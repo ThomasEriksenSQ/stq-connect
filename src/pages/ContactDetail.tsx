@@ -1,8 +1,8 @@
-import { useParams, Link } from "react-router-dom";
+import { useState } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,23 +10,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, User, Plus, FileText, Phone, Calendar, Mail, Building2, MapPin, Linkedin, ExternalLink } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Phone, Calendar, Mail, MapPin, ExternalLink, Building2, Linkedin } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
-import { useState } from "react";
 
-const typeLabels: Record<string, { label: string; icon: typeof FileText }> = {
-  note: { label: "Notat", icon: FileText },
-  call: { label: "Samtale", icon: Phone },
-  meeting: { label: "Møte", icon: Calendar },
-  email: { label: "E-post", icon: Mail },
+const typeConfig: Record<string, { label: string; icon: typeof FileText; color: string }> = {
+  note: { label: "Notat", icon: FileText, color: "bg-muted text-muted-foreground" },
+  call: { label: "Samtale", icon: Phone, color: "bg-success/10 text-success" },
+  meeting: { label: "Møte", icon: Calendar, color: "bg-primary/10 text-primary" },
+  email: { label: "E-post", icon: Mail, color: "bg-warning/10 text-warning" },
 };
 
 const ContactDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [activityOpen, setActivityOpen] = useState(false);
   const [actForm, setActForm] = useState({ type: "note", subject: "", description: "" });
 
@@ -72,6 +72,7 @@ const ContactDetail = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contact-activities", id] });
+      queryClient.invalidateQueries({ queryKey: ["company-activities"] });
       setActivityOpen(false);
       setActForm({ type: "note", subject: "", description: "" });
       toast.success("Aktivitet registrert");
@@ -86,108 +87,67 @@ const ContactDetail = () => {
     return acc;
   }, {});
 
-  if (isLoading) return <p className="text-muted-foreground p-6">Laster...</p>;
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="h-8 w-48 bg-card animate-pulse rounded-lg" />
+        <div className="h-48 bg-card animate-pulse rounded-xl" />
+      </div>
+    );
+  }
   if (!contact) return <p className="text-muted-foreground p-6">Kontakt ikke funnet</p>;
+
+  const infoRows = [
+    { label: "Stilling", value: contact.title },
+    { label: "E-post", value: contact.email, href: contact.email ? `mailto:${contact.email}` : undefined },
+    { label: "Telefon", value: contact.phone, href: contact.phone ? `tel:${contact.phone}` : undefined, mono: true },
+    { label: "LinkedIn", value: (contact as any).linkedin, href: (contact as any).linkedin, external: true },
+    { label: "Sted", value: (contact as any).location, icon: MapPin },
+  ].filter(r => r.value);
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <Link to="/kontakter">
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-            <User className="h-4 w-4" />
-            <span>Kontakt</span>
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0">
+            {contact.first_name[0]}{contact.last_name[0]}
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            {contact.first_name} {contact.last_name}
-          </h1>
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-0.5">Kontakt</p>
+            <h1 className="text-xl font-bold tracking-tight truncate">
+              {contact.first_name} {contact.last_name}
+            </h1>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Contact Info - right panel on desktop */}
-        <div className="lg:col-span-1 lg:order-2 space-y-4">
-          <Card>
-            <CardContent className="py-5 space-y-4">
-              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Kontaktinformasjon</h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Navn</span>
-                  <span className="font-medium">{contact.first_name} {contact.last_name}</span>
-                </div>
-                {contact.title && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Stilling</span>
-                    <span className="font-medium">{contact.title}</span>
-                  </div>
-                )}
-                {(contact.companies as any)?.name && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Selskap</span>
-                    <Link to={`/selskaper/${(contact.companies as any).id}`} className="font-medium text-primary hover:underline">
-                      {(contact.companies as any).name}
-                    </Link>
-                  </div>
-                )}
-                {contact.email && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">E-post</span>
-                    <a href={`mailto:${contact.email}`} className="font-medium text-primary hover:underline">{contact.email}</a>
-                  </div>
-                )}
-                {contact.phone && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Telefon</span>
-                    <a href={`tel:${contact.phone}`} className="font-medium text-primary hover:underline">{contact.phone}</a>
-                  </div>
-                )}
-                {(contact as any).linkedin && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">LinkedIn</span>
-                    <a href={(contact as any).linkedin} target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline flex items-center gap-1">
-                      Profil <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </div>
-                )}
-                {(contact as any).location && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Sted</span>
-                    <span className="font-medium flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />{(contact as any).location}
-                    </span>
-                  </div>
-                )}
-                {contact.notes && (
-                  <div className="pt-2 border-t">
-                    <span className="text-muted-foreground block mb-1">Notater</span>
-                    <p className="text-sm">{contact.notes}</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Activity Timeline */}
-        <div className="lg:col-span-2 lg:order-1 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* Timeline - 3/5 */}
+        <div className="lg:col-span-3 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Aktiviteter</h2>
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Aktiviteter ({activities.length})
+            </h2>
             <Dialog open={activityOpen} onOpenChange={setActivityOpen}>
               <DialogTrigger asChild>
-                <Button size="sm"><Plus className="h-4 w-4 mr-2" />Logg aktivitet</Button>
+                <Button size="sm" variant="outline" className="gap-2 h-8 text-xs border-border/50">
+                  <Plus className="h-3.5 w-3.5" />
+                  Logg aktivitet
+                </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle>Registrer aktivitet</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={(e) => { e.preventDefault(); createActivityMutation.mutate(); }} className="space-y-4">
+                <form onSubmit={(e) => { e.preventDefault(); createActivityMutation.mutate(); }} className="space-y-4 mt-2">
                   <div className="space-y-2">
-                    <Label>Type</Label>
+                    <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</Label>
                     <Select value={actForm.type} onValueChange={(v) => setActForm({ ...actForm, type: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -199,12 +159,12 @@ const ContactDetail = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Emne *</Label>
+                    <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Emne *</Label>
                     <Input value={actForm.subject} onChange={(e) => setActForm({ ...actForm, subject: e.target.value })} required />
                   </div>
                   <div className="space-y-2">
-                    <Label>Beskrivelse</Label>
-                    <Textarea value={actForm.description} onChange={(e) => setActForm({ ...actForm, description: e.target.value })} />
+                    <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Beskrivelse</Label>
+                    <Textarea value={actForm.description} onChange={(e) => setActForm({ ...actForm, description: e.target.value })} rows={3} />
                   </div>
                   <Button type="submit" className="w-full" disabled={createActivityMutation.isPending}>
                     {createActivityMutation.isPending ? "Registrerer..." : "Registrer"}
@@ -215,36 +175,35 @@ const ContactDetail = () => {
           </div>
 
           {activities.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <FileText className="h-12 w-12 text-muted-foreground/40 mb-4" />
-                <p className="text-muted-foreground">Ingen aktiviteter registrert</p>
-              </CardContent>
-            </Card>
+            <div className="rounded-xl bg-card border border-border/50 p-10 text-center">
+              <FileText className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">Ingen aktiviteter ennå</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">Logg din første aktivitet for denne kontakten</p>
+            </div>
           ) : (
             <div className="space-y-6">
               {Object.entries(groupedActivities).map(([monthLabel, acts]) => (
                 <div key={monthLabel}>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-3 capitalize">{monthLabel}</h3>
-                  <div className="space-y-2 border-l-2 border-border pl-4">
+                  <p className="text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-2 capitalize">{monthLabel}</p>
+                  <div className="space-y-1 border-l border-border/50 ml-2">
                     {acts.map((activity) => {
-                      const typeInfo = typeLabels[activity.type] || typeLabels.note;
-                      const Icon = typeInfo.icon;
+                      const cfg = typeConfig[activity.type] || typeConfig.note;
+                      const Icon = cfg.icon;
                       return (
-                        <div key={activity.id} className="relative flex items-start gap-3 pb-3">
-                          <div className="absolute -left-[1.35rem] top-1 h-3 w-3 rounded-full bg-primary border-2 border-background" />
-                          <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
-                            <Icon className="h-4 w-4 text-primary" />
+                        <div key={activity.id} className="relative flex items-start gap-3 pl-5 py-2 group">
+                          <div className="absolute left-[-5px] top-3.5 h-2.5 w-2.5 rounded-full bg-border group-hover:bg-primary transition-colors" />
+                          <div className={`h-7 w-7 rounded-md flex items-center justify-center flex-shrink-0 ${cfg.color}`}>
+                            <Icon className="h-3.5 w-3.5" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm">{activity.subject}</span>
-                              <Badge variant="secondary" className="text-xs">{typeInfo.label}</Badge>
+                              <span className="text-sm font-medium">{activity.subject}</span>
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{cfg.label}</Badge>
                             </div>
                             {activity.description && (
-                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{activity.description}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{activity.description}</p>
                             )}
-                            <span className="text-xs text-muted-foreground mt-1">
+                            <span className="text-[11px] text-muted-foreground/60 mt-1 block">
                               {format(new Date(activity.created_at), "d. MMM yyyy, HH:mm", { locale: nb })}
                             </span>
                           </div>
@@ -256,6 +215,64 @@ const ContactDetail = () => {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Info panel - 2/5 */}
+        <div className="lg:col-span-2 space-y-4">
+          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Informasjon</h2>
+          <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/50">
+            {/* Company link */}
+            {(contact.companies as any)?.name && (
+              <button
+                onClick={() => navigate(`/selskaper/${(contact.companies as any).id}`)}
+                className="w-full flex items-center gap-3 p-4 hover:bg-accent/30 transition-colors text-left group"
+              >
+                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Building2 className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] text-muted-foreground/60 uppercase tracking-wider">Selskap</p>
+                  <p className="text-sm font-medium group-hover:text-primary transition-colors truncate">{(contact.companies as any).name}</p>
+                </div>
+              </button>
+            )}
+
+            {/* Info rows */}
+            {infoRows.map((row) => (
+              <div key={row.label} className="flex items-center justify-between px-4 py-3">
+                <span className="text-xs text-muted-foreground">{row.label}</span>
+                {row.href ? (
+                  <a
+                    href={row.href}
+                    target={row.external ? "_blank" : undefined}
+                    rel={row.external ? "noopener noreferrer" : undefined}
+                    className={`text-sm font-medium text-primary hover:underline flex items-center gap-1 ${row.mono ? 'text-mono' : ''}`}
+                  >
+                    {row.external ? (
+                      <>
+                        {row.label === "LinkedIn" ? <Linkedin className="h-3 w-3" /> : null}
+                        {row.label === "LinkedIn" ? "Profil" : row.value}
+                        <ExternalLink className="h-3 w-3 opacity-50" />
+                      </>
+                    ) : row.value}
+                  </a>
+                ) : (
+                  <span className={`text-sm font-medium flex items-center gap-1 ${row.mono ? 'text-mono' : ''}`}>
+                    {row.icon && <row.icon className="h-3 w-3 text-muted-foreground" />}
+                    {row.value}
+                  </span>
+                )}
+              </div>
+            ))}
+
+            {/* Notes */}
+            {contact.notes && (
+              <div className="px-4 py-3">
+                <p className="text-xs text-muted-foreground mb-1">Notater</p>
+                <p className="text-sm leading-relaxed">{contact.notes}</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

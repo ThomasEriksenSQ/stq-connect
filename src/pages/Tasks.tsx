@@ -3,14 +3,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, CheckSquare } from "lucide-react";
+import { Plus, CheckSquare, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
@@ -25,7 +24,7 @@ const priorityColors: Record<string, string> = {
 
 const Tasks = () => {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ title: "", description: "", priority: "medium", due_date: "", company_id: "", contact_id: "" });
+  const [form, setForm] = useState({ title: "", description: "", priority: "medium", due_date: "", company_id: "" });
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -59,7 +58,6 @@ const Tasks = () => {
         priority: form.priority,
         due_date: form.due_date || null,
         company_id: form.company_id || null,
-        contact_id: form.contact_id || null,
         assigned_to: user?.id,
         created_by: user?.id,
       });
@@ -68,7 +66,7 @@ const Tasks = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       setOpen(false);
-      setForm({ title: "", description: "", priority: "medium", due_date: "", company_id: "", contact_id: "" });
+      setForm({ title: "", description: "", priority: "medium", due_date: "", company_id: "" });
       toast.success("Oppgave opprettet");
     },
     onError: () => toast.error("Kunne ikke opprette oppgave"),
@@ -87,33 +85,41 @@ const Tasks = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks"] }),
   });
 
+  const openTasks = tasks.filter(t => t.status !== "done");
+  const doneTasks = tasks.filter(t => t.status === "done");
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Oppgaver</h1>
-          <p className="text-muted-foreground">Hold oversikt over alle oppgaver</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {openTasks.length} åpne · {doneTasks.length} fullført
+          </p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-2" />Ny oppgave</Button>
+            <Button size="sm" className="gap-2">
+              <Plus className="h-4 w-4" />
+              Ny oppgave
+            </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Opprett ny oppgave</DialogTitle>
             </DialogHeader>
-            <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }} className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }} className="space-y-4 mt-2">
               <div className="space-y-2">
-                <Label>Tittel *</Label>
+                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tittel *</Label>
                 <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
               </div>
               <div className="space-y-2">
-                <Label>Beskrivelse</Label>
-                <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Beskrivelse</Label>
+                <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label>Prioritet</Label>
+                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Prioritet</Label>
                   <Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -124,12 +130,12 @@ const Tasks = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Forfallsdato</Label>
+                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Frist</Label>
                   <Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Selskap</Label>
+                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Selskap</Label>
                 <Select value={form.company_id} onValueChange={(v) => setForm({ ...form, company_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Velg selskap" /></SelectTrigger>
                   <SelectContent>
@@ -148,38 +154,67 @@ const Tasks = () => {
       </div>
 
       {isLoading ? (
-        <p className="text-muted-foreground">Laster...</p>
-      ) : tasks.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <CheckSquare className="h-12 w-12 text-muted-foreground/40 mb-4" />
-            <p className="text-muted-foreground">Ingen oppgaver</p>
-          </CardContent>
-        </Card>
-      ) : (
         <div className="space-y-2">
-          {tasks.map((task) => (
-            <Card key={task.id} className={task.status === "done" ? "opacity-60" : ""}>
-              <CardContent className="flex items-center gap-4 py-3">
-                <Checkbox
-                  checked={task.status === "done"}
-                  onCheckedChange={() => toggleMutation.mutate({ id: task.id, currentStatus: task.status })}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className={`font-medium ${task.status === "done" ? "line-through" : ""}`}>{task.title}</span>
-                    <Badge className={priorityColors[task.priority]}>{priorityLabels[task.priority]}</Badge>
-                  </div>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                    {(task.companies as any)?.name && <span>{(task.companies as any).name}</span>}
-                    {task.due_date && (
-                      <span>Frist: {format(new Date(task.due_date), "d. MMM yyyy", { locale: nb })}</span>
-                    )}
+          {[1, 2, 3].map((i) => <div key={i} className="h-14 rounded-xl bg-card animate-pulse" />)}
+        </div>
+      ) : tasks.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center mb-4">
+            <CheckSquare className="h-7 w-7 text-muted-foreground/50" />
+          </div>
+          <p className="text-muted-foreground font-medium">Ingen oppgaver</p>
+          <p className="text-sm text-muted-foreground/60 mt-1">Alt er i boks!</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Open tasks */}
+          {openTasks.length > 0 && (
+            <div className="space-y-1">
+              {openTasks.map((task) => (
+                <div key={task.id} className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border/50 hover:border-border transition-colors group">
+                  <Checkbox
+                    checked={false}
+                    onCheckedChange={() => toggleMutation.mutate({ id: task.id, currentStatus: task.status })}
+                    className="flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{task.title}</span>
+                      <Badge className={`text-[10px] px-1.5 py-0 ${priorityColors[task.priority]}`}>
+                        {priorityLabels[task.priority]}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-3 mt-0.5 text-[11px] text-muted-foreground/60">
+                      {(task.companies as any)?.name && <span>{(task.companies as any).name}</span>}
+                      {task.due_date && (
+                        <span className="flex items-center gap-1">
+                          <CalendarDays className="h-3 w-3" />
+                          {format(new Date(task.due_date), "d. MMM yyyy", { locale: nb })}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+              ))}
+            </div>
+          )}
+
+          {/* Done tasks */}
+          {doneTasks.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-2">Fullført ({doneTasks.length})</p>
+              {doneTasks.map((task) => (
+                <div key={task.id} className="flex items-center gap-3 p-3 rounded-xl bg-card/50 border border-border/30 opacity-60">
+                  <Checkbox
+                    checked={true}
+                    onCheckedChange={() => toggleMutation.mutate({ id: task.id, currentStatus: task.status })}
+                    className="flex-shrink-0"
+                  />
+                  <span className="text-sm line-through text-muted-foreground">{task.title}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
