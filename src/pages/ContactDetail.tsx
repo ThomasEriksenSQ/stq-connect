@@ -180,11 +180,7 @@ const ContactDetail = () => {
           Kontakter
         </Link>
 
-        <div className="flex items-start gap-5">
-          <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <span className="text-lg font-bold text-primary">{contact.first_name[0]}{contact.last_name[0]}</span>
-          </div>
-          <div className="space-y-1.5 min-w-0">
+        <div className="space-y-1.5 min-w-0">
             <h1 className="text-[1.5rem] font-bold">
               {contact.first_name} {contact.last_name}
             </h1>
@@ -228,6 +224,24 @@ const ContactDetail = () => {
                 <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">LinkedIn</a>
               )}
             </div>
+            <div className="flex items-center gap-6 pt-3">
+              <label className="flex items-center gap-2 text-[0.875rem] cursor-pointer">
+                <Checkbox
+                  checked={(contact as any).cv_email ?? false}
+                  onCheckedChange={(checked) => updateMutation.mutate({ cv_email: checked as any })}
+                  className="h-4 w-4 rounded-md"
+                />
+                <span className="font-medium">CV-Epost</span>
+              </label>
+              <label className="flex items-center gap-2 text-[0.875rem] cursor-pointer">
+                <Checkbox
+                  checked={(contact as any).call_list ?? false}
+                  onCheckedChange={(checked) => updateMutation.mutate({ call_list: checked as any })}
+                  className="h-4 w-4 rounded-md"
+                />
+                <span className="font-medium">Ringeliste</span>
+              </label>
+            </div>
             <div className="pt-2">
               <InlineEdit
                 value={contact.notes || ""}
@@ -237,7 +251,6 @@ const ContactDetail = () => {
               />
             </div>
           </div>
-        </div>
       </div>
 
       {/* Oppfølginger & Aktiviteter */}
