@@ -16,7 +16,7 @@ const typeConfig: Record<string, { label: string; icon: typeof FileText; accent:
 };
 
 const priorityDots: Record<string, string> = {
-  low: "text-muted-foreground/30",
+  low: "text-muted-foreground",
   medium: "text-primary",
   high: "text-destructive",
 };
@@ -175,7 +175,7 @@ const CompanyDetail = () => {
           <div className="space-y-4">
             <h2 className="text-label">Oppfølginger · {tasks.length}</h2>
             {tasks.length === 0 ? (
-              <p className="text-[0.875rem] text-muted-foreground/60 py-4">Ingen kommende oppfølginger</p>
+              <p className="text-[0.875rem] text-muted-foreground py-4">Ingen kommende oppfølginger</p>
             ) : (
               <div className="space-y-1">
                 {tasks.map((task) => {
@@ -196,7 +196,7 @@ const CompanyDetail = () => {
                         <div className="flex items-center gap-2 mt-0.5">
                           {contactName && <span className="text-[0.75rem] text-muted-foreground">{contactName}</span>}
                           {task.due_date && (
-                            <span className={`flex items-center gap-1 text-[0.75rem] ${overdue ? 'text-destructive' : 'text-muted-foreground/50'}`}>
+                            <span className={`flex items-center gap-1 text-[0.75rem] ${overdue ? 'text-destructive' : 'text-muted-foreground'}`}>
                               <CalendarDays className="h-3 w-3 stroke-[1.5]" />
                               {format(new Date(task.due_date), "d. MMM", { locale: nb })}
                             </span>
@@ -214,7 +214,7 @@ const CompanyDetail = () => {
           <div className="space-y-4">
             <h2 className="text-label">Aktiviteter · {activities.length}</h2>
             {activities.length === 0 ? (
-              <p className="text-[0.875rem] text-muted-foreground/60 py-4">Ingen aktiviteter</p>
+              <p className="text-[0.875rem] text-muted-foreground py-4">Ingen aktiviteter</p>
             ) : (
               <div className="space-y-1">
                 {activities.map((activity) => {
@@ -233,7 +233,7 @@ const CompanyDetail = () => {
                         {activity.description && (
                           <p className="text-[0.8125rem] text-muted-foreground leading-relaxed line-clamp-2">{activity.description}</p>
                         )}
-                        <p className="text-[0.75rem] text-muted-foreground/50 pt-0.5">
+                        <p className="text-[0.75rem] text-muted-foreground pt-0.5">
                           {contactName && <>{contactName} · </>}
                           {format(new Date(activity.created_at), "d. MMM yyyy", { locale: nb })}
                         </p>
@@ -250,7 +250,7 @@ const CompanyDetail = () => {
         <section className="lg:col-span-2 space-y-4">
           <h2 className="text-label">Kontakter · {contacts.length}</h2>
           {contacts.length === 0 ? (
-            <p className="text-[0.875rem] text-muted-foreground/60 py-4">Ingen kontakter</p>
+            <p className="text-[0.875rem] text-muted-foreground py-4">Ingen kontakter</p>
           ) : (
             <div className="space-y-1">
               {contacts.map((c) => (
@@ -266,7 +266,7 @@ const CompanyDetail = () => {
                     <p className="text-[0.9375rem] font-medium truncate">{c.first_name} {c.last_name}</p>
                     <p className="text-[0.8125rem] text-muted-foreground truncate">{c.title || "—"}</p>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-muted-foreground/50 transition-colors flex-shrink-0" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors flex-shrink-0" />
                 </button>
               ))}
             </div>

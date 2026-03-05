@@ -24,7 +24,7 @@ const typeConfig: Record<string, { label: string; icon: typeof FileText; accent:
 };
 
 const priorityDots: Record<string, string> = {
-  low: "text-muted-foreground/30",
+  low: "text-muted-foreground",
   medium: "text-primary",
   high: "text-destructive",
 };
@@ -291,7 +291,7 @@ const ContactDetail = () => {
           </div>
 
           {tasks.length === 0 ? (
-            <p className="text-[0.875rem] text-muted-foreground/60 py-4">Ingen kommende oppfølginger</p>
+            <p className="text-[0.875rem] text-muted-foreground py-4">Ingen kommende oppfølginger</p>
           ) : (
             <div className="space-y-1">
               {tasks.map((task) => {
@@ -301,13 +301,13 @@ const ContactDetail = () => {
                     <Checkbox
                       checked={false}
                       onCheckedChange={() => toggleTaskMutation.mutate(task.id)}
-                      className="flex-shrink-0 h-4 w-4 rounded-md border-border/60"
+                      className="flex-shrink-0 h-4 w-4 rounded-md border-border"
                     />
                     <Circle className={`h-2 w-2 fill-current ${priorityDots[task.priority]} flex-shrink-0`} />
                     <div className="flex-1 min-w-0">
                       <p className="text-[0.875rem] font-medium leading-snug">{task.title}</p>
                       {task.due_date && (
-                        <span className={`flex items-center gap-1 text-[0.75rem] mt-0.5 ${overdue ? 'text-destructive' : 'text-muted-foreground/60'}`}>
+                        <span className={`flex items-center gap-1 text-[0.75rem] mt-0.5 ${overdue ? 'text-destructive' : 'text-muted-foreground'}`}>
                           <CalendarDays className="h-3 w-3 stroke-[1.5]" />
                           {format(new Date(task.due_date), "d. MMM yyyy", { locale: nb })}
                         </span>
@@ -366,7 +366,7 @@ const ContactDetail = () => {
 
           {activities.length === 0 ? (
             <div className="py-8 text-center">
-              <p className="text-[0.875rem] text-muted-foreground/60">Ingen aktiviteter ennå</p>
+              <p className="text-[0.875rem] text-muted-foreground">Ingen aktiviteter ennå</p>
             </div>
           ) : (
             <div className="space-y-1">
@@ -381,12 +381,12 @@ const ContactDetail = () => {
                     <div className="flex-1 min-w-0 space-y-0.5">
                       <div className="flex items-center gap-2">
                         <p className="text-[0.9375rem] font-medium leading-snug">{activity.subject}</p>
-                        <span className="text-[0.6875rem] text-muted-foreground/40 font-medium">{cfg.label}</span>
+                        <span className="text-[0.6875rem] text-muted-foreground font-medium">{cfg.label}</span>
                       </div>
                       {activity.description && (
                         <p className="text-[0.875rem] text-muted-foreground leading-relaxed">{activity.description}</p>
                       )}
-                      <p className="text-[0.75rem] text-muted-foreground/40 pt-0.5">
+                      <p className="text-[0.75rem] text-muted-foreground pt-0.5">
                         {format(new Date(activity.created_at), "d. MMMM yyyy 'kl.' HH:mm", { locale: nb })}
                       </p>
                     </div>
