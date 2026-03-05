@@ -7,6 +7,7 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
 import Companies from "./pages/Companies";
 import CompanyDetail from "./pages/CompanyDetail";
 import Contacts from "./pages/Contacts";
@@ -35,7 +36,7 @@ function ProtectedRoutes() {
 function AuthRoute() {
   const { user, loading } = useAuth();
   if (loading) return null;
-  if (user) return <Navigate to="/selskaper" replace />;
+  if (user) return <Navigate to="/" replace />;
   return <Login />;
 }
 
@@ -50,7 +51,7 @@ const App = () => (
             <Routes>
               <Route path="/login" element={<AuthRoute />} />
               <Route path="/" element={<ProtectedRoutes />}>
-                <Route index element={<Navigate to="/selskaper" replace />} />
+                <Route index element={<Dashboard />} />
                 <Route path="selskaper" element={<Companies />} />
                 <Route path="selskaper/:id" element={<CompanyDetail />} />
                 <Route path="kontakter" element={<Contacts />} />

@@ -18,11 +18,11 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background dark">
-      <div className="w-full max-w-[340px] space-y-10 animate-fade-up">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="w-full max-w-[380px] space-y-10 animate-fade-up">
         <div className="space-y-2">
-          <h1 className="text-[28px] font-bold tracking-tight">STACQ</h1>
-          <p className="text-[15px] text-muted-foreground leading-relaxed">
+          <h1 className="text-[1.75rem] font-bold tracking-tight">STACQ</h1>
+          <p className="text-[0.9375rem] text-muted-foreground leading-relaxed">
             Logg inn for å fortsette
           </p>
         </div>
@@ -35,7 +35,7 @@ const Login = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="h-11 bg-card border-border/60 text-[15px] rounded-xl"
+              className="h-11 bg-card border-border/60 text-[0.9375rem] rounded-xl"
             />
           </div>
           <div className="space-y-2">
@@ -47,10 +47,10 @@ const Login = () => {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="h-11 bg-card border-border/60 text-[15px] rounded-xl"
+              className="h-11 bg-card border-border/60 text-[0.9375rem] rounded-xl"
             />
           </div>
-          <Button type="submit" className="w-full h-11 rounded-xl text-[14px] font-semibold" disabled={loading}>
+          <Button type="submit" className="w-full h-11 rounded-xl text-[0.875rem] font-semibold" disabled={loading}>
             {loading ? "Logger inn..." : "Logg inn"}
           </Button>
         </form>
