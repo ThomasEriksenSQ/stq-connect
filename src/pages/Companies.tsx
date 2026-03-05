@@ -132,28 +132,16 @@ const Companies = () => {
               onClick={() => navigate(`/selskaper/${company.id}`)}
               className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl hover:bg-card active:bg-accent transition-colors duration-150 group text-left"
             >
-              <div className="h-11 w-11 rounded-2xl bg-card border border-border/60 flex items-center justify-center flex-shrink-0 group-hover:border-primary/30 transition-colors">
-                <span className="text-[0.9375rem] font-semibold text-foreground/70">
-                  {company.name.charAt(0)}
-                </span>
-              </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[0.9375rem] font-medium text-foreground truncate">
                   {company.name}
                 </p>
-                <div className="flex items-center gap-3 mt-0.5">
-                  {company.city && (
-                    <span className="flex items-center gap-1 text-[0.8125rem] text-muted-foreground">
-                      <MapPin className="h-3 w-3 stroke-[1.5]" />
-                      {company.city}
-                    </span>
-                  )}
-                  {company.org_number && (
-                    <span className="text-[0.8125rem] text-muted-foreground/60 text-mono">
-                      {company.org_number}
-                    </span>
-                  )}
-                </div>
+                {company.city && (
+                  <span className="flex items-center gap-1 text-[0.8125rem] text-muted-foreground mt-0.5">
+                    <MapPin className="h-3 w-3 stroke-[1.5]" />
+                    {company.city}
+                  </span>
+                )}
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-muted-foreground/60 transition-colors flex-shrink-0" />
             </button>

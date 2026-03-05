@@ -158,11 +158,6 @@ const Contacts = () => {
               onClick={() => navigate(`/kontakter/${contact.id}`)}
               className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl hover:bg-card active:bg-accent transition-colors duration-150 group text-left"
             >
-              <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <span className="text-[0.8125rem] font-semibold text-primary">
-                  {contact.first_name[0]}{contact.last_name[0]}
-                </span>
-              </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[0.9375rem] font-medium text-foreground truncate">
                   {contact.first_name} {contact.last_name}
