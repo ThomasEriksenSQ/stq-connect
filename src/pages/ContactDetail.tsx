@@ -9,12 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Plus, FileText, Phone, Calendar, Mail, Building2, CalendarDays, Circle } from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday } from "date-fns";
 import { nb } from "date-fns/locale";
 import InlineEdit from "@/components/InlineEdit";
-import { Checkbox } from "@/components/ui/checkbox";
 
 const typeConfig: Record<string, { label: string; icon: typeof FileText; accent: string }> = {
   note: { label: "Notat", icon: FileText, accent: "text-muted-foreground" },
@@ -184,7 +184,7 @@ const ContactDetail = () => {
     <div className="space-y-10">
       {/* Header */}
       <div>
-        <Link to="/kontakter" className="inline-flex items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground transition-colors mb-6">
+        <Link to="/kontakter" className="inline-flex items-center gap-2 text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors mb-6">
           <ArrowLeft className="h-3.5 w-3.5 stroke-[1.5]" />
           Kontakter
         </Link>
@@ -194,15 +194,15 @@ const ContactDetail = () => {
             <span className="text-lg font-bold text-primary">{contact.first_name[0]}{contact.last_name[0]}</span>
           </div>
           <div className="space-y-1.5 min-w-0">
-            <h1 className="text-[24px] font-bold tracking-tight">
+            <h1 className="text-[1.5rem] font-bold">
               {contact.first_name} {contact.last_name}
             </h1>
             <div className="flex items-center gap-3 flex-wrap">
-              {contact.title && <span className="text-[15px] text-muted-foreground">{contact.title}</span>}
+              {contact.title && <span className="text-[0.9375rem] text-muted-foreground">{contact.title}</span>}
               {(contact.companies as any)?.name && (
                 <button
                   onClick={() => navigate(`/selskaper/${(contact.companies as any).id}`)}
-                  className="inline-flex items-center gap-1.5 text-[14px] text-primary hover:underline"
+                  className="inline-flex items-center gap-1.5 text-[0.875rem] text-primary hover:underline"
                 >
                   <Building2 className="h-3.5 w-3.5 stroke-[1.5]" />
                   {(contact.companies as any).name}
@@ -215,7 +215,7 @@ const ContactDetail = () => {
 
       {/* Two column */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
-        {/* Left: Activity timeline + Tasks — 3/5 */}
+        {/* Left column — 3/5 */}
         <section className="lg:col-span-3 space-y-8">
           {/* Oppfølginger */}
           <div className="space-y-4">
@@ -223,7 +223,7 @@ const ContactDetail = () => {
               <h2 className="text-label">Oppfølginger · {tasks.length}</h2>
               <Dialog open={taskOpen} onOpenChange={setTaskOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="rounded-xl h-8 px-3 text-[12px] font-medium gap-1.5 border-border/40 hover:bg-card">
+                  <Button variant="outline" size="sm" className="rounded-xl h-8 px-3 text-[0.75rem] font-medium gap-1.5 border-border/40 hover:bg-card">
                     <Plus className="h-3.5 w-3.5 stroke-[2]" />
                     Legg til oppfølging
                   </Button>
@@ -235,17 +235,17 @@ const ContactDetail = () => {
                   <form onSubmit={(e) => { e.preventDefault(); createTaskMutation.mutate(); }} className="space-y-5 mt-4">
                     <div className="space-y-2">
                       <Label className="text-label">Tittel</Label>
-                      <Input value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} required className="h-11 rounded-xl text-[15px] bg-secondary/50" />
+                      <Input value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} required className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-label">Beskrivelse</Label>
-                      <Textarea value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} rows={2} className="rounded-xl text-[15px] bg-secondary/50 min-h-[60px]" />
+                      <Textarea value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} rows={2} className="rounded-xl text-[0.9375rem] bg-secondary/50 min-h-[60px]" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label className="text-label">Prioritet</Label>
                         <Select value={taskForm.priority} onValueChange={(v) => setTaskForm({ ...taskForm, priority: v })}>
-                          <SelectTrigger className="h-11 rounded-xl text-[15px] bg-secondary/50"><SelectValue /></SelectTrigger>
+                          <SelectTrigger className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="low">Lav</SelectItem>
                             <SelectItem value="medium">Medium</SelectItem>
@@ -255,10 +255,10 @@ const ContactDetail = () => {
                       </div>
                       <div className="space-y-2">
                         <Label className="text-label">Frist</Label>
-                        <Input type="date" value={taskForm.due_date} onChange={(e) => setTaskForm({ ...taskForm, due_date: e.target.value })} className="h-11 rounded-xl text-[15px] bg-secondary/50" />
+                        <Input type="date" value={taskForm.due_date} onChange={(e) => setTaskForm({ ...taskForm, due_date: e.target.value })} className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
                       </div>
                     </div>
-                    <Button type="submit" className="w-full h-11 rounded-xl text-[14px] font-semibold" disabled={createTaskMutation.isPending}>
+                    <Button type="submit" className="w-full h-11 rounded-xl text-[0.875rem] font-semibold" disabled={createTaskMutation.isPending}>
                       {createTaskMutation.isPending ? "Oppretter..." : "Opprett"}
                     </Button>
                   </form>
@@ -267,23 +267,23 @@ const ContactDetail = () => {
             </div>
 
             {tasks.length === 0 ? (
-              <p className="text-[14px] text-muted-foreground/60 py-4">Ingen kommende oppfølginger</p>
+              <p className="text-[0.875rem] text-muted-foreground/60 py-4">Ingen kommende oppfølginger</p>
             ) : (
               <div className="space-y-1">
                 {tasks.map((task) => {
                   const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
                   return (
-                    <div key={task.id} className="flex items-center gap-3.5 px-4 py-3 rounded-2xl hover:bg-card transition-colors">
+                    <div key={task.id} className="flex items-center gap-3.5 px-4 py-3 rounded-xl hover:bg-card transition-colors">
                       <Checkbox
                         checked={false}
                         onCheckedChange={() => toggleTaskMutation.mutate(task.id)}
-                        className="flex-shrink-0 h-4.5 w-4.5 rounded-md border-border/60"
+                        className="flex-shrink-0 h-4 w-4 rounded-md border-border/60"
                       />
                       <Circle className={`h-2 w-2 fill-current ${priorityDots[task.priority]} flex-shrink-0`} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-medium leading-snug">{task.title}</p>
+                        <p className="text-[0.875rem] font-medium leading-snug">{task.title}</p>
                         {task.due_date && (
-                          <span className={`flex items-center gap-1 text-[12px] mt-0.5 ${overdue ? 'text-destructive' : 'text-muted-foreground/60'}`}>
+                          <span className={`flex items-center gap-1 text-[0.75rem] mt-0.5 ${overdue ? 'text-destructive' : 'text-muted-foreground/60'}`}>
                             <CalendarDays className="h-3 w-3 stroke-[1.5]" />
                             {format(new Date(task.due_date), "d. MMM yyyy", { locale: nb })}
                           </span>
@@ -302,7 +302,7 @@ const ContactDetail = () => {
               <h2 className="text-label">Aktiviteter · {activities.length}</h2>
               <Dialog open={activityOpen} onOpenChange={setActivityOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="rounded-xl h-8 px-3 text-[12px] font-medium gap-1.5 border-border/40 hover:bg-card">
+                  <Button variant="outline" size="sm" className="rounded-xl h-8 px-3 text-[0.75rem] font-medium gap-1.5 border-border/40 hover:bg-card">
                     <Plus className="h-3.5 w-3.5 stroke-[2]" />
                     Logg aktivitet
                   </Button>
@@ -315,7 +315,7 @@ const ContactDetail = () => {
                     <div className="space-y-2">
                       <Label className="text-label">Type</Label>
                       <Select value={actForm.type} onValueChange={(v) => setActForm({ ...actForm, type: v })}>
-                        <SelectTrigger className="h-11 rounded-xl text-[15px] bg-secondary/50"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="note">Notat</SelectItem>
                           <SelectItem value="call">Samtale</SelectItem>
@@ -326,13 +326,13 @@ const ContactDetail = () => {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-label">Emne</Label>
-                      <Input value={actForm.subject} onChange={(e) => setActForm({ ...actForm, subject: e.target.value })} required className="h-11 rounded-xl text-[15px] bg-secondary/50" />
+                      <Input value={actForm.subject} onChange={(e) => setActForm({ ...actForm, subject: e.target.value })} required className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-label">Beskrivelse</Label>
-                      <Textarea value={actForm.description} onChange={(e) => setActForm({ ...actForm, description: e.target.value })} rows={3} className="rounded-xl text-[15px] bg-secondary/50 min-h-[80px]" />
+                      <Textarea value={actForm.description} onChange={(e) => setActForm({ ...actForm, description: e.target.value })} rows={3} className="rounded-xl text-[0.9375rem] bg-secondary/50 min-h-[80px]" />
                     </div>
-                    <Button type="submit" className="w-full h-11 rounded-xl text-[14px] font-semibold" disabled={createActivityMutation.isPending}>
+                    <Button type="submit" className="w-full h-11 rounded-xl text-[0.875rem] font-semibold" disabled={createActivityMutation.isPending}>
                       {createActivityMutation.isPending ? "Registrerer..." : "Registrer"}
                     </Button>
                   </form>
@@ -342,7 +342,7 @@ const ContactDetail = () => {
 
             {activities.length === 0 ? (
               <div className="py-8 text-center">
-                <p className="text-[14px] text-muted-foreground/60">Ingen aktiviteter ennå</p>
+                <p className="text-[0.875rem] text-muted-foreground/60">Ingen aktiviteter ennå</p>
               </div>
             ) : (
               <div className="space-y-1">
@@ -350,19 +350,19 @@ const ContactDetail = () => {
                   const cfg = typeConfig[activity.type] || typeConfig.note;
                   const Icon = cfg.icon;
                   return (
-                    <div key={activity.id} className="flex items-start gap-3.5 px-4 py-3.5 rounded-2xl hover:bg-card transition-colors">
+                    <div key={activity.id} className="flex items-start gap-3.5 px-4 py-3.5 rounded-xl hover:bg-card transition-colors">
                       <div className="mt-0.5 flex-shrink-0">
                         <Icon className={`h-4 w-4 stroke-[1.5] ${cfg.accent}`} />
                       </div>
                       <div className="flex-1 min-w-0 space-y-0.5">
                         <div className="flex items-center gap-2">
-                          <p className="text-[15px] font-medium leading-snug">{activity.subject}</p>
-                          <span className="text-[11px] text-muted-foreground/40 font-medium">{cfg.label}</span>
+                          <p className="text-[0.9375rem] font-medium leading-snug">{activity.subject}</p>
+                          <span className="text-[0.6875rem] text-muted-foreground/40 font-medium">{cfg.label}</span>
                         </div>
                         {activity.description && (
-                          <p className="text-[14px] text-muted-foreground leading-relaxed">{activity.description}</p>
+                          <p className="text-[0.875rem] text-muted-foreground leading-relaxed">{activity.description}</p>
                         )}
-                        <p className="text-[12px] text-muted-foreground/40 pt-0.5">
+                        <p className="text-[0.75rem] text-muted-foreground/40 pt-0.5">
                           {format(new Date(activity.created_at), "d. MMMM yyyy 'kl.' HH:mm", { locale: nb })}
                         </p>
                       </div>
@@ -377,10 +377,10 @@ const ContactDetail = () => {
         {/* Right: Editable details — 2/5 */}
         <section className="lg:col-span-2 space-y-5">
           <h2 className="text-label">Detaljer</h2>
-          <div className="rounded-2xl bg-card border border-border/40 divide-y divide-border/40">
+          <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/50">
             {detailFields.map((row) => (
               <div key={row.field} className="flex items-center justify-between px-5 py-4">
-                <span className="text-[13px] text-muted-foreground w-24 flex-shrink-0">{row.label}</span>
+                <span className="text-[0.8125rem] text-muted-foreground w-24 flex-shrink-0">{row.label}</span>
                 <InlineEdit
                   value={row.value}
                   onSave={updateField(row.field)}
@@ -392,7 +392,7 @@ const ContactDetail = () => {
             ))}
 
             <div className="px-5 py-4 space-y-2">
-              <span className="text-[13px] text-muted-foreground">Notater</span>
+              <span className="text-[0.8125rem] text-muted-foreground">Notater</span>
               <InlineEdit
                 value={contact.notes || ""}
                 onSave={updateField("notes")}
