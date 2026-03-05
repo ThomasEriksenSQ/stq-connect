@@ -366,7 +366,7 @@ const ContactDetail = () => {
 
           {activities.length === 0 ? (
             <div className="py-8 text-center">
-              <p className="text-[0.875rem] text-muted-foreground/60">Ingen aktiviteter ennå</p>
+              <p className="text-[0.875rem] text-muted-foreground">Ingen aktiviteter ennå</p>
             </div>
           ) : (
             <div className="space-y-1">
