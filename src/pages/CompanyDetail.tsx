@@ -163,7 +163,8 @@ const CompanyDetail = () => {
                 multiline
               />
             </div>
-          </div>
+        </div>
+      </div>
 
       {/* Two columns: Left = oppfølginger + aktiviteter, Right = kontakter */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
