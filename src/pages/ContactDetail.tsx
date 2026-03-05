@@ -9,10 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, FileText, Phone, Calendar, Mail, MapPin, ExternalLink, Building2, Linkedin } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Phone, Calendar, Mail, Building2, Linkedin, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
+import InlineEdit from "@/components/InlineEdit";
 
 const typeConfig: Record<string, { label: string; icon: typeof FileText; accent: string }> = {
   note: { label: "Notat", icon: FileText, accent: "text-muted-foreground" },
@@ -57,6 +58,23 @@ const ContactDetail = () => {
     enabled: !!id,
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async (updates: Record<string, string | null>) => {
+      const { error } = await supabase.from("contacts").update(updates).eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contact", id] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      toast.success("Oppdatert");
+    },
+    onError: () => toast.error("Kunne ikke oppdatere"),
+  });
+
+  const updateField = (field: string) => (value: string) => {
+    updateMutation.mutate({ [field]: value || null });
+  };
+
   const createActivityMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("activities").insert({
@@ -89,13 +107,15 @@ const ContactDetail = () => {
   }
   if (!contact) return <p className="text-muted-foreground">Kontakt ikke funnet</p>;
 
-  const detailRows = [
-    { label: "Stilling", value: contact.title },
-    { label: "E-post", value: contact.email, href: contact.email ? `mailto:${contact.email}` : undefined },
-    { label: "Telefon", value: contact.phone, href: contact.phone ? `tel:${contact.phone}` : undefined, mono: true },
-    { label: "LinkedIn", value: (contact as any).linkedin, href: (contact as any).linkedin, external: true, iconEl: Linkedin },
-    { label: "Sted", value: (contact as any).location },
-  ].filter(r => r.value);
+  const detailFields = [
+    { label: "Fornavn", field: "first_name", value: contact.first_name },
+    { label: "Etternavn", field: "last_name", value: contact.last_name },
+    { label: "Stilling", field: "title", value: contact.title || "" },
+    { label: "E-post", field: "email", value: contact.email || "", type: "email" as const },
+    { label: "Telefon", field: "phone", value: contact.phone || "", type: "tel" as const, mono: true },
+    { label: "LinkedIn", field: "linkedin", value: contact.linkedin || "", type: "url" as const },
+    { label: "Sted", field: "location", value: contact.location || "" },
+  ];
 
   return (
     <div className="space-y-10">
@@ -209,36 +229,33 @@ const ContactDetail = () => {
           )}
         </section>
 
-        {/* Right: Info — 2/5 */}
+        {/* Right: Editable details — 2/5 */}
         <section className="lg:col-span-2 space-y-5">
           <h2 className="text-label">Detaljer</h2>
           <div className="rounded-2xl bg-card border border-border/40 divide-y divide-border/40">
-            {detailRows.map((row) => (
-              <div key={row.label} className="flex items-center justify-between px-5 py-4">
-                <span className="text-[13px] text-muted-foreground">{row.label}</span>
-                {row.href ? (
-                  <a
-                    href={row.href}
-                    target={row.external ? "_blank" : undefined}
-                    rel={row.external ? "noopener noreferrer" : undefined}
-                    className={`text-[14px] font-medium text-primary hover:underline inline-flex items-center gap-1.5 ${row.mono ? 'text-mono' : ''}`}
-                  >
-                    {row.iconEl && <row.iconEl className="h-3.5 w-3.5" />}
-                    {row.external && row.label === "LinkedIn" ? "Profil" : row.value}
-                    {row.external && <ExternalLink className="h-3 w-3 opacity-40" />}
-                  </a>
-                ) : (
-                  <span className={`text-[14px] font-medium ${row.mono ? 'text-mono' : ''}`}>{row.value}</span>
-                )}
+            {detailFields.map((row) => (
+              <div key={row.field} className="flex items-center justify-between px-5 py-4">
+                <span className="text-[13px] text-muted-foreground w-24 flex-shrink-0">{row.label}</span>
+                <InlineEdit
+                  value={row.value}
+                  onSave={updateField(row.field)}
+                  placeholder={`Legg til ${row.label.toLowerCase()}`}
+                  type={row.type}
+                  mono={row.mono}
+                />
               </div>
             ))}
 
-            {contact.notes && (
-              <div className="px-5 py-4">
-                <p className="text-[13px] text-muted-foreground mb-1">Notater</p>
-                <p className="text-[14px] leading-relaxed">{contact.notes}</p>
-              </div>
-            )}
+            {/* Notes as multiline */}
+            <div className="px-5 py-4 space-y-2">
+              <span className="text-[13px] text-muted-foreground">Notater</span>
+              <InlineEdit
+                value={contact.notes || ""}
+                onSave={updateField("notes")}
+                placeholder="Legg til notater..."
+                multiline
+              />
+            </div>
           </div>
         </section>
       </div>

@@ -1,10 +1,11 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { ArrowLeft, Globe, MapPin, ExternalLink, FileText, Phone, Calendar, Mail, Linkedin, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
+import { toast } from "sonner";
+import InlineEdit from "@/components/InlineEdit";
 
 const typeConfig: Record<string, { label: string; icon: typeof FileText; accent: string }> = {
   note: { label: "Notat", icon: FileText, accent: "text-muted-foreground" },
@@ -16,6 +17,7 @@ const typeConfig: Record<string, { label: string; icon: typeof FileText; accent:
 const CompanyDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: company, isLoading } = useQuery({
     queryKey: ["company", id],
@@ -51,6 +53,23 @@ const CompanyDetail = () => {
     enabled: !!id,
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async (updates: Record<string, string | null>) => {
+      const { error } = await supabase.from("companies").update(updates).eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["company", id] });
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      toast.success("Oppdatert");
+    },
+    onError: () => toast.error("Kunne ikke oppdatere"),
+  });
+
+  const updateField = (field: string) => (value: string) => {
+    updateMutation.mutate({ [field]: value || null });
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -60,11 +79,6 @@ const CompanyDetail = () => {
     );
   }
   if (!company) return <p className="text-muted-foreground">Selskap ikke funnet</p>;
-
-  const links = [
-    company.website && { icon: Globe, label: company.website.replace(/^https?:\/\//, ''), href: company.website },
-    (company as any).linkedin && { icon: Linkedin, label: "LinkedIn", href: (company as any).linkedin },
-  ].filter(Boolean) as { icon: typeof Globe; label: string; href: string }[];
 
   return (
     <div className="space-y-10">
@@ -80,7 +94,7 @@ const CompanyDetail = () => {
             <span className="text-xl font-bold text-foreground/70">{company.name.charAt(0)}</span>
           </div>
           <div className="space-y-1 min-w-0">
-            <h1 className="text-[24px] font-bold tracking-tight">{company.name}</h1>
+            <InlineEdit value={company.name} onSave={updateField("name")} className="text-[24px] font-bold tracking-tight" />
             <div className="flex items-center gap-4 text-[14px] text-muted-foreground">
               {company.org_number && <span className="text-mono">{company.org_number}</span>}
               {company.city && (
@@ -91,26 +105,34 @@ const CompanyDetail = () => {
             </div>
           </div>
         </div>
-
-        {/* Links */}
-        {links.length > 0 && (
-          <div className="flex items-center gap-2 mt-5">
-            {links.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-card border border-border/40 text-[13px] text-muted-foreground hover:text-foreground hover:border-border transition-colors"
-              >
-                <link.icon className="h-3.5 w-3.5 stroke-[1.5]" />
-                <span className="truncate max-w-[200px]">{link.label}</span>
-                <ExternalLink className="h-3 w-3 opacity-40" />
-              </a>
-            ))}
-          </div>
-        )}
       </div>
+
+      {/* Editable fields */}
+      <section className="space-y-4">
+        <h2 className="text-label">Selskapsinformasjon</h2>
+        <div className="rounded-2xl bg-card border border-border/40 divide-y divide-border/40">
+          <div className="flex items-center justify-between px-5 py-4">
+            <span className="text-[13px] text-muted-foreground w-36 flex-shrink-0">Selskapsnavn</span>
+            <InlineEdit value={company.name} onSave={updateField("name")} />
+          </div>
+          <div className="flex items-center justify-between px-5 py-4">
+            <span className="text-[13px] text-muted-foreground w-36 flex-shrink-0">Org.nr</span>
+            <InlineEdit value={company.org_number || ""} onSave={updateField("org_number")} placeholder="Legg til org.nr" mono />
+          </div>
+          <div className="flex items-center justify-between px-5 py-4">
+            <span className="text-[13px] text-muted-foreground w-36 flex-shrink-0">Sted</span>
+            <InlineEdit value={company.city || ""} onSave={updateField("city")} placeholder="Legg til sted" />
+          </div>
+          <div className="flex items-center justify-between px-5 py-4">
+            <span className="text-[13px] text-muted-foreground w-36 flex-shrink-0">Nettside</span>
+            <InlineEdit value={company.website || ""} onSave={updateField("website")} placeholder="Legg til nettside" type="url" />
+          </div>
+          <div className="flex items-center justify-between px-5 py-4">
+            <span className="text-[13px] text-muted-foreground w-36 flex-shrink-0">LinkedIn</span>
+            <InlineEdit value={company.linkedin || ""} onSave={updateField("linkedin")} placeholder="Legg til LinkedIn" type="url" />
+          </div>
+        </div>
+      </section>
 
       {/* Two column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
