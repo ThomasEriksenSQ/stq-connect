@@ -202,7 +202,7 @@ const ContactDetail = () => {
               )}
               {contact.location && (
                 <>
-                  <span>{contact.location}</span>
+                  <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5 stroke-[1.5]" />{contact.location}</span>
                   <span className="text-muted-foreground/30">·</span>
                 </>
               )}
@@ -214,18 +214,18 @@ const ContactDetail = () => {
               )}
               {contact.phone && (
                 <>
-                  <a href={`tel:${contact.phone}`} className="font-mono hover:text-foreground transition-colors">{contact.phone}</a>
+                  <a href={`tel:${contact.phone}`} className="font-mono text-primary hover:underline">{contact.phone}</a>
                   <span className="text-muted-foreground/30">·</span>
                 </>
               )}
               {contact.email && (
                 <>
-                  <a href={`mailto:${contact.email}`} className="hover:text-foreground transition-colors">{contact.email}</a>
+                  <a href={`mailto:${contact.email}`} className="text-primary hover:underline">{contact.email}</a>
                   <span className="text-muted-foreground/30">·</span>
                 </>
               )}
               {contact.linkedin && (
-                <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">LinkedIn</a>
+                <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">LinkedIn</a>
               )}
             </div>
             <div className="pt-2">
