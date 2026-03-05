@@ -250,7 +250,7 @@ const CompanyDetail = () => {
         <section className="lg:col-span-2 space-y-4">
           <h2 className="text-label">Kontakter · {contacts.length}</h2>
           {contacts.length === 0 ? (
-            <p className="text-[0.875rem] text-muted-foreground/60 py-4">Ingen kontakter</p>
+            <p className="text-[0.875rem] text-muted-foreground py-4">Ingen kontakter</p>
           ) : (
             <div className="space-y-1">
               {contacts.map((c) => (
