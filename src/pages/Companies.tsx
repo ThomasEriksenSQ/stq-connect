@@ -18,6 +18,7 @@ const Companies = () => {
   const [form, setForm] = useState({ name: "", org_number: "", industry: "", phone: "", email: "", city: "" });
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ["companies"],
