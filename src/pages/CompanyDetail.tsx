@@ -214,7 +214,7 @@ const CompanyDetail = () => {
           <div className="space-y-4">
             <h2 className="text-label">Aktiviteter · {activities.length}</h2>
             {activities.length === 0 ? (
-              <p className="text-[0.875rem] text-muted-foreground/60 py-4">Ingen aktiviteter</p>
+              <p className="text-[0.875rem] text-muted-foreground py-4">Ingen aktiviteter</p>
             ) : (
               <div className="space-y-1">
                 {activities.map((activity) => {
