@@ -213,14 +213,54 @@ const ContactDetail = () => {
         </div>
       </div>
 
-      {/* Two column */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
-        {/* Left column — 3/5 */}
-        <section className="lg:col-span-3 space-y-8">
-          {/* Oppfølginger */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-label">Oppfølginger · {tasks.length}</h2>
+      {/* Contact info strip */}
+      <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/50">
+        {[
+          { label: "Selskap", field: "company_id", value: (contact.companies as any)?.name || "", readonly: true, link: (contact.companies as any)?.id ? `/selskaper/${(contact.companies as any).id}` : undefined },
+          { label: "Sted", field: "location", value: contact.location || "" },
+          { label: "Stilling", field: "title", value: contact.title || "" },
+          { label: "Telefon", field: "phone", value: contact.phone || "", type: "tel" as const, mono: true },
+          { label: "E-post", field: "email", value: contact.email || "", type: "email" as const },
+          { label: "LinkedIn", field: "linkedin", value: contact.linkedin || "", type: "url" as const },
+        ].map((row) => (
+          <div key={row.field} className="flex items-center justify-between px-5 py-4">
+            <span className="text-[0.8125rem] text-muted-foreground w-24 flex-shrink-0">{row.label}</span>
+            {row.readonly ? (
+              row.link ? (
+                <button onClick={() => navigate(row.link!)} className="text-[14px] font-medium text-primary hover:underline">
+                  {row.value || <span className="text-muted-foreground/40 italic">—</span>}
+                </button>
+              ) : (
+                <span className="text-[14px] font-medium text-muted-foreground/40 italic">—</span>
+              )
+            ) : (
+              <InlineEdit
+                value={row.value}
+                onSave={updateField(row.field)}
+                placeholder={`Legg til ${row.label.toLowerCase()}`}
+                type={row.type}
+                mono={row.mono}
+              />
+            )}
+          </div>
+        ))}
+        <div className="px-5 py-4 space-y-2">
+          <span className="text-[0.8125rem] text-muted-foreground">Notater</span>
+          <InlineEdit
+            value={contact.notes || ""}
+            onSave={updateField("notes")}
+            placeholder="Legg til notater..."
+            multiline
+          />
+        </div>
+      </div>
+
+      {/* Oppfølginger & Aktiviteter */}
+      <div className="space-y-8">
+        {/* Oppfølginger */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-label">Oppfølginger · {tasks.length}</h2>
               <Dialog open={taskOpen} onOpenChange={setTaskOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm" className="rounded-xl h-8 px-3 text-[0.75rem] font-medium gap-1.5 border-border/40 hover:bg-card">
