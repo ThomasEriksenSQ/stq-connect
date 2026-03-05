@@ -135,24 +135,24 @@ const CompanyDetail = () => {
             <div className="flex items-center gap-2 flex-wrap text-[0.875rem] text-muted-foreground">
               {company.city && (
                 <>
-                  <span>{company.city}</span>
+                  <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5 stroke-[1.5]" />{company.city}</span>
                   <span className="text-muted-foreground/30">·</span>
                 </>
               )}
               {company.org_number && (
                 <>
-                  <span className="font-mono">{company.org_number}</span>
+                  <span className="font-mono">Org.nr {company.org_number}</span>
                   <span className="text-muted-foreground/30">·</span>
                 </>
               )}
               {company.website && (
                 <>
-                  <a href={company.website} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{company.website.replace(/^https?:\/\//, '')}</a>
+                  <a href={company.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{company.website.replace(/^https?:\/\//, '')}</a>
                   <span className="text-muted-foreground/30">·</span>
                 </>
               )}
               {company.linkedin && (
-                <a href={company.linkedin} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">LinkedIn</a>
+                <a href={company.linkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">LinkedIn</a>
               )}
             </div>
             <div className="pt-2">
