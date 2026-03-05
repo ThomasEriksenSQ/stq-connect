@@ -53,6 +53,18 @@ const ContactDetail = () => {
     enabled: !!id,
   });
 
+  const { data: allProfiles = [] } = useQuery({
+    queryKey: ["profiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .order("full_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: activities = [] } = useQuery({
     queryKey: ["contact-activities", id],
     queryFn: async () => {
