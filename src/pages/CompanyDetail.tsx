@@ -1,7 +1,7 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, MapPin, FileText, Phone, Calendar, Mail, ChevronRight, CalendarDays, Circle } from "lucide-react";
+import { ArrowLeft, MapPin, FileText, Phone, Calendar, Mail, ChevronRight, CalendarDays, Circle, Globe, Linkedin } from "lucide-react";
 import { format, isPast, isToday } from "date-fns";
 import { nb } from "date-fns/locale";
 import { toast } from "sonner";
