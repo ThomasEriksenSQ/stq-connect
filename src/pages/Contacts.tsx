@@ -50,6 +50,7 @@ const Contacts = () => {
         title: form.title || null,
         company_id: form.company_id || null,
         created_by: user?.id,
+        owner_id: user?.id,
       });
       if (error) throw error;
     },
