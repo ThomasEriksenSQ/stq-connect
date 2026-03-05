@@ -266,7 +266,7 @@ const CompanyDetail = () => {
                     <p className="text-[0.9375rem] font-medium truncate">{c.first_name} {c.last_name}</p>
                     <p className="text-[0.8125rem] text-muted-foreground truncate">{c.title || "—"}</p>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-muted-foreground/50 transition-colors flex-shrink-0" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors flex-shrink-0" />
                 </button>
               ))}
             </div>
