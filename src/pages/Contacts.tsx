@@ -24,7 +24,7 @@ const Contacts = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
-        .select("*, companies(name)")
+        .select("*, companies(name), profiles!contacts_owner_id_fkey(full_name)")
         .order("first_name");
       if (error) throw error;
       return data;
@@ -50,6 +50,7 @@ const Contacts = () => {
         title: form.title || null,
         company_id: form.company_id || null,
         created_by: user?.id,
+        owner_id: user?.id,
       });
       if (error) throw error;
     },
@@ -161,6 +162,11 @@ const Contacts = () => {
               <div className="flex-1 min-w-0">
                 <p className="text-[0.9375rem] font-medium text-foreground truncate">
                   {contact.first_name} {contact.last_name}
+                  {(contact as any).profiles?.full_name && (
+                    <span className="text-[0.8125rem] font-normal text-muted-foreground ml-1.5">
+                      {(contact as any).profiles.full_name}
+                    </span>
+                  )}
                 </p>
                 <p className="text-[0.8125rem] text-muted-foreground truncate mt-0.5">
                   {[contact.title, (contact.companies as any)?.name].filter(Boolean).join(" · ") || "—"}

@@ -44,7 +44,7 @@ const ContactDetail = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
-        .select("*, companies(id, name)")
+        .select("*, companies(id, name), profiles!contacts_owner_id_fkey(full_name)")
         .eq("id", id!)
         .single();
       if (error) throw error;
@@ -183,6 +183,11 @@ const ContactDetail = () => {
         <div className="space-y-1.5 min-w-0">
             <h1 className="text-[1.5rem] font-bold">
               {contact.first_name} {contact.last_name}
+              {(contact as any).profiles?.full_name && (
+                <span className="text-[0.875rem] font-normal text-muted-foreground ml-2">
+                  {(contact as any).profiles.full_name}
+                </span>
+              )}
             </h1>
             <div className="flex items-center gap-2 flex-wrap text-[0.875rem] text-muted-foreground">
               {(contact.companies as any)?.name && (

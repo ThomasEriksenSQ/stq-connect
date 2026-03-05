@@ -181,6 +181,7 @@ export type Database = {
           linkedin: string | null
           location: string | null
           notes: string | null
+          owner_id: string | null
           phone: string | null
           title: string | null
           updated_at: string
@@ -198,6 +199,7 @@ export type Database = {
           linkedin?: string | null
           location?: string | null
           notes?: string | null
+          owner_id?: string | null
           phone?: string | null
           title?: string | null
           updated_at?: string
@@ -215,6 +217,7 @@ export type Database = {
           linkedin?: string | null
           location?: string | null
           notes?: string | null
+          owner_id?: string | null
           phone?: string | null
           title?: string | null
           updated_at?: string
@@ -259,6 +262,27 @@ export type Database = {
           sort_order?: number
           title?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string
+          id?: string
+          updated_at?: string
         }
         Relationships: []
       }
