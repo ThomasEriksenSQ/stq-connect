@@ -326,82 +326,81 @@ const ContactDetail = () => {
           )}
         </div>
 
-          {/* Aktiviteter */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-label">Aktiviteter · {activities.length}</h2>
-              <Dialog open={activityOpen} onOpenChange={setActivityOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="rounded-xl h-8 px-3 text-[0.75rem] font-medium gap-1.5 border-border/40 hover:bg-card">
-                    <Plus className="h-3.5 w-3.5 stroke-[2]" />
-                    Logg aktivitet
+        {/* Aktiviteter */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-label">Aktiviteter · {activities.length}</h2>
+            <Dialog open={activityOpen} onOpenChange={setActivityOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="rounded-xl h-8 px-3 text-[0.75rem] font-medium gap-1.5 border-border/40 hover:bg-card">
+                  <Plus className="h-3.5 w-3.5 stroke-[2]" />
+                  Logg aktivitet
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[440px] rounded-2xl">
+                <DialogHeader>
+                  <DialogTitle className="text-lg">Ny aktivitet</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={(e) => { e.preventDefault(); createActivityMutation.mutate(); }} className="space-y-5 mt-4">
+                  <div className="space-y-2">
+                    <Label className="text-label">Type</Label>
+                    <Select value={actForm.type} onValueChange={(v) => setActForm({ ...actForm, type: v })}>
+                      <SelectTrigger className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="note">Notat</SelectItem>
+                        <SelectItem value="call">Samtale</SelectItem>
+                        <SelectItem value="meeting">Møte</SelectItem>
+                        <SelectItem value="email">E-post</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-label">Emne</Label>
+                    <Input value={actForm.subject} onChange={(e) => setActForm({ ...actForm, subject: e.target.value })} required className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-label">Beskrivelse</Label>
+                    <Textarea value={actForm.description} onChange={(e) => setActForm({ ...actForm, description: e.target.value })} rows={3} className="rounded-xl text-[0.9375rem] bg-secondary/50 min-h-[80px]" />
+                  </div>
+                  <Button type="submit" className="w-full h-11 rounded-xl text-[0.875rem] font-semibold" disabled={createActivityMutation.isPending}>
+                    {createActivityMutation.isPending ? "Registrerer..." : "Registrer"}
                   </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[440px] rounded-2xl">
-                  <DialogHeader>
-                    <DialogTitle className="text-lg">Ny aktivitet</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={(e) => { e.preventDefault(); createActivityMutation.mutate(); }} className="space-y-5 mt-4">
-                    <div className="space-y-2">
-                      <Label className="text-label">Type</Label>
-                      <Select value={actForm.type} onValueChange={(v) => setActForm({ ...actForm, type: v })}>
-                        <SelectTrigger className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="note">Notat</SelectItem>
-                          <SelectItem value="call">Samtale</SelectItem>
-                          <SelectItem value="meeting">Møte</SelectItem>
-                          <SelectItem value="email">E-post</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-label">Emne</Label>
-                      <Input value={actForm.subject} onChange={(e) => setActForm({ ...actForm, subject: e.target.value })} required className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-label">Beskrivelse</Label>
-                      <Textarea value={actForm.description} onChange={(e) => setActForm({ ...actForm, description: e.target.value })} rows={3} className="rounded-xl text-[0.9375rem] bg-secondary/50 min-h-[80px]" />
-                    </div>
-                    <Button type="submit" className="w-full h-11 rounded-xl text-[0.875rem] font-semibold" disabled={createActivityMutation.isPending}>
-                      {createActivityMutation.isPending ? "Registrerer..." : "Registrer"}
-                    </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            {activities.length === 0 ? (
-              <div className="py-8 text-center">
-                <p className="text-[0.875rem] text-muted-foreground/60">Ingen aktiviteter ennå</p>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {activities.map((activity) => {
-                  const cfg = typeConfig[activity.type] || typeConfig.note;
-                  const Icon = cfg.icon;
-                  return (
-                    <div key={activity.id} className="flex items-start gap-3.5 px-4 py-3.5 rounded-xl hover:bg-card transition-colors">
-                      <div className="mt-0.5 flex-shrink-0">
-                        <Icon className={`h-4 w-4 stroke-[1.5] ${cfg.accent}`} />
-                      </div>
-                      <div className="flex-1 min-w-0 space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <p className="text-[0.9375rem] font-medium leading-snug">{activity.subject}</p>
-                          <span className="text-[0.6875rem] text-muted-foreground/40 font-medium">{cfg.label}</span>
-                        </div>
-                        {activity.description && (
-                          <p className="text-[0.875rem] text-muted-foreground leading-relaxed">{activity.description}</p>
-                        )}
-                        <p className="text-[0.75rem] text-muted-foreground/40 pt-0.5">
-                          {format(new Date(activity.created_at), "d. MMMM yyyy 'kl.' HH:mm", { locale: nb })}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
+
+          {activities.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="text-[0.875rem] text-muted-foreground/60">Ingen aktiviteter ennå</p>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {activities.map((activity) => {
+                const cfg = typeConfig[activity.type] || typeConfig.note;
+                const Icon = cfg.icon;
+                return (
+                  <div key={activity.id} className="flex items-start gap-3.5 px-4 py-3.5 rounded-xl hover:bg-card transition-colors">
+                    <div className="mt-0.5 flex-shrink-0">
+                      <Icon className={`h-4 w-4 stroke-[1.5] ${cfg.accent}`} />
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[0.9375rem] font-medium leading-snug">{activity.subject}</p>
+                        <span className="text-[0.6875rem] text-muted-foreground/40 font-medium">{cfg.label}</span>
+                      </div>
+                      {activity.description && (
+                        <p className="text-[0.875rem] text-muted-foreground leading-relaxed">{activity.description}</p>
+                      )}
+                      <p className="text-[0.75rem] text-muted-foreground/40 pt-0.5">
+                        {format(new Date(activity.created_at), "d. MMMM yyyy 'kl.' HH:mm", { locale: nb })}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
