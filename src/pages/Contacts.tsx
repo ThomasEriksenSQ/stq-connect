@@ -19,6 +19,7 @@ const Contacts = () => {
   const [form, setForm] = useState({ first_name: "", last_name: "", email: "", phone: "", title: "", company_id: "" });
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const { data: contacts = [], isLoading } = useQuery({
     queryKey: ["contacts"],
