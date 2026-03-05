@@ -29,31 +29,24 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarContent>
         <SidebarGroup>
-          <div className="px-3 py-5">
-            {!collapsed && (
-              <span className="text-xl font-extrabold tracking-tighter text-sidebar-primary-foreground">
-                STACQ
-              </span>
-            )}
-            {collapsed && (
-              <span className="text-xl font-extrabold tracking-tighter text-sidebar-primary-foreground">
-                S
-              </span>
-            )}
+          <div className="px-4 pt-6 pb-8">
+            <span className="text-[15px] font-bold tracking-tight text-sidebar-accent-foreground">
+              {collapsed ? "S" : "STACQ"}
+            </span>
           </div>
           <SidebarGroupContent>
-            <SidebarMenu className="space-y-0.5 px-2">
+            <SidebarMenu className="px-2 space-y-1">
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
                       end={false}
-                      className="flex items-center gap-3 px-3 py-2 rounded-lg text-sidebar-foreground transition-all duration-150 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary-foreground font-semibold"
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sidebar-foreground/80 transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
                     >
-                      <item.icon className="h-[18px] w-[18px] flex-shrink-0" />
-                      {!collapsed && <span className="text-sm">{item.title}</span>}
+                      <item.icon className="h-[18px] w-[18px] flex-shrink-0 stroke-[1.5]" />
+                      {!collapsed && <span className="text-[13px] font-medium">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -62,9 +55,9 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="px-2 pb-4">
+      <SidebarFooter className="px-2 pb-4 space-y-2">
         {!collapsed && user && (
-          <p className="px-3 text-[11px] text-sidebar-foreground/40 truncate mb-2 text-mono">
+          <p className="px-3 text-[11px] text-sidebar-foreground/30 truncate">
             {user.email}
           </p>
         )}
@@ -72,10 +65,10 @@ export function AppSidebar() {
           variant="ghost"
           size={collapsed ? "icon" : "default"}
           onClick={signOut}
-          className="w-full text-sidebar-foreground/50 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent justify-start text-sm"
+          className="w-full text-sidebar-foreground/40 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent justify-start rounded-xl"
         >
-          <LogOut className="h-4 w-4" />
-          {!collapsed && <span className="ml-2">Logg ut</span>}
+          <LogOut className="h-4 w-4 stroke-[1.5]" />
+          {!collapsed && <span className="ml-2 text-[13px]">Logg ut</span>}
         </Button>
       </SidebarFooter>
     </Sidebar>
