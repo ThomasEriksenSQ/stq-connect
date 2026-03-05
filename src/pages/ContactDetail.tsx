@@ -170,15 +170,6 @@ const ContactDetail = () => {
   }
   if (!contact) return <p className="text-muted-foreground">Kontakt ikke funnet</p>;
 
-  const detailFields = [
-    { label: "Fornavn", field: "first_name", value: contact.first_name },
-    { label: "Etternavn", field: "last_name", value: contact.last_name },
-    { label: "Stilling", field: "title", value: contact.title || "" },
-    { label: "E-post", field: "email", value: contact.email || "", type: "email" as const },
-    { label: "Telefon", field: "phone", value: contact.phone || "", type: "tel" as const, mono: true },
-    { label: "LinkedIn", field: "linkedin", value: contact.linkedin || "", type: "url" as const },
-    { label: "Sted", field: "location", value: contact.location || "" },
-  ];
 
   return (
     <div className="space-y-10">
@@ -213,195 +204,204 @@ const ContactDetail = () => {
         </div>
       </div>
 
-      {/* Two column */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
-        {/* Left column — 3/5 */}
-        <section className="lg:col-span-3 space-y-8">
-          {/* Oppfølginger */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-label">Oppfølginger · {tasks.length}</h2>
-              <Dialog open={taskOpen} onOpenChange={setTaskOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="rounded-xl h-8 px-3 text-[0.75rem] font-medium gap-1.5 border-border/40 hover:bg-card">
-                    <Plus className="h-3.5 w-3.5 stroke-[2]" />
-                    Legg til oppfølging
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[440px] rounded-2xl">
-                  <DialogHeader>
-                    <DialogTitle className="text-lg">Ny oppfølging</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={(e) => { e.preventDefault(); createTaskMutation.mutate(); }} className="space-y-5 mt-4">
-                    <div className="space-y-2">
-                      <Label className="text-label">Tittel</Label>
-                      <Input value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} required className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-label">Beskrivelse</Label>
-                      <Textarea value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} rows={2} className="rounded-xl text-[0.9375rem] bg-secondary/50 min-h-[60px]" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-label">Prioritet</Label>
-                        <Select value={taskForm.priority} onValueChange={(v) => setTaskForm({ ...taskForm, priority: v })}>
-                          <SelectTrigger className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="low">Lav</SelectItem>
-                            <SelectItem value="medium">Medium</SelectItem>
-                            <SelectItem value="high">Høy</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-label">Frist</Label>
-                        <Input type="date" value={taskForm.due_date} onChange={(e) => setTaskForm({ ...taskForm, due_date: e.target.value })} className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
-                      </div>
-                    </div>
-                    <Button type="submit" className="w-full h-11 rounded-xl text-[0.875rem] font-semibold" disabled={createTaskMutation.isPending}>
-                      {createTaskMutation.isPending ? "Oppretter..." : "Opprett"}
-                    </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            {tasks.length === 0 ? (
-              <p className="text-[0.875rem] text-muted-foreground/60 py-4">Ingen kommende oppfølginger</p>
+      {/* Contact info strip */}
+      <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/50">
+        {[
+          { label: "Selskap", field: "company_id", value: (contact.companies as any)?.name || "", readonly: true, link: (contact.companies as any)?.id ? `/selskaper/${(contact.companies as any).id}` : undefined },
+          { label: "Sted", field: "location", value: contact.location || "" },
+          { label: "Stilling", field: "title", value: contact.title || "" },
+          { label: "Telefon", field: "phone", value: contact.phone || "", type: "tel" as const, mono: true },
+          { label: "E-post", field: "email", value: contact.email || "", type: "email" as const },
+          { label: "LinkedIn", field: "linkedin", value: contact.linkedin || "", type: "url" as const },
+        ].map((row) => (
+          <div key={row.field} className="flex items-center justify-between px-5 py-4">
+            <span className="text-[0.8125rem] text-muted-foreground w-24 flex-shrink-0">{row.label}</span>
+            {row.readonly ? (
+              row.link ? (
+                <button onClick={() => navigate(row.link!)} className="text-[14px] font-medium text-primary hover:underline">
+                  {row.value || <span className="text-muted-foreground/40 italic">—</span>}
+                </button>
+              ) : (
+                <span className="text-[14px] font-medium text-muted-foreground/40 italic">—</span>
+              )
             ) : (
-              <div className="space-y-1">
-                {tasks.map((task) => {
-                  const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
-                  return (
-                    <div key={task.id} className="flex items-center gap-3.5 px-4 py-3 rounded-xl hover:bg-card transition-colors">
-                      <Checkbox
-                        checked={false}
-                        onCheckedChange={() => toggleTaskMutation.mutate(task.id)}
-                        className="flex-shrink-0 h-4 w-4 rounded-md border-border/60"
-                      />
-                      <Circle className={`h-2 w-2 fill-current ${priorityDots[task.priority]} flex-shrink-0`} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[0.875rem] font-medium leading-snug">{task.title}</p>
-                        {task.due_date && (
-                          <span className={`flex items-center gap-1 text-[0.75rem] mt-0.5 ${overdue ? 'text-destructive' : 'text-muted-foreground/60'}`}>
-                            <CalendarDays className="h-3 w-3 stroke-[1.5]" />
-                            {format(new Date(task.due_date), "d. MMM yyyy", { locale: nb })}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <InlineEdit
+                value={row.value}
+                onSave={updateField(row.field)}
+                placeholder={`Legg til ${row.label.toLowerCase()}`}
+                type={row.type}
+                mono={row.mono}
+              />
             )}
           </div>
+        ))}
+        <div className="px-5 py-4 space-y-2">
+          <span className="text-[0.8125rem] text-muted-foreground">Notater</span>
+          <InlineEdit
+            value={contact.notes || ""}
+            onSave={updateField("notes")}
+            placeholder="Legg til notater..."
+            multiline
+          />
+        </div>
+      </div>
 
-          {/* Aktiviteter */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-label">Aktiviteter · {activities.length}</h2>
-              <Dialog open={activityOpen} onOpenChange={setActivityOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="rounded-xl h-8 px-3 text-[0.75rem] font-medium gap-1.5 border-border/40 hover:bg-card">
-                    <Plus className="h-3.5 w-3.5 stroke-[2]" />
-                    Logg aktivitet
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[440px] rounded-2xl">
-                  <DialogHeader>
-                    <DialogTitle className="text-lg">Ny aktivitet</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={(e) => { e.preventDefault(); createActivityMutation.mutate(); }} className="space-y-5 mt-4">
+      {/* Oppfølginger & Aktiviteter */}
+      <div className="space-y-8">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-label">Oppfølginger · {tasks.length}</h2>
+            <Dialog open={taskOpen} onOpenChange={setTaskOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="rounded-xl h-8 px-3 text-[0.75rem] font-medium gap-1.5 border-border/40 hover:bg-card">
+                  <Plus className="h-3.5 w-3.5 stroke-[2]" />
+                  Legg til oppfølging
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[440px] rounded-2xl">
+                <DialogHeader>
+                  <DialogTitle className="text-lg">Ny oppfølging</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={(e) => { e.preventDefault(); createTaskMutation.mutate(); }} className="space-y-5 mt-4">
+                  <div className="space-y-2">
+                    <Label className="text-label">Tittel</Label>
+                    <Input value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} required className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-label">Beskrivelse</Label>
+                    <Textarea value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} rows={2} className="rounded-xl text-[0.9375rem] bg-secondary/50 min-h-[60px]" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-label">Type</Label>
-                      <Select value={actForm.type} onValueChange={(v) => setActForm({ ...actForm, type: v })}>
+                      <Label className="text-label">Prioritet</Label>
+                      <Select value={taskForm.priority} onValueChange={(v) => setTaskForm({ ...taskForm, priority: v })}>
                         <SelectTrigger className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="note">Notat</SelectItem>
-                          <SelectItem value="call">Samtale</SelectItem>
-                          <SelectItem value="meeting">Møte</SelectItem>
-                          <SelectItem value="email">E-post</SelectItem>
+                          <SelectItem value="low">Lav</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="high">Høy</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-label">Emne</Label>
-                      <Input value={actForm.subject} onChange={(e) => setActForm({ ...actForm, subject: e.target.value })} required className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
+                      <Label className="text-label">Frist</Label>
+                      <Input type="date" value={taskForm.due_date} onChange={(e) => setTaskForm({ ...taskForm, due_date: e.target.value })} className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-label">Beskrivelse</Label>
-                      <Textarea value={actForm.description} onChange={(e) => setActForm({ ...actForm, description: e.target.value })} rows={3} className="rounded-xl text-[0.9375rem] bg-secondary/50 min-h-[80px]" />
-                    </div>
-                    <Button type="submit" className="w-full h-11 rounded-xl text-[0.875rem] font-semibold" disabled={createActivityMutation.isPending}>
-                      {createActivityMutation.isPending ? "Registrerer..." : "Registrer"}
-                    </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            {activities.length === 0 ? (
-              <div className="py-8 text-center">
-                <p className="text-[0.875rem] text-muted-foreground/60">Ingen aktiviteter ennå</p>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {activities.map((activity) => {
-                  const cfg = typeConfig[activity.type] || typeConfig.note;
-                  const Icon = cfg.icon;
-                  return (
-                    <div key={activity.id} className="flex items-start gap-3.5 px-4 py-3.5 rounded-xl hover:bg-card transition-colors">
-                      <div className="mt-0.5 flex-shrink-0">
-                        <Icon className={`h-4 w-4 stroke-[1.5] ${cfg.accent}`} />
-                      </div>
-                      <div className="flex-1 min-w-0 space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <p className="text-[0.9375rem] font-medium leading-snug">{activity.subject}</p>
-                          <span className="text-[0.6875rem] text-muted-foreground/40 font-medium">{cfg.label}</span>
-                        </div>
-                        {activity.description && (
-                          <p className="text-[0.875rem] text-muted-foreground leading-relaxed">{activity.description}</p>
-                        )}
-                        <p className="text-[0.75rem] text-muted-foreground/40 pt-0.5">
-                          {format(new Date(activity.created_at), "d. MMMM yyyy 'kl.' HH:mm", { locale: nb })}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                  </div>
+                  <Button type="submit" className="w-full h-11 rounded-xl text-[0.875rem] font-semibold" disabled={createTaskMutation.isPending}>
+                    {createTaskMutation.isPending ? "Oppretter..." : "Opprett"}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
-        </section>
 
-        {/* Right: Editable details — 2/5 */}
-        <section className="lg:col-span-2 space-y-5">
-          <h2 className="text-label">Detaljer</h2>
-          <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/50">
-            {detailFields.map((row) => (
-              <div key={row.field} className="flex items-center justify-between px-5 py-4">
-                <span className="text-[0.8125rem] text-muted-foreground w-24 flex-shrink-0">{row.label}</span>
-                <InlineEdit
-                  value={row.value}
-                  onSave={updateField(row.field)}
-                  placeholder={`Legg til ${row.label.toLowerCase()}`}
-                  type={row.type}
-                  mono={row.mono}
-                />
-              </div>
-            ))}
-
-            <div className="px-5 py-4 space-y-2">
-              <span className="text-[0.8125rem] text-muted-foreground">Notater</span>
-              <InlineEdit
-                value={contact.notes || ""}
-                onSave={updateField("notes")}
-                placeholder="Legg til notater..."
-                multiline
-              />
+          {tasks.length === 0 ? (
+            <p className="text-[0.875rem] text-muted-foreground/60 py-4">Ingen kommende oppfølginger</p>
+          ) : (
+            <div className="space-y-1">
+              {tasks.map((task) => {
+                const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
+                return (
+                  <div key={task.id} className="flex items-center gap-3.5 px-4 py-3 rounded-xl hover:bg-card transition-colors">
+                    <Checkbox
+                      checked={false}
+                      onCheckedChange={() => toggleTaskMutation.mutate(task.id)}
+                      className="flex-shrink-0 h-4 w-4 rounded-md border-border/60"
+                    />
+                    <Circle className={`h-2 w-2 fill-current ${priorityDots[task.priority]} flex-shrink-0`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[0.875rem] font-medium leading-snug">{task.title}</p>
+                      {task.due_date && (
+                        <span className={`flex items-center gap-1 text-[0.75rem] mt-0.5 ${overdue ? 'text-destructive' : 'text-muted-foreground/60'}`}>
+                          <CalendarDays className="h-3 w-3 stroke-[1.5]" />
+                          {format(new Date(task.due_date), "d. MMM yyyy", { locale: nb })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
+          )}
+        </div>
+
+        {/* Aktiviteter */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-label">Aktiviteter · {activities.length}</h2>
+            <Dialog open={activityOpen} onOpenChange={setActivityOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="rounded-xl h-8 px-3 text-[0.75rem] font-medium gap-1.5 border-border/40 hover:bg-card">
+                  <Plus className="h-3.5 w-3.5 stroke-[2]" />
+                  Logg aktivitet
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[440px] rounded-2xl">
+                <DialogHeader>
+                  <DialogTitle className="text-lg">Ny aktivitet</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={(e) => { e.preventDefault(); createActivityMutation.mutate(); }} className="space-y-5 mt-4">
+                  <div className="space-y-2">
+                    <Label className="text-label">Type</Label>
+                    <Select value={actForm.type} onValueChange={(v) => setActForm({ ...actForm, type: v })}>
+                      <SelectTrigger className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="note">Notat</SelectItem>
+                        <SelectItem value="call">Samtale</SelectItem>
+                        <SelectItem value="meeting">Møte</SelectItem>
+                        <SelectItem value="email">E-post</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-label">Emne</Label>
+                    <Input value={actForm.subject} onChange={(e) => setActForm({ ...actForm, subject: e.target.value })} required className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-label">Beskrivelse</Label>
+                    <Textarea value={actForm.description} onChange={(e) => setActForm({ ...actForm, description: e.target.value })} rows={3} className="rounded-xl text-[0.9375rem] bg-secondary/50 min-h-[80px]" />
+                  </div>
+                  <Button type="submit" className="w-full h-11 rounded-xl text-[0.875rem] font-semibold" disabled={createActivityMutation.isPending}>
+                    {createActivityMutation.isPending ? "Registrerer..." : "Registrer"}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
-        </section>
+
+          {activities.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="text-[0.875rem] text-muted-foreground/60">Ingen aktiviteter ennå</p>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {activities.map((activity) => {
+                const cfg = typeConfig[activity.type] || typeConfig.note;
+                const Icon = cfg.icon;
+                return (
+                  <div key={activity.id} className="flex items-start gap-3.5 px-4 py-3.5 rounded-xl hover:bg-card transition-colors">
+                    <div className="mt-0.5 flex-shrink-0">
+                      <Icon className={`h-4 w-4 stroke-[1.5] ${cfg.accent}`} />
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[0.9375rem] font-medium leading-snug">{activity.subject}</p>
+                        <span className="text-[0.6875rem] text-muted-foreground/40 font-medium">{cfg.label}</span>
+                      </div>
+                      {activity.description && (
+                        <p className="text-[0.875rem] text-muted-foreground leading-relaxed">{activity.description}</p>
+                      )}
+                      <p className="text-[0.75rem] text-muted-foreground/40 pt-0.5">
+                        {format(new Date(activity.created_at), "d. MMMM yyyy 'kl.' HH:mm", { locale: nb })}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
