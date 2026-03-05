@@ -44,7 +44,7 @@ const ContactDetail = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
-        .select("*, companies(id, name)")
+        .select("*, companies(id, name), profiles!contacts_owner_id_fkey(full_name)")
         .eq("id", id!)
         .single();
       if (error) throw error;
