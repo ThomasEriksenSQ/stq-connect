@@ -381,7 +381,7 @@ const ContactDetail = () => {
                     <div className="flex-1 min-w-0 space-y-0.5">
                       <div className="flex items-center gap-2">
                         <p className="text-[0.9375rem] font-medium leading-snug">{activity.subject}</p>
-                        <span className="text-[0.6875rem] text-muted-foreground/40 font-medium">{cfg.label}</span>
+                        <span className="text-[0.6875rem] text-muted-foreground font-medium">{cfg.label}</span>
                       </div>
                       {activity.description && (
                         <p className="text-[0.875rem] text-muted-foreground leading-relaxed">{activity.description}</p>
