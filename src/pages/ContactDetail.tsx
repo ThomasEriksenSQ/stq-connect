@@ -301,7 +301,7 @@ const ContactDetail = () => {
                     <Checkbox
                       checked={false}
                       onCheckedChange={() => toggleTaskMutation.mutate(task.id)}
-                      className="flex-shrink-0 h-4 w-4 rounded-md border-border/60"
+                      className="flex-shrink-0 h-4 w-4 rounded-md border-border"
                     />
                     <Circle className={`h-2 w-2 fill-current ${priorityDots[task.priority]} flex-shrink-0`} />
                     <div className="flex-1 min-w-0">
