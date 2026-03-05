@@ -24,7 +24,7 @@ const typeConfig: Record<string, { label: string; icon: typeof FileText; accent:
 };
 
 const priorityDots: Record<string, string> = {
-  low: "text-muted-foreground/30",
+  low: "text-muted-foreground",
   medium: "text-primary",
   high: "text-destructive",
 };
