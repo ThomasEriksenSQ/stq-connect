@@ -73,12 +73,12 @@ const Contacts = () => {
     <div className="space-y-8">
       <div className="flex items-end justify-between">
         <div className="space-y-1">
-          <h1 className="text-[28px] font-bold tracking-tight">Kontakter</h1>
-          <p className="text-[15px] text-muted-foreground">{contacts.length} kontakter</p>
+          <h1 className="text-[1.75rem] font-bold">Kontakter</h1>
+          <p className="text-[0.9375rem] text-muted-foreground">{contacts.length} kontakter</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="rounded-xl h-10 px-4 text-[13px] font-semibold gap-2">
+            <Button className="rounded-xl h-10 px-4 text-[0.8125rem] font-semibold gap-2">
               <Plus className="h-4 w-4 stroke-[2]" />
               Ny kontakt
             </Button>
@@ -91,17 +91,17 @@ const Contacts = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-label">Fornavn</Label>
-                  <Input value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} required className="h-11 rounded-xl text-[15px] bg-secondary/50" />
+                  <Input value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} required className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-label">Etternavn</Label>
-                  <Input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} required className="h-11 rounded-xl text-[15px] bg-secondary/50" />
+                  <Input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} required className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label className="text-label">Selskap</Label>
                 <Select value={form.company_id} onValueChange={(v) => setForm({ ...form, company_id: v })}>
-                  <SelectTrigger className="h-11 rounded-xl text-[15px] bg-secondary/50"><SelectValue placeholder="Velg selskap" /></SelectTrigger>
+                  <SelectTrigger className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50"><SelectValue placeholder="Velg selskap" /></SelectTrigger>
                   <SelectContent>
                     {companies.map((c) => (
                       <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
@@ -111,19 +111,19 @@ const Contacts = () => {
               </div>
               <div className="space-y-2">
                 <Label className="text-label">Stilling</Label>
-                <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="h-11 rounded-xl text-[15px] bg-secondary/50" />
+                <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-label">E-post</Label>
-                  <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} type="email" className="h-11 rounded-xl text-[15px] bg-secondary/50" />
+                  <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} type="email" className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-label">Telefon</Label>
-                  <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="h-11 rounded-xl text-[15px] bg-secondary/50" />
+                  <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
                 </div>
               </div>
-              <Button type="submit" className="w-full h-11 rounded-xl text-[14px] font-semibold" disabled={createMutation.isPending}>
+              <Button type="submit" className="w-full h-11 rounded-xl text-[0.875rem] font-semibold" disabled={createMutation.isPending}>
                 {createMutation.isPending ? "Oppretter..." : "Opprett"}
               </Button>
             </form>
@@ -131,26 +131,24 @@ const Contacts = () => {
         </Dialog>
       </div>
 
-      {/* Search */}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60 stroke-[1.5]" />
         <Input
           placeholder="Søk etter navn, e-post eller selskap..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-11 h-11 rounded-xl bg-card border-border/40 text-[15px] placeholder:text-muted-foreground/40"
+          className="pl-11 h-11 rounded-xl bg-card border-border/40 text-[0.9375rem] placeholder:text-muted-foreground/40"
         />
       </div>
 
-      {/* List */}
       {isLoading ? (
         <div className="space-y-2">
           {[1, 2, 3, 4].map((i) => <div key={i} className="h-[72px] rounded-2xl bg-card animate-pulse" />)}
         </div>
       ) : filtered.length === 0 ? (
         <div className="py-24 text-center space-y-3">
-          <p className="text-[17px] font-medium text-foreground/60">Ingen kontakter funnet</p>
-          <p className="text-[14px] text-muted-foreground">Opprett din første kontakt</p>
+          <p className="text-[1.0625rem] font-medium text-foreground/60">Ingen kontakter funnet</p>
+          <p className="text-[0.875rem] text-muted-foreground">Opprett din første kontakt</p>
         </div>
       ) : (
         <div className="space-y-1">
@@ -160,33 +158,27 @@ const Contacts = () => {
               onClick={() => navigate(`/kontakter/${contact.id}`)}
               className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl hover:bg-card active:bg-accent transition-colors duration-150 group text-left"
             >
-              {/* Avatar */}
               <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <span className="text-[13px] font-semibold text-primary">
+                <span className="text-[0.8125rem] font-semibold text-primary">
                   {contact.first_name[0]}{contact.last_name[0]}
                 </span>
               </div>
-
-              {/* Content */}
               <div className="flex-1 min-w-0">
-                <p className="text-[15px] font-medium text-foreground truncate">
+                <p className="text-[0.9375rem] font-medium text-foreground truncate">
                   {contact.first_name} {contact.last_name}
                 </p>
-                <p className="text-[13px] text-muted-foreground truncate mt-0.5">
+                <p className="text-[0.8125rem] text-muted-foreground truncate mt-0.5">
                   {[contact.title, (contact.companies as any)?.name].filter(Boolean).join(" · ") || "—"}
                 </p>
               </div>
-
-              {/* Right side info */}
               <div className="hidden md:flex items-center gap-6 flex-shrink-0">
                 {contact.email && (
-                  <span className="text-[13px] text-muted-foreground/60 max-w-[180px] truncate">{contact.email}</span>
+                  <span className="text-[0.8125rem] text-muted-foreground/60 max-w-[180px] truncate">{contact.email}</span>
                 )}
                 {contact.phone && (
-                  <span className="text-[13px] text-muted-foreground/40 text-mono w-[100px] text-right">{contact.phone}</span>
+                  <span className="text-[0.8125rem] text-muted-foreground/40 text-mono w-[100px] text-right">{contact.phone}</span>
                 )}
               </div>
-
               <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-muted-foreground/60 transition-colors flex-shrink-0" />
             </button>
           ))}

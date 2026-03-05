@@ -14,7 +14,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { format, isPast, isToday } from "date-fns";
 import { nb } from "date-fns/locale";
 
-const priorityLabels: Record<string, string> = { low: "Lav", medium: "Medium", high: "Høy" };
 const priorityDots: Record<string, string> = {
   low: "text-muted-foreground/30",
   medium: "text-primary",
@@ -93,14 +92,14 @@ const Tasks = () => {
     <div className="space-y-8">
       <div className="flex items-end justify-between">
         <div className="space-y-1">
-          <h1 className="text-[28px] font-bold tracking-tight">Oppfølginger</h1>
-          <p className="text-[15px] text-muted-foreground">
+          <h1 className="text-[1.75rem] font-bold">Oppfølginger</h1>
+          <p className="text-[0.9375rem] text-muted-foreground">
             {openTasks.length} åpne{doneTasks.length > 0 && ` · ${doneTasks.length} fullført`}
           </p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="rounded-xl h-10 px-4 text-[13px] font-semibold gap-2">
+            <Button className="rounded-xl h-10 px-4 text-[0.8125rem] font-semibold gap-2">
               <Plus className="h-4 w-4 stroke-[2]" />
               Ny oppfølging
             </Button>
@@ -112,16 +111,16 @@ const Tasks = () => {
             <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }} className="space-y-5 mt-4">
               <div className="space-y-2">
                 <Label className="text-label">Tittel</Label>
-                <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required className="h-11 rounded-xl text-[15px] bg-secondary/50" />
+                <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
               </div>
               <div className="space-y-2">
                 <Label className="text-label">Beskrivelse</Label>
-                <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} className="rounded-xl text-[15px] bg-secondary/50 min-h-[80px]" />
+                <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} className="rounded-xl text-[0.9375rem] bg-secondary/50 min-h-[80px]" />
               </div>
               <div className="space-y-2">
                 <Label className="text-label">Kontaktperson *</Label>
                 <Select value={form.contact_id} onValueChange={(v) => setForm({ ...form, contact_id: v })} required>
-                  <SelectTrigger className="h-11 rounded-xl text-[15px] bg-secondary/50"><SelectValue placeholder="Velg kontaktperson" /></SelectTrigger>
+                  <SelectTrigger className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50"><SelectValue placeholder="Velg kontaktperson" /></SelectTrigger>
                   <SelectContent>
                     {contacts.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
@@ -136,7 +135,7 @@ const Tasks = () => {
                 <div className="space-y-2">
                   <Label className="text-label">Prioritet</Label>
                   <Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}>
-                    <SelectTrigger className="h-11 rounded-xl text-[15px] bg-secondary/50"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="low">Lav</SelectItem>
                       <SelectItem value="medium">Medium</SelectItem>
@@ -146,10 +145,10 @@ const Tasks = () => {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-label">Frist</Label>
-                  <Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} className="h-11 rounded-xl text-[15px] bg-secondary/50" />
+                  <Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
                 </div>
               </div>
-              <Button type="submit" className="w-full h-11 rounded-xl text-[14px] font-semibold" disabled={createMutation.isPending || !form.contact_id}>
+              <Button type="submit" className="w-full h-11 rounded-xl text-[0.875rem] font-semibold" disabled={createMutation.isPending || !form.contact_id}>
                 {createMutation.isPending ? "Oppretter..." : "Opprett"}
               </Button>
             </form>
@@ -163,8 +162,8 @@ const Tasks = () => {
         </div>
       ) : tasks.length === 0 ? (
         <div className="py-24 text-center space-y-3">
-          <p className="text-[17px] font-medium text-foreground/60">Ingen oppfølginger</p>
-          <p className="text-[14px] text-muted-foreground">Alt er i boks 🎉</p>
+          <p className="text-[1.0625rem] font-medium text-foreground/60">Ingen oppfølginger</p>
+          <p className="text-[0.875rem] text-muted-foreground">Alt er i boks 🎉</p>
         </div>
       ) : (
         <div className="space-y-8">
@@ -184,13 +183,13 @@ const Tasks = () => {
                     />
                     <Circle className={`h-2 w-2 fill-current ${priorityDots[task.priority]} flex-shrink-0`} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[15px] font-medium leading-snug">{task.title}</p>
+                      <p className="text-[0.9375rem] font-medium leading-snug">{task.title}</p>
                       <div className="flex items-center gap-3 mt-0.5">
                         {contactName && (
-                          <span className="text-[13px] text-muted-foreground">{contactName}</span>
+                          <span className="text-[0.8125rem] text-muted-foreground">{contactName}</span>
                         )}
                         {task.due_date && (
-                          <span className={`flex items-center gap-1 text-[13px] ${overdue ? 'text-destructive' : 'text-muted-foreground/60'}`}>
+                          <span className={`flex items-center gap-1 text-[0.8125rem] ${overdue ? 'text-destructive' : 'text-muted-foreground/60'}`}>
                             <CalendarDays className="h-3 w-3 stroke-[1.5]" />
                             {format(new Date(task.due_date), "d. MMM", { locale: nb })}
                           </span>
@@ -213,7 +212,7 @@ const Tasks = () => {
                     onCheckedChange={() => toggleMutation.mutate({ id: task.id, currentStatus: task.status })}
                     className="flex-shrink-0 h-5 w-5 rounded-md"
                   />
-                  <span className="text-[15px] line-through">{task.title}</span>
+                  <span className="text-[0.9375rem] line-through">{task.title}</span>
                 </div>
               ))}
             </div>
