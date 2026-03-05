@@ -161,6 +161,11 @@ const Contacts = () => {
               <div className="flex-1 min-w-0">
                 <p className="text-[0.9375rem] font-medium text-foreground truncate">
                   {contact.first_name} {contact.last_name}
+                  {(contact as any).profiles?.full_name && (
+                    <span className="text-[0.8125rem] font-normal text-muted-foreground ml-1.5">
+                      {(contact as any).profiles.full_name}
+                    </span>
+                  )}
                 </p>
                 <p className="text-[0.8125rem] text-muted-foreground truncate mt-0.5">
                   {[contact.title, (contact.companies as any)?.name].filter(Boolean).join(" · ") || "—"}
