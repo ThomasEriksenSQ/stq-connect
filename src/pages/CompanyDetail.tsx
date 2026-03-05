@@ -126,10 +126,7 @@ const CompanyDetail = () => {
           Selskaper
         </Link>
 
-        <div className="flex items-start gap-5">
-          <div className="h-14 w-14 rounded-2xl bg-card border border-border/60 flex items-center justify-center flex-shrink-0">
-            <span className="text-xl font-bold text-foreground/70">{company.name.charAt(0)}</span>
-          </div>
+        <div>
           <div className="space-y-1.5 min-w-0">
             <InlineEdit value={company.name} onSave={updateField("name")} className="text-[1.5rem] font-bold" />
             <div className="flex items-center gap-2 flex-wrap text-[0.875rem] text-muted-foreground">
