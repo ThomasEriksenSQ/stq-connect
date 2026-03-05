@@ -2,7 +2,6 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 const Login = () => {
@@ -14,33 +13,33 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      toast.error("Feil e-post eller passord");
-    }
+    if (error) toast.error("Feil e-post eller passord");
     setLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background dark px-4">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="text-center">
-          <h1 className="text-3xl font-extrabold tracking-tighter text-foreground">STACQ</h1>
-          <p className="text-sm text-muted-foreground mt-2">Logg inn for å fortsette</p>
+    <div className="min-h-screen flex items-center justify-center bg-background dark">
+      <div className="w-full max-w-[340px] space-y-10 animate-fade-up">
+        <div className="space-y-2">
+          <h1 className="text-[28px] font-bold tracking-tight">STACQ</h1>
+          <p className="text-[15px] text-muted-foreground leading-relaxed">
+            Logg inn for å fortsette
+          </p>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">E-post</Label>
+            <label className="text-label">E-post</label>
             <Input
               type="email"
               placeholder="din@epost.no"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="bg-card border-border/50"
+              className="h-11 bg-card border-border/60 text-[15px] rounded-xl"
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Passord</Label>
+            <label className="text-label">Passord</label>
             <Input
               type="password"
               placeholder="••••••••"
@@ -48,10 +47,10 @@ const Login = () => {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="bg-card border-border/50"
+              className="h-11 bg-card border-border/60 text-[15px] rounded-xl"
             />
           </div>
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="w-full h-11 rounded-xl text-[14px] font-semibold" disabled={loading}>
             {loading ? "Logger inn..." : "Logg inn"}
           </Button>
         </form>
