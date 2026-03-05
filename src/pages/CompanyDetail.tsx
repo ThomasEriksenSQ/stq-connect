@@ -1,7 +1,7 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, MapPin, FileText, Phone, Calendar, Mail, ChevronRight, CalendarDays, Circle } from "lucide-react";
+import { ArrowLeft, MapPin, FileText, Phone, Calendar, Mail, ChevronRight, CalendarDays, Circle, Globe, Linkedin } from "lucide-react";
 import { format, isPast, isToday } from "date-fns";
 import { nb } from "date-fns/locale";
 import { toast } from "sonner";
@@ -132,44 +132,118 @@ const CompanyDetail = () => {
           </div>
           <div className="space-y-1 min-w-0">
             <InlineEdit value={company.name} onSave={updateField("name")} className="text-[1.5rem] font-bold" />
-            <div className="flex items-center gap-4 text-[0.875rem] text-muted-foreground">
-              {company.org_number && <span className="text-mono">{company.org_number}</span>}
-              {company.city && (
-                <span className="flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5 stroke-[1.5]" />{company.city}
-                </span>
-              )}
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Editable fields */}
-      <section className="space-y-4">
-        <h2 className="text-label">Selskapsinformasjon</h2>
-        <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/50">
-          {[
-            { label: "Selskapsnavn", field: "name", value: company.name },
-            { label: "Org.nr", field: "org_number", value: company.org_number || "", mono: true, placeholder: "Legg til org.nr" },
-            { label: "Sted", field: "city", value: company.city || "", placeholder: "Legg til sted" },
-            { label: "Nettside", field: "website", value: company.website || "", type: "url" as const, placeholder: "Legg til nettside" },
-            { label: "LinkedIn", field: "linkedin", value: company.linkedin || "", type: "url" as const, placeholder: "Legg til LinkedIn" },
-          ].map((row) => (
-            <div key={row.field} className="flex items-center justify-between px-5 py-4">
-              <span className="text-[0.8125rem] text-muted-foreground w-36 flex-shrink-0">{row.label}</span>
-              <InlineEdit value={row.value} onSave={updateField(row.field)} placeholder={row.placeholder} type={row.type} mono={row.mono} />
-            </div>
-          ))}
+      {/* Company info strip */}
+      <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/50">
+        {[
+          { label: "Sted", field: "city", value: company.city || "" },
+          { label: "Org.nr", field: "org_number", value: company.org_number || "", mono: true },
+          { label: "Nettside", field: "website", value: company.website || "", type: "url" as const },
+          { label: "LinkedIn", field: "linkedin", value: company.linkedin || "", type: "url" as const },
+        ].map((row) => (
+          <div key={row.field} className="flex items-center justify-between px-5 py-4">
+            <span className="text-[0.8125rem] text-muted-foreground w-24 flex-shrink-0">{row.label}</span>
+            <InlineEdit value={row.value} onSave={updateField(row.field)} placeholder={`Legg til ${row.label.toLowerCase()}`} type={row.type} mono={row.mono} />
+          </div>
+        ))}
+        <div className="px-5 py-4 space-y-2">
+          <span className="text-[0.8125rem] text-muted-foreground">Notater</span>
+          <InlineEdit
+            value={company.notes || ""}
+            onSave={updateField("notes")}
+            placeholder="Legg til notater..."
+            multiline
+          />
         </div>
-      </section>
+      </div>
 
-      {/* Three columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        {/* Kontakter */}
-        <section className="space-y-4">
+      {/* Two columns: Left = oppfølginger + aktiviteter, Right = kontakter */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
+        {/* Left — 3/5 */}
+        <section className="lg:col-span-3 space-y-8">
+          {/* Oppfølginger */}
+          <div className="space-y-4">
+            <h2 className="text-label">Oppfølginger · {tasks.length}</h2>
+            {tasks.length === 0 ? (
+              <p className="text-[0.875rem] text-muted-foreground/60 py-4">Ingen kommende oppfølginger</p>
+            ) : (
+              <div className="space-y-1">
+                {tasks.map((task) => {
+                  const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
+                  const contactName = (task.contacts as any)?.first_name
+                    ? `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}`
+                    : null;
+                  return (
+                    <div key={task.id} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-card transition-colors">
+                      <Checkbox
+                        checked={false}
+                        onCheckedChange={() => toggleTaskMutation.mutate(task.id)}
+                        className="flex-shrink-0 h-4 w-4 rounded-md border-border/60"
+                      />
+                      <Circle className={`h-2 w-2 fill-current ${priorityDots[task.priority]} flex-shrink-0`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[0.875rem] font-medium leading-snug truncate">{task.title}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {contactName && <span className="text-[0.75rem] text-muted-foreground">{contactName}</span>}
+                          {task.due_date && (
+                            <span className={`flex items-center gap-1 text-[0.75rem] ${overdue ? 'text-destructive' : 'text-muted-foreground/50'}`}>
+                              <CalendarDays className="h-3 w-3 stroke-[1.5]" />
+                              {format(new Date(task.due_date), "d. MMM", { locale: nb })}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Aktiviteter */}
+          <div className="space-y-4">
+            <h2 className="text-label">Aktiviteter · {activities.length}</h2>
+            {activities.length === 0 ? (
+              <p className="text-[0.875rem] text-muted-foreground/60 py-4">Ingen aktiviteter</p>
+            ) : (
+              <div className="space-y-1">
+                {activities.map((activity) => {
+                  const cfg = typeConfig[activity.type] || typeConfig.note;
+                  const Icon = cfg.icon;
+                  const contactName = (activity.contacts as any)?.first_name
+                    ? `${(activity.contacts as any).first_name} ${(activity.contacts as any).last_name}`
+                    : null;
+                  return (
+                    <div key={activity.id} className="flex items-start gap-3.5 px-4 py-3.5 rounded-xl hover:bg-card transition-colors">
+                      <div className="mt-0.5 flex-shrink-0">
+                        <Icon className={`h-4 w-4 stroke-[1.5] ${cfg.accent}`} />
+                      </div>
+                      <div className="flex-1 min-w-0 space-y-0.5">
+                        <p className="text-[0.875rem] font-medium leading-snug">{activity.subject}</p>
+                        {activity.description && (
+                          <p className="text-[0.8125rem] text-muted-foreground leading-relaxed line-clamp-2">{activity.description}</p>
+                        )}
+                        <p className="text-[0.75rem] text-muted-foreground/50 pt-0.5">
+                          {contactName && <>{contactName} · </>}
+                          {format(new Date(activity.created_at), "d. MMM yyyy", { locale: nb })}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Right — 2/5: Kontakter */}
+        <section className="lg:col-span-2 space-y-4">
           <h2 className="text-label">Kontakter · {contacts.length}</h2>
           {contacts.length === 0 ? (
-            <p className="text-[0.875rem] text-muted-foreground/60 py-8">Ingen kontakter</p>
+            <p className="text-[0.875rem] text-muted-foreground/60 py-4">Ingen kontakter</p>
           ) : (
             <div className="space-y-1">
               {contacts.map((c) => (
@@ -188,80 +262,6 @@ const CompanyDetail = () => {
                   <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-muted-foreground/50 transition-colors flex-shrink-0" />
                 </button>
               ))}
-            </div>
-          )}
-        </section>
-
-        {/* Oppfølginger */}
-        <section className="space-y-4">
-          <h2 className="text-label">Oppfølginger · {tasks.length}</h2>
-          {tasks.length === 0 ? (
-            <p className="text-[0.875rem] text-muted-foreground/60 py-8">Ingen kommende oppfølginger</p>
-          ) : (
-            <div className="space-y-1">
-              {tasks.map((task) => {
-                const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
-                const contactName = (task.contacts as any)?.first_name
-                  ? `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}`
-                  : null;
-                return (
-                  <div key={task.id} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-card transition-colors">
-                    <Checkbox
-                      checked={false}
-                      onCheckedChange={() => toggleTaskMutation.mutate(task.id)}
-                      className="flex-shrink-0 h-4 w-4 rounded-md border-border/60"
-                    />
-                    <Circle className={`h-2 w-2 fill-current ${priorityDots[task.priority]} flex-shrink-0`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[0.875rem] font-medium leading-snug truncate">{task.title}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {contactName && <span className="text-[0.75rem] text-muted-foreground">{contactName}</span>}
-                        {task.due_date && (
-                          <span className={`flex items-center gap-1 text-[0.75rem] ${overdue ? 'text-destructive' : 'text-muted-foreground/50'}`}>
-                            <CalendarDays className="h-3 w-3 stroke-[1.5]" />
-                            {format(new Date(task.due_date), "d. MMM", { locale: nb })}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        {/* Aktiviteter */}
-        <section className="space-y-4">
-          <h2 className="text-label">Aktiviteter · {activities.length}</h2>
-          {activities.length === 0 ? (
-            <p className="text-[0.875rem] text-muted-foreground/60 py-8">Ingen aktiviteter</p>
-          ) : (
-            <div className="space-y-1">
-              {activities.map((activity) => {
-                const cfg = typeConfig[activity.type] || typeConfig.note;
-                const Icon = cfg.icon;
-                const contactName = (activity.contacts as any)?.first_name
-                  ? `${(activity.contacts as any).first_name} ${(activity.contacts as any).last_name}`
-                  : null;
-                return (
-                  <div key={activity.id} className="flex items-start gap-3.5 px-4 py-3.5 rounded-xl hover:bg-card transition-colors">
-                    <div className="mt-0.5 flex-shrink-0">
-                      <Icon className={`h-4 w-4 stroke-[1.5] ${cfg.accent}`} />
-                    </div>
-                    <div className="flex-1 min-w-0 space-y-0.5">
-                      <p className="text-[0.875rem] font-medium leading-snug">{activity.subject}</p>
-                      {activity.description && (
-                        <p className="text-[0.8125rem] text-muted-foreground leading-relaxed line-clamp-2">{activity.description}</p>
-                      )}
-                      <p className="text-[0.75rem] text-muted-foreground/50 pt-0.5">
-                        {contactName && <>{contactName} · </>}
-                        {format(new Date(activity.created_at), "d. MMM yyyy", { locale: nb })}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
             </div>
           )}
         </section>
