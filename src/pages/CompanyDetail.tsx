@@ -233,7 +233,7 @@ const CompanyDetail = () => {
                         {activity.description && (
                           <p className="text-[0.8125rem] text-muted-foreground leading-relaxed line-clamp-2">{activity.description}</p>
                         )}
-                        <p className="text-[0.75rem] text-muted-foreground/50 pt-0.5">
+                        <p className="text-[0.75rem] text-muted-foreground pt-0.5">
                           {contactName && <>{contactName} · </>}
                           {format(new Date(activity.created_at), "d. MMM yyyy", { locale: nb })}
                         </p>
