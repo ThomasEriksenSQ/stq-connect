@@ -175,7 +175,7 @@ const CompanyDetail = () => {
           <div className="space-y-4">
             <h2 className="text-label">Oppfølginger · {tasks.length}</h2>
             {tasks.length === 0 ? (
-              <p className="text-[0.875rem] text-muted-foreground/60 py-4">Ingen kommende oppfølginger</p>
+              <p className="text-[0.875rem] text-muted-foreground py-4">Ingen kommende oppfølginger</p>
             ) : (
               <div className="space-y-1">
                 {tasks.map((task) => {
