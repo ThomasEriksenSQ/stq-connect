@@ -7,8 +7,9 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import Login from "./pages/Login";
 import Companies from "./pages/Companies";
+import CompanyDetail from "./pages/CompanyDetail";
 import Contacts from "./pages/Contacts";
-import Activities from "./pages/Activities";
+import ContactDetail from "./pages/ContactDetail";
 import Tasks from "./pages/Tasks";
 import NotFound from "./pages/NotFound";
 
@@ -27,9 +28,7 @@ function ProtectedRoutes() {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  return (
-    <AppLayout />
-  );
+  return <AppLayout />;
 }
 
 function AuthRoute() {
@@ -51,8 +50,9 @@ const App = () => (
             <Route path="/" element={<ProtectedRoutes />}>
               <Route index element={<Navigate to="/selskaper" replace />} />
               <Route path="selskaper" element={<Companies />} />
+              <Route path="selskaper/:id" element={<CompanyDetail />} />
               <Route path="kontakter" element={<Contacts />} />
-              <Route path="aktiviteter" element={<Activities />} />
+              <Route path="kontakter/:id" element={<ContactDetail />} />
               <Route path="oppgaver" element={<Tasks />} />
             </Route>
             <Route path="*" element={<NotFound />} />

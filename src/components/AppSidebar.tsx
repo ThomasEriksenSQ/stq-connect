@@ -1,4 +1,4 @@
-import { Building2, Users, Activity, CheckSquare, LogOut } from "lucide-react";
+import { Building2, Users, CheckSquare, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { title: "Selskaper", url: "/selskaper", icon: Building2 },
   { title: "Kontakter", url: "/kontakter", icon: Users },
-  { title: "Aktiviteter", url: "/aktiviteter", icon: Activity },
   { title: "Oppgaver", url: "/oppgaver", icon: CheckSquare },
 ];
 

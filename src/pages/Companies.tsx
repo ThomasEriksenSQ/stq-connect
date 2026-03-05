@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ const Companies = () => {
   const [form, setForm] = useState({ name: "", org_number: "", industry: "", phone: "", email: "", city: "" });
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ["companies"],
@@ -140,7 +142,7 @@ const Companies = () => {
             </TableHeader>
             <TableBody>
               {filtered.map((company) => (
-                <TableRow key={company.id} className="cursor-pointer">
+                <TableRow key={company.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/selskaper/${company.id}`)}>
                   <TableCell className="font-medium">{company.name}</TableCell>
                   <TableCell>{company.industry || "—"}</TableCell>
                   <TableCell>{company.city || "—"}</TableCell>
