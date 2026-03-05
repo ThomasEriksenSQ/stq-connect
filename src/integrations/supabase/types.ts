@@ -169,9 +169,11 @@ export type Database = {
       }
       contacts: {
         Row: {
+          call_list: boolean
           company_id: string | null
           created_at: string
           created_by: string | null
+          cv_email: boolean
           email: string | null
           first_name: string
           id: string
@@ -184,9 +186,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          call_list?: boolean
           company_id?: string | null
           created_at?: string
           created_by?: string | null
+          cv_email?: boolean
           email?: string | null
           first_name: string
           id?: string
@@ -199,9 +203,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          call_list?: boolean
           company_id?: string | null
           created_at?: string
           created_by?: string | null
+          cv_email?: boolean
           email?: string | null
           first_name?: string
           id?: string
