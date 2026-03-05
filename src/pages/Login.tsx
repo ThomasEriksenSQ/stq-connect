@@ -28,7 +28,7 @@ const Login = () => {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold tracking-tight">STACQ</CardTitle>
           <CardDescription>
-            {isSignUp ? "Opprett en ny konto" : "Logg inn for å fortsette"}
+            Logg inn for å fortsette
           </CardDescription>
         </CardHeader>
         <CardContent>
