@@ -386,7 +386,7 @@ const ContactDetail = () => {
                       {activity.description && (
                         <p className="text-[0.875rem] text-muted-foreground leading-relaxed">{activity.description}</p>
                       )}
-                      <p className="text-[0.75rem] text-muted-foreground/40 pt-0.5">
+                      <p className="text-[0.75rem] text-muted-foreground pt-0.5">
                         {format(new Date(activity.created_at), "d. MMMM yyyy 'kl.' HH:mm", { locale: nb })}
                       </p>
                     </div>
