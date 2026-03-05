@@ -214,13 +214,13 @@ const ContactDetail = () => {
               )}
               {contact.phone && (
                 <>
-                  <a href={`tel:${contact.phone}`} className="font-mono text-primary hover:underline">{contact.phone}</a>
+                  <a href={`tel:${contact.phone}`} className="inline-flex items-center gap-1 font-mono text-primary hover:underline"><Phone className="h-3.5 w-3.5 stroke-[1.5]" />{contact.phone}</a>
                   <span className="text-muted-foreground/30">·</span>
                 </>
               )}
               {contact.email && (
                 <>
-                  <a href={`mailto:${contact.email}`} className="text-primary hover:underline">{contact.email}</a>
+                  <a href={`mailto:${contact.email}`} className="inline-flex items-center gap-1 text-primary hover:underline"><Mail className="h-3.5 w-3.5 stroke-[1.5]" />{contact.email}</a>
                   <span className="text-muted-foreground/30">·</span>
                 </>
               )}
