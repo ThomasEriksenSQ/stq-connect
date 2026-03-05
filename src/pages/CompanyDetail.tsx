@@ -130,33 +130,40 @@ const CompanyDetail = () => {
           <div className="h-14 w-14 rounded-2xl bg-card border border-border/60 flex items-center justify-center flex-shrink-0">
             <span className="text-xl font-bold text-foreground/70">{company.name.charAt(0)}</span>
           </div>
-          <div className="space-y-1 min-w-0">
+          <div className="space-y-1.5 min-w-0">
             <InlineEdit value={company.name} onSave={updateField("name")} className="text-[1.5rem] font-bold" />
+            <div className="flex items-center gap-2 flex-wrap text-[0.875rem] text-muted-foreground">
+              {company.city && (
+                <>
+                  <span>{company.city}</span>
+                  <span className="text-muted-foreground/30">·</span>
+                </>
+              )}
+              {company.org_number && (
+                <>
+                  <span className="font-mono">{company.org_number}</span>
+                  <span className="text-muted-foreground/30">·</span>
+                </>
+              )}
+              {company.website && (
+                <>
+                  <a href={company.website} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{company.website.replace(/^https?:\/\//, '')}</a>
+                  <span className="text-muted-foreground/30">·</span>
+                </>
+              )}
+              {company.linkedin && (
+                <a href={company.linkedin} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">LinkedIn</a>
+              )}
+            </div>
+            <div className="pt-2">
+              <InlineEdit
+                value={company.notes || ""}
+                onSave={updateField("notes")}
+                placeholder="Legg til notater..."
+                multiline
+              />
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* Company info strip */}
-      <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/50">
-        {[
-          { label: "Sted", field: "city", value: company.city || "" },
-          { label: "Org.nr", field: "org_number", value: company.org_number || "", mono: true },
-          { label: "Nettside", field: "website", value: company.website || "", type: "url" as const },
-          { label: "LinkedIn", field: "linkedin", value: company.linkedin || "", type: "url" as const },
-        ].map((row) => (
-          <div key={row.field} className="flex items-center justify-between px-5 py-4">
-            <span className="text-[0.8125rem] text-muted-foreground w-24 flex-shrink-0">{row.label}</span>
-            <InlineEdit value={row.value} onSave={updateField(row.field)} placeholder={`Legg til ${row.label.toLowerCase()}`} type={row.type} mono={row.mono} />
-          </div>
-        ))}
-        <div className="px-5 py-4 space-y-2">
-          <span className="text-[0.8125rem] text-muted-foreground">Notater</span>
-          <InlineEdit
-            value={company.notes || ""}
-            onSave={updateField("notes")}
-            placeholder="Legg til notater..."
-            multiline
-          />
         </div>
       </div>
 
