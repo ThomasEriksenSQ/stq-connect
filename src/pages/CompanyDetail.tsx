@@ -1,17 +1,24 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Globe, MapPin, ExternalLink, FileText, Phone, Calendar, Mail, Linkedin, ChevronRight } from "lucide-react";
-import { format } from "date-fns";
+import { ArrowLeft, Globe, MapPin, ExternalLink, FileText, Phone, Calendar, Mail, Linkedin, ChevronRight, CalendarDays, Circle } from "lucide-react";
+import { format, isPast, isToday } from "date-fns";
 import { nb } from "date-fns/locale";
 import { toast } from "sonner";
 import InlineEdit from "@/components/InlineEdit";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const typeConfig: Record<string, { label: string; icon: typeof FileText; accent: string }> = {
   note: { label: "Notat", icon: FileText, accent: "text-muted-foreground" },
   call: { label: "Samtale", icon: Phone, accent: "text-success" },
   meeting: { label: "Møte", icon: Calendar, accent: "text-primary" },
   email: { label: "E-post", icon: Mail, accent: "text-warning" },
+};
+
+const priorityDots: Record<string, string> = {
+  low: "text-muted-foreground/30",
+  medium: "text-primary",
+  high: "text-destructive",
 };
 
 const CompanyDetail = () => {
@@ -53,6 +60,21 @@ const CompanyDetail = () => {
     enabled: !!id,
   });
 
+  const { data: tasks = [] } = useQuery({
+    queryKey: ["company-tasks", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*, contacts(first_name, last_name)")
+        .eq("company_id", id!)
+        .neq("status", "done")
+        .order("due_date", { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
   const updateMutation = useMutation({
     mutationFn: async (updates: Record<string, string | null>) => {
       const { error } = await supabase.from("companies").update(updates).eq("id", id!);
@@ -64,6 +86,21 @@ const CompanyDetail = () => {
       toast.success("Oppdatert");
     },
     onError: () => toast.error("Kunne ikke oppdatere"),
+  });
+
+  const toggleTaskMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await supabase.from("tasks").update({
+        status: "done",
+        completed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }).eq("id", taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["company-tasks", id] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
   });
 
   const updateField = (field: string) => (value: string) => {
@@ -134,13 +171,13 @@ const CompanyDetail = () => {
         </div>
       </section>
 
-      {/* Two column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+      {/* Three sections */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         {/* Kontakter */}
         <section className="space-y-4">
           <h2 className="text-label">Kontakter · {contacts.length}</h2>
           {contacts.length === 0 ? (
-            <p className="text-[14px] text-muted-foreground/60 py-8">Ingen kontakter knyttet til dette selskapet</p>
+            <p className="text-[14px] text-muted-foreground/60 py-8">Ingen kontakter</p>
           ) : (
             <div className="space-y-1">
               {contacts.map((c) => (
@@ -163,11 +200,50 @@ const CompanyDetail = () => {
           )}
         </section>
 
+        {/* Oppfølginger */}
+        <section className="space-y-4">
+          <h2 className="text-label">Oppfølginger · {tasks.length}</h2>
+          {tasks.length === 0 ? (
+            <p className="text-[14px] text-muted-foreground/60 py-8">Ingen kommende oppfølginger</p>
+          ) : (
+            <div className="space-y-1">
+              {tasks.map((task) => {
+                const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
+                const contactName = (task.contacts as any)?.first_name
+                  ? `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}`
+                  : null;
+                return (
+                  <div key={task.id} className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-card transition-colors">
+                    <Checkbox
+                      checked={false}
+                      onCheckedChange={() => toggleTaskMutation.mutate(task.id)}
+                      className="flex-shrink-0 h-4 w-4 rounded-md border-border/60"
+                    />
+                    <Circle className={`h-2 w-2 fill-current ${priorityDots[task.priority]} flex-shrink-0`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[14px] font-medium leading-snug truncate">{task.title}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {contactName && <span className="text-[12px] text-muted-foreground">{contactName}</span>}
+                        {task.due_date && (
+                          <span className={`flex items-center gap-1 text-[12px] ${overdue ? 'text-destructive' : 'text-muted-foreground/50'}`}>
+                            <CalendarDays className="h-3 w-3 stroke-[1.5]" />
+                            {format(new Date(task.due_date), "d. MMM", { locale: nb })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
         {/* Aktiviteter */}
         <section className="space-y-4">
-          <h2 className="text-label">Siste aktiviteter · {activities.length}</h2>
+          <h2 className="text-label">Aktiviteter · {activities.length}</h2>
           {activities.length === 0 ? (
-            <p className="text-[14px] text-muted-foreground/60 py-8">Ingen aktiviteter registrert</p>
+            <p className="text-[14px] text-muted-foreground/60 py-8">Ingen aktiviteter</p>
           ) : (
             <div className="space-y-1">
               {activities.map((activity) => {
@@ -183,13 +259,13 @@ const CompanyDetail = () => {
                       <Icon className={`h-4 w-4 stroke-[1.5] ${cfg.accent}`} />
                     </div>
                     <div className="flex-1 min-w-0 space-y-0.5">
-                      <p className="text-[15px] font-medium leading-snug">{activity.subject}</p>
+                      <p className="text-[14px] font-medium leading-snug">{activity.subject}</p>
                       {activity.description && (
                         <p className="text-[13px] text-muted-foreground leading-relaxed line-clamp-2">{activity.description}</p>
                       )}
                       <p className="text-[12px] text-muted-foreground/50 pt-0.5">
                         {contactName && <>{contactName} · </>}
-                        {format(new Date(activity.created_at), "d. MMMM yyyy", { locale: nb })}
+                        {format(new Date(activity.created_at), "d. MMM yyyy", { locale: nb })}
                       </p>
                     </div>
                   </div>
