@@ -221,25 +221,27 @@ const ContactDetail = () => {
                 </>
               )}
               {contact.linkedin && (
-                <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">LinkedIn</a>
+                <>
+                  <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">LinkedIn</a>
+                  <span className="text-muted-foreground/30">·</span>
+                </>
               )}
-            </div>
-            <div className="flex items-center gap-6 pt-3">
-              <label className="flex items-center gap-2 text-[0.875rem] cursor-pointer">
+              <label className="inline-flex items-center gap-1.5 cursor-pointer">
                 <Checkbox
                   checked={(contact as any).cv_email ?? false}
                   onCheckedChange={(checked) => updateMutation.mutate({ cv_email: checked as any })}
-                  className="h-4 w-4 rounded-md"
+                  className="h-3.5 w-3.5 rounded-[4px]"
                 />
-                <span className="font-medium">CV-Epost</span>
+                <span className="font-medium text-foreground">CV-Epost</span>
               </label>
-              <label className="flex items-center gap-2 text-[0.875rem] cursor-pointer">
+              <span className="text-muted-foreground/30">·</span>
+              <label className="inline-flex items-center gap-1.5 cursor-pointer">
                 <Checkbox
                   checked={(contact as any).call_list ?? false}
                   onCheckedChange={(checked) => updateMutation.mutate({ call_list: checked as any })}
-                  className="h-4 w-4 rounded-md"
+                  className="h-3.5 w-3.5 rounded-[4px]"
                 />
-                <span className="font-medium">Ringeliste</span>
+                <span className="font-medium text-foreground">Ringeliste</span>
               </label>
             </div>
             <div className="pt-2">
