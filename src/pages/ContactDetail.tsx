@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Plus, FileText, Phone, Calendar, Mail, Building2, CalendarDays, Circle } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Phone, Calendar, Mail, Building2, CalendarDays, Circle, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday } from "date-fns";
 import { nb } from "date-fns/locale";
