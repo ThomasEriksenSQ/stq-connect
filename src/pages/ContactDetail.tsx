@@ -53,6 +53,18 @@ const ContactDetail = () => {
     enabled: !!id,
   });
 
+  const { data: allProfiles = [] } = useQuery({
+    queryKey: ["profiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .order("full_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: activities = [] } = useQuery({
     queryKey: ["contact-activities", id],
     queryFn: async () => {
@@ -183,11 +195,19 @@ const ContactDetail = () => {
         <div className="space-y-1.5 min-w-0">
             <h1 className="text-[1.5rem] font-bold">
               {contact.first_name} {contact.last_name}
-              {(contact as any).profiles?.full_name && (
-                <span className="text-[0.875rem] font-normal text-muted-foreground ml-2">
-                  {(contact as any).profiles.full_name}
-                </span>
-              )}
+              <Select
+                value={contact.owner_id || ""}
+                onValueChange={(v) => updateMutation.mutate({ owner_id: v || null })}
+              >
+                <SelectTrigger className="inline-flex h-auto w-auto gap-1 border-none bg-transparent p-0 text-[0.875rem] font-normal text-muted-foreground shadow-none hover:text-foreground ml-2">
+                  <SelectValue placeholder="Velg eier" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allProfiles.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.full_name || "Uten navn"}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </h1>
             <div className="flex items-center gap-2 flex-wrap text-[0.875rem] text-muted-foreground">
               {(contact.companies as any)?.name && (
