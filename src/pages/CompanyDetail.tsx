@@ -163,6 +163,7 @@ const CompanyDetail = () => {
                 multiline
               />
             </div>
+          </div>
         </div>
       </div>
 
