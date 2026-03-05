@@ -1,27 +1,35 @@
 
 
-## Problem
+# Update: Norwegian UI Language
 
-The user `thomas@stacq.no` (id: `877c63e8-a70c-4b78-9258-3dc8b1bf3c20`) has no row in the `profiles` table. This means their name won't appear as owner on any contacts they own.
+The database schema, table names, column names, and all backend code remain in English as planned. The user-facing interface will be fully in Norwegian.
 
-The `handle_new_user` trigger exists but apparently wasn't active when this user was created, so the profile was never auto-generated.
+## What changes
 
-## Plan
+All UI text — labels, buttons, headings, placeholders, menu items, status labels, and empty states — will be written in Norwegian (Bokmål).
 
-1. **Insert missing profile row** via SQL:
-   ```sql
-   INSERT INTO public.profiles (id, full_name)
-   VALUES ('877c63e8-a70c-4b78-9258-3dc8b1bf3c20', 'Thomas')
-   ON CONFLICT (id) DO NOTHING;
-   ```
-   You may want to provide the correct full name — I'll use the name you specify, or default to the email prefix.
+Examples:
+- "Companies" → "Selskaper"
+- "Contacts" → "Kontakter"
+- "Activities" → "Aktiviteter"
+- "Tasks" → "Oppgaver"
+- "Add Note" → "Legg til notat"
+- "Log Activity" → "Logg aktivitet"
+- "Create Task" → "Opprett oppgave"
+- "Search..." → "Søk..."
+- "Open" / "Done" → "Åpen" / "Fullført"
+- "Name" → "Navn"
+- "Industry" → "Bransje"
+- "Due date" → "Forfallsdato"
+- "Sign in" → "Logg inn"
+- Activity types: Note → Notat, Call → Samtale, Meeting → Møte, Email → E-post
 
-2. **Verify the trigger exists** so future signups auto-create profiles. The `handle_new_user` function exists but the trigger listing shows no triggers. I'll create the trigger if missing:
-   ```sql
-   CREATE TRIGGER on_auth_user_created
-     AFTER INSERT ON auth.users
-     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-   ```
+## Implementation approach
 
-No code changes needed — this is purely a database data + trigger fix.
+- All hardcoded UI strings will be in Norwegian directly in the components (no i18n library needed since this is a single-language internal tool)
+- Database columns stay English (e.g. `company_name`, `due_date`, `status`)
+- Supabase table/column names stay English
+- TypeScript types and variable names stay English
+
+This will be applied throughout all pages and components during implementation. No separate translation step needed — Norwegian is simply the default language for all UI copy.
 
