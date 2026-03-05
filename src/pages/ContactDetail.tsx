@@ -170,15 +170,6 @@ const ContactDetail = () => {
   }
   if (!contact) return <p className="text-muted-foreground">Kontakt ikke funnet</p>;
 
-  const detailFields = [
-    { label: "Fornavn", field: "first_name", value: contact.first_name },
-    { label: "Etternavn", field: "last_name", value: contact.last_name },
-    { label: "Stilling", field: "title", value: contact.title || "" },
-    { label: "E-post", field: "email", value: contact.email || "", type: "email" as const },
-    { label: "Telefon", field: "phone", value: contact.phone || "", type: "tel" as const, mono: true },
-    { label: "LinkedIn", field: "linkedin", value: contact.linkedin || "", type: "url" as const },
-    { label: "Sted", field: "location", value: contact.location || "" },
-  ];
 
   return (
     <div className="space-y-10">
