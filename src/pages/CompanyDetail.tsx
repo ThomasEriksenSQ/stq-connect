@@ -196,7 +196,7 @@ const CompanyDetail = () => {
                         <div className="flex items-center gap-2 mt-0.5">
                           {contactName && <span className="text-[0.75rem] text-muted-foreground">{contactName}</span>}
                           {task.due_date && (
-                            <span className={`flex items-center gap-1 text-[0.75rem] ${overdue ? 'text-destructive' : 'text-muted-foreground/50'}`}>
+                            <span className={`flex items-center gap-1 text-[0.75rem] ${overdue ? 'text-destructive' : 'text-muted-foreground'}`}>
                               <CalendarDays className="h-3 w-3 stroke-[1.5]" />
                               {format(new Date(task.due_date), "d. MMM", { locale: nb })}
                             </span>
