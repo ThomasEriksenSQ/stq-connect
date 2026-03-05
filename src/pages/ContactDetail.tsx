@@ -188,61 +188,55 @@ const ContactDetail = () => {
             <h1 className="text-[1.5rem] font-bold">
               {contact.first_name} {contact.last_name}
             </h1>
-            <div className="flex items-center gap-3 flex-wrap">
-              {contact.title && <span className="text-[0.9375rem] text-muted-foreground">{contact.title}</span>}
+            <div className="flex items-center gap-2 flex-wrap text-[0.875rem] text-muted-foreground">
               {(contact.companies as any)?.name && (
-                <button
-                  onClick={() => navigate(`/selskaper/${(contact.companies as any).id}`)}
-                  className="inline-flex items-center gap-1.5 text-[0.875rem] text-primary hover:underline"
-                >
-                  <Building2 className="h-3.5 w-3.5 stroke-[1.5]" />
-                  {(contact.companies as any).name}
-                </button>
+                <>
+                  <button
+                    onClick={() => navigate(`/selskaper/${(contact.companies as any).id}`)}
+                    className="text-primary hover:underline"
+                  >
+                    {(contact.companies as any).name}
+                  </button>
+                  <span className="text-muted-foreground/30">·</span>
+                </>
+              )}
+              {contact.location && (
+                <>
+                  <span>{contact.location}</span>
+                  <span className="text-muted-foreground/30">·</span>
+                </>
+              )}
+              {contact.title && (
+                <>
+                  <span>{contact.title}</span>
+                  <span className="text-muted-foreground/30">·</span>
+                </>
+              )}
+              {contact.phone && (
+                <>
+                  <a href={`tel:${contact.phone}`} className="font-mono hover:text-foreground transition-colors">{contact.phone}</a>
+                  <span className="text-muted-foreground/30">·</span>
+                </>
+              )}
+              {contact.email && (
+                <>
+                  <a href={`mailto:${contact.email}`} className="hover:text-foreground transition-colors">{contact.email}</a>
+                  <span className="text-muted-foreground/30">·</span>
+                </>
+              )}
+              {contact.linkedin && (
+                <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">LinkedIn</a>
               )}
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Contact info strip */}
-      <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/50">
-        {[
-          { label: "Selskap", field: "company_id", value: (contact.companies as any)?.name || "", readonly: true, link: (contact.companies as any)?.id ? `/selskaper/${(contact.companies as any).id}` : undefined },
-          { label: "Sted", field: "location", value: contact.location || "" },
-          { label: "Stilling", field: "title", value: contact.title || "" },
-          { label: "Telefon", field: "phone", value: contact.phone || "", type: "tel" as const, mono: true },
-          { label: "E-post", field: "email", value: contact.email || "", type: "email" as const },
-          { label: "LinkedIn", field: "linkedin", value: contact.linkedin || "", type: "url" as const },
-        ].map((row) => (
-          <div key={row.field} className="flex items-center justify-between px-5 py-4">
-            <span className="text-[0.8125rem] text-muted-foreground w-24 flex-shrink-0">{row.label}</span>
-            {row.readonly ? (
-              row.link ? (
-                <button onClick={() => navigate(row.link!)} className="text-[14px] font-medium text-primary hover:underline">
-                  {row.value || <span className="text-muted-foreground/40 italic">—</span>}
-                </button>
-              ) : (
-                <span className="text-[14px] font-medium text-muted-foreground/40 italic">—</span>
-              )
-            ) : (
+            <div className="pt-2">
               <InlineEdit
-                value={row.value}
-                onSave={updateField(row.field)}
-                placeholder={`Legg til ${row.label.toLowerCase()}`}
-                type={row.type}
-                mono={row.mono}
+                value={contact.notes || ""}
+                onSave={updateField("notes")}
+                placeholder="Legg til notater..."
+                multiline
               />
-            )}
+            </div>
           </div>
-        ))}
-        <div className="px-5 py-4 space-y-2">
-          <span className="text-[0.8125rem] text-muted-foreground">Notater</span>
-          <InlineEdit
-            value={contact.notes || ""}
-            onSave={updateField("notes")}
-            placeholder="Legg til notater..."
-            multiline
-          />
         </div>
       </div>
 
