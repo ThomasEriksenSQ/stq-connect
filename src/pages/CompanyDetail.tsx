@@ -256,9 +256,6 @@ const CompanyDetail = () => {
                   onClick={() => navigate(`/kontakter/${c.id}`)}
                   className="w-full flex items-center gap-3.5 px-4 py-3.5 rounded-xl hover:bg-card active:bg-accent transition-colors group text-left"
                 >
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-[0.75rem] font-semibold text-primary">{c.first_name[0]}{c.last_name[0]}</span>
-                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[0.9375rem] font-medium truncate">{c.first_name} {c.last_name}</p>
                     <p className="text-[0.8125rem] text-muted-foreground truncate">{c.title || "—"}</p>
