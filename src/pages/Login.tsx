@@ -57,18 +57,9 @@ const Login = () => {
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Vennligst vent..." : isSignUp ? "Opprett konto" : "Logg inn"}
+              {loading ? "Vennligst vent..." : "Logg inn"}
             </Button>
           </form>
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-muted-foreground hover:text-primary transition-colors"
-            >
-              {isSignUp ? "Har du allerede en konto? Logg inn" : "Ingen konto? Opprett en"}
-            </button>
-          </div>
         </CardContent>
       </Card>
     </div>
