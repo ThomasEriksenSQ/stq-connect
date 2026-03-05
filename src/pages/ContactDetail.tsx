@@ -412,36 +412,7 @@ const ContactDetail = () => {
               </div>
             )}
           </div>
-        </section>
-
-        {/* Right: Editable details — 2/5 */}
-        <section className="lg:col-span-2 space-y-5">
-          <h2 className="text-label">Detaljer</h2>
-          <div className="rounded-xl bg-card border border-border/50 divide-y divide-border/50">
-            {detailFields.map((row) => (
-              <div key={row.field} className="flex items-center justify-between px-5 py-4">
-                <span className="text-[0.8125rem] text-muted-foreground w-24 flex-shrink-0">{row.label}</span>
-                <InlineEdit
-                  value={row.value}
-                  onSave={updateField(row.field)}
-                  placeholder={`Legg til ${row.label.toLowerCase()}`}
-                  type={row.type}
-                  mono={row.mono}
-                />
-              </div>
-            ))}
-
-            <div className="px-5 py-4 space-y-2">
-              <span className="text-[0.8125rem] text-muted-foreground">Notater</span>
-              <InlineEdit
-                value={contact.notes || ""}
-                onSave={updateField("notes")}
-                placeholder="Legg til notater..."
-                multiline
-              />
-            </div>
-          </div>
-        </section>
+        </div>
       </div>
     </div>
   );
