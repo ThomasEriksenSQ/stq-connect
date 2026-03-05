@@ -307,7 +307,7 @@ const ContactDetail = () => {
                     <div className="flex-1 min-w-0">
                       <p className="text-[0.875rem] font-medium leading-snug">{task.title}</p>
                       {task.due_date && (
-                        <span className={`flex items-center gap-1 text-[0.75rem] mt-0.5 ${overdue ? 'text-destructive' : 'text-muted-foreground/60'}`}>
+                        <span className={`flex items-center gap-1 text-[0.75rem] mt-0.5 ${overdue ? 'text-destructive' : 'text-muted-foreground'}`}>
                           <CalendarDays className="h-3 w-3 stroke-[1.5]" />
                           {format(new Date(task.due_date), "d. MMM yyyy", { locale: nb })}
                         </span>
