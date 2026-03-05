@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { title: "Selskaper", url: "/selskaper", icon: Building2 },
   { title: "Kontakter", url: "/kontakter", icon: Users },
-  { title: "Aktiviteter", url: "/aktiviteter", icon: Activity },
   { title: "Oppgaver", url: "/oppgaver", icon: CheckSquare },
 ];
 
