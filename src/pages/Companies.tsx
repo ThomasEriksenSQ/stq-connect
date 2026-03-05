@@ -142,7 +142,7 @@ const Companies = () => {
             </TableHeader>
             <TableBody>
               {filtered.map((company) => (
-                <TableRow key={company.id} className="cursor-pointer">
+                <TableRow key={company.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/selskaper/${company.id}`)}>
                   <TableCell className="font-medium">{company.name}</TableCell>
                   <TableCell>{company.industry || "—"}</TableCell>
                   <TableCell>{company.city || "—"}</TableCell>
