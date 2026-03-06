@@ -9,7 +9,7 @@ const ContactDetail = () => {
 
   return (
     <div className="max-w-2xl">
-      <Link to="/kontakter" className="inline-flex items-center gap-2 text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors mb-6">
+      <Link to="/kontakter" className="inline-flex items-center gap-2 text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors mb-3">
         <ArrowLeft className="h-3.5 w-3.5 stroke-[1.5]" />
         Kontakter
       </Link>
