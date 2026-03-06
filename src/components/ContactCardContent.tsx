@@ -23,6 +23,7 @@ const typeConfig: Record<string, { label: string; icon: typeof FileText; accent:
   call: { label: "Samtale", icon: Phone, accent: "text-success" },
   meeting: { label: "Møte", icon: Calendar, accent: "text-primary" },
   email: { label: "E-post", icon: Mail, accent: "text-warning" },
+  task: { label: "Oppgave", icon: FileText, accent: "text-muted-foreground" },
 };
 
 const priorityConfig: Record<string, { label: string; className: string }> = {
