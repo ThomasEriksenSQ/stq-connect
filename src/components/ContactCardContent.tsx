@@ -92,7 +92,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks")
-        .select("*")
+        .select("*, companies(name)")
         .eq("contact_id", contactId)
         .neq("status", "done")
         .order("due_date", { ascending: true, nullsFirst: false });

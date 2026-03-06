@@ -324,6 +324,8 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                         <p className="text-[0.8125rem] font-medium truncate">{task.title}</p>
                         <DescriptionText text={task.description} maxLines={2} />
                         <div className="flex items-center gap-1.5 text-[0.6875rem] text-muted-foreground">
+                          {task.assigned_to && profileMap[task.assigned_to] && <span>{profileMap[task.assigned_to]}</span>}
+                          {task.assigned_to && profileMap[task.assigned_to] && contactName && <span>·</span>}
                           {contactName && <span className="truncate">{contactName}</span>}
                         </div>
                       </div>
