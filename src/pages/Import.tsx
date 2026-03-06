@@ -131,7 +131,7 @@ const Import = () => {
 
       // Step 2: Parse & import companies
       addLog("Parser selskaper...");
-      const accData = await readXlsxAsObjects(accountsFile);
+      const accData = await readXlsxAsObjects(accountsFile, "Account Name");
       addLog(`  Funnet kolonner: ${accData.headers.filter(h => h).join(", ")}`);
       addLog(`  ${accData.rows.length} rader funnet`);
 
