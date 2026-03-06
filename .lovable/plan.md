@@ -1,62 +1,35 @@
 
 
-## Plan: Re-import Salesforce-data med navnebasert matching
+# Update: Norwegian UI Language
 
-### Bakgrunn
-Første import brukte Salesforce ID-mapping som feilet for mange poster. Nå har vi 4 filer:
-1. **Accounts** (selskaper) - ~555 rader
-2. **Contacts** (kontakter) - ~1184 rader  
-3. **Activities with Contacts** (original eksport) - ~816 rader med SF-ID'er
-4. **"Lovable sin request import"** (ny eksport) - ~816 rader med Task Subtype/Event Subtype
+The database schema, table names, column names, and all backend code remain in English as planned. The user-facing interface will be fully in Norwegian.
 
-### Strategi
+## What changes
 
-**Slett alt og re-importer fra scratch** -- renere enn å prøve å deduplisere.
+All UI text — labels, buttons, headings, placeholders, menu items, status labels, and empty states — will be written in Norwegian (Bokmål).
 
-### Implementasjon
+Examples:
+- "Companies" → "Selskaper"
+- "Contacts" → "Kontakter"
+- "Activities" → "Aktiviteter"
+- "Tasks" → "Oppgaver"
+- "Add Note" → "Legg til notat"
+- "Log Activity" → "Logg aktivitet"
+- "Create Task" → "Opprett oppgave"
+- "Search..." → "Søk..."
+- "Open" / "Done" → "Åpen" / "Fullført"
+- "Name" → "Navn"
+- "Industry" → "Bransje"
+- "Due date" → "Forfallsdato"
+- "Sign in" → "Logg inn"
+- Activity types: Note → Notat, Call → Samtale, Meeting → Møte, Email → E-post
 
-#### 1. Opprett midlertidig importside (`/import`)
-- Filupplasting for alle 4 filer (xlsx)
-- Parse med `xlsx`-biblioteket (allerede installert)
-- Vis fremdrift per steg
+## Implementation approach
 
-#### 2. Oppdater Edge Function (`salesforce-import`)
-Ny logikk med **navnebasert matching** istedenfor SF-ID:
+- All hardcoded UI strings will be in Norwegian directly in the components (no i18n library needed since this is a single-language internal tool)
+- Database columns stay English (e.g. `company_name`, `due_date`, `status`)
+- Supabase table/column names stay English
+- TypeScript types and variable names stay English
 
-**Selskaper** (fil 1): Kolonnene er som før. Slett alle eksisterende selskaper først, re-insert.
-
-**Kontakter** (fil 3): Slett eksisterende, re-insert. Match selskap via `Account Name` → `companies.name`.
-
-**Aktiviteter/Oppgaver** (fil 4 - den nye): Bruker `Task Subtype` og `Event Subtype` for klassifisering:
-- `Task Subtype = "Task"` → `tasks`-tabellen (oppfølginger)
-- `Task Subtype = "Call"` → `activities`-tabellen med type `call`
-- `Event Subtype = "Event"` → `activities`-tabellen med type `meeting`
-- Records uten subtype som matcher aktivitetsmønstre → `activities`
-
-Match kontakter via `First Name` + `Last Name` → `contacts`. Match selskap via `Account Name` → `companies.name`.
-
-#### 3. Importrekkefølge
-1. Slett activities, tasks, contacts, companies (i den rekkefølgen pga FK)
-2. Importer selskaper
-3. Importer kontakter (matcher selskap via navn)
-4. Importer aktiviteter/oppgaver (matcher kontakt+selskap via navn)
-
-#### 4. Rydde opp etter import
-Fjern importside og edge function når alt er verifisert.
-
-### Teknisk detalj
-
-**Fil 4 kolonner** (den nye activities-eksporten):
-```
-Subject | (tom) | Type | Description | Full Comments | Date | Status | First Name | Last Name | Account Name | Assigned | Task Subtype | Event Subtype | Call Type
-Index:  0    1      2       3              4            5       6         7            8           9              10          11              12            13
-```
-
-**Klassifiseringslogikk**:
-- `Task Subtype = "Call"` → activity type `call`
-- `Event Subtype = "Event"` → activity type `meeting`  
-- `Task Subtype = "Task"` + `Status != "Ferdig utført"` → `tasks`-tabellen
-- `Task Subtype = "Task"` + `Status = "Ferdig utført"` → `tasks`-tabellen med status `completed`
-
-Alle "Call"-poster (også de med subjects som "Linkedin", "Sendt mail") blir `call`-type i activities, da Salesforce kategoriserer dem slik.
+This will be applied throughout all pages and components during implementation. No separate translation step needed — Norwegian is simply the default language for all UI copy.
 
