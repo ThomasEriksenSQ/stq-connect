@@ -249,7 +249,7 @@ const Tasks = () => {
                   const prio = priorityConfig[task.priority] || priorityConfig.medium;
 
                   return (
-                    <div key={task.id} className="grid grid-cols-[40px_1fr_130px_130px_80px_90px] gap-3 items-center px-5 py-3.5 hover:bg-accent/50 transition-colors duration-100">
+                    <div key={task.id} className="grid grid-cols-[40px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_70px_85px] gap-3 items-center px-5 py-3.5 hover:bg-accent/50 transition-colors duration-100">
                       <Checkbox checked={false} onCheckedChange={() => toggleMutation.mutate({ id: task.id, currentStatus: task.status })}
                         className="h-[18px] w-[18px] rounded-[5px] border-border/60" />
 
