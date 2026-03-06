@@ -70,7 +70,6 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
       if (error) throw error;
       return data;
     },
-    enabled: editable,
   });
 
   const { data: activities = [] } = useQuery({
