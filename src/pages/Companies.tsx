@@ -26,6 +26,31 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   churned: { label: "Tapt", className: "bg-destructive/10 text-destructive" },
 };
 
+const OrgNrInput = ({ value, onChange, onLookup }: { value: string; onChange: (v: string) => void; onLookup: (name: string | null, city: string | null) => void }) => {
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const cleaned = value.replace(/\s/g, "");
+    if (cleaned.length !== 9 || !/^\d{9}$/.test(cleaned)) return;
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(async () => {
+      setLoading(true);
+      const r = await lookupByOrgNr(cleaned);
+      if (r) onLookup(r.navn, r.forretningsadresse?.kommune || null);
+      setLoading(false);
+    }, 400);
+    return () => clearTimeout(timerRef.current);
+  }, [value]);
+
+  return (
+    <div className="relative">
+      <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="923 456 789" className="h-10 rounded-lg" />
+      {loading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />}
+    </div>
+  );
+};
+
 const Companies = () => {
   const [search, setSearch] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("all");
