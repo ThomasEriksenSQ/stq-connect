@@ -122,11 +122,12 @@ const Import = () => {
     try {
       // Step 1: Clear all data
       addLog("Sletter eksisterende data...");
-      const { error: clearErr } = await supabase.functions.invoke("salesforce-import", {
+      const { data: clearData, error: clearErr } = await supabase.functions.invoke("salesforce-import", {
         body: { type: "clear" },
       });
       if (clearErr) throw new Error("Feil ved sletting: " + clearErr.message);
-      addLog("✅ Data slettet");
+      const del = clearData?.deleted || {};
+      addLog(`✅ Slettet: ${del.activities || 0} aktiviteter, ${del.tasks || 0} oppgaver, ${del.contacts || 0} kontakter, ${del.companies || 0} selskaper`);
       setProgress(10);
 
       // Step 2: Parse & import companies
