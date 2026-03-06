@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Plus, CalendarDays, Search, ArrowUpDown, User, Building2 } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Plus, CalendarDays, Search, ArrowUpDown, User, Building2, Mail, Phone, MapPin, Globe, FileText, Calendar, Linkedin } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { format, isPast, isToday } from "date-fns";
@@ -21,7 +23,14 @@ const priorityConfig: Record<string, { label: string; className: string }> = {
   low: { label: "Lav", className: "bg-muted text-muted-foreground border-border" },
 };
 
-type SortField = "title" | "contact" | "priority" | "due_date";
+const typeConfig: Record<string, { label: string; icon: typeof FileText; accent: string }> = {
+  note: { label: "Notat", icon: FileText, accent: "text-muted-foreground" },
+  call: { label: "Samtale", icon: Phone, accent: "text-success" },
+  meeting: { label: "Møte", icon: Calendar, accent: "text-primary" },
+  email: { label: "E-post", icon: Mail, accent: "text-warning" },
+};
+
+type SortField = "title" | "contact" | "company" | "priority" | "due_date";
 type SortDir = "asc" | "desc";
 
 const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
@@ -32,15 +41,18 @@ const Tasks = () => {
   const [form, setForm] = useState({ title: "", description: "", priority: "medium", due_date: "", contact_id: "" });
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "due_date", dir: "asc" });
   const [showDone, setShowDone] = useState(false);
+  const [contactSheetId, setContactSheetId] = useState<string | null>(null);
+  const [companySheetId, setCompanySheetId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ["tasks"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks")
-        .select("*, contacts(first_name, last_name, company_id, companies(name))")
+        .select("*, contacts(first_name, last_name, company_id, companies(id, name))")
         .order("status", { ascending: true })
         .order("due_date", { ascending: true, nullsFirst: false });
       if (error) throw error;
@@ -55,6 +67,96 @@ const Tasks = () => {
       if (error) throw error;
       return data;
     },
+  });
+
+  // Contact sheet data
+  const { data: sheetContact } = useQuery({
+    queryKey: ["contact-sheet", contactSheetId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*, companies(id, name)")
+        .eq("id", contactSheetId!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!contactSheetId,
+  });
+
+  const { data: sheetContactActivities = [] } = useQuery({
+    queryKey: ["contact-sheet-activities", contactSheetId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("activities")
+        .select("*")
+        .eq("contact_id", contactSheetId!)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!contactSheetId,
+  });
+
+  const { data: sheetContactTasks = [] } = useQuery({
+    queryKey: ["contact-sheet-tasks", contactSheetId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("contact_id", contactSheetId!)
+        .neq("status", "done")
+        .order("due_date", { ascending: true, nullsFirst: false })
+        .limit(10);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!contactSheetId,
+  });
+
+  // Company sheet data
+  const { data: sheetCompany } = useQuery({
+    queryKey: ["company-sheet", companySheetId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("*")
+        .eq("id", companySheetId!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!companySheetId,
+  });
+
+  const { data: sheetCompanyContacts = [] } = useQuery({
+    queryKey: ["company-sheet-contacts", companySheetId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("id, first_name, last_name, title, email, phone")
+        .eq("company_id", companySheetId!)
+        .order("first_name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!companySheetId,
+  });
+
+  const { data: sheetCompanyActivities = [] } = useQuery({
+    queryKey: ["company-sheet-activities", companySheetId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("activities")
+        .select("*, contacts(first_name, last_name)")
+        .eq("company_id", companySheetId!)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!companySheetId,
   });
 
   const createMutation = useMutation({
@@ -102,8 +204,16 @@ const Tasks = () => {
     return c?.first_name ? `${c.first_name} ${c.last_name}` : null;
   };
 
+  const getContactId = (task: any) => {
+    return (task as any).contact_id || null;
+  };
+
   const getCompanyName = (task: any) => {
     return (task.contacts as any)?.companies?.name || null;
+  };
+
+  const getCompanyId = (task: any) => {
+    return (task.contacts as any)?.companies?.id || (task as any).company_id || null;
   };
 
   const filterTasks = (list: any[]) =>
@@ -123,6 +233,8 @@ const Tasks = () => {
           return dir * a.title.localeCompare(b.title, "nb");
         case "contact":
           return dir * (getContactName(a) || "").localeCompare(getContactName(b) || "", "nb");
+        case "company":
+          return dir * (getCompanyName(a) || "").localeCompare(getCompanyName(b) || "", "nb");
         case "priority":
           return dir * ((priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1));
         case "due_date":
@@ -253,10 +365,11 @@ const Tasks = () => {
           {/* Open tasks */}
           {filteredOpen.length > 0 && (
             <div className="border border-border/40 rounded-2xl overflow-hidden bg-card">
-              <div className="grid grid-cols-[40px_1fr_140px_90px_100px] gap-4 px-5 py-3 border-b border-border/40 bg-secondary/30">
+              <div className="grid grid-cols-[40px_1fr_140px_140px_90px_100px] gap-3 px-5 py-3 border-b border-border/40 bg-secondary/30">
                 <span />
                 <SortHeader field="title">Oppfølging</SortHeader>
                 <SortHeader field="contact">Kontakt</SortHeader>
+                <SortHeader field="company">Selskap</SortHeader>
                 <SortHeader field="priority">Prioritet</SortHeader>
                 <SortHeader field="due_date" className="justify-end">Frist</SortHeader>
               </div>
@@ -267,12 +380,14 @@ const Tasks = () => {
                   const dueToday = task.due_date && isToday(new Date(task.due_date));
                   const contactName = getContactName(task);
                   const companyName = getCompanyName(task);
+                  const contactId = getContactId(task);
+                  const companyId = getCompanyId(task);
                   const prio = priorityConfig[task.priority] || priorityConfig.medium;
 
                   return (
                     <div
                       key={task.id}
-                      className="grid grid-cols-[40px_1fr_140px_90px_100px] gap-4 items-center px-5 py-3.5 hover:bg-accent/50 transition-colors duration-100"
+                      className="grid grid-cols-[40px_1fr_140px_140px_90px_100px] gap-3 items-center px-5 py-3.5 hover:bg-accent/50 transition-colors duration-100"
                     >
                       {/* Checkbox */}
                       <Checkbox
@@ -281,24 +396,44 @@ const Tasks = () => {
                         className="h-[18px] w-[18px] rounded-[5px] border-border/60"
                       />
 
-                      {/* Title + company */}
+                      {/* Title — clickable to open contact sheet */}
+                      <button
+                        className="min-w-0 text-left group"
+                        onClick={() => contactId && setContactSheetId(contactId)}
+                      >
+                        <p className="text-[0.875rem] font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                          {task.title}
+                        </p>
+                        {task.description && (
+                          <p className="text-[0.75rem] text-muted-foreground/50 truncate mt-0.5">{task.description}</p>
+                        )}
+                      </button>
+
+                      {/* Contact — clickable to open contact sheet */}
                       <div className="min-w-0">
-                        <p className="text-[0.875rem] font-medium text-foreground truncate">{task.title}</p>
-                        {companyName && (
-                          <span className="flex items-center gap-1 text-[0.75rem] text-muted-foreground/60 mt-0.5 truncate">
-                            <Building2 className="h-3 w-3 flex-shrink-0" />
-                            {companyName}
-                          </span>
+                        {contactName ? (
+                          <button
+                            className="flex items-center gap-1 text-[0.8125rem] text-muted-foreground truncate hover:text-primary transition-colors"
+                            onClick={() => contactId && setContactSheetId(contactId)}
+                          >
+                            <User className="h-3 w-3 flex-shrink-0 stroke-[1.5]" />
+                            {contactName}
+                          </button>
+                        ) : (
+                          <span className="text-[0.8125rem] text-muted-foreground/30">—</span>
                         )}
                       </div>
 
-                      {/* Contact */}
+                      {/* Company — clickable to open company sheet */}
                       <div className="min-w-0">
-                        {contactName ? (
-                          <span className="flex items-center gap-1 text-[0.8125rem] text-muted-foreground truncate">
-                            <User className="h-3 w-3 flex-shrink-0 stroke-[1.5]" />
-                            {contactName}
-                          </span>
+                        {companyName ? (
+                          <button
+                            className="flex items-center gap-1 text-[0.8125rem] text-muted-foreground truncate hover:text-primary transition-colors"
+                            onClick={() => companyId && setCompanySheetId(companyId)}
+                          >
+                            <Building2 className="h-3 w-3 flex-shrink-0 stroke-[1.5]" />
+                            {companyName}
+                          </button>
                         ) : (
                           <span className="text-[0.8125rem] text-muted-foreground/30">—</span>
                         )}
@@ -346,10 +481,11 @@ const Tasks = () => {
                   <div className="divide-y divide-border/20">
                     {filteredDone.map((task) => {
                       const contactName = getContactName(task);
+                      const companyName = getCompanyName(task);
                       return (
                         <div
                           key={task.id}
-                          className="grid grid-cols-[40px_1fr_140px_90px_100px] gap-4 items-center px-5 py-3 opacity-50 hover:opacity-70 transition-opacity"
+                          className="grid grid-cols-[40px_1fr_140px_140px_90px_100px] gap-3 items-center px-5 py-3 opacity-50 hover:opacity-70 transition-opacity"
                         >
                           <Checkbox
                             checked={true}
@@ -358,6 +494,7 @@ const Tasks = () => {
                           />
                           <span className="text-[0.875rem] line-through truncate">{task.title}</span>
                           <span className="text-[0.8125rem] text-muted-foreground truncate">{contactName || "—"}</span>
+                          <span className="text-[0.8125rem] text-muted-foreground truncate">{companyName || "—"}</span>
                           <span />
                           <span className="text-[0.8125rem] text-muted-foreground/40 text-right">
                             {task.completed_at && format(new Date(task.completed_at), "d. MMM", { locale: nb })}
@@ -372,6 +509,256 @@ const Tasks = () => {
           )}
         </div>
       )}
+
+      {/* Contact Sheet */}
+      <Sheet open={!!contactSheetId} onOpenChange={(open) => !open && setContactSheetId(null)}>
+        <SheetContent className="sm:max-w-[480px] overflow-y-auto">
+          {sheetContact && (
+            <div className="space-y-6 pt-2">
+              <SheetHeader className="space-y-1.5">
+                <SheetTitle className="text-[1.25rem] font-bold">
+                  {sheetContact.first_name} {sheetContact.last_name}
+                </SheetTitle>
+                <div className="flex items-center gap-2 flex-wrap text-[0.8125rem] text-muted-foreground">
+                  {sheetContact.title && (
+                    <>
+                      <span>{sheetContact.title}</span>
+                      <span className="text-muted-foreground/30">·</span>
+                    </>
+                  )}
+                  {(sheetContact.companies as any)?.name && (
+                    <button
+                      className="text-primary hover:underline"
+                      onClick={() => {
+                        setContactSheetId(null);
+                        setCompanySheetId((sheetContact.companies as any).id);
+                      }}
+                    >
+                      {(sheetContact.companies as any).name}
+                    </button>
+                  )}
+                </div>
+              </SheetHeader>
+
+              {/* Contact info */}
+              <div className="space-y-2.5">
+                {sheetContact.phone && (
+                  <a href={`tel:${sheetContact.phone}`} className="flex items-center gap-2.5 text-[0.875rem] text-primary hover:underline">
+                    <Phone className="h-4 w-4 stroke-[1.5]" />
+                    {sheetContact.phone}
+                  </a>
+                )}
+                {sheetContact.email && (
+                  <a href={`mailto:${sheetContact.email}`} className="flex items-center gap-2.5 text-[0.875rem] text-primary hover:underline">
+                    <Mail className="h-4 w-4 stroke-[1.5]" />
+                    {sheetContact.email}
+                  </a>
+                )}
+                {sheetContact.linkedin && (
+                  <a href={sheetContact.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-[0.875rem] text-primary hover:underline">
+                    <Linkedin className="h-4 w-4 stroke-[1.5]" />
+                    LinkedIn
+                  </a>
+                )}
+                {sheetContact.location && (
+                  <span className="flex items-center gap-2.5 text-[0.875rem] text-muted-foreground">
+                    <MapPin className="h-4 w-4 stroke-[1.5]" />
+                    {sheetContact.location}
+                  </span>
+                )}
+              </div>
+
+              {sheetContact.notes && (
+                <div className="bg-secondary/50 rounded-xl px-4 py-3">
+                  <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{sheetContact.notes}</p>
+                </div>
+              )}
+
+              {/* Tasks */}
+              {sheetContactTasks.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-[0.75rem] font-medium uppercase tracking-wider text-muted-foreground">Oppfølginger</h3>
+                  <div className="space-y-1">
+                    {sheetContactTasks.map((t) => {
+                      const overdue = t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date));
+                      return (
+                        <div key={t.id} className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-secondary/30">
+                          <div className="h-1.5 w-1.5 rounded-full bg-current flex-shrink-0" style={{ color: t.priority === "high" ? "hsl(var(--destructive))" : t.priority === "medium" ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))" }} />
+                          <span className="text-[0.8125rem] font-medium truncate flex-1">{t.title}</span>
+                          {t.due_date && (
+                            <span className={`text-[0.75rem] flex-shrink-0 ${overdue ? "text-destructive" : "text-muted-foreground"}`}>
+                              {format(new Date(t.due_date), "d. MMM", { locale: nb })}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Activities */}
+              {sheetContactActivities.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-[0.75rem] font-medium uppercase tracking-wider text-muted-foreground">Siste aktiviteter</h3>
+                  <div className="space-y-1">
+                    {sheetContactActivities.map((a) => {
+                      const cfg = typeConfig[a.type] || typeConfig.note;
+                      const Icon = cfg.icon;
+                      return (
+                        <div key={a.id} className="flex items-start gap-2.5 px-3 py-2.5 rounded-lg bg-secondary/30">
+                          <Icon className={`h-3.5 w-3.5 mt-0.5 stroke-[1.5] flex-shrink-0 ${cfg.accent}`} />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[0.8125rem] font-medium truncate">{a.subject}</p>
+                            <p className="text-[0.6875rem] text-muted-foreground mt-0.5">
+                              {format(new Date(a.created_at), "d. MMM yyyy", { locale: nb })}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Full page link */}
+              <Button
+                variant="outline"
+                className="w-full rounded-xl text-[0.8125rem]"
+                onClick={() => {
+                  setContactSheetId(null);
+                  navigate(`/kontakter/${contactSheetId}`);
+                }}
+              >
+                Åpne fullstendig kontaktkort
+              </Button>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Company Sheet */}
+      <Sheet open={!!companySheetId} onOpenChange={(open) => !open && setCompanySheetId(null)}>
+        <SheetContent className="sm:max-w-[480px] overflow-y-auto">
+          {sheetCompany && (
+            <div className="space-y-6 pt-2">
+              <SheetHeader className="space-y-1.5">
+                <SheetTitle className="text-[1.25rem] font-bold">{sheetCompany.name}</SheetTitle>
+                <div className="flex items-center gap-2 flex-wrap text-[0.8125rem] text-muted-foreground">
+                  {sheetCompany.city && (
+                    <>
+                      <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5 stroke-[1.5]" />{sheetCompany.city}</span>
+                      <span className="text-muted-foreground/30">·</span>
+                    </>
+                  )}
+                  {sheetCompany.org_number && (
+                    <span className="font-mono">Org.nr {sheetCompany.org_number}</span>
+                  )}
+                </div>
+              </SheetHeader>
+
+              {/* Company info */}
+              <div className="space-y-2.5">
+                {sheetCompany.website && (
+                  <a href={sheetCompany.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-[0.875rem] text-primary hover:underline">
+                    <Globe className="h-4 w-4 stroke-[1.5]" />
+                    {sheetCompany.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
+                  </a>
+                )}
+                {sheetCompany.linkedin && (
+                  <a href={sheetCompany.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-[0.875rem] text-primary hover:underline">
+                    <Linkedin className="h-4 w-4 stroke-[1.5]" />
+                    LinkedIn
+                  </a>
+                )}
+                {sheetCompany.phone && (
+                  <a href={`tel:${sheetCompany.phone}`} className="flex items-center gap-2.5 text-[0.875rem] text-primary hover:underline">
+                    <Phone className="h-4 w-4 stroke-[1.5]" />
+                    {sheetCompany.phone}
+                  </a>
+                )}
+                {sheetCompany.email && (
+                  <a href={`mailto:${sheetCompany.email}`} className="flex items-center gap-2.5 text-[0.875rem] text-primary hover:underline">
+                    <Mail className="h-4 w-4 stroke-[1.5]" />
+                    {sheetCompany.email}
+                  </a>
+                )}
+              </div>
+
+              {sheetCompany.notes && (
+                <div className="bg-secondary/50 rounded-xl px-4 py-3">
+                  <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{sheetCompany.notes}</p>
+                </div>
+              )}
+
+              {/* Contacts */}
+              {sheetCompanyContacts.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-[0.75rem] font-medium uppercase tracking-wider text-muted-foreground">Kontakter · {sheetCompanyContacts.length}</h3>
+                  <div className="space-y-1">
+                    {sheetCompanyContacts.map((c) => (
+                      <button
+                        key={c.id}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-secondary/30 hover:bg-secondary/60 transition-colors text-left"
+                        onClick={() => {
+                          setCompanySheetId(null);
+                          setContactSheetId(c.id);
+                        }}
+                      >
+                        <User className="h-3.5 w-3.5 stroke-[1.5] text-muted-foreground flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[0.8125rem] font-medium truncate">{c.first_name} {c.last_name}</p>
+                          {c.title && <p className="text-[0.6875rem] text-muted-foreground truncate">{c.title}</p>}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Activities */}
+              {sheetCompanyActivities.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-[0.75rem] font-medium uppercase tracking-wider text-muted-foreground">Siste aktiviteter</h3>
+                  <div className="space-y-1">
+                    {sheetCompanyActivities.map((a) => {
+                      const cfg = typeConfig[a.type] || typeConfig.note;
+                      const Icon = cfg.icon;
+                      const contactName = (a.contacts as any)?.first_name
+                        ? `${(a.contacts as any).first_name} ${(a.contacts as any).last_name}`
+                        : null;
+                      return (
+                        <div key={a.id} className="flex items-start gap-2.5 px-3 py-2.5 rounded-lg bg-secondary/30">
+                          <Icon className={`h-3.5 w-3.5 mt-0.5 stroke-[1.5] flex-shrink-0 ${cfg.accent}`} />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[0.8125rem] font-medium truncate">{a.subject}</p>
+                            <p className="text-[0.6875rem] text-muted-foreground mt-0.5">
+                              {contactName && <>{contactName} · </>}
+                              {format(new Date(a.created_at), "d. MMM yyyy", { locale: nb })}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Full page link */}
+              <Button
+                variant="outline"
+                className="w-full rounded-xl text-[0.8125rem]"
+                onClick={() => {
+                  setCompanySheetId(null);
+                  navigate(`/selskaper/${companySheetId}`);
+                }}
+              >
+                Åpne fullstendig selskapsside
+              </Button>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
