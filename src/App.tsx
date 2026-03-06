@@ -58,7 +58,6 @@ const App = () => (
                 <Route path="kontakter" element={<Contacts />} />
                 <Route path="kontakter/:id" element={<ContactDetail />} />
                 <Route path="oppfolginger" element={<Tasks />} />
-                
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
