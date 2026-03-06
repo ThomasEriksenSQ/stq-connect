@@ -14,7 +14,7 @@ import Contacts from "./pages/Contacts";
 import ContactDetail from "./pages/ContactDetail";
 import Tasks from "./pages/Tasks";
 import NotFound from "./pages/NotFound";
-import Import from "./pages/Import";
+
 
 const queryClient = new QueryClient();
 
