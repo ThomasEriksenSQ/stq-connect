@@ -22,6 +22,7 @@ export type Database = {
           created_by: string | null
           description: string | null
           id: string
+          sf_activity_id: string | null
           subject: string
           type: string
         }
@@ -32,6 +33,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          sf_activity_id?: string | null
           subject: string
           type?: string
         }
@@ -42,6 +44,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          sf_activity_id?: string | null
           subject?: string
           type?: string
         }
@@ -77,6 +80,7 @@ export type Database = {
           org_number: string | null
           owner_id: string | null
           phone: string | null
+          sf_account_id: string | null
           status: string
           updated_at: string
           website: string | null
@@ -96,6 +100,7 @@ export type Database = {
           org_number?: string | null
           owner_id?: string | null
           phone?: string | null
+          sf_account_id?: string | null
           status?: string
           updated_at?: string
           website?: string | null
@@ -115,6 +120,7 @@ export type Database = {
           org_number?: string | null
           owner_id?: string | null
           phone?: string | null
+          sf_account_id?: string | null
           status?: string
           updated_at?: string
           website?: string | null
@@ -194,6 +200,7 @@ export type Database = {
           notes: string | null
           owner_id: string | null
           phone: string | null
+          sf_contact_id: string | null
           title: string | null
           updated_at: string
         }
@@ -212,6 +219,7 @@ export type Database = {
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
+          sf_contact_id?: string | null
           title?: string | null
           updated_at?: string
         }
@@ -230,6 +238,7 @@ export type Database = {
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
+          sf_contact_id?: string | null
           title?: string | null
           updated_at?: string
         }
@@ -319,6 +328,7 @@ export type Database = {
           due_date: string | null
           id: string
           priority: string
+          sf_activity_id: string | null
           status: string
           title: string
           updated_at: string
@@ -334,6 +344,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           priority?: string
+          sf_activity_id?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -349,6 +360,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           priority?: string
+          sf_activity_id?: string | null
           status?: string
           title?: string
           updated_at?: string

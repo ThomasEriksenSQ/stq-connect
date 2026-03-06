@@ -18,7 +18,6 @@ Deno.serve(async (req) => {
 
     const { type, records } = await req.json();
 
-    // Helper to delete all rows from a table (handles >1000 row limit)
     async function clearTable(table: string) {
       let deleted = 0;
       while (true) {
@@ -31,29 +30,6 @@ Deno.serve(async (req) => {
       return deleted;
     }
 
-    if (type === "clear") {
-      const a = await clearTable("activities");
-      const t = await clearTable("tasks");
-      const c = await clearTable("contacts");
-      const co = await clearTable("companies");
-      console.log(`Cleared: ${a} activities, ${t} tasks, ${c} contacts, ${co} companies`);
-      return new Response(JSON.stringify({ ok: true, deleted: { activities: a, tasks: t, contacts: c, companies: co } }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    if (type === "companies") {
-      let inserted = 0;
-      for (let i = 0; i < records.length; i += 50) {
-        const batch = records.slice(i, i + 50);
-        const { error } = await supabase.from("companies").insert(batch);
-        if (error) console.error("Company err:", JSON.stringify(error), "at:", i);
-        else inserted += batch.length;
-      }
-      return new Response(JSON.stringify({ type: "companies", inserted, total: records.length }), 
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    // Helper to fetch all rows from a table (handles >1000 row limit)
     async function fetchAll(table: string, columns: string) {
       const all: any[] = [];
       let from = 0;
@@ -69,19 +45,42 @@ Deno.serve(async (req) => {
       return all;
     }
 
-    if (type === "contacts") {
-      const companies = await fetchAll("companies", "id, name");
-      const companyMap: Record<string, string> = {};
-      for (const c of companies) {
-        companyMap[c.name.toLowerCase()] = c.id;
+    if (type === "clear") {
+      const a = await clearTable("activities");
+      const t = await clearTable("tasks");
+      const c = await clearTable("contacts");
+      const co = await clearTable("companies");
+      console.log(`Cleared: ${a} activities, ${t} tasks, ${c} contacts, ${co} companies`);
+      return new Response(JSON.stringify({ ok: true, deleted: { activities: a, tasks: t, contacts: c, companies: co } }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (type === "companies") {
+      let inserted = 0;
+      for (let i = 0; i < records.length; i += 50) {
+        const batch = records.slice(i, i + 50);
+        const { error } = await supabase.from("companies").insert(batch);
+        if (error) console.error("Company err:", JSON.stringify(error), "at:", i);
+        else inserted += batch.length;
       }
-      console.log(`Company map has ${Object.keys(companyMap).length} entries`);
+      return new Response(JSON.stringify({ type: "companies", inserted, total: records.length }), 
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (type === "contacts") {
+      // Resolve company_id via sf_account_id
+      const companies = await fetchAll("companies", "id, sf_account_id");
+      const sfAccMap: Record<string, string> = {};
+      for (const c of companies) {
+        if (c.sf_account_id) sfAccMap[c.sf_account_id] = c.id;
+      }
+      console.log(`SF Account map has ${Object.keys(sfAccMap).length} entries`);
 
       const toInsert = records.map((r: any) => {
-        const { account_name, ...rest } = r;
+        const { sf_account_id, ...rest } = r;
         return {
           ...rest,
-          company_id: account_name ? companyMap[account_name.toLowerCase()] || null : null,
+          sf_contact_id: r.sf_contact_id,
+          company_id: sf_account_id ? sfAccMap[sf_account_id] || null : null,
         };
       });
 
@@ -89,7 +88,7 @@ Deno.serve(async (req) => {
       for (let i = 0; i < toInsert.length; i += 50) {
         const batch = toInsert.slice(i, i + 50);
         const { error } = await supabase.from("contacts").insert(batch);
-        if (error) console.error("Contact err:", JSON.stringify(error), "at:", i);
+        if (error) console.error("Contact err:", JSON.stringify(error), "at:", i, JSON.stringify(batch[0]));
         else inserted += batch.length;
       }
       return new Response(JSON.stringify({ type: "contacts", inserted, total: toInsert.length }),
@@ -97,24 +96,45 @@ Deno.serve(async (req) => {
     }
 
     if (type === "activities") {
-      const contacts = await fetchAll("contacts", "id, first_name, last_name");
-      const contactMap: Record<string, string> = {};
-      for (const c of contacts) {
-        contactMap[`${c.first_name}|${c.last_name}`.toLowerCase()] = c.id;
-      }
-      const companies = await fetchAll("companies", "id, name");
-      const companyMap: Record<string, string> = {};
+      // Resolve company_id via sf_account_id, contact_id via name match scoped to company
+      const companies = await fetchAll("companies", "id, sf_account_id");
+      const sfAccMap: Record<string, string> = {};
       for (const c of companies) {
-        companyMap[c.name.toLowerCase()] = c.id;
+        if (c.sf_account_id) sfAccMap[c.sf_account_id] = c.id;
       }
-      console.log(`Lookup maps: ${Object.keys(contactMap).length} contacts, ${Object.keys(companyMap).length} companies`);
+      const contacts = await fetchAll("contacts", "id, first_name, last_name, company_id");
+      // Build contact lookup: "first|last|company_id" -> contact.id
+      const contactMap: Record<string, string> = {};
+      const contactByName: Record<string, string> = {};
+      for (const c of contacts) {
+        const key = `${c.first_name}|${c.last_name}`.toLowerCase();
+        contactByName[key] = c.id;
+        if (c.company_id) {
+          contactMap[`${key}|${c.company_id}`] = c.id;
+        }
+      }
+      console.log(`Lookup maps: ${Object.keys(sfAccMap).length} companies, ${Object.keys(contactMap).length} scoped contacts, ${Object.keys(contactByName).length} name contacts`);
 
       const toInsert = records.map((r: any) => {
-        const { contact_name, account_name, ...rest } = r;
+        const { sf_account_id, contact_first, contact_last, ...rest } = r;
+        const companyId = sf_account_id ? sfAccMap[sf_account_id] || null : null;
+        
+        // Try company-scoped contact match first, then name-only
+        let contactId = null;
+        if (contact_first || contact_last) {
+          const nameKey = `${contact_first || ""}|${contact_last || ""}`.toLowerCase();
+          if (companyId) {
+            contactId = contactMap[`${nameKey}|${companyId}`] || null;
+          }
+          if (!contactId) {
+            contactId = contactByName[nameKey] || null;
+          }
+        }
+
         return {
           ...rest,
-          contact_id: contact_name ? contactMap[contact_name.toLowerCase()] || null : null,
-          company_id: account_name ? companyMap[account_name.toLowerCase()] || null : null,
+          company_id: companyId,
+          contact_id: contactId,
         };
       });
 
@@ -130,24 +150,42 @@ Deno.serve(async (req) => {
     }
 
     if (type === "tasks") {
-      const contacts = await fetchAll("contacts", "id, first_name, last_name");
-      const contactMap: Record<string, string> = {};
-      for (const c of contacts) {
-        contactMap[`${c.first_name}|${c.last_name}`.toLowerCase()] = c.id;
-      }
-      const companies = await fetchAll("companies", "id, name");
-      const companyMap: Record<string, string> = {};
+      const companies = await fetchAll("companies", "id, sf_account_id");
+      const sfAccMap: Record<string, string> = {};
       for (const c of companies) {
-        companyMap[c.name.toLowerCase()] = c.id;
+        if (c.sf_account_id) sfAccMap[c.sf_account_id] = c.id;
       }
-      console.log(`Task lookup maps: ${Object.keys(contactMap).length} contacts, ${Object.keys(companyMap).length} companies`);
+      const contacts = await fetchAll("contacts", "id, first_name, last_name, company_id");
+      const contactMap: Record<string, string> = {};
+      const contactByName: Record<string, string> = {};
+      for (const c of contacts) {
+        const key = `${c.first_name}|${c.last_name}`.toLowerCase();
+        contactByName[key] = c.id;
+        if (c.company_id) {
+          contactMap[`${key}|${c.company_id}`] = c.id;
+        }
+      }
+      console.log(`Task lookup maps: ${Object.keys(sfAccMap).length} companies, ${Object.keys(contactMap).length} scoped contacts`);
 
       const toInsert = records.map((r: any) => {
-        const { contact_name, account_name, ...rest } = r;
+        const { sf_account_id, contact_first, contact_last, ...rest } = r;
+        const companyId = sf_account_id ? sfAccMap[sf_account_id] || null : null;
+        
+        let contactId = null;
+        if (contact_first || contact_last) {
+          const nameKey = `${contact_first || ""}|${contact_last || ""}`.toLowerCase();
+          if (companyId) {
+            contactId = contactMap[`${nameKey}|${companyId}`] || null;
+          }
+          if (!contactId) {
+            contactId = contactByName[nameKey] || null;
+          }
+        }
+
         return {
           ...rest,
-          contact_id: contact_name ? contactMap[contact_name.toLowerCase()] || null : null,
-          company_id: account_name ? companyMap[account_name.toLowerCase()] || null : null,
+          company_id: companyId,
+          contact_id: contactId,
         };
       });
 
