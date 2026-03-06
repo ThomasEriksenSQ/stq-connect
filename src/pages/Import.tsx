@@ -45,7 +45,7 @@ function mapStatus(sfType: string): string {
 
 type Row = Record<string, string>;
 
-function readXlsxAsObjects(file: File): Promise<{ headers: string[], rows: Row[] }> {
+function readXlsxAsObjects(file: File, requiredColumn: string): Promise<{ headers: string[], rows: Row[] }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -54,22 +54,25 @@ function readXlsxAsObjects(file: File): Promise<{ headers: string[], rows: Row[]
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
 
-        // Find header row - the first row with 5+ non-empty cells
+        // Find header row by looking for the required column name
         let headerIdx = -1;
-        for (let i = 0; i < Math.min(rawRows.length, 25); i++) {
-          const nonEmpty = rawRows[i]?.filter((c: any) => String(c).trim()).length || 0;
-          if (nonEmpty >= 5) {
+        for (let i = 0; i < Math.min(rawRows.length, 30); i++) {
+          const cells = rawRows[i]?.map((c: any) => String(c).trim()) || [];
+          if (cells.includes(requiredColumn)) {
             headerIdx = i;
             break;
           }
         }
 
         if (headerIdx < 0) {
+          console.error(`Header row with "${requiredColumn}" not found. First 15 rows:`, rawRows.slice(0, 15).map((r, i) => `Row ${i}: [${r?.map((c: any) => String(c).trim()).filter(Boolean).join(", ")}]`));
           resolve({ headers: [], rows: [] });
           return;
         }
 
         const headers = rawRows[headerIdx].map((h: any) => String(h).trim());
+        console.log(`Found header at row ${headerIdx}:`, headers.filter(Boolean));
+        
         const rows: Row[] = [];
         for (let i = headerIdx + 1; i < rawRows.length; i++) {
           const raw = rawRows[i];
@@ -80,6 +83,11 @@ function readXlsxAsObjects(file: File): Promise<{ headers: string[], rows: Row[]
           });
           rows.push(obj);
         }
+        
+        // Debug: log first 2 data rows
+        if (rows.length > 0) console.log("Sample row 0:", JSON.stringify(rows[0]));
+        if (rows.length > 1) console.log("Sample row 1:", JSON.stringify(rows[1]));
+        
         resolve({ headers, rows });
       } catch (err) { reject(err); }
     };
@@ -123,7 +131,7 @@ const Import = () => {
 
       // Step 2: Parse & import companies
       addLog("Parser selskaper...");
-      const accData = await readXlsxAsObjects(accountsFile);
+      const accData = await readXlsxAsObjects(accountsFile, "Account Name");
       addLog(`  Funnet kolonner: ${accData.headers.filter(h => h).join(", ")}`);
       addLog(`  ${accData.rows.length} rader funnet`);
 
@@ -155,7 +163,7 @@ const Import = () => {
 
       // Step 3: Parse & import contacts
       addLog("Parser kontakter...");
-      const conData = await readXlsxAsObjects(contactsFile);
+      const conData = await readXlsxAsObjects(contactsFile, "First Name");
       addLog(`  Funnet kolonner: ${conData.headers.filter(h => h).join(", ")}`);
       addLog(`  ${conData.rows.length} rader funnet`);
 
@@ -210,7 +218,7 @@ const Import = () => {
 
       // Step 4: Parse & import activities/tasks
       addLog("Parser aktiviteter og oppgaver...");
-      const actData = await readXlsxAsObjects(activitiesFile);
+      const actData = await readXlsxAsObjects(activitiesFile, "Subject");
       addLog(`  Funnet kolonner: ${actData.headers.filter(h => h).join(", ")}`);
       addLog(`  ${actData.rows.length} rader funnet`);
 
