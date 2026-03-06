@@ -172,9 +172,10 @@ const Import = () => {
 
       for (const r of taskRows) {
         if (!r.Subject?.trim()) continue;
-        const taskType = (r.Type || "").trim();
         const owner = mapOwner(sf(r.OwnerId));
         const createdAt = sfDateTime(r.CreatedDate) || sfDateTime(r.ActivityDate) || "2024-01-01T00:00:00Z";
+        const status = (r.Status || "").trim().toLowerCase();
+        const isCompleted = status === "completed" || status === "ferdig utført" || r.IsClosed === "1";
 
         const base = {
           sf_activity_id: sf(r.Id),
@@ -187,21 +188,18 @@ const Import = () => {
           created_by: owner,
         };
 
-        if (taskType === "Call") {
-          activityRecordsFromTasks.push({ ...base, type: "call" });
-        } else if (taskType === "Email") {
-          activityRecordsFromTasks.push({ ...base, type: "note" });
+        if (isCompleted) {
+          // Completed tasks → activities. Infer type from Subject.
+          activityRecordsFromTasks.push({ ...base, type: inferActivityType(base.subject) });
         } else {
-          // Regular task
-          const status = (r.Status || "").trim();
-          const isClosed = r.IsClosed === "1";
+          // Open/Not Started/In Progress/Deferred → oppfølginger (tasks table)
           taskRecords.push({
             ...base,
             title: base.subject,
-            status: isClosed ? "completed" : "open",
+            status: "open",
             priority: (r.Priority || "Normal").toLowerCase() === "high" ? "high" : "medium",
             due_date: sfDate(r.ActivityDate),
-            completed_at: isClosed ? (sfDateTime(r.CompletedDateTime) || createdAt) : null,
+            completed_at: null,
             assigned_to: owner,
           });
         }
