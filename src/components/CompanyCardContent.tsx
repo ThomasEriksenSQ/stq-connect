@@ -46,7 +46,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   const { data: company, isLoading } = useQuery({
     queryKey: ["company", companyId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("companies").select("*").eq("id", companyId).single();
+      const { data, error } = await supabase.from("companies").select("*, profiles!companies_owner_id_fkey(full_name)").eq("id", companyId).single();
       if (error) throw error;
       return data;
     },
@@ -56,7 +56,11 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   const { data: contacts = [] } = useQuery({
     queryKey: ["company-contacts", companyId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("contacts").select("*").eq("company_id", companyId).order("first_name");
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*, profiles!contacts_owner_id_fkey(full_name)")
+        .eq("company_id", companyId)
+        .order("first_name");
       if (error) throw error;
       return data;
     },
@@ -77,12 +81,13 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
     enabled: !!companyId,
   });
 
-  const { data: tasks = [] } = useQuery({
+  // Tasks directly on company
+  const { data: companyTasks = [] } = useQuery({
     queryKey: ["company-tasks", companyId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks")
-        .select("*, contacts(first_name, last_name)")
+        .select("*, contacts(first_name, last_name), profiles!tasks_assigned_to_fkey(full_name)")
         .eq("company_id", companyId)
         .neq("status", "done")
         .order("due_date", { ascending: true, nullsFirst: false });
@@ -90,6 +95,35 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
       return data;
     },
     enabled: !!companyId,
+  });
+
+  // Tasks on contacts of this company (not already covered by company_id)
+  const contactIds = contacts.map(c => c.id);
+  const { data: contactTasks = [] } = useQuery({
+    queryKey: ["company-contact-tasks", companyId, contactIds],
+    queryFn: async () => {
+      if (contactIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*, contacts(first_name, last_name), profiles!tasks_assigned_to_fkey(full_name)")
+        .in("contact_id", contactIds)
+        .neq("status", "done")
+        .order("due_date", { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!companyId && contactIds.length > 0,
+  });
+
+  // Merge and deduplicate tasks
+  const allTasksMap = new Map<string, any>();
+  companyTasks.forEach(t => allTasksMap.set(t.id, t));
+  contactTasks.forEach(t => { if (!allTasksMap.has(t.id)) allTasksMap.set(t.id, t); });
+  const tasks = Array.from(allTasksMap.values()).sort((a, b) => {
+    if (!a.due_date && !b.due_date) return 0;
+    if (!a.due_date) return 1;
+    if (!b.due_date) return -1;
+    return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
   });
 
   const updateMutation = useMutation({
@@ -114,12 +148,18 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company-tasks", companyId] });
+      queryClient.invalidateQueries({ queryKey: ["company-contact-tasks", companyId] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
   });
 
   const updateField = (field: string) => (value: string) => {
     updateMutation.mutate({ [field]: value || null });
+  };
+
+  const getOwnerFirstName = (profile: any) => {
+    const fullName = profile?.full_name;
+    return fullName ? fullName.split(" ")[0] : null;
   };
 
   if (isLoading) {
@@ -134,6 +174,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   if (!company) return <p className="text-muted-foreground text-[0.875rem]">Selskap ikke funnet</p>;
 
   const status = statusLabels[company.status] || { label: company.status, className: "bg-secondary text-secondary-foreground border-border" };
+  const companyOwner = getOwnerFirstName((company as any).profiles);
 
   return (
     <div className="space-y-6">
@@ -175,6 +216,12 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
           {company.industry && (
             <span>{company.industry}</span>
           )}
+          {companyOwner && (
+            <>
+              <span className="text-muted-foreground/30">·</span>
+              <span className="inline-flex items-center gap-1"><User className="h-3.5 w-3.5 stroke-[1.5]" />{companyOwner}</span>
+            </>
+          )}
         </div>
       </div>
 
@@ -211,106 +258,120 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
         </div>
       ) : null}
 
-      {/* Kontakter */}
-      <div className="space-y-3">
-        <h3 className="text-[0.75rem] font-medium uppercase tracking-wider text-muted-foreground">Kontakter · {contacts.length}</h3>
-        {contacts.length === 0 ? (
-          <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen kontakter</p>
-        ) : (
-          <div className="space-y-1">
-            {contacts.map((c) => (
-              <button
-                key={c.id}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors text-left group"
-                onClick={() => onOpenContact ? onOpenContact(c.id) : navigate(`/kontakter/${c.id}`)}
-              >
-                <User className="h-3.5 w-3.5 stroke-[1.5] text-muted-foreground flex-shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[0.8125rem] font-medium truncate group-hover:text-primary transition-colors">{c.first_name} {c.last_name}</p>
-                  <p className="text-[0.6875rem] text-muted-foreground truncate">{c.title || "—"}</p>
-                </div>
-                {c.phone && (
-                  <span className="text-[0.6875rem] text-muted-foreground/60 hidden sm:block flex-shrink-0">{c.phone}</span>
-                )}
-                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/20 group-hover:text-muted-foreground/60 flex-shrink-0" />
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Oppfølginger */}
-      <div className="space-y-3">
-        <h3 className="text-[0.75rem] font-medium uppercase tracking-wider text-muted-foreground">Oppfølginger · {tasks.length}</h3>
-        {tasks.length === 0 ? (
-          <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen kommende oppfølginger</p>
-        ) : (
-          <div className="space-y-1">
-            {tasks.map((task) => {
-              const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
-              const prio = priorityConfig[task.priority] || priorityConfig.medium;
-              const contactName = (task.contacts as any)?.first_name
-                ? `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}`
-                : null;
-              return (
-                <div key={task.id} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors">
-                  <Checkbox
-                    checked={false}
-                    onCheckedChange={() => toggleTaskMutation.mutate(task.id)}
-                    className="h-4 w-4 rounded-[5px] border-border/60 flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[0.8125rem] font-medium truncate">{task.title}</p>
-                    {contactName && <p className="text-[0.6875rem] text-muted-foreground truncate">{contactName}</p>}
-                  </div>
-                  <Badge variant="outline" className={`text-[0.625rem] px-1.5 py-0 rounded ${prio.className} flex-shrink-0`}>{prio.label}</Badge>
-                  {task.due_date && (
-                    <span className={`text-[0.75rem] flex-shrink-0 flex items-center gap-1 ${overdue ? "text-destructive" : "text-muted-foreground"}`}>
-                      <CalendarDays className="h-3 w-3 stroke-[1.5]" />
-                      {format(new Date(task.due_date), "d. MMM", { locale: nb })}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Aktiviteter */}
-      <div className="space-y-3">
-        <h3 className="text-[0.75rem] font-medium uppercase tracking-wider text-muted-foreground">Aktiviteter · {activities.length}</h3>
-        {activities.length === 0 ? (
-          <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen aktiviteter</p>
-        ) : (
-          <div className="space-y-1">
-            {activities.map((a) => {
-              const cfg = typeConfig[a.type] || typeConfig.note;
-              const Icon = cfg.icon;
-              const contactName = (a.contacts as any)?.first_name
-                ? `${(a.contacts as any).first_name} ${(a.contacts as any).last_name}`
-                : null;
-              return (
-                <div key={a.id} className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors">
-                  <Icon className={`h-3.5 w-3.5 mt-0.5 stroke-[1.5] flex-shrink-0 ${cfg.accent}`} />
-                  <div className="min-w-0 flex-1 space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <p className="text-[0.8125rem] font-medium leading-snug truncate">{a.subject}</p>
-                      <span className="text-[0.625rem] text-muted-foreground/60 flex-shrink-0">{cfg.label}</span>
+      {/* Two-column layout: Left = Tasks + Activities, Right = Contacts */}
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_minmax(0,280px)] gap-6">
+        {/* Left column: Oppfølginger + Aktiviteter */}
+        <div className="space-y-6">
+          {/* Oppfølginger */}
+          <div className="space-y-3">
+            <h3 className="text-[0.75rem] font-medium uppercase tracking-wider text-muted-foreground">Oppfølginger · {tasks.length}</h3>
+            {tasks.length === 0 ? (
+              <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen kommende oppfølginger</p>
+            ) : (
+              <div className="space-y-1">
+                {tasks.map((task) => {
+                  const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
+                  const prio = priorityConfig[task.priority] || priorityConfig.medium;
+                  const contactName = (task.contacts as any)?.first_name
+                    ? `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}`
+                    : null;
+                  const taskOwner = getOwnerFirstName((task as any).profiles);
+                  return (
+                    <div key={task.id} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors">
+                      <Checkbox
+                        checked={false}
+                        onCheckedChange={() => toggleTaskMutation.mutate(task.id)}
+                        className="h-4 w-4 rounded-[5px] border-border/60 flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[0.8125rem] font-medium truncate">{task.title}</p>
+                        <div className="flex items-center gap-1.5 text-[0.6875rem] text-muted-foreground">
+                          {contactName && <span className="truncate">{contactName}</span>}
+                          {contactName && taskOwner && <span className="text-muted-foreground/30">·</span>}
+                          {taskOwner && <span className="flex items-center gap-0.5"><User className="h-2.5 w-2.5 stroke-[1.5]" />{taskOwner}</span>}
+                        </div>
+                      </div>
+                      <Badge variant="outline" className={`text-[0.625rem] px-1.5 py-0 rounded ${prio.className} flex-shrink-0`}>{prio.label}</Badge>
+                      {task.due_date && (
+                        <span className={`text-[0.75rem] flex-shrink-0 flex items-center gap-1 ${overdue ? "text-destructive" : "text-muted-foreground"}`}>
+                          <CalendarDays className="h-3 w-3 stroke-[1.5]" />
+                          {format(new Date(task.due_date), "d. MMM", { locale: nb })}
+                        </span>
+                      )}
                     </div>
-                    {a.description && (
-                      <p className="text-[0.75rem] text-muted-foreground leading-relaxed line-clamp-2">{a.description}</p>
-                    )}
-                    <p className="text-[0.6875rem] text-muted-foreground/60">
-                      {contactName && <>{contactName} · </>}
-                      {format(new Date(a.created_at), "d. MMM yyyy 'kl.' HH:mm", { locale: nb })}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Aktiviteter */}
+          <div className="space-y-3">
+            <h3 className="text-[0.75rem] font-medium uppercase tracking-wider text-muted-foreground">Aktiviteter · {activities.length}</h3>
+            {activities.length === 0 ? (
+              <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen aktiviteter</p>
+            ) : (
+              <div className="space-y-1">
+                {activities.map((a) => {
+                  const cfg = typeConfig[a.type] || typeConfig.note;
+                  const Icon = cfg.icon;
+                  const contactName = (a.contacts as any)?.first_name
+                    ? `${(a.contacts as any).first_name} ${(a.contacts as any).last_name}`
+                    : null;
+                  return (
+                    <div key={a.id} className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors">
+                      <Icon className={`h-3.5 w-3.5 mt-0.5 stroke-[1.5] flex-shrink-0 ${cfg.accent}`} />
+                      <div className="min-w-0 flex-1 space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <p className="text-[0.8125rem] font-medium leading-snug truncate">{a.subject}</p>
+                          <span className="text-[0.625rem] text-muted-foreground/60 flex-shrink-0">{cfg.label}</span>
+                        </div>
+                        {a.description && (
+                          <p className="text-[0.75rem] text-muted-foreground leading-relaxed line-clamp-2">{a.description}</p>
+                        )}
+                        <p className="text-[0.6875rem] text-muted-foreground/60">
+                          {contactName && <>{contactName} · </>}
+                          {format(new Date(a.created_at), "d. MMM yyyy 'kl.' HH:mm", { locale: nb })}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right column: Kontakter */}
+        <div className="space-y-3">
+          <h3 className="text-[0.75rem] font-medium uppercase tracking-wider text-muted-foreground">Kontakter · {contacts.length}</h3>
+          {contacts.length === 0 ? (
+            <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen kontakter</p>
+          ) : (
+            <div className="space-y-1">
+              {contacts.map((c) => {
+                const contactOwner = getOwnerFirstName((c as any).profiles);
+                return (
+                  <button
+                    key={c.id}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors text-left group"
+                    onClick={() => onOpenContact ? onOpenContact(c.id) : navigate(`/kontakter/${c.id}`)}
+                  >
+                    <User className="h-3.5 w-3.5 stroke-[1.5] text-muted-foreground flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[0.8125rem] font-medium truncate group-hover:text-primary transition-colors">{c.first_name} {c.last_name}</p>
+                      <p className="text-[0.6875rem] text-muted-foreground truncate">
+                        {c.title || "—"}
+                        {contactOwner && <span className="text-muted-foreground/40"> · {contactOwner}</span>}
+                      </p>
+                    </div>
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/20 group-hover:text-muted-foreground/60 flex-shrink-0" />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
