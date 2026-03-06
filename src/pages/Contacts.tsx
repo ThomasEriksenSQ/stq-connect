@@ -212,7 +212,7 @@ const Contacts = () => {
             {sorted.map((contact) => {
               const companyName = (contact.companies as any)?.name;
               const flags = [
-                contact.call_list && "Ringeliste",
+                contact.call_list && "Innkjøper",
                 contact.cv_email && "CV-Epost",
               ].filter(Boolean);
 
