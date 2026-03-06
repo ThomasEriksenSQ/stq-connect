@@ -37,6 +37,8 @@ const Tasks = () => {
   const [showDone, setShowDone] = useState(false);
   const [contactSheetId, setContactSheetId] = useState<string | null>(null);
   const [companySheetId, setCompanySheetId] = useState<string | null>(null);
+  const [pendingComplete, setPendingComplete] = useState<Set<string>>(new Set());
+  const pendingTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const navigate = useNavigate();
