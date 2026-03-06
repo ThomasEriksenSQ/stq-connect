@@ -1,25 +1,20 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Phone, Mail, Linkedin, FileText, Calendar as CalendarIcon, ExternalLink, Pencil, List, ChevronDown, ChevronUp } from "lucide-react";
+import { Phone, Mail, Linkedin, FileText, Clock, ExternalLink, Pencil, Trash2, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { format, isPast, isToday, getYear } from "date-fns";
+import { format, isPast, isToday, getYear, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { nb } from "date-fns/locale";
 import { fullDate } from "@/lib/relativeDate";
 import { cleanDescription } from "@/lib/cleanDescription";
-import InlineEdit from "@/components/InlineEdit";
 import { cn } from "@/lib/utils";
 
 const dotColors: Record<string, string> = {
@@ -37,18 +32,94 @@ interface ContactCardContentProps {
   onNavigateToFullPage?: () => void;
 }
 
+// Inline editable text field
+function InlineField({
+  value,
+  onSave,
+  placeholder,
+  className,
+}: {
+  value: string;
+  onSave: (v: string) => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) {
+      setDraft(value);
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  }, [editing, value]);
+
+  const save = () => {
+    const trimmed = draft.trim();
+    if (trimmed !== value) onSave(trimmed);
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") save();
+          if (e.key === "Escape") setEditing(false);
+        }}
+        onBlur={save}
+        className={cn(
+          "bg-transparent border-b border-primary/40 outline-none py-0.5 min-w-[60px]",
+          className
+        )}
+      />
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setEditing(true)}
+      className={cn(
+        "group inline-flex items-center gap-1 hover:text-primary transition-colors cursor-text",
+        !value && "text-muted-foreground/40 italic",
+        className
+      )}
+    >
+      <span>{value || placeholder || "—"}</span>
+      <Pencil className="h-2.5 w-2.5 opacity-0 group-hover:opacity-50 transition-opacity flex-shrink-0" />
+    </button>
+  );
+}
+
+const DATE_CHIPS = [
+  { label: "I dag", fn: () => new Date() },
+  { label: "1 uke", fn: () => addWeeks(new Date(), 1) },
+  { label: "2 uker", fn: () => addWeeks(new Date(), 2) },
+  { label: "3 uker", fn: () => addWeeks(new Date(), 3) },
+  { label: "1 mnd", fn: () => addMonths(new Date(), 1) },
+  { label: "2 mnd", fn: () => addMonths(new Date(), 2) },
+  { label: "3 mnd", fn: () => addMonths(new Date(), 3) },
+  { label: "6 mnd", fn: () => addMonths(new Date(), 6) },
+  { label: "1 år", fn: () => addYears(new Date(), 1) },
+];
+
 export function ContactCardContent({ contactId, editable = false, onOpenCompany, onNavigateToFullPage }: ContactCardContentProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [taskOpen, setTaskOpen] = useState(false);
+
+  // Form states
+  const [activeForm, setActiveForm] = useState<"call" | "meeting" | "task" | null>(null);
+  const [formSubject, setFormSubject] = useState("");
+  const [formDate, setFormDate] = useState("");
+  const [selectedChipIdx, setSelectedChipIdx] = useState<number | null>(null);
   const [editingNotes, setEditingNotes] = useState(false);
-  const [dueDateOpen, setDueDateOpen] = useState(false);
-  const [taskForm, setTaskForm] = useState({ title: "", description: "", priority: "medium", due_date: "" });
-  const [inlineLogOpen, setInlineLogOpen] = useState(false);
-  const [inlineLogType, setInlineLogType] = useState<"call" | "other">("call");
-  const [inlineLogSubject, setInlineLogSubject] = useState("");
-  const [inlineLogActType, setInlineLogActType] = useState("call");
+  const [notesDraft, setNotesDraft] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { data: contact, isLoading } = useQuery({
     queryKey: ["contact", contactId],
@@ -107,28 +178,31 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contact", contactId] });
       queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
-      toast.success("Oppdatert");
     },
     onError: () => toast.error("Kunne ikke oppdatere"),
   });
 
-  const createInlineActivity = async (type: string, subject: string) => {
-    const { error } = await supabase.from("activities").insert({
-      type, subject: subject.trim(),
-      contact_id: contactId, company_id: contact?.company_id || null, created_by: user?.id,
-    });
-    if (error) { toast.error("Kunne ikke lagre"); return; }
-    queryClient.invalidateQueries({ queryKey: ["contact-activities", contactId] });
-    toast.success("Aktivitet registrert");
-    setInlineLogOpen(false);
-    setInlineLogSubject("");
-  };
+  const createActivityMutation = useMutation({
+    mutationFn: async ({ type, subject }: { type: string; subject: string }) => {
+      const { error } = await supabase.from("activities").insert({
+        type, subject: subject.trim(),
+        contact_id: contactId, company_id: contact?.company_id || null, created_by: user?.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contact-activities", contactId] });
+      toast.success("Aktivitet registrert");
+      closeForm();
+    },
+    onError: () => toast.error("Kunne ikke lagre"),
+  });
 
   const createTaskMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("tasks").insert({
-        title: taskForm.title, description: taskForm.description || null, priority: taskForm.priority,
-        due_date: taskForm.due_date || null, contact_id: contactId, company_id: contact?.company_id || null,
+        title: formSubject.trim(), description: null, priority: "medium",
+        due_date: formDate || null, contact_id: contactId, company_id: contact?.company_id || null,
         assigned_to: user?.id, created_by: user?.id,
       });
       if (error) throw error;
@@ -136,9 +210,8 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contact-tasks", contactId] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      setTaskOpen(false);
-      setTaskForm({ title: "", description: "", priority: "medium", due_date: "" });
       toast.success("Oppfølging opprettet");
+      closeForm();
     },
     onError: () => toast.error("Kunne ikke opprette oppfølging"),
   });
@@ -153,8 +226,63 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contact-tasks", contactId] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast.success("Oppfølging fullført", { duration: 2000 });
     },
   });
+
+  const deleteActivityMutation = useMutation({
+    mutationFn: async (activityId: string) => {
+      const { error } = await supabase.from("activities").delete().eq("id", activityId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contact-activities", contactId] });
+      toast.success("Aktivitet slettet");
+    },
+  });
+
+  const updateActivityMutation = useMutation({
+    mutationFn: async ({ id, description }: { id: string; description: string }) => {
+      const { error } = await supabase.from("activities").update({ description }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contact-activities", contactId] });
+      toast.success("Oppdatert");
+    },
+  });
+
+  const openForm = (type: "call" | "meeting" | "task") => {
+    setActiveForm(type);
+    setFormSubject("");
+    setFormDate("");
+    setSelectedChipIdx(null);
+    setTimeout(() => textareaRef.current?.focus(), 50);
+  };
+
+  const closeForm = () => {
+    setActiveForm(null);
+    setFormSubject("");
+    setFormDate("");
+    setSelectedChipIdx(null);
+  };
+
+  const handleFormSubmit = () => {
+    if (!formSubject.trim()) return;
+    if (activeForm === "task") {
+      createTaskMutation.mutate();
+    } else {
+      createActivityMutation.mutate({
+        type: activeForm === "call" ? "call" : "meeting",
+        subject: formSubject,
+      });
+    }
+  };
+
+  const handleFormKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") closeForm();
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") handleFormSubmit();
+  };
 
   const updateField = (field: string) => (value: string) => {
     updateMutation.mutate({ [field]: value || null });
@@ -174,13 +302,28 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
   const companyId = (contact.companies as any)?.id;
 
   return (
-    <div className="space-y-5">
-      {/* Header – compact */}
-      <div>
+    <div>
+      {/* ── ZONE A: Contact Header ── */}
+      <div className="mb-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-[1.375rem] font-bold truncate">
-            {contact.first_name} {contact.last_name}
-          </h2>
+          {editable ? (
+            <h2 className="text-[1.375rem] font-bold truncate">
+              <InlineField
+                value={`${contact.first_name} ${contact.last_name}`}
+                onSave={(v) => {
+                  const parts = v.split(" ");
+                  const first = parts[0] || "";
+                  const last = parts.slice(1).join(" ") || "";
+                  updateMutation.mutate({ first_name: first, last_name: last });
+                }}
+                className="text-[1.375rem] font-bold"
+              />
+            </h2>
+          ) : (
+            <h2 className="text-[1.375rem] font-bold truncate">
+              {contact.first_name} {contact.last_name}
+            </h2>
+          )}
           <div className="flex items-center gap-1 flex-shrink-0">
             {editable && (
               <Select value={contact.owner_id || ""} onValueChange={(v) => updateMutation.mutate({ owner_id: v || null })}>
@@ -192,11 +335,6 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                 </SelectContent>
               </Select>
             )}
-            {editable && !editingNotes && !contact.notes && (
-              <button onClick={() => setEditingNotes(true)} className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-secondary text-muted-foreground">
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
-            )}
             {!editable && onNavigateToFullPage && (
               <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={onNavigateToFullPage}>
                 <ExternalLink className="h-3.5 w-3.5" />
@@ -205,19 +343,26 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           </div>
         </div>
 
+        {/* Line 2: title · company · phone · email · linkedin */}
         <div className="flex items-center gap-2 flex-wrap text-[0.8125rem] text-muted-foreground mt-1">
-          {contact.title && <span>{editable ? <InlineEdit value={contact.title} onSave={updateField("title")} className="text-[0.8125rem] font-normal" /> : contact.title}</span>}
-          {contact.title && companyName && <span className="text-muted-foreground/30">·</span>}
+          {editable ? (
+            <InlineField value={contact.title || ""} onSave={updateField("title")} placeholder="Stilling" className="text-[0.8125rem]" />
+          ) : (
+            contact.title && <span>{contact.title}</span>
+          )}
           {companyName && (
-            <button className="text-primary hover:underline" onClick={() => onOpenCompany ? onOpenCompany(companyId) : navigate(`/selskaper/${companyId}`)}>
-              {companyName}
-            </button>
+            <>
+              {contact.title && <span className="text-muted-foreground/30">·</span>}
+              <button className="text-primary hover:underline" onClick={() => onOpenCompany ? onOpenCompany(companyId) : navigate(`/selskaper/${companyId}`)}>
+                {companyName}
+              </button>
+            </>
           )}
           {contact.phone && (
             <>
               <span className="text-muted-foreground/30">·</span>
               <button onClick={() => copyToClipboard(contact.phone!)} className="inline-flex items-center gap-1 hover:text-foreground">
-                <Phone className="h-3 w-3" />{contact.phone}
+                <Phone className="h-3 w-3" />{editable ? <InlineField value={contact.phone} onSave={updateField("phone")} className="text-[0.8125rem]" /> : contact.phone}
               </button>
             </>
           )}
@@ -225,7 +370,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
             <>
               <span className="text-muted-foreground/30">·</span>
               <button onClick={() => copyToClipboard(contact.email!)} className="inline-flex items-center gap-1 hover:text-foreground">
-                <Mail className="h-3 w-3" />{contact.email}
+                <Mail className="h-3 w-3" />{editable ? <InlineField value={contact.email} onSave={updateField("email")} className="text-[0.8125rem]" /> : contact.email}
               </button>
             </>
           )}
@@ -237,8 +382,21 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
               </a>
             </>
           )}
+          {editable && !contact.phone && (
+            <>
+              <span className="text-muted-foreground/30">·</span>
+              <InlineField value="" onSave={updateField("phone")} placeholder="Telefon" className="text-[0.8125rem]" />
+            </>
+          )}
+          {editable && !contact.email && (
+            <>
+              <span className="text-muted-foreground/30">·</span>
+              <InlineField value="" onSave={updateField("email")} placeholder="E-post" className="text-[0.8125rem]" />
+            </>
+          )}
         </div>
 
+        {/* Line 3: Checkboxes */}
         <div className="flex items-center gap-3 mt-2">
           <label className="inline-flex items-center gap-1.5 cursor-pointer">
             <Checkbox checked={(contact as any).cv_email ?? false}
@@ -255,169 +413,274 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
         </div>
       </div>
 
-      {/* Notes */}
-      {editable && (editingNotes || contact.notes) ? (
-        <InlineEdit value={contact.notes || ""} onSave={(v) => { updateField("notes")(v); setEditingNotes(false); }} placeholder="Legg til notater..." multiline />
+      {/* Notes (inline edit via pencil) */}
+      {editable && editingNotes ? (
+        <div className="mb-4">
+          <Textarea
+            value={notesDraft}
+            onChange={(e) => setNotesDraft(e.target.value)}
+            rows={3}
+            autoFocus
+            className="text-[0.875rem] rounded-md"
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setEditingNotes(false);
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                updateField("notes")(notesDraft);
+                setEditingNotes(false);
+              }
+            }}
+          />
+          <div className="flex gap-2 mt-1.5">
+            <Button size="sm" className="h-7 text-[0.75rem] px-3 rounded-md" onClick={() => { updateField("notes")(notesDraft); setEditingNotes(false); }}>Lagre</Button>
+            <Button variant="ghost" size="sm" className="h-7 text-[0.75rem] px-3 rounded-md" onClick={() => setEditingNotes(false)}>Avbryt</Button>
+          </div>
+        </div>
       ) : contact.notes ? (
-        <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{contact.notes}</p>
+        <div className="group mb-4 relative">
+          <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{contact.notes}</p>
+          {editable && (
+            <button onClick={() => { setNotesDraft(contact.notes || ""); setEditingNotes(true); }}
+              className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-secondary">
+              <Pencil className="h-3 w-3 text-muted-foreground" />
+            </button>
+          )}
+        </div>
+      ) : editable ? (
+        <button onClick={() => { setNotesDraft(""); setEditingNotes(true); }}
+          className="text-[0.75rem] text-muted-foreground/50 hover:text-muted-foreground mb-4 inline-flex items-center gap-1 transition-colors">
+          <Pencil className="h-3 w-3" /> Legg til notat
+        </button>
       ) : null}
 
-      {/* Tasks – hidden if zero */}
+      {/* ── ZONE B: Action Bar ── */}
+      {editable && (
+        <div className="border-t border-border pt-4 pb-4">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => openForm("call")}
+              className={cn(
+                "inline-flex items-center gap-1.5 h-9 px-3.5 text-[0.8125rem] font-medium rounded-lg border bg-background transition-colors",
+                activeForm === "call" ? "border-primary/40 bg-primary/5" : "border-border text-foreground/80 hover:bg-secondary hover:border-muted-foreground/30"
+              )}
+            >
+              <Phone className="h-[15px] w-[15px] text-[hsl(var(--success))]" /> Logg telefon
+            </button>
+            <button
+              onClick={() => openForm("meeting")}
+              className={cn(
+                "inline-flex items-center gap-1.5 h-9 px-3.5 text-[0.8125rem] font-medium rounded-lg border bg-background transition-colors",
+                activeForm === "meeting" ? "border-primary/40 bg-primary/5" : "border-border text-foreground/80 hover:bg-secondary hover:border-muted-foreground/30"
+              )}
+            >
+              <FileText className="h-[15px] w-[15px] text-primary" /> Logg møtereferat
+            </button>
+            <button
+              onClick={() => openForm("task")}
+              className={cn(
+                "inline-flex items-center gap-1.5 h-9 px-3.5 text-[0.8125rem] font-medium rounded-lg border bg-background transition-colors",
+                activeForm === "task" ? "border-primary/40 bg-primary/5" : "border-border text-foreground/80 hover:bg-secondary hover:border-muted-foreground/30"
+              )}
+            >
+              <Clock className="h-[15px] w-[15px] text-[hsl(var(--warning))]" /> Ny oppfølging
+            </button>
+          </div>
+
+          {/* Inline form */}
+          {activeForm && (
+            <div
+              className="mt-3 animate-in slide-in-from-top-1 duration-200"
+              onKeyDown={handleFormKeyDown}
+            >
+              <Textarea
+                ref={textareaRef}
+                value={formSubject}
+                onChange={(e) => setFormSubject(e.target.value)}
+                placeholder={activeForm === "task" ? "Hva skal gjøres?" : activeForm === "meeting" ? "Hva ble diskutert og avtalt?" : "Hva ble sagt?"}
+                rows={3}
+                className="text-[0.9375rem] rounded-md border-border focus:ring-primary/30 resize-none"
+              />
+
+              {activeForm === "task" ? (
+                /* Date shortcut chips */
+                <div className="mt-3">
+                  <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Når?</span>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {DATE_CHIPS.map((chip, i) => (
+                      <button
+                        key={chip.label}
+                        type="button"
+                        onClick={() => {
+                          const d = chip.fn();
+                          setFormDate(format(d, "yyyy-MM-dd"));
+                          setSelectedChipIdx(i);
+                        }}
+                        className={cn(
+                          "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors",
+                          selectedChipIdx === i
+                            ? "bg-[hsl(var(--tag-bg))] border-primary/30 text-[hsl(var(--tag-text))] font-medium"
+                            : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
+                        )}
+                      >
+                        {chip.label}
+                      </button>
+                    ))}
+                  </div>
+                  {formDate && (
+                    <p className="text-[0.75rem] text-muted-foreground mt-2">
+                      Frist: {format(new Date(formDate), "d. MMMM yyyy", { locale: nb })}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                /* Date for call/meeting */
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-[0.75rem] text-muted-foreground">
+                    Dato: I dag, {format(new Date(), "d. MMMM", { locale: nb })}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 mt-3">
+                <Button
+                  size="sm"
+                  className="h-[34px] px-4 text-[0.8125rem] rounded-md"
+                  disabled={!formSubject.trim() || (activeForm === "task" && createTaskMutation.isPending) || (activeForm !== "task" && createActivityMutation.isPending)}
+                  onClick={handleFormSubmit}
+                >
+                  {activeForm === "task" ? "Lagre oppfølging" : activeForm === "meeting" ? "Lagre referat" : "Lagre samtale"}
+                </Button>
+                <Button variant="ghost" size="sm" className="h-[34px] px-3 text-[0.8125rem] text-muted-foreground rounded-md" onClick={closeForm}>
+                  Avbryt
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── ZONE C: Oppfølginger ── */}
       {tasks.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h3 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        <div className="bg-[hsl(210_40%_98%)] border-l-[3px] border-l-[hsl(214_100%_93%)] rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
               Oppfølginger · {tasks.length}
             </h3>
+            {editable && (
+              <button
+                onClick={() => openForm("task")}
+                className="inline-flex items-center gap-1 h-7 px-2.5 text-[0.75rem] rounded-md border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              >
+                <Plus className="h-3 w-3" /> Ny
+              </button>
+            )}
           </div>
           <div className="space-y-px">
             {tasks.map((task) => {
               const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
+              const today = task.due_date && isToday(new Date(task.due_date));
               return (
-                <div key={task.id} className="flex items-center gap-2.5 py-2 hover:bg-secondary/50 rounded-md transition-colors duration-75">
-                  <Checkbox checked={false} onCheckedChange={() => toggleTaskMutation.mutate(task.id)}
-                    className="h-4 w-4 rounded-[4px] border-2 border-muted-foreground/40 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[0.8125rem] font-medium truncate">{task.title}</p>
-                    {task.assigned_to && profileMap[task.assigned_to] && (
-                      <span className="text-[0.6875rem] text-muted-foreground">{profileMap[task.assigned_to]}</span>
-                    )}
-                  </div>
-                  {task.due_date && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className={`text-[0.75rem] font-medium px-2 py-0.5 rounded-md flex-shrink-0 ${
-                          overdue ? "bg-destructive/10 text-destructive" : "bg-secondary text-muted-foreground"
-                        }`}>
-                          {format(new Date(task.due_date), "d. MMM", { locale: nb })}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>{fullDate(task.due_date)}</TooltipContent>
-                    </Tooltip>
-                  )}
-                </div>
+                <TaskRow
+                  key={task.id}
+                  task={task}
+                  overdue={!!overdue}
+                  today={!!today}
+                  profileMap={profileMap}
+                  onToggle={() => toggleTaskMutation.mutate(task.id)}
+                  editable={editable}
+                />
               );
             })}
           </div>
         </div>
       )}
 
-      {/* Quick Action Bar */}
-      {editable && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => { setInlineLogOpen(true); setInlineLogType("call"); setInlineLogActType("call"); }}
-              className="inline-flex items-center gap-1.5 h-[30px] px-3 text-[0.8125rem] rounded-md border border-border bg-background text-foreground/80 hover:bg-secondary transition-colors"
-            >
-              <Phone className="h-4 w-4" /> Logg samtale
-            </button>
-            <Dialog open={taskOpen} onOpenChange={setTaskOpen}>
-              <DialogTrigger asChild>
-                <button className="inline-flex items-center gap-1.5 h-[30px] px-3 text-[0.8125rem] rounded-md border border-border bg-background text-foreground/80 hover:bg-secondary transition-colors">
-                  <Plus className="h-4 w-4" /> Ny oppfølging
-                </button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[440px] rounded-xl">
-                <DialogHeader><DialogTitle>Ny oppfølging</DialogTitle></DialogHeader>
-                <form onSubmit={(e) => { e.preventDefault(); createTaskMutation.mutate(); }} className="space-y-4 mt-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-label">Tittel</Label>
-                    <Input value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} required autoFocus className="h-10 rounded-lg" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-label">Frist</Label>
-                    <Popover open={dueDateOpen} onOpenChange={setDueDateOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className={cn("w-full h-10 rounded-lg justify-start text-left font-normal", !taskForm.due_date && "text-muted-foreground")}>
-                          {taskForm.due_date ? format(new Date(taskForm.due_date), "d. MMMM yyyy", { locale: nb }) : "Velg dato"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={taskForm.due_date ? new Date(taskForm.due_date) : undefined}
-                          onSelect={(date) => {
-                            if (date) { setTaskForm({ ...taskForm, due_date: format(date, "yyyy-MM-dd") }); setDueDateOpen(false); }
-                          }}
-                          locale={nb}
-                          className={cn("p-3 pointer-events-auto")}
-                        />
-                        <div className="px-3 pb-3">
-                          <Button type="button" variant="ghost" size="sm" className="w-full text-[0.8125rem]"
-                            onClick={() => { setTaskForm({ ...taskForm, due_date: format(new Date(), "yyyy-MM-dd") }); setDueDateOpen(false); }}>
-                            I dag
-                          </Button>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-label">Beskrivelse</Label>
-                    <Textarea value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} rows={2} className="rounded-lg min-h-[60px]" />
-                  </div>
-                  <Button type="submit" className="w-full h-10 rounded-lg" disabled={createTaskMutation.isPending}>
-                    {createTaskMutation.isPending ? "Oppretter..." : "Opprett"}
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-            <button
-              onClick={() => { setInlineLogOpen(true); setInlineLogType("other"); setInlineLogActType("note"); }}
-              className="inline-flex items-center gap-1.5 h-[30px] px-3 text-[0.8125rem] rounded-md border border-border bg-background text-foreground/80 hover:bg-secondary transition-colors"
-            >
-              <List className="h-4 w-4" /> Logg annet
-            </button>
-          </div>
-
-          {/* Inline log form */}
-          {inlineLogOpen && (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!inlineLogSubject.trim()) return;
-                createInlineActivity(
-                  inlineLogType === "call" ? "call" : inlineLogActType,
-                  inlineLogSubject
-                );
-              }}
-              onKeyDown={(e) => { if (e.key === "Escape") { setInlineLogOpen(false); setInlineLogSubject(""); } }}
-              className="flex items-center gap-2 animate-in slide-in-from-top-1 duration-200"
-            >
-              {inlineLogType === "other" && (
-                <Select value={inlineLogActType} onValueChange={setInlineLogActType}>
-                  <SelectTrigger className="h-8 w-28 text-[0.8125rem] rounded-md"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="call">Samtale</SelectItem>
-                    <SelectItem value="meeting">Møte</SelectItem>
-                    <SelectItem value="email">E-post</SelectItem>
-                    <SelectItem value="note">Notat</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-              <Input
-                value={inlineLogSubject}
-                onChange={(e) => setInlineLogSubject(e.target.value)}
-                placeholder="Hva skjedde?"
-                autoFocus
-                className="h-8 flex-1 text-[0.8125rem] rounded-md"
-              />
-              <Button type="submit" size="sm" className="h-8 rounded-md text-[0.8125rem] px-4" disabled={!inlineLogSubject.trim()}>
-                Lagre
-              </Button>
-            </form>
-          )}
-        </div>
-      )}
-
-      {/* Activities – Timeline */}
-      <ActivityTimeline activities={activities} profileMap={profileMap} />
+      {/* ── ZONE D: Aktiviteter Timeline ── */}
+      <ActivityTimeline
+        activities={activities}
+        profileMap={profileMap}
+        editable={editable}
+        onDelete={(id) => deleteActivityMutation.mutate(id)}
+        onUpdateDescription={(id, desc) => updateActivityMutation.mutate({ id, description: desc })}
+      />
     </div>
   );
 }
 
-/** Group activities by month and render vertical timeline with colored dots */
-function ActivityTimeline({ activities, profileMap }: { activities: any[]; profileMap: Record<string, string> }) {
+/* ── Task Row ── */
+function TaskRow({
+  task,
+  overdue,
+  today,
+  profileMap,
+  onToggle,
+  editable,
+}: {
+  task: any;
+  overdue: boolean;
+  today: boolean;
+  profileMap: Record<string, string>;
+  onToggle: () => void;
+  editable: boolean;
+}) {
+  const [completing, setCompleting] = useState(false);
+
+  const handleCheck = () => {
+    setCompleting(true);
+    setTimeout(() => onToggle(), 250);
+  };
+
+  return (
+    <div
+      className={cn(
+        "flex items-start gap-2.5 py-2.5 px-1 rounded-md transition-all duration-200 group hover:bg-background/60",
+        completing && "opacity-30 line-through scale-[0.98]"
+      )}
+    >
+      <Checkbox
+        checked={completing}
+        onCheckedChange={handleCheck}
+        className="h-4 w-4 rounded-[4px] border-2 border-muted-foreground/40 flex-shrink-0 mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+      />
+      <div className="flex-1 min-w-0">
+        <p className={cn("text-[0.9375rem] font-semibold text-foreground truncate", completing && "line-through")}>{task.title}</p>
+        {task.description && (
+          <p className="text-[0.875rem] text-foreground/70 truncate">{task.description}</p>
+        )}
+        {task.assigned_to && profileMap[task.assigned_to] && (
+          <span className="text-[0.75rem] text-muted-foreground">{profileMap[task.assigned_to]}</span>
+        )}
+      </div>
+      {task.due_date && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className={cn(
+              "text-[0.8125rem] font-medium px-2 py-0.5 rounded-md flex-shrink-0 mt-0.5",
+              overdue ? "text-destructive" : today ? "text-[hsl(var(--warning))]" : "text-muted-foreground"
+            )}>
+              {format(new Date(task.due_date), "d. MMM", { locale: nb })}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>{fullDate(task.due_date)}</TooltipContent>
+        </Tooltip>
+      )}
+    </div>
+  );
+}
+
+/* ── Activity Timeline ── */
+function ActivityTimeline({
+  activities,
+  profileMap,
+  editable,
+  onDelete,
+  onUpdateDescription,
+}: {
+  activities: any[];
+  profileMap: Record<string, string>;
+  editable: boolean;
+  onDelete: (id: string) => void;
+  onUpdateDescription: (id: string, desc: string) => void;
+}) {
   const currentYear = getYear(new Date());
 
   const grouped = useMemo(() => {
@@ -440,27 +703,18 @@ function ActivityTimeline({ activities, profileMap }: { activities: any[]; profi
     return groups;
   }, [activities, currentYear]);
 
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const toggleExpand = (id: string) => {
-    setExpanded(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-
   if (activities.length === 0) {
     return (
       <div>
-        <h3 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Aktiviteter · 0</h3>
-        <p className="text-sm text-muted-foreground/60 py-2">Ingen aktiviteter ennå</p>
+        <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">Aktiviteter · 0</h3>
+        <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen aktiviteter ennå</p>
       </div>
     );
   }
 
   return (
     <div>
-      <h3 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-3">
+      <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4">
         Aktiviteter · {activities.length}
       </h3>
 
@@ -468,77 +722,152 @@ function ActivityTimeline({ activities, profileMap }: { activities: any[]; profi
         <div key={group.key}>
           {/* Month header */}
           <div className={cn("flex items-center gap-2 mb-3", gi > 0 && "mt-5")}>
-            <span className="text-[0.6875rem] font-semibold tracking-[0.06em] text-muted-foreground/60 whitespace-nowrap">
+            <span className="text-[0.6875rem] font-semibold tracking-[0.06em] text-muted-foreground/50 whitespace-nowrap">
               {group.label}{group.period && <span> · {group.period}</span>}
             </span>
-            <div className="flex-1 h-px bg-border/50" />
+            <div className="flex-1 h-px bg-border/40" />
           </div>
 
           {/* Timeline spine */}
-          <div className="relative pl-[22px]">
+          <div className="relative pl-7">
             {/* Vertical line */}
-            <div className="absolute left-[4px] top-[5px] bottom-0 w-[2px] bg-border" />
+            <div className="absolute left-[5px] top-[5px] bottom-0 w-[2px] bg-border" />
 
             <div className="space-y-5">
-              {group.items.map((activity) => {
-                const dotColor = dotColors[activity.type] || dotColors.note;
-                const desc = cleanDescription(activity.description);
-                const isExpanded = expanded.has(activity.id);
-                const ownerName = activity.created_by ? profileMap[activity.created_by] : null;
-                const d = new Date(activity.created_at);
-                const dateStr = format(d, "d. MMM", { locale: nb });
-                const yearStr = getYear(d) !== currentYear ? ` ${getYear(d)}` : "";
-
-                return (
-                  <div key={activity.id} className="relative">
-                    {/* Dot on spine */}
-                    <div className={`absolute -left-[22px] top-[6px] w-[10px] h-[10px] rounded-full ${dotColor} ring-2 ring-background`} />
-
-                    {/* Content */}
-                    <div className="min-w-0">
-                      {/* Level 1: Subject – semibold, near-black */}
-                      <p className="text-[0.875rem] font-semibold text-foreground leading-snug">
-                        {activity.subject}
-                      </p>
-
-                      {/* Level 2: Description – gray-700 */}
-                      {desc && (
-                        <div className="mt-0.5">
-                          <p
-                            className={cn(
-                              "text-[0.8125rem] leading-relaxed whitespace-pre-wrap",
-                              // gray-700 equivalent via foreground opacity
-                              "text-foreground/70"
-                            )}
-                            style={!isExpanded ? { WebkitLineClamp: 2, display: "-webkit-box", WebkitBoxOrient: "vertical" as const, overflow: "hidden" } : undefined}
-                          >
-                            {desc}
-                          </p>
-                          {desc.length > 100 && (
-                            <button onClick={() => toggleExpand(activity.id)} className="text-[0.75rem] text-primary hover:underline mt-0.5 inline-flex items-center gap-0.5">
-                              {isExpanded ? <>Vis mindre <ChevronUp className="h-3 w-3" /></> : <>Vis mer <ChevronDown className="h-3 w-3" /></>}
-                            </button>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Level 3: Meta – gray-500 */}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <p className="text-[0.75rem] text-muted-foreground mt-1">
-                            {ownerName && <>{ownerName} · </>}{dateStr}{yearStr}
-                          </p>
-                        </TooltipTrigger>
-                        <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </div>
-                );
-              })}
+              {group.items.map((activity) => (
+                <ActivityRow
+                  key={activity.id}
+                  activity={activity}
+                  currentYear={currentYear}
+                  profileMap={profileMap}
+                  editable={editable}
+                  onDelete={onDelete}
+                  onUpdateDescription={onUpdateDescription}
+                />
+              ))}
             </div>
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+/* ── Single Activity Row ── */
+function ActivityRow({
+  activity,
+  currentYear,
+  profileMap,
+  editable,
+  onDelete,
+  onUpdateDescription,
+}: {
+  activity: any;
+  currentYear: number;
+  profileMap: Record<string, string>;
+  editable: boolean;
+  onDelete: (id: string) => void;
+  onUpdateDescription: (id: string, desc: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [descDraft, setDescDraft] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const dotColor = dotColors[activity.type] || dotColors.note;
+  const desc = cleanDescription(activity.description);
+  const ownerName = activity.created_by ? profileMap[activity.created_by] : null;
+  const d = new Date(activity.created_at);
+  const dateStr = format(d, "d. MMM", { locale: nb });
+  const yearStr = getYear(d) !== currentYear ? ` ${getYear(d)}` : "";
+
+  return (
+    <div className="relative group">
+      {/* Dot on spine */}
+      <div className={cn("absolute -left-7 top-[6px] w-[10px] h-[10px] rounded-full ring-2 ring-background", dotColor)} />
+
+      <div className="min-w-0">
+        {/* Level 1: Subject */}
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-[0.9375rem] font-semibold text-foreground leading-snug flex-1">
+            {activity.subject}
+          </p>
+          {/* Edit/delete icons on hover */}
+          {editable && !confirmDelete && (
+            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5">
+              <button
+                onClick={() => { setDescDraft(activity.description || ""); setEditingDesc(true); }}
+                className="p-1 rounded hover:bg-secondary text-border hover:text-muted-foreground transition-colors"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="p-1 rounded hover:bg-destructive/10 text-border hover:text-destructive transition-colors"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Delete confirmation */}
+        {confirmDelete && (
+          <div className="flex items-center gap-2 mt-1 text-[0.75rem] animate-in fade-in duration-150">
+            <span className="text-destructive">Slett denne aktiviteten?</span>
+            <button onClick={() => { onDelete(activity.id); setConfirmDelete(false); }} className="text-destructive font-medium hover:underline">Ja, slett</button>
+            <button onClick={() => setConfirmDelete(false)} className="text-muted-foreground hover:text-foreground">Avbryt</button>
+          </div>
+        )}
+
+        {/* Level 2: Description */}
+        {editingDesc ? (
+          <div className="mt-1">
+            <Textarea
+              value={descDraft}
+              onChange={(e) => setDescDraft(e.target.value)}
+              rows={3}
+              autoFocus
+              className="text-[0.875rem] rounded-md"
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setEditingDesc(false);
+                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                  onUpdateDescription(activity.id, descDraft);
+                  setEditingDesc(false);
+                }
+              }}
+            />
+            <div className="flex gap-2 mt-1">
+              <Button size="sm" className="h-6 text-[0.6875rem] px-2 rounded" onClick={() => { onUpdateDescription(activity.id, descDraft); setEditingDesc(false); }}>Lagre</Button>
+              <Button variant="ghost" size="sm" className="h-6 text-[0.6875rem] px-2 rounded" onClick={() => setEditingDesc(false)}>Avbryt</Button>
+            </div>
+          </div>
+        ) : desc ? (
+          <div className="mt-0.5">
+            <p
+              className="text-[0.875rem] leading-relaxed whitespace-pre-wrap text-foreground/70"
+              style={!expanded ? { WebkitLineClamp: 2, display: "-webkit-box", WebkitBoxOrient: "vertical" as const, overflow: "hidden" } : undefined}
+            >
+              {desc}
+            </p>
+            {desc.length > 120 && (
+              <button onClick={() => setExpanded(!expanded)} className="text-[0.75rem] text-primary hover:underline mt-0.5 inline-flex items-center gap-0.5">
+                {expanded ? <>Vis mindre <ChevronUp className="h-3 w-3" /></> : <>Vis mer <ChevronDown className="h-3 w-3" /></>}
+              </button>
+            )}
+          </div>
+        ) : null}
+
+        {/* Level 3: Meta */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <p className="text-[0.75rem] text-muted-foreground mt-1">
+              {ownerName && <>{ownerName} · </>}{dateStr}{yearStr}
+            </p>
+          </TooltipTrigger>
+          <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
+        </Tooltip>
+      </div>
     </div>
   );
 }
