@@ -206,10 +206,11 @@ const Contacts = () => {
       ) : (
         <div className="border border-border/40 rounded-2xl overflow-hidden bg-card">
           {/* Column headers */}
-          <div className="grid grid-cols-[1fr_160px_140px_160px_100px] gap-4 px-5 py-3 border-b border-border/40 bg-secondary/30">
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_80px_minmax(0,1fr)_90px] gap-3 px-5 py-3 border-b border-border/40 bg-secondary/30">
             <SortHeader field="name">Navn</SortHeader>
             <SortHeader field="company">Selskap</SortHeader>
             <SortHeader field="title">Stilling</SortHeader>
+            <SortHeader field="owner">Eier</SortHeader>
             <SortHeader field="email">E-post</SortHeader>
             <span className="text-[0.75rem] font-medium uppercase tracking-wider text-muted-foreground text-right">Telefon</span>
           </div>
