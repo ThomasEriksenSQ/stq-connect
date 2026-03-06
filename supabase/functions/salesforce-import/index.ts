@@ -53,13 +53,29 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Helper to fetch all rows from a table (handles >1000 row limit)
+    async function fetchAll(table: string, columns: string) {
+      const all: any[] = [];
+      let from = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data, error } = await supabase.from(table).select(columns).range(from, from + pageSize - 1);
+        if (error) { console.error(`Fetch ${table} err:`, JSON.stringify(error)); break; }
+        if (!data || data.length === 0) break;
+        all.push(...data);
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
+      return all;
+    }
+
     if (type === "contacts") {
-      // Build company name -> id map
-      const { data: companies } = await supabase.from("companies").select("id, name");
+      const companies = await fetchAll("companies", "id, name");
       const companyMap: Record<string, string> = {};
-      for (const c of companies || []) {
+      for (const c of companies) {
         companyMap[c.name.toLowerCase()] = c.id;
       }
+      console.log(`Company map has ${Object.keys(companyMap).length} entries`);
 
       const toInsert = records.map((r: any) => {
         const { account_name, ...rest } = r;
@@ -81,17 +97,17 @@ Deno.serve(async (req) => {
     }
 
     if (type === "activities") {
-      // Build lookup maps
-      const { data: contacts } = await supabase.from("contacts").select("id, first_name, last_name");
+      const contacts = await fetchAll("contacts", "id, first_name, last_name");
       const contactMap: Record<string, string> = {};
-      for (const c of contacts || []) {
+      for (const c of contacts) {
         contactMap[`${c.first_name}|${c.last_name}`.toLowerCase()] = c.id;
       }
-      const { data: companies } = await supabase.from("companies").select("id, name");
+      const companies = await fetchAll("companies", "id, name");
       const companyMap: Record<string, string> = {};
-      for (const c of companies || []) {
+      for (const c of companies) {
         companyMap[c.name.toLowerCase()] = c.id;
       }
+      console.log(`Lookup maps: ${Object.keys(contactMap).length} contacts, ${Object.keys(companyMap).length} companies`);
 
       const toInsert = records.map((r: any) => {
         const { contact_name, account_name, ...rest } = r;
