@@ -265,6 +265,13 @@ const Contacts = () => {
                     </span>
                   </div>
 
+                  {/* Owner */}
+                  <div className="min-w-0">
+                    <span className="text-[0.8125rem] text-muted-foreground truncate block">
+                      {getOwnerFirstName(contact) || <span className="text-muted-foreground/30">—</span>}
+                    </span>
+                  </div>
+
                   {/* Email */}
                   <div className="min-w-0">
                     {contact.email ? (
