@@ -312,8 +312,6 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                         <p className="text-[0.8125rem] font-medium truncate">{task.title}</p>
                         <div className="flex items-center gap-1.5 text-[0.6875rem] text-muted-foreground">
                           {contactName && <span className="truncate">{contactName}</span>}
-                          {contactName && taskOwner && <span className="text-muted-foreground/30">·</span>}
-                          {taskOwner && <span className="flex items-center gap-0.5"><User className="h-2.5 w-2.5 stroke-[1.5]" />{taskOwner}</span>}
                         </div>
                       </div>
                       <Badge variant="outline" className={`text-[0.625rem] px-1.5 py-0 rounded ${prio.className} flex-shrink-0`}>{prio.label}</Badge>
