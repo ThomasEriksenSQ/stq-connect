@@ -76,6 +76,11 @@ const Contacts = () => {
       c.title?.toLowerCase().includes(q);
   });
 
+  const getOwnerFirstName = (contact: any) => {
+    const fullName = (contact.profiles as any)?.full_name;
+    return fullName ? fullName.split(" ")[0] : null;
+  };
+
   const sorted = [...filtered].sort((a, b) => {
     const dir = sort.dir === "asc" ? 1 : -1;
     switch (sort.field) {
@@ -85,6 +90,8 @@ const Contacts = () => {
         return dir * ((a.companies as any)?.name || "").localeCompare((b.companies as any)?.name || "", "nb");
       case "title":
         return dir * (a.title || "").localeCompare(b.title || "", "nb");
+      case "owner":
+        return dir * (getOwnerFirstName(a) || "").localeCompare(getOwnerFirstName(b) || "", "nb");
       case "email":
         return dir * (a.email || "").localeCompare(b.email || "", "nb");
       default:
