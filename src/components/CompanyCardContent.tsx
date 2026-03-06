@@ -114,7 +114,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks")
-        .select("*, contacts(first_name, last_name), profiles!tasks_assigned_to_fkey(full_name)")
+        .select("*, contacts(first_name, last_name)")
         .eq("company_id", companyId)
         .neq("status", "done")
         .order("due_date", { ascending: true, nullsFirst: false });
