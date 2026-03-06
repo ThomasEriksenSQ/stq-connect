@@ -160,12 +160,20 @@ const Companies = () => {
             <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }} className="space-y-4 mt-3">
               <div className="space-y-1.5">
                 <Label className="text-label">Selskapsnavn</Label>
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="Firmanavn AS" className="h-10 rounded-lg" />
+                <BrregSearch
+                  value={form.name}
+                  onChange={(name) => setForm((f) => ({ ...f, name }))}
+                  onSelect={(r) => setForm((f) => ({ ...f, name: r.name, org_number: r.org_number, city: r.city }))}
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-label">Org.nr</Label>
-                  <Input value={form.org_number} onChange={(e) => setForm({ ...form, org_number: e.target.value })} placeholder="923 456 789" className="h-10 rounded-lg" />
+                  <OrgNrInput
+                    value={form.org_number}
+                    onChange={(org_number) => setForm((f) => ({ ...f, org_number }))}
+                    onLookup={(name, city) => setForm((f) => ({ ...f, name: name || f.name, city: city || f.city }))}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-label">Sted</Label>
