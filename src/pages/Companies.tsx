@@ -69,6 +69,11 @@ const Companies = () => {
     c.org_number?.includes(search)
   );
 
+  const getOwnerFirstName = (company: any) => {
+    const fullName = (company.profiles as any)?.full_name;
+    return fullName ? fullName.split(" ")[0] : null;
+  };
+
   const sorted = [...filtered].sort((a, b) => {
     const dir = sort.dir === "asc" ? 1 : -1;
     switch (sort.field) {
@@ -78,6 +83,8 @@ const Companies = () => {
         return dir * (a.city || "").localeCompare(b.city || "", "nb");
       case "status":
         return dir * (a.status || "").localeCompare(b.status || "", "nb");
+      case "owner":
+        return dir * (getOwnerFirstName(a) || "").localeCompare(getOwnerFirstName(b) || "", "nb");
       case "contacts":
         return dir * ((a.contacts?.length || 0) - (b.contacts?.length || 0));
       default:
