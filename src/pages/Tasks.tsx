@@ -230,7 +230,7 @@ const Tasks = () => {
         <div className="space-y-6">
           {filteredOpen.length > 0 && (
             <div className="border border-border/40 rounded-2xl overflow-hidden bg-card">
-              <div className="grid grid-cols-[40px_1fr_130px_130px_80px_90px] gap-3 px-5 py-3 border-b border-border/40 bg-secondary/30">
+              <div className="grid grid-cols-[40px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_70px_85px] gap-3 px-5 py-3 border-b border-border/40 bg-secondary/30">
                 <span />
                 <SortHeader field="title">Oppfølging</SortHeader>
                 <SortHeader field="contact">Kontakt</SortHeader>
@@ -249,7 +249,7 @@ const Tasks = () => {
                   const prio = priorityConfig[task.priority] || priorityConfig.medium;
 
                   return (
-                    <div key={task.id} className="grid grid-cols-[40px_1fr_130px_130px_80px_90px] gap-3 items-center px-5 py-3.5 hover:bg-accent/50 transition-colors duration-100">
+                    <div key={task.id} className="grid grid-cols-[40px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_70px_85px] gap-3 items-center px-5 py-3.5 hover:bg-accent/50 transition-colors duration-100">
                       <Checkbox checked={false} onCheckedChange={() => toggleMutation.mutate({ id: task.id, currentStatus: task.status })}
                         className="h-[18px] w-[18px] rounded-[5px] border-border/60" />
 
@@ -308,7 +308,7 @@ const Tasks = () => {
                       const contactName = getContactName(task);
                       const companyName = getCompanyName(task);
                       return (
-                        <div key={task.id} className="grid grid-cols-[40px_1fr_130px_130px_80px_90px] gap-3 items-center px-5 py-3 opacity-50 hover:opacity-70 transition-opacity">
+                        <div key={task.id} className="grid grid-cols-[40px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_70px_85px] gap-3 items-center px-5 py-3 opacity-50 hover:opacity-70 transition-opacity">
                           <Checkbox checked={true} onCheckedChange={() => toggleMutation.mutate({ id: task.id, currentStatus: task.status })}
                             className="h-[18px] w-[18px] rounded-[5px]" />
                           <span className="text-[0.875rem] line-through truncate">{task.title}</span>
