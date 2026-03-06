@@ -2,9 +2,3 @@ project_id = "kbvzpcebfopqqrvmbiap"
 
 [functions.chat]
 verify_jwt = false
-
-[functions.create-user]
-verify_jwt = false
-
-[functions.admin-ops]
-verify_jwt = false
