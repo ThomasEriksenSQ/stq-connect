@@ -351,6 +351,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-[0.8125rem] font-medium truncate">{task.title}</p>
+                    <DescriptionText text={task.description} maxLines={2} />
                   </div>
                   <Badge variant="outline" className={`text-[0.625rem] px-1.5 py-0 rounded ${prio.className} flex-shrink-0`}>{prio.label}</Badge>
                   {task.due_date && (
