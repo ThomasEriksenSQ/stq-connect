@@ -12,7 +12,7 @@ import { Plus, Search, Building2, Mail, Phone, ArrowUpDown } from "lucide-react"
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
-type SortField = "name" | "company" | "title" | "email";
+type SortField = "name" | "company" | "title" | "owner" | "email";
 type SortDir = "asc" | "desc";
 
 const Contacts = () => {
@@ -29,7 +29,7 @@ const Contacts = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
-        .select("*, companies(name)")
+        .select("*, companies(name), profiles!contacts_owner_id_fkey(full_name)")
         .order("first_name");
       if (error) throw error;
       return data;
@@ -76,6 +76,11 @@ const Contacts = () => {
       c.title?.toLowerCase().includes(q);
   });
 
+  const getOwnerFirstName = (contact: any) => {
+    const fullName = (contact.profiles as any)?.full_name;
+    return fullName ? fullName.split(" ")[0] : null;
+  };
+
   const sorted = [...filtered].sort((a, b) => {
     const dir = sort.dir === "asc" ? 1 : -1;
     switch (sort.field) {
@@ -85,6 +90,8 @@ const Contacts = () => {
         return dir * ((a.companies as any)?.name || "").localeCompare((b.companies as any)?.name || "", "nb");
       case "title":
         return dir * (a.title || "").localeCompare(b.title || "", "nb");
+      case "owner":
+        return dir * (getOwnerFirstName(a) || "").localeCompare(getOwnerFirstName(b) || "", "nb");
       case "email":
         return dir * (a.email || "").localeCompare(b.email || "", "nb");
       default:
@@ -199,10 +206,11 @@ const Contacts = () => {
       ) : (
         <div className="border border-border/40 rounded-2xl overflow-hidden bg-card">
           {/* Column headers */}
-          <div className="grid grid-cols-[1fr_160px_140px_160px_100px] gap-4 px-5 py-3 border-b border-border/40 bg-secondary/30">
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_80px_minmax(0,1fr)_90px] gap-3 px-5 py-3 border-b border-border/40 bg-secondary/30">
             <SortHeader field="name">Navn</SortHeader>
             <SortHeader field="company">Selskap</SortHeader>
             <SortHeader field="title">Stilling</SortHeader>
+            <SortHeader field="owner">Eier</SortHeader>
             <SortHeader field="email">E-post</SortHeader>
             <span className="text-[0.75rem] font-medium uppercase tracking-wider text-muted-foreground text-right">Telefon</span>
           </div>
@@ -220,7 +228,7 @@ const Contacts = () => {
                 <button
                   key={contact.id}
                   onClick={() => navigate(`/kontakter/${contact.id}`)}
-                  className="w-full grid grid-cols-[1fr_160px_140px_160px_100px] gap-4 items-center px-5 py-3.5 hover:bg-accent/50 active:bg-accent transition-colors duration-100 text-left group"
+                  className="w-full grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_80px_minmax(0,1fr)_90px] gap-3 items-center px-5 py-3.5 hover:bg-accent/50 active:bg-accent transition-colors duration-100 text-left group"
                 >
                   {/* Name + flags */}
                   <div className="min-w-0">
@@ -254,6 +262,13 @@ const Contacts = () => {
                   <div className="min-w-0">
                     <span className="text-[0.8125rem] text-muted-foreground truncate block">
                       {contact.title || <span className="text-muted-foreground/30">—</span>}
+                    </span>
+                  </div>
+
+                  {/* Owner */}
+                  <div className="min-w-0">
+                    <span className="text-[0.8125rem] text-muted-foreground truncate block">
+                      {getOwnerFirstName(contact) || <span className="text-muted-foreground/30">—</span>}
                     </span>
                   </div>
 

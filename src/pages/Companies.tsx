@@ -11,7 +11,7 @@ import { Plus, Search, MapPin, Globe, Users, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
-type SortField = "name" | "city" | "status" | "contacts";
+type SortField = "name" | "city" | "status" | "owner" | "contacts";
 type SortDir = "asc" | "desc";
 
 const statusLabels: Record<string, { label: string; className: string }> = {
@@ -35,7 +35,7 @@ const Companies = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("companies")
-        .select("*, contacts(id)")
+        .select("*, contacts(id), profiles!companies_owner_id_fkey(full_name)")
         .order("name");
       if (error) throw error;
       return data;
@@ -69,6 +69,11 @@ const Companies = () => {
     c.org_number?.includes(search)
   );
 
+  const getOwnerFirstName = (company: any) => {
+    const fullName = (company.profiles as any)?.full_name;
+    return fullName ? fullName.split(" ")[0] : null;
+  };
+
   const sorted = [...filtered].sort((a, b) => {
     const dir = sort.dir === "asc" ? 1 : -1;
     switch (sort.field) {
@@ -78,6 +83,8 @@ const Companies = () => {
         return dir * (a.city || "").localeCompare(b.city || "", "nb");
       case "status":
         return dir * (a.status || "").localeCompare(b.status || "", "nb");
+      case "owner":
+        return dir * (getOwnerFirstName(a) || "").localeCompare(getOwnerFirstName(b) || "", "nb");
       case "contacts":
         return dir * ((a.contacts?.length || 0) - (b.contacts?.length || 0));
       default:
@@ -184,10 +191,11 @@ const Companies = () => {
       ) : (
         <div className="border border-border/40 rounded-2xl overflow-hidden bg-card">
           {/* Column headers */}
-          <div className="grid grid-cols-[1fr_140px_100px_80px] gap-4 px-5 py-3 border-b border-border/40 bg-secondary/30">
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_90px_80px_70px] gap-4 px-5 py-3 border-b border-border/40 bg-secondary/30">
             <SortHeader field="name">Selskap</SortHeader>
             <SortHeader field="city">Sted</SortHeader>
             <SortHeader field="status">Status</SortHeader>
+            <SortHeader field="owner">Eier</SortHeader>
             <SortHeader field="contacts" className="justify-end">Kontakter</SortHeader>
           </div>
 
@@ -196,11 +204,12 @@ const Companies = () => {
             {sorted.map((company) => {
               const status = getStatus(company.status);
               const contactCount = company.contacts?.length || 0;
+              const ownerName = getOwnerFirstName(company);
               return (
                 <button
                   key={company.id}
                   onClick={() => navigate(`/selskaper/${company.id}`)}
-                  className="w-full grid grid-cols-[1fr_140px_100px_80px] gap-4 items-center px-5 py-3.5 hover:bg-accent/50 active:bg-accent transition-colors duration-100 text-left group"
+                  className="w-full grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_90px_80px_70px] gap-4 items-center px-5 py-3.5 hover:bg-accent/50 active:bg-accent transition-colors duration-100 text-left group"
                 >
                   {/* Name + website */}
                   <div className="min-w-0">
@@ -232,6 +241,13 @@ const Companies = () => {
                     <Badge variant="outline" className={`text-[0.6875rem] font-medium px-2 py-0.5 rounded-md ${status.className}`}>
                       {status.label}
                     </Badge>
+                  </div>
+
+                  {/* Owner */}
+                  <div className="min-w-0">
+                    <span className="text-[0.8125rem] text-muted-foreground truncate block">
+                      {ownerName || <span className="text-muted-foreground/30">—</span>}
+                    </span>
                   </div>
 
                   {/* Contact count */}
