@@ -12,7 +12,7 @@ import { Plus, Search, Building2, Mail, Phone, ArrowUpDown } from "lucide-react"
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
-type SortField = "name" | "company" | "title" | "email";
+type SortField = "name" | "company" | "title" | "owner" | "email";
 type SortDir = "asc" | "desc";
 
 const Contacts = () => {
