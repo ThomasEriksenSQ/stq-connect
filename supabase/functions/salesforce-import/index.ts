@@ -18,6 +18,7 @@ Deno.serve(async (req) => {
 
     const { type, records } = await req.json();
 
+    // --- Helpers ---
     async function clearTable(table: string) {
       let deleted = 0;
       while (true) {
@@ -25,7 +26,6 @@ Deno.serve(async (req) => {
         if (error) { console.error(`Delete ${table} err:`, JSON.stringify(error)); break; }
         if (!data || data.length === 0) break;
         deleted += data.length;
-        console.log(`Deleted ${deleted} from ${table}...`);
       }
       return deleted;
     }
@@ -45,175 +45,140 @@ Deno.serve(async (req) => {
       return all;
     }
 
+    async function batchInsert(table: string, rows: any[], batchSize = 50) {
+      let inserted = 0;
+      for (let i = 0; i < rows.length; i += batchSize) {
+        const batch = rows.slice(i, i + batchSize);
+        const { error } = await supabase.from(table).insert(batch);
+        if (error) console.error(`${table} insert err at ${i}:`, JSON.stringify(error));
+        else inserted += batch.length;
+      }
+      return inserted;
+    }
+
+    // --- Build lookup maps for activities/tasks resolution ---
+    async function buildLookups() {
+      const companies = await fetchAll("companies", "id, sf_account_id");
+      const contacts = await fetchAll("contacts", "id, sf_contact_id, company_id");
+
+      // sf_account_id → company uuid
+      const companyBySfId: Record<string, string> = {};
+      for (const c of companies) {
+        if (c.sf_account_id) companyBySfId[c.sf_account_id] = c.id;
+      }
+
+      // sf_contact_id → { contact uuid, company uuid }
+      const contactBySfId: Record<string, { id: string; company_id: string | null }> = {};
+      for (const c of contacts) {
+        if (c.sf_contact_id) contactBySfId[c.sf_contact_id] = { id: c.id, company_id: c.company_id };
+      }
+
+      console.log(`Lookups: ${Object.keys(companyBySfId).length} companies, ${Object.keys(contactBySfId).length} contacts`);
+      return { companyBySfId, contactBySfId };
+    }
+
+    // 3-step company resolution: sf_what_id → sf_account_id → contact's company
+    function resolveCompanyAndContact(
+      r: any,
+      companyBySfId: Record<string, string>,
+      contactBySfId: Record<string, { id: string; company_id: string | null }>
+    ) {
+      let companyId: string | null = null;
+      let contactId: string | null = null;
+
+      // Step 1: WhatId → company
+      if (r.sf_what_id) {
+        companyId = companyBySfId[r.sf_what_id] || null;
+      }
+      // Step 2: AccountId → company (fallback)
+      if (!companyId && r.sf_account_id) {
+        companyId = companyBySfId[r.sf_account_id] || null;
+      }
+      // Resolve contact from WhoId
+      if (r.sf_who_id && contactBySfId[r.sf_who_id]) {
+        const contact = contactBySfId[r.sf_who_id];
+        contactId = contact.id;
+        // Step 3: Contact's company (fallback)
+        if (!companyId && contact.company_id) {
+          companyId = contact.company_id;
+        }
+      }
+
+      return { company_id: companyId, contact_id: contactId };
+    }
+
+    // --- Handlers ---
+
     if (type === "clear") {
       const a = await clearTable("activities");
       const t = await clearTable("tasks");
       const c = await clearTable("contacts");
       const co = await clearTable("companies");
       console.log(`Cleared: ${a} activities, ${t} tasks, ${c} contacts, ${co} companies`);
-      return new Response(JSON.stringify({ ok: true, deleted: { activities: a, tasks: t, contacts: c, companies: co } }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ ok: true, deleted: { activities: a, tasks: t, contacts: c, companies: co } }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (type === "companies") {
-      let inserted = 0;
-      for (let i = 0; i < records.length; i += 50) {
-        const batch = records.slice(i, i + 50);
-        const { error } = await supabase.from("companies").insert(batch);
-        if (error) console.error("Company err:", JSON.stringify(error), "at:", i);
-        else inserted += batch.length;
-      }
-      return new Response(JSON.stringify({ type: "companies", inserted, total: records.length }), 
+      const inserted = await batchInsert("companies", records);
+      return new Response(JSON.stringify({ type: "companies", inserted, total: records.length }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (type === "contacts") {
-      // Resolve company_id via sf_account_id
+      // Resolve company_id from sf_account_id
       const companies = await fetchAll("companies", "id, sf_account_id");
       const sfAccMap: Record<string, string> = {};
       for (const c of companies) {
         if (c.sf_account_id) sfAccMap[c.sf_account_id] = c.id;
       }
-      console.log(`SF Account map has ${Object.keys(sfAccMap).length} entries`);
 
       const toInsert = records.map((r: any) => {
         const { sf_account_id, ...rest } = r;
         return {
           ...rest,
-          sf_contact_id: r.sf_contact_id,
           company_id: sf_account_id ? sfAccMap[sf_account_id] || null : null,
         };
       });
 
-      let inserted = 0;
-      for (let i = 0; i < toInsert.length; i += 50) {
-        const batch = toInsert.slice(i, i + 50);
-        const { error } = await supabase.from("contacts").insert(batch);
-        if (error) console.error("Contact err:", JSON.stringify(error), "at:", i, JSON.stringify(batch[0]));
-        else inserted += batch.length;
-      }
+      const inserted = await batchInsert("contacts", toInsert);
       return new Response(JSON.stringify({ type: "contacts", inserted, total: toInsert.length }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (type === "activities") {
-      // Resolve company_id via sf_account_id, fallback to company name
-      const companies = await fetchAll("companies", "id, sf_account_id, name");
-      const sfAccMap: Record<string, string> = {};
-      const companyNameMap: Record<string, string> = {};
-      for (const c of companies) {
-        if (c.sf_account_id) sfAccMap[c.sf_account_id] = c.id;
-        if (c.name) companyNameMap[c.name.toLowerCase()] = c.id;
-      }
-      const contacts = await fetchAll("contacts", "id, first_name, last_name, company_id");
-      const contactMap: Record<string, string> = {};
-      const contactByName: Record<string, string> = {};
-      for (const c of contacts) {
-        const key = `${c.first_name}|${c.last_name}`.toLowerCase();
-        contactByName[key] = c.id;
-        if (c.company_id) {
-          contactMap[`${key}|${c.company_id}`] = c.id;
-        }
-      }
-      console.log(`Lookup maps: ${Object.keys(sfAccMap).length} sf_acc, ${Object.keys(companyNameMap).length} name companies, ${Object.keys(contactByName).length} contacts`);
+      const { companyBySfId, contactBySfId } = await buildLookups();
 
       const toInsert = records.map((r: any) => {
-        const { sf_account_id, contact_first, contact_last, company_name, ...rest } = r;
-        // Try sf_account_id first, then company name fallback
-        let companyId = sf_account_id ? sfAccMap[sf_account_id] || null : null;
-        if (!companyId && company_name) {
-          companyId = companyNameMap[company_name.toLowerCase()] || null;
-        }
-        
-        let contactId = null;
-        if (contact_first || contact_last) {
-          const nameKey = `${contact_first || ""}|${contact_last || ""}`.toLowerCase();
-          if (companyId) {
-            contactId = contactMap[`${nameKey}|${companyId}`] || null;
-          }
-          if (!contactId) {
-            contactId = contactByName[nameKey] || null;
-          }
-        }
-
-        return {
-          ...rest,
-          company_id: companyId,
-          contact_id: contactId,
-        };
+        const { sf_who_id, sf_what_id, sf_account_id, ...rest } = r;
+        const resolved = resolveCompanyAndContact({ sf_who_id, sf_what_id, sf_account_id }, companyBySfId, contactBySfId);
+        return { ...rest, ...resolved };
       });
 
-      let inserted = 0;
-      for (let i = 0; i < toInsert.length; i += 50) {
-        const batch = toInsert.slice(i, i + 50);
-        const { error } = await supabase.from("activities").insert(batch);
-        if (error) console.error("Activity err:", JSON.stringify(error), "at:", i);
-        else inserted += batch.length;
-      }
+      const inserted = await batchInsert("activities", toInsert);
       return new Response(JSON.stringify({ type: "activities", inserted, total: toInsert.length }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (type === "tasks") {
-      const companies = await fetchAll("companies", "id, sf_account_id, name");
-      const sfAccMap: Record<string, string> = {};
-      const companyNameMap: Record<string, string> = {};
-      for (const c of companies) {
-        if (c.sf_account_id) sfAccMap[c.sf_account_id] = c.id;
-        if (c.name) companyNameMap[c.name.toLowerCase()] = c.id;
-      }
-      const contacts = await fetchAll("contacts", "id, first_name, last_name, company_id");
-      const contactMap: Record<string, string> = {};
-      const contactByName: Record<string, string> = {};
-      for (const c of contacts) {
-        const key = `${c.first_name}|${c.last_name}`.toLowerCase();
-        contactByName[key] = c.id;
-        if (c.company_id) {
-          contactMap[`${key}|${c.company_id}`] = c.id;
-        }
-      }
-      console.log(`Task lookup maps: ${Object.keys(sfAccMap).length} sf_acc, ${Object.keys(companyNameMap).length} name companies`);
+      const { companyBySfId, contactBySfId } = await buildLookups();
 
       const toInsert = records.map((r: any) => {
-        const { sf_account_id, contact_first, contact_last, company_name, ...rest } = r;
-        let companyId = sf_account_id ? sfAccMap[sf_account_id] || null : null;
-        if (!companyId && company_name) {
-          companyId = companyNameMap[company_name.toLowerCase()] || null;
-        }
-        
-        let contactId = null;
-        if (contact_first || contact_last) {
-          const nameKey = `${contact_first || ""}|${contact_last || ""}`.toLowerCase();
-          if (companyId) {
-            contactId = contactMap[`${nameKey}|${companyId}`] || null;
-          }
-          if (!contactId) {
-            contactId = contactByName[nameKey] || null;
-          }
-        }
-
-        return {
-          ...rest,
-          company_id: companyId,
-          contact_id: contactId,
-        };
+        const { sf_who_id, sf_what_id, sf_account_id, subject, ...rest } = r;
+        const resolved = resolveCompanyAndContact({ sf_who_id, sf_what_id, sf_account_id }, companyBySfId, contactBySfId);
+        return { ...rest, ...resolved };
       });
 
-      let inserted = 0;
-      for (let i = 0; i < toInsert.length; i += 50) {
-        const batch = toInsert.slice(i, i + 50);
-        const { error } = await supabase.from("tasks").insert(batch);
-        if (error) console.error("Task err:", JSON.stringify(error), "at:", i);
-        else inserted += batch.length;
-      }
+      const inserted = await batchInsert("tasks", toInsert);
       return new Response(JSON.stringify({ type: "tasks", inserted, total: toInsert.length }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    return new Response(JSON.stringify({ error: "Invalid type" }), 
+    return new Response(JSON.stringify({ error: "Invalid type" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     console.error("Error:", err);
-    return new Response(JSON.stringify({ error: err.message }), 
+    return new Response(JSON.stringify({ error: err.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
