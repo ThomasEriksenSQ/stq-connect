@@ -51,6 +51,7 @@ export const BrregSearch = ({ value, onChange, onSelect }: BrregSearchProps) => 
   const [noResults, setNoResults] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
   const containerRef = useRef<HTMLDivElement>(null);
+  const justSelectedRef = useRef(false);
 
   const doSearch = useCallback(async (q: string) => {
     if (q.length < 2) {
@@ -75,6 +76,10 @@ export const BrregSearch = ({ value, onChange, onSelect }: BrregSearchProps) => 
   }, []);
 
   useEffect(() => {
+    if (justSelectedRef.current) {
+      justSelectedRef.current = false;
+      return;
+    }
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => doSearch(value), 300);
     return () => clearTimeout(timerRef.current);
@@ -91,12 +96,14 @@ export const BrregSearch = ({ value, onChange, onSelect }: BrregSearchProps) => 
   }, []);
 
   const handleSelect = (r: BrregResult) => {
+    justSelectedRef.current = true;
     onSelect({
       name: r.navn,
       org_number: r.organisasjonsnummer,
       city: r.forretningsadresse?.kommune || "",
     });
     setShowDropdown(false);
+    setResults([]);
   };
 
   return (
