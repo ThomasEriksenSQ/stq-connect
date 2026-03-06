@@ -7,55 +7,85 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, MapPin, Globe, Users, ArrowUpDown } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Search, Users, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { relativeDate } from "@/lib/relativeDate";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { format } from "date-fns";
+import { nb } from "date-fns/locale";
 
-type SortField = "name" | "city" | "status" | "owner" | "contacts";
+type SortField = "name" | "industry" | "owner" | "contacts" | "last_activity" | "tasks";
 type SortDir = "asc" | "desc";
 
 const statusLabels: Record<string, { label: string; className: string }> = {
-  lead: { label: "Lead", className: "bg-primary/10 text-primary border-primary/20" },
-  prospect: { label: "Prospekt", className: "bg-warning/10 text-warning border-warning/20" },
-  customer: { label: "Kunde", className: "bg-success/10 text-success border-success/20" },
-  churned: { label: "Tapt", className: "bg-destructive/10 text-destructive border-destructive/20" },
+  lead: { label: "Lead", className: "bg-tag text-tag-foreground" },
+  prospect: { label: "Prospekt", className: "bg-warning/10 text-warning" },
+  customer: { label: "Kunde", className: "bg-success/10 text-success" },
+  churned: { label: "Tapt", className: "bg-destructive/10 text-destructive" },
 };
 
 const Companies = () => {
   const [search, setSearch] = useState("");
+  const [ownerFilter, setOwnerFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", org_number: "", city: "", website: "", linkedin: "" });
-  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "name", dir: "asc" });
+  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "last_activity", dir: "desc" });
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const navigate = useNavigate();
 
   const { data: companies = [], isLoading } = useQuery({
-    queryKey: ["companies"],
+    queryKey: ["companies-full"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("companies")
-        .select("*, contacts(id), profiles!companies_owner_id_fkey(full_name)")
+        .select("*, contacts(id), profiles!companies_owner_id_fkey(id, full_name)")
         .order("name");
       if (error) throw error;
-      return data;
+
+      // Fetch last activity date and open task count per company
+      const companyIds = data.map(c => c.id);
+      const [actRes, taskRes] = await Promise.all([
+        supabase.from("activities").select("company_id, created_at").in("company_id", companyIds).order("created_at", { ascending: false }),
+        supabase.from("tasks").select("company_id, due_date").in("company_id", companyIds).neq("status", "done"),
+      ]);
+
+      const lastActivityMap: Record<string, string> = {};
+      (actRes.data || []).forEach(a => {
+        if (!lastActivityMap[a.company_id!]) lastActivityMap[a.company_id!] = a.created_at;
+      });
+
+      const taskCountMap: Record<string, number> = {};
+      const overdueTaskMap: Record<string, boolean> = {};
+      (taskRes.data || []).forEach(t => {
+        if (t.company_id) {
+          taskCountMap[t.company_id] = (taskCountMap[t.company_id] || 0) + 1;
+          if (t.due_date && new Date(t.due_date) < new Date()) overdueTaskMap[t.company_id] = true;
+        }
+      });
+
+      return data.map(c => ({
+        ...c,
+        lastActivity: lastActivityMap[c.id] || null,
+        taskCount: taskCountMap[c.id] || 0,
+        hasOverdue: overdueTaskMap[c.id] || false,
+      }));
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("companies").insert({
-        name: form.name,
-        org_number: form.org_number || null,
-        city: form.city || null,
-        website: form.website || null,
-        linkedin: form.linkedin || null,
-        created_by: user?.id,
+        name: form.name, org_number: form.org_number || null, city: form.city || null,
+        website: form.website || null, linkedin: form.linkedin || null, created_by: user?.id,
       });
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
       setOpen(false);
       setForm({ name: "", org_number: "", city: "", website: "", linkedin: "" });
       toast.success("Selskap opprettet");
@@ -63,101 +93,92 @@ const Companies = () => {
     onError: () => toast.error("Kunne ikke opprette selskap"),
   });
 
-  const filtered = companies.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.city?.toLowerCase().includes(search.toLowerCase()) ||
-    c.org_number?.includes(search)
-  );
-
   const getOwnerFirstName = (company: any) => {
     const fullName = (company.profiles as any)?.full_name;
     return fullName ? fullName.split(" ")[0] : null;
   };
+  const getOwnerId = (company: any) => (company.profiles as any)?.id || null;
+
+  const ownerMap = new Map<string, string>();
+  companies.forEach(c => {
+    const id = getOwnerId(c);
+    const name = getOwnerFirstName(c);
+    if (id && name) ownerMap.set(id, name);
+  });
+  const ownerList = Array.from(ownerMap.entries());
+
+  const filtered = companies.filter((c) => {
+    const q = search.toLowerCase();
+    const matchSearch = !q || c.name.toLowerCase().includes(q) || c.org_number?.includes(q) || c.industry?.toLowerCase().includes(q);
+    const matchOwner = ownerFilter === "all" || getOwnerId(c) === ownerFilter;
+    const matchStatus = statusFilter === "all" || c.status === statusFilter;
+    return matchSearch && matchOwner && matchStatus;
+  });
 
   const sorted = [...filtered].sort((a, b) => {
     const dir = sort.dir === "asc" ? 1 : -1;
     switch (sort.field) {
-      case "name":
-        return dir * a.name.localeCompare(b.name, "nb");
-      case "city":
-        return dir * (a.city || "").localeCompare(b.city || "", "nb");
-      case "status":
-        return dir * (a.status || "").localeCompare(b.status || "", "nb");
-      case "owner":
-        return dir * (getOwnerFirstName(a) || "").localeCompare(getOwnerFirstName(b) || "", "nb");
-      case "contacts":
-        return dir * ((a.contacts?.length || 0) - (b.contacts?.length || 0));
-      default:
-        return 0;
+      case "name": return dir * a.name.localeCompare(b.name, "nb");
+      case "industry": return dir * (a.industry || "").localeCompare(b.industry || "", "nb");
+      case "owner": return dir * (getOwnerFirstName(a) || "").localeCompare(getOwnerFirstName(b) || "", "nb");
+      case "contacts": return dir * ((a.contacts?.length || 0) - (b.contacts?.length || 0));
+      case "last_activity":
+        if (!a.lastActivity && !b.lastActivity) return 0;
+        if (!a.lastActivity) return 1;
+        if (!b.lastActivity) return -1;
+        return dir * a.lastActivity.localeCompare(b.lastActivity);
+      case "tasks": return dir * ((a.taskCount || 0) - (b.taskCount || 0));
+      default: return 0;
     }
   });
 
   const toggleSort = (field: SortField) => {
-    setSort((prev) =>
-      prev.field === field
-        ? { field, dir: prev.dir === "asc" ? "desc" : "asc" }
-        : { field, dir: "asc" }
-    );
+    setSort((prev) => prev.field === field ? { field, dir: prev.dir === "asc" ? "desc" : "asc" } : { field, dir: field === "last_activity" ? "desc" : "asc" });
   };
 
   const SortHeader = ({ field, children, className = "" }: { field: SortField; children: React.ReactNode; className?: string }) => (
-    <button
-      onClick={() => toggleSort(field)}
-      className={`flex items-center gap-1 text-[0.75rem] font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors ${className}`}
-    >
+    <button onClick={() => toggleSort(field)}
+      className={`flex items-center gap-1 text-[0.6875rem] font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors ${className}`}>
       {children}
-      <ArrowUpDown className={`h-3 w-3 ${sort.field === field ? "text-foreground" : "text-muted-foreground/30"}`} />
+      <ArrowUpDown className={`h-3 w-3 ${sort.field === field ? "text-foreground" : "text-muted-foreground/20"}`} />
     </button>
   );
 
-  const getStatus = (status: string) => {
-    const s = statusLabels[status] || { label: status, className: "bg-secondary text-secondary-foreground border-border" };
-    return s;
-  };
+  const getStatus = (status: string) => statusLabels[status] || { label: status, className: "bg-secondary text-muted-foreground" };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-end justify-between">
-        <div className="space-y-1">
-          <h1 className="text-[1.75rem] font-bold tracking-tight">Selskaper</h1>
-          <p className="text-[0.875rem] text-muted-foreground">{companies.length} totalt</p>
-        </div>
+      <div className="flex items-center justify-between">
+        <h1 className="text-[1.375rem] font-bold">Selskaper</h1>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="rounded-xl h-10 px-4 text-[0.8125rem] font-semibold gap-2">
-              <Plus className="h-4 w-4 stroke-[2]" />
-              Nytt selskap
+            <Button className="rounded-lg h-9 px-3.5 text-[0.8125rem] font-medium gap-1.5">
+              <Plus className="h-4 w-4" />Nytt selskap
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[440px] rounded-2xl">
-            <DialogHeader>
-              <DialogTitle className="text-lg">Nytt selskap</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }} className="space-y-5 mt-4">
-              <div className="space-y-2">
+          <DialogContent className="sm:max-w-[440px] rounded-xl">
+            <DialogHeader><DialogTitle>Nytt selskap</DialogTitle></DialogHeader>
+            <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }} className="space-y-4 mt-3">
+              <div className="space-y-1.5">
                 <Label className="text-label">Selskapsnavn</Label>
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="Firmanavn AS" className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="Firmanavn AS" className="h-10 rounded-lg" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
                   <Label className="text-label">Org.nr</Label>
-                  <Input value={form.org_number} onChange={(e) => setForm({ ...form, org_number: e.target.value })} placeholder="923 456 789" className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
+                  <Input value={form.org_number} onChange={(e) => setForm({ ...form, org_number: e.target.value })} placeholder="923 456 789" className="h-10 rounded-lg" />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label className="text-label">Sted</Label>
-                  <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Oslo" className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
+                  <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Oslo" className="h-10 rounded-lg" />
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label className="text-label">Nettside</Label>
-                <Input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://" className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" type="url" />
+                <Input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://" className="h-10 rounded-lg" type="url" />
               </div>
-              <div className="space-y-2">
-                <Label className="text-label">LinkedIn</Label>
-                <Input value={form.linkedin} onChange={(e) => setForm({ ...form, linkedin: e.target.value })} placeholder="https://linkedin.com/company/..." className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" type="url" />
-              </div>
-              <Button type="submit" className="w-full h-11 rounded-xl text-[0.875rem] font-semibold" disabled={createMutation.isPending}>
+              <Button type="submit" className="w-full h-10 rounded-lg" disabled={createMutation.isPending}>
                 {createMutation.isPending ? "Oppretter..." : "Opprett"}
               </Button>
             </form>
@@ -165,102 +186,83 @@ const Companies = () => {
         </Dialog>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60 stroke-[1.5]" />
-        <Input
-          placeholder="Søk etter selskap, sted eller org.nr..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-11 h-11 rounded-xl bg-card border-border/40 text-[0.9375rem] placeholder:text-muted-foreground/40"
-        />
+      {/* Filter bar */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+          <Input placeholder="Søk..." value={search} onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border" />
+        </div>
+        <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+          <SelectTrigger className="h-9 w-auto min-w-[100px] rounded-lg text-[0.8125rem] border-border bg-card">
+            <SelectValue placeholder="Eier: Alle" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Eier: Alle</SelectItem>
+            {ownerList.map(([id, name]) => (
+              <SelectItem key={id as string} value={id as string}>{name as string}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="h-9 w-auto min-w-[110px] rounded-lg text-[0.8125rem] border-border bg-card">
+            <SelectValue placeholder="Status: Alle" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Status: Alle</SelectItem>
+            {Object.entries(statusLabels).map(([k, v]) => (
+              <SelectItem key={k} value={k}>{v.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="text-[0.75rem] text-muted-foreground ml-auto">{filtered.length} selskaper</span>
       </div>
 
       {/* Table */}
       {isLoading ? (
-        <div className="space-y-1">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-[52px] rounded-xl bg-secondary/50 animate-pulse" />
-          ))}
-        </div>
+        <div className="space-y-px">{[1,2,3,4,5].map(i => <div key={i} className="h-[44px] bg-secondary/50 animate-pulse rounded" />)}</div>
       ) : filtered.length === 0 ? (
-        <div className="py-24 text-center space-y-3">
-          <p className="text-[1.0625rem] font-medium text-foreground/60">Ingen selskaper funnet</p>
-          <p className="text-[0.875rem] text-muted-foreground">Opprett ditt første selskap for å komme i gang</p>
-        </div>
+        <p className="text-sm text-muted-foreground py-12 text-center">Ingen selskaper funnet</p>
       ) : (
-        <div className="border border-border/40 rounded-2xl overflow-hidden bg-card">
-          {/* Column headers */}
-          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_90px_80px_70px] gap-4 px-5 py-3 border-b border-border/40 bg-secondary/30">
+        <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_80px_60px_100px_70px] gap-3 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="name">Selskap</SortHeader>
-            <SortHeader field="city">Sted</SortHeader>
-            <SortHeader field="status">Status</SortHeader>
+            <SortHeader field="industry">Bransje</SortHeader>
             <SortHeader field="owner">Eier</SortHeader>
-            <SortHeader field="contacts" className="justify-end">Kontakter</SortHeader>
+            <SortHeader field="contacts">Kont.</SortHeader>
+            <SortHeader field="last_activity">Siste akt.</SortHeader>
+            <SortHeader field="tasks" className="justify-end">Oppf.</SortHeader>
           </div>
-
-          {/* Rows */}
-          <div className="divide-y divide-border/30">
+          <div className="divide-y divide-border">
             {sorted.map((company) => {
               const status = getStatus(company.status);
               const contactCount = company.contacts?.length || 0;
               const ownerName = getOwnerFirstName(company);
               return (
-                <button
-                  key={company.id}
-                  onClick={() => navigate(`/selskaper/${company.id}`)}
-                  className="w-full grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_90px_80px_70px] gap-4 items-center px-5 py-3.5 hover:bg-accent/50 active:bg-accent transition-colors duration-100 text-left group"
-                >
-                  {/* Name + website */}
-                  <div className="min-w-0">
-                    <p className="text-[0.875rem] font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                      {company.name}
-                    </p>
-                    {company.website && (
-                      <span className="flex items-center gap-1 text-[0.75rem] text-muted-foreground/60 mt-0.5 truncate">
-                        <Globe className="h-3 w-3 flex-shrink-0" />
-                        {company.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
-                      </span>
-                    )}
+                <button key={company.id} onClick={() => navigate(`/selskaper/${company.id}`)}
+                  className="w-full grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_80px_60px_100px_70px] gap-3 items-center px-4 h-[44px] hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer">
+                  <div className="min-w-0 flex items-center gap-2">
+                    <span className="text-[0.8125rem] font-medium text-foreground truncate">{company.name}</span>
+                    <span className={`text-[0.625rem] font-medium px-1.5 py-0 rounded-[4px] flex-shrink-0 ${status.className}`}>{status.label}</span>
                   </div>
-
-                  {/* City */}
-                  <div className="min-w-0">
-                    {company.city ? (
-                      <span className="flex items-center gap-1 text-[0.8125rem] text-muted-foreground truncate">
-                        <MapPin className="h-3 w-3 flex-shrink-0 stroke-[1.5]" />
-                        {company.city}
-                      </span>
-                    ) : (
-                      <span className="text-[0.8125rem] text-muted-foreground/30">—</span>
-                    )}
-                  </div>
-
-                  {/* Status */}
-                  <div>
-                    <Badge variant="outline" className={`text-[0.6875rem] font-medium px-2 py-0.5 rounded-md ${status.className}`}>
-                      {status.label}
-                    </Badge>
-                  </div>
-
-                  {/* Owner */}
-                  <div className="min-w-0">
-                    <span className="text-[0.8125rem] text-muted-foreground truncate block">
-                      {ownerName || <span className="text-muted-foreground/30">—</span>}
-                    </span>
-                  </div>
-
-                  {/* Contact count */}
-                  <div className="text-right">
-                    {contactCount > 0 ? (
-                      <span className="inline-flex items-center gap-1 text-[0.8125rem] text-muted-foreground">
-                        <Users className="h-3 w-3 stroke-[1.5]" />
-                        {contactCount}
-                      </span>
-                    ) : (
-                      <span className="text-[0.8125rem] text-muted-foreground/30">0</span>
-                    )}
-                  </div>
+                  <span className="text-[0.8125rem] text-muted-foreground truncate">{company.industry || "—"}</span>
+                  <span className="text-[0.8125rem] text-muted-foreground truncate">{ownerName || "—"}</span>
+                  <span className="text-[0.8125rem] text-muted-foreground">
+                    {contactCount > 0 ? <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" />{contactCount}</span> : ""}
+                  </span>
+                  <span className="text-[0.75rem] text-muted-foreground">
+                    {company.lastActivity ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>{relativeDate(company.lastActivity)}</span>
+                        </TooltipTrigger>
+                        <TooltipContent>{format(new Date(company.lastActivity), "d. MMMM yyyy", { locale: nb })}</TooltipContent>
+                      </Tooltip>
+                    ) : "—"}
+                  </span>
+                  <span className={`text-[0.8125rem] text-right ${company.hasOverdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                    {company.taskCount > 0 ? company.taskCount : ""}
+                  </span>
                 </button>
               );
             })}

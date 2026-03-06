@@ -1,31 +1,28 @@
-import { useState, useRef, useEffect } from "react";
-import { DescriptionText } from "@/components/DescriptionText";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { Building2, Users, CalendarCheck, ArrowRight, Sparkles, Send, FileText, Phone, Calendar, Mail } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { ContactCardContent } from "@/components/ContactCardContent";
+import { Building2, Users, CalendarCheck, FileText, Phone, Calendar, Mail, Plus } from "lucide-react";
+import { format, isPast, isToday, addDays, startOfDay, endOfDay, endOfWeek } from "date-fns";
 import { nb } from "date-fns/locale";
-import ReactMarkdown from "react-markdown";
-
-type Msg = { role: "user" | "assistant"; content: string };
+import { relativeTime, relativeDate, fullDate } from "@/lib/relativeDate";
+import { useState, useRef } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const typeIcons: Record<string, typeof FileText> = {
-  note: FileText, call: Phone, meeting: Calendar, email: Mail,
-};
-const typeAccents: Record<string, string> = {
-  note: "text-muted-foreground", call: "text-success", meeting: "text-primary", email: "text-warning",
+  note: FileText, call: Phone, meeting: Calendar, email: Mail, task: FileText,
 };
 
 const Dashboard = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
-  const [messages, setMessages] = useState<Msg[]>([]);
-  const [input, setInput] = useState("");
-  const [isStreaming, setIsStreaming] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+  const [contactSheetId, setContactSheetId] = useState<string | null>(null);
+  const [pendingComplete, setPendingComplete] = useState<Set<string>>(new Set());
+  const pendingTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats"],
@@ -43,276 +40,302 @@ const Dashboard = () => {
     },
   });
 
+  const { data: allTasks = [] } = useQuery({
+    queryKey: ["dashboard-focused-tasks"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*, contacts(id, first_name, last_name, company_id, companies(name))")
+        .neq("status", "done")
+        .order("due_date", { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: recentActivities = [] } = useQuery({
     queryKey: ["dashboard-activities"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("activities")
-        .select("*, contacts(first_name, last_name), companies(name)")
+        .select("*, contacts(id, first_name, last_name)")
         .order("created_at", { ascending: false })
-        .limit(5);
+        .limit(10);
       if (error) throw error;
       return data;
     },
   });
 
-  const { data: upcomingTasks = [] } = useQuery({
-    queryKey: ["dashboard-tasks"],
+  const { data: dormantContacts = [] } = useQuery({
+    queryKey: ["dashboard-dormant"],
     queryFn: async () => {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 60);
+      // Get contacts whose latest activity is older than 60 days
       const { data, error } = await supabase
-        .from("tasks")
-        .select("*, contacts(first_name, last_name)")
-        .neq("status", "done")
-        .order("due_date", { ascending: true, nullsFirst: false })
+        .from("contacts")
+        .select("id, first_name, last_name, companies(name), updated_at")
+        .order("updated_at", { ascending: true })
         .limit(5);
       if (error) throw error;
       return data;
     },
   });
 
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  const toggleTaskMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await supabase.from("tasks").update({
+        status: "done", completed_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      }).eq("id", taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard-focused-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
 
-  const sendMessage = async () => {
-    if (!input.trim() || isStreaming) return;
-    const userMsg: Msg = { role: "user", content: input.trim() };
-    const allMessages = [...messages, userMsg];
-    setMessages(allMessages);
-    setInput("");
-    setIsStreaming(true);
-
-    let assistantSoFar = "";
-
-    try {
-      const resp = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ messages: allMessages }),
-        }
-      );
-
-      if (!resp.ok || !resp.body) {
-        throw new Error(`Error ${resp.status}`);
-      }
-
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let textBuffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        textBuffer += decoder.decode(value, { stream: true });
-
-        let newlineIndex: number;
-        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
-          let line = textBuffer.slice(0, newlineIndex);
-          textBuffer = textBuffer.slice(newlineIndex + 1);
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (line.startsWith(":") || line.trim() === "") continue;
-          if (!line.startsWith("data: ")) continue;
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") break;
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              assistantSoFar += content;
-              setMessages((prev) => {
-                const last = prev[prev.length - 1];
-                if (last?.role === "assistant") {
-                  return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantSoFar } : m);
-                }
-                return [...prev, { role: "assistant", content: assistantSoFar }];
-              });
-            }
-          } catch {
-            textBuffer = line + "\n" + textBuffer;
-            break;
-          }
-        }
-      }
-    } catch (e) {
-      console.error(e);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Beklager, noe gikk galt. Prøv igjen." },
-      ]);
-    } finally {
-      setIsStreaming(false);
-    }
+  const handleComplete = (taskId: string, title: string) => {
+    setPendingComplete((prev) => new Set(prev).add(taskId));
+    toast("Oppfølging fullført", {
+      description: title,
+      action: {
+        label: "Angre",
+        onClick: () => {
+          const timer = pendingTimers.current.get(taskId);
+          if (timer) clearTimeout(timer);
+          pendingTimers.current.delete(taskId);
+          setPendingComplete((prev) => { const s = new Set(prev); s.delete(taskId); return s; });
+        },
+      },
+      duration: 4000,
+    });
+    const timer = setTimeout(() => {
+      pendingTimers.current.delete(taskId);
+      setPendingComplete((prev) => { const s = new Set(prev); s.delete(taskId); return s; });
+      toggleTaskMutation.mutate(taskId);
+    }, 4000);
+    pendingTimers.current.set(taskId, timer);
   };
 
-  const statCards = [
-    { label: "Selskaper", value: stats?.companies ?? "–", icon: Building2, href: "/selskaper", color: "text-primary" },
-    { label: "Kontakter", value: stats?.contacts ?? "–", icon: Users, href: "/kontakter", color: "text-success" },
-    { label: "Åpne oppfølginger", value: stats?.openTasks ?? "–", icon: CalendarCheck, href: "/oppfolginger", color: "text-warning" },
-  ];
+  // Group tasks
+  const today = startOfDay(new Date());
+  const endToday = endOfDay(new Date());
+  const endWeek = endOfWeek(new Date(), { weekStartsOn: 1 });
 
-  const firstName = user?.email?.split("@")[0] ?? "bruker";
+  const visibleTasks = allTasks.filter(t => !pendingComplete.has(t.id));
+
+  const overdueTasks = visibleTasks.filter(t => t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date)));
+  const todayTasks = visibleTasks.filter(t => t.due_date && isToday(new Date(t.due_date)));
+  const weekTasks = visibleTasks.filter(t => {
+    if (!t.due_date) return false;
+    const d = new Date(t.due_date);
+    return d > endToday && d <= endWeek;
+  });
+
+  const overdueCount = overdueTasks.length;
+
+  const getContactName = (task: any) => {
+    const c = task.contacts as any;
+    return c?.first_name ? `${c.first_name} ${c.last_name}` : null;
+  };
+  const getContactId = (task: any) => (task.contacts as any)?.id || null;
+  const getCompanyName = (task: any) => (task.contacts as any)?.companies?.name || null;
+
+  const TaskRow = ({ task }: { task: any }) => {
+    const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
+    const dueToday = task.due_date && isToday(new Date(task.due_date));
+    const contactName = getContactName(task);
+    const contactId = getContactId(task);
+    const companyName = getCompanyName(task);
+
+    return (
+      <div className="flex items-center gap-3 h-[44px] px-0 group hover:bg-card transition-colors duration-75 rounded-md cursor-pointer"
+           onClick={() => contactId && setContactSheetId(contactId)}>
+        <Checkbox
+          checked={false}
+          onCheckedChange={(e) => { e && handleComplete(task.id, task.title); }}
+          onClick={(e) => e.stopPropagation()}
+          className="h-4 w-4 rounded-[4px] border-2 border-muted-foreground/40 data-[state=checked]:border-primary flex-shrink-0"
+        />
+        <div className="flex-1 min-w-0 flex items-center gap-2">
+          <span className="text-[0.8125rem] font-medium text-foreground truncate">
+            {contactName && <>{contactName} <span className="text-muted-foreground font-normal">·</span> </>}
+            <span className="font-normal text-foreground">{task.title}</span>
+          </span>
+        </div>
+        <span className="text-[0.75rem] text-muted-foreground truncate max-w-[140px] hidden sm:block">
+          {companyName}
+        </span>
+        {task.due_date && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className={`text-[0.75rem] font-medium px-2 py-0.5 rounded-md flex-shrink-0 ${
+                overdue ? "bg-destructive/10 text-destructive" : dueToday ? "bg-warning/10 text-warning" : "bg-secondary text-muted-foreground"
+              }`}>
+                {format(new Date(task.due_date), "d. MMM", { locale: nb })}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{fullDate(task.due_date)}</TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <div className="space-y-10">
-      {/* Welcome */}
-      <div className="space-y-2">
-        <h1 className="text-[1.75rem] font-bold">
-          Hei, {firstName} 👋
-        </h1>
-        <p className="text-muted-foreground text-[0.9375rem] prose-measure">
-          Her er en rask oversikt over CRM-et ditt. Bruk AI-assistenten for å stille spørsmål eller få hjelp.
-        </p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {statCards.map((s) => (
-          <button
-            key={s.label}
-            onClick={() => navigate(s.href)}
-            className="group flex items-center gap-4 p-5 rounded-xl bg-card border border-border/50 hover:border-border transition-all text-left"
-          >
-            <div className={`p-2.5 rounded-lg bg-accent ${s.color}`}>
-              <s.icon className="h-5 w-5 stroke-[1.5]" />
-            </div>
-            <div>
-              <p className="text-[1.5rem] font-bold leading-none">{s.value}</p>
-              <p className="text-[0.8125rem] text-muted-foreground mt-1">{s.label}</p>
-            </div>
-            <ArrowRight className="h-4 w-4 ml-auto text-muted-foreground/20 group-hover:text-muted-foreground/60 transition-colors" />
-          </button>
-        ))}
-      </div>
-
-      {/* Two column: AI chat + activity/tasks */}
+    <div className="space-y-6">
+      {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-        {/* AI Assistant — 3/5 */}
-        <section className="lg:col-span-3 space-y-4">
+        {/* Left: Oppfølginger i fokus (60%) */}
+        <div className="lg:col-span-3 space-y-5">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <h2 className="text-label">AI-assistent</h2>
-          </div>
-          <div className="rounded-xl bg-card border border-border/50 overflow-hidden flex flex-col" style={{ minHeight: "360px", maxHeight: "480px" }}>
-            {/* Chat messages */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-4">
-              {messages.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-full text-center py-8">
-                  <Sparkles className="h-8 w-8 text-primary/30 mb-3" />
-                  <p className="text-[0.875rem] text-muted-foreground">
-                    Spør meg om kundene dine, oppfølginger, eller få hjelp med CRM-arbeid.
-                  </p>
-                </div>
-              )}
-              {messages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[85%] px-4 py-2.5 rounded-xl text-[0.875rem] leading-relaxed ${
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-accent text-foreground"
-                  }`}>
-                    {msg.role === "assistant" ? (
-                      <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:m-0 [&>ul]:my-1 [&>ol]:my-1">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
-                      </div>
-                    ) : msg.content}
-                  </div>
-                </div>
-              ))}
-              <div ref={chatEndRef} />
-            </div>
-
-            {/* Input */}
-            <div className="border-t border-border/50 p-3">
-              <form
-                onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
-                className="flex items-center gap-2"
-              >
-                <input
-                  type="text"
-                  placeholder="Skriv en melding..."
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  disabled={isStreaming}
-                  className="flex-1 bg-transparent text-[0.875rem] placeholder:text-muted-foreground/40 focus:outline-none px-2 py-1.5"
-                />
-                <Button
-                  type="submit"
-                  size="icon"
-                  disabled={!input.trim() || isStreaming}
-                  className="h-8 w-8 rounded-lg flex-shrink-0"
-                >
-                  <Send className="h-3.5 w-3.5" />
-                </Button>
-              </form>
-            </div>
-          </div>
-        </section>
-
-        {/* Right column: Tasks + Activities — 2/5 */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Upcoming tasks */}
-          <section className="space-y-3">
-            <h2 className="text-label">Kommende oppfølginger</h2>
-            {upcomingTasks.length === 0 ? (
-              <p className="text-[0.8125rem] text-muted-foreground/60 py-4">Ingen kommende oppfølginger</p>
-            ) : (
-              <div className="space-y-1">
-                {upcomingTasks.map((task) => {
-                  const contactName = (task.contacts as any)?.first_name
-                    ? `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}`
-                    : null;
-                  return (
-                    <div key={task.id} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-card transition-colors">
-                      <CalendarCheck className="h-4 w-4 text-warning stroke-[1.5] flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[0.875rem] font-medium truncate">{task.title}</p>
-                        <p className="text-[0.75rem] text-muted-foreground truncate">
-                          {[contactName, task.due_date ? format(new Date(task.due_date), "d. MMM", { locale: nb }) : null].filter(Boolean).join(" · ")}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+            <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">I dag</h2>
+            {overdueCount > 0 && (
+              <span className="text-[0.625rem] font-semibold bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded-[4px]">
+                {overdueCount} forfalt
+              </span>
             )}
-          </section>
+          </div>
+
+          {/* Overdue */}
+          {overdueTasks.length > 0 && (
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[0.6875rem] font-semibold uppercase tracking-wider text-destructive">Forfalt</span>
+                <div className="flex-1 h-px bg-destructive/20" />
+              </div>
+              {overdueTasks.map(t => <TaskRow key={t.id} task={t} />)}
+            </div>
+          )}
+
+          {/* Today */}
+          {todayTasks.length > 0 && (
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[0.6875rem] font-semibold uppercase tracking-wider text-warning">I dag</span>
+                <div className="flex-1 h-px bg-warning/20" />
+              </div>
+              {todayTasks.map(t => <TaskRow key={t.id} task={t} />)}
+            </div>
+          )}
+
+          {/* This week */}
+          {weekTasks.length > 0 && (
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[0.6875rem] font-semibold uppercase tracking-wider text-muted-foreground">Denne uken</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+              {weekTasks.slice(0, 5).map(t => <TaskRow key={t.id} task={t} />)}
+              {weekTasks.length > 5 && (
+                <button onClick={() => navigate("/oppfolginger")} className="text-[0.75rem] text-primary hover:underline mt-1">
+                  + {weekTasks.length - 5} til
+                </button>
+              )}
+            </div>
+          )}
+
+          {overdueTasks.length === 0 && todayTasks.length === 0 && weekTasks.length === 0 && (
+            <p className="text-sm text-muted-foreground py-4">Ingen oppfølginger denne uken</p>
+          )}
+
+          <button onClick={() => navigate("/oppfolginger")} className="text-[0.75rem] text-primary hover:underline">
+            + Ny oppfølging
+          </button>
+        </div>
+
+        {/* Right: Puls + Fokus (40%) */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Stats */}
+          <div className="flex items-baseline gap-8">
+            <button onClick={() => navigate("/selskaper")} className="group">
+              <p className="text-2xl font-bold text-foreground">{stats?.companies ?? "–"}</p>
+              <p className="text-[0.75rem] text-muted-foreground group-hover:text-foreground transition-colors">Selskaper</p>
+            </button>
+            <button onClick={() => navigate("/kontakter")} className="group">
+              <p className="text-2xl font-bold text-foreground">{stats?.contacts ?? "–"}</p>
+              <p className="text-[0.75rem] text-muted-foreground group-hover:text-foreground transition-colors">Kontakter</p>
+            </button>
+            <button onClick={() => navigate("/oppfolginger")} className="group">
+              <p className="text-2xl font-bold text-foreground">{stats?.openTasks ?? "–"}</p>
+              <p className="text-[0.75rem] text-muted-foreground group-hover:text-foreground transition-colors">Åpne oppfølginger</p>
+            </button>
+          </div>
+
+          <div className="h-px bg-border" />
 
           {/* Recent activities */}
-          <section className="space-y-3">
-            <h2 className="text-label">Siste aktiviteter</h2>
-            {recentActivities.length === 0 ? (
-              <p className="text-[0.8125rem] text-muted-foreground/60 py-4">Ingen aktiviteter ennå</p>
-            ) : (
-              <div className="space-y-1">
-                {recentActivities.map((a) => {
-                  const Icon = typeIcons[a.type] || FileText;
-                  const accent = typeAccents[a.type] || "text-muted-foreground";
-                  const contactName = (a.contacts as any)?.first_name
-                    ? `${(a.contacts as any).first_name} ${(a.contacts as any).last_name}`
-                    : null;
-                  return (
-                    <div key={a.id} className="flex items-start gap-3 px-4 py-3 rounded-xl hover:bg-card transition-colors">
-                      <Icon className={`h-4 w-4 mt-0.5 stroke-[1.5] ${accent} flex-shrink-0`} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[0.875rem] font-medium truncate">{a.subject}</p>
-                        <DescriptionText text={a.description} maxLines={1} />
-                        <p className="text-[0.75rem] text-muted-foreground truncate">
-                          {[contactName, format(new Date(a.created_at), "d. MMM", { locale: nb })].filter(Boolean).join(" · ")}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
+          <div className="space-y-1">
+            <h3 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">Siste aktiviteter</h3>
+            {recentActivities.map((a) => {
+              const Icon = typeIcons[a.type] || FileText;
+              const contactName = (a.contacts as any)?.first_name
+                ? `${(a.contacts as any).first_name} ${(a.contacts as any).last_name}` : null;
+              const contactId = (a.contacts as any)?.id;
+              return (
+                <button
+                  key={a.id}
+                  className="w-full flex items-center gap-2.5 py-2 hover:bg-card transition-colors duration-75 rounded-md text-left"
+                  onClick={() => contactId && setContactSheetId(contactId)}
+                >
+                  <Icon className="h-4 w-4 text-muted-foreground/60 stroke-[1.5] flex-shrink-0" />
+                  <span className="text-[0.8125rem] text-foreground truncate flex-1">
+                    {contactName}
+                  </span>
+                  <span className="text-[0.75rem] text-muted-foreground/60 truncate max-w-[140px]">{a.subject}</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="text-[0.6875rem] text-muted-foreground/40 flex-shrink-0 ml-1">
+                        {relativeTime(a.created_at)}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>{fullDate(a.created_at)}</TooltipContent>
+                  </Tooltip>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="h-px bg-border" />
+
+          {/* Dormant contacts */}
+          <div className="space-y-1">
+            <h3 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">Ikke kontaktet på 60+ dager</h3>
+            {dormantContacts.map((c) => {
+              const daysSince = Math.floor((Date.now() - new Date((c as any).updated_at).getTime()) / (1000 * 60 * 60 * 24));
+              return (
+                <button
+                  key={c.id}
+                  className="w-full flex items-center gap-2.5 py-2 hover:bg-card transition-colors duration-75 rounded-md text-left"
+                  onClick={() => setContactSheetId(c.id)}
+                >
+                  <span className="text-[0.8125rem] text-foreground truncate flex-1">
+                    {c.first_name} {c.last_name}
+                  </span>
+                  <span className="text-[0.75rem] text-muted-foreground/60 truncate max-w-[120px]">
+                    {(c.companies as any)?.name}
+                  </span>
+                  <span className="text-[0.6875rem] text-destructive flex-shrink-0">{daysSince}d siden</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
+
+      {/* Contact Sheet */}
+      <Sheet open={!!contactSheetId} onOpenChange={(open) => !open && setContactSheetId(null)}>
+        <SheetContent className="sm:max-w-[640px] overflow-y-auto p-6">
+          {contactSheetId && (
+            <ContactCardContent
+              contactId={contactSheetId}
+              onNavigateToFullPage={() => { setContactSheetId(null); navigate(`/kontakter/${contactSheetId}`); }}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };

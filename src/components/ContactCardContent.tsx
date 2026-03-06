@@ -8,14 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Phone, Mail, MapPin, Linkedin, Building2, FileText, Calendar, CalendarDays, ExternalLink } from "lucide-react";
+import { Plus, Phone, Mail, Linkedin, FileText, Calendar, CalendarDays, ExternalLink, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday } from "date-fns";
 import { nb } from "date-fns/locale";
+import { relativeDate, fullDate } from "@/lib/relativeDate";
 import InlineEdit from "@/components/InlineEdit";
 
 const typeConfig: Record<string, { label: string; icon: typeof FileText; accent: string }> = {
@@ -26,15 +27,8 @@ const typeConfig: Record<string, { label: string; icon: typeof FileText; accent:
   task: { label: "Oppgave", icon: FileText, accent: "text-muted-foreground" },
 };
 
-const priorityConfig: Record<string, { label: string; className: string }> = {
-  high: { label: "Høy", className: "bg-destructive/10 text-destructive border-destructive/20" },
-  medium: { label: "Medium", className: "bg-primary/10 text-primary border-primary/20" },
-  low: { label: "Lav", className: "bg-muted text-muted-foreground border-border" },
-};
-
 interface ContactCardContentProps {
   contactId: string;
-  /** If true, shows full editing + create forms. False = read-only summary for overlays */
   editable?: boolean;
   onOpenCompany?: (companyId: string) => void;
   onNavigateToFullPage?: () => void;
@@ -46,6 +40,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
   const navigate = useNavigate();
   const [activityOpen, setActivityOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
+  const [editingNotes, setEditingNotes] = useState(false);
   const [actForm, setActForm] = useState({ type: "note", subject: "", description: "" });
   const [taskForm, setTaskForm] = useState({ title: "", description: "", priority: "medium", due_date: "" });
 
@@ -55,8 +50,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
       const { data, error } = await supabase
         .from("contacts")
         .select("*, companies(id, name), profiles!contacts_owner_id_fkey(full_name)")
-        .eq("id", contactId)
-        .single();
+        .eq("id", contactId).single();
       if (error) throw error;
       return data;
     },
@@ -76,9 +70,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
     queryKey: ["contact-activities", contactId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("activities")
-        .select("*")
-        .eq("contact_id", contactId)
+        .from("activities").select("*").eq("contact_id", contactId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -92,10 +84,8 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
     queryKey: ["contact-tasks", contactId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("tasks")
-        .select("*, companies(name)")
-        .eq("contact_id", contactId)
-        .neq("status", "done")
+        .from("tasks").select("*, companies(name)")
+        .eq("contact_id", contactId).neq("status", "done")
         .order("due_date", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data;
@@ -110,7 +100,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contact", contactId] });
-      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
       toast.success("Oppdatert");
     },
     onError: () => toast.error("Kunne ikke oppdatere"),
@@ -169,227 +159,217 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
     updateMutation.mutate({ [field]: value || null });
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast("Kopiert!", { duration: 1500 });
+  };
+
   if (isLoading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-7 w-48 bg-secondary rounded-lg" />
-        <div className="h-4 w-32 bg-secondary rounded-lg" />
-        <div className="h-20 bg-secondary rounded-xl" />
-      </div>
-    );
+    return <div className="space-y-3 animate-pulse"><div className="h-7 w-48 bg-secondary rounded" /><div className="h-4 w-32 bg-secondary rounded" /></div>;
   }
-  if (!contact) return <p className="text-muted-foreground text-[0.875rem]">Kontakt ikke funnet</p>;
+  if (!contact) return <p className="text-sm text-muted-foreground">Kontakt ikke funnet</p>;
 
   const companyName = (contact.companies as any)?.name;
   const companyId = (contact.companies as any)?.id;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="space-y-2">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            {editable ? (
-              <h1 className="text-[1.5rem] font-bold">
-                {contact.first_name} {contact.last_name}
-                <Select value={contact.owner_id || ""} onValueChange={(v) => updateMutation.mutate({ owner_id: v || null })}>
-                  <SelectTrigger className="inline-flex h-auto w-auto gap-1 border-none bg-transparent p-0 text-[0.875rem] font-normal text-muted-foreground shadow-none hover:text-foreground ml-2">
-                    <SelectValue placeholder="Velg eier" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {allProfiles.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.full_name || "Uten navn"}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </h1>
-            ) : (
-              <h2 className="text-[1.25rem] font-bold">{contact.first_name} {contact.last_name}</h2>
+    <div className="space-y-5">
+      {/* Header – compact */}
+      <div>
+        {/* Line 1 */}
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-[1.375rem] font-bold truncate">
+            {contact.first_name} {contact.last_name}
+          </h2>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {editable && (
+              <Select value={contact.owner_id || ""} onValueChange={(v) => updateMutation.mutate({ owner_id: v || null })}>
+                <SelectTrigger className="h-7 w-auto gap-1 border-none bg-transparent p-0 px-2 text-[0.75rem] text-muted-foreground shadow-none hover:text-foreground">
+                  <SelectValue placeholder="Eier" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allProfiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+            {editable && !editingNotes && !contact.notes && (
+              <button onClick={() => setEditingNotes(true)} className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-secondary text-muted-foreground">
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            )}
+            {!editable && onNavigateToFullPage && (
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={onNavigateToFullPage}>
+                <ExternalLink className="h-3.5 w-3.5" />
+              </Button>
             )}
           </div>
-          {!editable && onNavigateToFullPage && (
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg flex-shrink-0" onClick={onNavigateToFullPage}>
-              <ExternalLink className="h-4 w-4 stroke-[1.5]" />
-            </Button>
-          )}
         </div>
 
-        {/* Info stripe */}
-        <div className="flex items-center gap-2 flex-wrap text-[0.8125rem] text-muted-foreground">
-          {contact.title && (
-            <>
-              {editable ? <InlineEdit value={contact.title} onSave={updateField("title")} className="text-[0.8125rem] font-normal" /> : <span>{contact.title}</span>}
-              <span className="text-muted-foreground/30">·</span>
-            </>
-          )}
+        {/* Line 2: title · company · phone · email · linkedin */}
+        <div className="flex items-center gap-2 flex-wrap text-[0.8125rem] text-muted-foreground mt-1">
+          {contact.title && <span>{editable ? <InlineEdit value={contact.title} onSave={updateField("title")} className="text-[0.8125rem] font-normal" /> : contact.title}</span>}
+          {contact.title && companyName && <span className="text-muted-foreground/30">·</span>}
           {companyName && (
+            <button className="text-primary hover:underline" onClick={() => onOpenCompany ? onOpenCompany(companyId) : navigate(`/selskaper/${companyId}`)}>
+              {companyName}
+            </button>
+          )}
+          {contact.phone && (
             <>
-              <button
-                className="text-primary hover:underline"
-                onClick={() => onOpenCompany ? onOpenCompany(companyId) : navigate(`/selskaper/${companyId}`)}
-              >
-                {companyName}
-              </button>
               <span className="text-muted-foreground/30">·</span>
+              <button onClick={() => copyToClipboard(contact.phone!)} className="inline-flex items-center gap-1 hover:text-foreground">
+                <Phone className="h-3 w-3" />{contact.phone}
+              </button>
             </>
           )}
-          {contact.location && (
+          {contact.email && (
             <>
-              <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5 stroke-[1.5]" />{contact.location}</span>
               <span className="text-muted-foreground/30">·</span>
+              <button onClick={() => copyToClipboard(contact.email!)} className="inline-flex items-center gap-1 hover:text-foreground">
+                <Mail className="h-3 w-3" />{contact.email}
+              </button>
+            </>
+          )}
+          {contact.linkedin && (
+            <>
+              <span className="text-muted-foreground/30">·</span>
+              <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                <Linkedin className="h-3 w-3" />in
+              </a>
             </>
           )}
         </div>
-      </div>
 
-      {/* Contact details */}
-      <div className="space-y-2">
-        {contact.phone && (
-          <a href={`tel:${contact.phone}`} className="flex items-center gap-2.5 text-[0.875rem] text-primary hover:underline">
-            <Phone className="h-4 w-4 stroke-[1.5]" />{contact.phone}
-          </a>
-        )}
-        {contact.email && (
-          <a href={`mailto:${contact.email}`} className="flex items-center gap-2.5 text-[0.875rem] text-primary hover:underline">
-            <Mail className="h-4 w-4 stroke-[1.5]" />{contact.email}
-          </a>
-        )}
-        {contact.linkedin && (
-          <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-[0.875rem] text-primary hover:underline">
-            <Linkedin className="h-4 w-4 stroke-[1.5]" />LinkedIn
-          </a>
-        )}
-      </div>
-
-      {/* Flags */}
-      <div className="flex items-center gap-3">
-        <label className="inline-flex items-center gap-1.5 cursor-pointer">
-          <Checkbox
-            checked={(contact as any).cv_email ?? false}
-            onCheckedChange={(checked) => updateMutation.mutate({ cv_email: checked as any })}
-            className="h-3.5 w-3.5 rounded-[4px]"
-          />
-          <span className="text-[0.8125rem] font-medium text-foreground">CV-Epost</span>
-        </label>
-        <label className="inline-flex items-center gap-1.5 cursor-pointer">
-          <Checkbox
-            checked={(contact as any).call_list ?? false}
-            onCheckedChange={(checked) => updateMutation.mutate({ call_list: checked as any })}
-            className="h-3.5 w-3.5 rounded-[4px]"
-          />
-          <span className="text-[0.8125rem] font-medium text-foreground">Innkjøper</span>
-        </label>
+        {/* Line 3: Flags */}
+        <div className="flex items-center gap-3 mt-2">
+          <label className="inline-flex items-center gap-1.5 cursor-pointer">
+            <Checkbox checked={(contact as any).cv_email ?? false}
+              onCheckedChange={(checked) => updateMutation.mutate({ cv_email: checked as any })}
+              className="h-3.5 w-3.5 rounded-[3px]" />
+            <span className="text-[0.75rem] text-foreground">CV-Epost</span>
+          </label>
+          <label className="inline-flex items-center gap-1.5 cursor-pointer">
+            <Checkbox checked={(contact as any).call_list ?? false}
+              onCheckedChange={(checked) => updateMutation.mutate({ call_list: checked as any })}
+              className="h-3.5 w-3.5 rounded-[3px]" />
+            <span className="text-[0.75rem] text-foreground">Innkjøper</span>
+          </label>
+        </div>
       </div>
 
       {/* Notes */}
-      {editable ? (
-        <InlineEdit value={contact.notes || ""} onSave={updateField("notes")} placeholder="Legg til notater..." multiline />
+      {editable && (editingNotes || contact.notes) ? (
+        <InlineEdit value={contact.notes || ""} onSave={(v) => { updateField("notes")(v); setEditingNotes(false); }} placeholder="Legg til notater..." multiline />
       ) : contact.notes ? (
-        <div className="bg-secondary/50 rounded-xl px-4 py-3">
-          <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{contact.notes}</p>
-        </div>
+        <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{contact.notes}</p>
       ) : null}
 
-      {/* Oppfølginger */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-[0.75rem] font-medium uppercase tracking-wider text-muted-foreground">Oppfølginger · {tasks.length}</h3>
-          {editable && (
-            <Dialog open={taskOpen} onOpenChange={setTaskOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="rounded-xl h-7 px-2.5 text-[0.6875rem] font-medium gap-1 border-border/40">
-                  <Plus className="h-3 w-3 stroke-[2]" />Ny
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[440px] rounded-2xl">
-                <DialogHeader><DialogTitle className="text-lg">Ny oppfølging</DialogTitle></DialogHeader>
-                <form onSubmit={(e) => { e.preventDefault(); createTaskMutation.mutate(); }} className="space-y-5 mt-4">
-                  <div className="space-y-2">
-                    <Label className="text-label">Tittel</Label>
-                    <Input value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} required className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-label">Beskrivelse</Label>
-                    <Textarea value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} rows={2} className="rounded-xl text-[0.9375rem] bg-secondary/50 min-h-[60px]" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-label">Prioritet</Label>
-                      <Select value={taskForm.priority} onValueChange={(v) => setTaskForm({ ...taskForm, priority: v })}>
-                        <SelectTrigger className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="low">Lav</SelectItem>
-                          <SelectItem value="medium">Medium</SelectItem>
-                          <SelectItem value="high">Høy</SelectItem>
-                        </SelectContent>
-                      </Select>
+      {/* Tasks – hidden if zero */}
+      {tasks.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Oppfølginger · {tasks.length}</h3>
+            {editable && (
+              <Dialog open={taskOpen} onOpenChange={setTaskOpen}>
+                <DialogTrigger asChild>
+                  <button className="text-[0.75rem] text-primary hover:underline">+ Ny</button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[440px] rounded-xl">
+                  <DialogHeader><DialogTitle>Ny oppfølging</DialogTitle></DialogHeader>
+                  <form onSubmit={(e) => { e.preventDefault(); createTaskMutation.mutate(); }} className="space-y-4 mt-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-label">Tittel</Label>
+                      <Input value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} required className="h-10 rounded-lg" />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-label">Beskrivelse</Label>
+                      <Textarea value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} rows={2} className="rounded-lg min-h-[60px]" />
+                    </div>
+                    <div className="space-y-1.5">
                       <Label className="text-label">Frist</Label>
-                      <Input type="date" value={taskForm.due_date} onChange={(e) => setTaskForm({ ...taskForm, due_date: e.target.value })} className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
+                      <Input type="date" value={taskForm.due_date} onChange={(e) => setTaskForm({ ...taskForm, due_date: e.target.value })} className="h-10 rounded-lg" />
                     </div>
-                  </div>
-                  <Button type="submit" className="w-full h-11 rounded-xl text-[0.875rem] font-semibold" disabled={createTaskMutation.isPending}>
-                    {createTaskMutation.isPending ? "Oppretter..." : "Opprett"}
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-          )}
-        </div>
-        {tasks.length === 0 ? (
-          <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen kommende oppfølginger</p>
-        ) : (
-          <div className="space-y-1">
+                    <Button type="submit" className="w-full h-10 rounded-lg" disabled={createTaskMutation.isPending}>
+                      {createTaskMutation.isPending ? "Oppretter..." : "Opprett"}
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+          <div className="space-y-px">
             {tasks.map((task) => {
               const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
-              const prio = priorityConfig[task.priority] || priorityConfig.medium;
               return (
-                <div key={task.id} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors">
-                  <Checkbox
-                    checked={false}
-                    onCheckedChange={() => toggleTaskMutation.mutate(task.id)}
-                    className="h-4 w-4 rounded-[5px] border-border/60 flex-shrink-0"
-                  />
+                <div key={task.id} className="flex items-center gap-2.5 py-2 hover:bg-secondary/50 rounded-md transition-colors duration-75">
+                  <Checkbox checked={false} onCheckedChange={() => toggleTaskMutation.mutate(task.id)}
+                    className="h-4 w-4 rounded-[4px] border-2 border-muted-foreground/40 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-[0.8125rem] font-medium truncate">{task.title}</p>
-                    <DescriptionText text={task.description} maxLines={2} />
                     {task.assigned_to && profileMap[task.assigned_to] && (
                       <span className="text-[0.6875rem] text-muted-foreground">{profileMap[task.assigned_to]}</span>
                     )}
                   </div>
-                  <Badge variant="outline" className={`text-[0.625rem] px-1.5 py-0 rounded ${prio.className} flex-shrink-0`}>{prio.label}</Badge>
                   {task.due_date && (
-                    <span className={`text-[0.75rem] flex-shrink-0 flex items-center gap-1 ${overdue ? "text-destructive" : "text-muted-foreground"}`}>
-                      <CalendarDays className="h-3 w-3 stroke-[1.5]" />
-                      {format(new Date(task.due_date), "d. MMM", { locale: nb })}
-                    </span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className={`text-[0.75rem] font-medium px-2 py-0.5 rounded-md flex-shrink-0 ${
+                          overdue ? "bg-destructive/10 text-destructive" : "bg-secondary text-muted-foreground"
+                        }`}>
+                          {format(new Date(task.due_date), "d. MMM", { locale: nb })}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>{fullDate(task.due_date)}</TooltipContent>
+                    </Tooltip>
                   )}
                 </div>
               );
             })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Aktiviteter */}
-      <div className="space-y-3">
+      {/* If editable and no tasks, show just the "+ Ny oppfølging" link */}
+      {tasks.length === 0 && editable && (
+        <Dialog open={taskOpen} onOpenChange={setTaskOpen}>
+          <DialogTrigger asChild>
+            <button className="text-[0.75rem] text-primary hover:underline">+ Ny oppfølging</button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[440px] rounded-xl">
+            <DialogHeader><DialogTitle>Ny oppfølging</DialogTitle></DialogHeader>
+            <form onSubmit={(e) => { e.preventDefault(); createTaskMutation.mutate(); }} className="space-y-4 mt-3">
+              <div className="space-y-1.5">
+                <Label className="text-label">Tittel</Label>
+                <Input value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} required className="h-10 rounded-lg" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-label">Frist</Label>
+                <Input type="date" value={taskForm.due_date} onChange={(e) => setTaskForm({ ...taskForm, due_date: e.target.value })} className="h-10 rounded-lg" />
+              </div>
+              <Button type="submit" className="w-full h-10 rounded-lg" disabled={createTaskMutation.isPending}>
+                {createTaskMutation.isPending ? "Oppretter..." : "Opprett"}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Activities */}
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h3 className="text-[0.75rem] font-medium uppercase tracking-wider text-muted-foreground">Aktiviteter · {activities.length}</h3>
+          <h3 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Aktiviteter · {activities.length}</h3>
           {editable && (
             <Dialog open={activityOpen} onOpenChange={setActivityOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="rounded-xl h-7 px-2.5 text-[0.6875rem] font-medium gap-1 border-border/40">
-                  <Plus className="h-3 w-3 stroke-[2]" />Logg
-                </Button>
+                <button className="text-[0.75rem] text-primary hover:underline">+ Logg</button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[440px] rounded-2xl">
-                <DialogHeader><DialogTitle className="text-lg">Ny aktivitet</DialogTitle></DialogHeader>
-                <form onSubmit={(e) => { e.preventDefault(); createActivityMutation.mutate(); }} className="space-y-5 mt-4">
-                  <div className="space-y-2">
+              <DialogContent className="sm:max-w-[440px] rounded-xl">
+                <DialogHeader><DialogTitle>Ny aktivitet</DialogTitle></DialogHeader>
+                <form onSubmit={(e) => { e.preventDefault(); createActivityMutation.mutate(); }} className="space-y-4 mt-3">
+                  <div className="space-y-1.5">
                     <Label className="text-label">Type</Label>
                     <Select value={actForm.type} onValueChange={(v) => setActForm({ ...actForm, type: v })}>
-                      <SelectTrigger className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-10 rounded-lg"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="note">Notat</SelectItem>
                         <SelectItem value="call">Samtale</SelectItem>
@@ -398,15 +378,15 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <Label className="text-label">Emne</Label>
-                    <Input value={actForm.subject} onChange={(e) => setActForm({ ...actForm, subject: e.target.value })} required className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
+                    <Input value={actForm.subject} onChange={(e) => setActForm({ ...actForm, subject: e.target.value })} required className="h-10 rounded-lg" />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <Label className="text-label">Beskrivelse</Label>
-                    <Textarea value={actForm.description} onChange={(e) => setActForm({ ...actForm, description: e.target.value })} rows={3} className="rounded-xl text-[0.9375rem] bg-secondary/50 min-h-[80px]" />
+                    <Textarea value={actForm.description} onChange={(e) => setActForm({ ...actForm, description: e.target.value })} rows={3} className="rounded-lg min-h-[80px]" />
                   </div>
-                  <Button type="submit" className="w-full h-11 rounded-xl text-[0.875rem] font-semibold" disabled={createActivityMutation.isPending}>
+                  <Button type="submit" className="w-full h-10 rounded-lg" disabled={createActivityMutation.isPending}>
                     {createActivityMutation.isPending ? "Registrerer..." : "Registrer"}
                   </Button>
                 </form>
@@ -415,24 +395,27 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           )}
         </div>
         {activities.length === 0 ? (
-          <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen aktiviteter ennå</p>
+          <p className="text-sm text-muted-foreground/60 py-2">Ingen aktiviteter ennå</p>
         ) : (
-          <div className="space-y-1">
+          <div className="divide-y divide-border">
             {activities.map((activity) => {
               const cfg = typeConfig[activity.type] || typeConfig.note;
               const Icon = cfg.icon;
               return (
-                <div key={activity.id} className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors">
-                  <Icon className={`h-3.5 w-3.5 mt-0.5 stroke-[1.5] flex-shrink-0 ${cfg.accent}`} />
-                  <div className="min-w-0 flex-1 space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <p className="text-[0.8125rem] font-medium leading-snug truncate">{activity.subject}</p>
+                <div key={activity.id} className="flex items-start gap-2.5 py-3">
+                  <Icon className={`h-4 w-4 mt-0.5 stroke-[1.5] flex-shrink-0 ${cfg.accent}`} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[0.8125rem] font-medium truncate">{activity.subject}</p>
                       <span className="text-[0.625rem] text-muted-foreground/60 flex-shrink-0">{cfg.label}</span>
                     </div>
-                        <DescriptionText text={activity.description} maxLines={2} />
-                    <p className="text-[0.6875rem] text-muted-foreground/60">
-                      {format(new Date(activity.created_at), "d. MMM yyyy 'kl.' HH:mm", { locale: nb })}
-                    </p>
+                    <DescriptionText text={activity.description} maxLines={2} />
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <p className="text-[0.6875rem] text-muted-foreground/60 mt-0.5">{relativeDate(activity.created_at)}</p>
+                      </TooltipTrigger>
+                      <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
+                    </Tooltip>
                   </div>
                 </div>
               );
