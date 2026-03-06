@@ -230,7 +230,7 @@ const Tasks = () => {
         <div className="space-y-6">
           {filteredOpen.length > 0 && (
             <div className="border border-border/40 rounded-2xl overflow-hidden bg-card">
-              <div className="grid grid-cols-[40px_1fr_130px_130px_80px_90px] gap-3 px-5 py-3 border-b border-border/40 bg-secondary/30">
+              <div className="grid grid-cols-[40px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_70px_85px] gap-3 px-5 py-3 border-b border-border/40 bg-secondary/30">
                 <span />
                 <SortHeader field="title">Oppfølging</SortHeader>
                 <SortHeader field="contact">Kontakt</SortHeader>
