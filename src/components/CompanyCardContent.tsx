@@ -297,9 +297,9 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
               <div className="space-y-1">
                 {tasks.map((task) => {
                   const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
-                  const prio = priorityConfig[task.priority] || priorityConfig.medium;
-                  const contactName = (task.contacts as any)?.first_name
-                    ? `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}`
+                   const contactName = (task.contacts as any)?.first_name
+                     ? `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}`
+                     : null;
                     : null;
                   const taskOwner = getOwnerFirstName((task as any).profiles);
                   return (
