@@ -67,6 +67,8 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
     enabled: !!companyId,
   });
 
+  const contactIds = contacts.map(c => c.id);
+
   // Activities directly on company
   const { data: companyActivities = [] } = useQuery({
     queryKey: ["company-activities-direct", companyId],
