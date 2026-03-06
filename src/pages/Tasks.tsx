@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,6 +37,8 @@ const Tasks = () => {
   const [showDone, setShowDone] = useState(false);
   const [contactSheetId, setContactSheetId] = useState<string | null>(null);
   const [companySheetId, setCompanySheetId] = useState<string | null>(null);
+  const [pendingComplete, setPendingComplete] = useState<Set<string>>(new Set());
+  const pendingTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -93,6 +95,30 @@ const Tasks = () => {
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks"] }),
   });
+
+  const handleComplete = (taskId: string, title: string) => {
+    setPendingComplete((prev) => new Set(prev).add(taskId));
+    const toastId = toast("Oppfølging fullført", {
+      description: title,
+      action: {
+        label: "Angre",
+        onClick: () => {
+          const timer = pendingTimers.current.get(taskId);
+          if (timer) clearTimeout(timer);
+          pendingTimers.current.delete(taskId);
+          setPendingComplete((prev) => { const s = new Set(prev); s.delete(taskId); return s; });
+        },
+      },
+      duration: 4000,
+    });
+
+    const timer = setTimeout(() => {
+      pendingTimers.current.delete(taskId);
+      setPendingComplete((prev) => { const s = new Set(prev); s.delete(taskId); return s; });
+      toggleMutation.mutate({ id: taskId, currentStatus: "open" });
+    }, 4000);
+    pendingTimers.current.set(taskId, timer);
+  };
 
   const openTasks = tasks.filter(t => t.status !== "done");
   const doneTasks = tasks.filter(t => t.status === "done");
@@ -239,7 +265,7 @@ const Tasks = () => {
                 <SortHeader field="due_date" className="justify-end">Frist</SortHeader>
               </div>
               <div className="divide-y divide-border/30">
-                {filteredOpen.map((task) => {
+                {filteredOpen.filter(t => !pendingComplete.has(t.id)).map((task) => {
                   const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
                   const dueToday = task.due_date && isToday(new Date(task.due_date));
                   const contactName = getContactName(task);
@@ -250,8 +276,8 @@ const Tasks = () => {
 
                   return (
                     <div key={task.id} className="grid grid-cols-[40px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_70px_85px] gap-3 items-center px-5 py-3.5 hover:bg-accent/50 transition-colors duration-100">
-                      <Checkbox checked={false} onCheckedChange={() => toggleMutation.mutate({ id: task.id, currentStatus: task.status })}
-                        className="h-[18px] w-[18px] rounded-[5px] border-border/60" />
+                      <Checkbox checked={false} onCheckedChange={() => handleComplete(task.id, task.title)}
+                        className="h-[18px] w-[18px] rounded-[5px] border-2 border-muted-foreground/50 data-[state=checked]:border-primary" />
 
                       <button className="min-w-0 text-left group" onClick={() => contactId && setContactSheetId(contactId)}>
                         <p className="text-[0.875rem] font-medium text-foreground truncate group-hover:text-primary transition-colors">{task.title}</p>
