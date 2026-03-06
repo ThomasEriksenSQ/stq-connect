@@ -265,7 +265,7 @@ const Tasks = () => {
                 <SortHeader field="due_date" className="justify-end">Frist</SortHeader>
               </div>
               <div className="divide-y divide-border/30">
-                {filteredOpen.map((task) => {
+                {filteredOpen.filter(t => !pendingComplete.has(t.id)).map((task) => {
                   const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
                   const dueToday = task.due_date && isToday(new Date(task.due_date));
                   const contactName = getContactName(task);
@@ -276,8 +276,8 @@ const Tasks = () => {
 
                   return (
                     <div key={task.id} className="grid grid-cols-[40px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_70px_85px] gap-3 items-center px-5 py-3.5 hover:bg-accent/50 transition-colors duration-100">
-                      <Checkbox checked={false} onCheckedChange={() => toggleMutation.mutate({ id: task.id, currentStatus: task.status })}
-                        className="h-[18px] w-[18px] rounded-[5px] border-border/60" />
+                      <Checkbox checked={false} onCheckedChange={() => handleComplete(task.id, task.title)}
+                        className="h-[18px] w-[18px] rounded-[5px] border-2 border-muted-foreground/50 data-[state=checked]:border-primary" />
 
                       <button className="min-w-0 text-left group" onClick={() => contactId && setContactSheetId(contactId)}>
                         <p className="text-[0.875rem] font-medium text-foreground truncate group-hover:text-primary transition-colors">{task.title}</p>
