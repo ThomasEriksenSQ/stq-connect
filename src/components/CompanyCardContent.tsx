@@ -67,8 +67,11 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
     enabled: !!companyId,
   });
 
-  const { data: activities = [] } = useQuery({
-    queryKey: ["company-activities", companyId],
+  const contactIds = contacts.map(c => c.id);
+
+  // Activities directly on company
+  const { data: companyActivities = [] } = useQuery({
+    queryKey: ["company-activities-direct", companyId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("activities")
@@ -80,6 +83,30 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
     },
     enabled: !!companyId,
   });
+
+  // Activities on contacts of this company
+  const { data: contactActivities = [] } = useQuery({
+    queryKey: ["company-contact-activities", companyId, contactIds],
+    queryFn: async () => {
+      if (contactIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("activities")
+        .select("*, contacts(first_name, last_name)")
+        .in("contact_id", contactIds)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!companyId && contactIds.length > 0,
+  });
+
+  // Merge and deduplicate activities
+  const allActivitiesMap = new Map<string, any>();
+  companyActivities.forEach(a => allActivitiesMap.set(a.id, a));
+  contactActivities.forEach(a => { if (!allActivitiesMap.has(a.id)) allActivitiesMap.set(a.id, a); });
+  const activities = Array.from(allActivitiesMap.values()).sort((a, b) =>
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
 
   // Tasks directly on company
   const { data: companyTasks = [] } = useQuery({
@@ -98,7 +125,6 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   });
 
   // Tasks on contacts of this company (not already covered by company_id)
-  const contactIds = contacts.map(c => c.id);
   const { data: contactTasks = [] } = useQuery({
     queryKey: ["company-contact-tasks", companyId, contactIds],
     queryFn: async () => {
