@@ -297,12 +297,11 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
               <div className="space-y-1">
                 {tasks.map((task) => {
                   const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
-                   const contactName = (task.contacts as any)?.first_name
-                     ? `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}`
-                     : null;
+                  const contactName = (task.contacts as any)?.first_name
+                    ? `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}`
                     : null;
-                   const prio = priorityConfig[task.priority] || priorityConfig.medium;
-                    <div key={task.id} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors">
+                  const prio = priorityConfig[task.priority] || priorityConfig.medium;
+                  return (
                       <Checkbox
                         checked={false}
                         onCheckedChange={() => toggleTaskMutation.mutate(task.id)}
