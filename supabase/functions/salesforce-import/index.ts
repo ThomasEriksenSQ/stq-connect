@@ -130,16 +130,17 @@ Deno.serve(async (req) => {
     }
 
     if (type === "tasks") {
-      const { data: contacts } = await supabase.from("contacts").select("id, first_name, last_name");
+      const contacts = await fetchAll("contacts", "id, first_name, last_name");
       const contactMap: Record<string, string> = {};
-      for (const c of contacts || []) {
+      for (const c of contacts) {
         contactMap[`${c.first_name}|${c.last_name}`.toLowerCase()] = c.id;
       }
-      const { data: companies } = await supabase.from("companies").select("id, name");
+      const companies = await fetchAll("companies", "id, name");
       const companyMap: Record<string, string> = {};
-      for (const c of companies || []) {
+      for (const c of companies) {
         companyMap[c.name.toLowerCase()] = c.id;
       }
+      console.log(`Task lookup maps: ${Object.keys(contactMap).length} contacts, ${Object.keys(companyMap).length} companies`);
 
       const toInsert = records.map((r: any) => {
         const { contact_name, account_name, ...rest } = r;
