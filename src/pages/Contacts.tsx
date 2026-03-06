@@ -29,7 +29,7 @@ const Contacts = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
-        .select("*, companies(name)")
+        .select("*, companies(name), profiles!contacts_owner_id_fkey(full_name)")
         .order("first_name");
       if (error) throw error;
       return data;
