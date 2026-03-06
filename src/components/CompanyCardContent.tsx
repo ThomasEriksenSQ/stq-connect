@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DescriptionText } from "@/components/DescriptionText";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -349,9 +350,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                           <p className="text-[0.8125rem] font-medium leading-snug truncate">{a.subject}</p>
                           <span className="text-[0.625rem] text-muted-foreground/60 flex-shrink-0">{cfg.label}</span>
                         </div>
-                        {a.description && (
-                          <p className="text-[0.75rem] text-muted-foreground leading-relaxed line-clamp-2">{a.description}</p>
-                        )}
+                        <DescriptionText text={a.description} maxLines={2} />
                         <p className="text-[0.6875rem] text-muted-foreground/60">
                           {contactName && <>{contactName} · </>}
                           {format(new Date(a.created_at), "d. MMM yyyy 'kl.' HH:mm", { locale: nb })}

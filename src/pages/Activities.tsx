@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DescriptionText } from "@/components/DescriptionText";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -172,9 +173,7 @@ const Activities = () => {
                       <span className="font-medium">{activity.subject}</span>
                       <Badge variant="secondary">{typeInfo.label}</Badge>
                     </div>
-                    {activity.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">{activity.description}</p>
-                    )}
+                    <DescriptionText text={activity.description} maxLines={2} />
                     <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                       {(activity.companies as any)?.name && (
                         <span>{(activity.companies as any).name}</span>
