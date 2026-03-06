@@ -11,7 +11,7 @@ import { Plus, Search, MapPin, Globe, Users, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
-type SortField = "name" | "city" | "status" | "contacts";
+type SortField = "name" | "city" | "status" | "owner" | "contacts";
 type SortDir = "asc" | "desc";
 
 const statusLabels: Record<string, { label: string; className: string }> = {
