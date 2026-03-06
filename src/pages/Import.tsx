@@ -268,6 +268,7 @@ const Import = () => {
             subject,
             sf_activity_id: sfActivityId || null,
             sf_account_id: sfAccountId || null,
+            company_name: companyName,
             contact_first: contactFirst,
             contact_last: contactLast,
             type: actType,
