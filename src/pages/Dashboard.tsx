@@ -300,6 +300,7 @@ const Dashboard = () => {
                       <Icon className={`h-4 w-4 mt-0.5 stroke-[1.5] ${accent} flex-shrink-0`} />
                       <div className="flex-1 min-w-0">
                         <p className="text-[0.875rem] font-medium truncate">{a.subject}</p>
+                        <DescriptionText text={a.description} maxLines={1} />
                         <p className="text-[0.75rem] text-muted-foreground truncate">
                           {[contactName, format(new Date(a.created_at), "d. MMM", { locale: nb })].filter(Boolean).join(" · ")}
                         </p>

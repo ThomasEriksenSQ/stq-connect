@@ -423,9 +423,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                       <p className="text-[0.8125rem] font-medium leading-snug truncate">{activity.subject}</p>
                       <span className="text-[0.625rem] text-muted-foreground/60 flex-shrink-0">{cfg.label}</span>
                     </div>
-                    {activity.description && (
-                      <p className="text-[0.75rem] text-muted-foreground leading-relaxed line-clamp-2">{activity.description}</p>
-                    )}
+                        <DescriptionText text={activity.description} maxLines={2} />
                     <p className="text-[0.6875rem] text-muted-foreground/60">
                       {format(new Date(activity.created_at), "d. MMM yyyy 'kl.' HH:mm", { locale: nb })}
                     </p>
