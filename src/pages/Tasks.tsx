@@ -357,7 +357,7 @@ const Tasks = () => {
 
       {/* Contact Sheet */}
       <Sheet open={!!contactSheetId} onOpenChange={(open) => !open && setContactSheetId(null)}>
-        <SheetContent className="sm:max-w-[500px] overflow-y-auto p-6">
+        <SheetContent className="sm:max-w-[640px] overflow-y-auto p-6">
           {contactSheetId && (
             <ContactCardContent
               contactId={contactSheetId}
@@ -370,7 +370,7 @@ const Tasks = () => {
 
       {/* Company Sheet */}
       <Sheet open={!!companySheetId} onOpenChange={(open) => !open && setCompanySheetId(null)}>
-        <SheetContent className="sm:max-w-[500px] overflow-y-auto p-6">
+        <SheetContent className="sm:max-w-[640px] overflow-y-auto p-6">
           {companySheetId && (
             <CompanyCardContent
               companyId={companySheetId}
