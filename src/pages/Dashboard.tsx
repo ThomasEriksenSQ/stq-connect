@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { DescriptionText } from "@/components/DescriptionText";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
