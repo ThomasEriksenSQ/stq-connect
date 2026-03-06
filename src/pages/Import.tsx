@@ -218,7 +218,7 @@ const Import = () => {
 
       // Step 4: Parse & import activities/tasks
       addLog("Parser aktiviteter og oppgaver...");
-      const actData = await readXlsxAsObjects(activitiesFile);
+      const actData = await readXlsxAsObjects(activitiesFile, "Subject");
       addLog(`  Funnet kolonner: ${actData.headers.filter(h => h).join(", ")}`);
       addLog(`  ${actData.rows.length} rader funnet`);
 
