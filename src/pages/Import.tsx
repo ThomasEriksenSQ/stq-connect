@@ -64,9 +64,16 @@ function sfDateTime(d: string | null | undefined): string | null {
   if (!d?.trim()) return null;
   const date = sfDate(d);
   if (!date) return null;
-  // If it has time component, use it
   const timeMatch = d.trim().match(/\d{4}-\d{2}-\d{2}\s+(\d{2}:\d{2}:\d{2})/);
   return timeMatch ? `${date}T${timeMatch[1]}Z` : `${date}T00:00:00Z`;
+}
+
+function inferActivityType(subject: string): string {
+  const s = subject.toLowerCase();
+  if (/telefon|ring|ringt|samtale/.test(s)) return "call";
+  if (/e-?mail|epost|mail/.test(s)) return "email";
+  if (/møte|lunch|kaffeprat|besøk/.test(s)) return "meeting";
+  return "task";
 }
 
 const Import = () => {
