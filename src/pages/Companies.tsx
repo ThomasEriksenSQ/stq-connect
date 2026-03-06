@@ -99,9 +99,13 @@ const Companies = () => {
   };
   const getOwnerId = (company: any) => (company.profiles as any)?.id || null;
 
-  const owners = [...new Map(companies.map(c => [getOwnerId(c), getOwnerFirstName(c)]).filter(([id]) => id)).values()];
-  const uniqueOwners = [...new Set(companies.map(c => ({ id: getOwnerId(c), name: getOwnerFirstName(c) })).filter(o => o.id))];
-  const ownerList = Array.from(new Map(uniqueOwners.map(o => [o.id, o.name])));
+  const ownerMap = new Map<string, string>();
+  companies.forEach(c => {
+    const id = getOwnerId(c);
+    const name = getOwnerFirstName(c);
+    if (id && name) ownerMap.set(id, name);
+  });
+  const ownerList = Array.from(ownerMap.entries());
 
   const filtered = companies.filter((c) => {
     const q = search.toLowerCase();

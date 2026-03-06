@@ -90,9 +90,13 @@ const Contacts = () => {
   };
   const getOwnerId = (contact: any) => (contact.profiles as any)?.id || null;
 
-  const uniqueOwners = Array.from(new Map(
-    contacts.map(c => [getOwnerId(c), getOwnerFirstName(c)]).filter(([id]) => id)
-  ));
+  const ownerMap = new Map<string, string>();
+  contacts.forEach(c => {
+    const id = getOwnerId(c);
+    const name = getOwnerFirstName(c);
+    if (id && name) ownerMap.set(id, name);
+  });
+  const uniqueOwners = Array.from(ownerMap.entries());
 
   const filtered = contacts.filter((c) => {
     const q = search.toLowerCase();
