@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Users, ArrowUpDown } from "lucide-react";
+import { Plus, Search, Users, ArrowUpDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { BrregSearch, lookupByOrgNr } from "@/components/BrregSearch";
 import { relativeDate } from "@/lib/relativeDate";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { format } from "date-fns";
@@ -23,6 +24,31 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   prospect: { label: "Prospekt", className: "bg-warning/10 text-warning" },
   customer: { label: "Kunde", className: "bg-success/10 text-success" },
   churned: { label: "Tapt", className: "bg-destructive/10 text-destructive" },
+};
+
+const OrgNrInput = ({ value, onChange, onLookup }: { value: string; onChange: (v: string) => void; onLookup: (name: string | null, city: string | null) => void }) => {
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const cleaned = value.replace(/\s/g, "");
+    if (cleaned.length !== 9 || !/^\d{9}$/.test(cleaned)) return;
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(async () => {
+      setLoading(true);
+      const r = await lookupByOrgNr(cleaned);
+      if (r) onLookup(r.navn, r.forretningsadresse?.kommune || null);
+      setLoading(false);
+    }, 400);
+    return () => clearTimeout(timerRef.current);
+  }, [value]);
+
+  return (
+    <div className="relative">
+      <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="923 456 789" className="h-10 rounded-lg" />
+      {loading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />}
+    </div>
+  );
 };
 
 const Companies = () => {
@@ -159,12 +185,20 @@ const Companies = () => {
             <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }} className="space-y-4 mt-3">
               <div className="space-y-1.5">
                 <Label className="text-label">Selskapsnavn</Label>
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="Firmanavn AS" className="h-10 rounded-lg" />
+                <BrregSearch
+                  value={form.name}
+                  onChange={(name) => setForm((f) => ({ ...f, name }))}
+                  onSelect={(r) => setForm((f) => ({ ...f, name: r.name, org_number: r.org_number, city: r.city }))}
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-label">Org.nr</Label>
-                  <Input value={form.org_number} onChange={(e) => setForm({ ...form, org_number: e.target.value })} placeholder="923 456 789" className="h-10 rounded-lg" />
+                  <OrgNrInput
+                    value={form.org_number}
+                    onChange={(org_number) => setForm((f) => ({ ...f, org_number }))}
+                    onLookup={(name, city) => setForm((f) => ({ ...f, name: name || f.name, city: city || f.city }))}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-label">Sted</Label>
