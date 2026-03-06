@@ -21,6 +21,7 @@ const typeLabels: Record<string, { label: string; icon: typeof FileText }> = {
   call: { label: "Samtale", icon: Phone },
   meeting: { label: "Møte", icon: Calendar },
   email: { label: "E-post", icon: Mail },
+  task: { label: "Oppgave", icon: FileText },
 };
 
 const Activities = () => {
