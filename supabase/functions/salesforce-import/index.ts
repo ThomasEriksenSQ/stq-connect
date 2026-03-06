@@ -96,14 +96,15 @@ Deno.serve(async (req) => {
     }
 
     if (type === "activities") {
-      // Resolve company_id via sf_account_id, contact_id via name match scoped to company
-      const companies = await fetchAll("companies", "id, sf_account_id");
+      // Resolve company_id via sf_account_id, fallback to company name
+      const companies = await fetchAll("companies", "id, sf_account_id, name");
       const sfAccMap: Record<string, string> = {};
+      const companyNameMap: Record<string, string> = {};
       for (const c of companies) {
         if (c.sf_account_id) sfAccMap[c.sf_account_id] = c.id;
+        if (c.name) companyNameMap[c.name.toLowerCase()] = c.id;
       }
       const contacts = await fetchAll("contacts", "id, first_name, last_name, company_id");
-      // Build contact lookup: "first|last|company_id" -> contact.id
       const contactMap: Record<string, string> = {};
       const contactByName: Record<string, string> = {};
       for (const c of contacts) {
@@ -113,13 +114,16 @@ Deno.serve(async (req) => {
           contactMap[`${key}|${c.company_id}`] = c.id;
         }
       }
-      console.log(`Lookup maps: ${Object.keys(sfAccMap).length} companies, ${Object.keys(contactMap).length} scoped contacts, ${Object.keys(contactByName).length} name contacts`);
+      console.log(`Lookup maps: ${Object.keys(sfAccMap).length} sf_acc, ${Object.keys(companyNameMap).length} name companies, ${Object.keys(contactByName).length} contacts`);
 
       const toInsert = records.map((r: any) => {
-        const { sf_account_id, contact_first, contact_last, ...rest } = r;
-        const companyId = sf_account_id ? sfAccMap[sf_account_id] || null : null;
+        const { sf_account_id, contact_first, contact_last, company_name, ...rest } = r;
+        // Try sf_account_id first, then company name fallback
+        let companyId = sf_account_id ? sfAccMap[sf_account_id] || null : null;
+        if (!companyId && company_name) {
+          companyId = companyNameMap[company_name.toLowerCase()] || null;
+        }
         
-        // Try company-scoped contact match first, then name-only
         let contactId = null;
         if (contact_first || contact_last) {
           const nameKey = `${contact_first || ""}|${contact_last || ""}`.toLowerCase();
@@ -150,10 +154,12 @@ Deno.serve(async (req) => {
     }
 
     if (type === "tasks") {
-      const companies = await fetchAll("companies", "id, sf_account_id");
+      const companies = await fetchAll("companies", "id, sf_account_id, name");
       const sfAccMap: Record<string, string> = {};
+      const companyNameMap: Record<string, string> = {};
       for (const c of companies) {
         if (c.sf_account_id) sfAccMap[c.sf_account_id] = c.id;
+        if (c.name) companyNameMap[c.name.toLowerCase()] = c.id;
       }
       const contacts = await fetchAll("contacts", "id, first_name, last_name, company_id");
       const contactMap: Record<string, string> = {};
@@ -165,11 +171,14 @@ Deno.serve(async (req) => {
           contactMap[`${key}|${c.company_id}`] = c.id;
         }
       }
-      console.log(`Task lookup maps: ${Object.keys(sfAccMap).length} companies, ${Object.keys(contactMap).length} scoped contacts`);
+      console.log(`Task lookup maps: ${Object.keys(sfAccMap).length} sf_acc, ${Object.keys(companyNameMap).length} name companies`);
 
       const toInsert = records.map((r: any) => {
-        const { sf_account_id, contact_first, contact_last, ...rest } = r;
-        const companyId = sf_account_id ? sfAccMap[sf_account_id] || null : null;
+        const { sf_account_id, contact_first, contact_last, company_name, ...rest } = r;
+        let companyId = sf_account_id ? sfAccMap[sf_account_id] || null : null;
+        if (!companyId && company_name) {
+          companyId = companyNameMap[company_name.toLowerCase()] || null;
+        }
         
         let contactId = null;
         if (contact_first || contact_last) {
