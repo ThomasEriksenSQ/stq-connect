@@ -1,32 +1,35 @@
 
 
-# Plan: Opprett ny bruker og oppdater profiler
+# Update: Norwegian UI Language
 
-## Analyse
+The database schema, table names, column names, and all backend code remain in English as planned. The user-facing interface will be fully in Norwegian.
 
-- Profiles-tabellen mangler `phone`-kolonne
-- Thomas har profil men ikke `user_roles`-oppføring
-- Jon Richard trenger: auth-bruker, profil, og rolle
+## What changes
 
-## Steg
+All UI text — labels, buttons, headings, placeholders, menu items, status labels, and empty states — will be written in Norwegian (Bokmål).
 
-### 1. Database-migrasjon: Legg til `phone` på profiles
-Legger til en `phone` text-kolonne på `profiles`-tabellen.
+Examples:
+- "Companies" → "Selskaper"
+- "Contacts" → "Kontakter"
+- "Activities" → "Aktiviteter"
+- "Tasks" → "Oppgaver"
+- "Add Note" → "Legg til notat"
+- "Log Activity" → "Logg aktivitet"
+- "Create Task" → "Opprett oppgave"
+- "Search..." → "Søk..."
+- "Open" / "Done" → "Åpen" / "Fullført"
+- "Name" → "Navn"
+- "Industry" → "Bransje"
+- "Due date" → "Forfallsdato"
+- "Sign in" → "Logg inn"
+- Activity types: Note → Notat, Call → Samtale, Meeting → Møte, Email → E-post
 
-### 2. Edge Function: `create-user`
-Oppretter en midlertidig Edge Function som bruker `supabase.auth.admin.createUser()` med service_role-nøkkelen for å opprette Jon Richard som auth-bruker. Denne setter også opp profilen automatisk via den eksisterende `handle_new_user`-triggeren.
+## Implementation approach
 
-### 3. Oppdater data
-- Oppdater Thomas sin profil: `full_name = 'Thomas Eriksen'`, `phone = '97500321'`
-- Oppdater Jon Richards profil: `phone = '93287267'`
-- Gi begge brukerne `admin`-rolle i `user_roles`
+- All hardcoded UI strings will be in Norwegian directly in the components (no i18n library needed since this is a single-language internal tool)
+- Database columns stay English (e.g. `company_name`, `due_date`, `status`)
+- Supabase table/column names stay English
+- TypeScript types and variable names stay English
 
-### 4. Kall Edge Function
-Bruker curl-verktøyet til å kalle funksjonen og opprette brukeren.
-
-## Tekniske detaljer
-
-- Edge Function bruker `SUPABASE_SERVICE_ROLE_KEY` for admin-tilgang
-- `handle_new_user`-triggeren oppretter automatisk en profil-rad når auth-brukeren opprettes
-- Etter opprettelse oppdaterer vi profilen med telefonnummer og fullt navn
+This will be applied throughout all pages and components during implementation. No separate translation step needed — Norwegian is simply the default language for all UI copy.
 
