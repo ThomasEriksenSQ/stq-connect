@@ -77,6 +77,9 @@ function readXlsxAsObjects(file: File, requiredColumn: string): Promise<{ header
         for (let i = headerIdx + 1; i < rawRows.length; i++) {
           const raw = rawRows[i];
           if (!raw || raw.every((c: any) => !String(c).trim())) continue;
+          // Skip Salesforce summary/total rows
+          const firstCell = String(raw[0] || "").trim().toLowerCase();
+          if (firstCell === "total" || firstCell === "grand total") continue;
           const obj: Row = {};
           headers.forEach((h, idx) => {
             if (h) obj[h] = clean(raw[idx]);
