@@ -266,7 +266,7 @@ const ContactDetail = () => {
                   onCheckedChange={(checked) => updateMutation.mutate({ call_list: checked as any })}
                   className="h-3.5 w-3.5 rounded-[4px]"
                 />
-                <span className="font-medium text-foreground">Ringeliste</span>
+                <span className="font-medium text-foreground">Innkjøper</span>
               </label>
             </div>
             <div className="pt-2">
