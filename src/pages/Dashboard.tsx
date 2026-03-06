@@ -4,17 +4,21 @@ import { useNavigate } from "react-router-dom";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ContactCardContent } from "@/components/ContactCardContent";
-import { Building2, Users, CalendarCheck, FileText, Phone, Calendar, Mail, Plus } from "lucide-react";
-import { format, isPast, isToday, addDays, startOfDay, endOfDay, endOfWeek } from "date-fns";
+import { FileText, Phone, Calendar, Mail, Plus } from "lucide-react";
+import { format, isPast, isToday, startOfDay, endOfDay, endOfWeek } from "date-fns";
 import { nb } from "date-fns/locale";
-import { relativeTime, relativeDate, fullDate } from "@/lib/relativeDate";
+import { relativeTimeShort, fullDate } from "@/lib/relativeDate";
 import { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-const typeIcons: Record<string, typeof FileText> = {
-  note: FileText, call: Phone, meeting: Calendar, email: Mail, task: FileText,
+const typeIcons: Record<string, { icon: typeof FileText; color: string }> = {
+  call: { icon: Phone, color: "text-success" },
+  meeting: { icon: Calendar, color: "text-primary" },
+  email: { icon: Mail, color: "text-warning" },
+  task: { icon: FileText, color: "text-muted-foreground" },
+  note: { icon: FileText, color: "text-muted-foreground" },
 };
 
 const Dashboard = () => {
@@ -60,7 +64,7 @@ const Dashboard = () => {
         .from("activities")
         .select("*, contacts(id, first_name, last_name)")
         .order("created_at", { ascending: false })
-        .limit(10);
+        .limit(12);
       if (error) throw error;
       return data;
     },
@@ -69,16 +73,47 @@ const Dashboard = () => {
   const { data: dormantContacts = [] } = useQuery({
     queryKey: ["dashboard-dormant"],
     queryFn: async () => {
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - 60);
-      // Get contacts whose latest activity is older than 60 days
-      const { data, error } = await supabase
+      // Get all contacts with their latest activity date
+      const { data: contacts, error: cErr } = await supabase
         .from("contacts")
-        .select("id, first_name, last_name, companies(name), updated_at")
-        .order("updated_at", { ascending: true })
-        .limit(5);
-      if (error) throw error;
-      return data;
+        .select("id, first_name, last_name, companies(name)")
+        .order("first_name");
+      if (cErr) throw cErr;
+      if (!contacts || contacts.length === 0) return [];
+
+      const contactIds = contacts.map(c => c.id);
+      const { data: acts } = await supabase
+        .from("activities")
+        .select("contact_id, created_at")
+        .in("contact_id", contactIds)
+        .order("created_at", { ascending: false });
+
+      const lastActMap: Record<string, string> = {};
+      (acts || []).forEach(a => {
+        if (a.contact_id && !lastActMap[a.contact_id]) lastActMap[a.contact_id] = a.created_at;
+      });
+
+      const cutoff = Date.now() - 60 * 24 * 60 * 60 * 1000;
+      const dormant = contacts
+        .map(c => ({
+          ...c,
+          lastActivity: lastActMap[c.id] || null,
+          daysSince: lastActMap[c.id]
+            ? Math.floor((Date.now() - new Date(lastActMap[c.id]).getTime()) / (1000 * 60 * 60 * 24))
+            : null,
+        }))
+        .filter(c => {
+          if (!c.lastActivity) return true; // never contacted
+          return new Date(c.lastActivity).getTime() < cutoff;
+        })
+        .sort((a, b) => {
+          if (!a.lastActivity) return -1;
+          if (!b.lastActivity) return 1;
+          return new Date(a.lastActivity).getTime() - new Date(b.lastActivity).getTime();
+        })
+        .slice(0, 5);
+
+      return dormant;
     },
   });
 
@@ -120,7 +155,6 @@ const Dashboard = () => {
   };
 
   // Group tasks
-  const today = startOfDay(new Date());
   const endToday = endOfDay(new Date());
   const endWeek = endOfWeek(new Date(), { weekStartsOn: 1 });
 
@@ -186,7 +220,6 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         {/* Left: Oppfølginger i fokus (60%) */}
         <div className="lg:col-span-3 space-y-5">
@@ -199,7 +232,6 @@ const Dashboard = () => {
             )}
           </div>
 
-          {/* Overdue */}
           {overdueTasks.length > 0 && (
             <div className="space-y-1">
               <div className="flex items-center gap-2 mb-1">
@@ -210,7 +242,6 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* Today */}
           {todayTasks.length > 0 && (
             <div className="space-y-1">
               <div className="flex items-center gap-2 mb-1">
@@ -221,7 +252,6 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* This week */}
           {weekTasks.length > 0 && (
             <div className="space-y-1">
               <div className="flex items-center gap-2 mb-1">
@@ -267,28 +297,30 @@ const Dashboard = () => {
           <div className="h-px bg-border" />
 
           {/* Recent activities */}
-          <div className="space-y-1">
+          <div className="space-y-0">
             <h3 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">Siste aktiviteter</h3>
             {recentActivities.map((a) => {
-              const Icon = typeIcons[a.type] || FileText;
+              const iconCfg = typeIcons[a.type] || typeIcons.note;
+              const Icon = iconCfg.icon;
               const contactName = (a.contacts as any)?.first_name
                 ? `${(a.contacts as any).first_name} ${(a.contacts as any).last_name}` : null;
               const contactId = (a.contacts as any)?.id;
+              const subjectTrunc = a.subject?.length > 35 ? a.subject.slice(0, 35) + "…" : a.subject;
               return (
                 <button
                   key={a.id}
                   className="w-full flex items-center gap-2.5 py-2 hover:bg-card transition-colors duration-75 rounded-md text-left"
                   onClick={() => contactId && setContactSheetId(contactId)}
                 >
-                  <Icon className="h-4 w-4 text-muted-foreground/60 stroke-[1.5] flex-shrink-0" />
-                  <span className="text-[0.8125rem] text-foreground truncate flex-1">
+                  <Icon className={`h-4 w-4 stroke-[1.5] flex-shrink-0 ${iconCfg.color}`} />
+                  <span className="text-[0.8125rem] font-medium text-foreground truncate">
                     {contactName}
                   </span>
-                  <span className="text-[0.75rem] text-muted-foreground/60 truncate max-w-[140px]">{a.subject}</span>
+                  <span className="text-[0.75rem] text-muted-foreground/60 truncate flex-1 min-w-0">{subjectTrunc}</span>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <span className="text-[0.6875rem] text-muted-foreground/40 flex-shrink-0 ml-1">
-                        {relativeTime(a.created_at)}
+                        {relativeTimeShort(a.created_at)}
                       </span>
                     </TooltipTrigger>
                     <TooltipContent>{fullDate(a.created_at)}</TooltipContent>
@@ -301,26 +333,28 @@ const Dashboard = () => {
           <div className="h-px bg-border" />
 
           {/* Dormant contacts */}
-          <div className="space-y-1">
+          <div className="space-y-0">
             <h3 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">Ikke kontaktet på 60+ dager</h3>
-            {dormantContacts.map((c) => {
-              const daysSince = Math.floor((Date.now() - new Date((c as any).updated_at).getTime()) / (1000 * 60 * 60 * 24));
-              return (
-                <button
-                  key={c.id}
-                  className="w-full flex items-center gap-2.5 py-2 hover:bg-card transition-colors duration-75 rounded-md text-left"
-                  onClick={() => setContactSheetId(c.id)}
-                >
-                  <span className="text-[0.8125rem] text-foreground truncate flex-1">
-                    {c.first_name} {c.last_name}
-                  </span>
-                  <span className="text-[0.75rem] text-muted-foreground/60 truncate max-w-[120px]">
-                    {(c.companies as any)?.name}
-                  </span>
-                  <span className="text-[0.6875rem] text-destructive flex-shrink-0">{daysSince}d siden</span>
-                </button>
-              );
-            })}
+            {dormantContacts.length === 0 && (
+              <p className="text-[0.8125rem] text-muted-foreground py-2">Alle kontakter er oppdatert</p>
+            )}
+            {dormantContacts.map((c: any) => (
+              <button
+                key={c.id}
+                className="w-full flex items-center gap-2.5 py-2 hover:bg-card transition-colors duration-75 rounded-md text-left"
+                onClick={() => setContactSheetId(c.id)}
+              >
+                <span className="text-[0.8125rem] font-medium text-foreground truncate flex-1">
+                  {c.first_name} {c.last_name}
+                </span>
+                <span className="text-[0.75rem] text-muted-foreground/60 truncate max-w-[120px]">
+                  {(c.companies as any)?.name}
+                </span>
+                <span className="text-[0.6875rem] text-destructive flex-shrink-0">
+                  {c.daysSince !== null ? `${c.daysSince}d siden` : "Aldri kontaktet"}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
       </div>

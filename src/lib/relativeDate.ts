@@ -10,8 +10,8 @@ export function relativeDate(dateStr: string): string {
   if (diff < 14) return "1 uke siden";
   if (diff < 30) return `${Math.floor(diff / 7)} uker siden`;
   if (diff < 60) return "1 mnd siden";
-  if (diff < 365) return `${Math.floor(diff / 30)} mnd siden`;
-  return `${Math.floor(diff / 365)}å siden`;
+  if (diff < 730) return `${Math.floor(diff / 30)} mnd siden`;
+  return `${Math.floor(diff / 365)} år siden`;
 }
 
 export function relativeTime(dateStr: string): string {
@@ -26,7 +26,25 @@ export function relativeTime(dateStr: string): string {
   const diffDays = Math.floor(diffHours / 24);
   if (diffDays < 7) return `${diffDays}d siden`;
   if (diffDays < 30) return `${Math.floor(diffDays / 7)}u siden`;
-  return format(date, "d. MMM", { locale: nb });
+  if (diffDays < 730) return `${Math.floor(diffDays / 30)} mnd siden`;
+  return format(date, "d. MMM yyyy", { locale: nb });
+}
+
+/** Ultra-compact for dashboard feed: "3t", "1d", "2u", "3 mnd" */
+export function relativeTimeShort(dateStr: string): string {
+  const date = new Date(dateStr);
+  const diffMs = Date.now() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "nå";
+  if (diffMin < 60) return `${diffMin}m`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${diffHours}t`;
+  if (isYesterday(date)) return "i går";
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}u`;
+  if (diffDays < 730) return `${Math.floor(diffDays / 30)} mnd`;
+  return `${Math.floor(diffDays / 365)} år`;
 }
 
 export function fullDate(dateStr: string): string {

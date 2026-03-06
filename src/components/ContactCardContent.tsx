@@ -11,18 +11,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Phone, Mail, Linkedin, FileText, Calendar, CalendarDays, ExternalLink, Pencil } from "lucide-react";
+import { Plus, Phone, Mail, Linkedin, FileText, Calendar as CalendarIcon, ExternalLink, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday } from "date-fns";
 import { nb } from "date-fns/locale";
 import { relativeDate, fullDate } from "@/lib/relativeDate";
 import InlineEdit from "@/components/InlineEdit";
+import { cn } from "@/lib/utils";
 
 const typeConfig: Record<string, { label: string; icon: typeof FileText; accent: string }> = {
   note: { label: "Notat", icon: FileText, accent: "text-muted-foreground" },
   call: { label: "Samtale", icon: Phone, accent: "text-success" },
-  meeting: { label: "Møte", icon: Calendar, accent: "text-primary" },
+  meeting: { label: "Møte", icon: CalendarIcon, accent: "text-primary" },
   email: { label: "E-post", icon: Mail, accent: "text-warning" },
   task: { label: "Oppgave", icon: FileText, accent: "text-muted-foreground" },
 };
@@ -41,6 +44,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
   const [activityOpen, setActivityOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
   const [editingNotes, setEditingNotes] = useState(false);
+  const [dueDateOpen, setDueDateOpen] = useState(false);
   const [actForm, setActForm] = useState({ type: "note", subject: "", description: "" });
   const [taskForm, setTaskForm] = useState({ title: "", description: "", priority: "medium", due_date: "" });
 
@@ -172,11 +176,66 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
   const companyName = (contact.companies as any)?.name;
   const companyId = (contact.companies as any)?.id;
 
+  const TaskDialog = () => (
+    <Dialog open={taskOpen} onOpenChange={setTaskOpen}>
+      <DialogTrigger asChild>
+        <button className="h-5 w-5 flex items-center justify-center rounded hover:bg-secondary text-muted-foreground">
+          <Plus className="h-3.5 w-3.5" />
+        </button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[440px] rounded-xl">
+        <DialogHeader><DialogTitle>Ny oppfølging</DialogTitle></DialogHeader>
+        <form onSubmit={(e) => { e.preventDefault(); createTaskMutation.mutate(); }} className="space-y-4 mt-3">
+          <div className="space-y-1.5">
+            <Label className="text-label">Tittel</Label>
+            <Input value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} required autoFocus className="h-10 rounded-lg" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-label">Frist</Label>
+            <Popover open={dueDateOpen} onOpenChange={setDueDateOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("w-full h-10 rounded-lg justify-start text-left font-normal", !taskForm.due_date && "text-muted-foreground")}>
+                  {taskForm.due_date ? format(new Date(taskForm.due_date), "d. MMMM yyyy", { locale: nb }) : "Velg dato"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={taskForm.due_date ? new Date(taskForm.due_date) : undefined}
+                  onSelect={(date) => {
+                    if (date) {
+                      setTaskForm({ ...taskForm, due_date: format(date, "yyyy-MM-dd") });
+                      setDueDateOpen(false);
+                    }
+                  }}
+                  locale={nb}
+                  className={cn("p-3 pointer-events-auto")}
+                />
+                <div className="px-3 pb-3">
+                  <Button type="button" variant="ghost" size="sm" className="w-full text-[0.8125rem]"
+                    onClick={() => { setTaskForm({ ...taskForm, due_date: format(new Date(), "yyyy-MM-dd") }); setDueDateOpen(false); }}>
+                    I dag
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-label">Beskrivelse</Label>
+            <Textarea value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} rows={2} className="rounded-lg min-h-[60px]" />
+          </div>
+          <Button type="submit" className="w-full h-10 rounded-lg" disabled={createTaskMutation.isPending}>
+            {createTaskMutation.isPending ? "Oppretter..." : "Opprett"}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+
   return (
     <div className="space-y-5">
       {/* Header – compact */}
       <div>
-        {/* Line 1 */}
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-[1.375rem] font-bold truncate">
             {contact.first_name} {contact.last_name}
@@ -205,7 +264,6 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           </div>
         </div>
 
-        {/* Line 2: title · company · phone · email · linkedin */}
         <div className="flex items-center gap-2 flex-wrap text-[0.8125rem] text-muted-foreground mt-1">
           {contact.title && <span>{editable ? <InlineEdit value={contact.title} onSave={updateField("title")} className="text-[0.8125rem] font-normal" /> : contact.title}</span>}
           {contact.title && companyName && <span className="text-muted-foreground/30">·</span>}
@@ -240,7 +298,6 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           )}
         </div>
 
-        {/* Line 3: Flags */}
         <div className="flex items-center gap-3 mt-2">
           <label className="inline-flex items-center gap-1.5 cursor-pointer">
             <Checkbox checked={(contact as any).cv_email ?? false}
@@ -264,38 +321,12 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
         <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{contact.notes}</p>
       ) : null}
 
-      {/* Tasks – hidden if zero */}
+      {/* Tasks – hidden if zero, +Ny in section header */}
       {tasks.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <h3 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Oppfølginger · {tasks.length}</h3>
-            {editable && (
-              <Dialog open={taskOpen} onOpenChange={setTaskOpen}>
-                <DialogTrigger asChild>
-                  <button className="text-[0.75rem] text-primary hover:underline">+ Ny</button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[440px] rounded-xl">
-                  <DialogHeader><DialogTitle>Ny oppfølging</DialogTitle></DialogHeader>
-                  <form onSubmit={(e) => { e.preventDefault(); createTaskMutation.mutate(); }} className="space-y-4 mt-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-label">Tittel</Label>
-                      <Input value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} required className="h-10 rounded-lg" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-label">Beskrivelse</Label>
-                      <Textarea value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} rows={2} className="rounded-lg min-h-[60px]" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-label">Frist</Label>
-                      <Input type="date" value={taskForm.due_date} onChange={(e) => setTaskForm({ ...taskForm, due_date: e.target.value })} className="h-10 rounded-lg" />
-                    </div>
-                    <Button type="submit" className="w-full h-10 rounded-lg" disabled={createTaskMutation.isPending}>
-                      {createTaskMutation.isPending ? "Oppretter..." : "Opprett"}
-                    </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            )}
+            {editable && <TaskDialog />}
           </div>
           <div className="space-y-px">
             {tasks.map((task) => {
@@ -329,29 +360,12 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
         </div>
       )}
 
-      {/* If editable and no tasks, show just the "+ Ny oppfølging" link */}
+      {/* If editable and no tasks, show just the ⊕ icon in a minimal way */}
       {tasks.length === 0 && editable && (
-        <Dialog open={taskOpen} onOpenChange={setTaskOpen}>
-          <DialogTrigger asChild>
-            <button className="text-[0.75rem] text-primary hover:underline">+ Ny oppfølging</button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[440px] rounded-xl">
-            <DialogHeader><DialogTitle>Ny oppfølging</DialogTitle></DialogHeader>
-            <form onSubmit={(e) => { e.preventDefault(); createTaskMutation.mutate(); }} className="space-y-4 mt-3">
-              <div className="space-y-1.5">
-                <Label className="text-label">Tittel</Label>
-                <Input value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} required className="h-10 rounded-lg" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-label">Frist</Label>
-                <Input type="date" value={taskForm.due_date} onChange={(e) => setTaskForm({ ...taskForm, due_date: e.target.value })} className="h-10 rounded-lg" />
-              </div>
-              <Button type="submit" className="w-full h-10 rounded-lg" disabled={createTaskMutation.isPending}>
-                {createTaskMutation.isPending ? "Oppretter..." : "Opprett"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+          <h3 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Oppfølginger</h3>
+          <TaskDialog />
+        </div>
       )}
 
       {/* Activities */}

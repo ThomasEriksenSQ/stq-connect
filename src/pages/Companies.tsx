@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Users, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
@@ -16,7 +15,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 
-type SortField = "name" | "industry" | "owner" | "contacts" | "last_activity" | "tasks";
+type SortField = "name" | "owner" | "contacts" | "last_activity" | "tasks";
 type SortDir = "asc" | "desc";
 
 const statusLabels: Record<string, { label: string; className: string }> = {
@@ -46,7 +45,6 @@ const Companies = () => {
         .order("name");
       if (error) throw error;
 
-      // Fetch last activity date and open task count per company
       const companyIds = data.map(c => c.id);
       const [actRes, taskRes] = await Promise.all([
         supabase.from("activities").select("company_id, created_at").in("company_id", companyIds).order("created_at", { ascending: false }),
@@ -119,7 +117,6 @@ const Companies = () => {
     const dir = sort.dir === "asc" ? 1 : -1;
     switch (sort.field) {
       case "name": return dir * a.name.localeCompare(b.name, "nb");
-      case "industry": return dir * (a.industry || "").localeCompare(b.industry || "", "nb");
       case "owner": return dir * (getOwnerFirstName(a) || "").localeCompare(getOwnerFirstName(b) || "", "nb");
       case "contacts": return dir * ((a.contacts?.length || 0) - (b.contacts?.length || 0));
       case "last_activity":
@@ -138,7 +135,7 @@ const Companies = () => {
 
   const SortHeader = ({ field, children, className = "" }: { field: SortField; children: React.ReactNode; className?: string }) => (
     <button onClick={() => toggleSort(field)}
-      className={`flex items-center gap-1 text-[0.6875rem] font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors ${className}`}>
+      className={`flex items-center gap-1 text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground hover:text-foreground transition-colors ${className}`}>
       {children}
       <ArrowUpDown className={`h-3 w-3 ${sort.field === field ? "text-foreground" : "text-muted-foreground/20"}`} />
     </button>
@@ -147,7 +144,7 @@ const Companies = () => {
   const getStatus = (status: string) => statusLabels[status] || { label: status, className: "bg-secondary text-muted-foreground" };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-[1.375rem] font-bold">Selskaper</h1>
@@ -225,9 +222,8 @@ const Companies = () => {
         <p className="text-sm text-muted-foreground py-12 text-center">Ingen selskaper funnet</p>
       ) : (
         <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
-          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_80px_60px_100px_70px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          <div className="grid grid-cols-[minmax(0,2.5fr)_80px_60px_100px_70px] gap-3 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="name">Selskap</SortHeader>
-            <SortHeader field="industry">Bransje</SortHeader>
             <SortHeader field="owner">Eier</SortHeader>
             <SortHeader field="contacts">Kont.</SortHeader>
             <SortHeader field="last_activity">Siste akt.</SortHeader>
@@ -240,13 +236,17 @@ const Companies = () => {
               const ownerName = getOwnerFirstName(company);
               return (
                 <button key={company.id} onClick={() => navigate(`/selskaper/${company.id}`)}
-                  className="w-full grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_80px_60px_100px_70px] gap-3 items-center px-4 h-[44px] hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer">
-                  <div className="min-w-0 flex items-center gap-2">
-                    <span className="text-[0.8125rem] font-medium text-foreground truncate">{company.name}</span>
-                    <span className={`text-[0.625rem] font-medium px-1.5 py-0 rounded-[4px] flex-shrink-0 ${status.className}`}>{status.label}</span>
+                  className="w-full grid grid-cols-[minmax(0,2.5fr)_80px_60px_100px_70px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[0.8125rem] font-medium text-foreground truncate">{company.name}</span>
+                      <span className={`text-[0.625rem] font-medium px-1.5 py-0 rounded-[4px] flex-shrink-0 ${status.className}`}>{status.label}</span>
+                    </div>
+                    {company.industry && (
+                      <p className="text-[0.6875rem] text-muted-foreground truncate mt-0.5">{company.industry}</p>
+                    )}
                   </div>
-                  <span className="text-[0.8125rem] text-muted-foreground truncate">{company.industry || "—"}</span>
-                  <span className="text-[0.8125rem] text-muted-foreground truncate">{ownerName || "—"}</span>
+                  <span className="text-[0.8125rem] text-muted-foreground truncate">{ownerName || ""}</span>
                   <span className="text-[0.8125rem] text-muted-foreground">
                     {contactCount > 0 ? <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" />{contactCount}</span> : ""}
                   </span>
@@ -258,7 +258,7 @@ const Companies = () => {
                         </TooltipTrigger>
                         <TooltipContent>{format(new Date(company.lastActivity), "d. MMMM yyyy", { locale: nb })}</TooltipContent>
                       </Tooltip>
-                    ) : "—"}
+                    ) : ""}
                   </span>
                   <span className={`text-[0.8125rem] text-right ${company.hasOverdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
                     {company.taskCount > 0 ? company.taskCount : ""}
