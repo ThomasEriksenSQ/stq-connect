@@ -6,14 +6,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, MapPin, ChevronRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Search, MapPin, Globe, Users, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+
+type SortField = "name" | "city" | "status" | "contacts";
+type SortDir = "asc" | "desc";
+
+const statusLabels: Record<string, { label: string; className: string }> = {
+  lead: { label: "Lead", className: "bg-primary/10 text-primary border-primary/20" },
+  prospect: { label: "Prospekt", className: "bg-warning/10 text-warning border-warning/20" },
+  customer: { label: "Kunde", className: "bg-success/10 text-success border-success/20" },
+  churned: { label: "Tapt", className: "bg-destructive/10 text-destructive border-destructive/20" },
+};
 
 const Companies = () => {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", org_number: "", city: "", website: "", linkedin: "" });
+  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "name", dir: "asc" });
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -21,7 +33,10 @@ const Companies = () => {
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ["companies"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("companies").select("*").order("name");
+      const { data, error } = await supabase
+        .from("companies")
+        .select("*, contacts(id)")
+        .order("name");
       if (error) throw error;
       return data;
     },
@@ -54,12 +69,52 @@ const Companies = () => {
     c.org_number?.includes(search)
   );
 
+  const sorted = [...filtered].sort((a, b) => {
+    const dir = sort.dir === "asc" ? 1 : -1;
+    switch (sort.field) {
+      case "name":
+        return dir * a.name.localeCompare(b.name, "nb");
+      case "city":
+        return dir * (a.city || "").localeCompare(b.city || "", "nb");
+      case "status":
+        return dir * (a.status || "").localeCompare(b.status || "", "nb");
+      case "contacts":
+        return dir * ((a.contacts?.length || 0) - (b.contacts?.length || 0));
+      default:
+        return 0;
+    }
+  });
+
+  const toggleSort = (field: SortField) => {
+    setSort((prev) =>
+      prev.field === field
+        ? { field, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { field, dir: "asc" }
+    );
+  };
+
+  const SortHeader = ({ field, children, className = "" }: { field: SortField; children: React.ReactNode; className?: string }) => (
+    <button
+      onClick={() => toggleSort(field)}
+      className={`flex items-center gap-1 text-[0.75rem] font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors ${className}`}
+    >
+      {children}
+      <ArrowUpDown className={`h-3 w-3 ${sort.field === field ? "text-foreground" : "text-muted-foreground/30"}`} />
+    </button>
+  );
+
+  const getStatus = (status: string) => {
+    const s = statusLabels[status] || { label: status, className: "bg-secondary text-secondary-foreground border-border" };
+    return s;
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-end justify-between">
         <div className="space-y-1">
-          <h1 className="text-[1.75rem] font-bold">Selskaper</h1>
-          <p className="text-[0.9375rem] text-muted-foreground">{companies.length} selskaper</p>
+          <h1 className="text-[1.75rem] font-bold tracking-tight">Selskaper</h1>
+          <p className="text-[0.875rem] text-muted-foreground">{companies.length} totalt</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -80,7 +135,7 @@ const Companies = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-label">Org.nr</Label>
-                  <Input value={form.org_number} onChange={(e) => setForm({ ...form, org_number: e.target.value })} placeholder="923 456 789" className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50 text-mono" />
+                  <Input value={form.org_number} onChange={(e) => setForm({ ...form, org_number: e.target.value })} placeholder="923 456 789" className="h-11 rounded-xl text-[0.9375rem] bg-secondary/50" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-label">Sted</Label>
@@ -103,6 +158,7 @@ const Companies = () => {
         </Dialog>
       </div>
 
+      {/* Search */}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60 stroke-[1.5]" />
         <Input
@@ -113,10 +169,11 @@ const Companies = () => {
         />
       </div>
 
+      {/* Table */}
       {isLoading ? (
-        <div className="space-y-2">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-[72px] rounded-2xl bg-card animate-pulse" />
+        <div className="space-y-1">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-[52px] rounded-xl bg-secondary/50 animate-pulse" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
@@ -125,27 +182,73 @@ const Companies = () => {
           <p className="text-[0.875rem] text-muted-foreground">Opprett ditt første selskap for å komme i gang</p>
         </div>
       ) : (
-        <div className="space-y-1">
-          {filtered.map((company) => (
-            <button
-              key={company.id}
-              onClick={() => navigate(`/selskaper/${company.id}`)}
-              className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl hover:bg-card active:bg-accent transition-colors duration-150 group text-left"
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-[0.9375rem] font-medium text-foreground truncate">
-                  {company.name}
-                </p>
-                {company.city && (
-                  <span className="flex items-center gap-1 text-[0.8125rem] text-muted-foreground mt-0.5">
-                    <MapPin className="h-3 w-3 stroke-[1.5]" />
-                    {company.city}
-                  </span>
-                )}
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-muted-foreground/60 transition-colors flex-shrink-0" />
-            </button>
-          ))}
+        <div className="border border-border/40 rounded-2xl overflow-hidden bg-card">
+          {/* Column headers */}
+          <div className="grid grid-cols-[1fr_140px_100px_80px] gap-4 px-5 py-3 border-b border-border/40 bg-secondary/30">
+            <SortHeader field="name">Selskap</SortHeader>
+            <SortHeader field="city">Sted</SortHeader>
+            <SortHeader field="status">Status</SortHeader>
+            <SortHeader field="contacts" className="justify-end">Kontakter</SortHeader>
+          </div>
+
+          {/* Rows */}
+          <div className="divide-y divide-border/30">
+            {sorted.map((company) => {
+              const status = getStatus(company.status);
+              const contactCount = company.contacts?.length || 0;
+              return (
+                <button
+                  key={company.id}
+                  onClick={() => navigate(`/selskaper/${company.id}`)}
+                  className="w-full grid grid-cols-[1fr_140px_100px_80px] gap-4 items-center px-5 py-3.5 hover:bg-accent/50 active:bg-accent transition-colors duration-100 text-left group"
+                >
+                  {/* Name + website */}
+                  <div className="min-w-0">
+                    <p className="text-[0.875rem] font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                      {company.name}
+                    </p>
+                    {company.website && (
+                      <span className="flex items-center gap-1 text-[0.75rem] text-muted-foreground/60 mt-0.5 truncate">
+                        <Globe className="h-3 w-3 flex-shrink-0" />
+                        {company.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* City */}
+                  <div className="min-w-0">
+                    {company.city ? (
+                      <span className="flex items-center gap-1 text-[0.8125rem] text-muted-foreground truncate">
+                        <MapPin className="h-3 w-3 flex-shrink-0 stroke-[1.5]" />
+                        {company.city}
+                      </span>
+                    ) : (
+                      <span className="text-[0.8125rem] text-muted-foreground/30">—</span>
+                    )}
+                  </div>
+
+                  {/* Status */}
+                  <div>
+                    <Badge variant="outline" className={`text-[0.6875rem] font-medium px-2 py-0.5 rounded-md ${status.className}`}>
+                      {status.label}
+                    </Badge>
+                  </div>
+
+                  {/* Contact count */}
+                  <div className="text-right">
+                    {contactCount > 0 ? (
+                      <span className="inline-flex items-center gap-1 text-[0.8125rem] text-muted-foreground">
+                        <Users className="h-3 w-3 stroke-[1.5]" />
+                        {contactCount}
+                      </span>
+                    ) : (
+                      <span className="text-[0.8125rem] text-muted-foreground/30">0</span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
