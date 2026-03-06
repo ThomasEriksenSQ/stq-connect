@@ -190,7 +190,7 @@ const Import = () => {
         if (taskType === "Call") {
           activityRecordsFromTasks.push({ ...base, type: "call" });
         } else if (taskType === "Email") {
-          activityRecordsFromTasks.push({ ...base, type: "email" });
+          activityRecordsFromTasks.push({ ...base, type: "note" });
         } else {
           // Regular task
           const status = (r.Status || "").trim();
