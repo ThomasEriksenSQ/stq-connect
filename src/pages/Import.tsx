@@ -43,27 +43,49 @@ function mapStatus(sfType: string): string {
   return "active";
 }
 
-function readXlsx(file: File): Promise<string[][]> {
+type Row = Record<string, string>;
+
+function readXlsxAsObjects(file: File): Promise<{ headers: string[], rows: Row[] }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const wb = XLSX.read(e.target?.result, { type: "array" });
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-        resolve(rows);
+        const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+
+        // Find header row - the first row with 5+ non-empty cells
+        let headerIdx = -1;
+        for (let i = 0; i < Math.min(rawRows.length, 25); i++) {
+          const nonEmpty = rawRows[i]?.filter((c: any) => String(c).trim()).length || 0;
+          if (nonEmpty >= 5) {
+            headerIdx = i;
+            break;
+          }
+        }
+
+        if (headerIdx < 0) {
+          resolve({ headers: [], rows: [] });
+          return;
+        }
+
+        const headers = rawRows[headerIdx].map((h: any) => String(h).trim());
+        const rows: Row[] = [];
+        for (let i = headerIdx + 1; i < rawRows.length; i++) {
+          const raw = rawRows[i];
+          if (!raw || raw.every((c: any) => !String(c).trim())) continue;
+          const obj: Row = {};
+          headers.forEach((h, idx) => {
+            if (h) obj[h] = clean(raw[idx]);
+          });
+          rows.push(obj);
+        }
+        resolve({ headers, rows });
       } catch (err) { reject(err); }
     };
     reader.onerror = reject;
     reader.readAsArrayBuffer(file);
   });
-}
-
-function findHeaderRow(rows: string[][], marker: string): number {
-  for (let i = 0; i < Math.min(rows.length, 20); i++) {
-    if (rows[i]?.some(c => String(c).includes(marker))) return i;
-  }
-  return -1;
 }
 
 const Import = () => {
@@ -101,27 +123,26 @@ const Import = () => {
 
       // Step 2: Parse & import companies
       addLog("Parser selskaper...");
-      const accRows = await readXlsx(accountsFile);
-      const accHeader = findHeaderRow(accRows, "Account Name");
-      if (accHeader < 0) throw new Error("Fant ikke header-rad i accounts-filen");
+      const accData = await readXlsxAsObjects(accountsFile);
+      addLog(`  Funnet kolonner: ${accData.headers.filter(h => h).join(", ")}`);
+      addLog(`  ${accData.rows.length} rader funnet`);
 
       const companies: any[] = [];
       const seen = new Set<string>();
-      for (let i = accHeader + 1; i < accRows.length; i++) {
-        const c = accRows[i];
-        const name = clean(c[3]);
+      for (const r of accData.rows) {
+        const name = r["Account Name"];
         if (!name || seen.has(name.toLowerCase())) continue;
         seen.add(name.toLowerCase());
         companies.push({
           name,
-          status: mapStatus(clean(c[4])),
-          org_number: clean(c[7]) || null,
-          website: cleanUrl(clean(c[8])),
-          industry: clean(c[9]) || null,
-          notes: clean(c[12]) || null,
-          created_by: getOwnerId(clean(c[2])),
-          owner_id: getOwnerId(clean(c[2])),
-          created_at: (parseDate(clean(c[10])) || "2024-01-01") + "T00:00:00Z",
+          status: mapStatus(r["Type"] || ""),
+          org_number: r["Organization number"] || null,
+          website: cleanUrl(r["Website"] || ""),
+          industry: r["Industry"] || null,
+          notes: r["Description"] || null,
+          created_by: getOwnerId(r["Account Owner"] || ""),
+          owner_id: getOwnerId(r["Account Owner"] || ""),
+          created_at: (parseDate(r["Created Date"] || "") || "2024-01-01") + "T00:00:00Z",
         });
       }
       addLog(`Sender ${companies.length} selskaper...`);
@@ -134,75 +155,48 @@ const Import = () => {
 
       // Step 3: Parse & import contacts
       addLog("Parser kontakter...");
-      const conRows = await readXlsx(contactsFile);
-      const conHeader = findHeaderRow(conRows, "First Name");
-      if (conHeader < 0) throw new Error("Fant ikke header-rad i contacts-filen");
+      const conData = await readXlsxAsObjects(contactsFile);
+      addLog(`  Funnet kolonner: ${conData.headers.filter(h => h).join(", ")}`);
+      addLog(`  ${conData.rows.length} rader funnet`);
 
-      const contacts: any[] = [];
+      // Build SF Account ID -> Account Name map from accounts file
+      const accIdToName: Record<string, string> = {};
+      for (const r of accData.rows) {
+        const sfId = r["Account ID"];
+        const name = r["Account Name"];
+        if (sfId && name) accIdToName[sfId] = name;
+      }
+
+      const contactsFinal: any[] = [];
       const seenContacts = new Set<string>();
-      for (let i = conHeader + 1; i < conRows.length; i++) {
-        const c = conRows[i];
-        const firstName = clean(c[5]);
-        const lastName = clean(c[6]);
+      for (const r of conData.rows) {
+        const firstName = r["First Name"] || "";
+        const lastName = r["Last Name"] || "";
         if (!firstName && !lastName) continue;
         const key = `${firstName}|${lastName}`.toLowerCase();
         if (seenContacts.has(key)) continue;
         seenContacts.add(key);
 
-        contacts.push({
-          first_name: firstName || "[ukjent]",
-          last_name: lastName || "[ukjent]",
-          email: clean(c[7]) || null,
-          phone: clean(c[8]) || null,
-          title: clean(c[9]) || null,
-          account_name: clean(c[3] ? "" : ""), // Account name is matched via Account ID -> accounts file
-          linkedin: cleanUrl(clean(c[14])),
-          notes: clean(c[17]) || null,
-          call_list: clean(c[2]).toUpperCase() === "TRUE",
-          cv_email: clean(c[3]).toUpperCase() === "TRUE",
-          created_by: getOwnerId(clean(c[15])),
-          owner_id: getOwnerId(clean(c[15])),
-        });
-      }
-
-      // We need to match contacts to companies by Account ID -> Account Name
-      // The contacts file has Account ID at index 13, accounts file maps Account ID -> Account Name
-      // Build account ID -> name map from accounts file
-      const accIdToName: Record<string, string> = {};
-      for (let i = accHeader + 1; i < accRows.length; i++) {
-        const sfId = clean(accRows[i][6]);
-        const name = clean(accRows[i][3]);
-        if (sfId && name) accIdToName[sfId] = name;
-      }
-
-      // Now re-parse contacts with proper account_name
-      const contactsFinal: any[] = [];
-      const seenContacts2 = new Set<string>();
-      for (let i = conHeader + 1; i < conRows.length; i++) {
-        const c = conRows[i];
-        const firstName = clean(c[5]);
-        const lastName = clean(c[6]);
-        if (!firstName && !lastName) continue;
-        const key = `${firstName}|${lastName}`.toLowerCase();
-        if (seenContacts2.has(key)) continue;
-        seenContacts2.add(key);
-
-        const accountId = clean(c[13]);
+        const accountId = r["Account ID"] || "";
         const accountName = accIdToName[accountId] || null;
+
+        // Map the ringeliste/cv columns - they use Norwegian headers
+        const callListVal = r["Legg til ringeliste"] || r["call_list"] || "";
+        const cvEmailVal = r["Motta CV på tilgjengelige konsulenter"] || r["cv_email"] || "";
 
         contactsFinal.push({
           first_name: firstName || "[ukjent]",
           last_name: lastName || "[ukjent]",
-          email: clean(c[7]) || null,
-          phone: clean(c[8]) || null,
-          title: clean(c[9]) || null,
+          email: r["Email"] || null,
+          phone: r["Phone"] || null,
+          title: r["Title"] || null,
           account_name: accountName,
-          linkedin: cleanUrl(clean(c[14])),
-          notes: clean(c[17]) || null,
-          call_list: clean(c[2]).toUpperCase() === "TRUE",
-          cv_email: clean(c[3]).toUpperCase() === "TRUE",
-          created_by: getOwnerId(clean(c[15])),
-          owner_id: getOwnerId(clean(c[15])),
+          linkedin: cleanUrl(r["Linkedin"] || ""),
+          notes: r["Description"] || null,
+          call_list: callListVal.toUpperCase() === "TRUE",
+          cv_email: cvEmailVal.toUpperCase() === "TRUE",
+          created_by: getOwnerId(r["Contact Owner"] || ""),
+          owner_id: getOwnerId(r["Contact Owner"] || ""),
         });
       }
 
@@ -216,26 +210,25 @@ const Import = () => {
 
       // Step 4: Parse & import activities/tasks
       addLog("Parser aktiviteter og oppgaver...");
-      const actRows = await readXlsx(activitiesFile);
-      const actHeader = findHeaderRow(actRows, "Subject");
-      if (actHeader < 0) throw new Error("Fant ikke header-rad i activities-filen");
+      const actData = await readXlsxAsObjects(activitiesFile);
+      addLog(`  Funnet kolonner: ${actData.headers.filter(h => h).join(", ")}`);
+      addLog(`  ${actData.rows.length} rader funnet`);
 
       const activities: any[] = [];
       const tasks: any[] = [];
-      for (let i = actHeader + 1; i < actRows.length; i++) {
-        const c = actRows[i];
-        const subject = clean(c[0]);
+      for (const r of actData.rows) {
+        const subject = r["Subject"];
         if (!subject) continue;
 
-        const taskSubtype = clean(c[11]);
-        const eventSubtype = clean(c[12]);
-        const desc = clean(c[3]) || clean(c[4]) || null;
-        const date = parseDate(clean(c[5]));
-        const status = clean(c[6]);
-        const firstName = clean(c[7]);
-        const lastName = clean(c[8]);
-        const accountName = clean(c[9]) || null;
-        const assignedTo = getOwnerId(clean(c[10]));
+        const taskSubtype = r["Task Subtype"] || "";
+        const eventSubtype = r["Event Subtype"] || "";
+        const desc = r["Description"] || r["Full Comments"] || null;
+        const date = parseDate(r["Date"] || "");
+        const status = r["Status"] || "";
+        const firstName = r["First Name"] || "";
+        const lastName = r["Last Name"] || "";
+        const accountName = r["Account Name"] || null;
+        const assignedTo = getOwnerId(r["Assigned"] || "");
 
         if (taskSubtype === "Task") {
           tasks.push({
@@ -252,7 +245,6 @@ const Import = () => {
             created_by: assignedTo,
           });
         } else {
-          // Call, Event, or other -> activities table
           let actType = "note";
           if (taskSubtype === "Call") actType = "call";
           else if (eventSubtype === "Event") actType = "meeting";
@@ -306,19 +298,19 @@ const Import = () => {
         <div className="space-y-2">
           <label className="text-sm font-medium">1. Accounts (selskaper)</label>
           <input type="file" accept=".xlsx" onChange={e => setAccountsFile(e.target.files?.[0] || null)} className="block w-full text-sm" />
-          {accountsFile && <p className="text-xs text-green-600">✓ {accountsFile.name}</p>}
+          {accountsFile && <p className="text-xs text-muted-foreground">✓ {accountsFile.name}</p>}
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium">2. Contacts (kontakter)</label>
           <input type="file" accept=".xlsx" onChange={e => setContactsFile(e.target.files?.[0] || null)} className="block w-full text-sm" />
-          {contactsFile && <p className="text-xs text-green-600">✓ {contactsFile.name}</p>}
+          {contactsFile && <p className="text-xs text-muted-foreground">✓ {contactsFile.name}</p>}
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium">3. Activities/Tasks (den nye eksporten med Task Subtype)</label>
           <input type="file" accept=".xlsx" onChange={e => setActivitiesFile(e.target.files?.[0] || null)} className="block w-full text-sm" />
-          {activitiesFile && <p className="text-xs text-green-600">✓ {activitiesFile.name}</p>}
+          {activitiesFile && <p className="text-xs text-muted-foreground">✓ {activitiesFile.name}</p>}
         </div>
       </div>
 
