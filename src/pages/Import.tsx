@@ -163,7 +163,7 @@ const Import = () => {
 
       // Step 3: Parse & import contacts
       addLog("Parser kontakter...");
-      const conData = await readXlsxAsObjects(contactsFile);
+      const conData = await readXlsxAsObjects(contactsFile, "First Name");
       addLog(`  Funnet kolonner: ${conData.headers.filter(h => h).join(", ")}`);
       addLog(`  ${conData.rows.length} rader funnet`);
 
