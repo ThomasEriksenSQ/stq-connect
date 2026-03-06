@@ -204,11 +204,12 @@ const Companies = () => {
             {sorted.map((company) => {
               const status = getStatus(company.status);
               const contactCount = company.contacts?.length || 0;
+              const ownerName = getOwnerFirstName(company);
               return (
                 <button
                   key={company.id}
                   onClick={() => navigate(`/selskaper/${company.id}`)}
-                  className="w-full grid grid-cols-[1fr_140px_100px_80px] gap-4 items-center px-5 py-3.5 hover:bg-accent/50 active:bg-accent transition-colors duration-100 text-left group"
+                  className="w-full grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_90px_80px_70px] gap-4 items-center px-5 py-3.5 hover:bg-accent/50 active:bg-accent transition-colors duration-100 text-left group"
                 >
                   {/* Name + website */}
                   <div className="min-w-0">
@@ -240,6 +241,13 @@ const Companies = () => {
                     <Badge variant="outline" className={`text-[0.6875rem] font-medium px-2 py-0.5 rounded-md ${status.className}`}>
                       {status.label}
                     </Badge>
+                  </div>
+
+                  {/* Owner */}
+                  <div className="min-w-0">
+                    <span className="text-[0.8125rem] text-muted-foreground truncate block">
+                      {ownerName || <span className="text-muted-foreground/30">—</span>}
+                    </span>
                   </div>
 
                   {/* Contact count */}
