@@ -125,7 +125,6 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   });
 
   // Tasks on contacts of this company (not already covered by company_id)
-  const contactIds = contacts.map(c => c.id);
   const { data: contactTasks = [] } = useQuery({
     queryKey: ["company-contact-tasks", companyId, contactIds],
     queryFn: async () => {
