@@ -96,6 +96,30 @@ const Tasks = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks"] }),
   });
 
+  const handleComplete = (taskId: string, title: string) => {
+    setPendingComplete((prev) => new Set(prev).add(taskId));
+    const toastId = toast("Oppfølging fullført", {
+      description: title,
+      action: {
+        label: "Angre",
+        onClick: () => {
+          const timer = pendingTimers.current.get(taskId);
+          if (timer) clearTimeout(timer);
+          pendingTimers.current.delete(taskId);
+          setPendingComplete((prev) => { const s = new Set(prev); s.delete(taskId); return s; });
+        },
+      },
+      duration: 4000,
+    });
+
+    const timer = setTimeout(() => {
+      pendingTimers.current.delete(taskId);
+      setPendingComplete((prev) => { const s = new Set(prev); s.delete(taskId); return s; });
+      toggleMutation.mutate({ id: taskId, currentStatus: "open" });
+    }, 4000);
+    pendingTimers.current.set(taskId, timer);
+  };
+
   const openTasks = tasks.filter(t => t.status !== "done");
   const doneTasks = tasks.filter(t => t.status === "done");
 
