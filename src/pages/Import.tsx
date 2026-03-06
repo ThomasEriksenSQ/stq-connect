@@ -54,7 +54,6 @@ function readXlsxAsObjects(file: File, requiredColumn: string): Promise<{ header
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
 
-        // Find header row by looking for the required column name
         let headerIdx = -1;
         for (let i = 0; i < Math.min(rawRows.length, 30); i++) {
           const cells = rawRows[i]?.map((c: any) => String(c).trim()) || [];
@@ -65,7 +64,7 @@ function readXlsxAsObjects(file: File, requiredColumn: string): Promise<{ header
         }
 
         if (headerIdx < 0) {
-          console.error(`Header row with "${requiredColumn}" not found. First 15 rows:`, rawRows.slice(0, 15).map((r, i) => `Row ${i}: [${r?.map((c: any) => String(c).trim()).filter(Boolean).join(", ")}]`));
+          console.error(`Header row with "${requiredColumn}" not found.`);
           resolve({ headers: [], rows: [] });
           return;
         }
@@ -77,7 +76,6 @@ function readXlsxAsObjects(file: File, requiredColumn: string): Promise<{ header
         for (let i = headerIdx + 1; i < rawRows.length; i++) {
           const raw = rawRows[i];
           if (!raw || raw.every((c: any) => !String(c).trim())) continue;
-          // Skip Salesforce summary/total rows
           const firstCell = String(raw[0] || "").trim().toLowerCase();
           if (firstCell === "total" || firstCell === "grand total") continue;
           const obj: Row = {};
@@ -87,16 +85,21 @@ function readXlsxAsObjects(file: File, requiredColumn: string): Promise<{ header
           rows.push(obj);
         }
         
-        // Debug: log first 2 data rows
         if (rows.length > 0) console.log("Sample row 0:", JSON.stringify(rows[0]));
-        if (rows.length > 1) console.log("Sample row 1:", JSON.stringify(rows[1]));
-        
         resolve({ headers, rows });
       } catch (err) { reject(err); }
     };
     reader.onerror = reject;
     reader.readAsArrayBuffer(file);
   });
+}
+
+/** Split "Joakim Almvik" into { first, last } */
+function splitName(name: string): { first: string; last: string } {
+  if (!name?.trim()) return { first: "", last: "" };
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return { first: parts[0], last: "" };
+  return { first: parts[0], last: parts.slice(1).join(" ") };
 }
 
 const Import = () => {
@@ -133,20 +136,24 @@ const Import = () => {
       addLog(`✅ Slettet: ${del.activities || 0} aktiviteter, ${del.tasks || 0} oppgaver, ${del.contacts || 0} kontakter, ${del.companies || 0} selskaper`);
       setProgress(10);
 
-      // Step 2: Parse & import companies
+      // Step 2: Parse & import companies with sf_account_id
       addLog("Parser selskaper...");
       const accData = await readXlsxAsObjects(accountsFile, "Account Name");
-      addLog(`  Funnet kolonner: ${accData.headers.filter(h => h).join(", ")}`);
       addLog(`  ${accData.rows.length} rader funnet`);
 
       const companies: any[] = [];
       const seen = new Set<string>();
       for (const r of accData.rows) {
+        const sfId = r["Account ID"];
         const name = r["Account Name"];
-        if (!name || seen.has(name.toLowerCase())) continue;
-        seen.add(name.toLowerCase());
+        if (!name) continue;
+        // Deduplicate by sf_account_id
+        const dedupeKey = sfId || name.toLowerCase();
+        if (seen.has(dedupeKey)) continue;
+        seen.add(dedupeKey);
         companies.push({
           name,
+          sf_account_id: sfId || null,
           status: mapStatus(r["Type"] || ""),
           org_number: r["Organization number"] || null,
           website: cleanUrl(r["Website"] || ""),
@@ -165,44 +172,36 @@ const Import = () => {
       addLog(`✅ ${compRes?.inserted || 0} selskaper importert`);
       setProgress(30);
 
-      // Step 3: Parse & import contacts
+      // Step 3: Parse & import contacts with sf_contact_id + sf_account_id
       addLog("Parser kontakter...");
       const conData = await readXlsxAsObjects(contactsFile, "First Name");
-      addLog(`  Funnet kolonner: ${conData.headers.filter(h => h).join(", ")}`);
       addLog(`  ${conData.rows.length} rader funnet`);
-
-      // Build SF Account ID -> Account Name map from accounts file
-      const accIdToName: Record<string, string> = {};
-      for (const r of accData.rows) {
-        const sfId = r["Account ID"];
-        const name = r["Account Name"];
-        if (sfId && name) accIdToName[sfId] = name;
-      }
 
       const contactsFinal: any[] = [];
       const seenContacts = new Set<string>();
       for (const r of conData.rows) {
+        const sfContactId = r["Contact ID"];
+        const sfAccountId = r["Account ID"];
         const firstName = r["First Name"] || "";
         const lastName = r["Last Name"] || "";
         if (!firstName && !lastName) continue;
-        const key = `${firstName}|${lastName}`.toLowerCase();
-        if (seenContacts.has(key)) continue;
-        seenContacts.add(key);
+        
+        // Deduplicate by sf_contact_id
+        const dedupeKey = sfContactId || `${firstName}|${lastName}`.toLowerCase();
+        if (seenContacts.has(dedupeKey)) continue;
+        seenContacts.add(dedupeKey);
 
-        const accountId = r["Account ID"] || "";
-        const accountName = accIdToName[accountId] || null;
-
-        // Map the ringeliste/cv columns - they use Norwegian headers
-        const callListVal = r["Legg til ringeliste"] || r["call_list"] || "";
-        const cvEmailVal = r["Motta CV på tilgjengelige konsulenter"] || r["cv_email"] || "";
+        const callListVal = r["Legg til ringeliste"] || "";
+        const cvEmailVal = r["Motta CV på tilgjengelige konsulenter"] || "";
 
         contactsFinal.push({
           first_name: firstName || "[ukjent]",
           last_name: lastName || "[ukjent]",
+          sf_contact_id: sfContactId || null,
+          sf_account_id: sfAccountId || null, // Edge function resolves company_id from this
           email: r["Email"] || null,
           phone: r["Phone"] || null,
           title: r["Title"] || null,
-          account_name: accountName,
           linkedin: cleanUrl(r["Linkedin"] || ""),
           notes: r["Description"] || null,
           call_list: callListVal.toUpperCase() === "TRUE",
@@ -220,10 +219,9 @@ const Import = () => {
       addLog(`✅ ${conRes?.inserted || 0} kontakter importert`);
       setProgress(60);
 
-      // Step 4: Parse & import activities/tasks
+      // Step 4: Parse & import activities/tasks with sf_activity_id + sf_account_id
       addLog("Parser aktiviteter og oppgaver...");
       const actData = await readXlsxAsObjects(activitiesFile, "Subject");
-      addLog(`  Funnet kolonner: ${actData.headers.filter(h => h).join(", ")}`);
       addLog(`  ${actData.rows.length} rader funnet`);
 
       const activities: any[] = [];
@@ -232,27 +230,30 @@ const Import = () => {
         const subject = r["Subject"];
         if (!subject) continue;
 
+        const sfActivityId = r["Activity ID"];
+        const sfAccountId = r["Account ID"];
         const taskSubtype = r["Task Subtype"] || "";
         const eventSubtype = r["Event Subtype"] || "";
-        const desc = r["Description"] || r["Full Comments"] || null;
+        const desc = r["Full Comments"] || r["Comments"] || r["Description"] || null;
         const date = parseDate(r["Date"] || "");
         const status = r["Status"] || "";
-        const firstName = r["First Name"] || "";
-        const lastName = r["Last Name"] || "";
-        const accountName = r["Account Name"] || null;
+        const contactName = r["Name"] || "";
+        const { first: contactFirst, last: contactLast } = splitName(contactName);
         const assignedTo = getOwnerId(r["Assigned"] || "");
 
         if (taskSubtype === "Task") {
           tasks.push({
             title: subject,
+            sf_activity_id: sfActivityId || null,
+            sf_account_id: sfAccountId || null,
+            contact_first: contactFirst,
+            contact_last: contactLast,
             description: desc,
             status: status.includes("Ferdig") ? "completed" : "open",
             priority: "medium",
             due_date: date,
             completed_at: status.includes("Ferdig") && date ? date + "T00:00:00Z" : null,
             created_at: (date || "2024-01-01") + "T00:00:00Z",
-            contact_name: firstName && lastName ? `${firstName}|${lastName}` : null,
-            account_name: accountName,
             assigned_to: assignedTo,
             created_by: assignedTo,
           });
@@ -263,11 +264,13 @@ const Import = () => {
 
           activities.push({
             subject,
+            sf_activity_id: sfActivityId || null,
+            sf_account_id: sfAccountId || null,
+            contact_first: contactFirst,
+            contact_last: contactLast,
             type: actType,
             description: desc,
             created_at: (date || "2024-01-01") + "T00:00:00Z",
-            contact_name: firstName && lastName ? `${firstName}|${lastName}` : null,
-            account_name: accountName,
             created_by: assignedTo,
           });
         }
@@ -304,6 +307,7 @@ const Import = () => {
       <h1 className="text-2xl font-bold">Salesforce Re-import</h1>
       <p className="text-muted-foreground">
         Last opp 3 Excel-filer fra Salesforce. All eksisterende data slettes og erstattes.
+        Relasjoner kobles via Salesforce-IDer for korrekt matching.
       </p>
 
       <div className="space-y-4">
@@ -320,7 +324,7 @@ const Import = () => {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">3. Activities/Tasks (den nye eksporten med Task Subtype)</label>
+          <label className="text-sm font-medium">3. Activities/Tasks (aktiviteter og oppgaver)</label>
           <input type="file" accept=".xlsx" onChange={e => setActivitiesFile(e.target.files?.[0] || null)} className="block w-full text-sm" />
           {activitiesFile && <p className="text-xs text-muted-foreground">✓ {activitiesFile.name}</p>}
         </div>
