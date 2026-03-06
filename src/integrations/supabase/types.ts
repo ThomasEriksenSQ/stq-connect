@@ -75,6 +75,7 @@ export type Database = {
           name: string
           notes: string | null
           org_number: string | null
+          owner_id: string | null
           phone: string | null
           status: string
           updated_at: string
@@ -93,6 +94,7 @@ export type Database = {
           name: string
           notes?: string | null
           org_number?: string | null
+          owner_id?: string | null
           phone?: string | null
           status?: string
           updated_at?: string
@@ -111,13 +113,22 @@ export type Database = {
           name?: string
           notes?: string | null
           org_number?: string | null
+          owner_id?: string | null
           phone?: string | null
           status?: string
           updated_at?: string
           website?: string | null
           zip_code?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "companies_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       consultants: {
         Row: {
