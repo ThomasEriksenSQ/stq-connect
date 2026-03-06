@@ -114,7 +114,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks")
-        .select("*, contacts(first_name, last_name), profiles!tasks_assigned_to_fkey(full_name)")
+        .select("*, contacts(first_name, last_name)")
         .eq("company_id", companyId)
         .neq("status", "done")
         .order("due_date", { ascending: true, nullsFirst: false });
@@ -131,7 +131,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
       if (contactIds.length === 0) return [];
       const { data, error } = await supabase
         .from("tasks")
-        .select("*, contacts(first_name, last_name), profiles!tasks_assigned_to_fkey(full_name)")
+        .select("*, contacts(first_name, last_name)")
         .in("contact_id", contactIds)
         .neq("status", "done")
         .order("due_date", { ascending: true, nullsFirst: false });
@@ -297,11 +297,10 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
               <div className="space-y-1">
                 {tasks.map((task) => {
                   const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
-                  const prio = priorityConfig[task.priority] || priorityConfig.medium;
                   const contactName = (task.contacts as any)?.first_name
                     ? `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}`
                     : null;
-                  const taskOwner = getOwnerFirstName((task as any).profiles);
+                  const prio = priorityConfig[task.priority] || priorityConfig.medium;
                   return (
                     <div key={task.id} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors">
                       <Checkbox
@@ -313,8 +312,6 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                         <p className="text-[0.8125rem] font-medium truncate">{task.title}</p>
                         <div className="flex items-center gap-1.5 text-[0.6875rem] text-muted-foreground">
                           {contactName && <span className="truncate">{contactName}</span>}
-                          {contactName && taskOwner && <span className="text-muted-foreground/30">·</span>}
-                          {taskOwner && <span className="flex items-center gap-0.5"><User className="h-2.5 w-2.5 stroke-[1.5]" />{taskOwner}</span>}
                         </div>
                       </div>
                       <Badge variant="outline" className={`text-[0.625rem] px-1.5 py-0 rounded ${prio.className} flex-shrink-0`}>{prio.label}</Badge>
