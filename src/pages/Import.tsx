@@ -232,6 +232,7 @@ const Import = () => {
 
         const sfActivityId = r["Activity ID"];
         const sfAccountId = r["Account ID"];
+        const companyName = r["Company / Account"] || null;
         const taskSubtype = r["Task Subtype"] || "";
         const eventSubtype = r["Event Subtype"] || "";
         const desc = r["Full Comments"] || r["Comments"] || r["Description"] || null;
@@ -246,6 +247,7 @@ const Import = () => {
             title: subject,
             sf_activity_id: sfActivityId || null,
             sf_account_id: sfAccountId || null,
+            company_name: companyName,
             contact_first: contactFirst,
             contact_last: contactLast,
             description: desc,
