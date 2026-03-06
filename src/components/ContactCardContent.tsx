@@ -87,14 +87,6 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
     enabled: !!contactId,
   });
 
-  const { data: allProfiles = [] } = useQuery({
-    queryKey: ["profiles"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("id, full_name");
-      if (error) throw error;
-      return data;
-    },
-  });
   const profileMap = Object.fromEntries(allProfiles.map(p => [p.id, p.full_name.split(" ")[0]]));
 
   const { data: tasks = [] } = useQuery({
