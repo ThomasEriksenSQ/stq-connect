@@ -301,8 +301,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                      ? `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}`
                      : null;
                     : null;
-                  const taskOwner = getOwnerFirstName((task as any).profiles);
-                  return (
+                   const prio = priorityConfig[task.priority] || priorityConfig.medium;
                     <div key={task.id} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors">
                       <Checkbox
                         checked={false}
