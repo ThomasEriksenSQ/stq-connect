@@ -18,13 +18,26 @@ Deno.serve(async (req) => {
 
     const { type, records } = await req.json();
 
+    // Helper to delete all rows from a table (handles >1000 row limit)
+    async function clearTable(table: string) {
+      let deleted = 0;
+      while (true) {
+        const { data, error } = await supabase.from(table).delete().neq("id", "00000000-0000-0000-0000-000000000000").select("id").limit(500);
+        if (error) { console.error(`Delete ${table} err:`, JSON.stringify(error)); break; }
+        if (!data || data.length === 0) break;
+        deleted += data.length;
+        console.log(`Deleted ${deleted} from ${table}...`);
+      }
+      return deleted;
+    }
+
     if (type === "clear") {
-      // Delete in FK order
-      await supabase.from("activities").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("tasks").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("contacts").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("companies").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      console.log("Cleared all data");
+      const a = await clearTable("activities");
+      const t = await clearTable("tasks");
+      const c = await clearTable("contacts");
+      const co = await clearTable("companies");
+      console.log(`Cleared: ${a} activities, ${t} tasks, ${c} contacts, ${co} companies`);
+      return new Response(JSON.stringify({ ok: true, deleted: { activities: a, tasks: t, contacts: c, companies: co } }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
