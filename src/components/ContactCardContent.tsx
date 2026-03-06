@@ -70,7 +70,6 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
       if (error) throw error;
       return data;
     },
-    enabled: editable,
   });
 
   const { data: activities = [] } = useQuery({
@@ -87,12 +86,14 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
     enabled: !!contactId,
   });
 
+  const profileMap = Object.fromEntries(allProfiles.map(p => [p.id, p.full_name.split(" ")[0]]));
+
   const { data: tasks = [] } = useQuery({
     queryKey: ["contact-tasks", contactId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks")
-        .select("*")
+        .select("*, companies(name)")
         .eq("contact_id", contactId)
         .neq("status", "done")
         .order("due_date", { ascending: true, nullsFirst: false });
@@ -353,6 +354,9 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                   <div className="flex-1 min-w-0">
                     <p className="text-[0.8125rem] font-medium truncate">{task.title}</p>
                     <DescriptionText text={task.description} maxLines={2} />
+                    {task.assigned_to && profileMap[task.assigned_to] && (
+                      <span className="text-[0.6875rem] text-muted-foreground">{profileMap[task.assigned_to]}</span>
+                    )}
                   </div>
                   <Badge variant="outline" className={`text-[0.625rem] px-1.5 py-0 rounded ${prio.className} flex-shrink-0`}>{prio.label}</Badge>
                   {task.due_date && (
