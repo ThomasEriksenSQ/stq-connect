@@ -163,6 +163,7 @@ const Import = () => {
           owner_id: mapOwner(sf(r.OwnerId)),
           created_by: mapOwner(sf(r.OwnerId)),
           call_list: r.Ringeliste__c === "1",
+          cv_email: r.send_assignment_email_contact__c === "1",
         }));
 
       const { data: conRes, error: conErr } = await supabase.functions.invoke("salesforce-import", {
