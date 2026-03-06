@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { DescriptionText } from "@/components/DescriptionText";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,20 +13,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Phone, Mail, Linkedin, FileText, Calendar as CalendarIcon, ExternalLink, Pencil } from "lucide-react";
+import { Plus, Phone, Mail, Linkedin, FileText, Calendar as CalendarIcon, ExternalLink, Pencil, List, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
-import { format, isPast, isToday } from "date-fns";
+import { format, isPast, isToday, getYear } from "date-fns";
 import { nb } from "date-fns/locale";
-import { relativeDate, fullDate } from "@/lib/relativeDate";
+import { fullDate } from "@/lib/relativeDate";
+import { cleanDescription } from "@/lib/cleanDescription";
 import InlineEdit from "@/components/InlineEdit";
 import { cn } from "@/lib/utils";
 
-const typeConfig: Record<string, { label: string; icon: typeof FileText; accent: string }> = {
-  note: { label: "Notat", icon: FileText, accent: "text-muted-foreground" },
-  call: { label: "Samtale", icon: Phone, accent: "text-success" },
-  meeting: { label: "Møte", icon: CalendarIcon, accent: "text-primary" },
-  email: { label: "E-post", icon: Mail, accent: "text-warning" },
-  task: { label: "Oppgave", icon: FileText, accent: "text-muted-foreground" },
+const dotColors: Record<string, string> = {
+  call: "bg-[hsl(var(--success))]",
+  meeting: "bg-[hsl(var(--primary))]",
+  email: "bg-[hsl(var(--warning))]",
+  note: "bg-muted-foreground",
+  task: "bg-muted-foreground",
 };
 
 interface ContactCardContentProps {
@@ -41,12 +41,14 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [activityOpen, setActivityOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
   const [editingNotes, setEditingNotes] = useState(false);
   const [dueDateOpen, setDueDateOpen] = useState(false);
-  const [actForm, setActForm] = useState({ type: "note", subject: "", description: "" });
   const [taskForm, setTaskForm] = useState({ title: "", description: "", priority: "medium", due_date: "" });
+  const [inlineLogOpen, setInlineLogOpen] = useState(false);
+  const [inlineLogType, setInlineLogType] = useState<"call" | "other">("call");
+  const [inlineLogSubject, setInlineLogSubject] = useState("");
+  const [inlineLogActType, setInlineLogActType] = useState("call");
 
   const { data: contact, isLoading } = useQuery({
     queryKey: ["contact", contactId],
@@ -110,22 +112,17 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
     onError: () => toast.error("Kunne ikke oppdatere"),
   });
 
-  const createActivityMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("activities").insert({
-        type: actForm.type, subject: actForm.subject, description: actForm.description || null,
-        contact_id: contactId, company_id: contact?.company_id || null, created_by: user?.id,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["contact-activities", contactId] });
-      setActivityOpen(false);
-      setActForm({ type: "note", subject: "", description: "" });
-      toast.success("Aktivitet registrert");
-    },
-    onError: () => toast.error("Kunne ikke registrere aktivitet"),
-  });
+  const createInlineActivity = async (type: string, subject: string) => {
+    const { error } = await supabase.from("activities").insert({
+      type, subject: subject.trim(),
+      contact_id: contactId, company_id: contact?.company_id || null, created_by: user?.id,
+    });
+    if (error) { toast.error("Kunne ikke lagre"); return; }
+    queryClient.invalidateQueries({ queryKey: ["contact-activities", contactId] });
+    toast.success("Aktivitet registrert");
+    setInlineLogOpen(false);
+    setInlineLogSubject("");
+  };
 
   const createTaskMutation = useMutation({
     mutationFn: async () => {
@@ -175,62 +172,6 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
 
   const companyName = (contact.companies as any)?.name;
   const companyId = (contact.companies as any)?.id;
-
-  const TaskDialog = () => (
-    <Dialog open={taskOpen} onOpenChange={setTaskOpen}>
-      <DialogTrigger asChild>
-        <button className="h-5 w-5 flex items-center justify-center rounded hover:bg-secondary text-muted-foreground">
-          <Plus className="h-3.5 w-3.5" />
-        </button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[440px] rounded-xl">
-        <DialogHeader><DialogTitle>Ny oppfølging</DialogTitle></DialogHeader>
-        <form onSubmit={(e) => { e.preventDefault(); createTaskMutation.mutate(); }} className="space-y-4 mt-3">
-          <div className="space-y-1.5">
-            <Label className="text-label">Tittel</Label>
-            <Input value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} required autoFocus className="h-10 rounded-lg" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-label">Frist</Label>
-            <Popover open={dueDateOpen} onOpenChange={setDueDateOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className={cn("w-full h-10 rounded-lg justify-start text-left font-normal", !taskForm.due_date && "text-muted-foreground")}>
-                  {taskForm.due_date ? format(new Date(taskForm.due_date), "d. MMMM yyyy", { locale: nb }) : "Velg dato"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={taskForm.due_date ? new Date(taskForm.due_date) : undefined}
-                  onSelect={(date) => {
-                    if (date) {
-                      setTaskForm({ ...taskForm, due_date: format(date, "yyyy-MM-dd") });
-                      setDueDateOpen(false);
-                    }
-                  }}
-                  locale={nb}
-                  className={cn("p-3 pointer-events-auto")}
-                />
-                <div className="px-3 pb-3">
-                  <Button type="button" variant="ghost" size="sm" className="w-full text-[0.8125rem]"
-                    onClick={() => { setTaskForm({ ...taskForm, due_date: format(new Date(), "yyyy-MM-dd") }); setDueDateOpen(false); }}>
-                    I dag
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-label">Beskrivelse</Label>
-            <Textarea value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} rows={2} className="rounded-lg min-h-[60px]" />
-          </div>
-          <Button type="submit" className="w-full h-10 rounded-lg" disabled={createTaskMutation.isPending}>
-            {createTaskMutation.isPending ? "Oppretter..." : "Opprett"}
-          </Button>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
 
   return (
     <div className="space-y-5">
@@ -321,12 +262,13 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
         <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{contact.notes}</p>
       ) : null}
 
-      {/* Tasks – hidden if zero, +Ny in section header */}
+      {/* Tasks – hidden if zero */}
       {tasks.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <h3 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Oppfølginger · {tasks.length}</h3>
-            {editable && <TaskDialog />}
+            <h3 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Oppfølginger · {tasks.length}
+            </h3>
           </div>
           <div className="space-y-px">
             {tasks.map((task) => {
@@ -360,83 +302,243 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
         </div>
       )}
 
-      {/* If editable and no tasks, show just the ⊕ icon in a minimal way */}
-      {tasks.length === 0 && editable && (
-        <div className="flex items-center gap-2">
-          <h3 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Oppfølginger</h3>
-          <TaskDialog />
-        </div>
-      )}
-
-      {/* Activities */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h3 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Aktiviteter · {activities.length}</h3>
-          {editable && (
-            <Dialog open={activityOpen} onOpenChange={setActivityOpen}>
+      {/* Quick Action Bar */}
+      {editable && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => { setInlineLogOpen(true); setInlineLogType("call"); setInlineLogActType("call"); }}
+              className="inline-flex items-center gap-1.5 h-[30px] px-3 text-[0.8125rem] rounded-md border border-border bg-background text-foreground/80 hover:bg-secondary transition-colors"
+            >
+              <Phone className="h-4 w-4" /> Logg samtale
+            </button>
+            <Dialog open={taskOpen} onOpenChange={setTaskOpen}>
               <DialogTrigger asChild>
-                <button className="text-[0.75rem] text-primary hover:underline">+ Logg</button>
+                <button className="inline-flex items-center gap-1.5 h-[30px] px-3 text-[0.8125rem] rounded-md border border-border bg-background text-foreground/80 hover:bg-secondary transition-colors">
+                  <Plus className="h-4 w-4" /> Ny oppfølging
+                </button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[440px] rounded-xl">
-                <DialogHeader><DialogTitle>Ny aktivitet</DialogTitle></DialogHeader>
-                <form onSubmit={(e) => { e.preventDefault(); createActivityMutation.mutate(); }} className="space-y-4 mt-3">
+                <DialogHeader><DialogTitle>Ny oppfølging</DialogTitle></DialogHeader>
+                <form onSubmit={(e) => { e.preventDefault(); createTaskMutation.mutate(); }} className="space-y-4 mt-3">
                   <div className="space-y-1.5">
-                    <Label className="text-label">Type</Label>
-                    <Select value={actForm.type} onValueChange={(v) => setActForm({ ...actForm, type: v })}>
-                      <SelectTrigger className="h-10 rounded-lg"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="note">Notat</SelectItem>
-                        <SelectItem value="call">Samtale</SelectItem>
-                        <SelectItem value="meeting">Møte</SelectItem>
-                        <SelectItem value="email">E-post</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-label">Tittel</Label>
+                    <Input value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} required autoFocus className="h-10 rounded-lg" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-label">Emne</Label>
-                    <Input value={actForm.subject} onChange={(e) => setActForm({ ...actForm, subject: e.target.value })} required className="h-10 rounded-lg" />
+                    <Label className="text-label">Frist</Label>
+                    <Popover open={dueDateOpen} onOpenChange={setDueDateOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn("w-full h-10 rounded-lg justify-start text-left font-normal", !taskForm.due_date && "text-muted-foreground")}>
+                          {taskForm.due_date ? format(new Date(taskForm.due_date), "d. MMMM yyyy", { locale: nb }) : "Velg dato"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={taskForm.due_date ? new Date(taskForm.due_date) : undefined}
+                          onSelect={(date) => {
+                            if (date) { setTaskForm({ ...taskForm, due_date: format(date, "yyyy-MM-dd") }); setDueDateOpen(false); }
+                          }}
+                          locale={nb}
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                        <div className="px-3 pb-3">
+                          <Button type="button" variant="ghost" size="sm" className="w-full text-[0.8125rem]"
+                            onClick={() => { setTaskForm({ ...taskForm, due_date: format(new Date(), "yyyy-MM-dd") }); setDueDateOpen(false); }}>
+                            I dag
+                          </Button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-label">Beskrivelse</Label>
-                    <Textarea value={actForm.description} onChange={(e) => setActForm({ ...actForm, description: e.target.value })} rows={3} className="rounded-lg min-h-[80px]" />
+                    <Textarea value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} rows={2} className="rounded-lg min-h-[60px]" />
                   </div>
-                  <Button type="submit" className="w-full h-10 rounded-lg" disabled={createActivityMutation.isPending}>
-                    {createActivityMutation.isPending ? "Registrerer..." : "Registrer"}
+                  <Button type="submit" className="w-full h-10 rounded-lg" disabled={createTaskMutation.isPending}>
+                    {createTaskMutation.isPending ? "Oppretter..." : "Opprett"}
                   </Button>
                 </form>
               </DialogContent>
             </Dialog>
+            <button
+              onClick={() => { setInlineLogOpen(true); setInlineLogType("other"); setInlineLogActType("note"); }}
+              className="inline-flex items-center gap-1.5 h-[30px] px-3 text-[0.8125rem] rounded-md border border-border bg-background text-foreground/80 hover:bg-secondary transition-colors"
+            >
+              <List className="h-4 w-4" /> Logg annet
+            </button>
+          </div>
+
+          {/* Inline log form */}
+          {inlineLogOpen && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!inlineLogSubject.trim()) return;
+                createInlineActivity(
+                  inlineLogType === "call" ? "call" : inlineLogActType,
+                  inlineLogSubject
+                );
+              }}
+              onKeyDown={(e) => { if (e.key === "Escape") { setInlineLogOpen(false); setInlineLogSubject(""); } }}
+              className="flex items-center gap-2 animate-in slide-in-from-top-1 duration-200"
+            >
+              {inlineLogType === "other" && (
+                <Select value={inlineLogActType} onValueChange={setInlineLogActType}>
+                  <SelectTrigger className="h-8 w-28 text-[0.8125rem] rounded-md"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="call">Samtale</SelectItem>
+                    <SelectItem value="meeting">Møte</SelectItem>
+                    <SelectItem value="email">E-post</SelectItem>
+                    <SelectItem value="note">Notat</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+              <Input
+                value={inlineLogSubject}
+                onChange={(e) => setInlineLogSubject(e.target.value)}
+                placeholder="Hva skjedde?"
+                autoFocus
+                className="h-8 flex-1 text-[0.8125rem] rounded-md"
+              />
+              <Button type="submit" size="sm" className="h-8 rounded-md text-[0.8125rem] px-4" disabled={!inlineLogSubject.trim()}>
+                Lagre
+              </Button>
+            </form>
           )}
         </div>
-        {activities.length === 0 ? (
-          <p className="text-sm text-muted-foreground/60 py-2">Ingen aktiviteter ennå</p>
-        ) : (
-          <div className="divide-y divide-border">
-            {activities.map((activity) => {
-              const cfg = typeConfig[activity.type] || typeConfig.note;
-              const Icon = cfg.icon;
-              return (
-                <div key={activity.id} className="flex items-start gap-2.5 py-3">
-                  <Icon className={`h-4 w-4 mt-0.5 stroke-[1.5] flex-shrink-0 ${cfg.accent}`} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-[0.8125rem] font-medium truncate">{activity.subject}</p>
-                      <span className="text-[0.625rem] text-muted-foreground/60 flex-shrink-0">{cfg.label}</span>
-                    </div>
-                    <DescriptionText text={activity.description} maxLines={2} />
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <p className="text-[0.6875rem] text-muted-foreground/60 mt-0.5">{relativeDate(activity.created_at)}</p>
-                      </TooltipTrigger>
-                      <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
-                    </Tooltip>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+      )}
+
+      {/* Activities – Timeline */}
+      <ActivityTimeline activities={activities} profileMap={profileMap} />
+    </div>
+  );
+}
+
+/** Group activities by month and render vertical timeline with colored dots */
+function ActivityTimeline({ activities, profileMap }: { activities: any[]; profileMap: Record<string, string> }) {
+  const currentYear = getYear(new Date());
+
+  const grouped = useMemo(() => {
+    const groups: { key: string; label: string; period: string; items: any[] }[] = [];
+    let currentKey = "";
+    for (const act of activities) {
+      const d = new Date(act.created_at);
+      const monthKey = format(d, "yyyy-MM");
+      if (monthKey !== currentKey) {
+        currentKey = monthKey;
+        const label = format(d, "MMMM yyyy", { locale: nb }).toUpperCase();
+        const yr = getYear(d);
+        let period = "";
+        if (yr === currentYear - 1) period = "I fjor";
+        else if (yr < currentYear - 1) period = `${currentYear - yr} år siden`;
+        groups.push({ key: monthKey, label, period, items: [] });
+      }
+      groups[groups.length - 1].items.push(act);
+    }
+    return groups;
+  }, [activities, currentYear]);
+
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggleExpand = (id: string) => {
+    setExpanded(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  if (activities.length === 0) {
+    return (
+      <div>
+        <h3 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Aktiviteter · 0</h3>
+        <p className="text-sm text-muted-foreground/60 py-2">Ingen aktiviteter ennå</p>
       </div>
+    );
+  }
+
+  return (
+    <div>
+      <h3 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-3">
+        Aktiviteter · {activities.length}
+      </h3>
+
+      {grouped.map((group, gi) => (
+        <div key={group.key}>
+          {/* Month header */}
+          <div className={cn("flex items-center gap-2 mb-3", gi > 0 && "mt-5")}>
+            <span className="text-[0.6875rem] font-semibold tracking-[0.06em] text-muted-foreground/60 whitespace-nowrap">
+              {group.label}{group.period && <span> · {group.period}</span>}
+            </span>
+            <div className="flex-1 h-px bg-border/50" />
+          </div>
+
+          {/* Timeline spine */}
+          <div className="relative pl-[22px]">
+            {/* Vertical line */}
+            <div className="absolute left-[4px] top-[5px] bottom-0 w-[2px] bg-border" />
+
+            <div className="space-y-5">
+              {group.items.map((activity) => {
+                const dotColor = dotColors[activity.type] || dotColors.note;
+                const desc = cleanDescription(activity.description);
+                const isExpanded = expanded.has(activity.id);
+                const ownerName = activity.created_by ? profileMap[activity.created_by] : null;
+                const d = new Date(activity.created_at);
+                const dateStr = format(d, "d. MMM", { locale: nb });
+                const yearStr = getYear(d) !== currentYear ? ` ${getYear(d)}` : "";
+
+                return (
+                  <div key={activity.id} className="relative">
+                    {/* Dot on spine */}
+                    <div className={`absolute -left-[22px] top-[6px] w-[10px] h-[10px] rounded-full ${dotColor} ring-2 ring-background`} />
+
+                    {/* Content */}
+                    <div className="min-w-0">
+                      {/* Level 1: Subject – semibold, near-black */}
+                      <p className="text-[0.875rem] font-semibold text-foreground leading-snug">
+                        {activity.subject}
+                      </p>
+
+                      {/* Level 2: Description – gray-700 */}
+                      {desc && (
+                        <div className="mt-0.5">
+                          <p
+                            className={cn(
+                              "text-[0.8125rem] leading-relaxed whitespace-pre-wrap",
+                              // gray-700 equivalent via foreground opacity
+                              "text-foreground/70"
+                            )}
+                            style={!isExpanded ? { WebkitLineClamp: 2, display: "-webkit-box", WebkitBoxOrient: "vertical" as const, overflow: "hidden" } : undefined}
+                          >
+                            {desc}
+                          </p>
+                          {desc.length > 100 && (
+                            <button onClick={() => toggleExpand(activity.id)} className="text-[0.75rem] text-primary hover:underline mt-0.5 inline-flex items-center gap-0.5">
+                              {isExpanded ? <>Vis mindre <ChevronUp className="h-3 w-3" /></> : <>Vis mer <ChevronDown className="h-3 w-3" /></>}
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Level 3: Meta – gray-500 */}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <p className="text-[0.75rem] text-muted-foreground mt-1">
+                            {ownerName && <>{ownerName} · </>}{dateStr}{yearStr}
+                          </p>
+                        </TooltipTrigger>
+                        <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
