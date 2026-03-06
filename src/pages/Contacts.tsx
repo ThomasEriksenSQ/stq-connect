@@ -40,7 +40,6 @@ const Contacts = () => {
         .order("first_name");
       if (error) throw error;
 
-      // Fetch last activity per contact
       const contactIds = data.map(c => c.id);
       const { data: acts } = await supabase
         .from("activities")
@@ -130,14 +129,14 @@ const Contacts = () => {
 
   const SortHeader = ({ field, children, className = "" }: { field: SortField; children: React.ReactNode; className?: string }) => (
     <button onClick={() => toggleSort(field)}
-      className={`flex items-center gap-1 text-[0.6875rem] font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors ${className}`}>
+      className={`flex items-center gap-1 text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground hover:text-foreground transition-colors ${className}`}>
       {children}
       <ArrowUpDown className={`h-3 w-3 ${sort.field === field ? "text-foreground" : "text-muted-foreground/20"}`} />
     </button>
   );
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-[1.375rem] font-bold">Kontakter</h1>
         <Dialog open={open} onOpenChange={setOpen}>
@@ -257,10 +256,10 @@ const Contacts = () => {
                     )}
                   </div>
                   <span className="text-[0.8125rem] text-muted-foreground truncate flex items-center gap-1">
-                    {companyName ? <><Building2 className="h-3 w-3 flex-shrink-0" />{companyName}</> : "—"}
+                    {companyName ? <><Building2 className="h-3 w-3 flex-shrink-0" />{companyName}</> : ""}
                   </span>
-                  <span className="text-[0.8125rem] text-muted-foreground truncate">{contact.title?.slice(0, 25) || "—"}</span>
-                  <span className="text-[0.8125rem] text-muted-foreground truncate">{getOwnerFirstName(contact) || "—"}</span>
+                  <span className="text-[0.8125rem] text-muted-foreground truncate">{contact.title?.slice(0, 25) || ""}</span>
+                  <span className="text-[0.8125rem] text-muted-foreground truncate">{getOwnerFirstName(contact) || ""}</span>
                   <span className="text-[0.75rem] text-muted-foreground text-right">
                     {(contact as any).lastActivity ? (
                       <Tooltip>
@@ -269,7 +268,7 @@ const Contacts = () => {
                         </TooltipTrigger>
                         <TooltipContent>{format(new Date((contact as any).lastActivity), "d. MMMM yyyy", { locale: nb })}</TooltipContent>
                       </Tooltip>
-                    ) : "—"}
+                    ) : ""}
                   </span>
                 </button>
               );

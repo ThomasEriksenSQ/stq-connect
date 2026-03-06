@@ -343,7 +343,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                     <div className="min-w-0 flex-1">
                       <p className="text-[0.8125rem] font-medium truncate group-hover:text-primary transition-colors">{c.first_name} {c.last_name}</p>
                       <p className="text-[0.6875rem] text-muted-foreground truncate">
-                        {c.title || "—"}{contactOwner && ` · ${contactOwner}`}
+                        {[c.title, contactOwner].filter(Boolean).join(" · ") || ""}
                       </p>
                     </div>
                     <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/20 group-hover:text-muted-foreground/60 flex-shrink-0" />
