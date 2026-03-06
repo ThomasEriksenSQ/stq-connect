@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { DescriptionText } from "@/components/DescriptionText";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,20 +14,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Phone, Mail, Linkedin, FileText, Calendar as CalendarIcon, ExternalLink, Pencil } from "lucide-react";
+import { Plus, Phone, Mail, Linkedin, FileText, Calendar as CalendarIcon, ExternalLink, Pencil, List, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
-import { format, isPast, isToday } from "date-fns";
+import { format, isPast, isToday, isSameYear, getYear } from "date-fns";
 import { nb } from "date-fns/locale";
 import { relativeDate, fullDate } from "@/lib/relativeDate";
+import { cleanDescription } from "@/lib/cleanDescription";
 import InlineEdit from "@/components/InlineEdit";
 import { cn } from "@/lib/utils";
 
-const typeConfig: Record<string, { label: string; icon: typeof FileText; accent: string }> = {
-  note: { label: "Notat", icon: FileText, accent: "text-muted-foreground" },
-  call: { label: "Samtale", icon: Phone, accent: "text-success" },
-  meeting: { label: "Møte", icon: CalendarIcon, accent: "text-primary" },
-  email: { label: "E-post", icon: Mail, accent: "text-warning" },
-  task: { label: "Oppgave", icon: FileText, accent: "text-muted-foreground" },
+const dotColors: Record<string, string> = {
+  call: "bg-[hsl(var(--success))]",
+  meeting: "bg-[hsl(var(--primary))]",
+  email: "bg-[hsl(var(--warning))]",
+  note: "bg-muted-foreground",
+  task: "bg-muted-foreground",
 };
 
 interface ContactCardContentProps {
@@ -47,6 +48,11 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
   const [dueDateOpen, setDueDateOpen] = useState(false);
   const [actForm, setActForm] = useState({ type: "note", subject: "", description: "" });
   const [taskForm, setTaskForm] = useState({ title: "", description: "", priority: "medium", due_date: "" });
+  const [inlineLogOpen, setInlineLogOpen] = useState(false);
+  const [inlineLogType, setInlineLogType] = useState<"call" | "other">("call");
+  const [inlineLogSubject, setInlineLogSubject] = useState("");
+  const [inlineLogActType, setInlineLogActType] = useState("call");
+  const [expandedActivities, setExpandedActivities] = useState<Set<string>>(new Set());
 
   const { data: contact, isLoading } = useQuery({
     queryKey: ["contact", contactId],
