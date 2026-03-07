@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Phone, Mail, Linkedin, FileText, Clock, ExternalLink, Pencil, Trash2, ChevronDown, ChevronUp, Plus, MessageCircle, PhoneOff } from "lucide-react";
+import { Phone, Mail, Linkedin, FileText, Clock, ExternalLink, Pencil, Trash2, ChevronDown, ChevronUp, Plus, MessageCircle, PhoneOff, Send } from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday, getYear, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { nb } from "date-fns/locale";
@@ -19,25 +19,37 @@ import { cn } from "@/lib/utils";
 
 /* ── Category system ── */
 const CATEGORIES = [
-  { label: "Behov nå", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-  { label: "Fremtidig behov", color: "bg-blue-100 text-blue-800 border-blue-200" },
-  { label: "Har kanskje behov", color: "bg-amber-100 text-amber-800 border-amber-200" },
-  { label: "Ukjent om behov", color: "bg-gray-100 text-gray-600 border-gray-200" },
-  { label: "Aldri aktuelt", color: "bg-red-50 text-red-700 border-red-200" },
+  { label: "Behov nå", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200", selectedColor: "bg-emerald-500 text-white border-emerald-500" },
+  { label: "Får fremtidig behov", badgeColor: "bg-blue-100 text-blue-800 border-blue-200", selectedColor: "bg-blue-500 text-white border-blue-500" },
+  { label: "Vil kanskje få behov", badgeColor: "bg-amber-100 text-amber-800 border-amber-200", selectedColor: "bg-amber-500 text-white border-amber-500" },
+  { label: "Ukjent om behov", badgeColor: "bg-gray-100 text-gray-600 border-gray-200", selectedColor: "bg-gray-400 text-white border-gray-400" },
+  { label: "Ikke aktuelt", badgeColor: "bg-red-50 text-red-700 border-red-200", selectedColor: "bg-red-400 text-white border-red-400" },
 ] as const;
 
-function getCategoryStyle(title: string) {
-  const cat = CATEGORIES.find((c) => c.label === title);
-  return cat?.color || "bg-secondary text-foreground border-border";
+const LEGACY_CATEGORY_MAP: Record<string, string> = {
+  "Fremtidig behov": "Får fremtidig behov",
+  "Har kanskje behov": "Vil kanskje få behov",
+  "Aldri aktuelt": "Ikke aktuelt",
+};
+
+function normalizeCategoryLabel(label: string): string {
+  return LEGACY_CATEGORY_MAP[label] || label;
 }
 
-function CategoryBadge({ title, className }: { title: string; className?: string }) {
-  const style = getCategoryStyle(title);
-  const isKnown = CATEGORIES.some((c) => c.label === title);
-  if (!isKnown) return <span className={cn("text-[1rem] font-semibold text-foreground", className)}>{title}</span>;
+function getCategoryBadgeColor(label: string) {
+  const normalized = normalizeCategoryLabel(label);
+  const cat = CATEGORIES.find((c) => c.label === normalized);
+  return cat?.badgeColor || "bg-secondary text-foreground border-border";
+}
+
+function CategoryBadge({ label, className }: { label: string; className?: string }) {
+  const normalized = normalizeCategoryLabel(label);
+  const color = getCategoryBadgeColor(normalized);
+  const isKnown = CATEGORIES.some((c) => c.label === normalized);
+  if (!isKnown) return null;
   return (
-    <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", style, className)}>
-      {title}
+    <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", color, className)}>
+      {normalized}
     </span>
   );
 }
@@ -53,7 +65,7 @@ function CategoryPicker({ selected, onSelect }: { selected: string; onSelect: (v
           className={cn(
             "h-8 px-3 text-[0.8125rem] rounded-full border transition-all font-medium",
             selected === cat.label
-              ? "bg-foreground text-background border-foreground"
+              ? cat.selectedColor
               : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
           )}
         >
@@ -62,6 +74,39 @@ function CategoryPicker({ selected, onSelect }: { selected: string; onSelect: (v
       ))}
     </div>
   );
+}
+
+/* ── Helpers for storing/retrieving category in description ── */
+function buildDescriptionWithCategory(category: string, description: string): string {
+  if (!category) return description;
+  return description ? `[${category}]\n${description}` : `[${category}]`;
+}
+
+function parseDescriptionCategory(description: string | null): { category: string; text: string } {
+  if (!description) return { category: "", text: "" };
+  const match = description.match(/^\[([^\]]+)\]\n?([\s\S]*)$/);
+  if (match) {
+    const cat = match[1];
+    if (CATEGORIES.some(c => c.label === cat) || Object.keys(LEGACY_CATEGORY_MAP).includes(cat)) {
+      return { category: normalizeCategoryLabel(cat), text: match[2].trim() };
+    }
+  }
+  return { category: "", text: description };
+}
+
+/**
+ * For legacy data: subject IS the category. For new data: subject is free-text title, category in description.
+ */
+function extractTitleAndCategory(subject: string, description: string | null) {
+  const normalizedSubject = normalizeCategoryLabel(subject);
+  // Legacy: subject is a known category label
+  if (CATEGORIES.some(c => c.label === normalizedSubject)) {
+    const descClean = cleanDescription(description);
+    return { title: normalizedSubject, category: normalizedSubject, cleanDesc: descClean };
+  }
+  // New format: category in description prefix
+  const parsed = parseDescriptionCategory(description);
+  return { title: subject, category: parsed.category, cleanDesc: cleanDescription(parsed.text) || "" };
 }
 
 interface ContactCardContentProps {
@@ -152,6 +197,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
 
   // Form states
   const [activeForm, setActiveForm] = useState<"call" | "meeting" | "task" | null>(null);
+  const [formTitle, setFormTitle] = useState("");
   const [formCategory, setFormCategory] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formDate, setFormDate] = useState("");
@@ -240,9 +286,9 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
   });
 
   const createTaskMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ title, description }: { title: string; description?: string | null }) => {
       const { error } = await supabase.from("tasks").insert({
-        title: formCategory.trim(), description: formDescription.trim() || null, priority: "medium",
+        title: title.trim(), description: description?.trim() || null, priority: "medium",
         due_date: formDate || null, contact_id: contactId, company_id: contact?.company_id || null,
         assigned_to: user?.id, created_by: user?.id,
       });
@@ -319,6 +365,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
 
   const openForm = (type: "call" | "meeting" | "task") => {
     setActiveForm(type);
+    setFormTitle("");
     setFormCategory("");
     setFormDescription("");
     setFormDate("");
@@ -327,6 +374,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
 
   const closeForm = () => {
     setActiveForm(null);
+    setFormTitle("");
     setFormCategory("");
     setFormDescription("");
     setFormDate("");
@@ -334,14 +382,16 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
   };
 
   const handleFormSubmit = () => {
-    if (!formCategory) return;
+    if (!formTitle || !formCategory) return;
     if (activeForm === "task") {
-      createTaskMutation.mutate();
+      const descWithCat = buildDescriptionWithCategory(formCategory, formDescription);
+      createTaskMutation.mutate({ title: formTitle.trim(), description: descWithCat || null });
     } else {
+      const descWithCat = buildDescriptionWithCategory(formCategory, formDescription);
       createActivityMutation.mutate({
         type: activeForm === "call" ? "call" : "meeting",
-        subject: formCategory,
-        description: formDescription,
+        subject: formTitle.trim(),
+        description: descWithCat || undefined,
       });
     }
   };
@@ -391,7 +441,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
               {contact.first_name} {contact.last_name}
             </h2>
           )}
-          {/* Owner badge — same style as oppfølginger list badges */}
+          {/* Owner badge */}
           <div className="ml-auto flex items-center gap-2 flex-shrink-0">
             {editable && (
               <Select value={contact.owner_id || ""} onValueChange={(v) => updateMutation.mutate({ owner_id: v || null })}>
@@ -553,6 +603,18 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
               className="mt-3 animate-in slide-in-from-top-1 duration-200"
               onKeyDown={handleFormKeyDown}
             >
+              {/* Title input */}
+              <div className="mb-3">
+                <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">Tittel</span>
+                <Input
+                  value={formTitle}
+                  onChange={(e) => setFormTitle(e.target.value)}
+                  placeholder="Tittel"
+                  className="text-[0.9375rem] rounded-md"
+                  autoFocus
+                />
+              </div>
+
               {/* Category picker */}
               <div className="mb-3">
                 <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">Kategori</span>
@@ -607,23 +669,35 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                   )}
                 </div>
               ) : (
-                /* Date for call/meeting + quick-select for call */
+                /* Date for call/meeting + quick replies for call */
                 <div className="mt-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[0.75rem] text-muted-foreground">
                       Dato: I dag, {format(new Date(), "d. MMMM", { locale: nb })}
                     </span>
                     {activeForm === "call" && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormDescription("Ringte, svarte ikke");
-                          setFormCategory("Ukjent om behov");
-                        }}
-                        className="inline-flex items-center gap-1 h-6 px-2.5 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                      >
-                        <PhoneOff className="h-3 w-3" /> Ringte, svarte ikke
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormTitle("Ringte, ikke svar");
+                            setFormCategory("Ukjent om behov");
+                          }}
+                          className="inline-flex items-center gap-1 h-6 px-2.5 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                        >
+                          <PhoneOff className="h-3 w-3" /> Ringte, ikke svar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormTitle("Sendt LinkedIn melding");
+                            setFormCategory("Ukjent om behov");
+                          }}
+                          className="inline-flex items-center gap-1 h-6 px-2.5 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                        >
+                          <Send className="h-3 w-3" /> Sendt LinkedIn melding
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -633,7 +707,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                 <Button
                   size="sm"
                   className="h-[34px] px-4 text-[0.8125rem] rounded-md"
-                  disabled={!formCategory || (activeForm === "task" && createTaskMutation.isPending) || (activeForm !== "task" && createActivityMutation.isPending)}
+                  disabled={!formTitle.trim() || !formCategory || (activeForm === "task" && createTaskMutation.isPending) || (activeForm !== "task" && createActivityMutation.isPending)}
                   onClick={handleFormSubmit}
                 >
                   {activeForm === "task" ? "Lagre oppfølging" : activeForm === "meeting" ? "Lagre referat" : "Lagre samtale"}
@@ -711,11 +785,14 @@ function TaskRow({
 }) {
   const [completing, setCompleting] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [editCategory, setEditCategory] = useState(task.title);
-  const [editDesc, setEditDesc] = useState(task.description || "");
+  const [editTitle, setEditTitle] = useState(task.title);
+  const [editCategory, setEditCategory] = useState("");
+  const [editDesc, setEditDesc] = useState("");
   const [editDate, setEditDate] = useState(task.due_date || "");
   const [editChipIdx, setEditChipIdx] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const { title: displayTitle, category: displayCategory, cleanDesc: displayDesc } = extractTitleAndCategory(task.title, task.description);
 
   const handleCheck = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -725,23 +802,33 @@ function TaskRow({
 
   const handleRowClick = () => {
     if (!editable || completing || editing) return;
-    setEditCategory(task.title);
-    setEditDesc(task.description || "");
+    const parsed = extractTitleAndCategory(task.title, task.description);
+    setEditTitle(parsed.title);
+    setEditCategory(parsed.category);
+    setEditDesc(parsed.cleanDesc);
     setEditDate(task.due_date || "");
     setEditChipIdx(null);
     setEditing(true);
   };
 
   const handleSave = () => {
-    if (!editCategory) return;
-    onUpdate(task.id, { title: editCategory, description: editDesc.trim() || null, due_date: editDate || null });
+    if (!editTitle || !editCategory) return;
+    const descWithCat = buildDescriptionWithCategory(editCategory, editDesc.trim());
+    onUpdate(task.id, { title: editTitle.trim(), description: descWithCat || null, due_date: editDate || null });
     setEditing(false);
   };
 
   if (editing) {
     return (
       <div className="py-2.5 px-1 space-y-2 animate-in fade-in duration-150">
-        <CategoryPicker selected={editCategory} onSelect={setEditCategory} />
+        <div>
+          <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">Tittel</span>
+          <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="text-[0.9375rem] rounded-md" autoFocus />
+        </div>
+        <div>
+          <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">Kategori</span>
+          <CategoryPicker selected={editCategory} onSelect={setEditCategory} />
+        </div>
         <Textarea
           value={editDesc}
           onChange={(e) => setEditDesc(e.target.value)}
@@ -784,7 +871,7 @@ function TaskRow({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" className="h-6 text-[0.6875rem] px-2 rounded" onClick={handleSave}>Lagre</Button>
+          <Button size="sm" className="h-6 text-[0.6875rem] px-2 rounded" disabled={!editTitle.trim() || !editCategory} onClick={handleSave}>Lagre</Button>
           <Button variant="ghost" size="sm" className="h-6 text-[0.6875rem] px-2 rounded" onClick={() => setEditing(false)}>Avbryt</Button>
           <div className="ml-auto">
             {confirmDelete ? (
@@ -821,14 +908,15 @@ function TaskRow({
         />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-[1rem] font-bold text-foreground">{task.title}</div>
-        {task.assigned_to && profileMap[task.assigned_to] && (
-          <div className="mt-1">
+        <div className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</div>
+        <div className="flex items-center gap-1.5 mt-1">
+          {displayCategory && <CategoryBadge label={displayCategory} />}
+          {task.assigned_to && profileMap[task.assigned_to] && (
             <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{profileMap[task.assigned_to]}</span>
-          </div>
-        )}
-        {task.description && (
-          <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{task.description}</p>
+          )}
+        </div>
+        {displayDesc && (
+          <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{displayDesc}</p>
         )}
       </div>
       {task.due_date && (
@@ -952,25 +1040,25 @@ function ActivityRow({
   onUpdateActivity: (id: string, updates: Record<string, any>) => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [editCategory, setEditCategory] = useState(activity.subject);
-  const [editDesc, setEditDesc] = useState(activity.description || "");
+  const [editTitle, setEditTitle] = useState(activity.subject);
+  const [editCategory, setEditCategory] = useState("");
+  const [editDesc, setEditDesc] = useState("");
   const [editDate, setEditDate] = useState(activity.created_at ? format(new Date(activity.created_at), "yyyy-MM-dd") : "");
   const [expanded, setExpanded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const desc = cleanDescription(activity.description);
+  const { title: displayTitle, category: displayCategory, cleanDesc } = extractTitleAndCategory(activity.subject, activity.description);
   const ownerName = activity.created_by ? profileMap[activity.created_by] : null;
   const d = new Date(activity.created_at);
-  const dateStr = format(d, "d. MMM", { locale: nb });
-  const yearStr = getYear(d) !== currentYear ? ` ${getYear(d)}` : "";
 
   const typeIcon = activity.type === "call" || activity.type === "phone"
     ? <MessageCircle className="h-3.5 w-3.5 text-[hsl(var(--success))]" />
     : <FileText className="h-3.5 w-3.5 text-primary" />;
 
   const handleSaveEdit = () => {
-    if (!editCategory) return;
-    const updates: Record<string, any> = { subject: editCategory, description: editDesc.trim() || null };
+    if (!editTitle || !editCategory) return;
+    const descWithCat = buildDescriptionWithCategory(editCategory, editDesc.trim());
+    const updates: Record<string, any> = { subject: editTitle.trim(), description: descWithCat || null };
     if (editDate) {
       updates.created_at = new Date(editDate).toISOString();
     }
@@ -980,8 +1068,10 @@ function ActivityRow({
 
   const handleRowClick = () => {
     if (!editable || editing) return;
-    setEditCategory(activity.subject);
-    setEditDesc(activity.description || "");
+    const parsed = extractTitleAndCategory(activity.subject, activity.description);
+    setEditTitle(parsed.title);
+    setEditCategory(parsed.category);
+    setEditDesc(parsed.cleanDesc);
     setEditDate(activity.created_at ? format(new Date(activity.created_at), "yyyy-MM-dd") : "");
     setConfirmDelete(false);
     setEditing(true);
@@ -997,7 +1087,14 @@ function ActivityRow({
       <div className="min-w-0">
         {editing ? (
           <div className="space-y-2 animate-in fade-in duration-150">
-            <CategoryPicker selected={editCategory} onSelect={setEditCategory} />
+            <div>
+              <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">Tittel</span>
+              <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="text-[0.9375rem] rounded-md" autoFocus />
+            </div>
+            <div>
+              <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">Kategori</span>
+              <CategoryPicker selected={editCategory} onSelect={setEditCategory} />
+            </div>
             <Textarea
               value={editDesc}
               onChange={(e) => setEditDesc(e.target.value)}
@@ -1019,7 +1116,7 @@ function ActivityRow({
               />
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" className="h-6 text-[0.6875rem] px-2 rounded" onClick={handleSaveEdit}>Lagre</Button>
+              <Button size="sm" className="h-6 text-[0.6875rem] px-2 rounded" disabled={!editTitle.trim() || !editCategory} onClick={handleSaveEdit}>Lagre</Button>
               <Button variant="ghost" size="sm" className="h-6 text-[0.6875rem] px-2 rounded" onClick={() => setEditing(false)}>Avbryt</Button>
               <div className="ml-auto">
                 {confirmDelete ? (
@@ -1038,10 +1135,15 @@ function ActivityRow({
           </div>
         ) : (
           <div onClick={handleRowClick} className={cn(editable && "cursor-pointer")}>
-            {/* Level 1: Subject */}
-            <div className="flex items-start justify-between gap-2">
-              <span className="text-[1.0625rem] font-bold text-foreground">{activity.subject}</span>
-            </div>
+            {/* Title */}
+            <span className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</span>
+
+            {/* Category badge */}
+            {displayCategory && (
+              <div className="mt-1">
+                <CategoryBadge label={displayCategory} />
+              </div>
+            )}
 
             {/* Delete confirmation */}
             {confirmDelete && (
@@ -1052,16 +1154,16 @@ function ActivityRow({
               </div>
             )}
 
-            {/* Level 2: Description */}
-            {desc ? (
+            {/* Description */}
+            {cleanDesc ? (
               <div className="mt-1">
                 <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70">
-                  {desc}
+                  {cleanDesc}
                 </p>
               </div>
             ) : null}
 
-            {/* Level 3: Meta */}
+            {/* Meta */}
             <div className="flex items-center gap-2 mt-1.5">
               {ownerName && (
                 <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{ownerName}</span>
