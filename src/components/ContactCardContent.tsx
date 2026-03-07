@@ -654,14 +654,6 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
             <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
               Oppfølginger · {tasks.length}
             </h3>
-            {editable && (
-              <button
-                onClick={() => openForm("task")}
-                className="inline-flex items-center gap-1 h-8 px-3 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-colors"
-              >
-                <Plus className="h-3.5 w-3.5" /> Ny oppfølging
-              </button>
-            )}
           </div>
           <div className="space-y-px">
             {tasks.map((task) => {
