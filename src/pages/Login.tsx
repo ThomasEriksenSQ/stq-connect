@@ -33,15 +33,15 @@ const Login = () => {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: "1rem",
+          gap: "0.5rem",
         }}
       >
         <img
           src="/logo.png"
           alt="STACQ CRM"
           style={{
-            width: "250px",
-            height: "250px",
+            width: "400px",
+            height: "400px",
             objectFit: "contain",
           }}
         />
