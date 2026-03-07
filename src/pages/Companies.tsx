@@ -459,7 +459,7 @@ const Companies = () => {
         </div>
         {/* Type chips */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground min-w-[80px]">Type</span>
+          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Type</span>
           {[
             { value: "all", label: "Alle" },
             { value: "prospect", label: "Potensiell kunde" },
