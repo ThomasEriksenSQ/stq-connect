@@ -16,8 +16,40 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 
-type SortField = "name" | "owner" | "contacts" | "last_activity" | "tasks";
+type SortField = "name" | "signal" | "contacts" | "last_activity" | "tasks";
 type SortDir = "asc" | "desc";
+
+const CATEGORIES = [
+  { label: "Behov nå", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  { label: "Får fremtidig behov", badgeColor: "bg-blue-100 text-blue-800 border-blue-200" },
+  { label: "Vil kanskje få behov", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
+  { label: "Ukjent om behov", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" },
+  { label: "Ikke aktuelt", badgeColor: "bg-red-50 text-red-700 border-red-200" },
+] as const;
+
+const LEGACY_CATEGORY_MAP: Record<string, string> = {
+  "Fremtidig behov": "Får fremtidig behov",
+  "Har kanskje behov": "Vil kanskje få behov",
+  "Aldri aktuelt": "Ikke aktuelt",
+};
+
+function normalizeCategoryLabel(label: string): string {
+  return LEGACY_CATEGORY_MAP[label] || label;
+}
+
+function extractCategory(subject: string, description: string | null): string {
+  const normalizedSubject = normalizeCategoryLabel(subject);
+  if (CATEGORIES.some(c => c.label === normalizedSubject)) return normalizedSubject;
+  if (!description) return "";
+  const match = description.match(/^\[([^\]]+)\]\n?/);
+  if (match) {
+    const cat = normalizeCategoryLabel(match[1]);
+    if (CATEGORIES.some(c => c.label === cat)) return cat;
+  }
+  return "";
+}
+
+const SIGNAL_ORDER = CATEGORIES.map(c => c.label);
 
 const statusLabels: Record<string, { label: string; className: string }> = {
   lead: { label: "Lead", className: "bg-tag text-tag-foreground" },
@@ -78,23 +110,65 @@ const Companies = () => {
       if (error) throw error;
 
       const companyIds = data.map(c => c.id);
-      const [actRes, taskRes] = await Promise.all([
-        supabase.from("activities").select("company_id, created_at").in("company_id", companyIds).order("created_at", { ascending: false }),
-        supabase.from("tasks").select("company_id, due_date").in("company_id", companyIds).neq("status", "done"),
+      // Get contact IDs for each company
+      const contactIds = data.flatMap(c => (c.contacts || []).map((ct: any) => ct.id));
+
+      const [actRes, taskRes, contactActRes, contactTaskRes] = await Promise.all([
+        supabase.from("activities").select("company_id, created_at, subject, description").in("company_id", companyIds).order("created_at", { ascending: false }),
+        supabase.from("tasks").select("company_id, due_date, title, description, status, created_at").in("company_id", companyIds).neq("status", "done"),
+        contactIds.length > 0
+          ? supabase.from("activities").select("contact_id, created_at, subject, description").in("contact_id", contactIds).order("created_at", { ascending: false })
+          : Promise.resolve({ data: [] }),
+        contactIds.length > 0
+          ? supabase.from("tasks").select("contact_id, due_date, title, description, status, created_at").in("contact_id", contactIds).neq("status", "done")
+          : Promise.resolve({ data: [] }),
       ]);
 
-      const lastActivityMap: Record<string, string> = {};
-      (actRes.data || []).forEach(a => {
-        if (!lastActivityMap[a.company_id!]) lastActivityMap[a.company_id!] = a.created_at;
-      });
+      // Build contact→company map
+      const contactToCompany: Record<string, string> = {};
+      data.forEach(c => (c.contacts || []).forEach((ct: any) => { contactToCompany[ct.id] = c.id; }));
 
+      const lastActivityMap: Record<string, string> = {};
       const taskCountMap: Record<string, number> = {};
       const overdueTaskMap: Record<string, boolean> = {};
-      (taskRes.data || []).forEach(t => {
-        if (t.company_id) {
-          taskCountMap[t.company_id] = (taskCountMap[t.company_id] || 0) + 1;
-          if (t.due_date && new Date(t.due_date) < new Date()) overdueTaskMap[t.company_id] = true;
+      // Signal: find the category from the most recent activity or task per company
+      const signalMap: Record<string, string> = {};
+      const signalDateMap: Record<string, string> = {};
+
+      function trySetSignal(companyId: string, date: string, category: string) {
+        if (!category) return;
+        if (!signalDateMap[companyId] || date > signalDateMap[companyId]) {
+          signalDateMap[companyId] = date;
+          signalMap[companyId] = category;
         }
+      }
+
+      (actRes.data || []).forEach(a => {
+        if (!a.company_id) return;
+        if (!lastActivityMap[a.company_id]) lastActivityMap[a.company_id] = a.created_at;
+        trySetSignal(a.company_id, a.created_at, extractCategory(a.subject, a.description));
+      });
+
+      ((contactActRes as any).data || []).forEach((a: any) => {
+        const cid = contactToCompany[a.contact_id];
+        if (!cid) return;
+        if (!lastActivityMap[cid] || a.created_at > lastActivityMap[cid]) lastActivityMap[cid] = a.created_at;
+        trySetSignal(cid, a.created_at, extractCategory(a.subject, a.description));
+      });
+
+      (taskRes.data || []).forEach(t => {
+        if (!t.company_id) return;
+        taskCountMap[t.company_id] = (taskCountMap[t.company_id] || 0) + 1;
+        if (t.due_date && new Date(t.due_date) < new Date()) overdueTaskMap[t.company_id] = true;
+        trySetSignal(t.company_id, t.created_at, extractCategory(t.title, t.description));
+      });
+
+      ((contactTaskRes as any).data || []).forEach((t: any) => {
+        const cid = contactToCompany[t.contact_id];
+        if (!cid) return;
+        taskCountMap[cid] = (taskCountMap[cid] || 0) + 1;
+        if (t.due_date && new Date(t.due_date) < new Date()) overdueTaskMap[cid] = true;
+        trySetSignal(cid, t.created_at, extractCategory(t.title, t.description));
       });
 
       return data.map(c => ({
@@ -102,6 +176,7 @@ const Companies = () => {
         lastActivity: lastActivityMap[c.id] || null,
         taskCount: taskCountMap[c.id] || 0,
         hasOverdue: overdueTaskMap[c.id] || false,
+        signal: signalMap[c.id] || "",
       }));
     },
   });
@@ -125,17 +200,13 @@ const Companies = () => {
     onError: () => toast.error("Kunne ikke opprette selskap"),
   });
 
-  const getOwnerFirstName = (company: any) => {
-    const fullName = (company.profiles as any)?.full_name;
-    return fullName ? fullName.split(" ")[0] : null;
-  };
   const getOwnerId = (company: any) => (company.profiles as any)?.id || null;
 
   const ownerMap = new Map<string, string>();
   companies.forEach(c => {
     const id = getOwnerId(c);
-    const name = getOwnerFirstName(c);
-    if (id && name) ownerMap.set(id, name);
+    const fullName = (c.profiles as any)?.full_name;
+    if (id && fullName) ownerMap.set(id, fullName);
   });
   const ownerList = Array.from(ownerMap.entries());
 
@@ -151,7 +222,11 @@ const Companies = () => {
     const dir = sort.dir === "asc" ? 1 : -1;
     switch (sort.field) {
       case "name": return dir * a.name.localeCompare(b.name, "nb");
-      case "owner": return dir * (getOwnerFirstName(a) || "").localeCompare(getOwnerFirstName(b) || "", "nb");
+      case "signal": {
+        const ai = SIGNAL_ORDER.indexOf(a.signal as any || "");
+        const bi = SIGNAL_ORDER.indexOf(b.signal as any || "");
+        return dir * ((ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi));
+      }
       case "contacts": return dir * ((a.contacts?.length || 0) - (b.contacts?.length || 0));
       case "last_activity":
         if (!a.lastActivity && !b.lastActivity) return 0;
@@ -324,21 +399,20 @@ const Companies = () => {
         <p className="text-sm text-muted-foreground py-12 text-center">Ingen selskaper funnet</p>
       ) : (
         <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
-          <div className="grid grid-cols-[minmax(0,2.5fr)_80px_60px_100px_70px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_60px_70px_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="name">Selskap</SortHeader>
-            <SortHeader field="owner">Eier</SortHeader>
+            <SortHeader field="signal">Signal</SortHeader>
             <SortHeader field="contacts">Kont.</SortHeader>
-            <SortHeader field="last_activity">Siste akt.</SortHeader>
-            <SortHeader field="tasks" className="justify-end">Oppf.</SortHeader>
+            <SortHeader field="tasks">Oppf.</SortHeader>
+            <SortHeader field="last_activity" className="justify-end">Siste akt.</SortHeader>
           </div>
           <div className="divide-y divide-border">
             {sorted.map((company) => {
               const status = getStatus(company.status);
               const contactCount = company.contacts?.length || 0;
-              const ownerName = getOwnerFirstName(company);
               return (
                 <button key={company.id} onClick={() => navigate(`/selskaper/${company.id}`)}
-                  className="w-full grid grid-cols-[minmax(0,2.5fr)_80px_60px_100px_70px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer">
+                  className="w-full grid grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_60px_70px_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-[0.8125rem] font-medium text-foreground truncate">{company.name}</span>
@@ -348,11 +422,23 @@ const Companies = () => {
                       <p className="text-[0.6875rem] text-muted-foreground truncate mt-0.5">{company.industry}</p>
                     )}
                   </div>
-                  <span className="text-[0.8125rem] text-muted-foreground truncate">{ownerName || ""}</span>
+                  <span className="min-w-0">
+                    {company.signal ? (() => {
+                      const cat = CATEGORIES.find(c => c.label === company.signal);
+                      return cat ? (
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold truncate ${cat.badgeColor}`}>
+                          {company.signal}
+                        </span>
+                      ) : <span className="text-[0.75rem] text-muted-foreground">—</span>;
+                    })() : <span className="text-[0.75rem] text-muted-foreground">—</span>}
+                  </span>
                   <span className="text-[0.8125rem] text-muted-foreground">
                     {contactCount > 0 ? <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" />{contactCount}</span> : ""}
                   </span>
-                  <span className="text-[0.75rem] text-muted-foreground">
+                  <span className={`text-[0.8125rem] ${company.hasOverdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                    {company.taskCount > 0 ? company.taskCount : ""}
+                  </span>
+                  <span className="text-[0.75rem] text-muted-foreground text-right">
                     {company.lastActivity ? (
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -361,9 +447,6 @@ const Companies = () => {
                         <TooltipContent>{format(new Date(company.lastActivity), "d. MMMM yyyy", { locale: nb })}</TooltipContent>
                       </Tooltip>
                     ) : ""}
-                  </span>
-                  <span className={`text-[0.8125rem] text-right ${company.hasOverdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
-                    {company.taskCount > 0 ? company.taskCount : ""}
                   </span>
                 </button>
               );
