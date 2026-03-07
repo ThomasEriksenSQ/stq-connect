@@ -101,14 +101,19 @@ function parseDescriptionCategory(description: string | null): { category: strin
  */
 function extractTitleAndCategory(subject: string, description: string | null) {
   const normalizedSubject = normalizeCategoryLabel(subject);
+  // Strip bracket-only descriptions (e.g. "[Behov nå]")
+  const stripBracketOnly = (d: string | null | undefined): string => {
+    if (!d) return "";
+    return /^\[.+\]$/.test(d.trim()) ? "" : (d || "");
+  };
   // Legacy: subject is a known category label
   if (CATEGORIES.some(c => c.label === normalizedSubject)) {
-    const descClean = cleanDescription(description);
+    const descClean = cleanDescription(stripBracketOnly(description));
     return { title: normalizedSubject, category: normalizedSubject, cleanDesc: descClean };
   }
   // New format: category in description prefix
   const parsed = parseDescriptionCategory(description);
-  return { title: subject, category: parsed.category, cleanDesc: cleanDescription(parsed.text) || "" };
+  return { title: subject, category: parsed.category, cleanDesc: cleanDescription(stripBracketOnly(parsed.text)) || "" };
 }
 
 interface ContactCardContentProps {
