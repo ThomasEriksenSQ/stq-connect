@@ -634,7 +634,7 @@ function CompanyActivityTimeline({ activities, profileMap }: { activities: any[]
                   : <FileText className="h-3.5 w-3.5 text-primary" />;
 
                 return (
-                  <div key={activity.id} className="relative group">
+                  <div key={activity.id} className="relative group cursor-pointer" onClick={() => { if (activity.contact_id) navigate(`/kontakter/${activity.contact_id}`); }}>
                     {/* Icon on spine */}
                     <div className="absolute -left-7 top-[2px] w-[12px] h-[12px] flex items-center justify-center bg-background rounded-full">
                       {typeIcon}
