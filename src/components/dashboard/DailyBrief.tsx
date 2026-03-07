@@ -24,13 +24,14 @@ const DailyBrief = () => {
             <div className="flex items-center gap-2.5 text-[0.875rem]">
               <ClipboardList className="h-4 w-4 text-primary flex-shrink-0" />
               <span className="text-foreground">
-                <span className="font-semibold">3 nye forespørsler</span> venter — Kongsberg KDA, Six Robotics, Thales
+                <span className="font-semibold">3 forespørsler</span> — Kongsberg KDA, Six Robotics, Thales
               </span>
             </div>
             <div className="flex items-center gap-2.5 text-[0.875rem]">
               <Flame className="h-4 w-4 text-[hsl(var(--warning))] flex-shrink-0" />
               <span className="text-foreground">
-                <span className="font-semibold">4 kontakter</span> har aktivt behov nå — Eirik Klette, Mathias Nedrebø + 2 til
+                <span className="font-semibold">4 kontakter</span> har aktivt behov nå — Eirik Klette, Mathias Nedrebø +
+                2 til
               </span>
             </div>
           </div>
