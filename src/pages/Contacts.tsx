@@ -193,6 +193,35 @@ const Contacts = () => {
     });
   };
 
+  const setSignalMutation = useMutation({
+    mutationFn: async ({ contactId, companyId, label }: { contactId: string; companyId: string | null; label: string }) => {
+      const { error } = await supabase.from("activities").insert({
+        type: "note",
+        subject: label,
+        description: `[${label}]`,
+        contact_id: contactId,
+        company_id: companyId,
+        created_by: user?.id,
+      });
+      if (error) throw error;
+    },
+    onMutate: async ({ contactId, label }) => {
+      // Optimistic update
+      queryClient.setQueryData(["contacts-full"], (old: any[]) =>
+        old?.map(c => c.id === contactId ? { ...c, signal: label } : c)
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
+      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
+      toast.success("Signal oppdatert");
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
+      toast.error("Kunne ikke oppdatere signal");
+    },
+  });
+
   const getOwnerId = (contact: any) => (contact.profiles as any)?.id || null;
   const getOwnerName = (contact: any) => (contact.profiles as any)?.full_name || null;
 
