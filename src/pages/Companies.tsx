@@ -110,23 +110,65 @@ const Companies = () => {
       if (error) throw error;
 
       const companyIds = data.map(c => c.id);
-      const [actRes, taskRes] = await Promise.all([
-        supabase.from("activities").select("company_id, created_at").in("company_id", companyIds).order("created_at", { ascending: false }),
-        supabase.from("tasks").select("company_id, due_date").in("company_id", companyIds).neq("status", "done"),
+      // Get contact IDs for each company
+      const contactIds = data.flatMap(c => (c.contacts || []).map((ct: any) => ct.id));
+
+      const [actRes, taskRes, contactActRes, contactTaskRes] = await Promise.all([
+        supabase.from("activities").select("company_id, created_at, subject, description").in("company_id", companyIds).order("created_at", { ascending: false }),
+        supabase.from("tasks").select("company_id, due_date, title, description, status, created_at").in("company_id", companyIds).neq("status", "done"),
+        contactIds.length > 0
+          ? supabase.from("activities").select("contact_id, created_at, subject, description").in("contact_id", contactIds).order("created_at", { ascending: false })
+          : Promise.resolve({ data: [] }),
+        contactIds.length > 0
+          ? supabase.from("tasks").select("contact_id, due_date, title, description, status, created_at").in("contact_id", contactIds).neq("status", "done")
+          : Promise.resolve({ data: [] }),
       ]);
 
-      const lastActivityMap: Record<string, string> = {};
-      (actRes.data || []).forEach(a => {
-        if (!lastActivityMap[a.company_id!]) lastActivityMap[a.company_id!] = a.created_at;
-      });
+      // Build contact→company map
+      const contactToCompany: Record<string, string> = {};
+      data.forEach(c => (c.contacts || []).forEach((ct: any) => { contactToCompany[ct.id] = c.id; }));
 
+      const lastActivityMap: Record<string, string> = {};
       const taskCountMap: Record<string, number> = {};
       const overdueTaskMap: Record<string, boolean> = {};
-      (taskRes.data || []).forEach(t => {
-        if (t.company_id) {
-          taskCountMap[t.company_id] = (taskCountMap[t.company_id] || 0) + 1;
-          if (t.due_date && new Date(t.due_date) < new Date()) overdueTaskMap[t.company_id] = true;
+      // Signal: find the category from the most recent activity or task per company
+      const signalMap: Record<string, string> = {};
+      const signalDateMap: Record<string, string> = {};
+
+      function trySetSignal(companyId: string, date: string, category: string) {
+        if (!category) return;
+        if (!signalDateMap[companyId] || date > signalDateMap[companyId]) {
+          signalDateMap[companyId] = date;
+          signalMap[companyId] = category;
         }
+      }
+
+      (actRes.data || []).forEach(a => {
+        if (!a.company_id) return;
+        if (!lastActivityMap[a.company_id]) lastActivityMap[a.company_id] = a.created_at;
+        trySetSignal(a.company_id, a.created_at, extractCategory(a.subject, a.description));
+      });
+
+      ((contactActRes as any).data || []).forEach((a: any) => {
+        const cid = contactToCompany[a.contact_id];
+        if (!cid) return;
+        if (!lastActivityMap[cid] || a.created_at > lastActivityMap[cid]) lastActivityMap[cid] = a.created_at;
+        trySetSignal(cid, a.created_at, extractCategory(a.subject, a.description));
+      });
+
+      (taskRes.data || []).forEach(t => {
+        if (!t.company_id) return;
+        taskCountMap[t.company_id] = (taskCountMap[t.company_id] || 0) + 1;
+        if (t.due_date && new Date(t.due_date) < new Date()) overdueTaskMap[t.company_id] = true;
+        trySetSignal(t.company_id, t.created_at, extractCategory(t.title, t.description));
+      });
+
+      ((contactTaskRes as any).data || []).forEach((t: any) => {
+        const cid = contactToCompany[t.contact_id];
+        if (!cid) return;
+        taskCountMap[cid] = (taskCountMap[cid] || 0) + 1;
+        if (t.due_date && new Date(t.due_date) < new Date()) overdueTaskMap[cid] = true;
+        trySetSignal(cid, t.created_at, extractCategory(t.title, t.description));
       });
 
       return data.map(c => ({
@@ -134,6 +176,7 @@ const Companies = () => {
         lastActivity: lastActivityMap[c.id] || null,
         taskCount: taskCountMap[c.id] || 0,
         hasOverdue: overdueTaskMap[c.id] || false,
+        signal: signalMap[c.id] || "",
       }));
     },
   });
