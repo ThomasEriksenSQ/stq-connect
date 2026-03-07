@@ -865,9 +865,9 @@ function ActivityRow({
           </div>
         ) : (
           <>
-            {/* Level 1: Subject as category badge */}
+            {/* Level 1: Subject */}
             <div className="flex items-start justify-between gap-2">
-              <CategoryBadge title={activity.subject} />
+              <span className="text-[1rem] font-semibold text-foreground">{activity.subject}</span>
               {editable && !confirmDelete && (
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5">
                   <button
