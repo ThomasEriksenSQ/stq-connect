@@ -459,7 +459,10 @@ const Companies = () => {
                     )}
                   </div>
                   <span className="min-w-0">
-                    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${status.badgeColor}`}>{status.label}</span>
+                    {(() => {
+                      const t = TYPE_BADGE_COLORS[company.status] || { label: company.status, badgeColor: "bg-gray-100 text-gray-600 border-gray-200" };
+                      return <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${t.badgeColor}`}>{t.label}</span>;
+                    })()}
                   </span>
                   <span className="min-w-0">
                     {company.signal ? (() => {
