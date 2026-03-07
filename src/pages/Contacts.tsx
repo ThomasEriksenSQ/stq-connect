@@ -18,18 +18,13 @@ import { nb } from "date-fns/locale";
 type SortField = "name" | "company" | "title" | "signal" | "owner" | "last_activity";
 type SortDir = "asc" | "desc";
 
-const SIGNAL_OPTIONS = [
-  { label: "Behov nå", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-  { label: "Får fremtidig behov", color: "bg-blue-100 text-blue-800 border-blue-200" },
-  { label: "Vil kanskje få behov", color: "bg-amber-100 text-amber-800 border-amber-200" },
-  { label: "Ukjent om behov", color: "bg-gray-100 text-gray-600 border-gray-200" },
-  { label: "Ikke aktuelt", color: "bg-red-50 text-red-700 border-red-200" },
-];
+import { CATEGORIES, extractCategory } from "@/lib/categoryUtils";
 
-function extractCategory(description: string | null): string | null {
-  if (!description) return null;
-  const match = description.match(/^\[([^\]]+)\]/);
-  return match ? match[1] : null;
+const SIGNAL_OPTIONS = CATEGORIES.map(c => ({ label: c.label, color: c.badgeColor }));
+
+function getSignalBadge(category: string | null) {
+  if (!category) return null;
+  return SIGNAL_OPTIONS.find((s) => s.label === category) || null;
 }
 
 function getSignalBadge(category: string | null) {
