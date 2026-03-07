@@ -236,7 +236,13 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   }
   if (!company) return <p className="text-sm text-muted-foreground">Selskap ikke funnet</p>;
 
-  const status = statusLabels[company.status] || { label: company.status, className: "bg-secondary text-muted-foreground" };
+  const STATUS_OPTIONS = [
+    { value: "prospect", label: "Potensiell kunde", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
+    { value: "customer", label: "Kunde", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+    { value: "churned", label: "Ikke relevant selskap", badgeColor: "bg-red-50 text-red-700 border-red-200" },
+    { value: "partner", label: "Partner", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" },
+  ] as const;
+  const currentStatus = STATUS_OPTIONS.find(s => s.value === company.status || (s.value === "customer" && company.status === "kunde")) || STATUS_OPTIONS[0];
   const ownerFullName = (company as any).profiles?.full_name || null;
 
   return (
