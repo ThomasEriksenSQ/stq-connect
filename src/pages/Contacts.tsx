@@ -116,32 +116,6 @@ const Contacts = () => {
     },
   });
 
-  const { data: companies = [] } = useQuery({
-    queryKey: ["companies"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("companies").select("id, name").order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const createMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("contacts").insert({
-        first_name: form.first_name, last_name: form.last_name,
-        email: form.email || null, phone: form.phone || null, title: form.title || null,
-        company_id: form.company_id || null, linkedin: form.linkedin || null, created_by: user?.id, owner_id: user?.id,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
-      setOpen(false);
-      setForm({ first_name: "", last_name: "", email: "", phone: "", title: "", company_id: "", linkedin: "" });
-      toast.success("Kontakt opprettet");
-    },
-    onError: () => toast.error("Kunne ikke opprette kontakt"),
-  });
 
   const pendingToggles = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
