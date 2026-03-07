@@ -154,7 +154,7 @@ const Companies = () => {
       ((contactActRes as any).data || []).forEach((a: any) => {
         const cid = contactToCompany[a.contact_id];
         if (!cid) return;
-        if (!lastActivityMap[cid] || a.created_at > lastActivityMap[cid]) lastActivityMap[cid] = a.created_at;
+        if (isPast(a.created_at) && (!lastActivityMap[cid] || a.created_at > lastActivityMap[cid])) lastActivityMap[cid] = a.created_at;
         trySetSignal(cid, a.created_at, extractCategory(a.subject, a.description));
       });
 
