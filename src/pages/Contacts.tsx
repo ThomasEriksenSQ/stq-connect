@@ -83,11 +83,8 @@ const Contacts = () => {
     onError: () => toast.error("Kunne ikke opprette kontakt"),
   });
 
-  const getOwnerFirstName = (contact: any) => {
-    const fullName = (contact.profiles as any)?.full_name;
-    return fullName ? fullName.split(" ")[0] : null;
-  };
   const getOwnerId = (contact: any) => (contact.profiles as any)?.id || null;
+  const getOwnerName = (contact: any) => (contact.profiles as any)?.full_name || null;
 
   const ownerMap = new Map<string, string>();
   contacts.forEach(c => {
