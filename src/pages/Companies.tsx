@@ -427,7 +427,7 @@ const Companies = () => {
         <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
           <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1.2fr)_60px_70px_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="name">Selskap</SortHeader>
-            <SortHeader field="signal">Signal</SortHeader>
+            <SortHeader field="type">Type</SortHeader>
             <SortHeader field="contacts">Kont.</SortHeader>
             <SortHeader field="tasks">Oppf.</SortHeader>
             <SortHeader field="last_activity" className="justify-end">Siste akt.</SortHeader>
