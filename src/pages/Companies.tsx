@@ -459,10 +459,11 @@ const Companies = () => {
                     )}
                   </div>
                   <span className="min-w-0">
-                    {(() => {
-                      const t = TYPE_BADGE_COLORS[company.status] || { label: company.status, badgeColor: "bg-gray-100 text-gray-600 border-gray-200" };
-                      return <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${t.badgeColor}`}>{t.label}</span>;
-                    })()}
+                    {(company.status === "prospect") && <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-amber-100 text-amber-800 border-amber-200">Potensiell kunde</span>}
+                    {(company.status === "customer" || company.status === "kunde") && <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-800 border-emerald-200">Kunde</span>}
+                    {(company.status === "churned") && <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-red-50 text-red-700 border-red-200">Ikke relevant selskap</span>}
+                    {(company.status === "partner") && <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-gray-100 text-gray-600 border-gray-200">Partner</span>}
+                    {!["prospect","customer","kunde","churned","partner"].includes(company.status) && <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-gray-100 text-gray-600 border-gray-200">{company.status}</span>}
                   </span>
                   <span className="min-w-0">
                     {company.signal ? (() => {
