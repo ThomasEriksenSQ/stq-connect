@@ -60,6 +60,7 @@ const Login = () => {
             style={{
               width: "200px", height: "200px",
               objectFit: "contain", position: "relative",
+              mixBlendMode: "multiply",
               filter: "drop-shadow(0 0 30px rgba(200,80,0,0.5)) drop-shadow(0 0 60px rgba(180,60,0,0.3))",
             }}
           />
