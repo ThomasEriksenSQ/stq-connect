@@ -617,8 +617,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                       <button
                         type="button"
                         onClick={() => {
-                          setFormDescription("Ringte, svarte ikke");
-                          setFormCategory("Ukjent om behov");
+                           setFormDescription("Ringte, svarte ikke");
                         }}
                         className="inline-flex items-center gap-1 h-6 px-2.5 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
                       >
