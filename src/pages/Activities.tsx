@@ -85,8 +85,8 @@ const Activities = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Aktiviteter</h1>
-          <p className="text-muted-foreground">Logg og spor alle aktiviteter</p>
+          <h1 className="text-[1.375rem] font-bold">Aktiviteter</h1>
+          <p className="text-[0.8125rem] text-muted-foreground">Logg og spor alle aktiviteter</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -164,18 +164,18 @@ const Activities = () => {
             const typeInfo = typeLabels[activity.type] || typeLabels.note;
             const Icon = typeInfo.icon;
             return (
-              <Card key={activity.id}>
-                <CardContent className="flex items-start gap-4 py-4">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Icon className="h-5 w-5 text-primary" />
+              <Card key={activity.id} className="border border-border rounded-lg shadow-sm">
+                <CardContent className="flex items-start gap-3 py-3.5">
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Icon className="h-4 w-4 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium">{activity.subject}</span>
-                      <Badge variant="secondary">{typeInfo.label}</Badge>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-[1.0625rem] font-bold text-foreground">{activity.subject}</span>
+                      <Badge variant="secondary" className="text-[0.625rem]">{typeInfo.label}</Badge>
                     </div>
                     <DescriptionText text={activity.description} maxLines={2} />
-                    <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-3 mt-1.5 text-[0.8125rem] text-muted-foreground">
                       {(activity.companies as any)?.name && (
                         <span>{(activity.companies as any).name}</span>
                       )}

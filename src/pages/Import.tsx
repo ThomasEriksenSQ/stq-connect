@@ -265,45 +265,45 @@ const Import = () => {
 
   return (
     <div className="max-w-2xl mx-auto space-y-8 p-8">
-      <h1 className="text-2xl font-bold">Salesforce CSV Re-import</h1>
-      <p className="text-muted-foreground">
+      <h1 className="text-[1.375rem] font-bold">Salesforce CSV Re-import</h1>
+      <p className="text-[0.8125rem] text-muted-foreground">
         Last opp 4 CSV-filer fra Salesforce Data Export. All eksisterende data slettes og erstattes.
       </p>
 
       <div className="space-y-4">
         <div className="space-y-2">
-          <label className="text-sm font-medium">1. Account.csv (selskaper)</label>
-          <input type="file" accept=".csv" onChange={e => setAccountsFile(e.target.files?.[0] || null)} className="block w-full text-sm" />
-          {accountsFile && <p className="text-xs text-muted-foreground">✓ {accountsFile.name}</p>}
+          <label className="text-label">1. Account.csv (selskaper)</label>
+          <input type="file" accept=".csv" onChange={e => setAccountsFile(e.target.files?.[0] || null)} className="block w-full text-[0.8125rem]" />
+          {accountsFile && <p className="text-[0.75rem] text-muted-foreground">✓ {accountsFile.name}</p>}
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">2. Contact.csv (kontakter)</label>
-          <input type="file" accept=".csv" onChange={e => setContactsFile(e.target.files?.[0] || null)} className="block w-full text-sm" />
-          {contactsFile && <p className="text-xs text-muted-foreground">✓ {contactsFile.name}</p>}
+          <label className="text-label">2. Contact.csv (kontakter)</label>
+          <input type="file" accept=".csv" onChange={e => setContactsFile(e.target.files?.[0] || null)} className="block w-full text-[0.8125rem]" />
+          {contactsFile && <p className="text-[0.75rem] text-muted-foreground">✓ {contactsFile.name}</p>}
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">3. Task.csv (oppgaver og samtaler)</label>
-          <input type="file" accept=".csv" onChange={e => setTasksFile(e.target.files?.[0] || null)} className="block w-full text-sm" />
-          {tasksFile && <p className="text-xs text-muted-foreground">✓ {tasksFile.name}</p>}
+          <label className="text-label">3. Task.csv (oppgaver og samtaler)</label>
+          <input type="file" accept=".csv" onChange={e => setTasksFile(e.target.files?.[0] || null)} className="block w-full text-[0.8125rem]" />
+          {tasksFile && <p className="text-[0.75rem] text-muted-foreground">✓ {tasksFile.name}</p>}
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">4. Event.csv (møter og hendelser)</label>
-          <input type="file" accept=".csv" onChange={e => setEventsFile(e.target.files?.[0] || null)} className="block w-full text-sm" />
-          {eventsFile && <p className="text-xs text-muted-foreground">✓ {eventsFile.name}</p>}
+          <label className="text-label">4. Event.csv (møter og hendelser)</label>
+          <input type="file" accept=".csv" onChange={e => setEventsFile(e.target.files?.[0] || null)} className="block w-full text-[0.8125rem]" />
+          {eventsFile && <p className="text-[0.75rem] text-muted-foreground">✓ {eventsFile.name}</p>}
         </div>
       </div>
 
       {progress > 0 && <Progress value={progress} className="h-2" />}
 
-      <Button onClick={runImport} disabled={running || !accountsFile || !contactsFile || !tasksFile || !eventsFile} size="lg">
+      <Button onClick={runImport} disabled={running || !accountsFile || !contactsFile || !tasksFile || !eventsFile} className="rounded-lg h-10 px-5 text-[0.8125rem] font-medium">
         {running ? "Importerer..." : "Start re-import"}
       </Button>
 
       {log.length > 0 && (
-        <div ref={logRef} className="bg-muted rounded-xl p-4 max-h-80 overflow-y-auto font-mono text-xs space-y-1">
+        <div ref={logRef} className="bg-secondary rounded-lg border border-border p-4 max-h-80 overflow-y-auto font-mono text-[0.75rem] space-y-1">
           {log.map((l, i) => <div key={i}>{l}</div>)}
         </div>
       )}
