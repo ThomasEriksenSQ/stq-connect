@@ -71,6 +71,10 @@ interface SignalItem {
 /**
  * Given all activities and tasks for a contact/company, return the most recent
  * VALID (non-expired) signal category, or "" if none.
+ *
+ * Priority:
+ * 1. Most recent PAST activity (created_at <= now) with a valid non-expired category
+ * 2. Only if no past activity signal: most recent FUTURE task (due_date > today) with a category
  */
 export function getEffectiveSignal(
   activities: Array<{ created_at: string; subject: string; description: string | null }>,
@@ -78,34 +82,28 @@ export function getEffectiveSignal(
 ): string {
   const now = new Date();
 
-  // Merge into a single list with metadata
-  const items: SignalItem[] = [
-    ...activities.map(a => ({ created_at: a.created_at, subject: a.subject, description: a.description, _type: "activity" as const })),
-    ...tasks.map(t => ({ created_at: t.created_at, subject: t.title, description: t.description, due_date: t.due_date, _type: "task" as const })),
-  ];
-
-  // Sort by created_at descending (most recent first)
-  items.sort((a, b) => b.created_at.localeCompare(a.created_at));
-
-  for (const item of items) {
-    const cat = extractCategory(item.subject, item.description);
+  // 1. Check past activities (most recent first)
+  const sortedActs = [...activities].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  for (const act of sortedActs) {
+    if (new Date(act.created_at) > now) continue; // skip future-dated activities
+    const cat = extractCategory(act.subject, act.description);
     if (!cat) continue;
-
-    if (item._type === "task") {
-      // Task signal valid until due_date
-      if (item.due_date && new Date(item.due_date) < now) continue; // expired
-      // No due_date = still valid
-      return cat;
-    }
-
-    // Activity: check TTL
     const ttl = SIGNAL_TTL[cat];
     if (ttl === null) return cat; // never expires
     if (ttl !== undefined) {
-      const daysSince = differenceInDays(now, new Date(item.created_at));
+      const daysSince = differenceInDays(now, new Date(act.created_at));
       if (daysSince <= ttl) return cat;
-      // expired, continue looking
+      // expired, keep looking
     }
+  }
+
+  // 2. Fallback: future tasks (nearest due_date first)
+  const futureTasks = tasks
+    .filter(t => t.due_date && new Date(t.due_date) >= now)
+    .sort((a, b) => (a.due_date || "").localeCompare(b.due_date || ""));
+  for (const task of futureTasks) {
+    const cat = extractCategory(task.title, task.description);
+    if (cat) return cat;
   }
 
   return "";
