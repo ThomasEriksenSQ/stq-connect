@@ -897,18 +897,10 @@ function ActivityRow({
 
             {/* Level 2: Description */}
             {desc ? (
-              <div className="mt-0.5">
-                <p
-                  className="text-[0.875rem] leading-relaxed whitespace-pre-wrap text-foreground/70"
-                  style={!expanded ? { WebkitLineClamp: 2, display: "-webkit-box", WebkitBoxOrient: "vertical" as const, overflow: "hidden" } : undefined}
-                >
+              <div className="mt-1">
+                <p className="text-[0.875rem] leading-relaxed whitespace-pre-wrap text-foreground/70">
                   {desc}
                 </p>
-                {desc.length > 120 && (
-                  <button onClick={() => setExpanded(!expanded)} className="text-[0.75rem] text-primary hover:underline mt-0.5 inline-flex items-center gap-0.5">
-                    {expanded ? <>Vis mindre <ChevronUp className="h-3 w-3" /></> : <>Vis mer <ChevronDown className="h-3 w-3" /></>}
-                  </button>
-                )}
               </div>
             ) : null}
 
