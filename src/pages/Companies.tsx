@@ -22,6 +22,13 @@ type SortDir = "asc" | "desc";
 
 import { CATEGORIES, LEGACY_CATEGORY_MAP, normalizeCategoryLabel, extractCategory, SIGNAL_ORDER, getEffectiveSignal } from "@/lib/categoryUtils";
 
+const SIGNAL_OPTIONS = CATEGORIES.map(c => ({ label: c.label, color: c.badgeColor }));
+
+function getSignalBadge(category: string | null) {
+  if (!category) return null;
+  return SIGNAL_OPTIONS.find((s) => s.label === category) || null;
+}
+
 const TYPE_BADGE_COLORS: Record<string, { label: string; badgeColor: string }> = {
   prospect: { label: "Potensiell kunde", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
   customer: { label: "Kunde", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
