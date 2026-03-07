@@ -236,6 +236,26 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
     },
   });
 
+  const changeSignalMutation = useMutation({
+    mutationFn: async (newSignal: string) => {
+      const { error } = await supabase.from("activities").insert({
+        subject: newSignal,
+        type: "note",
+        company_id: companyId,
+        created_by: user?.id,
+        description: `[${newSignal}]`,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["company-activities-direct", companyId] });
+      queryClient.invalidateQueries({ queryKey: ["company-contact-activities", companyId] });
+      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
+      toast.success("Signal oppdatert");
+    },
+    onError: () => toast.error("Kunne ikke oppdatere signal"),
+  });
+
   const updateField = (field: string) => (value: string) => {
     updateMutation.mutate({ [field]: value || null });
   };
@@ -253,6 +273,14 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   ] as const;
   const currentStatus = STATUS_OPTIONS.find(s => s.value === company.status || (s.value === "customer" && company.status === "kunde")) || STATUS_OPTIONS[0];
   const ownerFullName = (company as any).profiles?.full_name || null;
+
+  const effectiveSignal = getEffectiveSignal(
+    activities.map(a => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+    tasks.map(t => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date }))
+  );
+  const signalBadgeColor = effectiveSignal
+    ? SIGNAL_CATEGORIES.find(c => c.label === effectiveSignal)?.badgeColor || "bg-gray-100 text-gray-600 border-gray-200"
+    : "bg-gray-100 text-gray-600 border-gray-200";
 
   return (
     <div>
