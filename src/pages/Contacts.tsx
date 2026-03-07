@@ -27,11 +27,6 @@ function getSignalBadge(category: string | null) {
   return SIGNAL_OPTIONS.find((s) => s.label === category) || null;
 }
 
-function getSignalBadge(category: string | null) {
-  if (!category) return null;
-  return SIGNAL_OPTIONS.find((s) => s.label === category) || null;
-}
-
 const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer";
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
 const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground font-medium`;
