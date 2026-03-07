@@ -272,27 +272,27 @@ const Import = () => {
 
       <div className="space-y-4">
         <div className="space-y-2">
-          <label className="text-sm font-medium">1. Account.csv (selskaper)</label>
-          <input type="file" accept=".csv" onChange={e => setAccountsFile(e.target.files?.[0] || null)} className="block w-full text-sm" />
-          {accountsFile && <p className="text-xs text-muted-foreground">✓ {accountsFile.name}</p>}
+          <label className="text-label">1. Account.csv (selskaper)</label>
+          <input type="file" accept=".csv" onChange={e => setAccountsFile(e.target.files?.[0] || null)} className="block w-full text-[0.8125rem]" />
+          {accountsFile && <p className="text-[0.75rem] text-muted-foreground">✓ {accountsFile.name}</p>}
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">2. Contact.csv (kontakter)</label>
-          <input type="file" accept=".csv" onChange={e => setContactsFile(e.target.files?.[0] || null)} className="block w-full text-sm" />
-          {contactsFile && <p className="text-xs text-muted-foreground">✓ {contactsFile.name}</p>}
+          <label className="text-label">2. Contact.csv (kontakter)</label>
+          <input type="file" accept=".csv" onChange={e => setContactsFile(e.target.files?.[0] || null)} className="block w-full text-[0.8125rem]" />
+          {contactsFile && <p className="text-[0.75rem] text-muted-foreground">✓ {contactsFile.name}</p>}
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">3. Task.csv (oppgaver og samtaler)</label>
-          <input type="file" accept=".csv" onChange={e => setTasksFile(e.target.files?.[0] || null)} className="block w-full text-sm" />
-          {tasksFile && <p className="text-xs text-muted-foreground">✓ {tasksFile.name}</p>}
+          <label className="text-label">3. Task.csv (oppgaver og samtaler)</label>
+          <input type="file" accept=".csv" onChange={e => setTasksFile(e.target.files?.[0] || null)} className="block w-full text-[0.8125rem]" />
+          {tasksFile && <p className="text-[0.75rem] text-muted-foreground">✓ {tasksFile.name}</p>}
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">4. Event.csv (møter og hendelser)</label>
-          <input type="file" accept=".csv" onChange={e => setEventsFile(e.target.files?.[0] || null)} className="block w-full text-sm" />
-          {eventsFile && <p className="text-xs text-muted-foreground">✓ {eventsFile.name}</p>}
+          <label className="text-label">4. Event.csv (møter og hendelser)</label>
+          <input type="file" accept=".csv" onChange={e => setEventsFile(e.target.files?.[0] || null)} className="block w-full text-[0.8125rem]" />
+          {eventsFile && <p className="text-[0.75rem] text-muted-foreground">✓ {eventsFile.name}</p>}
         </div>
       </div>
 
