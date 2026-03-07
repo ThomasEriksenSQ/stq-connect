@@ -54,16 +54,22 @@ const Login = () => {
             background: "radial-gradient(ellipse, rgba(200,80,0,0.3) 0%, transparent 70%)",
             borderRadius: "50%", filter: "blur(20px)",
           }} />
-          <img
-            src="/logo.png"
-            alt="STACQ CRM"
-            style={{
-              width: "200px", height: "200px",
-              objectFit: "contain", position: "relative",
-              mixBlendMode: "multiply",
-              filter: "drop-shadow(0 0 30px rgba(200,80,0,0.5)) drop-shadow(0 0 60px rgba(180,60,0,0.3))",
-            }}
-          />
+          <div style={{
+            width: "200px", height: "200px",
+            borderRadius: "50%", overflow: "hidden",
+            position: "relative",
+          }}>
+            <img
+              src="/logo.png"
+              alt="STACQ CRM"
+              style={{
+                width: "100%", height: "100%",
+                objectFit: "contain",
+                background: "transparent",
+                filter: "drop-shadow(0 0 30px rgba(200,80,0,0.5)) drop-shadow(0 0 60px rgba(180,60,0,0.3)) contrast(1) brightness(1)",
+              }}
+            />
+          </div>
         </div>
 
         <div style={{
