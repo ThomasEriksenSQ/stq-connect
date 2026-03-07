@@ -686,12 +686,12 @@ function TaskRow({
         className="h-4 w-4 rounded-[4px] border-2 border-muted-foreground/40 flex-shrink-0 mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
       />
       <div className="flex-1 min-w-0">
-        <CategoryBadge title={task.title} />
+        <span className="text-[1rem] font-semibold text-foreground">{task.title}</span>
         {task.description && (
           <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{task.description}</p>
         )}
         {task.assigned_to && profileMap[task.assigned_to] && (
-          <span className="text-[0.75rem] text-muted-foreground">{profileMap[task.assigned_to]}</span>
+          <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium mt-1">{profileMap[task.assigned_to]}</span>
         )}
       </div>
       {task.due_date && (
