@@ -128,6 +128,8 @@ const Companies = () => {
       const contactToCompany: Record<string, string> = {};
       data.forEach(c => (c.contacts || []).forEach((ct: any) => { contactToCompany[ct.id] = c.id; }));
 
+      const now = new Date();
+      const isPast = (d: string) => new Date(d) <= now;
       const lastActivityMap: Record<string, string> = {};
       const taskCountMap: Record<string, number> = {};
       const overdueTaskMap: Record<string, boolean> = {};
@@ -145,14 +147,14 @@ const Companies = () => {
 
       (actRes.data || []).forEach(a => {
         if (!a.company_id) return;
-        if (!lastActivityMap[a.company_id]) lastActivityMap[a.company_id] = a.created_at;
+        if (isPast(a.created_at) && !lastActivityMap[a.company_id]) lastActivityMap[a.company_id] = a.created_at;
         trySetSignal(a.company_id, a.created_at, extractCategory(a.subject, a.description));
       });
 
       ((contactActRes as any).data || []).forEach((a: any) => {
         const cid = contactToCompany[a.contact_id];
         if (!cid) return;
-        if (!lastActivityMap[cid] || a.created_at > lastActivityMap[cid]) lastActivityMap[cid] = a.created_at;
+        if (isPast(a.created_at) && (!lastActivityMap[cid] || a.created_at > lastActivityMap[cid])) lastActivityMap[cid] = a.created_at;
         trySetSignal(cid, a.created_at, extractCategory(a.subject, a.description));
       });
 
