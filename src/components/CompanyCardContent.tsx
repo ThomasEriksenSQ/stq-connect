@@ -19,6 +19,7 @@ import { cleanDescription } from "@/lib/cleanDescription";
 import InlineEdit from "@/components/InlineEdit";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { CATEGORIES as SIGNAL_CATEGORIES, getEffectiveSignal, extractCategory } from "@/lib/categoryUtils";
 
 
 
