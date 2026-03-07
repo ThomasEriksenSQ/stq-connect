@@ -265,8 +265,8 @@ const Import = () => {
 
   return (
     <div className="max-w-2xl mx-auto space-y-8 p-8">
-      <h1 className="text-2xl font-bold">Salesforce CSV Re-import</h1>
-      <p className="text-muted-foreground">
+      <h1 className="text-[1.375rem] font-bold">Salesforce CSV Re-import</h1>
+      <p className="text-[0.8125rem] text-muted-foreground">
         Last opp 4 CSV-filer fra Salesforce Data Export. All eksisterende data slettes og erstattes.
       </p>
 
