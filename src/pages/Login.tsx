@@ -40,7 +40,7 @@ const Login = () => {
           src="/logo.png"
           alt="STACQ CRM"
           style={{
-            width: "100%",
+            width: "90%",
             height: "auto",
             objectFit: "contain",
           }}
