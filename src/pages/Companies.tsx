@@ -439,16 +439,16 @@ const Companies = () => {
               const contactCount = company.contacts?.length || 0;
               return (
                 <button key={company.id} onClick={() => navigate(`/selskaper/${company.id}`)}
-                  className="w-full grid grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_60px_70px_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer">
+                  className="w-full grid grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1.2fr)_60px_70px_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[0.8125rem] font-medium text-foreground truncate">{company.name}</span>
-                      <span className={`text-[0.625rem] font-medium px-1.5 py-0 rounded-[4px] flex-shrink-0 ${status.className}`}>{status.label}</span>
-                    </div>
+                    <span className="text-[0.8125rem] font-medium text-foreground truncate block">{company.name}</span>
                     {company.industry && (
                       <p className="text-[0.6875rem] text-muted-foreground truncate mt-0.5">{company.industry}</p>
                     )}
                   </div>
+                  <span className="min-w-0">
+                    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${status.badgeColor}`}>{status.label}</span>
+                  </span>
                   <span className="min-w-0">
                     {company.signal ? (() => {
                       const cat = CATEGORIES.find(c => c.label === company.signal);
