@@ -217,6 +217,32 @@ const Companies = () => {
   });
   const ownerList = Array.from(ownerMap.entries());
 
+  const setSignalMutation = useMutation({
+    mutationFn: async ({ companyId, label }: { companyId: string; label: string }) => {
+      const { error } = await supabase.from("activities").insert({
+        type: "note",
+        subject: label,
+        description: `[${label}]`,
+        company_id: companyId,
+        created_by: user?.id,
+      });
+      if (error) throw error;
+    },
+    onMutate: async ({ companyId, label }) => {
+      queryClient.setQueryData(["companies-full"], (old: any[]) =>
+        old?.map(c => c.id === companyId ? { ...c, signal: label } : c)
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
+      toast.success("Signal oppdatert");
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
+      toast.error("Kunne ikke oppdatere signal");
+    },
+  });
+
   const filtered = companies.filter((c) => {
     const q = search.toLowerCase();
     const matchSearch = !q || c.name.toLowerCase().includes(q) || c.org_number?.includes(q) || c.industry?.toLowerCase().includes(q);
