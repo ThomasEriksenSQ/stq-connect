@@ -410,7 +410,6 @@ const Companies = () => {
             {sorted.map((company) => {
               const status = getStatus(company.status);
               const contactCount = company.contacts?.length || 0;
-              const ownerName = getOwnerFirstName(company);
               return (
                 <button key={company.id} onClick={() => navigate(`/selskaper/${company.id}`)}
                   className="w-full grid grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_60px_70px_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer">
