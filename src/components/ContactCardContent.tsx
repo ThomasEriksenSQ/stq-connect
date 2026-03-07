@@ -9,13 +9,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Phone, Mail, Linkedin, FileText, Clock, ExternalLink, Pencil, Trash2, ChevronDown, ChevronUp, Plus, MessageCircle, PhoneOff, Send } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Phone, Mail, Linkedin, FileText, Clock, ExternalLink, Pencil, Trash2, ChevronDown, ChevronUp, Plus, MessageCircle, PhoneOff, Send, Signal } from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday, getYear, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { nb } from "date-fns/locale";
 import { fullDate } from "@/lib/relativeDate";
 import { cleanDescription } from "@/lib/cleanDescription";
 import { cn } from "@/lib/utils";
+import { getEffectiveSignal } from "@/lib/categoryUtils";
 
 /* ── Category system ── */
 const CATEGORIES = [
@@ -279,6 +281,8 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contact-activities", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
+      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
       toast.success("Aktivitet registrert");
       closeForm();
     },
@@ -443,6 +447,47 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           )}
           {/* Owner badge */}
           <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+            {/* Signal badge */}
+            {editable && (() => {
+              const effectiveSignal = getEffectiveSignal(
+                activities.map(a => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+                tasks.map(t => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date })),
+              );
+              const signalCat = effectiveSignal ? CATEGORIES.find(c => c.label === effectiveSignal) : null;
+              return (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    {signalCat ? (
+                      <button className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer", signalCat.badgeColor)}>
+                        {signalCat.label}
+                      </button>
+                    ) : (
+                      <button className="inline-flex items-center rounded-full border border-dashed border-border px-2.5 py-0.5 text-[0.6875rem] text-muted-foreground/50 cursor-pointer hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors">
+                        Legg til signal
+                      </button>
+                    )}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {CATEGORIES.map(cat => (
+                      <DropdownMenuItem
+                        key={cat.label}
+                        onClick={() => {
+                          createActivityMutation.mutate({
+                            type: "note",
+                            subject: cat.label,
+                            description: `[${cat.label}]`,
+                          });
+                        }}
+                      >
+                        <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold mr-2", cat.badgeColor)}>
+                          {cat.label}
+                        </span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              );
+            })()}
             {editable && (
               <Select value={contact.owner_id || ""} onValueChange={(v) => updateMutation.mutate({ owner_id: v || null })}>
                 <SelectTrigger className="h-auto w-auto gap-1 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0">

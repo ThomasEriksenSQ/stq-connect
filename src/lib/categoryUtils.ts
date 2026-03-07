@@ -1,3 +1,5 @@
+import { differenceInDays } from "date-fns";
+
 export const CATEGORIES = [
   { label: "Behov nå", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
   { label: "Får fremtidig behov", badgeColor: "bg-blue-100 text-blue-800 border-blue-200" },
@@ -44,3 +46,67 @@ export function extractCategory(subject: string | null, description: string | nu
 }
 
 export const SIGNAL_ORDER = CATEGORIES.map(c => c.label);
+
+/* ── Signal expiry TTL (in days from created_at for activities) ── */
+const SIGNAL_TTL: Record<string, number | null> = {
+  "Behov nå": 30,
+  "Får fremtidig behov": 90,
+  "Vil kanskje få behov": 180,
+  "Ukjent om behov": null, // never expires
+  "Ikke aktuelt": null,    // never expires
+};
+
+interface SignalItem {
+  /** For activities: created_at. For tasks: created_at */
+  created_at: string;
+  /** For activities: subject. For tasks: title */
+  subject: string | null;
+  description: string | null;
+  /** Only present on tasks */
+  due_date?: string | null;
+  /** "activity" or "task" */
+  _type: "activity" | "task";
+}
+
+/**
+ * Given all activities and tasks for a contact/company, return the most recent
+ * VALID (non-expired) signal category, or "" if none.
+ */
+export function getEffectiveSignal(
+  activities: Array<{ created_at: string; subject: string; description: string | null }>,
+  tasks: Array<{ created_at: string; title: string; description: string | null; due_date?: string | null }>
+): string {
+  const now = new Date();
+
+  // Merge into a single list with metadata
+  const items: SignalItem[] = [
+    ...activities.map(a => ({ created_at: a.created_at, subject: a.subject, description: a.description, _type: "activity" as const })),
+    ...tasks.map(t => ({ created_at: t.created_at, subject: t.title, description: t.description, due_date: t.due_date, _type: "task" as const })),
+  ];
+
+  // Sort by created_at descending (most recent first)
+  items.sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+  for (const item of items) {
+    const cat = extractCategory(item.subject, item.description);
+    if (!cat) continue;
+
+    if (item._type === "task") {
+      // Task signal valid until due_date
+      if (item.due_date && new Date(item.due_date) < now) continue; // expired
+      // No due_date = still valid
+      return cat;
+    }
+
+    // Activity: check TTL
+    const ttl = SIGNAL_TTL[cat];
+    if (ttl === null) return cat; // never expires
+    if (ttl !== undefined) {
+      const daysSince = differenceInDays(now, new Date(item.created_at));
+      if (daysSince <= ttl) return cat;
+      // expired, continue looking
+    }
+  }
+
+  return "";
+}

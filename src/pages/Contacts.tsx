@@ -18,7 +18,7 @@ import { nb } from "date-fns/locale";
 type SortField = "name" | "company" | "title" | "signal" | "owner" | "last_activity";
 type SortDir = "asc" | "desc";
 
-import { CATEGORIES, extractCategory } from "@/lib/categoryUtils";
+import { CATEGORIES, getEffectiveSignal } from "@/lib/categoryUtils";
 
 const SIGNAL_OPTIONS = CATEGORIES.map(c => ({ label: c.label, color: c.badgeColor }));
 
@@ -72,19 +72,30 @@ const Contacts = () => {
         if (a.contact_id && !lastActMap[a.contact_id]) lastActMap[a.contact_id] = a.created_at;
       });
 
-      // Signal: latest category from activities or tasks (by created_at desc)
-      const signalMap: Record<string, string> = {};
-      const allItems = [
-        ...(acts || []).map(a => ({ contact_id: a.contact_id, created_at: a.created_at, subject: a.subject, description: a.description })),
-        ...(tasks || []).map(t => ({ contact_id: t.contact_id, created_at: t.created_at, subject: t.title, description: t.description })),
-      ].sort((a, b) => b.created_at.localeCompare(a.created_at));
-
-      allItems.forEach(item => {
-        if (item.contact_id && !signalMap[item.contact_id]) {
-          const cat = extractCategory(item.subject, item.description);
-          if (cat) signalMap[item.contact_id] = cat;
+      // Signal: effective (expiry-aware) signal per contact
+      const contactActsMap: Record<string, typeof acts> = {};
+      const contactTasksMap: Record<string, typeof tasks> = {};
+      (acts || []).forEach(a => {
+        if (a.contact_id) {
+          if (!contactActsMap[a.contact_id]) contactActsMap[a.contact_id] = [];
+          contactActsMap[a.contact_id]!.push(a);
         }
       });
+      (tasks || []).forEach(t => {
+        if (t.contact_id) {
+          if (!contactTasksMap[t.contact_id]) contactTasksMap[t.contact_id] = [];
+          contactTasksMap[t.contact_id]!.push(t);
+        }
+      });
+
+      const signalMap: Record<string, string> = {};
+      for (const cid of contactIds) {
+        const sig = getEffectiveSignal(
+          (contactActsMap[cid] || []).map(a => ({ created_at: a.created_at, subject: a.subject!, description: a.description })),
+          (contactTasksMap[cid] || []).map(t => ({ created_at: t.created_at, title: t.title!, description: t.description, due_date: t.due_date })),
+        );
+        if (sig) signalMap[cid] = sig;
+      }
 
       // Open tasks count + overdue flag per contact
       const openTasksMap: Record<string, { count: number; overdue: boolean }> = {};

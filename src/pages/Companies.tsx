@@ -18,7 +18,7 @@ import { nb } from "date-fns/locale";
 type SortField = "name" | "type" | "signal" | "contacts" | "last_activity" | "tasks";
 type SortDir = "asc" | "desc";
 
-import { CATEGORIES, LEGACY_CATEGORY_MAP, normalizeCategoryLabel, extractCategory, SIGNAL_ORDER } from "@/lib/categoryUtils";
+import { CATEGORIES, LEGACY_CATEGORY_MAP, normalizeCategoryLabel, extractCategory, SIGNAL_ORDER, getEffectiveSignal } from "@/lib/categoryUtils";
 
 const TYPE_BADGE_COLORS: Record<string, { label: string; badgeColor: string }> = {
   prospect: { label: "Potensiell kunde", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
@@ -117,36 +117,38 @@ const Companies = () => {
       const lastActivityMap: Record<string, string> = {};
       const taskCountMap: Record<string, number> = {};
       const overdueTaskMap: Record<string, boolean> = {};
-      // Signal: find the category from the most recent activity or task per company
-      const signalMap: Record<string, string> = {};
-      const signalDateMap: Record<string, string> = {};
 
-      function trySetSignal(companyId: string, date: string, category: string) {
-        if (!category) return;
-        if (!signalDateMap[companyId] || date > signalDateMap[companyId]) {
-          signalDateMap[companyId] = date;
-          signalMap[companyId] = category;
-        }
+      // Collect activities and tasks per company for signal calculation
+      const companyActsMap: Record<string, any[]> = {};
+      const companyTasksMap: Record<string, any[]> = {};
+
+      function addAct(companyId: string, a: any) {
+        if (!companyActsMap[companyId]) companyActsMap[companyId] = [];
+        companyActsMap[companyId].push(a);
+      }
+      function addTask(companyId: string, t: any) {
+        if (!companyTasksMap[companyId]) companyTasksMap[companyId] = [];
+        companyTasksMap[companyId].push(t);
       }
 
       (actRes.data || []).forEach(a => {
         if (!a.company_id) return;
         if (isPast(a.created_at) && !lastActivityMap[a.company_id]) lastActivityMap[a.company_id] = a.created_at;
-        trySetSignal(a.company_id, a.created_at, extractCategory(a.subject, a.description));
+        addAct(a.company_id, a);
       });
 
       ((contactActRes as any).data || []).forEach((a: any) => {
         const cid = contactToCompany[a.contact_id];
         if (!cid) return;
         if (isPast(a.created_at) && (!lastActivityMap[cid] || a.created_at > lastActivityMap[cid])) lastActivityMap[cid] = a.created_at;
-        trySetSignal(cid, a.created_at, extractCategory(a.subject, a.description));
+        addAct(cid, a);
       });
 
       (taskRes.data || []).forEach(t => {
         if (!t.company_id) return;
         taskCountMap[t.company_id] = (taskCountMap[t.company_id] || 0) + 1;
         if (t.due_date && new Date(t.due_date) < new Date()) overdueTaskMap[t.company_id] = true;
-        trySetSignal(t.company_id, t.created_at, extractCategory(t.title, t.description));
+        addTask(t.company_id, t);
       });
 
       ((contactTaskRes as any).data || []).forEach((t: any) => {
@@ -154,8 +156,18 @@ const Companies = () => {
         if (!cid) return;
         taskCountMap[cid] = (taskCountMap[cid] || 0) + 1;
         if (t.due_date && new Date(t.due_date) < new Date()) overdueTaskMap[cid] = true;
-        trySetSignal(cid, t.created_at, extractCategory(t.title, t.description));
+        addTask(cid, t);
       });
+
+      // Compute effective signal per company
+      const signalMap: Record<string, string> = {};
+      for (const c of data) {
+        const sig = getEffectiveSignal(
+          (companyActsMap[c.id] || []).map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+          (companyTasksMap[c.id] || []).map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date })),
+        );
+        if (sig) signalMap[c.id] = sig;
+      }
 
       return data.map(c => ({
         ...c,
