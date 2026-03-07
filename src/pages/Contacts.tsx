@@ -38,7 +38,7 @@ const Contacts = () => {
   const [signalFilter, setSignalFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ first_name: "", last_name: "", email: "", phone: "", title: "", company_id: "" });
+  const [form, setForm] = useState({ first_name: "", last_name: "", email: "", phone: "", title: "", company_id: "", linkedin: "" });
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "last_activity", dir: "desc" });
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -132,14 +132,14 @@ const Contacts = () => {
       const { error } = await supabase.from("contacts").insert({
         first_name: form.first_name, last_name: form.last_name,
         email: form.email || null, phone: form.phone || null, title: form.title || null,
-        company_id: form.company_id || null, created_by: user?.id, owner_id: user?.id,
+        company_id: form.company_id || null, linkedin: form.linkedin || null, created_by: user?.id, owner_id: user?.id,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
       setOpen(false);
-      setForm({ first_name: "", last_name: "", email: "", phone: "", title: "", company_id: "" });
+      setForm({ first_name: "", last_name: "", email: "", phone: "", title: "", company_id: "", linkedin: "" });
       toast.success("Kontakt opprettet");
     },
     onError: () => toast.error("Kunne ikke opprette kontakt"),
@@ -323,6 +323,10 @@ const Contacts = () => {
                   <Label className="text-label">Telefon</Label>
                   <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="h-10 rounded-lg" />
                 </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-label">LinkedIn</Label>
+                <Input value={form.linkedin} onChange={(e) => setForm({ ...form, linkedin: e.target.value })} placeholder="https://linkedin.com/in/..." className="h-10 rounded-lg" />
               </div>
               <Button type="submit" className="w-full h-10 rounded-lg" disabled={createMutation.isPending}>
                 {createMutation.isPending ? "Oppretter..." : "Opprett"}
