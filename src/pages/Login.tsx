@@ -33,7 +33,7 @@ const Login = () => {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: "2.5rem",
+          gap: "1rem",
         }}
       >
         <img
