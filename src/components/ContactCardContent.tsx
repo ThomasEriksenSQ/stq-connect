@@ -1134,40 +1134,39 @@ function ActivityRow({
             </div>
           </div>
         ) : (
-          <div onClick={handleRowClick} className={cn(editable && "cursor-pointer")}>
-            {/* Title */}
-            <span className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</span>
+          <div onClick={handleRowClick} className={cn("flex items-start gap-3", editable && "cursor-pointer")}>
+            <div className="flex-1 min-w-0">
+              {/* Title */}
+              <span className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</span>
 
-            {/* Category badge */}
-            {displayCategory && (
-              <div className="mt-1">
-                <CategoryBadge label={displayCategory} />
-              </div>
-            )}
-
-            {/* Delete confirmation */}
-            {confirmDelete && (
-              <div className="flex items-center gap-2 mt-1 text-[0.75rem] animate-in fade-in duration-150">
-                <span className="text-destructive">Slett denne aktiviteten?</span>
-                <button onClick={() => { onDelete(activity.id); setConfirmDelete(false); }} className="text-destructive font-medium hover:underline">Ja, slett</button>
-                <button onClick={() => setConfirmDelete(false)} className="text-muted-foreground hover:text-foreground">Avbryt</button>
-              </div>
-            )}
-
-            {/* Description */}
-            {cleanDesc ? (
-              <div className="mt-1">
-                <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70">
-                  {cleanDesc}
-                </p>
-              </div>
-            ) : null}
-
-            {/* Meta */}
-            <div className="flex items-center gap-2 mt-1.5">
-              {ownerName && (
-                <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{ownerName}</span>
+              {/* Delete confirmation */}
+              {confirmDelete && (
+                <div className="flex items-center gap-2 mt-1 text-[0.75rem] animate-in fade-in duration-150">
+                  <span className="text-destructive">Slett denne aktiviteten?</span>
+                  <button onClick={() => { onDelete(activity.id); setConfirmDelete(false); }} className="text-destructive font-medium hover:underline">Ja, slett</button>
+                  <button onClick={() => setConfirmDelete(false)} className="text-muted-foreground hover:text-foreground">Avbryt</button>
+                </div>
               )}
+
+              {/* Description */}
+              {cleanDesc ? (
+                <div className="mt-0.5">
+                  <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70">
+                    {cleanDesc}
+                  </p>
+                </div>
+              ) : null}
+
+              {/* Owner badge */}
+              {ownerName && (
+                <div className="mt-1">
+                  <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{ownerName}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Right side: Date + Category (same as task rows) */}
+            <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="text-[0.8125rem] text-muted-foreground">
@@ -1176,6 +1175,7 @@ function ActivityRow({
                 </TooltipTrigger>
                 <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
               </Tooltip>
+              {displayCategory && <CategoryBadge label={displayCategory} />}
             </div>
           </div>
         )}
