@@ -238,7 +238,7 @@ const Contacts = () => {
 
               return (
                 <button key={contact.id} onClick={() => navigate(`/kontakter/${contact.id}`)}
-                  className="w-full grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_80px_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer">
+                  className="w-full grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer">
                   <div className="min-w-0">
                     <p className="text-[0.8125rem] font-medium text-foreground truncate">
                       {contact.first_name} {contact.last_name}
