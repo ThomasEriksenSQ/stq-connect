@@ -89,7 +89,7 @@ const Contacts = () => {
   const ownerMap = new Map<string, string>();
   contacts.forEach(c => {
     const id = getOwnerId(c);
-    const name = getOwnerFirstName(c);
+    const name = getOwnerName(c);
     if (id && name) ownerMap.set(id, name);
   });
   const uniqueOwners = Array.from(ownerMap.entries());
