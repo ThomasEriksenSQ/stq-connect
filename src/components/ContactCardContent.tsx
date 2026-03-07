@@ -913,14 +913,19 @@ function ActivityRow({
             ) : null}
 
             {/* Level 3: Meta */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <p className="text-[0.75rem] text-muted-foreground mt-1">
-                  {ownerName && <>{ownerName} · </>}{dateStr}{yearStr}
-                </p>
-              </TooltipTrigger>
-              <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
-            </Tooltip>
+            <div className="flex items-center gap-2 mt-1.5">
+              {ownerName && (
+                <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{ownerName}</span>
+              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-[0.8125rem] text-muted-foreground">
+                    {format(d, "d. MMM yyyy", { locale: nb })}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
+              </Tooltip>
+            </div>
           </>
         )}
       </div>
