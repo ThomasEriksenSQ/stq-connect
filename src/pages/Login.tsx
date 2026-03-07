@@ -20,11 +20,18 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-[380px] space-y-10 animate-fade-up">
-        <div className="space-y-2">
-          <h1 className="text-[1.75rem] font-bold tracking-tight">STACQ</h1>
-          <p className="text-[0.9375rem] text-muted-foreground leading-relaxed">
-            Logg inn for å fortsette
-          </p>
+        <div className="space-y-3 flex flex-col items-center text-center">
+          <img
+            src="/logo.png"
+            alt="STACQ CRM"
+            className="w-24 h-24 object-contain"
+          />
+          <div className="space-y-1">
+            <h1 className="text-[1.75rem] font-bold tracking-tight">STACQ CRM</h1>
+            <p className="text-[0.9375rem] text-muted-foreground leading-relaxed">
+              Hot &amp; Fast
+            </p>
+          </div>
         </div>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
