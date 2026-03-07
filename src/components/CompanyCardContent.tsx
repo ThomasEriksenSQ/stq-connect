@@ -422,8 +422,8 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                     ? `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}` : null;
                   const { title: displayTitle, category: displayCategory, cleanDesc: displayDesc } = extractTitleAndCategory(task.title, task.description);
                   return (
-                    <div key={task.id} className="flex items-start gap-2.5 py-2.5 px-1 rounded-md transition-all duration-200 group hover:bg-background/60">
-                      <div>
+                    <div key={task.id} className="flex items-start gap-2.5 py-2.5 px-1 rounded-md transition-all duration-200 group hover:bg-background/60 cursor-pointer" onClick={() => { if (task.contact_id) navigate(`/kontakter/${task.contact_id}`); }}>
+                      <div onClick={(e) => e.stopPropagation()}>
                         <Checkbox checked={false} onCheckedChange={() => toggleTaskMutation.mutate(task.id)}
                           className="h-4 w-4 rounded-[4px] border-2 border-muted-foreground/40 flex-shrink-0 mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
                       </div>
