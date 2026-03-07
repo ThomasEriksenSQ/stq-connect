@@ -36,15 +36,26 @@ const Login = () => {
           gap: "2.5rem",
         }}
       >
-        <img
-          src="/logo.png"
-          alt="STACQ CRM"
-          style={{
-            width: "480px",
-            height: "480px",
-            objectFit: "contain",
-          }}
-        />
+        <div style={{
+          width: "220px",
+          height: "220px",
+          borderRadius: "50%",
+          overflow: "hidden",
+          flexShrink: 0,
+        }}>
+          <img
+            src="/logo.png"
+            alt="STACQ CRM"
+            style={{
+              width: "140%",
+              height: "140%",
+              objectFit: "cover",
+              objectPosition: "center",
+              marginLeft: "-20%",
+              marginTop: "-20%",
+            }}
+          />
+        </div>
 
         <div
           style={{
