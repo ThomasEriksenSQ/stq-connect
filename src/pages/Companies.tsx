@@ -58,6 +58,11 @@ const Companies = () => {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", org_number: "", city: "", website: "", linkedin: "", status: "prospect" });
   const [locations, setLocations] = useState<string[]>([""]);
+  useEffect(() => {
+    if (form.city && locations[0] === "") {
+      setLocations((prev) => [form.city, ...prev.slice(1)]);
+    }
+  }, [form.city]);
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "last_activity", dir: "desc" });
   const queryClient = useQueryClient();
   const { user } = useAuth();
