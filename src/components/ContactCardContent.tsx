@@ -829,7 +829,7 @@ function TaskRow({
         />
       </div>
       <div className="flex-1 min-w-0">
-        <span className="text-[1rem] font-semibold text-foreground">{task.title}</span>
+        <span className="text-[1rem] font-bold text-foreground">{task.title}</span>
         {task.description && (
           <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{task.description}</p>
         )}
