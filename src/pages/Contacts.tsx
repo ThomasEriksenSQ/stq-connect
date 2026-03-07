@@ -282,61 +282,7 @@ const Contacts = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-[1.375rem] font-bold">Kontakter</h1>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="rounded-lg h-9 px-3.5 text-[0.8125rem] font-medium gap-1.5">
-              <Plus className="h-4 w-4" />Ny kontakt
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[440px] rounded-xl">
-            <DialogHeader><DialogTitle>Ny kontakt</DialogTitle></DialogHeader>
-            <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }} className="space-y-4 mt-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-label">Fornavn</Label>
-                  <Input value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} required className="h-10 rounded-lg" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-label">Etternavn</Label>
-                  <Input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} required className="h-10 rounded-lg" />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-label">Selskap</Label>
-                <Select value={form.company_id} onValueChange={(v) => setForm({ ...form, company_id: v })}>
-                  <SelectTrigger className="h-10 rounded-lg"><SelectValue placeholder="Velg selskap" /></SelectTrigger>
-                  <SelectContent>
-                    {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-label">Stilling</Label>
-                <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="h-10 rounded-lg" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-label">E-post</Label>
-                  <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} type="email" className="h-10 rounded-lg" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-label">Telefon</Label>
-                  <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="h-10 rounded-lg" />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-label">LinkedIn</Label>
-                <Input value={form.linkedin} onChange={(e) => setForm({ ...form, linkedin: e.target.value })} placeholder="https://linkedin.com/in/..." className="h-10 rounded-lg" />
-              </div>
-              <Button type="submit" className="w-full h-10 rounded-lg" disabled={createMutation.isPending}>
-                {createMutation.isPending ? "Oppretter..." : "Opprett"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
       </div>
-
-      {/* Search + count */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
