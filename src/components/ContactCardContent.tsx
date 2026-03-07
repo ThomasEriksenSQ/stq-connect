@@ -921,7 +921,7 @@ function ActivityTimeline({
             {/* Vertical line */}
             <div className="absolute left-[5px] top-[5px] bottom-0 w-[2px] bg-border" />
 
-            <div className="space-y-5">
+            <div className="space-y-6">
               {group.items.map((activity) => (
                 <ActivityRow
                   key={activity.id}
