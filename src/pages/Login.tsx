@@ -1,5 +1,3 @@
-Replace the entire content of src/pages/Login.tsx with this code:
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
