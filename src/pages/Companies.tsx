@@ -468,8 +468,9 @@ const Companies = () => {
               const status = getStatus(company.status);
               const contactCount = company.contacts?.length || 0;
               return (
-                <button key={company.id} onClick={() => navigate(`/selskaper/${company.id}`)}
-                  className="w-full grid grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1.2fr)_60px_70px_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer">
+                <div key={company.id}
+                  className="w-full grid grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1.2fr)_60px_70px_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer"
+                  onClick={() => navigate(`/selskaper/${company.id}`)}>
                   <div className="min-w-0">
                     <span className="text-[0.8125rem] font-medium text-foreground truncate block">{company.name}</span>
                     {company.industry && (
@@ -483,16 +484,37 @@ const Companies = () => {
                     {(company.status === "partner") && <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-gray-100 text-gray-600 border-gray-200">Partner</span>}
                     {!["prospect","customer","kunde","churned","partner"].includes(company.status) && <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-gray-100 text-gray-600 border-gray-200">{company.status}</span>}
                   </span>
-                  <span className="min-w-0">
-                    {company.signal ? (() => {
-                      const cat = CATEGORIES.find(c => c.label === company.signal);
-                      return cat ? (
-                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold truncate ${cat.badgeColor}`}>
-                          {company.signal}
-                        </span>
-                      ) : <span className="text-[0.75rem] text-muted-foreground">—</span>;
-                    })() : <span className="text-[0.75rem] text-muted-foreground">—</span>}
-                  </span>
+                  {/* SIGNAL - inline editable */}
+                  <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        {(() => {
+                          const signalBadge = getSignalBadge(company.signal || null);
+                          return signalBadge ? (
+                            <button className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer ${signalBadge.color}`}>
+                              {company.signal}
+                            </button>
+                          ) : (
+                            <button className="inline-flex items-center rounded-full border border-dashed border-border px-2 py-0.5 text-[0.6875rem] text-muted-foreground/50 cursor-pointer hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors">
+                              + Signal
+                            </button>
+                          );
+                        })()}
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        {SIGNAL_OPTIONS.map(s => (
+                          <DropdownMenuItem
+                            key={s.label}
+                            onClick={() => setSignalMutation.mutate({ companyId: company.id, label: s.label })}
+                          >
+                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${s.color}`}>
+                              {s.label}
+                            </span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                   <span className="text-[0.8125rem] text-muted-foreground">
                     {contactCount > 0 ? <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" />{contactCount}</span> : ""}
                   </span>
@@ -509,7 +531,7 @@ const Companies = () => {
                       </Tooltip>
                     ) : ""}
                   </span>
-                </button>
+                </div>
               );
             })}
           </div>
