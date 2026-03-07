@@ -261,7 +261,7 @@ const Companies = () => {
     </button>
   );
 
-  const getStatus = (status: string) => statusLabels[status] || { label: status, className: "bg-secondary text-muted-foreground" };
+  const getStatus = (status: string) => statusLabels[status] || { label: status, className: "bg-secondary text-muted-foreground", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" };
 
   return (
     <div className="space-y-4">
