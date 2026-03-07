@@ -1061,7 +1061,7 @@ function ActivityRow({
             {/* Level 2: Description */}
             {desc ? (
               <div className="mt-1">
-                <p className="text-[0.875rem] leading-relaxed whitespace-pre-wrap text-foreground/70">
+                <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70">
                   {desc}
                 </p>
               </div>
