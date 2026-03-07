@@ -139,7 +139,7 @@ const Contacts = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
       setOpen(false);
-      setForm({ first_name: "", last_name: "", email: "", phone: "", title: "", company_id: "" });
+      setForm({ first_name: "", last_name: "", email: "", phone: "", title: "", company_id: "", linkedin: "" });
       toast.success("Kontakt opprettet");
     },
     onError: () => toast.error("Kunne ikke opprette kontakt"),
