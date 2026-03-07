@@ -399,12 +399,12 @@ const Companies = () => {
         <p className="text-sm text-muted-foreground py-12 text-center">Ingen selskaper funnet</p>
       ) : (
         <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
-          <div className="grid grid-cols-[minmax(0,2.5fr)_80px_60px_100px_70px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_60px_70px_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="name">Selskap</SortHeader>
-            <SortHeader field="owner">Eier</SortHeader>
+            <SortHeader field="signal">Signal</SortHeader>
             <SortHeader field="contacts">Kont.</SortHeader>
-            <SortHeader field="last_activity">Siste akt.</SortHeader>
-            <SortHeader field="tasks" className="justify-end">Oppf.</SortHeader>
+            <SortHeader field="tasks">Oppf.</SortHeader>
+            <SortHeader field="last_activity" className="justify-end">Siste akt.</SortHeader>
           </div>
           <div className="divide-y divide-border">
             {sorted.map((company) => {
