@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Users, ArrowUpDown, Loader2 } from "lucide-react";
+import { Plus, Search, Users, ArrowUpDown, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { BrregSearch, lookupByOrgNr } from "@/components/BrregSearch";
@@ -56,7 +56,13 @@ const Companies = () => {
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", org_number: "", city: "", website: "", linkedin: "" });
+  const [form, setForm] = useState({ name: "", org_number: "", city: "", website: "", linkedin: "", status: "prospect" });
+  const [locations, setLocations] = useState<string[]>([""]);
+  useEffect(() => {
+    if (form.city && locations[0] === "") {
+      setLocations((prev) => [form.city, ...prev.slice(1)]);
+    }
+  }, [form.city]);
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "last_activity", dir: "desc" });
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -105,13 +111,15 @@ const Companies = () => {
       const { error } = await supabase.from("companies").insert({
         name: form.name, org_number: form.org_number || null, city: form.city || null,
         website: form.website || null, linkedin: form.linkedin || null, created_by: user?.id,
+        status: form.status,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["companies-full"] });
       setOpen(false);
-      setForm({ name: "", org_number: "", city: "", website: "", linkedin: "" });
+      setForm({ name: "", org_number: "", city: "", website: "", linkedin: "", status: "prospect" });
+      setLocations([""]);
       toast.success("Selskap opprettet");
     },
     onError: () => toast.error("Kunne ikke opprette selskap"),
@@ -208,6 +216,66 @@ const Companies = () => {
               <div className="space-y-1.5">
                 <Label className="text-label">Nettside</Label>
                 <Input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://" className="h-10 rounded-lg" type="url" />
+              </div>
+              {/* STATUS */}
+              <div className="space-y-1.5">
+                <Label className="text-label">Status</Label>
+                <div className="flex gap-1.5">
+                  {([
+                    { value: "prospect", label: "Potensiell kunde" },
+                    { value: "customer", label: "Kunde" },
+                    { value: "churned", label: "Ikke aktuell" },
+                  ] as const).map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, status: opt.value }))}
+                      className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                        form.status === opt.value
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* AVDELINGER */}
+              <div className="space-y-1.5">
+                <Label className="text-label">Avdelinger</Label>
+                <div className="space-y-2">
+                  {locations.map((loc, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <Input
+                        value={loc}
+                        onChange={(e) => {
+                          const next = [...locations];
+                          next[i] = e.target.value;
+                          setLocations(next);
+                        }}
+                        placeholder="By eller sted"
+                        className="h-10 rounded-lg flex-1"
+                      />
+                      {locations.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setLocations(locations.filter((_, j) => j !== i))}
+                          className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setLocations([...locations, ""])}
+                    className="w-full h-9 text-[0.8125rem] text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg border border-dashed border-border transition-colors"
+                  >
+                    + Legg til avdeling
+                  </button>
+                </div>
               </div>
               <Button type="submit" className="w-full h-10 rounded-lg" disabled={createMutation.isPending}>
                 {createMutation.isPending ? "Oppretter..." : "Opprett"}
