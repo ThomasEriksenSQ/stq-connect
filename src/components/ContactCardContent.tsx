@@ -680,7 +680,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
       {/* ── ZONE D: Aktiviteter Timeline ── */}
       <ActivityTimeline
         activities={activities}
-        profileMap={profileMap}
+        profileMap={profileMapFull}
         editable={editable}
         onDelete={(id) => deleteActivityMutation.mutate(id)}
         onUpdateActivity={(id, updates) => updateActivityMutation.mutate({ id, updates })}
