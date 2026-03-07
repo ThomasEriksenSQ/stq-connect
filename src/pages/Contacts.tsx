@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Search, Building2, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,14 +15,37 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 
-type SortField = "name" | "company" | "title" | "owner" | "last_activity";
+type SortField = "name" | "company" | "title" | "signal" | "owner" | "last_activity";
 type SortDir = "asc" | "desc";
+
+const SIGNAL_OPTIONS = [
+  { label: "Behov nå", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  { label: "Får fremtidig behov", color: "bg-blue-100 text-blue-800 border-blue-200" },
+  { label: "Vil kanskje få behov", color: "bg-amber-100 text-amber-800 border-amber-200" },
+  { label: "Ukjent om behov", color: "bg-gray-100 text-gray-600 border-gray-200" },
+  { label: "Ikke aktuelt", color: "bg-red-50 text-red-700 border-red-200" },
+];
+
+function extractCategory(description: string | null): string | null {
+  if (!description) return null;
+  const match = description.match(/^\[([^\]]+)\]/);
+  return match ? match[1] : null;
+}
+
+function getSignalBadge(category: string | null) {
+  if (!category) return null;
+  return SIGNAL_OPTIONS.find((s) => s.label === category) || null;
+}
+
+const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer";
+const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
+const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground font-medium`;
 
 const Contacts = () => {
   const [search, setSearch] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("all");
-  const [filterCallList, setFilterCallList] = useState(false);
-  const [filterCvEmail, setFilterCvEmail] = useState(false);
+  const [signalFilter, setSignalFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ first_name: "", last_name: "", email: "", phone: "", title: "", company_id: "" });
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "last_activity", dir: "desc" });
@@ -41,18 +63,56 @@ const Contacts = () => {
       if (error) throw error;
 
       const contactIds = data.map(c => c.id);
-      const { data: acts } = await supabase
-        .from("activities")
-        .select("contact_id, created_at")
-        .in("contact_id", contactIds)
-        .order("created_at", { ascending: false });
 
+      const [{ data: acts }, { data: tasks }] = await Promise.all([
+        supabase
+          .from("activities")
+          .select("contact_id, created_at, description")
+          .in("contact_id", contactIds)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("tasks")
+          .select("contact_id, created_at, due_date, status, description")
+          .in("contact_id", contactIds),
+      ]);
+
+      // Last activity date map
       const lastActMap: Record<string, string> = {};
       (acts || []).forEach(a => {
         if (a.contact_id && !lastActMap[a.contact_id]) lastActMap[a.contact_id] = a.created_at;
       });
 
-      return data.map(c => ({ ...c, lastActivity: lastActMap[c.id] || null }));
+      // Signal: latest category from activities or tasks (by created_at desc)
+      const signalMap: Record<string, string> = {};
+      const allItems = [
+        ...(acts || []).map(a => ({ contact_id: a.contact_id, created_at: a.created_at, description: a.description })),
+        ...(tasks || []).map(t => ({ contact_id: t.contact_id, created_at: t.created_at, description: t.description })),
+      ].sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+      allItems.forEach(item => {
+        if (item.contact_id && !signalMap[item.contact_id]) {
+          const cat = extractCategory(item.description);
+          if (cat) signalMap[item.contact_id] = cat;
+        }
+      });
+
+      // Open tasks count + overdue flag per contact
+      const openTasksMap: Record<string, { count: number; overdue: boolean }> = {};
+      const today = new Date().toISOString().slice(0, 10);
+      (tasks || []).forEach(t => {
+        if (t.contact_id && t.status === "open") {
+          if (!openTasksMap[t.contact_id]) openTasksMap[t.contact_id] = { count: 0, overdue: false };
+          openTasksMap[t.contact_id].count++;
+          if (t.due_date && t.due_date < today) openTasksMap[t.contact_id].overdue = true;
+        }
+      });
+
+      return data.map(c => ({
+        ...c,
+        lastActivity: lastActMap[c.id] || null,
+        signal: signalMap[c.id] || null,
+        openTasks: openTasksMap[c.id] || { count: 0, overdue: false },
+      }));
     },
   });
 
@@ -83,6 +143,26 @@ const Contacts = () => {
     onError: () => toast.error("Kunne ikke opprette kontakt"),
   });
 
+  const toggleMutation = useMutation({
+    mutationFn: async ({ id, field, value }: { id: string; field: "cv_email" | "call_list"; value: boolean }) => {
+      const { error } = await supabase.from("contacts").update({ [field]: value }).eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async ({ id, field, value }) => {
+      await queryClient.cancelQueries({ queryKey: ["contacts-full"] });
+      const prev = queryClient.getQueryData(["contacts-full"]);
+      queryClient.setQueryData(["contacts-full"], (old: any[]) =>
+        old?.map(c => c.id === id ? { ...c, [field]: value } : c)
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      queryClient.setQueryData(["contacts-full"], ctx?.prev);
+      toast.error("Kunne ikke oppdatere");
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["contacts-full"] }),
+  });
+
   const getOwnerId = (contact: any) => (contact.profiles as any)?.id || null;
   const getOwnerName = (contact: any) => (contact.profiles as any)?.full_name || null;
 
@@ -99,9 +179,11 @@ const Contacts = () => {
     const matchSearch = !q || `${c.first_name} ${c.last_name}`.toLowerCase().includes(q) ||
       (c.companies as any)?.name?.toLowerCase().includes(q) || c.title?.toLowerCase().includes(q);
     const matchOwner = ownerFilter === "all" || getOwnerId(c) === ownerFilter;
-    const matchCallList = !filterCallList || c.call_list;
-    const matchCvEmail = !filterCvEmail || c.cv_email;
-    return matchSearch && matchOwner && matchCallList && matchCvEmail;
+    const matchSignal = signalFilter === "all" || (c as any).signal === signalFilter;
+    const matchType = typeFilter === "all" ||
+      (typeFilter === "call_list" && c.call_list) ||
+      (typeFilter === "cv_email" && c.cv_email);
+    return matchSearch && matchOwner && matchSignal && matchType;
   });
 
   const sorted = [...filtered].sort((a, b) => {
@@ -110,6 +192,7 @@ const Contacts = () => {
       case "name": return dir * `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`, "nb");
       case "company": return dir * ((a.companies as any)?.name || "").localeCompare((b.companies as any)?.name || "", "nb");
       case "title": return dir * (a.title || "").localeCompare(b.title || "", "nb");
+      case "signal": return dir * ((a as any).signal || "").localeCompare((b as any).signal || "", "nb");
       case "owner": return dir * (getOwnerName(a) || "").localeCompare(getOwnerName(b) || "", "nb");
       case "last_activity":
         if (!(a as any).lastActivity && !(b as any).lastActivity) return 0;
@@ -130,6 +213,10 @@ const Contacts = () => {
       {children}
       <ArrowUpDown className={`h-3 w-3 ${sort.field === field ? "text-foreground" : "text-muted-foreground/20"}`} />
     </button>
+  );
+
+  const Chip = ({ label, value, current, onSelect }: { label: string; value: string; current: string; onSelect: (v: string) => void }) => (
+    <button onClick={() => onSelect(value)} className={current === value ? CHIP_ON : CHIP_OFF}>{label}</button>
   );
 
   return (
@@ -186,33 +273,41 @@ const Contacts = () => {
         </Dialog>
       </div>
 
-      {/* Filter bar */}
-      <div className="flex items-center gap-3 flex-wrap">
+      {/* Search + count */}
+      <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
           <Input placeholder="Søk..." value={search} onChange={(e) => setSearch(e.target.value)}
             className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border" />
         </div>
-        <Select value={ownerFilter} onValueChange={setOwnerFilter}>
-          <SelectTrigger className="h-9 w-auto min-w-[100px] rounded-lg text-[0.8125rem] border-border bg-card">
-            <SelectValue placeholder="Eier: Alle" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Eier: Alle</SelectItem>
-            {uniqueOwners.map(([id, name]) => (
-              <SelectItem key={id as string} value={id as string}>{name as string}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <label className="inline-flex items-center gap-1.5 cursor-pointer text-[0.8125rem] text-muted-foreground">
-          <Checkbox checked={filterCallList} onCheckedChange={(c) => setFilterCallList(!!c)} className="h-3.5 w-3.5 rounded-[3px]" />
-          Innkjøper
-        </label>
-        <label className="inline-flex items-center gap-1.5 cursor-pointer text-[0.8125rem] text-muted-foreground">
-          <Checkbox checked={filterCvEmail} onCheckedChange={(c) => setFilterCvEmail(!!c)} className="h-3.5 w-3.5 rounded-[3px]" />
-          CV-Epost
-        </label>
         <span className="text-[0.75rem] text-muted-foreground ml-auto">{filtered.length} kontakter</span>
+      </div>
+
+      {/* Chip filters */}
+      <div className="space-y-2">
+        {/* EIER */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Eier</span>
+          <Chip label="Alle" value="all" current={ownerFilter} onSelect={setOwnerFilter} />
+          {uniqueOwners.map(([id, name]) => (
+            <Chip key={id} label={name} value={id} current={ownerFilter} onSelect={setOwnerFilter} />
+          ))}
+        </div>
+        {/* SIGNAL */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Signal</span>
+          <Chip label="Alle" value="all" current={signalFilter} onSelect={setSignalFilter} />
+          {SIGNAL_OPTIONS.map((s) => (
+            <Chip key={s.label} label={s.label} value={s.label} current={signalFilter} onSelect={setSignalFilter} />
+          ))}
+        </div>
+        {/* TYPE */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Type</span>
+          <Chip label="Alle" value="all" current={typeFilter} onSelect={setTypeFilter} />
+          <Chip label="Innkjøper" value="call_list" current={typeFilter} onSelect={setTypeFilter} />
+          <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
+        </div>
       </div>
 
       {/* Table */}
@@ -222,39 +317,76 @@ const Contacts = () => {
         <p className="text-sm text-muted-foreground py-12 text-center">Ingen kontakter funnet</p>
       ) : (
         <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
-          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_90px_70px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="name">Navn</SortHeader>
             <SortHeader field="company">Selskap</SortHeader>
             <SortHeader field="title">Stilling</SortHeader>
+            <SortHeader field="signal">Signal</SortHeader>
+            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Tags</span>
+            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground text-center">Oppf.</span>
             <SortHeader field="last_activity" className="justify-end">Siste akt.</SortHeader>
           </div>
           <div className="divide-y divide-border">
             {sorted.map((contact) => {
               const companyName = (contact.companies as any)?.name;
-              const flags = [
-                contact.call_list && "Innkjøper",
-                contact.cv_email && "CV-Epost",
-              ].filter(Boolean);
+              const signal = (contact as any).signal as string | null;
+              const signalBadge = getSignalBadge(signal);
+              const openTasks = (contact as any).openTasks as { count: number; overdue: boolean };
 
               return (
-                <button key={contact.id} onClick={() => navigate(`/kontakter/${contact.id}`)}
-                  className="w-full grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer">
-                  <div className="min-w-0">
+                <div key={contact.id} className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_90px_70px_90px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75">
+                  {/* NAME - clickable */}
+                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="min-w-0 text-left cursor-pointer">
                     <p className="text-[0.8125rem] font-medium text-foreground truncate">
                       {contact.first_name} {contact.last_name}
                     </p>
-                    {flags.length > 0 && (
-                      <div className="flex gap-1 mt-0.5">
-                        {flags.map((f) => (
-                          <span key={f} className="text-[0.5625rem] font-medium px-1.5 py-0 rounded-[4px] bg-tag text-tag-foreground">{f}</span>
-                        ))}
-                      </div>
+                  </button>
+                  {/* COMPANY */}
+                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate flex items-center gap-1 text-left cursor-pointer">
+                    {companyName ? <><Building2 className="h-3 w-3 flex-shrink-0" />{companyName}</> : ""}
+                  </button>
+                  {/* TITLE */}
+                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate text-left cursor-pointer">
+                    {contact.title?.slice(0, 25) || ""}
+                  </button>
+                  {/* SIGNAL */}
+                  <div className="min-w-0">
+                    {signalBadge ? (
+                      <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${signalBadge.color}`}>
+                        {signal}
+                      </span>
+                    ) : (
+                      <span className="text-[0.75rem] text-muted-foreground">—</span>
                     )}
                   </div>
-                  <span className="text-[0.8125rem] text-muted-foreground truncate flex items-center gap-1">
-                    {companyName ? <><Building2 className="h-3 w-3 flex-shrink-0" />{companyName}</> : ""}
-                  </span>
-                  <span className="text-[0.8125rem] text-muted-foreground truncate">{contact.title?.slice(0, 25) || ""}</span>
+                  {/* TAGS */}
+                  <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => toggleMutation.mutate({ id: contact.id, field: "cv_email", value: !contact.cv_email })}
+                      className={contact.cv_email
+                        ? "rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
+                        : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
+                      }
+                    >CV</button>
+                    <button
+                      onClick={() => toggleMutation.mutate({ id: contact.id, field: "call_list", value: !contact.call_list })}
+                      className={contact.call_list
+                        ? "rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
+                        : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
+                      }
+                    >INN</button>
+                  </div>
+                  {/* OPPFØLGINGER */}
+                  <div className="text-center">
+                    {openTasks.count > 0 ? (
+                      <span className={`text-[0.8125rem] font-medium ${openTasks.overdue ? "text-destructive" : "text-foreground"}`}>
+                        {openTasks.count}
+                      </span>
+                    ) : (
+                      <span className="text-[0.75rem] text-muted-foreground">—</span>
+                    )}
+                  </div>
+                  {/* SISTE AKT */}
                   <span className="text-[0.75rem] text-muted-foreground text-right">
                     {(contact as any).lastActivity ? (
                       <Tooltip>
@@ -265,7 +397,7 @@ const Contacts = () => {
                       </Tooltip>
                     ) : ""}
                   </span>
-                </button>
+                </div>
               );
             })}
           </div>
