@@ -413,7 +413,7 @@ const Companies = () => {
               const ownerName = getOwnerFirstName(company);
               return (
                 <button key={company.id} onClick={() => navigate(`/selskaper/${company.id}`)}
-                  className="w-full grid grid-cols-[minmax(0,2.5fr)_80px_60px_100px_70px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer">
+                  className="w-full grid grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_60px_70px_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-[0.8125rem] font-medium text-foreground truncate">{company.name}</span>
@@ -423,11 +423,23 @@ const Companies = () => {
                       <p className="text-[0.6875rem] text-muted-foreground truncate mt-0.5">{company.industry}</p>
                     )}
                   </div>
-                  <span className="text-[0.8125rem] text-muted-foreground truncate">{ownerName || ""}</span>
+                  <span className="min-w-0">
+                    {company.signal ? (() => {
+                      const cat = CATEGORIES.find(c => c.label === company.signal);
+                      return cat ? (
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold truncate ${cat.badgeColor}`}>
+                          {company.signal}
+                        </span>
+                      ) : <span className="text-[0.75rem] text-muted-foreground">—</span>;
+                    })() : <span className="text-[0.75rem] text-muted-foreground">—</span>}
+                  </span>
                   <span className="text-[0.8125rem] text-muted-foreground">
                     {contactCount > 0 ? <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" />{contactCount}</span> : ""}
                   </span>
-                  <span className="text-[0.75rem] text-muted-foreground">
+                  <span className={`text-[0.8125rem] ${company.hasOverdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                    {company.taskCount > 0 ? company.taskCount : ""}
+                  </span>
+                  <span className="text-[0.75rem] text-muted-foreground text-right">
                     {company.lastActivity ? (
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -436,9 +448,6 @@ const Companies = () => {
                         <TooltipContent>{format(new Date(company.lastActivity), "d. MMMM yyyy", { locale: nb })}</TooltipContent>
                       </Tooltip>
                     ) : ""}
-                  </span>
-                  <span className={`text-[0.8125rem] text-right ${company.hasOverdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
-                    {company.taskCount > 0 ? company.taskCount : ""}
                   </span>
                 </button>
               );
