@@ -200,17 +200,13 @@ const Companies = () => {
     onError: () => toast.error("Kunne ikke opprette selskap"),
   });
 
-  const getOwnerFirstName = (company: any) => {
-    const fullName = (company.profiles as any)?.full_name;
-    return fullName ? fullName.split(" ")[0] : null;
-  };
   const getOwnerId = (company: any) => (company.profiles as any)?.id || null;
 
   const ownerMap = new Map<string, string>();
   companies.forEach(c => {
     const id = getOwnerId(c);
-    const name = getOwnerFirstName(c);
-    if (id && name) ownerMap.set(id, name);
+    const fullName = (c.profiles as any)?.full_name;
+    if (id && fullName) ownerMap.set(id, fullName);
   });
   const ownerList = Array.from(ownerMap.entries());
 
