@@ -56,7 +56,8 @@ const Companies = () => {
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", org_number: "", city: "", website: "", linkedin: "" });
+  const [form, setForm] = useState({ name: "", org_number: "", city: "", website: "", linkedin: "", status: "prospect" });
+  const [locations, setLocations] = useState<string[]>([""]);
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "last_activity", dir: "desc" });
   const queryClient = useQueryClient();
   const { user } = useAuth();
