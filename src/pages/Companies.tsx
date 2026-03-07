@@ -215,7 +215,8 @@ const Companies = () => {
     const matchSearch = !q || c.name.toLowerCase().includes(q) || c.org_number?.includes(q) || c.industry?.toLowerCase().includes(q);
     const matchOwner = ownerFilter === "all" || getOwnerId(c) === ownerFilter;
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
-    return matchSearch && matchOwner && matchStatus;
+    const matchSignal = signalFilter === "all" || c.signal === signalFilter;
+    return matchSearch && matchOwner && matchStatus && matchSignal;
   });
 
   const sorted = [...filtered].sort((a, b) => {
