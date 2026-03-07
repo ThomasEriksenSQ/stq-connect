@@ -93,8 +93,8 @@ export function AppLayout() {
         </div>
       </header>
 
-      <main className="flex-1 px-8 py-7 overflow-auto">
-        <div className="max-w-6xl mx-auto animate-fade-up">
+      <main className="flex-1 overflow-auto">
+        <div className="max-w-6xl mx-auto px-8 py-7 animate-fade-up">
           <Outlet />
         </div>
       </main>
