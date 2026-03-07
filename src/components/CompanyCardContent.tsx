@@ -5,9 +5,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Phone, Mail, Globe, Linkedin, FileText, Calendar, CalendarDays, ExternalLink, ChevronRight, Pencil, User, MessageCircle } from "lucide-react";
+import { Phone, Mail, Globe, Linkedin, FileText, Calendar, CalendarDays, ExternalLink, ChevronRight, Pencil, User, MessageCircle, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday, getYear } from "date-fns";
 import { nb } from "date-fns/locale";
@@ -15,6 +18,9 @@ import { relativeDate, fullDate } from "@/lib/relativeDate";
 import { cleanDescription } from "@/lib/cleanDescription";
 import InlineEdit from "@/components/InlineEdit";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+
+
 
 /* ── Category system (shared with ContactCardContent) ── */
 const CATEGORIES = [
@@ -94,6 +100,9 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [editingNotes, setEditingNotes] = useState(false);
+  const [newContactOpen, setNewContactOpen] = useState(false);
+  const [contactForm, setContactForm] = useState({ first_name: "", last_name: "", email: "", phone: "", title: "", linkedin: "" });
+  const { user } = useAuth();
 
   const { data: company, isLoading } = useQuery({
     queryKey: ["company", companyId],
@@ -415,7 +424,66 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
 
         {/* Right: Contacts */}
         <div className="space-y-2">
-          <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">Kontakter · {contacts.length}</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">Kontakter · {contacts.length}</h3>
+            {editable && (
+              <Dialog open={newContactOpen} onOpenChange={setNewContactOpen}>
+                <DialogTrigger asChild>
+                  <button className="inline-flex items-center gap-1 text-[0.75rem] font-medium text-primary hover:underline">
+                    <Plus className="h-3 w-3" />Ny kontakt
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[440px] rounded-xl">
+                  <DialogHeader><DialogTitle>Ny kontakt</DialogTitle></DialogHeader>
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    const { error } = await supabase.from("contacts").insert({
+                      first_name: contactForm.first_name, last_name: contactForm.last_name,
+                      email: contactForm.email || null, phone: contactForm.phone || null,
+                      title: contactForm.title || null, linkedin: contactForm.linkedin || null,
+                      company_id: companyId, created_by: user?.id, owner_id: user?.id,
+                    });
+                    if (error) { toast.error("Kunne ikke opprette kontakt"); return; }
+                    queryClient.invalidateQueries({ queryKey: ["company-contacts", companyId] });
+                    queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
+                    setNewContactOpen(false);
+                    setContactForm({ first_name: "", last_name: "", email: "", phone: "", title: "", linkedin: "" });
+                    toast.success("Kontakt opprettet");
+                  }} className="space-y-4 mt-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-label">Fornavn</Label>
+                        <Input value={contactForm.first_name} onChange={(e) => setContactForm({ ...contactForm, first_name: e.target.value })} required className="h-10 rounded-lg" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-label">Etternavn</Label>
+                        <Input value={contactForm.last_name} onChange={(e) => setContactForm({ ...contactForm, last_name: e.target.value })} required className="h-10 rounded-lg" />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-label">Stilling</Label>
+                      <Input value={contactForm.title} onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })} className="h-10 rounded-lg" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-label">E-post</Label>
+                        <Input value={contactForm.email} onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })} type="email" className="h-10 rounded-lg" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-label">Telefon</Label>
+                        <Input value={contactForm.phone} onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })} className="h-10 rounded-lg" />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-label">LinkedIn</Label>
+                      <Input value={contactForm.linkedin} onChange={(e) => setContactForm({ ...contactForm, linkedin: e.target.value })} placeholder="https://linkedin.com/in/..." className="h-10 rounded-lg" />
+                    </div>
+                    <Button type="submit" className="w-full h-10 rounded-lg">Opprett</Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
           {contacts.length === 0 ? (
             <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen kontakter</p>
           ) : (

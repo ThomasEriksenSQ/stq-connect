@@ -2,13 +2,9 @@ import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Search, Building2, ArrowUpDown } from "lucide-react";
+import { Search, Building2, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { relativeDate } from "@/lib/relativeDate";
@@ -37,8 +33,6 @@ const Contacts = () => {
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [signalFilter, setSignalFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ first_name: "", last_name: "", email: "", phone: "", title: "", company_id: "", linkedin: "" });
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "last_activity", dir: "desc" });
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -118,32 +112,6 @@ const Contacts = () => {
     },
   });
 
-  const { data: companies = [] } = useQuery({
-    queryKey: ["companies"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("companies").select("id, name").order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const createMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("contacts").insert({
-        first_name: form.first_name, last_name: form.last_name,
-        email: form.email || null, phone: form.phone || null, title: form.title || null,
-        company_id: form.company_id || null, linkedin: form.linkedin || null, created_by: user?.id, owner_id: user?.id,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
-      setOpen(false);
-      setForm({ first_name: "", last_name: "", email: "", phone: "", title: "", company_id: "", linkedin: "" });
-      toast.success("Kontakt opprettet");
-    },
-    onError: () => toast.error("Kunne ikke opprette kontakt"),
-  });
 
   const pendingToggles = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
@@ -282,61 +250,7 @@ const Contacts = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-[1.375rem] font-bold">Kontakter</h1>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="rounded-lg h-9 px-3.5 text-[0.8125rem] font-medium gap-1.5">
-              <Plus className="h-4 w-4" />Ny kontakt
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[440px] rounded-xl">
-            <DialogHeader><DialogTitle>Ny kontakt</DialogTitle></DialogHeader>
-            <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }} className="space-y-4 mt-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-label">Fornavn</Label>
-                  <Input value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} required className="h-10 rounded-lg" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-label">Etternavn</Label>
-                  <Input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} required className="h-10 rounded-lg" />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-label">Selskap</Label>
-                <Select value={form.company_id} onValueChange={(v) => setForm({ ...form, company_id: v })}>
-                  <SelectTrigger className="h-10 rounded-lg"><SelectValue placeholder="Velg selskap" /></SelectTrigger>
-                  <SelectContent>
-                    {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-label">Stilling</Label>
-                <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="h-10 rounded-lg" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-label">E-post</Label>
-                  <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} type="email" className="h-10 rounded-lg" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-label">Telefon</Label>
-                  <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="h-10 rounded-lg" />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-label">LinkedIn</Label>
-                <Input value={form.linkedin} onChange={(e) => setForm({ ...form, linkedin: e.target.value })} placeholder="https://linkedin.com/in/..." className="h-10 rounded-lg" />
-              </div>
-              <Button type="submit" className="w-full h-10 rounded-lg" disabled={createMutation.isPending}>
-                {createMutation.isPending ? "Oppretter..." : "Opprett"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
       </div>
-
-      {/* Search + count */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
