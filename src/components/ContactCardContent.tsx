@@ -382,40 +382,41 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           </div>
         </div>
 
-        {/* Line 2: title · company · phone · email · linkedin */}
-        <div className="flex items-center gap-2 flex-wrap text-[0.8125rem] text-muted-foreground mt-1">
+        {/* Line 2: Company */}
+        {companyName && (
+          <div className="text-[0.9375rem] text-foreground/70 mt-0.5">
+            <button className="text-primary font-medium hover:underline" onClick={() => onOpenCompany ? onOpenCompany(companyId) : navigate(`/selskaper/${companyId}`)}>
+              {companyName}
+            </button>
+          </div>
+        )}
+
+        {/* Line 3: title · phone · email · linkedin */}
+        <div className="flex items-center gap-2 flex-wrap text-[0.9375rem] text-foreground/70 mt-1">
           {editable ? (
-            <InlineField value={contact.title || ""} onSave={updateField("title")} placeholder="Stilling" className="text-[0.8125rem]" />
+            <InlineField value={contact.title || ""} onSave={updateField("title")} placeholder="Stilling" className="text-[0.9375rem]" />
           ) : (
             contact.title && <span>{contact.title}</span>
           )}
-          {companyName && (
-            <>
-              {contact.title && <span className="text-muted-foreground/30">·</span>}
-              <button className="text-primary hover:underline" onClick={() => onOpenCompany ? onOpenCompany(companyId) : navigate(`/selskaper/${companyId}`)}>
-                {companyName}
-              </button>
-            </>
-          )}
           {contact.phone && (
             <>
-              <span className="text-muted-foreground/30">·</span>
+              {contact.title && <span className="text-muted-foreground/40">·</span>}
               <button onClick={() => copyToClipboard(contact.phone!)} className="inline-flex items-center gap-1 hover:text-foreground">
-                <Phone className="h-3 w-3" />{editable ? <InlineField value={contact.phone} onSave={updateField("phone")} className="text-[0.8125rem]" /> : contact.phone}
+                <Phone className="h-3 w-3" />{editable ? <InlineField value={contact.phone} onSave={updateField("phone")} className="text-[0.9375rem]" /> : contact.phone}
               </button>
             </>
           )}
           {contact.email && (
             <>
-              <span className="text-muted-foreground/30">·</span>
+              <span className="text-muted-foreground/40">·</span>
               <button onClick={() => copyToClipboard(contact.email!)} className="inline-flex items-center gap-1 hover:text-foreground">
-                <Mail className="h-3 w-3" />{editable ? <InlineField value={contact.email} onSave={updateField("email")} className="text-[0.8125rem]" /> : contact.email}
+                <Mail className="h-3 w-3" />{editable ? <InlineField value={contact.email} onSave={updateField("email")} className="text-[0.9375rem]" /> : contact.email}
               </button>
             </>
           )}
           {contact.linkedin && (
             <>
-              <span className="text-muted-foreground/30">·</span>
+              <span className="text-muted-foreground/40">·</span>
               <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
                 <Linkedin className="h-3 w-3" />in
               </a>
@@ -423,14 +424,14 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           )}
           {editable && !contact.phone && (
             <>
-              <span className="text-muted-foreground/30">·</span>
-              <InlineField value="" onSave={updateField("phone")} placeholder="Telefon" className="text-[0.8125rem]" />
+              <span className="text-muted-foreground/40">·</span>
+              <InlineField value="" onSave={updateField("phone")} placeholder="Telefon" className="text-[0.9375rem]" />
             </>
           )}
           {editable && !contact.email && (
             <>
-              <span className="text-muted-foreground/30">·</span>
-              <InlineField value="" onSave={updateField("email")} placeholder="E-post" className="text-[0.8125rem]" />
+              <span className="text-muted-foreground/40">·</span>
+              <InlineField value="" onSave={updateField("email")} placeholder="E-post" className="text-[0.9375rem]" />
             </>
           )}
         </div>
