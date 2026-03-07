@@ -324,6 +324,10 @@ const Contacts = () => {
                   <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="h-10 rounded-lg" />
                 </div>
               </div>
+              <div className="space-y-1.5">
+                <Label className="text-label">LinkedIn</Label>
+                <Input value={form.linkedin} onChange={(e) => setForm({ ...form, linkedin: e.target.value })} placeholder="https://linkedin.com/in/..." className="h-10 rounded-lg" />
+              </div>
               <Button type="submit" className="w-full h-10 rounded-lg" disabled={createMutation.isPending}>
                 {createMutation.isPending ? "Oppretter..." : "Opprett"}
               </Button>
