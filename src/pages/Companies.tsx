@@ -392,6 +392,7 @@ const Companies = () => {
             { value: "all", label: "Alle" },
             { value: "prospect", label: "Potensiell kunde" },
             { value: "customer", label: "Kunde" },
+            { value: "partner", label: "Partner" },
             { value: "churned", label: "Ikke relevant selskap" },
           ].map(o => (
             <button key={o.value} onClick={() => setStatusFilter(o.value)}
