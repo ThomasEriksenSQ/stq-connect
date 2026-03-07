@@ -106,13 +106,15 @@ const Companies = () => {
       const { error } = await supabase.from("companies").insert({
         name: form.name, org_number: form.org_number || null, city: form.city || null,
         website: form.website || null, linkedin: form.linkedin || null, created_by: user?.id,
+        status: form.status,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["companies-full"] });
       setOpen(false);
-      setForm({ name: "", org_number: "", city: "", website: "", linkedin: "" });
+      setForm({ name: "", org_number: "", city: "", website: "", linkedin: "", status: "prospect" });
+      setLocations([""]);
       toast.success("Selskap opprettet");
     },
     onError: () => toast.error("Kunne ikke opprette selskap"),
