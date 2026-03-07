@@ -701,7 +701,7 @@ function TaskRow({
               "text-[0.8125rem] font-medium px-2 py-0.5 rounded-md flex-shrink-0 mt-0.5",
               overdue ? "text-destructive" : today ? "text-[hsl(var(--warning))]" : "text-muted-foreground"
             )}>
-              {format(new Date(task.due_date), "d. MMM", { locale: nb })}
+              {format(new Date(task.due_date), "d. MMM yyyy", { locale: nb })}
             </span>
           </TooltipTrigger>
           <TooltipContent>{fullDate(task.due_date)}</TooltipContent>
