@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Phone, Mail, Linkedin, FileText, Clock, ExternalLink, Pencil, Trash2, ChevronDown, ChevronUp, Plus } from "lucide-react";
+import { Phone, Mail, Linkedin, FileText, Clock, ExternalLink, Pencil, Trash2, ChevronDown, ChevronUp, Plus, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday, getYear, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { nb } from "date-fns/locale";
@@ -17,13 +17,52 @@ import { fullDate } from "@/lib/relativeDate";
 import { cleanDescription } from "@/lib/cleanDescription";
 import { cn } from "@/lib/utils";
 
-const dotColors: Record<string, string> = {
-  call: "bg-[hsl(var(--success))]",
-  meeting: "bg-[hsl(var(--primary))]",
-  email: "bg-[hsl(var(--warning))]",
-  note: "bg-muted-foreground",
-  task: "bg-muted-foreground",
-};
+/* ── Category system ── */
+const CATEGORIES = [
+  { label: "Behov nå", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  { label: "Fremtidig behov", color: "bg-blue-100 text-blue-800 border-blue-200" },
+  { label: "Kanskje behov", color: "bg-amber-100 text-amber-800 border-amber-200" },
+  { label: "Ukjent behov", color: "bg-gray-100 text-gray-600 border-gray-200" },
+  { label: "Ikke relevant", color: "bg-red-50 text-red-700 border-red-200" },
+] as const;
+
+function getCategoryStyle(title: string) {
+  const cat = CATEGORIES.find((c) => c.label === title);
+  return cat?.color || "bg-secondary text-foreground border-border";
+}
+
+function CategoryBadge({ title, className }: { title: string; className?: string }) {
+  const style = getCategoryStyle(title);
+  const isKnown = CATEGORIES.some((c) => c.label === title);
+  if (!isKnown) return <span className={cn("text-[0.9375rem] font-semibold text-foreground", className)}>{title}</span>;
+  return (
+    <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", style, className)}>
+      {title}
+    </span>
+  );
+}
+
+function CategoryPicker({ selected, onSelect }: { selected: string; onSelect: (v: string) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {CATEGORIES.map((cat) => (
+        <button
+          key={cat.label}
+          type="button"
+          onClick={() => onSelect(cat.label)}
+          className={cn(
+            "h-8 px-3 text-[0.8125rem] rounded-full border transition-all font-medium",
+            selected === cat.label
+              ? cn(cat.color, "ring-2 ring-offset-1 ring-primary/30")
+              : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
+          )}
+        >
+          {cat.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 interface ContactCardContentProps {
   contactId: string;
@@ -97,14 +136,10 @@ function InlineField({
 
 const DATE_CHIPS = [
   { label: "I dag", fn: () => new Date() },
+  { label: "Om 3 dager", fn: () => addDays(new Date(), 3) },
   { label: "1 uke", fn: () => addWeeks(new Date(), 1) },
   { label: "2 uker", fn: () => addWeeks(new Date(), 2) },
-  { label: "3 uker", fn: () => addWeeks(new Date(), 3) },
-  { label: "1 mnd", fn: () => addMonths(new Date(), 1) },
-  { label: "2 mnd", fn: () => addMonths(new Date(), 2) },
-  { label: "3 mnd", fn: () => addMonths(new Date(), 3) },
-  { label: "6 mnd", fn: () => addMonths(new Date(), 6) },
-  { label: "1 år", fn: () => addYears(new Date(), 1) },
+  { label: "1 måned", fn: () => addMonths(new Date(), 1) },
 ];
 
 export function ContactCardContent({ contactId, editable = false, onOpenCompany, onNavigateToFullPage }: ContactCardContentProps) {
@@ -114,12 +149,13 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
 
   // Form states
   const [activeForm, setActiveForm] = useState<"call" | "meeting" | "task" | null>(null);
-  const [formSubject, setFormSubject] = useState("");
+  const [formCategory, setFormCategory] = useState("");
+  const [formDescription, setFormDescription] = useState("");
   const [formDate, setFormDate] = useState("");
   const [selectedChipIdx, setSelectedChipIdx] = useState<number | null>(null);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const descTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { data: contact, isLoading } = useQuery({
     queryKey: ["contact", contactId],
@@ -183,9 +219,10 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
   });
 
   const createActivityMutation = useMutation({
-    mutationFn: async ({ type, subject }: { type: string; subject: string }) => {
+    mutationFn: async ({ type, subject, description }: { type: string; subject: string; description?: string }) => {
       const { error } = await supabase.from("activities").insert({
         type, subject: subject.trim(),
+        description: description?.trim() || null,
         contact_id: contactId, company_id: contact?.company_id || null, created_by: user?.id,
       });
       if (error) throw error;
@@ -201,7 +238,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
   const createTaskMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("tasks").insert({
-        title: formSubject.trim(), description: null, priority: "medium",
+        title: formCategory.trim(), description: formDescription.trim() || null, priority: "medium",
         due_date: formDate || null, contact_id: contactId, company_id: contact?.company_id || null,
         assigned_to: user?.id, created_by: user?.id,
       });
@@ -242,8 +279,8 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
   });
 
   const updateActivityMutation = useMutation({
-    mutationFn: async ({ id, description }: { id: string; description: string }) => {
-      const { error } = await supabase.from("activities").update({ description }).eq("id", id);
+    mutationFn: async ({ id, updates }: { id: string; updates: Record<string, any> }) => {
+      const { error } = await supabase.from("activities").update(updates).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -254,27 +291,29 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
 
   const openForm = (type: "call" | "meeting" | "task") => {
     setActiveForm(type);
-    setFormSubject("");
+    setFormCategory("");
+    setFormDescription("");
     setFormDate("");
     setSelectedChipIdx(null);
-    setTimeout(() => textareaRef.current?.focus(), 50);
   };
 
   const closeForm = () => {
     setActiveForm(null);
-    setFormSubject("");
+    setFormCategory("");
+    setFormDescription("");
     setFormDate("");
     setSelectedChipIdx(null);
   };
 
   const handleFormSubmit = () => {
-    if (!formSubject.trim()) return;
+    if (!formCategory) return;
     if (activeForm === "task") {
       createTaskMutation.mutate();
     } else {
       createActivityMutation.mutate({
         type: activeForm === "call" ? "call" : "meeting",
-        subject: formSubject,
+        subject: formCategory,
+        description: formDescription,
       });
     }
   };
@@ -463,7 +502,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                 activeForm === "call" ? "border-primary/40 bg-primary/5" : "border-border text-foreground/80 hover:bg-secondary hover:border-muted-foreground/30"
               )}
             >
-              <Phone className="h-[15px] w-[15px] text-[hsl(var(--success))]" /> Logg telefon
+              <MessageCircle className="h-[15px] w-[15px] text-[hsl(var(--success))]" /> Logg samtale
             </button>
             <button
               onClick={() => openForm("meeting")}
@@ -491,11 +530,18 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
               className="mt-3 animate-in slide-in-from-top-1 duration-200"
               onKeyDown={handleFormKeyDown}
             >
+              {/* Category picker */}
+              <div className="mb-3">
+                <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">Kategori</span>
+                <CategoryPicker selected={formCategory} onSelect={setFormCategory} />
+              </div>
+
+              {/* Description */}
               <Textarea
-                ref={textareaRef}
-                value={formSubject}
-                onChange={(e) => setFormSubject(e.target.value)}
-                placeholder={activeForm === "task" ? "Hva skal gjøres?" : activeForm === "meeting" ? "Hva ble diskutert og avtalt?" : "Hva ble sagt?"}
+                ref={descTextareaRef}
+                value={formDescription}
+                onChange={(e) => setFormDescription(e.target.value)}
+                placeholder="Beskrivelse (valgfritt)"
                 rows={3}
                 className="text-[0.9375rem] rounded-md border-border focus:ring-primary/30 resize-none"
               />
@@ -517,13 +563,19 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                         className={cn(
                           "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors",
                           selectedChipIdx === i
-                            ? "bg-[hsl(var(--tag-bg))] border-primary/30 text-[hsl(var(--tag-text))] font-medium"
+                            ? "bg-primary/10 border-primary/30 text-primary font-medium"
                             : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
                         )}
                       >
                         {chip.label}
                       </button>
                     ))}
+                    <input
+                      type="date"
+                      value={formDate}
+                      onChange={(e) => { setFormDate(e.target.value); setSelectedChipIdx(null); }}
+                      className="h-7 px-2 text-[0.75rem] rounded-full border border-border text-muted-foreground bg-background"
+                    />
                   </div>
                   {formDate && (
                     <p className="text-[0.75rem] text-muted-foreground mt-2">
@@ -544,7 +596,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                 <Button
                   size="sm"
                   className="h-[34px] px-4 text-[0.8125rem] rounded-md"
-                  disabled={!formSubject.trim() || (activeForm === "task" && createTaskMutation.isPending) || (activeForm !== "task" && createActivityMutation.isPending)}
+                  disabled={!formCategory || (activeForm === "task" && createTaskMutation.isPending) || (activeForm !== "task" && createActivityMutation.isPending)}
                   onClick={handleFormSubmit}
                 >
                   {activeForm === "task" ? "Lagre oppfølging" : activeForm === "meeting" ? "Lagre referat" : "Lagre samtale"}
@@ -600,7 +652,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
         profileMap={profileMap}
         editable={editable}
         onDelete={(id) => deleteActivityMutation.mutate(id)}
-        onUpdateDescription={(id, desc) => updateActivityMutation.mutate({ id, description: desc })}
+        onUpdateActivity={(id, updates) => updateActivityMutation.mutate({ id, updates })}
       />
     </div>
   );
@@ -642,9 +694,9 @@ function TaskRow({
         className="h-4 w-4 rounded-[4px] border-2 border-muted-foreground/40 flex-shrink-0 mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
       />
       <div className="flex-1 min-w-0">
-        <p className={cn("text-[0.9375rem] font-semibold text-foreground truncate", completing && "line-through")}>{task.title}</p>
+        <CategoryBadge title={task.title} />
         {task.description && (
-          <p className="text-[0.875rem] text-foreground/70 truncate">{task.description}</p>
+          <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{task.description}</p>
         )}
         {task.assigned_to && profileMap[task.assigned_to] && (
           <span className="text-[0.75rem] text-muted-foreground">{profileMap[task.assigned_to]}</span>
@@ -673,13 +725,13 @@ function ActivityTimeline({
   profileMap,
   editable,
   onDelete,
-  onUpdateDescription,
+  onUpdateActivity,
 }: {
   activities: any[];
   profileMap: Record<string, string>;
   editable: boolean;
   onDelete: (id: string) => void;
-  onUpdateDescription: (id: string, desc: string) => void;
+  onUpdateActivity: (id: string, updates: Record<string, any>) => void;
 }) {
   const currentYear = getYear(new Date());
 
@@ -742,7 +794,7 @@ function ActivityTimeline({
                   profileMap={profileMap}
                   editable={editable}
                   onDelete={onDelete}
-                  onUpdateDescription={onUpdateDescription}
+                  onUpdateActivity={onUpdateActivity}
                 />
               ))}
             </div>
@@ -760,113 +812,124 @@ function ActivityRow({
   profileMap,
   editable,
   onDelete,
-  onUpdateDescription,
+  onUpdateActivity,
 }: {
   activity: any;
   currentYear: number;
   profileMap: Record<string, string>;
   editable: boolean;
   onDelete: (id: string) => void;
-  onUpdateDescription: (id: string, desc: string) => void;
+  onUpdateActivity: (id: string, updates: Record<string, any>) => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [editCategory, setEditCategory] = useState(activity.subject);
+  const [editDesc, setEditDesc] = useState(activity.description || "");
   const [expanded, setExpanded] = useState(false);
-  const [editingDesc, setEditingDesc] = useState(false);
-  const [descDraft, setDescDraft] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const dotColor = dotColors[activity.type] || dotColors.note;
   const desc = cleanDescription(activity.description);
   const ownerName = activity.created_by ? profileMap[activity.created_by] : null;
   const d = new Date(activity.created_at);
   const dateStr = format(d, "d. MMM", { locale: nb });
   const yearStr = getYear(d) !== currentYear ? ` ${getYear(d)}` : "";
 
+  const typeIcon = activity.type === "call" || activity.type === "phone"
+    ? <MessageCircle className="h-3.5 w-3.5 text-[hsl(var(--success))]" />
+    : <FileText className="h-3.5 w-3.5 text-primary" />;
+
+  const handleSaveEdit = () => {
+    if (!editCategory) return;
+    onUpdateActivity(activity.id, { subject: editCategory, description: editDesc.trim() || null });
+    setEditing(false);
+  };
+
   return (
     <div className="relative group">
-      {/* Dot on spine */}
-      <div className={cn("absolute -left-7 top-[6px] w-[10px] h-[10px] rounded-full ring-2 ring-background", dotColor)} />
+      {/* Icon on spine */}
+      <div className="absolute -left-7 top-[2px] w-[12px] h-[12px] flex items-center justify-center bg-background rounded-full">
+        {typeIcon}
+      </div>
 
       <div className="min-w-0">
-        {/* Level 1: Subject */}
-        <div className="flex items-start justify-between gap-2">
-          <p className="text-[0.9375rem] font-semibold text-foreground leading-snug flex-1">
-            {activity.subject}
-          </p>
-          {/* Edit/delete icons on hover */}
-          {editable && !confirmDelete && (
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5">
-              <button
-                onClick={() => { setDescDraft(activity.description || ""); setEditingDesc(true); }}
-                className="p-1 rounded hover:bg-secondary text-border hover:text-muted-foreground transition-colors"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="p-1 rounded hover:bg-destructive/10 text-border hover:text-destructive transition-colors"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Delete confirmation */}
-        {confirmDelete && (
-          <div className="flex items-center gap-2 mt-1 text-[0.75rem] animate-in fade-in duration-150">
-            <span className="text-destructive">Slett denne aktiviteten?</span>
-            <button onClick={() => { onDelete(activity.id); setConfirmDelete(false); }} className="text-destructive font-medium hover:underline">Ja, slett</button>
-            <button onClick={() => setConfirmDelete(false)} className="text-muted-foreground hover:text-foreground">Avbryt</button>
-          </div>
-        )}
-
-        {/* Level 2: Description */}
-        {editingDesc ? (
-          <div className="mt-1">
+        {editing ? (
+          <div className="space-y-2">
+            <CategoryPicker selected={editCategory} onSelect={setEditCategory} />
             <Textarea
-              value={descDraft}
-              onChange={(e) => setDescDraft(e.target.value)}
+              value={editDesc}
+              onChange={(e) => setEditDesc(e.target.value)}
               rows={3}
-              autoFocus
+              placeholder="Beskrivelse (valgfritt)"
               className="text-[0.875rem] rounded-md"
               onKeyDown={(e) => {
-                if (e.key === "Escape") setEditingDesc(false);
-                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                  onUpdateDescription(activity.id, descDraft);
-                  setEditingDesc(false);
-                }
+                if (e.key === "Escape") setEditing(false);
+                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") handleSaveEdit();
               }}
             />
-            <div className="flex gap-2 mt-1">
-              <Button size="sm" className="h-6 text-[0.6875rem] px-2 rounded" onClick={() => { onUpdateDescription(activity.id, descDraft); setEditingDesc(false); }}>Lagre</Button>
-              <Button variant="ghost" size="sm" className="h-6 text-[0.6875rem] px-2 rounded" onClick={() => setEditingDesc(false)}>Avbryt</Button>
+            <div className="flex gap-2">
+              <Button size="sm" className="h-6 text-[0.6875rem] px-2 rounded" onClick={handleSaveEdit}>Lagre</Button>
+              <Button variant="ghost" size="sm" className="h-6 text-[0.6875rem] px-2 rounded" onClick={() => setEditing(false)}>Avbryt</Button>
             </div>
           </div>
-        ) : desc ? (
-          <div className="mt-0.5">
-            <p
-              className="text-[0.875rem] leading-relaxed whitespace-pre-wrap text-foreground/70"
-              style={!expanded ? { WebkitLineClamp: 2, display: "-webkit-box", WebkitBoxOrient: "vertical" as const, overflow: "hidden" } : undefined}
-            >
-              {desc}
-            </p>
-            {desc.length > 120 && (
-              <button onClick={() => setExpanded(!expanded)} className="text-[0.75rem] text-primary hover:underline mt-0.5 inline-flex items-center gap-0.5">
-                {expanded ? <>Vis mindre <ChevronUp className="h-3 w-3" /></> : <>Vis mer <ChevronDown className="h-3 w-3" /></>}
-              </button>
-            )}
-          </div>
-        ) : null}
+        ) : (
+          <>
+            {/* Level 1: Subject as category badge */}
+            <div className="flex items-start justify-between gap-2">
+              <CategoryBadge title={activity.subject} />
+              {editable && !confirmDelete && (
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5">
+                  <button
+                    onClick={() => { setEditCategory(activity.subject); setEditDesc(activity.description || ""); setEditing(true); }}
+                    className="p-1 rounded hover:bg-secondary text-border hover:text-muted-foreground transition-colors"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(true)}
+                    className="p-1 rounded hover:bg-destructive/10 text-border hover:text-destructive transition-colors"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
 
-        {/* Level 3: Meta */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <p className="text-[0.75rem] text-muted-foreground mt-1">
-              {ownerName && <>{ownerName} · </>}{dateStr}{yearStr}
-            </p>
-          </TooltipTrigger>
-          <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
-        </Tooltip>
+            {/* Delete confirmation */}
+            {confirmDelete && (
+              <div className="flex items-center gap-2 mt-1 text-[0.75rem] animate-in fade-in duration-150">
+                <span className="text-destructive">Slett denne aktiviteten?</span>
+                <button onClick={() => { onDelete(activity.id); setConfirmDelete(false); }} className="text-destructive font-medium hover:underline">Ja, slett</button>
+                <button onClick={() => setConfirmDelete(false)} className="text-muted-foreground hover:text-foreground">Avbryt</button>
+              </div>
+            )}
+
+            {/* Level 2: Description */}
+            {desc ? (
+              <div className="mt-0.5">
+                <p
+                  className="text-[0.875rem] leading-relaxed whitespace-pre-wrap text-foreground/70"
+                  style={!expanded ? { WebkitLineClamp: 2, display: "-webkit-box", WebkitBoxOrient: "vertical" as const, overflow: "hidden" } : undefined}
+                >
+                  {desc}
+                </p>
+                {desc.length > 120 && (
+                  <button onClick={() => setExpanded(!expanded)} className="text-[0.75rem] text-primary hover:underline mt-0.5 inline-flex items-center gap-0.5">
+                    {expanded ? <>Vis mindre <ChevronUp className="h-3 w-3" /></> : <>Vis mer <ChevronDown className="h-3 w-3" /></>}
+                  </button>
+                )}
+              </div>
+            ) : null}
+
+            {/* Level 3: Meta */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <p className="text-[0.75rem] text-muted-foreground mt-1">
+                  {ownerName && <>{ownerName} · </>}{dateStr}{yearStr}
+                </p>
+              </TooltipTrigger>
+              <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
+            </Tooltip>
+          </>
+        )}
       </div>
     </div>
   );
