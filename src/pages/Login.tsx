@@ -44,6 +44,7 @@ const Login = () => {
             height: "auto",
             objectFit: "contain",
             paddingBottom: "10px",
+            paddingTop: "15px",
           }}
         />
 
