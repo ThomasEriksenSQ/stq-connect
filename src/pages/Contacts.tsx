@@ -8,7 +8,6 @@ import { Search, Building2, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { relativeDate } from "@/lib/relativeDate";
-import { relativeDate } from "@/lib/relativeDate";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
