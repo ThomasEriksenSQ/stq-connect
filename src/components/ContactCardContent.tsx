@@ -365,7 +365,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
 
   const openForm = (type: "call" | "meeting" | "task") => {
     setActiveForm(type);
-    setFormTitle("");
+    setFormTitle(type === "task" ? "Følg opp om behov" : "");
     setFormCategory("");
     setFormDescription("");
     setFormDate("");
