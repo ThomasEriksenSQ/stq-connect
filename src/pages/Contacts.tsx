@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -143,25 +143,53 @@ const Contacts = () => {
     onError: () => toast.error("Kunne ikke opprette kontakt"),
   });
 
-  const toggleMutation = useMutation({
-    mutationFn: async ({ id, field, value }: { id: string; field: "cv_email" | "call_list"; value: boolean }) => {
-      const { error } = await supabase.from("contacts").update({ [field]: value }).eq("id", id);
-      if (error) throw error;
-    },
-    onMutate: async ({ id, field, value }) => {
-      await queryClient.cancelQueries({ queryKey: ["contacts-full"] });
-      const prev = queryClient.getQueryData(["contacts-full"]);
-      queryClient.setQueryData(["contacts-full"], (old: any[]) =>
-        old?.map(c => c.id === id ? { ...c, [field]: value } : c)
-      );
-      return { prev };
-    },
-    onError: (_err, _vars, ctx) => {
-      queryClient.setQueryData(["contacts-full"], ctx?.prev);
-      toast.error("Kunne ikke oppdatere");
-    },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ["contacts-full"] }),
-  });
+  const pendingToggles = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  const handleToggle = (contact: any, field: "cv_email" | "call_list", newValue: boolean) => {
+    const name = `${contact.first_name} ${contact.last_name}`;
+    const key = `${contact.id}-${field}`;
+    const label = field === "cv_email" ? "CV-epost" : "Innkjøper";
+    const msg = newValue ? `${label} lagt til ${name}` : `${label} fjernet fra ${name}`;
+
+    // Cancel any pending save for same contact+field
+    if (pendingToggles.current[key]) {
+      clearTimeout(pendingToggles.current[key]);
+      delete pendingToggles.current[key];
+    }
+
+    // Optimistic UI update
+    queryClient.setQueryData(["contacts-full"], (old: any[]) =>
+      old?.map(c => c.id === contact.id ? { ...c, [field]: newValue } : c)
+    );
+
+    // Schedule save after 5s
+    const timeout = setTimeout(async () => {
+      delete pendingToggles.current[key];
+      const { error } = await supabase.from("contacts").update({ [field]: newValue }).eq("id", contact.id);
+      if (error) {
+        toast.error("Kunne ikke oppdatere");
+        queryClient.setQueryData(["contacts-full"], (old: any[]) =>
+          old?.map(c => c.id === contact.id ? { ...c, [field]: !newValue } : c)
+        );
+      }
+      queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
+    }, 5000);
+    pendingToggles.current[key] = timeout;
+
+    toast(msg, {
+      duration: 5000,
+      action: {
+        label: "Angre",
+        onClick: () => {
+          clearTimeout(pendingToggles.current[key]);
+          delete pendingToggles.current[key];
+          queryClient.setQueryData(["contacts-full"], (old: any[]) =>
+            old?.map(c => c.id === contact.id ? { ...c, [field]: !newValue } : c)
+          );
+        },
+      },
+    });
+  };
 
   const getOwnerId = (contact: any) => (contact.profiles as any)?.id || null;
   const getOwnerName = (contact: any) => (contact.profiles as any)?.full_name || null;
@@ -362,14 +390,14 @@ const Contacts = () => {
                   {/* TAGS */}
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                     <button
-                      onClick={() => toggleMutation.mutate({ id: contact.id, field: "cv_email", value: !contact.cv_email })}
+                      onClick={() => handleToggle(contact, "cv_email", !contact.cv_email)}
                       className={contact.cv_email
                         ? "rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
                         : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
                       }
                     >CV</button>
                     <button
-                      onClick={() => toggleMutation.mutate({ id: contact.id, field: "call_list", value: !contact.call_list })}
+                      onClick={() => handleToggle(contact, "call_list", !contact.call_list)}
                       className={contact.call_list
                         ? "rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
                         : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
