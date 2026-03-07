@@ -94,6 +94,7 @@ const Companies = () => {
       setLocations((prev) => [form.city, ...prev.slice(1)]);
     }
   }, [form.city]);
+  const [signalFilter, setSignalFilter] = useState("all");
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "last_activity", dir: "desc" });
   const queryClient = useQueryClient();
   const { user } = useAuth();
