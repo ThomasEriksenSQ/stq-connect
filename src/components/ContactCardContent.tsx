@@ -739,33 +739,9 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
               ) : (
                 /* Date for call/meeting + quick replies for call */
                 <div className="mt-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[0.75rem] text-muted-foreground">
-                      Dato: I dag, {format(new Date(), "d. MMMM", { locale: nb })}
-                    </span>
-                    {activeForm === "call" && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFormTitle("Ringte, ikke svar");
-                          }}
-                          className="inline-flex items-center gap-1 h-6 px-2.5 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                        >
-                          <PhoneOff className="h-3 w-3" /> Ringte, ikke svar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFormTitle("Sendt LinkedIn melding");
-                          }}
-                          className="inline-flex items-center gap-1 h-6 px-2.5 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                        >
-                          <Send className="h-3 w-3" /> Sendt LinkedIn melding
-                        </button>
-                      </>
-                    )}
-                  </div>
+                  <span className="text-[0.75rem] text-muted-foreground">
+                    Dato: I dag, {format(new Date(), "d. MMMM", { locale: nb })}
+                  </span>
                 </div>
               )}
 
