@@ -498,28 +498,19 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => openForm("call")}
-              className={cn(
-                "inline-flex items-center gap-1.5 h-9 px-3.5 text-[0.8125rem] font-medium rounded-lg border bg-background transition-colors",
-                activeForm === "call" ? "border-primary/40 bg-primary/5" : "border-border text-foreground/80 hover:bg-secondary hover:border-muted-foreground/30"
-              )}
+              className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg transition-colors bg-[hsl(var(--success))] text-white hover:opacity-90"
             >
-              <MessageCircle className="h-[15px] w-[15px] text-[hsl(var(--success))]" /> Logg samtale
+              <MessageCircle className="h-[15px] w-[15px] text-white" /> Logg samtale
             </button>
             <button
               onClick={() => openForm("meeting")}
-              className={cn(
-                "inline-flex items-center gap-1.5 h-9 px-3.5 text-[0.8125rem] font-medium rounded-lg border bg-background transition-colors",
-                activeForm === "meeting" ? "border-primary/40 bg-primary/5" : "border-border text-foreground/80 hover:bg-secondary hover:border-muted-foreground/30"
-              )}
+              className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg transition-colors bg-primary text-primary-foreground hover:opacity-90"
             >
-              <FileText className="h-[15px] w-[15px] text-primary" /> Logg møtereferat
+              <FileText className="h-[15px] w-[15px] text-white" /> Logg møtereferat
             </button>
             <button
               onClick={() => openForm("task")}
-              className={cn(
-                "inline-flex items-center gap-1.5 h-9 px-3.5 text-[0.8125rem] font-medium rounded-lg border bg-background transition-colors",
-                activeForm === "task" ? "border-primary/40 bg-primary/5" : "border-border text-foreground/80 hover:bg-secondary hover:border-muted-foreground/30"
-              )}
+              className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
             >
               <Clock className="h-[15px] w-[15px] text-[hsl(var(--warning))]" /> Ny oppfølging
             </button>
