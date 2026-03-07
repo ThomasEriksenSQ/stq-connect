@@ -681,7 +681,6 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                           type="button"
                           onClick={() => {
                             setFormTitle("Ringte, ikke svar");
-                            setFormCategory("Ukjent om behov");
                           }}
                           className="inline-flex items-center gap-1 h-6 px-2.5 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
                         >
