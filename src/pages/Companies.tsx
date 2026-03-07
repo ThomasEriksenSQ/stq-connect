@@ -18,37 +18,7 @@ import { nb } from "date-fns/locale";
 type SortField = "name" | "type" | "signal" | "contacts" | "last_activity" | "tasks";
 type SortDir = "asc" | "desc";
 
-const CATEGORIES = [
-  { label: "Behov nå", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-  { label: "Får fremtidig behov", badgeColor: "bg-blue-100 text-blue-800 border-blue-200" },
-  { label: "Vil kanskje få behov", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
-  { label: "Ukjent om behov", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" },
-  { label: "Ikke aktuelt", badgeColor: "bg-red-50 text-red-700 border-red-200" },
-] as const;
-
-const LEGACY_CATEGORY_MAP: Record<string, string> = {
-  "Fremtidig behov": "Får fremtidig behov",
-  "Har kanskje behov": "Vil kanskje få behov",
-  "Aldri aktuelt": "Ikke aktuelt",
-};
-
-function normalizeCategoryLabel(label: string): string {
-  return LEGACY_CATEGORY_MAP[label] || label;
-}
-
-function extractCategory(subject: string, description: string | null): string {
-  const normalizedSubject = normalizeCategoryLabel(subject);
-  if (CATEGORIES.some(c => c.label === normalizedSubject)) return normalizedSubject;
-  if (!description) return "";
-  const match = description.match(/^\[([^\]]+)\]\n?/);
-  if (match) {
-    const cat = normalizeCategoryLabel(match[1]);
-    if (CATEGORIES.some(c => c.label === cat)) return cat;
-  }
-  return "";
-}
-
-const SIGNAL_ORDER = CATEGORIES.map(c => c.label);
+import { CATEGORIES, LEGACY_CATEGORY_MAP, normalizeCategoryLabel, extractCategory, SIGNAL_ORDER } from "@/lib/categoryUtils";
 
 const TYPE_BADGE_COLORS: Record<string, { label: string; badgeColor: string }> = {
   prospect: { label: "Potensiell kunde", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
