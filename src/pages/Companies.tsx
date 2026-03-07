@@ -15,7 +15,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 
-type SortField = "name" | "signal" | "contacts" | "last_activity" | "tasks";
+type SortField = "name" | "type" | "signal" | "contacts" | "last_activity" | "tasks";
 type SortDir = "asc" | "desc";
 
 const CATEGORIES = [
@@ -50,12 +50,15 @@ function extractCategory(subject: string, description: string | null): string {
 
 const SIGNAL_ORDER = CATEGORIES.map(c => c.label);
 
-const statusLabels: Record<string, { label: string; className: string }> = {
-  lead: { label: "Lead", className: "bg-tag text-tag-foreground" },
-  prospect: { label: "Prospekt", className: "bg-warning/10 text-warning" },
-  customer: { label: "Kunde", className: "bg-success/10 text-success" },
-  churned: { label: "Tapt", className: "bg-destructive/10 text-destructive" },
+const statusLabels: Record<string, { label: string; className: string; badgeColor: string }> = {
+  lead: { label: "Lead", className: "bg-tag text-tag-foreground", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" },
+  prospect: { label: "Potensiell kunde", className: "bg-warning/10 text-warning", badgeColor: "bg-blue-100 text-blue-800 border-blue-200" },
+  customer: { label: "Kunde", className: "bg-success/10 text-success", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  churned: { label: "Ikke relevant selskap", className: "bg-destructive/10 text-destructive", badgeColor: "bg-red-50 text-red-700 border-red-200" },
+  partner: { label: "Partner", className: "bg-secondary text-muted-foreground", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" },
 };
+
+const TYPE_ORDER = ["prospect", "customer", "churned", "partner", "lead"];
 
 const OrgNrInput = ({ value, onChange, onLookup }: { value: string; onChange: (v: string) => void; onLookup: (name: string | null, city: string | null) => void }) => {
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -225,6 +228,11 @@ const Companies = () => {
     const dir = sort.dir === "asc" ? 1 : -1;
     switch (sort.field) {
       case "name": return dir * a.name.localeCompare(b.name, "nb");
+      case "type": {
+        const ai = TYPE_ORDER.indexOf(a.status);
+        const bi = TYPE_ORDER.indexOf(b.status);
+        return dir * ((ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi));
+      }
       case "signal": {
         const ai = SIGNAL_ORDER.indexOf(a.signal as any || "");
         const bi = SIGNAL_ORDER.indexOf(b.signal as any || "");
@@ -253,7 +261,7 @@ const Companies = () => {
     </button>
   );
 
-  const getStatus = (status: string) => statusLabels[status] || { label: status, className: "bg-secondary text-muted-foreground" };
+  const getStatus = (status: string) => statusLabels[status] || { label: status, className: "bg-secondary text-muted-foreground", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" };
 
   return (
     <div className="space-y-4">
@@ -300,9 +308,9 @@ const Companies = () => {
                 <Label className="text-label">Status</Label>
                 <div className="flex gap-1.5">
                   {([
-                    { value: "prospect", label: "Potensiell kunde", activeClass: "bg-[hsl(var(--warning))] text-white" },
-                    { value: "customer", label: "Kunde", activeClass: "bg-[hsl(var(--success))] text-white" },
-                    { value: "churned", label: "Ikke relevant selskap", activeClass: "bg-destructive text-destructive-foreground" },
+                    { value: "prospect", label: "Potensiell kunde", activeClass: "bg-blue-500 text-white border-blue-500" },
+                    { value: "customer", label: "Kunde", activeClass: "bg-emerald-500 text-white border-emerald-500" },
+                    { value: "churned", label: "Ikke relevant selskap", activeClass: "bg-red-400 text-white border-red-400" },
                   ] as const).map((opt) => (
                     <button
                       key={opt.value}
@@ -417,8 +425,9 @@ const Companies = () => {
         <p className="text-sm text-muted-foreground py-12 text-center">Ingen selskaper funnet</p>
       ) : (
         <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
-          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_60px_70px_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1.2fr)_60px_70px_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="name">Selskap</SortHeader>
+            <SortHeader field="type">Type</SortHeader>
             <SortHeader field="signal">Signal</SortHeader>
             <SortHeader field="contacts">Kont.</SortHeader>
             <SortHeader field="tasks">Oppf.</SortHeader>
@@ -430,16 +439,16 @@ const Companies = () => {
               const contactCount = company.contacts?.length || 0;
               return (
                 <button key={company.id} onClick={() => navigate(`/selskaper/${company.id}`)}
-                  className="w-full grid grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_60px_70px_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer">
+                  className="w-full grid grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1.2fr)_60px_70px_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[0.8125rem] font-medium text-foreground truncate">{company.name}</span>
-                      <span className={`text-[0.625rem] font-medium px-1.5 py-0 rounded-[4px] flex-shrink-0 ${status.className}`}>{status.label}</span>
-                    </div>
+                    <span className="text-[0.8125rem] font-medium text-foreground truncate block">{company.name}</span>
                     {company.industry && (
                       <p className="text-[0.6875rem] text-muted-foreground truncate mt-0.5">{company.industry}</p>
                     )}
                   </div>
+                  <span className="min-w-0">
+                    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${status.badgeColor}`}>{status.label}</span>
+                  </span>
                   <span className="min-w-0">
                     {company.signal ? (() => {
                       const cat = CATEGORIES.find(c => c.label === company.signal);
