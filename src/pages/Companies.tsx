@@ -431,6 +431,7 @@ const Companies = () => {
             <SortHeader field="signal">Signal</SortHeader>
             <SortHeader field="contacts">Kont.</SortHeader>
             <SortHeader field="tasks">Oppf.</SortHeader>
+            <SortHeader field="last_activity" className="justify-end">Siste akt.</SortHeader>
           </div>
           <div className="divide-y divide-border">
             {sorted.map((company) => {
