@@ -132,7 +132,7 @@ const Contacts = () => {
       const { error } = await supabase.from("contacts").insert({
         first_name: form.first_name, last_name: form.last_name,
         email: form.email || null, phone: form.phone || null, title: form.title || null,
-        company_id: form.company_id || null, created_by: user?.id, owner_id: user?.id,
+        company_id: form.company_id || null, linkedin: form.linkedin || null, created_by: user?.id, owner_id: user?.id,
       });
       if (error) throw error;
     },
