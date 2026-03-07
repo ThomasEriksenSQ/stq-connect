@@ -61,10 +61,11 @@ const Contacts = () => {
           .not("contact_id", "is", null),
       ]);
 
-      // Last activity date map
+      // Last activity date map — only past activities count
       const lastActMap: Record<string, string> = {};
+      const now = new Date().toISOString();
       (acts || []).forEach(a => {
-        if (a.contact_id && !lastActMap[a.contact_id]) lastActMap[a.contact_id] = a.created_at;
+        if (a.contact_id && a.created_at <= now && !lastActMap[a.contact_id]) lastActMap[a.contact_id] = a.created_at;
       });
 
       // Signal: effective (expiry-aware) signal per contact
