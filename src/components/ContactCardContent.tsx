@@ -908,14 +908,9 @@ function TaskRow({
       <div className="flex-1 min-w-0">
         <div className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</div>
         {displayDesc && (
-          <div className="flex items-center gap-1.5 mt-0.5">
-            {task.assigned_to && profileMap[task.assigned_to] && (
-              <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{profileMap[task.assigned_to]}</span>
-            )}
-            <p className="text-[0.875rem] text-foreground/70 truncate">{displayDesc}</p>
-          </div>
+          <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{displayDesc}</p>
         )}
-        {!displayDesc && task.assigned_to && profileMap[task.assigned_to] && (
+        {task.assigned_to && profileMap[task.assigned_to] && (
           <div className="mt-1">
             <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{profileMap[task.assigned_to]}</span>
           </div>
