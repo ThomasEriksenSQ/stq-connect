@@ -210,6 +210,66 @@ const Companies = () => {
                 <Label className="text-label">Nettside</Label>
                 <Input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://" className="h-10 rounded-lg" type="url" />
               </div>
+              {/* STATUS */}
+              <div className="space-y-1.5">
+                <Label className="text-label">Status</Label>
+                <div className="flex gap-1.5">
+                  {([
+                    { value: "prospect", label: "Potensiell kunde" },
+                    { value: "customer", label: "Kunde" },
+                    { value: "churned", label: "Ikke aktuell" },
+                  ] as const).map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, status: opt.value }))}
+                      className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                        form.status === opt.value
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* AVDELINGER */}
+              <div className="space-y-1.5">
+                <Label className="text-label">Avdelinger</Label>
+                <div className="space-y-2">
+                  {locations.map((loc, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <Input
+                        value={loc}
+                        onChange={(e) => {
+                          const next = [...locations];
+                          next[i] = e.target.value;
+                          setLocations(next);
+                        }}
+                        placeholder="By eller sted"
+                        className="h-10 rounded-lg flex-1"
+                      />
+                      {locations.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setLocations(locations.filter((_, j) => j !== i))}
+                          className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setLocations([...locations, ""])}
+                    className="w-full h-9 text-[0.8125rem] text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg border border-dashed border-border transition-colors"
+                  >
+                    + Legg til avdeling
+                  </button>
+                </div>
+              </div>
               <Button type="submit" className="w-full h-10 rounded-lg" disabled={createMutation.isPending}>
                 {createMutation.isPending ? "Oppretter..." : "Opprett"}
               </Button>
