@@ -194,7 +194,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
     enabled: !!contactId,
   });
 
-  const profileMap = Object.fromEntries(allProfiles.map(p => [p.id, p.full_name.split(" ")[0]]));
+  const profileMap = Object.fromEntries(allProfiles.map(p => [p.id, p.full_name]));
   const profileMapFull = Object.fromEntries(allProfiles.map(p => [p.id, p.full_name]));
 
   const { data: tasks = [] } = useQuery({
