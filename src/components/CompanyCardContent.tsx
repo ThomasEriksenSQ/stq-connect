@@ -16,6 +16,65 @@ import { cleanDescription } from "@/lib/cleanDescription";
 import InlineEdit from "@/components/InlineEdit";
 import { cn } from "@/lib/utils";
 
+/* ── Category system (shared with ContactCardContent) ── */
+const CATEGORIES = [
+  { label: "Behov nå", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  { label: "Får fremtidig behov", badgeColor: "bg-blue-100 text-blue-800 border-blue-200" },
+  { label: "Vil kanskje få behov", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
+  { label: "Ukjent om behov", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" },
+  { label: "Ikke aktuelt", badgeColor: "bg-red-50 text-red-700 border-red-200" },
+] as const;
+
+const LEGACY_CATEGORY_MAP: Record<string, string> = {
+  "Fremtidig behov": "Får fremtidig behov",
+  "Har kanskje behov": "Vil kanskje få behov",
+  "Aldri aktuelt": "Ikke aktuelt",
+};
+
+function normalizeCategoryLabel(label: string): string {
+  return LEGACY_CATEGORY_MAP[label] || label;
+}
+
+function getCategoryBadgeColor(label: string) {
+  const normalized = normalizeCategoryLabel(label);
+  const cat = CATEGORIES.find((c) => c.label === normalized);
+  return cat?.badgeColor || "bg-secondary text-foreground border-border";
+}
+
+function CategoryBadge({ label, className }: { label: string; className?: string }) {
+  const normalized = normalizeCategoryLabel(label);
+  const color = getCategoryBadgeColor(normalized);
+  const isKnown = CATEGORIES.some((c) => c.label === normalized);
+  if (!isKnown) return null;
+  return (
+    <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", color, className)}>
+      {normalized}
+    </span>
+  );
+}
+
+function parseDescriptionCategory(description: string | null): { category: string; text: string } {
+  if (!description) return { category: "", text: "" };
+  const match = description.match(/^\[([^\]]+)\]\n?([\s\S]*)$/);
+  if (match) {
+    const cat = match[1];
+    if (CATEGORIES.some(c => c.label === cat) || Object.keys(LEGACY_CATEGORY_MAP).includes(cat)) {
+      return { category: normalizeCategoryLabel(cat), text: match[2].trim() };
+    }
+  }
+  return { category: "", text: description };
+}
+
+function extractTitleAndCategory(subject: string, description: string | null) {
+  const normalizedSubject = normalizeCategoryLabel(subject);
+  if (CATEGORIES.some(c => c.label === normalizedSubject)) {
+    const descClean = cleanDescription(description);
+    return { title: normalizedSubject, category: normalizedSubject, cleanDesc: descClean };
+  }
+  const parsed = parseDescriptionCategory(description);
+  return { title: subject, category: parsed.category, cleanDesc: cleanDescription(parsed.text) || "" };
+}
+
 const statusLabels: Record<string, { label: string; className: string }> = {
   lead: { label: "Lead", className: "bg-tag text-tag-foreground" },
   prospect: { label: "Prospekt", className: "bg-warning/10 text-warning" },
@@ -273,7 +332,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
       <div className="grid grid-cols-1 md:grid-cols-[1fr_minmax(0,260px)] gap-6">
         {/* Left: Tasks + Activities */}
         <div className="space-y-5">
-          {/* ── Oppfølginger (card style matching ContactCardContent) ── */}
+          {/* ── Oppfølginger ── */}
           {tasks.length > 0 && (
             <div className="bg-card border border-border rounded-lg shadow-card p-4 mb-6">
               <div className="flex items-center justify-between mb-2">
@@ -287,6 +346,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                   const today = task.due_date && isToday(new Date(task.due_date));
                   const contactName = (task.contacts as any)?.first_name
                     ? `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}` : null;
+                  const { title: displayTitle, category: displayCategory, cleanDesc: displayDesc } = extractTitleAndCategory(task.title, task.description);
                   return (
                     <div key={task.id} className="flex items-start gap-2.5 py-2.5 px-1 rounded-md transition-all duration-200 group hover:bg-background/60">
                       <div>
@@ -294,19 +354,18 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                           className="h-4 w-4 rounded-[4px] border-2 border-muted-foreground/40 flex-shrink-0 mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-[1rem] font-bold text-foreground">{task.title}</div>
-                        {(task.assigned_to || contactName) && (
-                          <div className="flex items-center gap-1.5 mt-1">
-                            {task.assigned_to && profileMapFull[task.assigned_to] && (
-                              <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{profileMapFull[task.assigned_to]}</span>
-                            )}
-                            {contactName && (
-                              <span className="text-[0.6875rem] text-muted-foreground">{contactName}</span>
-                            )}
-                          </div>
-                        )}
-                        {task.description && (
-                          <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{task.description}</p>
+                        <div className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</div>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          {displayCategory && <CategoryBadge label={displayCategory} />}
+                          {task.assigned_to && profileMapFull[task.assigned_to] && (
+                            <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{profileMapFull[task.assigned_to]}</span>
+                          )}
+                          {contactName && (
+                            <span className="text-[0.6875rem] text-muted-foreground">{contactName}</span>
+                          )}
+                        </div>
+                        {displayDesc && (
+                          <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{displayDesc}</p>
                         )}
                       </div>
                       {task.due_date && (
@@ -329,7 +388,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             </div>
           )}
 
-          {/* ── Activities Timeline (matching ContactCardContent) ── */}
+          {/* ── Activities Timeline ── */}
           <CompanyActivityTimeline activities={activities} profileMap={profileMapFull} />
         </div>
 
@@ -366,7 +425,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   );
 }
 
-/* ── Company Activity Timeline (same visual as ContactCardContent) ── */
+/* ── Company Activity Timeline ── */
 function CompanyActivityTimeline({ activities, profileMap }: { activities: any[]; profileMap: Record<string, string> }) {
   const currentYear = getYear(new Date());
 
@@ -422,7 +481,7 @@ function CompanyActivityTimeline({ activities, profileMap }: { activities: any[]
 
             <div className="space-y-6">
               {group.items.map((activity) => {
-                const desc = cleanDescription(activity.description);
+                const { title: displayTitle, category: displayCategory, cleanDesc } = extractTitleAndCategory(activity.subject, activity.description);
                 const ownerName = activity.created_by ? profileMap[activity.created_by] : null;
                 const d = new Date(activity.created_at);
                 const contactName = (activity.contacts as any)?.first_name
@@ -440,13 +499,20 @@ function CompanyActivityTimeline({ activities, profileMap }: { activities: any[]
                     </div>
 
                     <div className="min-w-0">
-                      {/* Subject */}
-                      <span className="text-[1.0625rem] font-bold text-foreground">{activity.subject}</span>
+                      {/* Title */}
+                      <span className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</span>
+
+                      {/* Category badge */}
+                      {displayCategory && (
+                        <div className="mt-1">
+                          <CategoryBadge label={displayCategory} />
+                        </div>
+                      )}
 
                       {/* Description */}
-                      {desc && (
+                      {cleanDesc && (
                         <div className="mt-1">
-                          <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70">{desc}</p>
+                          <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70">{cleanDesc}</p>
                         </div>
                       )}
 
