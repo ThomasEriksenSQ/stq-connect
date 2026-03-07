@@ -612,9 +612,9 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
             {editable && (
               <button
                 onClick={() => openForm("task")}
-                className="inline-flex items-center gap-1 h-7 px-2.5 text-[0.75rem] rounded-md border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                className="inline-flex items-center gap-1 h-7 px-3 text-[0.75rem] font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-colors"
               >
-                <Plus className="h-3 w-3" /> Ny
+                <Plus className="h-3 w-3" /> Ny oppfølging
               </button>
             )}
           </div>
