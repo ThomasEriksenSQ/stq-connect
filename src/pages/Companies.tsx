@@ -270,6 +270,7 @@ const Companies = () => {
     },
   });
 
+  const filtered = companies.filter((c) => {
     const q = search.toLowerCase();
     const matchSearch = !q || c.name.toLowerCase().includes(q) || c.org_number?.includes(q) || c.industry?.toLowerCase().includes(q);
     const matchOwner = ownerFilter === "all" || getOwnerId(c) === ownerFilter;
