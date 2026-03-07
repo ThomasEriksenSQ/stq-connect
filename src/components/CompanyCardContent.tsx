@@ -19,13 +19,8 @@ import { cleanDescription } from "@/lib/cleanDescription";
 import InlineEdit from "@/components/InlineEdit";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
-import { format, isPast, isToday, getYear } from "date-fns";
-import { nb } from "date-fns/locale";
-import { relativeDate, fullDate } from "@/lib/relativeDate";
-import { cleanDescription } from "@/lib/cleanDescription";
-import InlineEdit from "@/components/InlineEdit";
-import { cn } from "@/lib/utils";
+
+
 
 /* ── Category system (shared with ContactCardContent) ── */
 const CATEGORIES = [
