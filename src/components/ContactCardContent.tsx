@@ -665,7 +665,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                   task={task}
                   overdue={!!overdue}
                   today={!!today}
-                  profileMap={profileMap}
+                  profileMap={profileMapFull}
                   onToggle={() => toggleTaskMutation.mutate(task.id)}
                   onDelete={(id) => deleteTaskMutation.mutate(id)}
                   onUpdate={(id, updates) => updateTaskMutation.mutate({ id, updates })}
