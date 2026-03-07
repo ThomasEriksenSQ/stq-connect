@@ -379,15 +379,33 @@ const Contacts = () => {
                   <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate text-left cursor-pointer">
                     {contact.title?.slice(0, 25) || ""}
                   </button>
-                  {/* SIGNAL */}
-                  <div className="min-w-0">
-                    {signalBadge ? (
-                      <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${signalBadge.color}`}>
-                        {signal}
-                      </span>
-                    ) : (
-                      <span className="text-[0.75rem] text-muted-foreground">—</span>
-                    )}
+                  {/* SIGNAL - inline editable */}
+                  <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        {signalBadge ? (
+                          <button className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer ${signalBadge.color}`}>
+                            {signal}
+                          </button>
+                        ) : (
+                          <button className="inline-flex items-center rounded-full border border-dashed border-border px-2 py-0.5 text-[0.6875rem] text-muted-foreground/50 cursor-pointer hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors">
+                            + Signal
+                          </button>
+                        )}
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        {SIGNAL_OPTIONS.map(s => (
+                          <DropdownMenuItem
+                            key={s.label}
+                            onClick={() => setSignalMutation.mutate({ contactId: contact.id, companyId: contact.company_id, label: s.label })}
+                          >
+                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${s.color}`}>
+                              {s.label}
+                            </span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                   {/* TAGS */}
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
