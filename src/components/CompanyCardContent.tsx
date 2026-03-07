@@ -22,6 +22,37 @@ import { useAuth } from "@/hooks/useAuth";
 import { CATEGORIES as SIGNAL_CATEGORIES, getEffectiveSignal, extractCategory } from "@/lib/categoryUtils";
 
 
+  const effectiveSignal = useMemo(() => {
+    return getEffectiveSignal(
+      activities.map(a => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+      tasks.map(t => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date }))
+    );
+  }, [activities, tasks]);
+
+  const signalBadgeColor = effectiveSignal
+    ? SIGNAL_CATEGORIES.find(c => c.label === effectiveSignal)?.badgeColor || "bg-gray-100 text-gray-600 border-gray-200"
+    : "bg-gray-100 text-gray-600 border-gray-200";
+
+  const changeSignalMutation = useMutation({
+    mutationFn: async (newSignal: string) => {
+      const { error } = await supabase.from("activities").insert({
+        subject: newSignal,
+        type: "note",
+        company_id: companyId,
+        created_by: user?.id,
+        description: `[${newSignal}]`,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["company-activities-direct", companyId] });
+      queryClient.invalidateQueries({ queryKey: ["company-contact-activities", companyId] });
+      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
+      toast.success("Signal oppdatert");
+    },
+    onError: () => toast.error("Kunne ikke oppdatere signal"),
+  });
+
 
 /* ── Category system (shared with ContactCardContent) ── */
 const CATEGORIES = [
