@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Plus, Search, Users, ArrowUpDown, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { useMutation } from "@tanstack/react-query";
+
 import { BrregSearch, lookupByOrgNr } from "@/components/BrregSearch";
 import { relativeDate } from "@/lib/relativeDate";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
