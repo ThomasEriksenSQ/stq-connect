@@ -541,7 +541,15 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                     onClick={() => onOpenContact ? onOpenContact(c.id) : navigate(`/kontakter/${c.id}`)}
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="text-[0.8125rem] font-medium truncate group-hover:text-primary transition-colors">{c.first_name} {c.last_name}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-[0.8125rem] font-medium truncate group-hover:text-primary transition-colors">{c.first_name} {c.last_name}</p>
+                        {c.cv_email && (
+                          <span className="rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">CV</span>
+                        )}
+                        {c.call_list && (
+                          <span className="rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">INN</span>
+                        )}
+                      </div>
                       <p className="text-[0.6875rem] text-muted-foreground truncate">
                         {[c.title, contactOwner].filter(Boolean).join(" · ") || ""}
                       </p>
