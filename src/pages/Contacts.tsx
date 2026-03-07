@@ -110,7 +110,7 @@ const Contacts = () => {
       case "name": return dir * `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`, "nb");
       case "company": return dir * ((a.companies as any)?.name || "").localeCompare((b.companies as any)?.name || "", "nb");
       case "title": return dir * (a.title || "").localeCompare(b.title || "", "nb");
-      case "owner": return dir * (getOwnerFirstName(a) || "").localeCompare(getOwnerFirstName(b) || "", "nb");
+      case "owner": return dir * (getOwnerName(a) || "").localeCompare(getOwnerName(b) || "", "nb");
       case "last_activity":
         if (!(a as any).lastActivity && !(b as any).lastActivity) return 0;
         if (!(a as any).lastActivity) return 1;
