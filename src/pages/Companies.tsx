@@ -311,6 +311,7 @@ const Companies = () => {
                     { value: "prospect", label: "Potensiell kunde", activeClass: "bg-blue-500 text-white border-blue-500" },
                     { value: "customer", label: "Kunde", activeClass: "bg-emerald-500 text-white border-emerald-500" },
                     { value: "churned", label: "Ikke relevant selskap", activeClass: "bg-red-400 text-white border-red-400" },
+                    { value: "partner", label: "Partner", activeClass: "bg-gray-400 text-white border-gray-400" },
                   ] as const).map((opt) => (
                     <button
                       key={opt.value}
