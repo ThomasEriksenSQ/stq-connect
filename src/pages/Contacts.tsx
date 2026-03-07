@@ -331,7 +331,7 @@ const Contacts = () => {
               const companyName = (contact.companies as any)?.name;
               const signal = (contact as any).signal as string | null;
               const signalBadge = getSignalBadge(signal);
-              const openTasks = (contact as any).openTasks as { count: number; overdue: boolean };
+              const openTasks = (contact as any).openTasks || { count: 0, overdue: false };
 
               return (
                 <div key={contact.id} className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_90px_70px_90px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75">
