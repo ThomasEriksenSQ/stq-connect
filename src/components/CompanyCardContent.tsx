@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Phone, Mail, Globe, Linkedin, FileText, Calendar, CalendarDays, ExternalLink, ChevronRight, Pencil, User, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -193,9 +194,20 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
           )}
           <div className="ml-auto flex items-center gap-2 flex-shrink-0">
             <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ${status.className}`}>{status.label}</span>
-            {ownerFullName && (
+            {editable ? (
+              <Select value={company.owner_id || ""} onValueChange={(v) => updateMutation.mutate({ owner_id: v || null })}>
+                <SelectTrigger className="h-auto w-auto gap-1 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0">
+                  <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+                    {company.owner_id && profileMapFull[company.owner_id] ? profileMapFull[company.owner_id] : "Eier"}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  {allProfiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            ) : ownerFullName ? (
               <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{ownerFullName}</span>
-            )}
+            ) : null}
             {editable && company.notes === null && !editingNotes && (
               <button onClick={() => setEditingNotes(true)} className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-secondary text-muted-foreground">
                 <Pencil className="h-3.5 w-3.5" />
