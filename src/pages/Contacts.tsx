@@ -62,12 +62,12 @@ const Contacts = () => {
       const [{ data: acts }, { data: tasks }] = await Promise.all([
         supabase
           .from("activities")
-          .select("contact_id, created_at, description")
+          .select("contact_id, created_at, description, subject")
           .in("contact_id", contactIds)
           .order("created_at", { ascending: false }),
         supabase
           .from("tasks")
-          .select("contact_id, created_at, due_date, status, description")
+          .select("contact_id, created_at, due_date, status, description, title")
           .in("contact_id", contactIds),
       ]);
 
@@ -80,13 +80,13 @@ const Contacts = () => {
       // Signal: latest category from activities or tasks (by created_at desc)
       const signalMap: Record<string, string> = {};
       const allItems = [
-        ...(acts || []).map(a => ({ contact_id: a.contact_id, created_at: a.created_at, description: a.description })),
-        ...(tasks || []).map(t => ({ contact_id: t.contact_id, created_at: t.created_at, description: t.description })),
+        ...(acts || []).map(a => ({ contact_id: a.contact_id, created_at: a.created_at, subject: a.subject, description: a.description })),
+        ...(tasks || []).map(t => ({ contact_id: t.contact_id, created_at: t.created_at, subject: t.title, description: t.description })),
       ].sort((a, b) => b.created_at.localeCompare(a.created_at));
 
       allItems.forEach(item => {
         if (item.contact_id && !signalMap[item.contact_id]) {
-          const cat = extractCategory(item.description);
+          const cat = extractCategory(item.subject, item.description);
           if (cat) signalMap[item.contact_id] = cat;
         }
       });
