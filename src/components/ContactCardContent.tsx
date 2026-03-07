@@ -344,9 +344,9 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
     <div>
       {/* ── ZONE A: Contact Header ── */}
       <div className="mb-3">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
           {editable ? (
-            <h2 className="text-[1.375rem] font-bold truncate">
+            <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">
               <InlineField
                 value={`${contact.first_name} ${contact.last_name}`}
                 onSave={(v) => {
@@ -355,15 +355,15 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                   const last = parts.slice(1).join(" ") || "";
                   updateMutation.mutate({ first_name: first, last_name: last });
                 }}
-                className="text-[1.375rem] font-bold"
+                className="text-[1.5rem] font-bold"
               />
             </h2>
           ) : (
-            <h2 className="text-[1.375rem] font-bold truncate">
+            <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">
               {contact.first_name} {contact.last_name}
             </h2>
           )}
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="ml-auto flex items-center gap-2 flex-shrink-0">
             {editable && (
               <Select value={contact.owner_id || ""} onValueChange={(v) => updateMutation.mutate({ owner_id: v || null })}>
                 <SelectTrigger className="h-7 w-auto gap-1 border-none bg-transparent p-0 px-2 text-[0.75rem] text-muted-foreground shadow-none hover:text-foreground">
