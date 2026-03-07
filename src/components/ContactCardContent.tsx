@@ -1046,7 +1046,7 @@ function ActivityRow({
           <div onClick={handleRowClick} className={cn(editable && "cursor-pointer")}>
             {/* Level 1: Subject */}
             <div className="flex items-start justify-between gap-2">
-              <span className="text-[1rem] font-semibold text-foreground">{activity.subject}</span>
+              <span className="text-[1.0625rem] font-bold text-foreground">{activity.subject}</span>
             </div>
 
             {/* Delete confirmation */}
