@@ -255,7 +255,6 @@ const Contacts = () => {
                     {companyName ? <><Building2 className="h-3 w-3 flex-shrink-0" />{companyName}</> : ""}
                   </span>
                   <span className="text-[0.8125rem] text-muted-foreground truncate">{contact.title?.slice(0, 25) || ""}</span>
-                  <span className="text-[0.8125rem] text-muted-foreground truncate">{getOwnerFirstName(contact) || ""}</span>
                   <span className="text-[0.75rem] text-muted-foreground text-right">
                     {(contact as any).lastActivity ? (
                       <Tooltip>
