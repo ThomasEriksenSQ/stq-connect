@@ -50,12 +50,15 @@ function extractCategory(subject: string, description: string | null): string {
 
 const SIGNAL_ORDER = CATEGORIES.map(c => c.label);
 
-const statusLabels: Record<string, { label: string; className: string }> = {
-  lead: { label: "Lead", className: "bg-tag text-tag-foreground" },
-  prospect: { label: "Prospekt", className: "bg-warning/10 text-warning" },
-  customer: { label: "Kunde", className: "bg-success/10 text-success" },
-  churned: { label: "Tapt", className: "bg-destructive/10 text-destructive" },
+const statusLabels: Record<string, { label: string; className: string; badgeColor: string }> = {
+  lead: { label: "Lead", className: "bg-tag text-tag-foreground", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" },
+  prospect: { label: "Potensiell kunde", className: "bg-warning/10 text-warning", badgeColor: "bg-blue-100 text-blue-800 border-blue-200" },
+  customer: { label: "Kunde", className: "bg-success/10 text-success", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  churned: { label: "Ikke relevant selskap", className: "bg-destructive/10 text-destructive", badgeColor: "bg-red-50 text-red-700 border-red-200" },
+  partner: { label: "Partner", className: "bg-secondary text-muted-foreground", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" },
 };
+
+const TYPE_ORDER = ["prospect", "customer", "churned", "partner", "lead"];
 
 const OrgNrInput = ({ value, onChange, onLookup }: { value: string; onChange: (v: string) => void; onLookup: (name: string | null, city: string | null) => void }) => {
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
