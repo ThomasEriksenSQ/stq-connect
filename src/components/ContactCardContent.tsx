@@ -665,7 +665,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                   task={task}
                   overdue={!!overdue}
                   today={!!today}
-                  profileMap={profileMap}
+                  profileMap={profileMapFull}
                   onToggle={() => toggleTaskMutation.mutate(task.id)}
                   onDelete={(id) => deleteTaskMutation.mutate(id)}
                   onUpdate={(id, updates) => updateTaskMutation.mutate({ id, updates })}
@@ -680,7 +680,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
       {/* ── ZONE D: Aktiviteter Timeline ── */}
       <ActivityTimeline
         activities={activities}
-        profileMap={profileMap}
+        profileMap={profileMapFull}
         editable={editable}
         onDelete={(id) => deleteActivityMutation.mutate(id)}
         onUpdateActivity={(id, updates) => updateActivityMutation.mutate({ id, updates })}
