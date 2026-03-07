@@ -222,11 +222,10 @@ const Contacts = () => {
         <p className="text-sm text-muted-foreground py-12 text-center">Ingen kontakter funnet</p>
       ) : (
         <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
-          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_80px_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="name">Navn</SortHeader>
             <SortHeader field="company">Selskap</SortHeader>
             <SortHeader field="title">Stilling</SortHeader>
-            <SortHeader field="owner">Eier</SortHeader>
             <SortHeader field="last_activity" className="justify-end">Siste akt.</SortHeader>
           </div>
           <div className="divide-y divide-border">
