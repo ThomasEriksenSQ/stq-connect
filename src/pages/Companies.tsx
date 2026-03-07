@@ -447,6 +447,16 @@ const Companies = () => {
             </button>
           ))}
         </div>
+        {/* Signal chips */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground mr-1">Signal</span>
+          {[{ value: "all", label: "Alle" }, ...CATEGORIES.map(c => ({ value: c.label, label: c.label }))].map(o => (
+            <button key={o.value} onClick={() => setSignalFilter(o.value)}
+              className={`h-8 px-3 text-[0.8125rem] rounded-full border transition-colors ${signalFilter === o.value ? "bg-foreground text-background border-foreground font-medium" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+              {o.label}
+            </button>
+          ))}
+        </div>
         {/* Type chips */}
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground mr-1">Type</span>
@@ -459,16 +469,6 @@ const Companies = () => {
           ].map(o => (
             <button key={o.value} onClick={() => setStatusFilter(o.value)}
               className={`h-8 px-3 text-[0.8125rem] rounded-full border transition-colors ${statusFilter === o.value ? "bg-foreground text-background border-foreground font-medium" : "border-border text-muted-foreground hover:bg-secondary"}`}>
-              {o.label}
-            </button>
-          ))}
-        </div>
-        {/* Signal chips */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground mr-1">Signal</span>
-          {[{ value: "all", label: "Alle" }, ...CATEGORIES.map(c => ({ value: c.label, label: c.label }))].map(o => (
-            <button key={o.value} onClick={() => setSignalFilter(o.value)}
-              className={`h-8 px-3 text-[0.8125rem] rounded-full border transition-colors ${signalFilter === o.value ? "bg-foreground text-background border-foreground font-medium" : "border-border text-muted-foreground hover:bg-secondary"}`}>
               {o.label}
             </button>
           ))}
