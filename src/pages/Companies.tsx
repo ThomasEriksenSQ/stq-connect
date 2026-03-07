@@ -504,13 +504,34 @@ const Companies = () => {
                       <p className="text-[0.6875rem] text-muted-foreground truncate mt-0.5">{company.industry}</p>
                     )}
                   </div>
-                  <span className="min-w-0">
-                    {(company.status === "prospect") && <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-amber-100 text-amber-800 border-amber-200">Potensiell kunde</span>}
-                    {(company.status === "customer" || company.status === "kunde") && <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-800 border-emerald-200">Kunde</span>}
-                    {(company.status === "churned") && <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-red-50 text-red-700 border-red-200">Ikke relevant selskap</span>}
-                    {(company.status === "partner") && <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-gray-100 text-gray-600 border-gray-200">Partner</span>}
-                    {!["prospect","customer","kunde","churned","partner"].includes(company.status) && <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-gray-100 text-gray-600 border-gray-200">{company.status}</span>}
-                  </span>
+                  {/* TYPE - inline editable */}
+                  <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        {(() => {
+                          const t = TYPE_OPTIONS.find(o => o.value === company.status || (o.value === "customer" && company.status === "kunde"));
+                          const badge = t || { label: company.status, badgeColor: "bg-gray-100 text-gray-600 border-gray-200" };
+                          return (
+                            <button className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer ${badge.badgeColor}`}>
+                              {badge.label}
+                            </button>
+                          );
+                        })()}
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        {TYPE_OPTIONS.map(o => (
+                          <DropdownMenuItem
+                            key={o.value}
+                            onClick={() => setTypeMutation.mutate({ companyId: company.id, status: o.value })}
+                          >
+                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${o.badgeColor}`}>
+                              {o.label}
+                            </span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                   {/* SIGNAL - inline editable */}
                   <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
