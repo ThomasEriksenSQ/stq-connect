@@ -281,6 +281,8 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contact-activities", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
+      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
       toast.success("Aktivitet registrert");
       closeForm();
     },
