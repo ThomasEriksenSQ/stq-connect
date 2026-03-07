@@ -29,7 +29,7 @@ const Login = () => {
       <div
         style={{
           width: "100%",
-          maxWidth: "380px",
+          maxWidth: "420px",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -40,8 +40,8 @@ const Login = () => {
           src="/logo.png"
           alt="STACQ CRM"
           style={{
-            width: "400px",
-            height: "400px",
+            width: "100%",
+            height: "auto",
             objectFit: "contain",
           }}
         />
