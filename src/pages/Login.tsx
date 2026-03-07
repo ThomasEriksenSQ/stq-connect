@@ -21,7 +21,7 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-white px-4">
       <div className="w-full max-w-[380px] space-y-10 animate-fade-up">
         <div className="flex justify-center">
-          <img src="/logo.png" alt="STACQ CRM" className="w-72 h-72 object-contain" />
+          <img src="/logo.png" alt="STACQ CRM" className="w-100 h-100 object-contain" />
         </div>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
