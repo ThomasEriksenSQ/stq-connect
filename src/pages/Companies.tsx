@@ -128,6 +128,8 @@ const Companies = () => {
       const contactToCompany: Record<string, string> = {};
       data.forEach(c => (c.contacts || []).forEach((ct: any) => { contactToCompany[ct.id] = c.id; }));
 
+      const now = new Date();
+      const isPast = (d: string) => new Date(d) <= now;
       const lastActivityMap: Record<string, string> = {};
       const taskCountMap: Record<string, number> = {};
       const overdueTaskMap: Record<string, boolean> = {};
