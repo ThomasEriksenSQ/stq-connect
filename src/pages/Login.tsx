@@ -42,7 +42,7 @@ const Login = () => {
           style={{
             width: "250px",
             height: "250px",
-            objectFit: "cover",
+            objectFit: "contain",
           }}
         />
 
