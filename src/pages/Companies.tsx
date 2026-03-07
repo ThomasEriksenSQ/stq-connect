@@ -228,6 +228,11 @@ const Companies = () => {
     const dir = sort.dir === "asc" ? 1 : -1;
     switch (sort.field) {
       case "name": return dir * a.name.localeCompare(b.name, "nb");
+      case "type": {
+        const ai = TYPE_ORDER.indexOf(a.status);
+        const bi = TYPE_ORDER.indexOf(b.status);
+        return dir * ((ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi));
+      }
       case "signal": {
         const ai = SIGNAL_ORDER.indexOf(a.signal as any || "");
         const bi = SIGNAL_ORDER.indexOf(b.signal as any || "");
