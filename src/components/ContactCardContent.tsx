@@ -922,7 +922,6 @@ function TaskRow({
         )}
       </div>
       <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
-        {displayCategory && <CategoryBadge label={displayCategory} />}
         {task.due_date && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -936,6 +935,7 @@ function TaskRow({
             <TooltipContent>{fullDate(task.due_date)}</TooltipContent>
           </Tooltip>
         )}
+        {displayCategory && <CategoryBadge label={displayCategory} />}
       </div>
     </div>
   );
