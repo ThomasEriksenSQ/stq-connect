@@ -224,7 +224,7 @@ const Companies = () => {
                   {([
                     { value: "prospect", label: "Potensiell kunde" },
                     { value: "customer", label: "Kunde" },
-                    { value: "churned", label: "Ikke aktuell" },
+                    { value: "churned", label: "Ikke relevant selskap" },
                   ] as const).map((opt) => (
                     <button
                       key={opt.value}
@@ -232,7 +232,9 @@ const Companies = () => {
                       onClick={() => setForm((f) => ({ ...f, status: opt.value }))}
                       className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
                         form.status === opt.value
-                          ? "bg-primary text-primary-foreground"
+                          ? opt.value === "churned"
+                            ? "bg-[hsl(var(--success))] text-white"
+                            : "bg-primary text-primary-foreground"
                           : "bg-secondary text-muted-foreground hover:bg-secondary/80"
                       }`}
                     >
