@@ -649,12 +649,19 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
 
       {/* ── ZONE C: Oppfølginger ── */}
       {tasks.length > 0 && (
-        <div className="bg-[hsl(210_40%_98%)] border-l-[3px] border-l-[hsl(214_100%_93%)] rounded-lg p-4 mb-6">
+        <div className="bg-card border border-border rounded-lg shadow-card p-4 mb-6">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
               Oppfølginger · {tasks.length}
             </h3>
-            {/* Removed duplicate "+ Ny oppfølging" button — use action bar button instead */}
+            {editable && (
+              <button
+                onClick={() => openForm("task")}
+                className="inline-flex items-center gap-1 h-8 px-3 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" /> Ny oppfølging
+              </button>
+            )}
           </div>
           <div className="space-y-px">
             {tasks.map((task) => {
