@@ -53,7 +53,7 @@ function CategoryPicker({ selected, onSelect }: { selected: string; onSelect: (v
           className={cn(
             "h-8 px-3 text-[0.8125rem] rounded-full border transition-all font-medium",
             selected === cat.label
-              ? cn(cat.color, "ring-2 ring-offset-1 ring-primary/30")
+              ? "bg-foreground text-background border-foreground"
               : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
           )}
         >
