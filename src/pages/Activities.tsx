@@ -85,8 +85,8 @@ const Activities = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Aktiviteter</h1>
-          <p className="text-muted-foreground">Logg og spor alle aktiviteter</p>
+          <h1 className="text-[1.375rem] font-bold">Aktiviteter</h1>
+          <p className="text-[0.8125rem] text-muted-foreground">Logg og spor alle aktiviteter</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
