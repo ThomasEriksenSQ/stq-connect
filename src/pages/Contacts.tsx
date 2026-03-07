@@ -18,7 +18,7 @@ import { nb } from "date-fns/locale";
 type SortField = "name" | "company" | "title" | "signal" | "owner" | "last_activity";
 type SortDir = "asc" | "desc";
 
-import { CATEGORIES, extractCategory } from "@/lib/categoryUtils";
+import { CATEGORIES, getEffectiveSignal } from "@/lib/categoryUtils";
 
 const SIGNAL_OPTIONS = CATEGORIES.map(c => ({ label: c.label, color: c.badgeColor }));
 
