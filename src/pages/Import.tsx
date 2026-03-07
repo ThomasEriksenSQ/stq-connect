@@ -298,12 +298,12 @@ const Import = () => {
 
       {progress > 0 && <Progress value={progress} className="h-2" />}
 
-      <Button onClick={runImport} disabled={running || !accountsFile || !contactsFile || !tasksFile || !eventsFile} size="lg">
+      <Button onClick={runImport} disabled={running || !accountsFile || !contactsFile || !tasksFile || !eventsFile} className="rounded-lg h-10 px-5 text-[0.8125rem] font-medium">
         {running ? "Importerer..." : "Start re-import"}
       </Button>
 
       {log.length > 0 && (
-        <div ref={logRef} className="bg-muted rounded-xl p-4 max-h-80 overflow-y-auto font-mono text-xs space-y-1">
+        <div ref={logRef} className="bg-secondary rounded-lg border border-border p-4 max-h-80 overflow-y-auto font-mono text-[0.75rem] space-y-1">
           {log.map((l, i) => <div key={i}>{l}</div>)}
         </div>
       )}
