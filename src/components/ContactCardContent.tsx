@@ -140,6 +140,9 @@ const DATE_CHIPS = [
   { label: "1 uke", fn: () => addWeeks(new Date(), 1) },
   { label: "2 uker", fn: () => addWeeks(new Date(), 2) },
   { label: "1 måned", fn: () => addMonths(new Date(), 1) },
+  { label: "3 måneder", fn: () => addMonths(new Date(), 3) },
+  { label: "6 måneder", fn: () => addMonths(new Date(), 6) },
+  { label: "1 år", fn: () => addYears(new Date(), 1) },
 ];
 
 export function ContactCardContent({ contactId, editable = false, onOpenCompany, onNavigateToFullPage }: ContactCardContentProps) {
@@ -191,7 +194,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
     enabled: !!contactId,
   });
 
-  const profileMap = Object.fromEntries(allProfiles.map(p => [p.id, p.full_name.split(" ")[0]]));
+  const profileMap = Object.fromEntries(allProfiles.map(p => [p.id, p.full_name]));
   const profileMapFull = Object.fromEntries(allProfiles.map(p => [p.id, p.full_name]));
 
   const { data: tasks = [] } = useQuery({
@@ -614,8 +617,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                       <button
                         type="button"
                         onClick={() => {
-                          setFormDescription("Ringte, svarte ikke");
-                          setFormCategory("Ukjent om behov");
+                           setFormDescription("Ringte, svarte ikke");
                         }}
                         className="inline-flex items-center gap-1 h-6 px-2.5 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
                       >
