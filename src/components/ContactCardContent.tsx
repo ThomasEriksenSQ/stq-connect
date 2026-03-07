@@ -498,28 +498,19 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => openForm("call")}
-              className={cn(
-                "inline-flex items-center gap-1.5 h-9 px-3.5 text-[0.8125rem] font-medium rounded-lg border bg-background transition-colors",
-                activeForm === "call" ? "border-primary/40 bg-primary/5" : "border-border text-foreground/80 hover:bg-secondary hover:border-muted-foreground/30"
-              )}
+              className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg transition-colors bg-[hsl(var(--success))] text-white hover:opacity-90"
             >
-              <MessageCircle className="h-[15px] w-[15px] text-[hsl(var(--success))]" /> Logg samtale
+              <MessageCircle className="h-[15px] w-[15px] text-white" /> Logg samtale
             </button>
             <button
               onClick={() => openForm("meeting")}
-              className={cn(
-                "inline-flex items-center gap-1.5 h-9 px-3.5 text-[0.8125rem] font-medium rounded-lg border bg-background transition-colors",
-                activeForm === "meeting" ? "border-primary/40 bg-primary/5" : "border-border text-foreground/80 hover:bg-secondary hover:border-muted-foreground/30"
-              )}
+              className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg transition-colors bg-primary text-primary-foreground hover:opacity-90"
             >
-              <FileText className="h-[15px] w-[15px] text-primary" /> Logg møtereferat
+              <FileText className="h-[15px] w-[15px] text-white" /> Logg møtereferat
             </button>
             <button
               onClick={() => openForm("task")}
-              className={cn(
-                "inline-flex items-center gap-1.5 h-9 px-3.5 text-[0.8125rem] font-medium rounded-lg border bg-background transition-colors",
-                activeForm === "task" ? "border-primary/40 bg-primary/5" : "border-border text-foreground/80 hover:bg-secondary hover:border-muted-foreground/30"
-              )}
+              className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
             >
               <Clock className="h-[15px] w-[15px] text-[hsl(var(--warning))]" /> Ny oppfølging
             </button>
@@ -621,9 +612,9 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
             {editable && (
               <button
                 onClick={() => openForm("task")}
-                className="inline-flex items-center gap-1 h-7 px-2.5 text-[0.75rem] rounded-md border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                className="inline-flex items-center gap-1 h-7 px-3 text-[0.75rem] font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-colors"
               >
-                <Plus className="h-3 w-3" /> Ny
+                <Plus className="h-3 w-3" /> Ny oppfølging
               </button>
             )}
           </div>
@@ -695,12 +686,12 @@ function TaskRow({
         className="h-4 w-4 rounded-[4px] border-2 border-muted-foreground/40 flex-shrink-0 mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
       />
       <div className="flex-1 min-w-0">
-        <CategoryBadge title={task.title} />
+        <span className="text-[1rem] font-semibold text-foreground">{task.title}</span>
         {task.description && (
           <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{task.description}</p>
         )}
         {task.assigned_to && profileMap[task.assigned_to] && (
-          <span className="text-[0.75rem] text-muted-foreground">{profileMap[task.assigned_to]}</span>
+          <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium mt-1">{profileMap[task.assigned_to]}</span>
         )}
       </div>
       {task.due_date && (
@@ -710,7 +701,7 @@ function TaskRow({
               "text-[0.8125rem] font-medium px-2 py-0.5 rounded-md flex-shrink-0 mt-0.5",
               overdue ? "text-destructive" : today ? "text-[hsl(var(--warning))]" : "text-muted-foreground"
             )}>
-              {format(new Date(task.due_date), "d. MMM", { locale: nb })}
+              {format(new Date(task.due_date), "d. MMM yyyy", { locale: nb })}
             </span>
           </TooltipTrigger>
           <TooltipContent>{fullDate(task.due_date)}</TooltipContent>
@@ -774,11 +765,12 @@ function ActivityTimeline({
       {grouped.map((group, gi) => (
         <div key={group.key}>
           {/* Month header */}
-          <div className={cn("flex items-center gap-2 mb-3", gi > 0 && "mt-5")}>
-            <span className="text-[0.6875rem] font-semibold tracking-[0.06em] text-muted-foreground/50 whitespace-nowrap">
-              {group.label}{group.period && <span> · {group.period}</span>}
+          <div className={cn("flex items-center gap-3 mb-3", gi > 0 && "mt-6")}>
+            <span className="text-[0.8125rem] font-bold tracking-[0.04em] text-foreground whitespace-nowrap">
+              {group.label}
             </span>
-            <div className="flex-1 h-px bg-border/40" />
+            {group.period && <span className="text-[0.8125rem] text-muted-foreground/60">· {group.period}</span>}
+            <div className="flex-1 h-px bg-border" />
           </div>
 
           {/* Timeline spine */}
@@ -873,9 +865,9 @@ function ActivityRow({
           </div>
         ) : (
           <>
-            {/* Level 1: Subject as category badge */}
+            {/* Level 1: Subject */}
             <div className="flex items-start justify-between gap-2">
-              <CategoryBadge title={activity.subject} />
+              <span className="text-[1rem] font-semibold text-foreground">{activity.subject}</span>
               {editable && !confirmDelete && (
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5">
                   <button
@@ -905,30 +897,27 @@ function ActivityRow({
 
             {/* Level 2: Description */}
             {desc ? (
-              <div className="mt-0.5">
-                <p
-                  className="text-[0.875rem] leading-relaxed whitespace-pre-wrap text-foreground/70"
-                  style={!expanded ? { WebkitLineClamp: 2, display: "-webkit-box", WebkitBoxOrient: "vertical" as const, overflow: "hidden" } : undefined}
-                >
+              <div className="mt-1">
+                <p className="text-[0.875rem] leading-relaxed whitespace-pre-wrap text-foreground/70">
                   {desc}
                 </p>
-                {desc.length > 120 && (
-                  <button onClick={() => setExpanded(!expanded)} className="text-[0.75rem] text-primary hover:underline mt-0.5 inline-flex items-center gap-0.5">
-                    {expanded ? <>Vis mindre <ChevronUp className="h-3 w-3" /></> : <>Vis mer <ChevronDown className="h-3 w-3" /></>}
-                  </button>
-                )}
               </div>
             ) : null}
 
             {/* Level 3: Meta */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <p className="text-[0.75rem] text-muted-foreground mt-1">
-                  {ownerName && <>{ownerName} · </>}{dateStr}{yearStr}
-                </p>
-              </TooltipTrigger>
-              <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
-            </Tooltip>
+            <div className="flex items-center gap-2 mt-1.5">
+              {ownerName && (
+                <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{ownerName}</span>
+              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-[0.8125rem] text-muted-foreground">
+                    {format(d, "d. MMM yyyy", { locale: nb })}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
+              </Tooltip>
+            </div>
           </>
         )}
       </div>
