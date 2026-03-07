@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Phone, Mail, Linkedin, FileText, Clock, ExternalLink, Pencil, Trash2, ChevronDown, ChevronUp, Plus, MessageCircle } from "lucide-react";
+import { Phone, Mail, Linkedin, FileText, Clock, ExternalLink, Pencil, Trash2, ChevronDown, ChevronUp, Plus, MessageCircle, PhoneOff } from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday, getYear, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { nb } from "date-fns/locale";
@@ -21,9 +21,9 @@ import { cn } from "@/lib/utils";
 const CATEGORIES = [
   { label: "Behov nå", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
   { label: "Fremtidig behov", color: "bg-blue-100 text-blue-800 border-blue-200" },
-  { label: "Kanskje behov", color: "bg-amber-100 text-amber-800 border-amber-200" },
-  { label: "Ukjent behov", color: "bg-gray-100 text-gray-600 border-gray-200" },
-  { label: "Ikke relevant", color: "bg-red-50 text-red-700 border-red-200" },
+  { label: "Har kanskje behov", color: "bg-amber-100 text-amber-800 border-amber-200" },
+  { label: "Ukjent om behov", color: "bg-gray-100 text-gray-600 border-gray-200" },
+  { label: "Aldri aktuelt", color: "bg-red-50 text-red-700 border-red-200" },
 ] as const;
 
 function getCategoryStyle(title: string) {
@@ -34,7 +34,7 @@ function getCategoryStyle(title: string) {
 function CategoryBadge({ title, className }: { title: string; className?: string }) {
   const style = getCategoryStyle(title);
   const isKnown = CATEGORIES.some((c) => c.label === title);
-  if (!isKnown) return <span className={cn("text-[0.9375rem] font-semibold text-foreground", className)}>{title}</span>;
+  if (!isKnown) return <span className={cn("text-[1rem] font-semibold text-foreground", className)}>{title}</span>;
   return (
     <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", style, className)}>
       {title}
@@ -192,6 +192,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
   });
 
   const profileMap = Object.fromEntries(allProfiles.map(p => [p.id, p.full_name.split(" ")[0]]));
+  const profileMapFull = Object.fromEntries(allProfiles.map(p => [p.id, p.full_name]));
 
   const { data: tasks = [] } = useQuery({
     queryKey: ["contact-tasks", contactId],
@@ -289,6 +290,30 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
     },
   });
 
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await supabase.from("tasks").delete().eq("id", taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contact-tasks", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast.success("Oppfølging slettet");
+    },
+  });
+
+  const updateTaskMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Record<string, any> }) => {
+      const { error } = await supabase.from("tasks").update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contact-tasks", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast.success("Oppdatert");
+    },
+  });
+
   const openForm = (type: "call" | "meeting" | "task") => {
     setActiveForm(type);
     setFormCategory("");
@@ -363,11 +388,14 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
               {contact.first_name} {contact.last_name}
             </h2>
           )}
+          {/* Owner badge — same style as oppfølginger list badges */}
           <div className="ml-auto flex items-center gap-2 flex-shrink-0">
             {editable && (
               <Select value={contact.owner_id || ""} onValueChange={(v) => updateMutation.mutate({ owner_id: v || null })}>
-                <SelectTrigger className="h-7 w-auto gap-1 border-none bg-transparent p-0 px-2 text-[0.75rem] text-muted-foreground shadow-none hover:text-foreground">
-                  <SelectValue placeholder="Eier" />
+                <SelectTrigger className="h-auto w-auto gap-1 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0">
+                  <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+                    {contact.owner_id && profileMapFull[contact.owner_id] ? profileMapFull[contact.owner_id] : "Eier"}
+                  </span>
                 </SelectTrigger>
                 <SelectContent>
                   {allProfiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
@@ -576,11 +604,25 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                   )}
                 </div>
               ) : (
-                /* Date for call/meeting */
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="text-[0.75rem] text-muted-foreground">
-                    Dato: I dag, {format(new Date(), "d. MMMM", { locale: nb })}
-                  </span>
+                /* Date for call/meeting + quick-select for call */
+                <div className="mt-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[0.75rem] text-muted-foreground">
+                      Dato: I dag, {format(new Date(), "d. MMMM", { locale: nb })}
+                    </span>
+                    {activeForm === "call" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormDescription("Ringte, svarte ikke");
+                          setFormCategory("Ukjent om behov");
+                        }}
+                        className="inline-flex items-center gap-1 h-6 px-2.5 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                      >
+                        <PhoneOff className="h-3 w-3" /> Ringte, svarte ikke
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -609,14 +651,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
             <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
               Oppfølginger · {tasks.length}
             </h3>
-            {editable && (
-              <button
-                onClick={() => openForm("task")}
-                className="inline-flex items-center gap-1 h-7 px-3 text-[0.75rem] font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-colors"
-              >
-                <Plus className="h-3 w-3" /> Ny oppfølging
-              </button>
-            )}
+            {/* Removed duplicate "+ Ny oppfølging" button — use action bar button instead */}
           </div>
           <div className="space-y-px">
             {tasks.map((task) => {
@@ -630,6 +665,8 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                   today={!!today}
                   profileMap={profileMap}
                   onToggle={() => toggleTaskMutation.mutate(task.id)}
+                  onDelete={(id) => deleteTaskMutation.mutate(id)}
+                  onUpdate={(id, updates) => updateTaskMutation.mutate({ id, updates })}
                   editable={editable}
                 />
               );
@@ -657,6 +694,8 @@ function TaskRow({
   today,
   profileMap,
   onToggle,
+  onDelete,
+  onUpdate,
   editable,
 }: {
   task: any;
@@ -664,27 +703,121 @@ function TaskRow({
   today: boolean;
   profileMap: Record<string, string>;
   onToggle: () => void;
+  onDelete: (id: string) => void;
+  onUpdate: (id: string, updates: Record<string, any>) => void;
   editable: boolean;
 }) {
   const [completing, setCompleting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editCategory, setEditCategory] = useState(task.title);
+  const [editDesc, setEditDesc] = useState(task.description || "");
+  const [editDate, setEditDate] = useState(task.due_date || "");
+  const [editChipIdx, setEditChipIdx] = useState<number | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const handleCheck = () => {
+  const handleCheck = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setCompleting(true);
     setTimeout(() => onToggle(), 250);
   };
 
+  const handleRowClick = () => {
+    if (!editable || completing || editing) return;
+    setEditCategory(task.title);
+    setEditDesc(task.description || "");
+    setEditDate(task.due_date || "");
+    setEditChipIdx(null);
+    setEditing(true);
+  };
+
+  const handleSave = () => {
+    if (!editCategory) return;
+    onUpdate(task.id, { title: editCategory, description: editDesc.trim() || null, due_date: editDate || null });
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <div className="py-2.5 px-1 space-y-2 animate-in fade-in duration-150">
+        <CategoryPicker selected={editCategory} onSelect={setEditCategory} />
+        <Textarea
+          value={editDesc}
+          onChange={(e) => setEditDesc(e.target.value)}
+          rows={3}
+          placeholder="Beskrivelse (valgfritt)"
+          className="text-[0.875rem] rounded-md"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setEditing(false);
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") handleSave();
+          }}
+        />
+        <div>
+          <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Når?</span>
+          <div className="flex flex-wrap gap-1.5 mt-1.5">
+            {DATE_CHIPS.map((chip, i) => (
+              <button
+                key={chip.label}
+                type="button"
+                onClick={() => {
+                  const d = chip.fn();
+                  setEditDate(format(d, "yyyy-MM-dd"));
+                  setEditChipIdx(i);
+                }}
+                className={cn(
+                  "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors",
+                  editChipIdx === i
+                    ? "bg-primary/10 border-primary/30 text-primary font-medium"
+                    : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
+                )}
+              >
+                {chip.label}
+              </button>
+            ))}
+            <input
+              type="date"
+              value={editDate}
+              onChange={(e) => { setEditDate(e.target.value); setEditChipIdx(null); }}
+              className="h-7 px-2 text-[0.75rem] rounded-full border border-border text-muted-foreground bg-background"
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" className="h-6 text-[0.6875rem] px-2 rounded" onClick={handleSave}>Lagre</Button>
+          <Button variant="ghost" size="sm" className="h-6 text-[0.6875rem] px-2 rounded" onClick={() => setEditing(false)}>Avbryt</Button>
+          <div className="ml-auto">
+            {confirmDelete ? (
+              <span className="text-[0.75rem] animate-in fade-in duration-150">
+                <span className="text-destructive mr-1">Er du sikker?</span>
+                <button onClick={() => { onDelete(task.id); setConfirmDelete(false); }} className="text-destructive font-medium hover:underline mr-1">Ja, slett</button>
+                <button onClick={() => setConfirmDelete(false)} className="text-muted-foreground hover:text-foreground">Avbryt</button>
+              </span>
+            ) : (
+              <button onClick={() => setConfirmDelete(true)} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
+      onClick={handleRowClick}
       className={cn(
         "flex items-start gap-2.5 py-2.5 px-1 rounded-md transition-all duration-200 group hover:bg-background/60",
-        completing && "opacity-30 line-through scale-[0.98]"
+        completing && "opacity-30 line-through scale-[0.98]",
+        editable && "cursor-pointer"
       )}
     >
-      <Checkbox
-        checked={completing}
-        onCheckedChange={handleCheck}
-        className="h-4 w-4 rounded-[4px] border-2 border-muted-foreground/40 flex-shrink-0 mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-      />
+      <div onClick={(e) => e.stopPropagation()}>
+        <Checkbox
+          checked={completing}
+          onCheckedChange={() => handleCheck({ stopPropagation: () => {} } as any)}
+          className="h-4 w-4 rounded-[4px] border-2 border-muted-foreground/40 flex-shrink-0 mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+        />
+      </div>
       <div className="flex-1 min-w-0">
         <span className="text-[1rem] font-semibold text-foreground">{task.title}</span>
         {task.description && (
@@ -817,6 +950,7 @@ function ActivityRow({
   const [editing, setEditing] = useState(false);
   const [editCategory, setEditCategory] = useState(activity.subject);
   const [editDesc, setEditDesc] = useState(activity.description || "");
+  const [editDate, setEditDate] = useState(activity.created_at ? format(new Date(activity.created_at), "yyyy-MM-dd") : "");
   const [expanded, setExpanded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -832,8 +966,21 @@ function ActivityRow({
 
   const handleSaveEdit = () => {
     if (!editCategory) return;
-    onUpdateActivity(activity.id, { subject: editCategory, description: editDesc.trim() || null });
+    const updates: Record<string, any> = { subject: editCategory, description: editDesc.trim() || null };
+    if (editDate) {
+      updates.created_at = new Date(editDate).toISOString();
+    }
+    onUpdateActivity(activity.id, updates);
     setEditing(false);
+  };
+
+  const handleRowClick = () => {
+    if (!editable || editing) return;
+    setEditCategory(activity.subject);
+    setEditDesc(activity.description || "");
+    setEditDate(activity.created_at ? format(new Date(activity.created_at), "yyyy-MM-dd") : "");
+    setConfirmDelete(false);
+    setEditing(true);
   };
 
   return (
@@ -845,7 +992,7 @@ function ActivityRow({
 
       <div className="min-w-0">
         {editing ? (
-          <div className="space-y-2">
+          <div className="space-y-2 animate-in fade-in duration-150">
             <CategoryPicker selected={editCategory} onSelect={setEditCategory} />
             <Textarea
               value={editDesc}
@@ -858,32 +1005,38 @@ function ActivityRow({
                 if ((e.metaKey || e.ctrlKey) && e.key === "Enter") handleSaveEdit();
               }}
             />
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Dato:</span>
+              <input
+                type="date"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+                className="h-7 px-2 text-[0.75rem] rounded-full border border-border text-muted-foreground bg-background"
+              />
+            </div>
+            <div className="flex items-center gap-2">
               <Button size="sm" className="h-6 text-[0.6875rem] px-2 rounded" onClick={handleSaveEdit}>Lagre</Button>
               <Button variant="ghost" size="sm" className="h-6 text-[0.6875rem] px-2 rounded" onClick={() => setEditing(false)}>Avbryt</Button>
+              <div className="ml-auto">
+                {confirmDelete ? (
+                  <span className="text-[0.75rem] animate-in fade-in duration-150">
+                    <span className="text-destructive mr-1">Er du sikker?</span>
+                    <button onClick={() => { onDelete(activity.id); setConfirmDelete(false); }} className="text-destructive font-medium hover:underline mr-1">Ja, slett</button>
+                    <button onClick={() => setConfirmDelete(false)} className="text-muted-foreground hover:text-foreground">Avbryt</button>
+                  </span>
+                ) : (
+                  <button onClick={() => setConfirmDelete(true)} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ) : (
-          <>
+          <div onClick={handleRowClick} className={cn(editable && "cursor-pointer")}>
             {/* Level 1: Subject */}
             <div className="flex items-start justify-between gap-2">
               <span className="text-[1rem] font-semibold text-foreground">{activity.subject}</span>
-              {editable && !confirmDelete && (
-                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5">
-                  <button
-                    onClick={() => { setEditCategory(activity.subject); setEditDesc(activity.description || ""); setEditing(true); }}
-                    className="p-1 rounded hover:bg-secondary text-border hover:text-muted-foreground transition-colors"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={() => setConfirmDelete(true)}
-                    className="p-1 rounded hover:bg-destructive/10 text-border hover:text-destructive transition-colors"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
             </div>
 
             {/* Delete confirmation */}
@@ -918,7 +1071,7 @@ function ActivityRow({
                 <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
               </Tooltip>
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
