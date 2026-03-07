@@ -312,6 +312,22 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
               </span>
             )}
             {editable ? (
+              <Select value={effectiveSignal || "__none__"} onValueChange={(v) => { if (v !== "__none__") changeSignalMutation.mutate(v); }}>
+                <SelectTrigger className="h-auto w-auto gap-1 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0">
+                  <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", signalBadgeColor)}>
+                    {effectiveSignal || "Signal"}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  {SIGNAL_CATEGORIES.map((c) => <SelectItem key={c.label} value={c.label}>{c.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            ) : effectiveSignal ? (
+              <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", signalBadgeColor)}>
+                {effectiveSignal}
+              </span>
+            ) : null}
+            {editable ? (
               <Select value={company.owner_id || ""} onValueChange={(v) => updateMutation.mutate({ owner_id: v || null })}>
                 <SelectTrigger className="h-auto w-auto gap-1 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0">
                   <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
