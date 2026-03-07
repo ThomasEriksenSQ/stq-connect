@@ -243,7 +243,33 @@ const Companies = () => {
     },
   });
 
-  const filtered = companies.filter((c) => {
+  const TYPE_OPTIONS = [
+    { value: "prospect", label: "Potensiell kunde", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
+    { value: "customer", label: "Kunde", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+    { value: "partner", label: "Partner", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" },
+    { value: "churned", label: "Ikke relevant selskap", badgeColor: "bg-red-50 text-red-700 border-red-200" },
+  ];
+
+  const setTypeMutation = useMutation({
+    mutationFn: async ({ companyId, status }: { companyId: string; status: string }) => {
+      const { error } = await supabase.from("companies").update({ status }).eq("id", companyId);
+      if (error) throw error;
+    },
+    onMutate: async ({ companyId, status }) => {
+      queryClient.setQueryData(["companies-full"], (old: any[]) =>
+        old?.map(c => c.id === companyId ? { ...c, status } : c)
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
+      toast.success("Type oppdatert");
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
+      toast.error("Kunne ikke oppdatere type");
+    },
+  });
+
     const q = search.toLowerCase();
     const matchSearch = !q || c.name.toLowerCase().includes(q) || c.org_number?.includes(q) || c.industry?.toLowerCase().includes(q);
     const matchOwner = ownerFilter === "all" || getOwnerId(c) === ownerFilter;
