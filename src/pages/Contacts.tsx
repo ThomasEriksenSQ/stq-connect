@@ -83,16 +83,13 @@ const Contacts = () => {
     onError: () => toast.error("Kunne ikke opprette kontakt"),
   });
 
-  const getOwnerFirstName = (contact: any) => {
-    const fullName = (contact.profiles as any)?.full_name;
-    return fullName ? fullName.split(" ")[0] : null;
-  };
   const getOwnerId = (contact: any) => (contact.profiles as any)?.id || null;
+  const getOwnerName = (contact: any) => (contact.profiles as any)?.full_name || null;
 
   const ownerMap = new Map<string, string>();
   contacts.forEach(c => {
     const id = getOwnerId(c);
-    const name = getOwnerFirstName(c);
+    const name = getOwnerName(c);
     if (id && name) ownerMap.set(id, name);
   });
   const uniqueOwners = Array.from(ownerMap.entries());
@@ -113,7 +110,7 @@ const Contacts = () => {
       case "name": return dir * `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`, "nb");
       case "company": return dir * ((a.companies as any)?.name || "").localeCompare((b.companies as any)?.name || "", "nb");
       case "title": return dir * (a.title || "").localeCompare(b.title || "", "nb");
-      case "owner": return dir * (getOwnerFirstName(a) || "").localeCompare(getOwnerFirstName(b) || "", "nb");
+      case "owner": return dir * (getOwnerName(a) || "").localeCompare(getOwnerName(b) || "", "nb");
       case "last_activity":
         if (!(a as any).lastActivity && !(b as any).lastActivity) return 0;
         if (!(a as any).lastActivity) return 1;
@@ -225,11 +222,10 @@ const Contacts = () => {
         <p className="text-sm text-muted-foreground py-12 text-center">Ingen kontakter funnet</p>
       ) : (
         <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
-          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_80px_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="name">Navn</SortHeader>
             <SortHeader field="company">Selskap</SortHeader>
             <SortHeader field="title">Stilling</SortHeader>
-            <SortHeader field="owner">Eier</SortHeader>
             <SortHeader field="last_activity" className="justify-end">Siste akt.</SortHeader>
           </div>
           <div className="divide-y divide-border">
@@ -242,7 +238,7 @@ const Contacts = () => {
 
               return (
                 <button key={contact.id} onClick={() => navigate(`/kontakter/${contact.id}`)}
-                  className="w-full grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_80px_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer">
+                  className="w-full grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer">
                   <div className="min-w-0">
                     <p className="text-[0.8125rem] font-medium text-foreground truncate">
                       {contact.first_name} {contact.last_name}
@@ -259,7 +255,6 @@ const Contacts = () => {
                     {companyName ? <><Building2 className="h-3 w-3 flex-shrink-0" />{companyName}</> : ""}
                   </span>
                   <span className="text-[0.8125rem] text-muted-foreground truncate">{contact.title?.slice(0, 25) || ""}</span>
-                  <span className="text-[0.8125rem] text-muted-foreground truncate">{getOwnerFirstName(contact) || ""}</span>
                   <span className="text-[0.75rem] text-muted-foreground text-right">
                     {(contact as any).lastActivity ? (
                       <Tooltip>
