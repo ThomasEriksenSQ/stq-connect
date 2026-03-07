@@ -136,10 +136,13 @@ function InlineField({
 
 const DATE_CHIPS = [
   { label: "I dag", fn: () => new Date() },
-  { label: "Om 3 dager", fn: () => addDays(new Date(), 3) },
   { label: "1 uke", fn: () => addWeeks(new Date(), 1) },
   { label: "2 uker", fn: () => addWeeks(new Date(), 2) },
+  { label: "3 uker", fn: () => addWeeks(new Date(), 3) },
   { label: "1 måned", fn: () => addMonths(new Date(), 1) },
+  { label: "3 måneder", fn: () => addMonths(new Date(), 3) },
+  { label: "6 måneder", fn: () => addMonths(new Date(), 6) },
+  { label: "1 år", fn: () => addYears(new Date(), 1) },
 ];
 
 export function ContactCardContent({ contactId, editable = false, onOpenCompany, onNavigateToFullPage }: ContactCardContentProps) {
