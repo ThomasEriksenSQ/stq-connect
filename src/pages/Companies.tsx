@@ -15,7 +15,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 
-type SortField = "name" | "signal" | "contacts" | "last_activity" | "tasks";
+type SortField = "name" | "type" | "signal" | "contacts" | "last_activity" | "tasks";
 type SortDir = "asc" | "desc";
 
 const CATEGORIES = [
