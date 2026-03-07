@@ -930,9 +930,7 @@ function TaskRow({
             </TooltipTrigger>
             <TooltipContent>{fullDate(task.due_date)}</TooltipContent>
           </Tooltip>
-        )}
-        </Tooltip>
-      )}
+      </div>
     </div>
   );
 }
