@@ -22,17 +22,15 @@ export function normalizeCategoryLabel(label: string): string {
  */
 export function extractCategory(subject: string | null, description: string | null): string {
   if (subject) {
-    const normalizedSubject = normalizeCategoryLabel(subject);
-    // Exact match
-    if (CATEGORIES.some(c => c.label === normalizedSubject)) return normalizedSubject;
-    // Subject contains a category label (case-insensitive)
-    const subjectLower = subject.toLowerCase();
-    for (const c of CATEGORIES) {
-      if (subjectLower.includes(c.label.toLowerCase())) return c.label;
+    const trimmed = subject.trim();
+    // Exact match (case-insensitive) against current labels
+    const normalizedSubject = normalizeCategoryLabel(trimmed);
+    if (CATEGORIES.some(c => c.label.toLowerCase() === normalizedSubject.toLowerCase())) {
+      return CATEGORIES.find(c => c.label.toLowerCase() === normalizedSubject.toLowerCase())!.label;
     }
-    // Check legacy labels in subject
+    // Exact match against legacy labels
     for (const [legacy, mapped] of Object.entries(LEGACY_CATEGORY_MAP)) {
-      if (subjectLower.includes(legacy.toLowerCase())) return mapped;
+      if (trimmed.toLowerCase() === legacy.toLowerCase()) return mapped;
     }
   }
   if (description) {
