@@ -390,14 +390,14 @@ const Contacts = () => {
                   {/* TAGS */}
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                     <button
-                      onClick={() => toggleMutation.mutate({ id: contact.id, field: "cv_email", value: !contact.cv_email })}
+                      onClick={() => handleToggle(contact, "cv_email", !contact.cv_email)}
                       className={contact.cv_email
                         ? "rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
                         : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
                       }
                     >CV</button>
                     <button
-                      onClick={() => toggleMutation.mutate({ id: contact.id, field: "call_list", value: !contact.call_list })}
+                      onClick={() => handleToggle(contact, "call_list", !contact.call_list)}
                       className={contact.call_list
                         ? "rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
                         : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
