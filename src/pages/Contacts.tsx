@@ -52,18 +52,18 @@ const Contacts = () => {
         .order("first_name");
       if (error) throw error;
 
-      const contactIds = data.map(c => c.id);
+      const contactIds = new Set(data.map(c => c.id));
 
       const [{ data: acts }, { data: tasks }] = await Promise.all([
         supabase
           .from("activities")
           .select("contact_id, created_at, description, subject")
-          .in("contact_id", contactIds)
+          .not("contact_id", "is", null)
           .order("created_at", { ascending: false }),
         supabase
           .from("tasks")
           .select("contact_id, created_at, due_date, status, description, title")
-          .in("contact_id", contactIds),
+          .not("contact_id", "is", null),
       ]);
 
       // Last activity date map
