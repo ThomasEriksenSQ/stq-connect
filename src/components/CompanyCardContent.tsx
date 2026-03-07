@@ -568,6 +568,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
 
 /* ── Company Activity Timeline ── */
 function CompanyActivityTimeline({ activities, profileMap }: { activities: any[]; profileMap: Record<string, string> }) {
+  const navigate = useNavigate();
   const currentYear = getYear(new Date());
 
   const grouped = useMemo(() => {
