@@ -236,7 +236,13 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   }
   if (!company) return <p className="text-sm text-muted-foreground">Selskap ikke funnet</p>;
 
-  const status = statusLabels[company.status] || { label: company.status, className: "bg-secondary text-muted-foreground" };
+  const STATUS_OPTIONS = [
+    { value: "prospect", label: "Potensiell kunde", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
+    { value: "customer", label: "Kunde", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+    { value: "churned", label: "Ikke relevant selskap", badgeColor: "bg-red-50 text-red-700 border-red-200" },
+    { value: "partner", label: "Partner", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" },
+  ] as const;
+  const currentStatus = STATUS_OPTIONS.find(s => s.value === company.status || (s.value === "customer" && company.status === "kunde")) || STATUS_OPTIONS[0];
   const ownerFullName = (company as any).profiles?.full_name || null;
 
   return (
@@ -252,7 +258,22 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">{company.name}</h2>
           )}
           <div className="ml-auto flex items-center gap-2 flex-shrink-0">
-            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ${status.className}`}>{status.label}</span>
+            {editable ? (
+              <Select value={company.status} onValueChange={(v) => updateMutation.mutate({ status: v })}>
+                <SelectTrigger className="h-auto w-auto gap-1 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0">
+                  <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", currentStatus.badgeColor)}>
+                    {currentStatus.label}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            ) : (
+              <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", currentStatus.badgeColor)}>
+                {currentStatus.label}
+              </span>
+            )}
             {editable ? (
               <Select value={company.owner_id || ""} onValueChange={(v) => updateMutation.mutate({ owner_id: v || null })}>
                 <SelectTrigger className="h-auto w-auto gap-1 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0">
