@@ -765,11 +765,12 @@ function ActivityTimeline({
       {grouped.map((group, gi) => (
         <div key={group.key}>
           {/* Month header */}
-          <div className={cn("flex items-center gap-2 mb-3", gi > 0 && "mt-5")}>
-            <span className="text-[0.6875rem] font-semibold tracking-[0.06em] text-muted-foreground/50 whitespace-nowrap">
-              {group.label}{group.period && <span> · {group.period}</span>}
+          <div className={cn("flex items-center gap-3 mb-3", gi > 0 && "mt-6")}>
+            <span className="text-[0.8125rem] font-bold tracking-[0.04em] text-foreground whitespace-nowrap">
+              {group.label}
             </span>
-            <div className="flex-1 h-px bg-border/40" />
+            {group.period && <span className="text-[0.8125rem] text-muted-foreground/60">· {group.period}</span>}
+            <div className="flex-1 h-px bg-border" />
           </div>
 
           {/* Timeline spine */}
