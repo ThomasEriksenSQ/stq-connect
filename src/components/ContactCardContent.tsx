@@ -53,7 +53,7 @@ function CategoryPicker({ selected, onSelect }: { selected: string; onSelect: (v
           className={cn(
             "h-8 px-3 text-[0.8125rem] rounded-full border transition-all font-medium",
             selected === cat.label
-              ? cn(cat.color, "ring-2 ring-offset-1 ring-primary/30")
+              ? "bg-foreground text-background border-foreground"
               : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
           )}
         >
@@ -136,10 +136,13 @@ function InlineField({
 
 const DATE_CHIPS = [
   { label: "I dag", fn: () => new Date() },
-  { label: "Om 3 dager", fn: () => addDays(new Date(), 3) },
   { label: "1 uke", fn: () => addWeeks(new Date(), 1) },
   { label: "2 uker", fn: () => addWeeks(new Date(), 2) },
+  { label: "3 uker", fn: () => addWeeks(new Date(), 3) },
   { label: "1 måned", fn: () => addMonths(new Date(), 1) },
+  { label: "3 måneder", fn: () => addMonths(new Date(), 3) },
+  { label: "6 måneder", fn: () => addMonths(new Date(), 6) },
+  { label: "1 år", fn: () => addYears(new Date(), 1) },
 ];
 
 export function ContactCardContent({ contactId, editable = false, onOpenCompany, onNavigateToFullPage }: ContactCardContentProps) {
@@ -646,12 +649,19 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
 
       {/* ── ZONE C: Oppfølginger ── */}
       {tasks.length > 0 && (
-        <div className="bg-[hsl(210_40%_98%)] border-l-[3px] border-l-[hsl(214_100%_93%)] rounded-lg p-4 mb-6">
+        <div className="bg-card border border-border rounded-lg shadow-card p-4 mb-6">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
               Oppfølginger · {tasks.length}
             </h3>
-            {/* Removed duplicate "+ Ny oppfølging" button — use action bar button instead */}
+            {editable && (
+              <button
+                onClick={() => openForm("task")}
+                className="inline-flex items-center gap-1 h-8 px-3 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" /> Ny oppfølging
+              </button>
+            )}
           </div>
           <div className="space-y-px">
             {tasks.map((task) => {
@@ -819,7 +829,7 @@ function TaskRow({
         />
       </div>
       <div className="flex-1 min-w-0">
-        <span className="text-[1rem] font-semibold text-foreground">{task.title}</span>
+        <span className="text-[1rem] font-bold text-foreground">{task.title}</span>
         {task.description && (
           <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{task.description}</p>
         )}
@@ -911,7 +921,7 @@ function ActivityTimeline({
             {/* Vertical line */}
             <div className="absolute left-[5px] top-[5px] bottom-0 w-[2px] bg-border" />
 
-            <div className="space-y-5">
+            <div className="space-y-6">
               {group.items.map((activity) => (
                 <ActivityRow
                   key={activity.id}
@@ -1036,7 +1046,7 @@ function ActivityRow({
           <div onClick={handleRowClick} className={cn(editable && "cursor-pointer")}>
             {/* Level 1: Subject */}
             <div className="flex items-start justify-between gap-2">
-              <span className="text-[1rem] font-semibold text-foreground">{activity.subject}</span>
+              <span className="text-[1.0625rem] font-bold text-foreground">{activity.subject}</span>
             </div>
 
             {/* Delete confirmation */}
@@ -1051,7 +1061,7 @@ function ActivityRow({
             {/* Level 2: Description */}
             {desc ? (
               <div className="mt-1">
-                <p className="text-[0.875rem] leading-relaxed whitespace-pre-wrap text-foreground/70">
+                <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70">
                   {desc}
                 </p>
               </div>
