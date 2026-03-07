@@ -147,7 +147,7 @@ const Companies = () => {
 
       (actRes.data || []).forEach(a => {
         if (!a.company_id) return;
-        if (!lastActivityMap[a.company_id]) lastActivityMap[a.company_id] = a.created_at;
+        if (isPast(a.created_at) && !lastActivityMap[a.company_id]) lastActivityMap[a.company_id] = a.created_at;
         trySetSignal(a.company_id, a.created_at, extractCategory(a.subject, a.description));
       });
 
