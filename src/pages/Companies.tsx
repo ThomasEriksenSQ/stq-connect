@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Users, ArrowUpDown, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -95,6 +94,7 @@ const Companies = () => {
       setLocations((prev) => [form.city, ...prev.slice(1)]);
     }
   }, [form.city]);
+  const [signalFilter, setSignalFilter] = useState("all");
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "last_activity", dir: "desc" });
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -215,7 +215,8 @@ const Companies = () => {
     const matchSearch = !q || c.name.toLowerCase().includes(q) || c.org_number?.includes(q) || c.industry?.toLowerCase().includes(q);
     const matchOwner = ownerFilter === "all" || getOwnerId(c) === ownerFilter;
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
-    return matchSearch && matchOwner && matchStatus;
+    const matchSignal = signalFilter === "all" || c.signal === signalFilter;
+    return matchSearch && matchOwner && matchStatus && matchSignal;
   });
 
   const sorted = [...filtered].sort((a, b) => {
@@ -361,35 +362,50 @@ const Companies = () => {
       </div>
 
       {/* Filter bar */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-          <Input placeholder="Søk..." value={search} onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border" />
+      <div className="space-y-2.5">
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+            <Input placeholder="Søk..." value={search} onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border" />
+          </div>
+          <span className="text-[0.75rem] text-muted-foreground ml-auto">{filtered.length} selskaper</span>
         </div>
-        <Select value={ownerFilter} onValueChange={setOwnerFilter}>
-          <SelectTrigger className="h-9 w-auto min-w-[100px] rounded-lg text-[0.8125rem] border-border bg-card">
-            <SelectValue placeholder="Eier: Alle" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Eier: Alle</SelectItem>
-            {ownerList.map(([id, name]) => (
-              <SelectItem key={id as string} value={id as string}>{name as string}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="h-9 w-auto min-w-[110px] rounded-lg text-[0.8125rem] border-border bg-card">
-            <SelectValue placeholder="Status: Alle" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Status: Alle</SelectItem>
-            {Object.entries(statusLabels).map(([k, v]) => (
-              <SelectItem key={k} value={k}>{v.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <span className="text-[0.75rem] text-muted-foreground ml-auto">{filtered.length} selskaper</span>
+        {/* Eier chips */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground mr-1">Eier</span>
+          {[{ id: "all", name: "Alle" }, ...ownerList.map(([id, name]) => ({ id: id as string, name: name as string }))].map(o => (
+            <button key={o.id} onClick={() => setOwnerFilter(o.id)}
+              className={`h-8 px-3 text-[0.8125rem] rounded-full border transition-colors ${ownerFilter === o.id ? "bg-foreground text-background border-foreground font-medium" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+              {o.name}
+            </button>
+          ))}
+        </div>
+        {/* Type chips */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground mr-1">Type</span>
+          {[
+            { value: "all", label: "Alle" },
+            { value: "prospect", label: "Potensiell kunde" },
+            { value: "customer", label: "Kunde" },
+            { value: "churned", label: "Ikke relevant selskap" },
+          ].map(o => (
+            <button key={o.value} onClick={() => setStatusFilter(o.value)}
+              className={`h-8 px-3 text-[0.8125rem] rounded-full border transition-colors ${statusFilter === o.value ? "bg-foreground text-background border-foreground font-medium" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+              {o.label}
+            </button>
+          ))}
+        </div>
+        {/* Signal chips */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground mr-1">Signal</span>
+          {[{ value: "all", label: "Alle" }, ...CATEGORIES.map(c => ({ value: c.label, label: c.label }))].map(o => (
+            <button key={o.value} onClick={() => setSignalFilter(o.value)}
+              className={`h-8 px-3 text-[0.8125rem] rounded-full border transition-colors ${signalFilter === o.value ? "bg-foreground text-background border-foreground font-medium" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+              {o.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Table */}
