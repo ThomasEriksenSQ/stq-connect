@@ -222,7 +222,11 @@ const Companies = () => {
     const dir = sort.dir === "asc" ? 1 : -1;
     switch (sort.field) {
       case "name": return dir * a.name.localeCompare(b.name, "nb");
-      case "owner": return dir * (getOwnerFirstName(a) || "").localeCompare(getOwnerFirstName(b) || "", "nb");
+      case "signal": {
+        const ai = SIGNAL_ORDER.indexOf(a.signal || "");
+        const bi = SIGNAL_ORDER.indexOf(b.signal || "");
+        return dir * ((ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi));
+      }
       case "contacts": return dir * ((a.contacts?.length || 0) - (b.contacts?.length || 0));
       case "last_activity":
         if (!a.lastActivity && !b.lastActivity) return 0;
