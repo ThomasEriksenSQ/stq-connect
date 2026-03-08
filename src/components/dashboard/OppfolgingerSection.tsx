@@ -38,6 +38,7 @@ const OppfolgingerSection = () => {
   const [ownerFilter, setOwnerFilter] = useState<string>("all");
   const [signalFilter, setSignalFilter] = useState<SignalFilter>("Alle");
   const [fadingIds, setFadingIds] = useState<Set<string>>(new Set());
+  const [showAll, setShowAll] = useState(false);
 
   // Follow-up modal state
   const [modalOpen, setModalOpen] = useState(false);
