@@ -805,10 +805,13 @@ function ForespørselSheet({
     const { error } = await supabase
       .from("foresporsler")
       .update({
+        selskap_navn: selskapNavn || row.selskap_navn,
+        selskap_id: selskapId || row.selskap_id,
+        kontakt_id: kontaktId,
         sted: sted || null,
         avdeling: avdeling || null,
         frist_dato: fristDato || null,
-        type: type || null,
+        type: isPartner ? "VIA" : "DIR",
         teknologier,
         kommentar: kommentar || null,
         sluttkunde: sluttkunde || null,
