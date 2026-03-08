@@ -890,10 +890,102 @@ function ForespørselSheet({
         {editMode ? (
           /* ─── EDIT MODE ─── */
           <div className="space-y-4">
+            {/* Selskap */}
+            <div>
+              <label className={LABEL}>Selskap</label>
+              <div className="relative mt-1">
+                <Input
+                  value={selskapNavn}
+                  onChange={(e) => {
+                    setSelskapNavn(e.target.value);
+                    setSelskapId(null);
+                    setShowSelskapDropdown(true);
+                    searchCompanies(e.target.value);
+                  }}
+                  onFocus={() => setShowSelskapDropdown(true)}
+                  placeholder="Søk etter selskap..."
+                  className="text-[0.875rem]"
+                />
+                {showSelskapDropdown && companyResults.length > 0 && (
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-md max-h-48 overflow-auto">
+                    {companyResults.map((c) => (
+                      <button key={c.id} onClick={() => selectCompany(c)}
+                        className="w-full text-left px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors">
+                        {c.name}
+                        {c.city && <span className="text-muted-foreground ml-2 text-[0.75rem]">{c.city}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Partner banner */}
+            {isPartner && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-600 border border-gray-200 px-2 py-0.5 text-[0.6875rem] font-semibold">
+                    Partner
+                  </span>
+                  <p className="text-[0.8125rem] text-amber-800">
+                    Forespørselen kom via en partner — hvem er sluttkunden?
+                  </p>
+                </div>
+                <div>
+                  <label className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-amber-700 block mb-1">SLUTTKUNDE</label>
+                  <Input
+                    value={sluttkunde}
+                    onChange={(e) => setSluttkunde(e.target.value)}
+                    placeholder="f.eks. Kongsberg Defence, Equinor..."
+                    className="h-10 rounded-lg bg-white"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Sted */}
             <div>
               <label className={LABEL}>Sted</label>
-              <Input value={sted} onChange={(e) => setSted(e.target.value)} className="mt-1 text-[0.875rem]" placeholder="f.eks. Oslo, Kongsberg" />
+              <Input value={sted} onChange={(e) => setSted(e.target.value)}
+                className="mt-1 text-[0.875rem]" placeholder="f.eks. Oslo, Kongsberg, Remote" />
+            </div>
+
+            {/* Kontaktperson */}
+            <div>
+              <label className={LABEL}>Kontaktperson</label>
+              <div className="relative mt-1">
+                {!selskapId ? (
+                  <Input disabled placeholder="Velg selskap først..."
+                    className="text-[0.875rem] opacity-50 cursor-not-allowed" />
+                ) : (
+                  <>
+                    <Input
+                      value={kontakt}
+                      onChange={(e) => { setKontakt(e.target.value); setKontaktId(null); setShowKontaktDropdown(true); }}
+                      onFocus={() => setShowKontaktDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowKontaktDropdown(false), 200)}
+                      placeholder="Søk etter kontaktperson..."
+                      className="text-[0.875rem]"
+                    />
+                    {showKontaktDropdown && !kontaktId && (
+                      <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-md max-h-[200px] overflow-y-auto">
+                        {filteredContacts.length === 0 ? (
+                          <p className="text-xs text-muted-foreground px-3 py-2.5 italic">Ingen kontakter på dette selskapet</p>
+                        ) : (
+                          (filteredContacts as any[]).map((c) => (
+                            <button key={c.id}
+                              onClick={() => { setKontakt(`${c.first_name} ${c.last_name}`); setKontaktId(c.id); setShowKontaktDropdown(false); }}
+                              className="w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors">
+                              <p className="text-[0.875rem] font-medium">{c.first_name} {c.last_name}</p>
+                              {c.title && <p className="text-xs text-muted-foreground">{c.title}</p>}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Avdeling */}
@@ -906,32 +998,6 @@ function ForespørselSheet({
             <div>
               <label className={LABEL}>Frist dato</label>
               <Input type="date" value={fristDato} onChange={(e) => setFristDato(e.target.value)} className="mt-1 text-[0.875rem]" />
-            </div>
-
-            {/* Type */}
-            <div>
-              <label className={LABEL}>Type</label>
-              <div className="flex gap-2 mt-1">
-                {["DIR", "VIA"].map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setType(t)}
-                    className={`h-8 px-4 text-[0.8125rem] rounded-lg border transition-colors ${
-                      type === t
-                        ? "bg-foreground text-background border-foreground font-medium"
-                        : "border-border text-muted-foreground hover:bg-secondary"
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Sluttkunde */}
-            <div>
-              <label className={LABEL}>Sluttkunde</label>
-              <Input value={sluttkunde} onChange={(e) => setSluttkunde(e.target.value)} className="mt-1 text-[0.875rem]" placeholder="f.eks. Kongsberg Defence, Equinor..." />
             </div>
 
             {/* Teknologier */}
