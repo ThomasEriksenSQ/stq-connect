@@ -131,16 +131,16 @@ const FollowUpModal = ({ open, onCancel, onClose, onSubmit, data }: Props) => {
         <DialogTitle className="sr-only">Opprett oppfølging</DialogTitle>
 
         {/* Header */}
-        <div className="mb-5">
-          <p className="text-emerald-600 text-[0.8125rem] font-medium mb-0.5">✓ Fullført</p>
-          <p className="text-[0.9375rem] font-semibold text-foreground">
+        <div className="pb-4 mb-4 border-b border-border">
+          <p className="text-2xl font-bold text-emerald-600">✓ Fullført</p>
+          <p className="text-[0.9375rem] text-muted-foreground mt-0.5">
             {data?.name} · {data?.company}
           </p>
         </div>
 
         {/* Body */}
         <div className="space-y-4">
-          <p className="text-[0.9375rem] font-medium text-foreground">Sett neste oppfølging?</p>
+          <p className="text-lg font-semibold text-foreground">Sett neste oppfølging?</p>
 
           {/* Title input */}
           <div>
