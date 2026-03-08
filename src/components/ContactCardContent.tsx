@@ -212,6 +212,10 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
   const descTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const [changingCompany, setChangingCompany] = useState(false);
+  const [companySearch, setCompanySearch] = useState("");
+  const [companyResults, setCompanyResults] = useState<{ id: string; name: string }[]>([]);
+  const companySearchRef = useRef<HTMLInputElement>(null);
 
   const { data: contact, isLoading } = useQuery({
     queryKey: ["contact", contactId],
@@ -522,18 +526,71 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           </div>
         </div>
 
-        {/* Line 2: Company · Title */}
-        <div className="flex items-center gap-2 flex-wrap text-[0.9375rem] text-foreground/70 mt-0.5">
-          {companyName && (
-            <button className="text-primary font-medium hover:underline" onClick={() => onOpenCompany ? onOpenCompany(companyId) : navigate(`/selskaper/${companyId}`)}>
-              {companyName}
-            </button>
-          )}
-          {companyName && (editable || contact.title) && <span className="text-muted-foreground/40">·</span>}
-          {editable ? (
-            <InlineField value={contact.title || ""} onSave={updateField("title")} placeholder="Stilling" className="text-[0.9375rem]" />
-          ) : (
-            contact.title && <span>{contact.title}</span>
+        <div className="text-[0.9375rem] text-foreground/70 mt-0.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            {companyName && (
+              <span className="group/co inline-flex items-center gap-1">
+                <button className="text-primary font-medium hover:underline" onClick={() => onOpenCompany ? onOpenCompany(companyId) : navigate(`/selskaper/${companyId}`)}>
+                  {companyName}
+                </button>
+                {editable && (
+                  <button
+                    onClick={() => { setChangingCompany(true); setCompanySearch(""); setCompanyResults([]); setTimeout(() => companySearchRef.current?.focus(), 0); }}
+                    className="opacity-0 group-hover/co:opacity-60 hover:!opacity-100 transition-opacity"
+                  >
+                    <Pencil className="h-2.5 w-2.5" />
+                  </button>
+                )}
+              </span>
+            )}
+            {!companyName && editable && (
+              <button
+                onClick={() => { setChangingCompany(true); setCompanySearch(""); setCompanyResults([]); setTimeout(() => companySearchRef.current?.focus(), 0); }}
+                className="text-muted-foreground/40 italic inline-flex items-center gap-1 hover:text-foreground/60 transition-colors"
+              >
+                Selskap <Pencil className="h-2.5 w-2.5" />
+              </button>
+            )}
+            {(companyName || editable) && (editable || contact.title) && <span className="text-muted-foreground/40">·</span>}
+            {editable ? (
+              <InlineField value={contact.title || ""} onSave={updateField("title")} placeholder="Stilling" className="text-[0.9375rem]" />
+            ) : (
+              contact.title && <span>{contact.title}</span>
+            )}
+          </div>
+          {changingCompany && (
+            <div className="relative mt-1.5">
+              <Input
+                ref={companySearchRef}
+                value={companySearch}
+                onChange={async (e) => {
+                  const q = e.target.value;
+                  setCompanySearch(q);
+                  if (q.trim().length < 2) { setCompanyResults([]); return; }
+                  const { data } = await supabase.from("companies").select("id, name").ilike("name", `%${q.trim()}%`).limit(8);
+                  setCompanyResults(data || []);
+                }}
+                onKeyDown={(e) => { if (e.key === "Escape") setChangingCompany(false); }}
+                placeholder="Søk selskap..."
+                className="h-8 text-sm rounded-lg w-64"
+              />
+              {companyResults.length > 0 && (
+                <div className="absolute z-50 mt-1 w-64 bg-background border border-border rounded-lg shadow-md py-1 max-h-48 overflow-y-auto">
+                  {companyResults.map((c) => (
+                    <button
+                      key={c.id}
+                      className="w-full text-left px-3 py-1.5 text-sm hover:bg-secondary transition-colors"
+                      onClick={() => {
+                        updateMutation.mutate({ company_id: c.id });
+                        setChangingCompany(false);
+                      }}
+                    >
+                      {c.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
