@@ -290,7 +290,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
       setSelskap(""); setSelskapId(null); setSelectedLocations([]);
       setAvdeling(""); setSted(""); setKontakt(""); setKontaktId(null);
       setKommentar(""); setTags([]); setTagInput("");
-      setCompanyResults([]);
+      setCompanyResults([]); setSluttkunde("");
     }
   }, [open]);
 
