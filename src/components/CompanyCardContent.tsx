@@ -530,9 +530,9 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                           <a
                             href={`/kontakter/${task.contact_id}`}
                             onClick={(e) => e.stopPropagation()}
-                            className="text-[0.8125rem] font-medium text-foreground/70 hover:text-foreground hover:underline block mt-0.5"
+                            className="text-[0.8125rem] font-semibold text-blue-600 hover:underline block mt-0.5"
                           >
-                            {contactName}
+                            → {contactName}
                           </a>
                         )}
                         {displayDesc && !/^\[.+\]$/.test(displayDesc.trim()) && (
