@@ -129,6 +129,7 @@ const MockOppfolgingerSection = () => {
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState<FollowUpModalData | null>(null);
+  const [removedRow, setRemovedRow] = useState<{ row: MockRow; index: number } | null>(null);
 
   const updateSignal = (id: string, newSignal: string) => {
     setRows((prev) =>
