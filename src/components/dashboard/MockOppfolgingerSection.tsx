@@ -214,12 +214,13 @@ const MockOppfolgingerSection = () => {
 
             {/* Right column — stacked */}
             <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-              <div className="flex items-baseline gap-1.5 whitespace-nowrap">
+              <div className="flex items-center gap-1.5 justify-end">
                 <span className={cn("text-[0.8125rem] font-medium", DATE_COLOR[row.dueType])}>
                   {row.due}
                 </span>
-                <span className={cn("text-[0.8125rem] font-medium", DATE_COLOR[row.dueType])}>·</span>
-                <span className={cn("text-[0.8125rem] font-medium", DATE_COLOR[row.dueType])}>{row.fullDate}</span>
+                <span className={cn("text-[0.8125rem] font-medium", DATE_COLOR[row.dueType])}>
+                  · {row.fullDate}
+                </span>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
