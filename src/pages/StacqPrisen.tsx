@@ -172,7 +172,7 @@ export default function StacqPrisen() {
               <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `${v}`} />
               <ReTooltip
                 contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 13 }}
-                formatter={(value: number) => [`kr ${formatKr(value)} / dag`, "STACQ Pris"]}
+                formatter={(value: number) => [`kr ${formatKr(value)} / time`, "STACQ Pris"]}
               />
               <ReferenceLine y={5000} stroke="hsl(var(--warning))" strokeDasharray="6 4" label={{ value: "Mål: 5 000", position: "right", fontSize: 11, fill: "hsl(var(--warning))" }} />
               <Area type="monotone" dataKey="value" stroke="rgb(16,185,129)" strokeWidth={2} fill="url(#stacqGrad)" />
