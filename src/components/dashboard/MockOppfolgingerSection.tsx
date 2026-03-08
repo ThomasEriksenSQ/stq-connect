@@ -7,6 +7,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import FollowUpModal, { type FollowUpModalData } from "./FollowUpModal";
 
 const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer";
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
@@ -105,12 +107,6 @@ const INITIAL_DATA: MockRow[] = [
   },
 ];
 
-const DUE_CHIP: Record<string, string> = {
-  overdue: "bg-destructive/10 text-destructive",
-  today: "bg-primary/10 text-primary",
-  future: "bg-muted text-muted-foreground",
-};
-
 const DATE_COLOR: Record<string, string> = {
   overdue: "text-destructive",
   today: "text-primary",
@@ -130,11 +126,39 @@ const SIGNAL_FILTERS = ["Alle", "Behov nå", "Får fremtidig behov", "Får kansk
 
 const MockOppfolgingerSection = () => {
   const [rows, setRows] = useState<MockRow[]>(INITIAL_DATA);
+  const [completingId, setCompletingId] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalData, setModalData] = useState<FollowUpModalData | null>(null);
 
   const updateSignal = (id: string, newSignal: string) => {
     setRows((prev) =>
       prev.map((r) => (r.id === id ? { ...r, signal: newSignal } : r))
     );
+  };
+
+  const handleCheckbox = (row: MockRow) => {
+    // Start fade animation
+    setCompletingId(row.id);
+
+    // After fade, remove row and open modal
+    setTimeout(() => {
+      setRows((prev) => prev.filter((r) => r.id !== row.id));
+      setCompletingId(null);
+      setModalData({
+        name: row.name,
+        company: row.company,
+        task: row.task,
+        signal: row.signal,
+        owner: row.owner,
+      });
+      setModalOpen(true);
+    }, 400);
+  };
+
+  const handleFollowUpSubmit = (data: { title: string; dueDate: Date; owner: string }) => {
+    setModalOpen(false);
+    const firstName = modalData?.name.split(" ")[0] ?? "";
+    toast.success(`Oppfølging opprettet for ${firstName}`);
   };
 
   return (
@@ -181,14 +205,21 @@ const MockOppfolgingerSection = () => {
           <div
             key={row.id}
             className={cn(
-              "flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-secondary/40 transition-colors",
+              "flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-secondary/40 transition-all duration-300",
               i < rows.length - 1 && "border-b border-border",
-              ACCENT_CLASS[row.accent]
+              ACCENT_CLASS[row.accent],
+              completingId === row.id && "opacity-0 scale-95"
             )}
           >
-            {/* Checkbox — vertically centered */}
-            <button className="h-[16px] w-[16px] rounded border border-border flex-shrink-0 flex items-center justify-center hover:border-primary hover:bg-primary/5 transition-colors mt-1">
-              <Check className="h-3 w-3 text-transparent" />
+            {/* Checkbox */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCheckbox(row);
+              }}
+              className="h-[16px] w-[16px] rounded border border-border flex-shrink-0 flex items-center justify-center hover:border-primary hover:bg-primary/5 transition-colors mt-1"
+            >
+              <Check className={cn("h-3 w-3", completingId === row.id ? "text-primary" : "text-transparent")} />
             </button>
 
             {/* Left content */}
@@ -199,7 +230,7 @@ const MockOppfolgingerSection = () => {
                 <span className="text-[0.8125rem] text-muted-foreground">· {row.company}</span>
               </div>
 
-              {/* Line 2: Task + Due chip */}
+              {/* Line 2: Task */}
               <div className="flex items-center gap-2.5 mt-1.5">
                 <span className="text-[0.8125rem] text-foreground">{row.task}</span>
               </div>
@@ -258,6 +289,14 @@ const MockOppfolgingerSection = () => {
           Vis alle oppfølginger →
         </button>
       </div>
+
+      {/* Follow-up modal */}
+      <FollowUpModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleFollowUpSubmit}
+        data={modalData}
+      />
     </div>
   );
 };
