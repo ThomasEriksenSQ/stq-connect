@@ -439,7 +439,7 @@ function TaskRow({ task, isLast, profiles, signal, fadingIds, onComplete, onChan
         !isOverdue && "border-l-[3px] border-l-transparent",
         isFading && "opacity-0 scale-95"
       )}
-      onClick={() => contactId && navigate(`/kontakter/${contactId}`)}
+      onClick={() => contactId && (window.location.href = `/kontakter/${contactId}`)}
     >
       {/* Checkbox */}
       <button
