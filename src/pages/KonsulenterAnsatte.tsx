@@ -91,7 +91,7 @@ export default function KonsulenterAnsatte() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 gap-4 mb-6">
         <div className="bg-card border border-border rounded-xl px-5 py-4 shadow-sm">
           <p className="text-2xl font-bold text-emerald-600">{stats.aktive}</p>
           <p className="text-[0.8125rem] text-muted-foreground">Aktive ansatte</p>
@@ -101,11 +101,6 @@ export default function KonsulenterAnsatte() {
           <p className="text-2xl font-bold text-amber-600">{stats.kommende}</p>
           <p className="text-[0.8125rem] text-muted-foreground">Kommende</p>
           <p className="text-xs text-muted-foreground">venter oppstart</p>
-        </div>
-        <div className="bg-card border border-border rounded-xl px-5 py-4 shadow-sm">
-          <p className="text-2xl font-bold text-muted-foreground">{stats.sluttet}</p>
-          <p className="text-[0.8125rem] text-muted-foreground">Har sluttet</p>
-          <p className="text-xs text-muted-foreground">tidligere ansatt</p>
         </div>
       </div>
 
