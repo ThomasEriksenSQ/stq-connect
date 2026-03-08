@@ -108,18 +108,17 @@ const Companies = () => {
       if (error) throw error;
 
       const companyIds = data.map(c => c.id);
+      const companyIdSet = new Set(companyIds);
       // Get contact IDs for each company
       const contactIds = data.flatMap(c => (c.contacts || []).map((ct: any) => ct.id));
+      const contactIdSet = new Set(contactIds);
 
+      // Fetch ALL activities/tasks without .in() to avoid URL length limits (400 errors)
       const [actRes, taskRes, contactActRes, contactTaskRes] = await Promise.all([
-        supabase.from("activities").select("company_id, created_at, subject, description").in("company_id", companyIds).order("created_at", { ascending: false }),
-        supabase.from("tasks").select("company_id, due_date, title, description, status, created_at").in("company_id", companyIds).neq("status", "done"),
-        contactIds.length > 0
-          ? supabase.from("activities").select("contact_id, created_at, subject, description").in("contact_id", contactIds).order("created_at", { ascending: false })
-          : Promise.resolve({ data: [] }),
-        contactIds.length > 0
-          ? supabase.from("tasks").select("contact_id, due_date, title, description, status, created_at").in("contact_id", contactIds).neq("status", "done")
-          : Promise.resolve({ data: [] }),
+        supabase.from("activities").select("company_id, created_at, subject, description").not("company_id", "is", null).order("created_at", { ascending: false }).limit(2000),
+        supabase.from("tasks").select("company_id, due_date, title, description, status, created_at").not("company_id", "is", null).neq("status", "done").limit(2000),
+        supabase.from("activities").select("contact_id, created_at, subject, description").not("contact_id", "is", null).order("created_at", { ascending: false }).limit(2000),
+        supabase.from("tasks").select("contact_id, due_date, title, description, status, created_at").not("contact_id", "is", null).neq("status", "done").limit(2000),
       ]);
 
       // Build contact→company map
