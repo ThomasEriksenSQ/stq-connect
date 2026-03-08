@@ -595,8 +595,8 @@ export default function KonsulenterAnsatte() {
             <span key={h} className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">{h}</span>
           ))}
         </div>
-        {/* Rows */}
-        {filtered.map((a: any, i: number) => {
+        <div className="divide-y divide-border">
+        {filtered.map((a: any) => {
           const status = getStatus(a);
           const isKommende = status === "Kommende";
           const isSluttet = status === "Sluttet";
