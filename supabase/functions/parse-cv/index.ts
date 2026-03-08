@@ -98,9 +98,10 @@ Kompetanse: bruk tekniske nøkkelord som C++, Embedded, Python, Linux, Yocto, FP
       parsed = JSON.parse(clean);
     } catch {
       console.error("Failed to parse AI response:", text);
+      // AI refused or couldn't produce JSON — likely not a valid CV
       return new Response(
-        JSON.stringify({ error: "Kunne ikke tolke AI-svaret" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Dokumentet ser ikke ut til å være en CV. Last opp en CV i PDF-format." }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
