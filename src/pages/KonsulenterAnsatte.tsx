@@ -271,31 +271,85 @@ function AnsattModal({
           </div>
 
           {/* ── PROFIL ── */}
-          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mt-4">
-            Profil — vises på nettsiden
-          </p>
+          <div className="space-y-3">
+            <label className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+              Profil — vises på nettsiden
+            </label>
 
-          {/* Bilde */}
-          <div className="flex items-center gap-4">
-            {form.bilde_url ? (
-              <img src={form.bilde_url} alt="" className="w-20 h-20 rounded-full object-cover border border-border" />
-            ) : (
-              <div className="w-20 h-20 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg font-bold">
-                {form.navn ? getInitials(form.navn) : "?"}
+            {/* Row: avatar + CV upload side by side */}
+            <div className="flex gap-4 items-start">
+              {/* Avatar/bilde */}
+              <div className="shrink-0">
+                {form.bilde_url ? (
+                  <img src={form.bilde_url} alt="" className="w-20 h-20 rounded-full object-cover border border-border" />
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg font-bold">
+                    {form.navn ? getInitials(form.navn) : "?"}
+                  </div>
+                )}
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  disabled={uploading}
+                  className="text-[0.6875rem] font-medium text-primary hover:underline disabled:opacity-50 mt-1.5 block mx-auto"
+                >
+                  {uploading ? "Laster opp..." : "Bytt bilde"}
+                </button>
+              </div>
+
+              {/* CV upload box */}
+              <div className="flex-1">
+                <label className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground block mb-1.5">
+                  Last opp CV (PDF)
+                </label>
+                <div
+                  onClick={() => cvInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-lg px-4 py-3 cursor-pointer transition-colors text-sm ${
+                    cvParsing
+                      ? "border-primary/40 bg-primary/5"
+                      : cvFile
+                        ? "border-emerald-500/40 bg-emerald-500/5"
+                        : "border-border hover:border-primary/40 hover:bg-primary/5"
+                  }`}
+                >
+                  {cvParsing ? (
+                    <div className="flex items-center gap-2 text-primary">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Analyserer CV med AI...</span>
+                    </div>
+                  ) : cvFile ? (
+                    <div className="flex items-center gap-2 text-emerald-600">
+                      <FileText className="h-4 w-4" />
+                      <span className="font-medium">{cvFile.name}</span>
+                      <span className="text-muted-foreground text-xs ml-auto">Klikk for å bytte</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Upload className="h-4 w-4" />
+                      <div>
+                        <span className="text-foreground font-medium">Last opp CV</span>
+                        <span className="text-muted-foreground"> — PDF, maks 10 MB</span>
+                        <p className="text-xs text-muted-foreground mt-0.5">AI henter ut erfaring, kompetanse og forslag til bio</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <input ref={cvInputRef} type="file" accept=".pdf" className="hidden" onChange={handleCvUpload} />
+              </div>
+            </div>
+
+            {/* AI result banner */}
+            {cvParsed && (
+              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  AI hentet ut følgende — rediger gjerne
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Feltene nedenfor er fylt inn automatisk. Du kan justere dem før du lagrer.
+                </p>
               </div>
             )}
-            <div>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-              <button
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading}
-                className="text-[0.8125rem] font-medium text-primary hover:underline disabled:opacity-50"
-              >
-                {uploading ? <Loader2 className="h-4 w-4 animate-spin inline mr-1" /> : null}
-                {uploading ? "Laster opp..." : "Last opp nytt bilde"}
-              </button>
-              <p className="text-xs text-muted-foreground mt-0.5">Maks 5 MB, bilde</p>
-            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
