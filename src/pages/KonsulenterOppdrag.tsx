@@ -55,7 +55,9 @@ export default function KonsulenterOppdrag() {
     for (let d = 1; d <= dim; d++) { const dow = new Date(y, m, d).getDay(); if (dow !== 0 && dow !== 6) workdays++; }
     const stacqPerDag = aktive.reduce((s: number, o: any) => s + o.margin, 0);
     const stacqMonthly = stacqPerDag * workdays;
-    const oppstartUtpris = oppstart.reduce((s: number, o: any) => s + (Number(o.utpris) || 0), 0);
+    const oppstartMarginPerTime = oppstart.length > 0
+      ? oppstart.reduce((s: number, o: any) => s + o.marginPerTime, 0) / oppstart.length
+      : 0;
     return {
       aktive: aktive.length,
       oppstart: oppstart.length,
@@ -64,7 +66,7 @@ export default function KonsulenterOppdrag() {
       stacqMonthly,
       workdays,
       monthLabel: format(now, "MMMM yyyy"),
-      oppstartUtpris,
+      oppstartMarginPerTime,
     };
   }, [enriched]);
 
@@ -125,8 +127,8 @@ export default function KonsulenterOppdrag() {
         </div>
         <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 rounded-xl px-5 py-4 shadow-sm">
           <BarChart2 className="h-4 w-4 text-amber-600 mb-1" />
-          <p className="text-xl font-bold text-amber-600">kr {formatNOK(stats.oppstartUtpris)} <span className="text-xs font-normal text-muted-foreground">/ time</span></p>
-          <p className="text-[0.8125rem] text-muted-foreground">Oppstart</p>
+          <p className="text-xl font-bold text-amber-600">kr {formatNOK(stats.oppstartMarginPerTime)} <span className="text-xs font-normal text-muted-foreground">/ time</span></p>
+          <p className="text-[0.8125rem] text-muted-foreground">Snitt margin / time</p>
           <p className="text-xs text-muted-foreground">{stats.oppstart} konsulenter kommer snart</p>
         </div>
       </div>
