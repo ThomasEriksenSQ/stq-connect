@@ -202,9 +202,6 @@ const MockOppfolgingerSection = () => {
               {/* Line 2: Task + Due chip */}
               <div className="flex items-center gap-2.5 mt-1.5">
                 <span className="text-[0.8125rem] text-foreground">{row.task}</span>
-                <span className={cn("rounded-full px-2 py-0.5 text-[0.6875rem] font-medium whitespace-nowrap", DUE_CHIP[row.dueType])}>
-                  {row.due}
-                </span>
               </div>
 
               {/* Line 3: Description */}
