@@ -158,7 +158,7 @@ const Companies = () => {
       });
 
       (taskRes.data || []).forEach(t => {
-        if (!t.company_id) return;
+        if (!t.company_id || !companyIdSet.has(t.company_id)) return;
         taskCountMap[t.company_id] = (taskCountMap[t.company_id] || 0) + 1;
         if (t.due_date && new Date(t.due_date) < new Date()) overdueTaskMap[t.company_id] = true;
         addTask(t.company_id, t);
