@@ -221,13 +221,27 @@ const Contacts = () => {
     return matchSearch && matchOwner && matchSignal && matchType;
   });
 
+  const SIGNAL_ORDER: Record<string, number> = {
+    "Behov nå": 0,
+    "Får fremtidig behov": 1,
+    "Får kanskje behov": 2,
+    "Ukjent om behov": 3,
+    "Ikke aktuelt": 4,
+  };
+
   const sorted = [...filtered].sort((a, b) => {
     const dir = sort.dir === "asc" ? 1 : -1;
     switch (sort.field) {
       case "name": return dir * `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`, "nb");
       case "company": return dir * ((a.companies as any)?.name || "").localeCompare((b.companies as any)?.name || "", "nb");
       case "title": return dir * (a.title || "").localeCompare(b.title || "", "nb");
-      case "signal": return dir * ((a as any).signal || "").localeCompare((b as any).signal || "", "nb");
+      case "signal": {
+        const sa = (a as any).signal as string | null;
+        const sb = (b as any).signal as string | null;
+        const oa = sa ? (SIGNAL_ORDER[sa] ?? 5) : 6;
+        const ob = sb ? (SIGNAL_ORDER[sb] ?? 5) : 6;
+        return dir * (oa - ob);
+      }
       case "owner": return dir * (getOwnerName(a) || "").localeCompare(getOwnerName(b) || "", "nb");
       case "last_activity":
         if (!(a as any).lastActivity && !(b as any).lastActivity) return 0;
