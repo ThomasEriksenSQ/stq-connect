@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState, useRef } from "react";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
 import { format, differenceInMonths, isAfter } from "date-fns";
-import { Pencil, Plus, X, Globe, Loader2 } from "lucide-react";
+import { Pencil, Plus, X, Globe, Loader2, Upload, FileText, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -33,7 +33,6 @@ interface AnsattForm {
   geografi: string;
   kompetanse: string[];
   bio: string;
-  linkedin: string;
   synlig_web: boolean;
 }
 
@@ -48,9 +47,13 @@ function AnsattModal({
 }) {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
+  const cvInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [tagInput, setTagInput] = useState("");
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [cvParsing, setCvParsing] = useState(false);
+  const [cvParsed, setCvParsed] = useState(false);
 
   const isCreate = !ansatt;
 
@@ -66,7 +69,6 @@ function AnsattModal({
     geografi: "",
     kompetanse: [],
     bio: "",
-    linkedin: "",
     synlig_web: false,
   });
 
@@ -75,6 +77,9 @@ function AnsattModal({
   if (open && (ansatt?.id ?? null) !== lastId) {
     setLastId(ansatt?.id ?? null);
     setTagInput("");
+    setCvFile(null);
+    setCvParsing(false);
+    setCvParsed(false);
     if (ansatt) {
       setForm({
         navn: ansatt.navn || "",
@@ -88,14 +93,13 @@ function AnsattModal({
         geografi: ansatt.geografi || "",
         kompetanse: ansatt.kompetanse || [],
         bio: ansatt.bio || "",
-        linkedin: ansatt.linkedin || "",
         synlig_web: ansatt.synlig_web || false,
       });
     } else {
       setForm({
         navn: "", epost: "", tlf: "", start_dato: "", slutt_dato: "",
         status: "AKTIV/SIGNERT", bilde_url: "", erfaring_aar: "",
-        geografi: "", kompetanse: [], bio: "", linkedin: "", synlig_web: false,
+        geografi: "", kompetanse: [], bio: "", synlig_web: false,
       });
     }
   }
@@ -129,6 +133,45 @@ function AnsattModal({
     }
   };
 
+  const handleCvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { toast.error("Maks 10 MB"); return; }
+    setCvFile(file);
+    setCvParsing(true);
+    setCvParsed(false);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(",")[1]);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const { data, error } = await supabase.functions.invoke("parse-cv", {
+        body: { base64, filename: file.name },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      if (data.erfaring_aar) set("erfaring_aar", String(data.erfaring_aar));
+      if (data.kompetanse?.length) set("kompetanse", data.kompetanse);
+      if (data.geografi) set("geografi", data.geografi);
+      if (data.bio) set("bio", data.bio);
+      setCvParsed(true);
+      toast.success("CV analysert — feltene er fylt inn");
+    } catch (err) {
+      console.error("CV parsing failed:", err);
+      toast.error("Kunne ikke analysere CV — fyll inn manuelt");
+    } finally {
+      setCvParsing(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!form.navn.trim()) return;
     setSaving(true);
@@ -144,7 +187,6 @@ function AnsattModal({
       geografi: form.geografi.trim() || null,
       kompetanse: form.kompetanse,
       bio: form.bio.trim() || null,
-      linkedin: form.linkedin.trim() || null,
       synlig_web: form.synlig_web,
       updated_at: new Date().toISOString(),
     };
@@ -229,31 +271,85 @@ function AnsattModal({
           </div>
 
           {/* ── PROFIL ── */}
-          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mt-4">
-            Profil — vises på nettsiden
-          </p>
+          <div className="space-y-3">
+            <label className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+              Profil — vises på nettsiden
+            </label>
 
-          {/* Bilde */}
-          <div className="flex items-center gap-4">
-            {form.bilde_url ? (
-              <img src={form.bilde_url} alt="" className="w-20 h-20 rounded-full object-cover border border-border" />
-            ) : (
-              <div className="w-20 h-20 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg font-bold">
-                {form.navn ? getInitials(form.navn) : "?"}
+            {/* Row: avatar + CV upload side by side */}
+            <div className="flex gap-4 items-start">
+              {/* Avatar/bilde */}
+              <div className="shrink-0">
+                {form.bilde_url ? (
+                  <img src={form.bilde_url} alt="" className="w-20 h-20 rounded-full object-cover border border-border" />
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg font-bold">
+                    {form.navn ? getInitials(form.navn) : "?"}
+                  </div>
+                )}
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  disabled={uploading}
+                  className="text-[0.6875rem] font-medium text-primary hover:underline disabled:opacity-50 mt-1.5 block mx-auto"
+                >
+                  {uploading ? "Laster opp..." : "Bytt bilde"}
+                </button>
+              </div>
+
+              {/* CV upload box */}
+              <div className="flex-1">
+                <label className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground block mb-1.5">
+                  Last opp CV (PDF)
+                </label>
+                <div
+                  onClick={() => cvInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-lg px-4 py-3 cursor-pointer transition-colors text-sm ${
+                    cvParsing
+                      ? "border-primary/40 bg-primary/5"
+                      : cvFile
+                        ? "border-emerald-500/40 bg-emerald-500/5"
+                        : "border-border hover:border-primary/40 hover:bg-primary/5"
+                  }`}
+                >
+                  {cvParsing ? (
+                    <div className="flex items-center gap-2 text-primary">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Analyserer CV med AI...</span>
+                    </div>
+                  ) : cvFile ? (
+                    <div className="flex items-center gap-2 text-emerald-600">
+                      <FileText className="h-4 w-4" />
+                      <span className="font-medium">{cvFile.name}</span>
+                      <span className="text-muted-foreground text-xs ml-auto">Klikk for å bytte</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Upload className="h-4 w-4" />
+                      <div>
+                        <span className="text-foreground font-medium">Last opp CV</span>
+                        <span className="text-muted-foreground"> — PDF, maks 10 MB</span>
+                        <p className="text-xs text-muted-foreground mt-0.5">AI henter ut erfaring, kompetanse og forslag til bio</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <input ref={cvInputRef} type="file" accept=".pdf" className="hidden" onChange={handleCvUpload} />
+              </div>
+            </div>
+
+            {/* AI result banner */}
+            {cvParsed && (
+              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  AI hentet ut følgende — rediger gjerne
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Feltene nedenfor er fylt inn automatisk. Du kan justere dem før du lagrer.
+                </p>
               </div>
             )}
-            <div>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-              <button
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading}
-                className="text-[0.8125rem] font-medium text-primary hover:underline disabled:opacity-50"
-              >
-                {uploading ? <Loader2 className="h-4 w-4 animate-spin inline mr-1" /> : null}
-                {uploading ? "Laster opp..." : "Last opp nytt bilde"}
-              </button>
-              <p className="text-xs text-muted-foreground mt-0.5">Maks 5 MB, bilde</p>
-            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -307,10 +403,6 @@ function AnsattModal({
             />
           </div>
 
-          <div>
-            <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">LinkedIn URL</label>
-            <Input value={form.linkedin} onChange={e => set("linkedin", e.target.value)} placeholder="https://linkedin.com/in/..." className="mt-1 text-[0.875rem]" />
-          </div>
 
           <div className="flex items-center justify-between py-2">
             <div>

@@ -3,5 +3,8 @@ project_id = "kbvzpcebfopqqrvmbiap"
 [functions.chat]
 verify_jwt = false
 
+[functions.parse-cv]
+verify_jwt = false
+
 [functions.salesforce-import]
 verify_jwt = false
