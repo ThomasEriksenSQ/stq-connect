@@ -757,18 +757,22 @@ export default function Foresporsler() {
                   )}
                 </div>
                 {/* Sendt inn */}
-                <div className="flex justify-end">
-                  {antall === 0 ? (
+                <div className="flex justify-end gap-1 flex-wrap">
+                  {firstNames.length === 0 ? (
                     <span className="text-[0.8125rem] text-muted-foreground">—</span>
                   ) : (
-                    <span className="text-[0.8125rem] font-semibold text-foreground">
-                      {antall}
-                      {hvem && (
-                        <span className="font-normal text-muted-foreground ml-1.5">
-                          {truncate(hvem, 15)}
+                    <>
+                      {firstNames.slice(0, 2).map((name, i) => (
+                        <span key={i} className="inline-flex items-center rounded-full bg-foreground text-background text-[0.6875rem] font-medium px-2 py-0.5">
+                          {name}
+                        </span>
+                      ))}
+                      {firstNames.length > 2 && (
+                        <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground text-[0.6875rem] font-medium px-2 py-0.5">
+                          +{firstNames.length - 2}
                         </span>
                       )}
-                    </span>
+                    </>
                   )}
                 </div>
               </div>
