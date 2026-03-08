@@ -96,6 +96,7 @@ const App = () => (
                       <EksterneKonsulenter />
                     </Suspense>
                   }
+                />
                 <Route
                   path="stacq/prisen"
                   element={
