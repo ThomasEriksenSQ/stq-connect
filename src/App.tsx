@@ -61,6 +61,7 @@ const App = () => (
                 <Route path="kontakter/:id" element={<ContactDetail />} />
                 <Route path="oppfolginger" element={<Tasks />} />
                 <Route path="import" element={<Import />} />
+                <Route path="admin/brreg-sync" element={<AdminBrregSync />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
