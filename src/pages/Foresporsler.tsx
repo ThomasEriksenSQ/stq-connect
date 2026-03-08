@@ -108,7 +108,9 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
 
   const selectCompany = (c: typeof MOCK_COMPANIES[0]) => {
     setSelskap(c.name);
-    setSted(c.sted);
+    setSelectedCompany(c);
+    setAvdeling("");
+    setSted(c.locations.length === 1 ? c.locations[0] : c.sted);
     setShowDropdown(false);
   };
 
