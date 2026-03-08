@@ -38,13 +38,14 @@ const Contacts = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const { data: contacts = [], isLoading } = useQuery({
+  const { data: contactsResult, isLoading } = useQuery({
     queryKey: ["contacts-full"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from("contacts")
-        .select("*, companies(name), profiles!contacts_owner_id_fkey(id, full_name)")
-        .order("first_name");
+        .select("*, companies(name), profiles!contacts_owner_id_fkey(id, full_name)", { count: "exact" })
+        .order("first_name")
+        .limit(2000);
       if (error) throw error;
 
       const contactIds = new Set(data.map(c => c.id));
@@ -104,14 +105,20 @@ const Contacts = () => {
         }
       });
 
-      return data.map(c => ({
+      const rows = data.map(c => ({
         ...c,
         lastActivity: lastActMap[c.id] || null,
         signal: signalMap[c.id] || null,
         openTasks: openTasksMap[c.id] || { count: 0, overdue: false },
       }));
+
+      return { rows, totalCount: count ?? data.length, capped: data.length < (count ?? 0) };
     },
   });
+
+  const contacts = contactsResult?.rows ?? [];
+  const totalCount = contactsResult?.totalCount ?? 0;
+  const capped = contactsResult?.capped ?? false;
 
 
   const pendingToggles = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -258,7 +265,11 @@ const Contacts = () => {
           <Input placeholder="Søk..." value={search} onChange={(e) => setSearch(e.target.value)}
             className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border" />
         </div>
-        <span className="text-[0.75rem] text-muted-foreground ml-auto">{filtered.length} kontakter</span>
+        <span className="text-[0.75rem] text-muted-foreground ml-auto">
+          {filtered.length === contacts.length
+            ? `${totalCount}${capped ? "+" : ""} kontakter`
+            : `${filtered.length} kontakter`}
+        </span>
       </div>
 
       {/* Chip filters */}
