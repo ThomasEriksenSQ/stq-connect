@@ -602,6 +602,11 @@ export default function Foresporsler() {
     },
   });
 
+  const selectedRow = useMemo(() => {
+    if (!selectedRowId || !rows) return null;
+    return rows.find((r: any) => r.id === selectedRowId) || null;
+  }, [selectedRowId, rows]);
+
   const filtered = useMemo(() => {
     if (!rows) return [];
     let items = rows.filter((r: any) => {
