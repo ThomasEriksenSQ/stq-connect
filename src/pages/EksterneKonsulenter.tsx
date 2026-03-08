@@ -10,6 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -259,6 +260,7 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
 }) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [companySearch, setCompanySearch] = useState("");
   const [cvParsing, setCvParsing] = useState(false);
@@ -422,9 +424,10 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
     onClose();
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => setShowDeleteConfirm(true);
+
+  const handleConfirmDelete = async () => {
     if (!editRow) return;
-    if (!confirm("Er du sikker?")) return;
     const { error } = await supabase.from("external_consultants").delete().eq("id", editRow.id);
     if (error) { toast.error("Kunne ikke slette"); return; }
     toast.success("Slettet");
@@ -693,6 +696,26 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
           </div>
         )}
       </DialogContent>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Slett konsulent?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Dette vil permanent slette {form.navn || "denne konsulenten"} fra Eksterne konsulenter. Handlingen kan ikke angres.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Avbryt</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Ja, slett
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
