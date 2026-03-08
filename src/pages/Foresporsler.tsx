@@ -574,7 +574,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
 export default function Foresporsler() {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedRow, setSelectedRow] = useState<any>(null);
+  const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("aktive");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
   const [sort, setSort] = useState<{
@@ -601,6 +601,11 @@ export default function Foresporsler() {
       return data;
     },
   });
+
+  const selectedRow = useMemo(() => {
+    if (!selectedRowId || !rows) return null;
+    return rows.find((r: any) => r.id === selectedRowId) || null;
+  }, [selectedRowId, rows]);
 
   const filtered = useMemo(() => {
     if (!rows) return [];
@@ -708,7 +713,7 @@ export default function Foresporsler() {
             return (
               <div
                 key={row.id}
-                onClick={() => setSelectedRow(row)}
+                onClick={() => setSelectedRowId(row.id)}
                 className="grid grid-cols-[90px_minmax(0,1.8fr)_80px_minmax(0,1.5fr)_90px] gap-3 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer"
               >
                 {/* Mottatt */}
@@ -769,9 +774,9 @@ export default function Foresporsler() {
       <NyForesporselModal open={modalOpen} onClose={() => setModalOpen(false)} />
 
       {/* Detail/Edit Sheet */}
-      <Sheet open={!!selectedRow} onOpenChange={(o) => { if (!o) setSelectedRow(null); }}>
+      <Sheet open={!!selectedRow} onOpenChange={(o) => { if (!o) setSelectedRowId(null); }}>
         <SheetContent side="right" className="w-[520px] sm:w-[520px] p-0" hideCloseButton>
-          <ForespørselSheet row={selectedRow} onClose={() => setSelectedRow(null)} />
+          <ForespørselSheet row={selectedRow} onClose={() => setSelectedRowId(null)} />
         </SheetContent>
       </Sheet>
     </div>
