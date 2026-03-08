@@ -205,7 +205,7 @@ export default function ImporterCver() {
       teknologier: cv.data.kompetanse || [],
       cv_tekst: cv.data.bio || null,
       updated_at: new Date().toISOString(),
-    }).eq("id", cv.matchedId);
+    }).eq("id", cv.matchedId as string);
     if (error) throw error;
   };
 
