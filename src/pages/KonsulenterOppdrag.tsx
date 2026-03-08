@@ -4,12 +4,15 @@ import { useMemo, useState } from "react";
 import { cn, formatNOK, getInitials } from "@/lib/utils";
 import { format, differenceInDays } from "date-fns";
 import { Briefcase, CalendarCheck, TrendingUp, BarChart2 } from "lucide-react";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { OppdragEditSheet } from "@/components/OppdragEditSheet";
 
 type Filter = "Alle" | "Aktiv" | "Oppstart" | "Inaktiv";
 const TIMER_PER_DAG = 7.5;
 
 export default function KonsulenterOppdrag() {
   const [filter, setFilter] = useState<Filter>("Aktiv");
+  const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
   const today = new Date();
 
   const { data: oppdrag = [], isLoading } = useQuery({
@@ -169,8 +172,9 @@ export default function KonsulenterOppdrag() {
             return (
               <div
                 key={o.id}
+                onClick={() => setSelectedRowId(o.id)}
                 className={cn(
-                  "grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 items-center px-4 py-3 hover:bg-muted/40 transition-colors",
+                  "grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 items-center px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer",
                   isInaktiv && "opacity-60"
                 )}
               >
@@ -263,6 +267,14 @@ export default function KonsulenterOppdrag() {
           <p className="text-muted-foreground text-center py-12">Ingen oppdrag å vise</p>
         )}
       </div>
+      <Sheet open={selectedRowId !== null} onOpenChange={(o) => { if (!o) setSelectedRowId(null); }}>
+        <SheetContent side="right" className="w-[480px] sm:max-w-[480px] p-0" hideCloseButton>
+          <OppdragEditSheet
+            row={enriched.find((o: any) => o.id === selectedRowId) || null}
+            onClose={() => setSelectedRowId(null)}
+          />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
