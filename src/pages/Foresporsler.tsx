@@ -755,6 +755,7 @@ function ForespørselSheet({
       setTeknologier(row.teknologier || []);
       setKommentar(row.kommentar || "");
       setSluttkunde(row.sluttkunde || "");
+      setStatus(row.status || "Ny");
       setTagInput("");
     }
   }, [editMode, row]);
