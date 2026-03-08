@@ -137,6 +137,9 @@ export default function KonsulenterOppdrag() {
         </div>
       </div>
 
+      {/* Renewal timeline */}
+      <FornyelsesTimeline enriched={enriched} />
+
       {/* Filter chips */}
       <div className="flex items-center gap-2 mb-4">
         {chips.map((c) => (
