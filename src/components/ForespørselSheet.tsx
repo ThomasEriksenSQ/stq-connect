@@ -682,6 +682,18 @@ function EditMode(props: any) {
   const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
   const SUGGESTED_TAGS = ["C++", "C", "Embedded", "Yocto", "Linux", "Qt", "FPGA", "Python", "SPI/I2C", "MCU", "Embedded Linux", "Sikkerhet"];
 
+  // Fetch company locations (avdelinger) from companies.city
+  const { data: companyCity } = useQuery({
+    queryKey: ["company-city", selskapId],
+    enabled: !!selskapId,
+    queryFn: async () => {
+      const { data } = await supabase.from("companies").select("city").eq("id", selskapId!).single();
+      return data?.city || null;
+    },
+  });
+  const companyLocations: string[] = companyCity ? companyCity.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
+  const hasAvdelinger = companyLocations.length > 1;
+
   return (
     <div className="space-y-4">
       {/* Selskap */}
@@ -789,11 +801,22 @@ function EditMode(props: any) {
         </select>
       </div>
 
-      {/* Avdeling */}
-      <div>
-        <label className={LABEL}>Avdeling</label>
-        <Input value={avdeling} onChange={(e: any) => setAvdeling(e.target.value)} className="mt-1 text-[0.875rem]" placeholder="f.eks. Defence, Maritime" />
-      </div>
+      {/* Avdeling — only if company has multiple locations */}
+      {hasAvdelinger && (
+        <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+          <label className={LABEL}>Avdeling</label>
+          <select
+            value={avdeling}
+            onChange={(e) => setAvdeling(e.target.value)}
+            className="mt-1 w-full h-9 rounded-lg border border-border bg-background px-3 text-[0.875rem] text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">Ingen avdeling</option>
+            {companyLocations.map((loc: string) => (
+              <option key={loc} value={loc}>{loc}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Teknologier */}
       <div>
