@@ -607,6 +607,7 @@ export type Database = {
           kandidat: string
           kunde: string | null
           oppdrag_id: number | null
+          selskap_id: string | null
           slutt_dato: string | null
           start_dato: string | null
           status: string | null
@@ -624,6 +625,7 @@ export type Database = {
           kandidat: string
           kunde?: string | null
           oppdrag_id?: number | null
+          selskap_id?: string | null
           slutt_dato?: string | null
           start_dato?: string | null
           status?: string | null
@@ -641,6 +643,7 @@ export type Database = {
           kandidat?: string
           kunde?: string | null
           oppdrag_id?: number | null
+          selskap_id?: string | null
           slutt_dato?: string | null
           start_dato?: string | null
           status?: string | null
@@ -648,7 +651,15 @@ export type Database = {
           til_konsulent_override?: number | null
           utpris?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "stacq_oppdrag_selskap_id_fkey"
+            columns: ["selskap_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tasks: {
         Row: {
