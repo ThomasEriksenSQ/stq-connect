@@ -12,6 +12,7 @@ const TIMER_PER_DAG = 7.5;
 
 export default function KonsulenterOppdrag() {
   const [filter, setFilter] = useState<Filter>("Aktiv");
+  const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
   const today = new Date();
 
   const { data: oppdrag = [], isLoading } = useQuery({
