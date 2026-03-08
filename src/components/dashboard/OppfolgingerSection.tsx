@@ -35,7 +35,7 @@ const OppfolgingerSection = () => {
   const queryClient = useQueryClient();
 
   const [naarFilter, setNaarFilter] = useState<NaarFilter>("Alle");
-  const [ownerFilter, setOwnerFilter] = useState<string>("all");
+  const [ownerFilter, setOwnerFilter] = useState<string>(user?.id || "all");
   const [signalFilter, setSignalFilter] = useState<SignalFilter>("Alle");
   const [fadingIds, setFadingIds] = useState<Set<string>>(new Set());
   const [showAll, setShowAll] = useState(false);
