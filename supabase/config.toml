@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.salesforce-import]
 verify_jwt = false
+
+[functions.extract-cv-contact]
+verify_jwt = false
