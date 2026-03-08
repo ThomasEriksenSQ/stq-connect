@@ -1,47 +1,34 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Plus, X } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { format, differenceInDays } from "date-fns";
+import { nb } from "date-fns/locale";
 
-interface Foresporsel {
-  id: number;
-  mottattDate: Date;
-  selskap: string;
-  sted: string;
-  teknologier: string[];
-  antallSendt: number;
-  hvemSendt: string;
-}
+type StatusFilter = "Alle" | "Ny" | "Aktiv" | "Fullført" | "Tapt";
 
-const TODAY = new Date(2026, 2, 8);
+const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer select-none";
+const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
+const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground font-medium`;
 
-const DATA: Foresporsel[] = [
-  { id: 66, mottattDate: new Date(2026, 0, 14), selskap: "Tomra", sted: "Oslo", teknologier: ["C", "C++", "Linux", "Embedded", "Yocto"], antallSendt: 4, hvemSendt: "Bjørn Ormholt, Tom Erik, Sindre, Ande" },
-  { id: 67, mottattDate: new Date(2026, 0, 15), selskap: "Kongsberg", sted: "Kongsberg/Moss", teknologier: ["Embedded", "Lab", "Test"], antallSendt: 2, hvemSendt: "Sondre Russholm, Karl Eirik" },
-  { id: 68, mottattDate: new Date(2026, 0, 16), selskap: "Kongsberg KDA", sted: "Kongsberg", teknologier: ["Embedded"], antallSendt: 1, hvemSendt: "Karl Eirik" },
-  { id: 69, mottattDate: new Date(2026, 0, 12), selskap: "Kongsberggruppen", sted: "Kongsberg", teknologier: ["Embedded"], antallSendt: 1, hvemSendt: "Karl Eirik" },
-  { id: 70, mottattDate: new Date(2026, 0, 21), selskap: "Cisco", sted: "Oslo", teknologier: ["Python", "Brannmur"], antallSendt: 0, hvemSendt: "" },
-  { id: 71, mottattDate: new Date(2026, 0, 27), selskap: "Sykehuspartner", sted: "Oslo", teknologier: ["Cisco", "Brannmur"], antallSendt: 1, hvemSendt: "Helge Myhre" },
-  { id: 72, mottattDate: new Date(2026, 0, 4), selskap: "Pixii", sted: "Remote", teknologier: ["Yocto", "OS"], antallSendt: 2, hvemSendt: "Rikke, Christian" },
-  { id: 73, mottattDate: new Date(2026, 1, 5), selskap: "Remora Robotics", sted: "Stavanger", teknologier: ["C", "C++", "Embedded"], antallSendt: 1, hvemSendt: "Christian" },
-  { id: 74, mottattDate: new Date(2026, 1, 4), selskap: "Kongsberg Maritime", sted: "Kongsberg/Horten", teknologier: ["C", "C++"], antallSendt: 1, hvemSendt: "Karl Eirik" },
-  { id: 75, mottattDate: new Date(2026, 1, 5), selskap: "Alcatel", sted: "Trondheim", teknologier: ["C", "C++", "Lite info"], antallSendt: 1, hvemSendt: "Rikke" },
-  { id: 76, mottattDate: new Date(2026, 1, 5), selskap: "Six Robotics", sted: "Oslo", teknologier: ["C/C++"], antallSendt: 1, hvemSendt: "Christian" },
-  { id: 77, mottattDate: new Date(2026, 1, 11), selskap: "Norbit", sted: "Trondheim", teknologier: ["C++"], antallSendt: 2, hvemSendt: "Rikke, Christian" },
-  { id: 78, mottattDate: new Date(2026, 1, 17), selskap: "SpinChip AS", sted: "Oslo", teknologier: ["Yocto", "Sikkerhet", "Kryptering"], antallSendt: 1, hvemSendt: "Christian" },
-  { id: 79, mottattDate: new Date(2026, 1, 17), selskap: "Enker Group", sted: "Oslo", teknologier: ["C", "C++"], antallSendt: 1, hvemSendt: "Christian" },
-  { id: 80, mottattDate: new Date(2026, 2, 6), selskap: "Six Robotics", sted: "Oslo", teknologier: ["C++", "Yocto"], antallSendt: 0, hvemSendt: "" },
-  { id: 81, mottattDate: new Date(2026, 2, 6), selskap: "KDA", sted: "Kongsberg", teknologier: ["C++"], antallSendt: 0, hvemSendt: "" },
-];
+const SUGGESTED_TAGS = ["C", "C++", "Embedded", "Python", "Yocto", "Linux", "Lab", "Sikkerhet", "Rust", "Java"];
 
-function getDaysAgo(d: Date): number {
-  return Math.floor((TODAY.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+function getDaysAgo(d: string): number {
+  return differenceInDays(new Date(), new Date(d));
 }
 
 function getMottattClass(days: number): string {
@@ -54,69 +41,87 @@ function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max) + "…" : s;
 }
 
-// Modal data
-const MOCK_COMPANIES = [
-  { name: "Kongsberg KDA", sted: "Kongsberg", locations: ["Kongsberg", "Oslo"] },
-  { name: "Six Robotics", sted: "Oslo", locations: ["Oslo"] },
-  { name: "SpinChip AS", sted: "Oslo", locations: ["Oslo"] },
-  { name: "Remora Robotics", sted: "Stavanger", locations: ["Stavanger"] },
-  { name: "Norbit", sted: "Trondheim", locations: ["Trondheim"] },
-  { name: "Tomra", sted: "Oslo", locations: ["Oslo"] },
-  { name: "Cisco", sted: "Oslo", locations: ["Oslo"] },
-  { name: "AutoStore", sted: "Halden", locations: ["Halden"] },
-  { name: "Thales", sted: "Oslo", locations: ["Oslo"] },
-  { name: "ABB", sted: "Oslo", locations: ["Oslo"] },
-  { name: "TechnipFMC", sted: "Kongsberg", locations: ["Kongsberg"] },
-  { name: "Kongsberggruppen", sted: "Kongsberg", locations: ["Kongsberg", "Horten", "Oslo"] },
-  { name: "Kongsberg Maritime", sted: "Kongsberg", locations: ["Kongsberg", "Horten"] },
-];
-
-const MOCK_CONTACTS = [
-  "Elin Lindtvedt", "Mathias Nedrebø", "Harald Moldsvor",
-  "Øystein Kopstad", "Abdullah Akkoca", "Morten Røraas",
-  "Sondre Russholm", "Karl Eirik Hansen", "Helge Myhre",
-];
-
-const SUGGESTED_TAGS = ["C", "C++", "Embedded", "Python", "Yocto", "Linux", "Lab", "Sikkerhet"];
+/* ─── Ny forespørsel modal ─── */
 
 function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
   const [selskap, setSelskap] = useState("");
-  const [selectedCompany, setSelectedCompany] = useState<typeof MOCK_COMPANIES[0] | null>(null);
+  const [selskapId, setSelskapId] = useState<string | null>(null);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [avdeling, setAvdeling] = useState("");
   const [sted, setSted] = useState("");
   const [kontakt, setKontakt] = useState("");
+  const [kontaktId, setKontaktId] = useState<string | null>(null);
   const [showKontaktDropdown, setShowKontaktDropdown] = useState(false);
   const [kommentar, setKommentar] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [companyResults, setCompanyResults] = useState<Array<{ id: string; name: string; city: string | null }>>([]);
+  const [contactResults, setContactResults] = useState<Array<{ id: string; first_name: string; last_name: string }>>([]);
+  const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const contactTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const hasMultipleLocations = selectedCompany && selectedCompany.locations.length > 1;
+  const hasMultipleLocations = selectedLocations.length > 1;
 
   useEffect(() => {
     if (open) {
-      setSelskap(""); setSelectedCompany(null); setAvdeling("");
-      setSted(""); setKontakt(""); setKommentar("");
-      setTags([]); setTagInput("");
+      setSelskap(""); setSelskapId(null); setSelectedLocations([]);
+      setAvdeling(""); setSted(""); setKontakt(""); setKontaktId(null);
+      setKommentar(""); setTags([]); setTagInput("");
+      setCompanyResults([]); setContactResults([]);
     }
   }, [open]);
 
-  const filtered = selskap.length > 0
-    ? MOCK_COMPANIES.filter((c) => c.name.toLowerCase().includes(selskap.toLowerCase()))
-    : [];
+  // Debounced company search
+  const searchCompanies = (query: string) => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (query.length < 1) { setCompanyResults([]); return; }
+    searchTimer.current = setTimeout(async () => {
+      const { data } = await supabase
+        .from("companies")
+        .select("id, name, city")
+        .ilike("name", `%${query}%`)
+        .limit(8);
+      if (data) setCompanyResults(data);
+    }, 300);
+  };
 
-  const selectCompany = (c: typeof MOCK_COMPANIES[0]) => {
+  const selectCompany = (c: { id: string; name: string; city: string | null }) => {
     setSelskap(c.name);
-    setSelectedCompany(c);
+    setSelskapId(c.id);
     setAvdeling("");
-    setSted(c.locations.length === 1 ? c.locations[0] : c.sted);
+    const locations = c.city ? c.city.split(",").map(l => l.trim()).filter(Boolean) : [];
+    setSelectedLocations(locations);
+    if (locations.length === 1) {
+      setSted(locations[0]);
+    } else if (locations.length > 1) {
+      setSted(c.city || "");
+    } else {
+      setSted("");
+    }
     setShowDropdown(false);
   };
 
-  const filteredKontakter = kontakt.length > 0
-    ? MOCK_CONTACTS.filter((c) => c.toLowerCase().includes(kontakt.toLowerCase()))
-    : [];
+  // Debounced contact search
+  const searchContacts = (query: string) => {
+    if (contactTimer.current) clearTimeout(contactTimer.current);
+    if (query.length < 1) { setContactResults([]); return; }
+    contactTimer.current = setTimeout(async () => {
+      let q = supabase
+        .from("contacts")
+        .select("id, first_name, last_name")
+        .limit(6);
+      if (selskapId) q = q.eq("company_id", selskapId);
+      q = q.or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%`);
+      const { data } = await q;
+      if (data) setContactResults(data);
+    }, 300);
+  };
 
   const addTag = (tag: string) => {
     const t = tag.trim();
@@ -129,6 +134,30 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
       e.preventDefault();
       addTag(tagInput);
     }
+  };
+
+  const handleSubmit = async () => {
+    if (!selskap.trim() || submitting) return;
+    setSubmitting(true);
+    const { error } = await supabase.from("foresporsler").insert({
+      selskap_navn: selskap,
+      selskap_id: selskapId,
+      sted: sted || null,
+      avdeling: avdeling || null,
+      kontakt_id: kontaktId,
+      teknologier: tags,
+      kommentar: kommentar || null,
+      status: "Ny",
+      created_by: user?.id,
+    });
+    setSubmitting(false);
+    if (error) {
+      toast.error("Kunne ikke opprette forespørsel");
+      return;
+    }
+    toast.success("Forespørsel opprettet");
+    queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
+    onClose();
   };
 
   return (
@@ -144,21 +173,27 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
               <Input
                 ref={inputRef}
                 value={selskap}
-                onChange={(e) => { setSelskap(e.target.value); setShowDropdown(true); }}
+                onChange={(e) => {
+                  setSelskap(e.target.value);
+                  setSelskapId(null);
+                  setSelectedLocations([]);
+                  setShowDropdown(true);
+                  searchCompanies(e.target.value);
+                }}
                 onFocus={() => setShowDropdown(true)}
                 placeholder="Søk etter selskap..."
                 className="text-[0.875rem]"
               />
-              {showDropdown && filtered.length > 0 && (
+              {showDropdown && companyResults.length > 0 && (
                 <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-md max-h-48 overflow-auto">
-                  {filtered.map((c) => (
+                  {companyResults.map((c) => (
                     <button
-                      key={c.name}
+                      key={c.id}
                       onClick={() => selectCompany(c)}
                       className="w-full text-left px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors"
                     >
                       {c.name}
-                      <span className="text-muted-foreground ml-2 text-[0.75rem]">{c.sted}</span>
+                      {c.city && <span className="text-muted-foreground ml-2 text-[0.75rem]">{c.city}</span>}
                     </button>
                   ))}
                 </div>
@@ -179,7 +214,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
                 className="mt-1 w-full h-9 rounded-lg border border-border bg-background px-3 text-[0.875rem] text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">Velg avdeling...</option>
-                {selectedCompany!.locations.map((loc) => (
+                {selectedLocations.map((loc) => (
                   <option key={loc} value={loc}>{loc}</option>
                 ))}
               </select>
@@ -203,21 +238,30 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
             <div className="relative mt-1">
               <Input
                 value={kontakt}
-                onChange={(e) => { setKontakt(e.target.value); setShowKontaktDropdown(true); }}
+                onChange={(e) => {
+                  setKontakt(e.target.value);
+                  setKontaktId(null);
+                  setShowKontaktDropdown(true);
+                  searchContacts(e.target.value);
+                }}
                 onFocus={() => setShowKontaktDropdown(true)}
-                onBlur={() => setTimeout(() => setShowKontaktDropdown(false), 150)}
+                onBlur={() => setTimeout(() => setShowKontaktDropdown(false), 200)}
                 placeholder="Søk etter kontaktperson..."
                 className="text-[0.875rem]"
               />
-              {showKontaktDropdown && filteredKontakter.length > 0 && (
+              {showKontaktDropdown && contactResults.length > 0 && (
                 <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-md max-h-48 overflow-auto">
-                  {filteredKontakter.map((c) => (
+                  {contactResults.map((c) => (
                     <button
-                      key={c}
-                      onClick={() => { setKontakt(c); setShowKontaktDropdown(false); }}
+                      key={c.id}
+                      onClick={() => {
+                        setKontakt(`${c.first_name} ${c.last_name}`);
+                        setKontaktId(c.id);
+                        setShowKontaktDropdown(false);
+                      }}
                       className="w-full text-left px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors"
                     >
-                      {c}
+                      {c.first_name} {c.last_name}
                     </button>
                   ))}
                 </div>
@@ -277,18 +321,15 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
             Avbryt
           </button>
           <button
-            disabled={!selskap.trim()}
-            onClick={() => {
-              toast.success("Forespørsel opprettet");
-              onClose();
-            }}
+            disabled={!selskap.trim() || submitting}
+            onClick={handleSubmit}
             className={`inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg transition-colors ${
-              selskap.trim()
+              selskap.trim() && !submitting
                 ? "bg-primary text-primary-foreground hover:opacity-90"
                 : "bg-muted text-muted-foreground cursor-not-allowed"
             }`}
           >
-            Opprett forespørsel
+            {submitting ? "Oppretter..." : "Opprett forespørsel"}
           </button>
         </div>
       </DialogContent>
@@ -296,9 +337,76 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
   );
 }
 
+/* ─── Detail placeholder ─── */
+
+function ForespørselDetail({ id }: { id: string }) {
+  const navigate = useNavigate();
+  const { data, isLoading } = useQuery({
+    queryKey: ["foresporsel-detail", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("foresporsler")
+        .select("*, contacts(id, first_name, last_name)")
+        .eq("id", Number(id))
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  if (isLoading) return <p className="text-muted-foreground py-12 text-center">Laster...</p>;
+  if (!data) return <p className="text-muted-foreground py-12 text-center">Fant ikke forespørsel</p>;
+
+  return (
+    <div className="space-y-4">
+      <button onClick={() => navigate("/foresporsler")} className="text-[0.8125rem] text-primary hover:underline">
+        ← Tilbake til forespørsler
+      </button>
+      <h1 className="text-[1.5rem] font-bold text-foreground">{data.selskap_navn}</h1>
+      <div className="text-muted-foreground text-[0.875rem] space-y-1">
+        {data.sted && <p>Sted: {data.sted}</p>}
+        {data.teknologier && data.teknologier.length > 0 && (
+          <p>Teknologier: {data.teknologier.join(", ")}</p>
+        )}
+        {data.kommentar && <p>Kommentar: {data.kommentar}</p>}
+        <p>Status: {data.status}</p>
+        <p>Mottatt: {data.mottatt_dato}</p>
+        {data.frist_dato && <p>Frist: {data.frist_dato}</p>}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main page ─── */
+
 export default function Foresporsler() {
   const navigate = useNavigate();
+  const { id } = useParams();
   const [modalOpen, setModalOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("Alle");
+
+  const { data: rows, isLoading } = useQuery({
+    queryKey: ["foresporsler-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("foresporsler")
+        .select("*, contacts(id, first_name, last_name)")
+        .order("mottatt_dato", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const filtered = useMemo(() => {
+    if (!rows) return [];
+    return rows.filter((r) => {
+      if (statusFilter === "Alle") return r.status !== "Tapt";
+      return r.status === statusFilter;
+    });
+  }, [rows, statusFilter]);
+
+  // If we have an ID param, show detail view
+  if (id) return <ForespørselDetail id={id} />;
 
   return (
     <div className="space-y-5">
@@ -307,7 +415,7 @@ export default function Foresporsler() {
         <div className="flex items-center gap-2.5">
           <h1 className="text-[1.5rem] font-bold text-foreground">Forespørsler</h1>
           <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-primary/10 text-primary text-[0.6875rem] font-semibold">
-            {DATA.length}
+            {filtered.length}
           </span>
         </div>
         <button
@@ -319,73 +427,98 @@ export default function Foresporsler() {
         </button>
       </div>
 
+      {/* Filter chips */}
+      <div className="flex items-center gap-2">
+        {(["Alle", "Ny", "Aktiv", "Fullført", "Tapt"] as StatusFilter[]).map((f) => (
+          <button key={f} className={statusFilter === f ? CHIP_ON : CHIP_OFF} onClick={() => setStatusFilter(f)}>
+            {f}
+          </button>
+        ))}
+      </div>
+
       {/* Table */}
-      <div className="bg-card border border-border rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.07)] overflow-hidden">
-        <table className="w-full text-[0.8125rem]">
-          <thead>
-            <tr className="border-b border-border">
-              {["MOTTATT", "SELSKAP", "STED", "TEKNOLOGIER", "SENDT INN"].map((h) => (
-                <th key={h} className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground text-left px-3 py-2.5">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {DATA.map((row, i) => {
-              const days = getDaysAgo(row.mottattDate);
-              return (
-                <tr
-                  key={row.id}
-                  onClick={() => navigate(`/foresporsler/${row.id}`)}
-                  className={`border-b border-border last:border-b-0 ${
-                    i % 2 === 1 ? "bg-secondary/20" : ""
-                  } hover:bg-secondary/50 transition-colors cursor-pointer`}
-                >
-                  <td className={`px-3 py-2.5 ${getMottattClass(days)}`}>
-                    {days} dager siden
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <span className="font-medium hover:text-primary hover:underline">{row.selskap}</span>
-                  </td>
-                  <td className="px-3 py-2.5 text-muted-foreground">{row.sted}</td>
-                  <td className="px-3 py-2.5">
-                    <div className="flex flex-wrap gap-1">
-                      {row.teknologier.slice(0, 3).map((t) => (
-                        <span key={t} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] text-muted-foreground">{t}</span>
-                      ))}
-                      {row.teknologier.length > 3 && (
-                        <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] text-muted-foreground">
-                          +{row.teknologier.length - 3}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-3 py-2.5">
-                    {row.antallSendt === 0 ? (
-                      <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-                        0 sendt
-                      </span>
-                    ) : (
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-foreground">{row.antallSendt}</span>
-                        <span className="text-muted-foreground text-[0.75rem]">{truncate(row.hvemSendt, 30)}</span>
+      {isLoading ? (
+        <div className="text-center py-12 text-muted-foreground">Laster...</div>
+      ) : (
+        <div className="bg-card border border-border rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.07)] overflow-hidden">
+          <table className="w-full text-[0.8125rem]">
+            <thead>
+              <tr className="border-b border-border">
+                {["MOTTATT", "SELSKAP", "STED", "TEKNOLOGIER", "SENDT INN"].map((h) => (
+                  <th key={h} className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground text-left px-3 py-2.5">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((row, i) => {
+                const days = getDaysAgo(row.mottatt_dato);
+                const isNew = (row.status === "Ny" || row.status === "Aktiv") && row.antall_sendt === 0;
+                const isAging = row.status === "Aktiv" && days > 21;
+
+                return (
+                  <tr
+                    key={row.id}
+                    onClick={() => navigate(`/foresporsler/${row.id}`)}
+                    className={`border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors cursor-pointer ${
+                      isNew ? "border-l-[3px] border-l-amber-400" : isAging ? "border-l-[3px] border-l-destructive/40" : ""
+                    }`}
+                  >
+                    <td className={`px-3 py-2.5 ${getMottattClass(days)}`}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>{days} dager siden</span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {format(new Date(row.mottatt_dato), "d. MMM yyyy", { locale: nb })}
+                        </TooltipContent>
+                      </Tooltip>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span className="font-medium hover:text-primary">{row.selskap_navn}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-muted-foreground text-sm">{row.sted}</td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex flex-wrap gap-1">
+                        {(row.teknologier || []).slice(0, 3).map((t: string) => (
+                          <span key={t} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] text-muted-foreground">{t}</span>
+                        ))}
+                        {(row.teknologier || []).length > 3 && (
+                          <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] text-muted-foreground">
+                            +{row.teknologier!.length - 3}
+                          </span>
+                        )}
                       </div>
-                    )}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      {row.antall_sendt === 0 ? (
+                        <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
+                          0 sendt
+                        </span>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-foreground">{row.antall_sendt}</span>
+                          {row.hvem_sendt && (
+                            <span className="text-muted-foreground text-[0.75rem]">{truncate(row.hvem_sendt, 25)}</span>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="text-center py-12 text-muted-foreground">
+                    Ingen forespørsler å vise
                   </td>
                 </tr>
-              );
-            })}
-            {DATA.length === 0 && (
-              <tr>
-                <td colSpan={5} className="text-center py-12 text-muted-foreground">
-                  Ingen forespørsler å vise
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <NyForesporselModal open={modalOpen} onClose={() => setModalOpen(false)} />
     </div>
