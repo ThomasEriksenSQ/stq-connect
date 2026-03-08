@@ -531,7 +531,7 @@ export default function Foresporsler() {
               <div
                 key={row.id}
                 onClick={() => navigate(`/foresporsler/${row.id}`)}
-                className={`grid grid-cols-[140px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 cursor-pointer border-b border-border last:border-b-0 ${
+                className={`grid grid-cols-[120px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 cursor-pointer ${
                   isNew ? "border-l-[3px] border-l-amber-400" : isAging ? "border-l-[3px] border-l-destructive/40" : ""
                 }`}
               >
