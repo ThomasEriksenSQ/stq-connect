@@ -10,6 +10,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import FollowUpModal, { type FollowUpModalData } from "./FollowUpModal";
@@ -314,15 +315,21 @@ const MockOppfolgingerSection = () => {
                     </span>
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-[160px]">
-                  <DropdownMenuItem className="cursor-pointer" onSelect={() => postponeRow(row.id, addWeeks(new Date(), 1))}>
-                    1 uke
+                <DropdownMenuContent align="end" className="min-w-[220px]">
+                  <DropdownMenuLabel className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground px-2 py-1.5">
+                    Utsett til
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem className="cursor-pointer flex items-center" onSelect={() => postponeRow(row.id, addWeeks(new Date(), 1))}>
+                    <span className="text-foreground">+ 1 uke</span>
+                    <span className="text-muted-foreground text-xs ml-auto">{format(addWeeks(new Date(), 1), "dd.MM.yyyy")}</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer" onSelect={() => postponeRow(row.id, addWeeks(new Date(), 2))}>
-                    2 uker
+                  <DropdownMenuItem className="cursor-pointer flex items-center" onSelect={() => postponeRow(row.id, addWeeks(new Date(), 2))}>
+                    <span className="text-foreground">+ 2 uker</span>
+                    <span className="text-muted-foreground text-xs ml-auto">{format(addWeeks(new Date(), 2), "dd.MM.yyyy")}</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer" onSelect={() => postponeRow(row.id, addMonths(new Date(), 1))}>
-                    1 måned
+                  <DropdownMenuItem className="cursor-pointer flex items-center" onSelect={() => postponeRow(row.id, addMonths(new Date(), 1))}>
+                    <span className="text-foreground">+ 1 måned</span>
+                    <span className="text-muted-foreground text-xs ml-auto">{format(addMonths(new Date(), 1), "dd.MM.yyyy")}</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <Popover>
