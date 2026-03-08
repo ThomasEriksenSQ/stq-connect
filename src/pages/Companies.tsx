@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Search, ArrowUpDown, Loader2, X } from "lucide-react";
+import { Plus, Search, ArrowUpDown, Loader2, X, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -378,49 +378,20 @@ const Companies = () => {
                   onSelect={(r) => setForm((f) => ({ ...f, name: r.name, org_number: r.org_number, city: r.city }))}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-label">Org.nr</Label>
-                  <OrgNrInput
-                    value={form.org_number}
-                    onChange={(org_number) => setForm((f) => ({ ...f, org_number }))}
-                    onLookup={(name, city) => setForm((f) => ({ ...f, name: name || f.name, city: city || f.city }))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-label">Sted</Label>
-                  <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Oslo" className="h-10 rounded-lg" />
-                </div>
-              </div>
               <div className="space-y-1.5">
-                <Label className="text-label">Nettside</Label>
-                <Input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://" className="h-10 rounded-lg" type="url" />
+                <Label className="text-label">Org.nr</Label>
+                <OrgNrInput
+                  value={form.org_number}
+                  onChange={(org_number) => setForm((f) => ({ ...f, org_number }))}
+                  onLookup={(name, city) => setForm((f) => ({ ...f, name: name || f.name, city: city || f.city }))}
+                />
               </div>
-              {/* STATUS */}
-              <div className="space-y-1.5">
-                <Label className="text-label">Status</Label>
-                <div className="flex gap-1.5">
-                  {([
-                    { value: "prospect", label: "Potensiell kunde", activeClass: "bg-blue-500 text-white border-blue-500" },
-                    { value: "customer", label: "Kunde", activeClass: "bg-emerald-500 text-white border-emerald-500" },
-                    { value: "partner", label: "Partner", activeClass: "bg-gray-400 text-white border-gray-400" },
-                    { value: "churned", label: "Ikke relevant selskap", activeClass: "bg-red-400 text-white border-red-400" },
-                  ] as const).map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setForm((f) => ({ ...f, status: opt.value }))}
-                      className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                        form.status === opt.value
-                          ? opt.activeClass
-                          : "bg-secondary text-muted-foreground hover:bg-secondary/80"
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
+              {form.city && (
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <MapPin className="h-3.5 w-3.5" />
+                  {form.city}
                 </div>
-              </div>
+              )}
               {/* AVDELINGER */}
               <div className="space-y-1.5">
                 <Label className="text-label">Avdelinger</Label>
@@ -455,6 +426,35 @@ const Companies = () => {
                   >
                     + Legg til avdeling
                   </button>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-label">Nettside</Label>
+                <Input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://" className="h-10 rounded-lg" type="url" />
+              </div>
+              {/* STATUS */}
+              <div className="space-y-1.5">
+                <Label className="text-label">Status</Label>
+                <div className="flex gap-1.5">
+                  {([
+                    { value: "prospect", label: "Potensiell kunde", activeClass: "bg-blue-500 text-white border-blue-500" },
+                    { value: "customer", label: "Kunde", activeClass: "bg-emerald-500 text-white border-emerald-500" },
+                    { value: "partner", label: "Partner", activeClass: "bg-gray-400 text-white border-gray-400" },
+                    { value: "churned", label: "Ikke relevant selskap", activeClass: "bg-red-400 text-white border-red-400" },
+                  ] as const).map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, status: opt.value }))}
+                      className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                        form.status === opt.value
+                          ? opt.activeClass
+                          : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
                 </div>
               </div>
               <Button type="submit" className="w-full h-10 rounded-lg" disabled={createMutation.isPending}>
