@@ -676,9 +676,9 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
       ) : null}
 
       {/* Two-column layout */}
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_minmax(0,300px)] gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_1px_minmax(0,300px)] gap-0">
         {/* Left: Tasks + Activities */}
-        <div className="space-y-5">
+        <div className="space-y-5 pr-6">
           {/* ── Oppfølginger ── */}
           {tasks.length > 0 && (
             <div className="bg-card border border-border rounded-lg shadow-card p-4 mb-6">
@@ -743,12 +743,17 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             </div>
           )}
 
+          <hr className="border-border my-4" />
+
           {/* ── Activities Timeline ── */}
           <CompanyActivityTimeline activities={activities} profileMap={profileMapFull} companyId={companyId} />
         </div>
 
+        {/* Vertical divider */}
+        <div className="hidden md:block w-px bg-border flex-shrink-0" />
+
         {/* Right: Contacts */}
-        <div className="space-y-3">
+        <div className="space-y-3 pl-6">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-medium uppercase tracking-[0.08em] text-muted-foreground">Kontakter · {contacts.length}</h3>
           </div>
