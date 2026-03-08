@@ -382,13 +382,332 @@ export function ForespørselSheet({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 py-5">
+      <div className={cn("flex-1 overflow-hidden", editMode ? "overflow-y-auto px-6 py-5" : "")}>
         {editMode ? (
           /* ─── EDIT MODE ─── */
           <EditMode
             row={row}
             selskapNavn={selskapNavn}
             setSelskapNavn={setSelskapNavn}
+            setSelskapId={setSelskapId}
+            setShowSelskapDropdown={setShowSelskapDropdown}
+            showSelskapDropdown={showSelskapDropdown}
+            companyResults={companyResults}
+            searchCompanies={searchCompanies}
+            selectCompany={selectCompany}
+            isPartner={isPartner}
+            sluttkunde={sluttkunde}
+            setSluttkunde={setSluttkunde}
+            sted={sted}
+            setSted={setSted}
+            selskapId={selskapId}
+            kontakt={kontakt}
+            setKontakt={setKontakt}
+            kontaktId={kontaktId}
+            setKontaktId={setKontaktId}
+            showKontaktDropdown={showKontaktDropdown}
+            setShowKontaktDropdown={setShowKontaktDropdown}
+            filteredContacts={filteredContacts}
+            fristDato={fristDato}
+            setFristDato={setFristDato}
+            status={status}
+            setStatus={setStatus}
+            avdeling={avdeling}
+            setAvdeling={setAvdeling}
+            teknologier={teknologier}
+            setTeknologier={setTeknologier}
+            tagInput={tagInput}
+            setTagInput={setTagInput}
+            addTag={addTag}
+            handleTagKeyDown={handleTagKeyDown}
+            kommentar={kommentar}
+            setKommentar={setKommentar}
+          />
+        ) : (
+          /* ─── VIEW MODE ─── */
+          <div className={cn("h-full", showMatch ? "flex" : "")}>
+            {/* LEFT COLUMN */}
+            <div className={cn(
+              "overflow-y-auto py-5 px-6",
+              showMatch ? "w-[320px] flex-shrink-0" : "flex-1"
+            )}>
+              <div className="space-y-5">
+                {/* Info row */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className={LABEL}>Mottatt</p>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <p className="text-[0.875rem] text-foreground mt-1 cursor-default">
+                          {row.mottatt_dato ? relativeDate(row.mottatt_dato) : "—"}
+                        </p>
+                      </TooltipTrigger>
+                      {row.mottatt_dato && <TooltipContent>{fullDate(row.mottatt_dato)}</TooltipContent>}
+                    </Tooltip>
+                  </div>
+                  <div>
+                    <p className={LABEL}>Kontakt</p>
+                    <p className="text-[0.875rem] text-foreground mt-1">
+                      {contactName || "—"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Teknologier */}
+                <div>
+                  <p className={LABEL}>Teknologier</p>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {(row.teknologier || []).length > 0 ? (
+                      row.teknologier.map((t: string) => (
+                        <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.75rem] font-medium text-foreground">
+                          {t}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[0.8125rem] text-muted-foreground">—</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Finn match button (only when no results yet) */}
+                {!matchResults && !matching && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Target className="h-4 w-4 text-primary" />
+                      <p className={`${LABEL} mb-0`}>Konsulentmatch</p>
+                    </div>
+                    <button
+                      onClick={runMatch}
+                      disabled={!(row.teknologier?.length)}
+                      className="inline-flex items-center gap-2 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Finn match
+                    </button>
+                  </div>
+                )}
+
+                {/* No results message */}
+                {matchResults && matchResults.length === 0 && !matching && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Target className="h-4 w-4 text-primary" />
+                      <p className={`${LABEL} mb-0`}>Konsulentmatch</p>
+                    </div>
+                    <p className="text-[0.8125rem] text-muted-foreground">Ingen treff med score ≥ 4</p>
+                  </div>
+                )}
+
+                {/* ─── Sendt inn ─── */}
+                <div>
+                  <p className={`${LABEL} mb-2`}>Sendt inn</p>
+                  <div className="space-y-1.5 mb-3">
+                    {linkedKonsulenter.length === 0 && (
+                      <p className="text-[0.8125rem] text-muted-foreground">
+                        Ingen konsulenter sendt inn ennå
+                      </p>
+                    )}
+                    {linkedKonsulenter.map((k: any) => {
+                      const isIntern = k.konsulent_type === "intern";
+                      const navn = isIntern ? k.stacq_ansatte?.navn : k.external_consultants?.navn;
+                      const eksterntType = k.external_consultants?.type;
+                      return (
+                        <div key={k.id} className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[0.6875rem] font-semibold text-primary">
+                              {getInitials(navn || "")}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[0.875rem] font-medium">
+                                  {navn || "Ukjent"}
+                                </span>
+                                <span className={cn(
+                                  "inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold",
+                                  isIntern
+                                    ? "bg-foreground text-background"
+                                    : "bg-blue-100 text-blue-700"
+                                )}>
+                                  {isIntern ? "Ansatt" : eksterntType === "via_partner" ? "Partner" : "Freelance"}
+                                </span>
+                              </div>
+                              {k.created_at && (
+                                <span className="text-[0.6875rem] text-muted-foreground">
+                                  lagt til {relativeTime(k.created_at)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleRemoveKonsulent(k.id)}
+                            className="text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <AddKonsulentCombobox
+                    foresporslerID={row.id}
+                    alreadyLinkedIntern={linkedKonsulenter.filter((k: any) => k.konsulent_type === "intern").map((k: any) => k.ansatt_id)}
+                    alreadyLinkedEkstern={linkedKonsulenter.filter((k: any) => k.konsulent_type === "ekstern").map((k: any) => k.ekstern_id)}
+                    onAddIntern={handleAddKonsulent}
+                    onAddEkstern={handleAddEkstern}
+                  />
+                </div>
+
+                {/* ─── Kommentar (inline edit) ─── */}
+                <div>
+                  <p className={LABEL}>Kommentar</p>
+                  {editingKommentar ? (
+                    <div className="mt-1">
+                      <textarea
+                        ref={kommentarRef}
+                        value={kommentar}
+                        onChange={e => setKommentar(e.target.value)}
+                        onBlur={saveKommentar}
+                        onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") saveKommentar(); }}
+                        rows={3}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-[0.875rem] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                        placeholder="Notater, kilde, intern info..."
+                        autoFocus
+                      />
+                      <p className="text-[0.6875rem] text-muted-foreground mt-1">Klikk utenfor eller Cmd+Enter for å lagre</p>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => setEditingKommentar(true)}
+                      className="mt-1 cursor-pointer rounded-lg px-3 py-2 hover:bg-muted/40 transition-colors min-h-[40px]"
+                    >
+                      {kommentar ? (
+                        <p className="text-[0.875rem] text-foreground/70 whitespace-pre-wrap leading-relaxed">{kommentar}</p>
+                      ) : (
+                        <p className="text-[0.8125rem] text-muted-foreground/50 italic">Klikk for å legge til kommentar...</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT COLUMN — Match results */}
+            {showMatch && (
+              <div className="flex-1 border-l border-border overflow-y-auto py-5 px-5 max-h-[calc(100vh-200px)]">
+                <div className="flex items-center justify-between gap-2 mb-4">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-4 w-4 text-primary" />
+                    <p className={`${LABEL} mb-0`}>Konsulentmatch</p>
+                  </div>
+                  {matchResults && matchResults.length > 0 && (
+                    <button
+                      onClick={runMatch}
+                      className="text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Kjør på nytt
+                    </button>
+                  )}
+                </div>
+
+                {matchResults && matchResults.length > 0 && (
+                  <div className="flex items-center gap-1.5 mb-3">
+                    {(["Alle", "Ansatte", "Eksterne"] as const).map(chip => {
+                      const sel = matchSourceFilter === chip;
+                      return (
+                        <button
+                          key={chip}
+                          onClick={() => setMatchSourceFilter(chip)}
+                          className={sel
+                            ? "h-7 px-2.5 text-[0.75rem] rounded-full border bg-foreground border-foreground text-background font-medium transition-colors"
+                            : "h-7 px-2.5 text-[0.75rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors"
+                          }
+                        >
+                          {chip}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {matching && (
+                  <div className="space-y-2">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="rounded-lg border border-border bg-muted/30 p-3 animate-pulse">
+                        <div className="h-4 bg-muted rounded w-2/3 mb-2" />
+                        <div className="h-3 bg-muted rounded w-1/2" />
+                      </div>
+                    ))}
+                    <p className="text-[0.8125rem] text-primary font-medium flex items-center gap-2">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Analyserer match...
+                    </p>
+                  </div>
+                )}
+
+                {matchResults && matchResults.length > 0 && (
+                  <div className="space-y-2">
+                    {matchResults
+                      .filter(m => matchSourceFilter === "Alle" ? true : matchSourceFilter === "Ansatte" ? m.type === "intern" : m.type === "ekstern")
+                      .map((m, i) => {
+                      const isLinked = alreadyLinkedIds.has(m.id);
+                      return (
+                        <div key={`${m.type}-${m.id}`} className="rounded-lg border border-border bg-card p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
+                              <span className="text-[0.875rem] font-semibold text-foreground truncate">{m.navn}</span>
+                              <span className={cn(
+                                "inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold shrink-0",
+                                m.type === "intern"
+                                  ? "bg-foreground text-background"
+                                  : "bg-blue-100 text-blue-700"
+                              )}>
+                                {m.type === "intern" ? "Intern" : "Ekstern"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <ScoreDot score={m.score} />
+                              <span className="text-[0.8125rem] font-bold text-foreground">{m.score}/10</span>
+                            </div>
+                          </div>
+                          {/* Match tags */}
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {m.match_tags.map(t => (
+                              <span key={t} className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                          {/* Begrunnelse */}
+                          <p className="text-[0.8125rem] text-muted-foreground mt-1.5 italic">
+                            {m.begrunnelse}
+                          </p>
+                          {/* Add button */}
+                          {!isLinked && (
+                            <button
+                              onClick={() => addFromMatch(m)}
+                              className="mt-2 inline-flex items-center gap-1 text-[0.75rem] text-primary hover:underline font-medium"
+                            >
+                              <Plus className="h-3 w-3" />
+                              Legg til
+                            </button>
+                          )}
+                          {isLinked && (
+                            <span className="mt-2 inline-flex items-center gap-1 text-[0.75rem] text-emerald-600 font-medium">
+                              ✓ Allerede lagt til
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
             setSelskapId={setSelskapId}
             setShowSelskapDropdown={setShowSelskapDropdown}
             showSelskapDropdown={showSelskapDropdown}
