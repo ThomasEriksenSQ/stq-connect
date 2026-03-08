@@ -523,7 +523,7 @@ const Companies = () => {
               const status = getStatus(company.status);
               return (
                 <div key={company.id}
-                  className="w-full grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)_70px_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer"
+                  className="w-full grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer"
                   onClick={() => navigate(`/selskaper/${company.id}`)}>
                   <div className="min-w-0">
                     <span className="text-[0.8125rem] font-medium text-foreground truncate block">{company.name}</span>
