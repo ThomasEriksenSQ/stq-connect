@@ -774,9 +774,9 @@ export default function Foresporsler() {
       <NyForesporselModal open={modalOpen} onClose={() => setModalOpen(false)} />
 
       {/* Detail/Edit Sheet */}
-      <Sheet open={!!selectedRow} onOpenChange={(o) => { if (!o) setSelectedRow(null); }}>
+      <Sheet open={!!selectedRow} onOpenChange={(o) => { if (!o) setSelectedRowId(null); }}>
         <SheetContent side="right" className="w-[520px] sm:w-[520px] p-0" hideCloseButton>
-          <ForespørselSheet row={selectedRow} onClose={() => setSelectedRow(null)} />
+          <ForespørselSheet row={selectedRow} onClose={() => setSelectedRowId(null)} />
         </SheetContent>
       </Sheet>
     </div>
