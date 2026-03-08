@@ -426,7 +426,7 @@ function ForespørselSheet({
   const [avdeling, setAvdeling] = useState("");
   const [fristDato, setFristDato] = useState("");
   const [type, setType] = useState("");
-  const [referanse, setReferanse] = useState("");
+  
   const [teknologier, setTeknologier] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [antallSendt, setAntallSendt] = useState("");
@@ -440,7 +440,7 @@ function ForespørselSheet({
       setAvdeling(row.avdeling || "");
       setFristDato(row.frist_dato || "");
       setType(row.type || "DIR");
-      setReferanse(row.referanse || "");
+      
       setTeknologier(row.teknologier || []);
       setAntallSendt(String(row.antall_sendt ?? 0));
       setHvemSendt(row.hvem_sendt || "");
@@ -472,7 +472,7 @@ function ForespørselSheet({
         avdeling: avdeling || null,
         frist_dato: fristDato || null,
         type: type || null,
-        referanse: referanse || null,
+        
         teknologier,
         antall_sendt: parseInt(antallSendt) || 0,
         hvem_sendt: hvemSendt || null,
@@ -575,12 +575,6 @@ function ForespørselSheet({
               </div>
             </div>
 
-            {/* Referanse */}
-            <div>
-              <label className={LABEL}>Referanse</label>
-              <Input value={referanse} onChange={(e) => setReferanse(e.target.value)} className="mt-1 text-[0.875rem]" placeholder="f.eks. navn på mellomledd" />
-            </div>
-
             {/* Teknologier */}
             <div>
               <label className={LABEL}>Teknologier</label>
@@ -653,16 +647,10 @@ function ForespørselSheet({
               </div>
             </div>
 
-            {/* Type / Referanse */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className={LABEL}>Type</p>
-                <p className="text-[0.875rem] text-foreground mt-1">{row.type || "—"}</p>
-              </div>
-              <div>
-                <p className={LABEL}>Referanse</p>
-                <p className="text-[0.875rem] text-foreground mt-1">{row.referanse || "—"}</p>
-              </div>
+            {/* Type */}
+            <div>
+              <p className={LABEL}>Type</p>
+              <p className="text-[0.875rem] text-foreground mt-1">{row.type || "—"}</p>
             </div>
 
             {/* Teknologier */}
