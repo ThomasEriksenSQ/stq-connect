@@ -15,6 +15,7 @@ import ContactDetail from "./pages/ContactDetail";
 import Tasks from "./pages/Tasks";
 import NotFound from "./pages/NotFound";
 import Import from "./pages/Import";
+import AdminBrregSync from "./pages/AdminBrregSync";
 
 
 const queryClient = new QueryClient();
@@ -60,6 +61,7 @@ const App = () => (
                 <Route path="kontakter/:id" element={<ContactDetail />} />
                 <Route path="oppfolginger" element={<Tasks />} />
                 <Route path="import" element={<Import />} />
+                <Route path="admin/brreg-sync" element={<AdminBrregSync />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
