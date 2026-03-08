@@ -86,6 +86,16 @@ export default function StacqPrisen() {
   const oppstartTotal = oppstart.reduce((s, r) => s + r.stacqPris * TIMER_PER_DAG, 0);
   const avgPris = aktive.length > 0 ? stacqTotal / aktive.length : 0;
 
+  const workdayCount = (() => {
+    const y = now.getFullYear(), m = now.getMonth();
+    const dim = new Date(y, m + 1, 0).getDate();
+    let wd = 0;
+    for (let d = 1; d <= dim; d++) { const dow = new Date(y, m, d).getDay(); if (dow !== 0 && dow !== 6) wd++; }
+    return wd;
+  })();
+  const monthlyTotal = stacqTotal * workdayCount;
+  const oppstartUtprisTotal = oppstart.reduce((s, r) => s + (r.utpris ?? 0), 0);
+
   const chartData = useMemo(() => [
     ...SEED_HISTORY,
     { label: "Nå", value: Math.round(stacqTotal) },
