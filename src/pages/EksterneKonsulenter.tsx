@@ -424,9 +424,10 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
     onClose();
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => setShowDeleteConfirm(true);
+
+  const handleConfirmDelete = async () => {
     if (!editRow) return;
-    if (!confirm("Er du sikker?")) return;
     const { error } = await supabase.from("external_consultants").delete().eq("id", editRow.id);
     if (error) { toast.error("Kunne ikke slette"); return; }
     toast.success("Slettet");
