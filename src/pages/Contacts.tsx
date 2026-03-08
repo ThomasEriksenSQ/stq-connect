@@ -319,13 +319,12 @@ const Contacts = () => {
         <p className="text-sm text-muted-foreground py-12 text-center">Ingen kontakter funnet</p>
       ) : (
         <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
-          <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)_90px_70px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+            <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)_90px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="name">Navn</SortHeader>
             <SortHeader field="signal">Signal</SortHeader>
             <SortHeader field="company">Selskap</SortHeader>
             <SortHeader field="title">Stilling</SortHeader>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Tags</span>
-            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground text-center">Oppf.</span>
             <SortHeader field="last_activity" className="justify-end">Siste akt.</SortHeader>
           </div>
           <div className="divide-y divide-border">
@@ -336,7 +335,7 @@ const Contacts = () => {
               const openTasks = (contact as any).openTasks || { count: 0, overdue: false };
 
               return (
-                <div key={contact.id} className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)_90px_70px_90px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75">
+                <div key={contact.id} className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)_90px_90px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75">
                   {/* NAME - clickable */}
                   <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="min-w-0 text-left cursor-pointer">
                     <p className="text-[0.8125rem] font-medium text-foreground truncate">
@@ -396,16 +395,6 @@ const Contacts = () => {
                         : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
                       }
                     >INN</button>
-                  </div>
-                  {/* OPPFØLGINGER */}
-                  <div className="text-center">
-                    {openTasks.count > 0 ? (
-                      <span className={`text-[0.8125rem] font-medium ${openTasks.overdue ? "text-destructive" : "text-foreground"}`}>
-                        {openTasks.count}
-                      </span>
-                    ) : (
-                      <span className="text-[0.75rem] text-muted-foreground">—</span>
-                    )}
                   </div>
                   {/* SISTE AKT */}
                   <span className="text-[0.75rem] text-muted-foreground text-right">
