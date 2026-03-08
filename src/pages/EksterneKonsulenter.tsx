@@ -288,6 +288,7 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
         status: editRow.status || "ledig",
         tilgjengelig_fra: editRow.tilgjengelig_fra || "",
         cv_tekst: (editRow as any).cv_tekst || "",
+        kommentar: (editRow as any).notat || "",
       });
     } else {
       setForm({ ...emptyForm });
