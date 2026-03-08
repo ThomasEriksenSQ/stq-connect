@@ -801,11 +801,22 @@ function EditMode(props: any) {
         </select>
       </div>
 
-      {/* Avdeling */}
-      <div>
-        <label className={LABEL}>Avdeling</label>
-        <Input value={avdeling} onChange={(e: any) => setAvdeling(e.target.value)} className="mt-1 text-[0.875rem]" placeholder="f.eks. Defence, Maritime" />
-      </div>
+      {/* Avdeling — only if company has multiple locations */}
+      {hasAvdelinger && (
+        <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+          <label className={LABEL}>Avdeling</label>
+          <select
+            value={avdeling}
+            onChange={(e) => setAvdeling(e.target.value)}
+            className="mt-1 w-full h-9 rounded-lg border border-border bg-background px-3 text-[0.875rem] text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">Ingen avdeling</option>
+            {companyLocations.map((loc: string) => (
+              <option key={loc} value={loc}>{loc}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Teknologier */}
       <div>
