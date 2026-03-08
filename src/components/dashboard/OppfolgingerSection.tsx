@@ -99,9 +99,7 @@ const OppfolgingerSection = () => {
   });
 
   // 2. Owner filter
-  if (ownerFilter === "mine") {
-    filtered = filtered.filter(t => t.assigned_to === user?.id || t.created_by === user?.id);
-  } else if (ownerFilter !== "all") {
+  if (ownerFilter !== "all") {
     filtered = filtered.filter(t => t.assigned_to === ownerFilter || t.created_by === ownerFilter);
   }
   
