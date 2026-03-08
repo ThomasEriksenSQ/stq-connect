@@ -56,17 +56,19 @@ function truncate(s: string, max: number): string {
 
 // Modal data
 const MOCK_COMPANIES = [
-  { name: "Kongsberg KDA", sted: "Kongsberg" },
-  { name: "Six Robotics", sted: "Oslo" },
-  { name: "SpinChip AS", sted: "Oslo" },
-  { name: "Remora Robotics", sted: "Stavanger" },
-  { name: "Norbit", sted: "Trondheim" },
-  { name: "Tomra", sted: "Oslo" },
-  { name: "Cisco", sted: "Oslo" },
-  { name: "AutoStore", sted: "Halden" },
-  { name: "Thales", sted: "Oslo" },
-  { name: "ABB", sted: "Oslo" },
-  { name: "TechnipFMC", sted: "Kongsberg" },
+  { name: "Kongsberg KDA", sted: "Kongsberg", locations: ["Kongsberg", "Oslo"] },
+  { name: "Six Robotics", sted: "Oslo", locations: ["Oslo"] },
+  { name: "SpinChip AS", sted: "Oslo", locations: ["Oslo"] },
+  { name: "Remora Robotics", sted: "Stavanger", locations: ["Stavanger"] },
+  { name: "Norbit", sted: "Trondheim", locations: ["Trondheim"] },
+  { name: "Tomra", sted: "Oslo", locations: ["Oslo"] },
+  { name: "Cisco", sted: "Oslo", locations: ["Oslo"] },
+  { name: "AutoStore", sted: "Halden", locations: ["Halden"] },
+  { name: "Thales", sted: "Oslo", locations: ["Oslo"] },
+  { name: "ABB", sted: "Oslo", locations: ["Oslo"] },
+  { name: "TechnipFMC", sted: "Kongsberg", locations: ["Kongsberg"] },
+  { name: "Kongsberggruppen", sted: "Kongsberg", locations: ["Kongsberg", "Horten", "Oslo"] },
+  { name: "Kongsberg Maritime", sted: "Kongsberg", locations: ["Kongsberg", "Horten"] },
 ];
 
 const MOCK_CONTACTS = [
