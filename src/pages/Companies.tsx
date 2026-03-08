@@ -360,21 +360,7 @@ const Companies = () => {
           <Input placeholder="Søk..." value={search} onChange={(e) => setSearch(e.target.value)}
             className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border" />
         </div>
-        <button
-          onClick={() => setMustHaveFilter(!mustHaveFilter)}
-          className={mustHaveFilter ? CHIP_ON : CHIP_OFF}
-        >
-          Must-have
-        </button>
         <span className="text-[0.75rem] text-muted-foreground ml-auto">{filtered.length} selskaper</span>
-        <Button
-          variant="outline"
-          onClick={() => setImportOpen(true)}
-          className="rounded-lg h-9 px-3.5 text-[0.8125rem] font-medium gap-1.5"
-        >
-          <Upload className="h-4 w-4" />Importer
-        </Button>
-        <ImportCompaniesModal open={importOpen} onOpenChange={setImportOpen} />
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="rounded-lg h-9 px-3.5 text-[0.8125rem] font-medium gap-1.5">
