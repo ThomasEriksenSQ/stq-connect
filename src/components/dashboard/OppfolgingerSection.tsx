@@ -34,7 +34,7 @@ const OppfolgingerSection = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const [naarFilter, setNaarFilter] = useState<NaarFilter>("Forfalt + I dag");
+  const [naarFilter, setNaarFilter] = useState<NaarFilter>("Alle");
   const [ownerFilter, setOwnerFilter] = useState<string>("all");
   const [signalFilter, setSignalFilter] = useState<SignalFilter>("Alle");
   const [fadingIds, setFadingIds] = useState<Set<string>>(new Set());
@@ -54,7 +54,7 @@ const OppfolgingerSection = () => {
       const { data, error } = await supabase
         .from("tasks")
         .select("*, contacts(id, first_name, last_name, title, company_id, companies(name))")
-        .neq("status", "done")
+        .in("status", ["open", "todo", "pending", "in_progress"])
         .order("due_date", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data || [];
