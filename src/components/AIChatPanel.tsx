@@ -147,7 +147,6 @@ export function AIChatPanel() {
         selskap: f.selskap_navn,
         sted: f.sted,
         teknologier: f.teknologier || [],
-        antallSendt: f.antall_sendt,
         daysOld: differenceInDays(now, new Date(f.mottatt_dato)),
       }));
 
