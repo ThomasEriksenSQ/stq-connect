@@ -511,9 +511,9 @@ export default function Foresporsler() {
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">Laster...</div>
       ) : (
-        <div className="border border-border rounded-lg overflow-hidden bg-card shadow-sm">
+        <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
           {/* Header row */}
-          <div className="grid grid-cols-[140px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          <div className="grid grid-cols-[120px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] gap-3 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="mottatt_dato">Mottatt</SortHeader>
             <SortHeader field="selskap_navn">Selskap</SortHeader>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Sted</span>
@@ -521,6 +521,7 @@ export default function Foresporsler() {
             <SortHeader field="antall_sendt" className="justify-end">Sendt inn</SortHeader>
           </div>
           {/* Data rows */}
+          <div className="divide-y divide-border">
           {sorted.map((row) => {
             const days = getDaysAgo(row.mottatt_dato);
             const isNew = (row.status === "Ny" || row.status === "Aktiv") && row.antall_sendt === 0;
