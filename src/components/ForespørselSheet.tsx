@@ -895,65 +895,158 @@ function EditMode(props: any) {
 
 function AddKonsulentCombobox({
   foresporslerID,
-  alreadyLinked,
-  onAdd,
+  alreadyLinkedIntern,
+  alreadyLinkedEkstern,
+  onAddIntern,
+  onAddEkstern,
 }: {
   foresporslerID: number;
-  alreadyLinked: number[];
-  onAdd: (ansattId: number) => void;
+  alreadyLinkedIntern: number[];
+  alreadyLinkedEkstern: string[];
+  onAddIntern: (ansattId: number) => void;
+  onAddEkstern: (eksternId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [subTab, setSubTab] = useState<"ansatte" | "eksterne">("ansatte");
 
   const { data: ansatte = [] } = useQuery({
     queryKey: ["stacq-ansatte-aktive"],
     queryFn: async () => {
       const { data } = await supabase
         .from("stacq_ansatte")
-        .select("id, navn, status")
-        .in("status", ["AKTIV/SIGNERT"])
+        .select("id, navn, kompetanse, status")
+        .in("status", ["AKTIV/SIGNERT", "Ledig"])
         .order("navn");
       return data || [];
     },
   });
 
-  const filtered = ansatte
-    .filter((a: any) => !alreadyLinked.includes(a.id))
-    .filter((a: any) => a.navn.toLowerCase().includes(search.toLowerCase()));
+  const { data: eksterne = [] } = useQuery({
+    queryKey: ["external-consultants-legg-til"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("external_consultants")
+        .select("id, navn, teknologier, type, status")
+        .order("navn");
+      return data || [];
+    },
+  });
+
+  const q = search.toLowerCase();
+
+  const filteredAnsatte = ansatte
+    .filter((a: any) => !alreadyLinkedIntern.includes(a.id))
+    .filter((a: any) => !q || a.navn?.toLowerCase().includes(q));
+
+  const filteredEksterne = eksterne
+    .filter((e: any) => !alreadyLinkedEkstern.includes(e.id))
+    .filter((e: any) => !q || e.navn?.toLowerCase().includes(q));
+
+  const CHIP_BASE_SM = "h-6 px-2 text-[0.6875rem] rounded-full border transition-colors cursor-pointer select-none font-medium";
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setSearch(""); } }}>
       <PopoverTrigger asChild>
         <button className="flex items-center gap-1.5 text-[0.8125rem] text-primary hover:underline">
           <Plus className="h-3.5 w-3.5" />
           Legg til konsulent
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[280px] p-2" align="start">
+      <PopoverContent className="w-[320px] p-3" align="start">
+        {/* Sub-tabs */}
+        <div className="flex gap-1.5 mb-2">
+          <button
+            className={`${CHIP_BASE_SM} ${subTab === "ansatte" ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:bg-secondary"}`}
+            onClick={() => setSubTab("ansatte")}
+          >
+            Ansatte
+          </button>
+          <button
+            className={`${CHIP_BASE_SM} ${subTab === "eksterne" ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:bg-secondary"}`}
+            onClick={() => setSubTab("eksterne")}
+          >
+            Eksterne
+          </button>
+        </div>
+
         <Input
-          placeholder="Søk konsulent..."
+          placeholder="Søk etter konsulent..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="h-8 text-sm mb-2"
           autoFocus
         />
-        <div className="space-y-0.5 max-h-[200px] overflow-y-auto">
-          {filtered.map((a: any) => (
-            <button
-              key={a.id}
-              onClick={() => { onAdd(a.id); setOpen(false); setSearch(""); }}
-              className="w-full text-left px-2 py-1.5 rounded hover:bg-muted text-[0.875rem] flex items-center gap-2"
-            >
-              <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[0.625rem] font-semibold text-primary shrink-0">
-                {getInitials(a.navn)}
-              </div>
-              {a.navn}
-            </button>
-          ))}
-          {filtered.length === 0 && (
-            <p className="text-[0.8125rem] text-muted-foreground px-2 py-2">
-              Ingen treff
-            </p>
+
+        <div className="space-y-0.5 max-h-[240px] overflow-y-auto">
+          {subTab === "ansatte" ? (
+            filteredAnsatte.length === 0 ? (
+              <p className="text-[0.8125rem] text-muted-foreground px-2 py-2">Ingen treff</p>
+            ) : (
+              filteredAnsatte.map((a: any) => (
+                <button
+                  key={a.id}
+                  onClick={() => { onAddIntern(a.id); setOpen(false); setSearch(""); }}
+                  className="w-full text-left px-2 py-2 rounded hover:bg-muted transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[0.625rem] font-semibold text-primary shrink-0">
+                      {getInitials(a.navn)}
+                    </div>
+                    <span className="text-[0.8125rem] font-medium text-foreground">{a.navn}</span>
+                  </div>
+                  {a.kompetanse?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1 ml-8">
+                      {(a.kompetanse as string[]).slice(0, 4).map((t: string) => (
+                        <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-1.5 py-0.5 text-[0.625rem] text-muted-foreground">
+                          {t}
+                        </span>
+                      ))}
+                      {a.kompetanse.length > 4 && (
+                        <span className="text-[0.625rem] text-muted-foreground">+{a.kompetanse.length - 4}</span>
+                      )}
+                    </div>
+                  )}
+                </button>
+              ))
+            )
+          ) : (
+            filteredEksterne.length === 0 ? (
+              <p className="text-[0.8125rem] text-muted-foreground px-2 py-2">Ingen treff</p>
+            ) : (
+              filteredEksterne.map((e: any) => (
+                <button
+                  key={e.id}
+                  onClick={() => { onAddEkstern(e.id); setOpen(false); setSearch(""); }}
+                  className="w-full text-left px-2 py-2 rounded hover:bg-muted transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-[0.625rem] font-semibold text-blue-700 shrink-0">
+                      {getInitials(e.navn || "?")}
+                    </div>
+                    <span className="text-[0.8125rem] font-medium text-foreground">{e.navn || "Ukjent"}</span>
+                    <span className={cn(
+                      "inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold",
+                      e.type === "via_partner" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
+                    )}>
+                      {e.type === "via_partner" ? "Partner" : "Freelance"}
+                    </span>
+                  </div>
+                  {e.teknologier?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1 ml-8">
+                      {(e.teknologier as string[]).slice(0, 4).map((t: string) => (
+                        <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-1.5 py-0.5 text-[0.625rem] text-muted-foreground">
+                          {t}
+                        </span>
+                      ))}
+                      {e.teknologier.length > 4 && (
+                        <span className="text-[0.625rem] text-muted-foreground">+{e.teknologier.length - 4}</span>
+                      )}
+                    </div>
+                  )}
+                </button>
+              ))
+            )
           )}
         </div>
       </PopoverContent>
