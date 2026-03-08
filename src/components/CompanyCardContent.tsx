@@ -437,7 +437,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                             <span className="text-[0.6875rem] text-muted-foreground">{contactName}</span>
                           )}
                         </div>
-                        {displayDesc && (
+                        {displayDesc && !/^\[.+\]$/.test(displayDesc.trim()) && (
                           <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{displayDesc}</p>
                         )}
                       </div>
