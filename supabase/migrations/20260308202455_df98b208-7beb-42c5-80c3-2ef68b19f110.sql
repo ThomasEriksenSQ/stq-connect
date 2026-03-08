@@ -1,0 +1,1 @@
+UPDATE companies SET category = 'Ukjent om behov' WHERE category IS NULL
