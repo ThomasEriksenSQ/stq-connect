@@ -456,7 +456,7 @@ function TaskRow({ task, isLast, profiles, signal, fadingIds, onComplete, onChan
           {contactName ? (
             <button
               className="text-[0.9375rem] font-semibold text-foreground hover:text-primary hover:underline"
-              onClick={(e) => { e.stopPropagation(); navigate(`/kontakter/${contactId}`); }}
+              onClick={(e) => { e.stopPropagation(); window.location.href = `/kontakter/${contactId}`; }}
             >
               {contactName}
             </button>
