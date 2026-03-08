@@ -57,7 +57,20 @@ const OppfolgingerSection = () => {
         .or("status.neq.done,status.is.null")
         .order("due_date", { ascending: true, nullsFirst: false });
       if (error) throw error;
+      console.log("TASKS RAW:", data?.length, data?.[0]);
       return data || [];
+    },
+  });
+
+  const { data: debugTasks } = useQuery({
+    queryKey: ["debug-all-tasks"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("id, title, status, assigned_to, created_by, due_date")
+        .limit(5);
+      console.log("DEBUG ALL TASKS (no filter):", data, error);
+      return data;
     },
   });
 
