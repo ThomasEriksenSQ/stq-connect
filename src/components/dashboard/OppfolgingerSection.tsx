@@ -34,7 +34,7 @@ const OppfolgingerSection = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const [naarFilter, setNaarFilter] = useState<NaarFilter>("Forfalt + I dag");
+  const [naarFilter, setNaarFilter] = useState<NaarFilter>("Alle");
   const [ownerFilter, setOwnerFilter] = useState<string>("all");
   const [signalFilter, setSignalFilter] = useState<SignalFilter>("Alle");
   const [fadingIds, setFadingIds] = useState<Set<string>>(new Set());
