@@ -84,7 +84,7 @@ const InlineEdit = ({ value, onSave, placeholder = "—", type = "text", mono, m
     <button
       onClick={() => setEditing(true)}
       className={cn(
-        "group inline-flex items-center gap-1.5 text-[14px] font-medium hover:text-primary transition-colors text-left max-w-full",
+        "group inline-flex items-center gap-1.5 text-[14px] font-medium hover:text-foreground/60 transition-colors text-left max-w-full",
         !value && "text-muted-foreground/40 italic",
         mono && "font-mono",
         className
