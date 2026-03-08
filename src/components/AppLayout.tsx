@@ -1,6 +1,6 @@
 import { Outlet, NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
-import { Moon, Sun, LogOut, Building2, Users, LayoutDashboard, Sparkles } from "lucide-react";
+import { Moon, Sun, LogOut, Building2, Users, LayoutDashboard, Sparkles, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ const navItems = [
   { title: "Hjem", url: "/", icon: LayoutDashboard, end: true },
   { title: "Selskaper", url: "/selskaper", icon: Building2 },
   { title: "Kontakter", url: "/kontakter", icon: Users },
+  { title: "Forespørsler", url: "/foresporsler", icon: Briefcase },
 ];
 
 export function AppLayout() {
