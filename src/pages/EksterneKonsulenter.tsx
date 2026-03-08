@@ -240,6 +240,7 @@ interface ConsultantForm {
   status: string;
   tilgjengelig_fra: string;
   cv_tekst: string;
+  kommentar: string;
 }
 
 const emptyForm: ConsultantForm = {
