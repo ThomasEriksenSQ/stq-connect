@@ -42,10 +42,10 @@ function formatKr(n: number): string {
   return n.toLocaleString("nb-NO", { maximumFractionDigits: 0 });
 }
 
-function stacqColor(dagsPris: number): string {
-  if (dagsPris >= 3375) return "text-emerald-600";  // 450*7.5
-  if (dagsPris >= 2625) return "text-blue-600";      // 350*7.5
-  if (dagsPris >= 1875) return "text-amber-600";     // 250*7.5
+function stacqColor(timePris: number): string {
+  if (timePris >= 450) return "text-emerald-600";
+  if (timePris >= 350) return "text-blue-600";
+  if (timePris >= 250) return "text-amber-600";
   return "text-muted-foreground";
 }
 
