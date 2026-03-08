@@ -54,7 +54,7 @@ const OppfolgingerSection = () => {
       const { data, error } = await supabase
         .from("tasks")
         .select("*, contacts(id, first_name, last_name, title, company_id, companies(name)), profiles!tasks_assigned_to_fkey(id, full_name)")
-        .neq("status", "done")
+        .or("status.neq.done,status.is.null")
         .order("due_date", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data || [];
