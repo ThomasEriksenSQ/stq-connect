@@ -48,11 +48,23 @@ export default function KonsulenterOppdrag() {
       aktive.length > 0
         ? aktive.reduce((s: number, o: any) => s + o.marginPct, 0) / aktive.length
         : 0;
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth();
+    const dim = new Date(y, m + 1, 0).getDate();
+    let workdays = 0;
+    for (let d = 1; d <= dim; d++) { const dow = new Date(y, m, d).getDay(); if (dow !== 0 && dow !== 6) workdays++; }
+    const stacqPerDag = aktive.reduce((s: number, o: any) => s + o.margin, 0);
+    const stacqMonthly = stacqPerDag * workdays;
+    const oppstartUtpris = oppstart.reduce((s: number, o: any) => s + (Number(o.utpris) || 0), 0);
     return {
       aktive: aktive.length,
       oppstart: oppstart.length,
       totalDagspris,
       avgMargin,
+      stacqMonthly,
+      workdays,
+      monthLabel: format(now, "MMMM yyyy"),
+      oppstartUtpris,
     };
   }, [enriched]);
 
@@ -107,14 +119,15 @@ export default function KonsulenterOppdrag() {
         </div>
         <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-100 rounded-xl px-5 py-4 shadow-sm">
           <TrendingUp className="h-4 w-4 text-blue-600 mb-1" />
-          <p className="text-xl font-bold text-blue-600">kr {formatNOK(stats.totalDagspris)}</p>
-          <p className="text-[0.8125rem] text-muted-foreground">Total dagspris</p>
-          <p className="text-xs text-muted-foreground">kr/dag alle aktive</p>
+          <p className="text-xl font-bold text-blue-600">kr {formatNOK(stats.stacqMonthly)} <span className="text-xs font-normal text-muted-foreground">/ mnd</span></p>
+          <p className="text-[0.8125rem] text-muted-foreground">STACQ Prisen</p>
+          <p className="text-xs text-muted-foreground">{stats.workdays} arbeidsdager · {stats.monthLabel}</p>
         </div>
-        <div className="bg-violet-50 dark:bg-violet-950/20 border border-violet-100 rounded-xl px-5 py-4 shadow-sm">
-          <BarChart2 className="h-4 w-4 text-violet-600 mb-1" />
-          <p className="text-2xl font-bold text-violet-600">{stats.avgMargin.toFixed(1)}%</p>
-          <p className="text-[0.8125rem] text-muted-foreground">Snitt margin</p>
+        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 rounded-xl px-5 py-4 shadow-sm">
+          <BarChart2 className="h-4 w-4 text-amber-600 mb-1" />
+          <p className="text-xl font-bold text-amber-600">kr {formatNOK(stats.oppstartUtpris)} <span className="text-xs font-normal text-muted-foreground">/ time</span></p>
+          <p className="text-[0.8125rem] text-muted-foreground">Oppstart</p>
+          <p className="text-xs text-muted-foreground">{stats.oppstart} konsulenter kommer snart</p>
         </div>
       </div>
 
