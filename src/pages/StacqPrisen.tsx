@@ -180,9 +180,9 @@ export default function StacqPrisen() {
       {/* Hero stat cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label="STACQ Prisen i dag" value={`kr ${formatKr(stacqTotal)}`} sub={`${aktive.length} konsulenter i oppdrag`} accent="emerald" suffix="/ dag" />
-        <StatCard label="STACQ Prisen månedlig" value={`kr ${formatKr(monthlyTotal)}`} sub={`${workdayCount} arbeidsdager · ${format(now, "MMMM yyyy", { locale: nb })}`} suffix="/ mnd" />
+        <StatCard label="STACQ Prisen månedlig" value={`kr ${formatKr(Math.round(monthlyTotal))}`} sub={`${workdayCount} arbeidsdager · ${format(now, "MMMM yyyy", { locale: nb })}`} suffix="/ mnd" />
         <StatCard label="Snitt per konsulent" value={`kr ${formatKr(Math.round(avgPris))}`} sub="gjennomsnitt" suffix="/ dag" />
-        <StatCard label="Oppstart" value={`+ kr ${formatKr(oppstartTotal)}`} sub="kommer snart" accent="amber" suffix="/ dag" />
+        <StatCard label="Oppstart" value={`+ kr ${formatKr(oppstartUtprisTotal)}`} sub={`${oppstart.length} konsulenter kommer snart`} accent="amber" suffix="/ time" />
       </div>
 
       {/* Chart */}
