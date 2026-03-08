@@ -1,10 +1,10 @@
 import { Outlet, NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
-import { Moon, Sun, LogOut, Building2, Users, LayoutDashboard, Sparkles, Briefcase } from "lucide-react";
+import { Moon, Sun, LogOut, Building2, Users, LayoutDashboard, Sparkles, Briefcase, ChevronDown, Users2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AIChatPanel } from "@/components/AIChatPanel";
 
@@ -20,6 +20,18 @@ export function AppLayout() {
   const { signOut, user } = useAuth();
   const location = useLocation();
   const [aiOpen, setAiOpen] = useState(false);
+  const [konsDropOpen, setKonsDropOpen] = useState(false);
+  const konsRef = useRef<HTMLDivElement>(null);
+  const isKonsActive = location.pathname.startsWith("/konsulenter");
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (konsRef.current && !konsRef.current.contains(e.target as Node))
+        setKonsDropOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   const initials = user?.email
     ? user.email.split("@")[0].slice(0, 2).toUpperCase()
@@ -58,6 +70,66 @@ export function AppLayout() {
                 </RouterNavLink>
               );
             })}
+
+            {/* Konsulenter dropdown */}
+            <div ref={konsRef} className="relative">
+              <button
+                onClick={() => setKonsDropOpen((v) => !v)}
+                className={cn(
+                  "relative flex items-center gap-2 px-3 py-1.5 text-[0.8125rem] font-medium transition-colors",
+                  isKonsActive
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Users2 className="h-4 w-4 stroke-[1.5]" />
+                <span className="hidden sm:inline">Konsulenter</span>
+                <ChevronDown
+                  className={cn(
+                    "h-3 w-3 transition-transform",
+                    konsDropOpen && "rotate-180"
+                  )}
+                />
+                {isKonsActive && (
+                  <span className="absolute bottom-[-13px] left-3 right-3 h-[2px] bg-primary rounded-full" />
+                )}
+              </button>
+
+              {konsDropOpen && (
+                <div className="absolute top-full left-0 mt-2 w-44 bg-card border border-border rounded-xl shadow-lg overflow-hidden z-50">
+                  <RouterNavLink
+                    to="/konsulenter/ansatte"
+                    onClick={() => setKonsDropOpen(false)}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-3 px-4 py-2.5 text-[0.8125rem] font-medium transition-colors",
+                        isActive
+                          ? "bg-muted text-foreground"
+                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      )
+                    }
+                  >
+                    <Users className="h-4 w-4 stroke-[1.5]" />
+                    Ansatte
+                  </RouterNavLink>
+                  <RouterNavLink
+                    to="/konsulenter/i-oppdrag"
+                    onClick={() => setKonsDropOpen(false)}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-3 px-4 py-2.5 text-[0.8125rem] font-medium transition-colors",
+                        isActive
+                          ? "bg-muted text-foreground"
+                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      )
+                    }
+                  >
+                    <Briefcase className="h-4 w-4 stroke-[1.5]" />
+                    I oppdrag
+                  </RouterNavLink>
+                </div>
+              )}
+            </div>
           </nav>
 
           <div className="flex items-center gap-2">

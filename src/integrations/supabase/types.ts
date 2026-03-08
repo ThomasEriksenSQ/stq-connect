@@ -394,6 +394,93 @@ export type Database = {
         }
         Relationships: []
       }
+      stacq_ansatte: {
+        Row: {
+          ansatt_id: number | null
+          created_at: string | null
+          epost: string | null
+          id: number
+          kommentar: string | null
+          navn: string
+          slutt_dato: string | null
+          start_dato: string | null
+          status: string | null
+          tlf: string | null
+        }
+        Insert: {
+          ansatt_id?: number | null
+          created_at?: string | null
+          epost?: string | null
+          id?: number
+          kommentar?: string | null
+          navn: string
+          slutt_dato?: string | null
+          start_dato?: string | null
+          status?: string | null
+          tlf?: string | null
+        }
+        Update: {
+          ansatt_id?: number | null
+          created_at?: string | null
+          epost?: string | null
+          id?: number
+          kommentar?: string | null
+          navn?: string
+          slutt_dato?: string | null
+          start_dato?: string | null
+          status?: string | null
+          tlf?: string | null
+        }
+        Relationships: []
+      }
+      stacq_oppdrag: {
+        Row: {
+          created_at: string | null
+          deal_type: string | null
+          er_ansatt: boolean | null
+          forny_dato: string | null
+          id: number
+          kandidat: string
+          kunde: string | null
+          oppdrag_id: number | null
+          slutt_dato: string | null
+          start_dato: string | null
+          status: string | null
+          til_konsulent: number | null
+          utpris: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          deal_type?: string | null
+          er_ansatt?: boolean | null
+          forny_dato?: string | null
+          id?: number
+          kandidat: string
+          kunde?: string | null
+          oppdrag_id?: number | null
+          slutt_dato?: string | null
+          start_dato?: string | null
+          status?: string | null
+          til_konsulent?: number | null
+          utpris?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          deal_type?: string | null
+          er_ansatt?: boolean | null
+          forny_dato?: string | null
+          id?: number
+          kandidat?: string
+          kunde?: string | null
+          oppdrag_id?: number | null
+          slutt_dato?: string | null
+          start_dato?: string | null
+          status?: string | null
+          til_konsulent?: number | null
+          utpris?: number | null
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           assigned_to: string | null
