@@ -259,6 +259,84 @@ export type Database = {
           },
         ]
       }
+      foresporsler: {
+        Row: {
+          antall_sendt: number | null
+          avdeling: string | null
+          created_at: string | null
+          created_by: string | null
+          frist_dato: string | null
+          hvem_sendt: string | null
+          id: number
+          kommentar: string | null
+          kontakt_id: string | null
+          mottatt_dato: string
+          referanse: string | null
+          selskap_id: string | null
+          selskap_navn: string
+          status: string | null
+          sted: string | null
+          teknologier: string[] | null
+          type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          antall_sendt?: number | null
+          avdeling?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          frist_dato?: string | null
+          hvem_sendt?: string | null
+          id?: number
+          kommentar?: string | null
+          kontakt_id?: string | null
+          mottatt_dato?: string
+          referanse?: string | null
+          selskap_id?: string | null
+          selskap_navn: string
+          status?: string | null
+          sted?: string | null
+          teknologier?: string[] | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          antall_sendt?: number | null
+          avdeling?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          frist_dato?: string | null
+          hvem_sendt?: string | null
+          id?: number
+          kommentar?: string | null
+          kontakt_id?: string | null
+          mottatt_dato?: string
+          referanse?: string | null
+          selskap_id?: string | null
+          selskap_navn?: string
+          status?: string | null
+          sted?: string | null
+          teknologier?: string[] | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "foresporsler_kontakt_id_fkey"
+            columns: ["kontakt_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "foresporsler_selskap_id_fkey"
+            columns: ["selskap_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_base: {
         Row: {
           active: boolean
