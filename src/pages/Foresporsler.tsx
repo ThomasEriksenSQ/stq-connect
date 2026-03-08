@@ -664,6 +664,7 @@ function ForespørselSheet({
       setType(row.type || "DIR");
       setTeknologier(row.teknologier || []);
       setKommentar(row.kommentar || "");
+      setSluttkunde(row.sluttkunde || "");
       setTagInput("");
     }
   }, [editMode, row]);
