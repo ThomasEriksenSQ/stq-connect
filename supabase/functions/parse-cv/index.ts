@@ -85,7 +85,13 @@ Kompetanse: bruk tekniske nøkkelord som C++, Embedded, Python, Linux, Yocto, FP
 
     const data = await response.json();
     const text = data.choices?.[0]?.message?.content ?? "";
-    const clean = text.replace(/```json|```/g, "").trim();
+    // Extract JSON robustly: find first { and last }
+    let clean = text.replace(/```json|```/g, "").trim();
+    const firstBrace = clean.indexOf("{");
+    const lastBrace = clean.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+      clean = clean.slice(firstBrace, lastBrace + 1);
+    }
 
     let parsed;
     try {
