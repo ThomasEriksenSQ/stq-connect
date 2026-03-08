@@ -259,6 +259,17 @@ export function ForespørselSheet({
     await supabase.from("foresporsler_konsulenter").insert({
       foresporsler_id: row.id,
       ansatt_id: ansattId,
+      konsulent_type: "intern",
+    });
+    queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
+    queryClient.invalidateQueries({ queryKey: ["foresporsler-konsulenter", row.id] });
+  };
+
+  const handleAddEkstern = async (eksternId: string) => {
+    await supabase.from("foresporsler_konsulenter").insert({
+      foresporsler_id: row.id,
+      ekstern_id: eksternId,
+      konsulent_type: "ekstern",
     });
     queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
     queryClient.invalidateQueries({ queryKey: ["foresporsler-konsulenter", row.id] });
