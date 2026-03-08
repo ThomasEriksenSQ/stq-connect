@@ -139,7 +139,7 @@ export default function StacqPrisen() {
   const monthlyTotal = enriched
     .filter(o => o.status === "Aktiv" || o.status === "Oppstart")
     .reduce((sum, o) => {
-      const stacq = o.stacqPris;
+      const stacq = o.stacqPris * TIMER_PER_DAG;
       const start = o.start_dato
         ? new Date(Math.max(new Date(o.start_dato).getTime(), firstDay.getTime()))
         : firstDay;
