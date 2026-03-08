@@ -245,16 +245,16 @@ export default function EksterneKonsulenter() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
-                      {(row.teknologier || []).slice(0, 4).map((t: string) => (
+                      {(row.teknologier || []).slice(0, 3).map((t: string) => (
                         <span key={t} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] text-muted-foreground">{t}</span>
                       ))}
-                      {(row.teknologier || []).length > 4 && (
-                        <span className="text-[0.6875rem] text-muted-foreground">+{row.teknologier.length - 4}</span>
+                      {(row.teknologier || []).length > 3 && (
+                        <span className="text-[0.6875rem] text-muted-foreground">+{row.teknologier.length - 3}</span>
                       )}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-[0.8125rem] text-muted-foreground">
-                    {row.tilgjengelig_fra ? format(new Date(row.tilgjengelig_fra), "dd.MM.yyyy") : "—"}
+                    {relativeFutureDate(row.tilgjengelig_fra)}
                   </td>
                 </tr>
               );
