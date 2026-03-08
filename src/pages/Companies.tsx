@@ -7,8 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Search, ArrowUpDown, Loader2, X, MapPin, ChevronDown, Upload } from "lucide-react";
-import { ImportCompaniesModal } from "@/components/ImportCompaniesModal";
+import { Plus, Search, ArrowUpDown, Loader2, X, MapPin, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -93,8 +92,6 @@ const Companies = () => {
     }
   }, [form.city]);
   const [signalFilter, setSignalFilter] = useState("all");
-  const [mustHaveFilter, setMustHaveFilter] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "last_activity", dir: "desc" });
   const [userHasSorted, setUserHasSorted] = useState(false);
   const queryClient = useQueryClient();
@@ -284,8 +281,7 @@ const Companies = () => {
     const matchOwner = ownerFilter === "all" || getOwnerId(c) === ownerFilter;
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
     const matchSignal = signalFilter === "all" || c.signal === signalFilter;
-    const matchMustHave = !mustHaveFilter || (c.notes && c.notes.includes("[Must-have]"));
-    return matchSearch && matchOwner && matchStatus && matchSignal && matchMustHave;
+    return matchSearch && matchOwner && matchStatus && matchSignal;
   });
 
   const SIGNAL_PRIORITY: Record<string, number> = {
@@ -364,21 +360,7 @@ const Companies = () => {
           <Input placeholder="Søk..." value={search} onChange={(e) => setSearch(e.target.value)}
             className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border" />
         </div>
-        <button
-          onClick={() => setMustHaveFilter(!mustHaveFilter)}
-          className={mustHaveFilter ? CHIP_ON : CHIP_OFF}
-        >
-          Must-have
-        </button>
         <span className="text-[0.75rem] text-muted-foreground ml-auto">{filtered.length} selskaper</span>
-        <Button
-          variant="outline"
-          onClick={() => setImportOpen(true)}
-          className="rounded-lg h-9 px-3.5 text-[0.8125rem] font-medium gap-1.5"
-        >
-          <Upload className="h-4 w-4" />Importer
-        </Button>
-        <ImportCompaniesModal open={importOpen} onOpenChange={setImportOpen} />
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="rounded-lg h-9 px-3.5 text-[0.8125rem] font-medium gap-1.5">
