@@ -134,7 +134,6 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
             </div>
           </div>
         </div>
-        </div>
 
         {/* Summary */}
         {monthlySummary.length > 0 && (
