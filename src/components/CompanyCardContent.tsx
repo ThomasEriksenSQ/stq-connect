@@ -327,7 +327,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             {/* Signal badge FIRST */}
             {editable ? (
               <Select value={effectiveSignal || "__none__"} onValueChange={(v) => { if (v !== "__none__") changeSignalMutation.mutate(v); }}>
-                <SelectTrigger className="h-auto w-auto max-w-none gap-0 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0 [&>svg]:hidden [&>span]:line-clamp-none">
+                <SelectTrigger className="h-auto w-auto max-w-none gap-0 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0 [&>svg]:hidden [&>span]:!flex [&>span]:!overflow-visible">
                   <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap", signalBadgeColor)}>
                     {effectiveSignal || "Signal"}
                     <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
@@ -345,7 +345,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             {/* Type badge SECOND — neutral style */}
             {editable ? (
               <Select value={company.status} onValueChange={(v) => updateMutation.mutate({ status: v })}>
-                <SelectTrigger className="h-auto w-auto max-w-none gap-0 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0 [&>svg]:hidden [&>span]:line-clamp-none">
+                <SelectTrigger className="h-auto w-auto max-w-none gap-0 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0 [&>svg]:hidden [&>span]:!flex [&>span]:!overflow-visible">
                   <span className="inline-flex items-center rounded-full border bg-gray-100 text-gray-600 border-gray-200 px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap">
                     {currentStatus.label}
                     <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
