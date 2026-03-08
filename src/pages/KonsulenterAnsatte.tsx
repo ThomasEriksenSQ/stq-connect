@@ -78,6 +78,9 @@ function AnsattModal({
   if (open && (ansatt?.id ?? null) !== lastId) {
     setLastId(ansatt?.id ?? null);
     setTagInput("");
+    setCvFile(null);
+    setCvParsing(false);
+    setCvParsed(false);
     if (ansatt) {
       setForm({
         navn: ansatt.navn || "",
@@ -91,14 +94,13 @@ function AnsattModal({
         geografi: ansatt.geografi || "",
         kompetanse: ansatt.kompetanse || [],
         bio: ansatt.bio || "",
-        linkedin: ansatt.linkedin || "",
         synlig_web: ansatt.synlig_web || false,
       });
     } else {
       setForm({
         navn: "", epost: "", tlf: "", start_dato: "", slutt_dato: "",
         status: "AKTIV/SIGNERT", bilde_url: "", erfaring_aar: "",
-        geografi: "", kompetanse: [], bio: "", linkedin: "", synlig_web: false,
+        geografi: "", kompetanse: [], bio: "", synlig_web: false,
       });
     }
   }
