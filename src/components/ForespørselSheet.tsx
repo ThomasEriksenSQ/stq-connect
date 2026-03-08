@@ -109,6 +109,7 @@ export function ForespørselSheet({
   // Match state
   const [matching, setMatching] = useState(false);
   const [matchResults, setMatchResults] = useState<MatchResult[] | null>(null);
+  const [matchSourceFilter, setMatchSourceFilter] = useState<"Alle" | "Ansatte" | "Eksterne">("Alle");
 
   // Linked consultants
   const { data: linkedKonsulenter = [], refetch: refetchLinked } = useQuery({
@@ -445,6 +446,26 @@ export function ForespørselSheet({
                 <p className={`${LABEL} mb-0`}>Konsulentmatch</p>
               </div>
 
+              {matchResults && matchResults.length > 0 && (
+                <div className="flex items-center gap-1.5 mb-3">
+                  {(["Alle", "Ansatte", "Eksterne"] as const).map(chip => {
+                    const sel = matchSourceFilter === chip;
+                    return (
+                      <button
+                        key={chip}
+                        onClick={() => setMatchSourceFilter(chip)}
+                        className={sel
+                          ? "h-7 px-2.5 text-[0.75rem] rounded-full border bg-foreground border-foreground text-background font-medium transition-colors"
+                          : "h-7 px-2.5 text-[0.75rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors"
+                        }
+                      >
+                        {chip}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               {!matchResults && !matching && (
                 <button
                   onClick={runMatch}
@@ -477,7 +498,9 @@ export function ForespørselSheet({
 
               {matchResults && matchResults.length > 0 && (
                 <div className="space-y-2">
-                  {matchResults.map((m, i) => {
+                  {matchResults
+                    .filter(m => matchSourceFilter === "Alle" ? true : matchSourceFilter === "Ansatte" ? m.type === "intern" : m.type === "ekstern")
+                    .map((m, i) => {
                     const isLinked = alreadyLinkedIds.has(m.id);
                     return (
                       <div key={`${m.type}-${m.id}`} className="rounded-lg border border-border bg-card p-3">
