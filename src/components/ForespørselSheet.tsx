@@ -111,15 +111,16 @@ export function ForespørselSheet({
   const [matchResults, setMatchResults] = useState<MatchResult[] | null>(null);
   const [matchSourceFilter, setMatchSourceFilter] = useState<"Alle" | "Ansatte" | "Eksterne">("Alle");
 
-  // Linked consultants
+  // Linked consultants (both intern and ekstern)
   const { data: linkedKonsulenter = [], refetch: refetchLinked } = useQuery({
     queryKey: ["foresporsler-konsulenter", row?.id],
     enabled: !!row?.id,
     queryFn: async () => {
       const { data } = await supabase
         .from("foresporsler_konsulenter")
-        .select("id, ansatt_id, created_at, stacq_ansatte(id, navn)")
-        .eq("foresporsler_id", row.id);
+        .select("id, ansatt_id, ekstern_id, konsulent_type, created_at, stacq_ansatte(id, navn), external_consultants(id, navn, type)")
+        .eq("foresporsler_id", row.id)
+        .order("created_at", { ascending: false });
       return data || [];
     },
   });
