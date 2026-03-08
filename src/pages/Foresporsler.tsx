@@ -694,6 +694,7 @@ function ForespørselSheet({
         type: type || null,
         teknologier,
         kommentar: kommentar || null,
+        sluttkunde: sluttkunde || null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", row.id);
