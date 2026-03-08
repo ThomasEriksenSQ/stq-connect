@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.extract-cv-contact]
 verify_jwt = false
+
+[functions.match-consultants]
+verify_jwt = false
