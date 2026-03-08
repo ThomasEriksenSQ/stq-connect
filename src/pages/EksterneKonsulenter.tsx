@@ -1,10 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
-import { Plus, X, Search, CalendarIcon } from "lucide-react";
+import { Plus, X, Search, CalendarIcon, Upload, CheckCircle2, Loader2, Users, User } from "lucide-react";
 import { relativeFutureDate } from "@/lib/relativeDate";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -23,7 +23,7 @@ const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground fo
 
 const TYPE_LABELS: Record<string, string> = {
   freelance: "Freelance",
-  partner: "Partner",
+  partner: "Via partner",
 };
 const STATUS_LABELS: Record<string, string> = {
   ledig: "Tilgjengelig",
@@ -41,32 +41,7 @@ const STATUS_COLORS: Record<string, string> = {
 const SUGGESTED_TECH = [
   "C++", "C", "Embedded", "Yocto", "Linux", "Qt", "FPGA",
   "Python", "SPI/I2C", "MCU", "Embedded Linux", "Sikkerhet",
-  "React", "TypeScript", "Java", "Rust", "AWS", "Azure",
 ];
-
-interface ConsultantForm {
-  contact_id: string;
-  company_id: string;
-  type: string;
-  status: string;
-  rolle: string;
-  teknologier: string[];
-  erfaring_aar: string;
-  tilgjengelig_fra: string;
-  tilgjengelig_til: string;
-  kapasitet_prosent: string;
-  innpris_time: string;
-  utpris_time: string;
-  cv_url: string;
-  notat: string;
-}
-
-const emptyForm: ConsultantForm = {
-  contact_id: "", company_id: "", type: "freelance", status: "ledig",
-  rolle: "", teknologier: [], erfaring_aar: "", tilgjengelig_fra: "",
-  tilgjengelig_til: "", kapasitet_prosent: "100", innpris_time: "",
-  utpris_time: "", cv_url: "", notat: "",
-};
 
 export default function EksterneKonsulenter() {
   const { user } = useAuth();
@@ -82,25 +57,9 @@ export default function EksterneKonsulenter() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("external_consultants")
-        .select("*, contacts(id, first_name, last_name, email, phone), companies(id, name)")
+        .select("*, companies(id, name)")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data || [];
-    },
-  });
-
-  const { data: contacts = [] } = useQuery({
-    queryKey: ["contacts-for-ext"],
-    queryFn: async () => {
-      const { data } = await supabase.from("contacts").select("id, first_name, last_name").order("first_name");
-      return data || [];
-    },
-  });
-
-  const { data: companies = [] } = useQuery({
-    queryKey: ["companies-for-ext"],
-    queryFn: async () => {
-      const { data } = await supabase.from("companies").select("id, name").order("name");
       return data || [];
     },
   });
@@ -118,22 +77,14 @@ export default function EksterneKonsulenter() {
     if (search.trim()) {
       const q = search.toLowerCase();
       items = items.filter((r: any) => {
-        const name = r.contacts ? `${r.contacts.first_name} ${r.contacts.last_name}` : "";
-        const company = r.companies?.name || "";
-        const rolle = r.rolle || "";
+        const name = (r as any).navn || "";
+        const company = r.companies?.name || (r as any).selskap_tekst || "";
         const tech = (r.teknologier || []).join(" ");
-        return [name, company, rolle, tech].join(" ").toLowerCase().includes(q);
+        return [name, company, tech].join(" ").toLowerCase().includes(q);
       });
     }
     return items;
   }, [rows, typeFilter, statusFilter, search]);
-
-  // Unique roles for filter
-  const uniqueRoles = useMemo(() => {
-    const set = new Set<string>();
-    rows.forEach((r: any) => { if (r.rolle) set.add(r.rolle); });
-    return Array.from(set).sort();
-  }, [rows]);
 
   const openEdit = (row: any) => {
     setEditId(row.id);
@@ -166,7 +117,7 @@ export default function EksterneKonsulenter() {
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Søk navn, selskap, rolle, teknologi..."
+            placeholder="Søk navn, selskap, teknologi..."
             className="pl-9 text-[0.875rem]"
           />
         </div>
@@ -215,9 +166,8 @@ export default function EksterneKonsulenter() {
           </thead>
           <tbody>
             {filtered.map((row: any, i: number) => {
-              const contact = row.contacts;
-              const name = contact ? `${contact.first_name} ${contact.last_name}` : "—";
-              const company = row.companies?.name || "—";
+              const name = (row as any).navn || "—";
+              const company = row.companies?.name || (row as any).selskap_tekst || "—";
               return (
                 <tr
                   key={row.id}
@@ -271,8 +221,6 @@ export default function EksterneKonsulenter() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         editRow={editId ? rows.find((r: any) => r.id === editId) : null}
-        contacts={contacts}
-        companies={companies}
         userId={user?.id}
       />
     </div>
@@ -281,19 +229,39 @@ export default function EksterneKonsulenter() {
 
 /* ─── Modal ─── */
 
-function ConsultantModal({ open, onClose, editRow, contacts, companies, userId }: {
+interface ConsultantForm {
+  type: string;
+  navn: string;
+  epost: string;
+  telefon: string;
+  company_id: string;
+  selskap_tekst: string;
+  teknologier: string[];
+  status: string;
+  tilgjengelig_fra: string;
+  cv_tekst: string;
+}
+
+const emptyForm: ConsultantForm = {
+  type: "", navn: "", epost: "", telefon: "",
+  company_id: "", selskap_tekst: "",
+  teknologier: [], status: "ledig",
+  tilgjengelig_fra: "", cv_tekst: "",
+};
+
+function ConsultantModal({ open, onClose, editRow, userId }: {
   open: boolean;
   onClose: () => void;
   editRow: any | null;
-  contacts: any[];
-  companies: any[];
   userId?: string;
 }) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [tagInput, setTagInput] = useState("");
-  const [contactSearch, setContactSearch] = useState("");
   const [companySearch, setCompanySearch] = useState("");
+  const [cvParsing, setCvParsing] = useState(false);
+  const [cvPrefilled, setCvPrefilled] = useState<Set<string>>(new Set());
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const isCreate = !editRow;
 
@@ -303,24 +271,21 @@ function ConsultantModal({ open, onClose, editRow, contacts, companies, userId }
   if (open && (editRow?.id ?? null) !== lastId) {
     setLastId(editRow?.id ?? null);
     setTagInput("");
-    setContactSearch("");
     setCompanySearch("");
+    setCvPrefilled(new Set());
+    setCvParsing(false);
     if (editRow) {
       setForm({
-        contact_id: editRow.contact_id || "",
-        company_id: editRow.company_id || "",
         type: editRow.type || "freelance",
-        status: editRow.status || "ledig",
-        rolle: editRow.rolle || "",
+        navn: (editRow as any).navn || "",
+        epost: (editRow as any).epost || "",
+        telefon: (editRow as any).telefon || "",
+        company_id: editRow.company_id || "",
+        selskap_tekst: (editRow as any).selskap_tekst || "",
         teknologier: editRow.teknologier || [],
-        erfaring_aar: editRow.erfaring_aar?.toString() || "",
+        status: editRow.status || "ledig",
         tilgjengelig_fra: editRow.tilgjengelig_fra || "",
-        tilgjengelig_til: editRow.tilgjengelig_til || "",
-        kapasitet_prosent: editRow.kapasitet_prosent?.toString() || "100",
-        innpris_time: editRow.innpris_time?.toString() || "",
-        utpris_time: editRow.utpris_time?.toString() || "",
-        cv_url: editRow.cv_url || "",
-        notat: editRow.notat || "",
+        cv_tekst: (editRow as any).cv_tekst || "",
       });
     } else {
       setForm({ ...emptyForm });
@@ -329,6 +294,22 @@ function ConsultantModal({ open, onClose, editRow, contacts, companies, userId }
 
   const set = (key: keyof ConsultantForm, val: any) => setForm(prev => ({ ...prev, [key]: val }));
 
+  // Company search for partner type
+  const { data: companies = [] } = useQuery({
+    queryKey: ["companies-for-ext"],
+    queryFn: async () => {
+      const { data } = await supabase.from("companies").select("id, name").order("name");
+      return data || [];
+    },
+  });
+
+  const filteredCompanies = companySearch.trim()
+    ? companies.filter(c => c.name.toLowerCase().includes(companySearch.toLowerCase())).slice(0, 8)
+    : companies.slice(0, 8);
+
+  const selectedCompany = companies.find(c => c.id === form.company_id);
+
+  // Tag input
   const addTag = (tag: string) => {
     const t = tag.trim();
     if (t && !form.teknologier.includes(t)) set("teknologier", [...form.teknologier, t]);
@@ -342,24 +323,85 @@ function ConsultantModal({ open, onClose, editRow, contacts, companies, userId }
     }
   };
 
+  // CV Upload & Parse
+  const handleCvUpload = useCallback(async (file: File) => {
+    if (!file || file.type !== "application/pdf") {
+      toast.error("Kun PDF-filer støttes");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Filen er for stor (maks 10 MB)");
+      return;
+    }
+
+    setCvParsing(true);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(
+        new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
+      );
+
+      const { data, error } = await supabase.functions.invoke("extract-cv-contact", {
+        body: { base64, filename: file.name },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const prefilled = new Set<string>();
+
+      if (data.name && !form.navn) {
+        set("navn", data.name);
+        prefilled.add("navn");
+      }
+      if (data.email && !form.epost) {
+        set("epost", data.email);
+        prefilled.add("epost");
+      }
+      if (data.phone && !form.telefon) {
+        set("telefon", data.phone);
+        prefilled.add("telefon");
+      }
+      if (data.technologies?.length && form.teknologier.length === 0) {
+        set("teknologier", data.technologies);
+        prefilled.add("teknologier");
+      }
+
+      // Store raw CV text placeholder (the base64 is too large, but we mark it)
+      set("cv_tekst", `[CV: ${file.name}]`);
+
+      setCvPrefilled(prefilled);
+      toast.success("CV analysert — felter fylt ut");
+    } catch (err: any) {
+      console.error("CV parsing error:", err);
+      toast.error(err.message || "Kunne ikke analysere CV");
+    } finally {
+      setCvParsing(false);
+    }
+  }, [form.navn, form.epost, form.telefon, form.teknologier.length]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) handleCvUpload(file);
+  }, [handleCvUpload]);
+
   const handleSave = async () => {
-    if (!form.contact_id) { toast.error("Velg en kontaktperson"); return; }
+    if (!form.navn.trim()) { toast.error("Navn er påkrevd"); return; }
+    if (form.type === "partner" && !form.company_id) { toast.error("Velg partnerselskap"); return; }
+
     setSaving(true);
     const payload: any = {
-      contact_id: form.contact_id || null,
-      company_id: form.company_id || null,
       type: form.type,
-      status: form.status,
-      rolle: form.rolle.trim() || null,
+      navn: form.navn.trim(),
+      epost: form.epost.trim() || null,
+      telefon: form.telefon.trim() || null,
+      company_id: form.type === "partner" ? (form.company_id || null) : null,
+      selskap_tekst: form.type === "freelance" ? (form.selskap_tekst.trim() || null) : null,
       teknologier: form.teknologier,
-      erfaring_aar: form.erfaring_aar ? parseInt(form.erfaring_aar) : null,
+      status: form.status,
       tilgjengelig_fra: form.tilgjengelig_fra || null,
-      tilgjengelig_til: form.tilgjengelig_til || null,
-      kapasitet_prosent: form.kapasitet_prosent ? parseInt(form.kapasitet_prosent) : 100,
-      innpris_time: form.innpris_time ? parseFloat(form.innpris_time) : null,
-      utpris_time: form.utpris_time ? parseFloat(form.utpris_time) : null,
-      cv_url: form.cv_url.trim() || null,
-      notat: form.notat.trim() || null,
+      cv_tekst: form.cv_tekst || null,
       updated_at: new Date().toISOString(),
     };
 
@@ -386,231 +428,254 @@ function ConsultantModal({ open, onClose, editRow, contacts, companies, userId }
     onClose();
   };
 
-  const selectedContact = contacts.find(c => c.id === form.contact_id);
-  const selectedCompany = companies.find(c => c.id === form.company_id);
-
-  const filteredContacts = contactSearch.trim()
-    ? contacts.filter(c => `${c.first_name} ${c.last_name}`.toLowerCase().includes(contactSearch.toLowerCase())).slice(0, 8)
-    : contacts.slice(0, 8);
-
-  const filteredCompanies = companySearch.trim()
-    ? companies.filter(c => c.name.toLowerCase().includes(companySearch.toLowerCase())).slice(0, 8)
-    : companies.slice(0, 8);
-
   const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
+  const showTypeSelection = isCreate && !form.type;
+
+  const CvBadge = ({ field }: { field: string }) =>
+    cvPrefilled.has(field) ? (
+      <span className="inline-flex items-center gap-1 text-[0.6875rem] text-emerald-600 font-medium ml-2">
+        <CheckCircle2 className="h-3 w-3" /> Hentet fra CV
+      </span>
+    ) : null;
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-lg rounded-xl p-6 gap-0 max-h-[90vh] overflow-y-auto" onInteractOutside={e => e.preventDefault()}>
+      <DialogContent className="max-w-lg rounded-xl p-6 gap-0 max-h-[90vh] overflow-y-auto">
         <DialogTitle className="text-[1.125rem] font-bold text-foreground mb-5">
           {isCreate ? "Ny ekstern konsulent" : "Rediger konsulent"}
         </DialogTitle>
 
-        <div className="space-y-4">
-          {/* Contact picker */}
-          <div>
-            <label className={LABEL}>Kontaktperson *</label>
-            {selectedContact ? (
-              <div className="mt-1 flex items-center gap-2">
-                <span className="text-[0.875rem] font-medium">{selectedContact.first_name} {selectedContact.last_name}</span>
-                <button onClick={() => set("contact_id", "")} className="text-muted-foreground hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
-              </div>
-            ) : (
-              <div className="mt-1">
-                <Input
-                  value={contactSearch}
-                  onChange={e => setContactSearch(e.target.value)}
-                  placeholder="Søk kontakter..."
-                  className="text-[0.875rem]"
-                />
-                {contactSearch.trim() && filteredContacts.length > 0 && (
-                  <div className="border border-border rounded-lg mt-1 max-h-40 overflow-y-auto bg-popover">
-                    {filteredContacts.map(c => (
-                      <button
-                        key={c.id}
-                        onClick={() => { set("contact_id", c.id); setContactSearch(""); }}
-                        className="w-full text-left px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors"
-                      >
-                        {c.first_name} {c.last_name}
-                      </button>
-                    ))}
+        {/* STEP 1: Type selection (create only) */}
+        {showTypeSelection && (
+          <div className="space-y-3">
+            <p className="text-[0.8125rem] text-muted-foreground">Velg type:</p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => set("type", "freelance")}
+                className="flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all text-center"
+              >
+                <User className="h-7 w-7 text-primary" />
+                <span className="text-[0.9375rem] font-semibold">Freelance</span>
+                <span className="text-[0.75rem] text-muted-foreground leading-snug">Selvstendig konsulent</span>
+              </button>
+              <button
+                onClick={() => set("type", "partner")}
+                className="flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all text-center"
+              >
+                <Users className="h-7 w-7 text-primary" />
+                <span className="text-[0.9375rem] font-semibold">Via partner</span>
+                <span className="text-[0.75rem] text-muted-foreground leading-snug">Kommer via et partnerselskap</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 2: Fields (after type selected or edit mode) */}
+        {(form.type || !isCreate) && (
+          <div className="space-y-4">
+            {/* Partner: Company picker first */}
+            {form.type === "partner" && (
+              <div>
+                <label className={LABEL}>Partnerselskap *</label>
+                {selectedCompany ? (
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className="text-[0.875rem] font-medium">{selectedCompany.name}</span>
+                    <button onClick={() => set("company_id", "")} className="text-muted-foreground hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
+                  </div>
+                ) : (
+                  <div className="mt-1">
+                    <Input
+                      value={companySearch}
+                      onChange={e => setCompanySearch(e.target.value)}
+                      placeholder="Søk selskaper..."
+                      className="text-[0.875rem]"
+                    />
+                    {companySearch.trim() && filteredCompanies.length > 0 && (
+                      <div className="border border-border rounded-lg mt-1 max-h-40 overflow-y-auto bg-popover">
+                        {filteredCompanies.map(c => (
+                          <button
+                            key={c.id}
+                            onClick={() => { set("company_id", c.id); setCompanySearch(""); }}
+                            className="w-full text-left px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors"
+                          >
+                            {c.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             )}
-          </div>
 
-          {/* Company picker */}
-          <div>
-            <label className={LABEL}>Selskap <span className="normal-case font-normal text-muted-foreground/50">(valgfritt)</span></label>
-            {selectedCompany ? (
-              <div className="mt-1 flex items-center gap-2">
-                <span className="text-[0.875rem] font-medium">{selectedCompany.name}</span>
-                <button onClick={() => set("company_id", "")} className="text-muted-foreground hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
-              </div>
-            ) : (
-              <div className="mt-1">
-                <Input
-                  value={companySearch}
-                  onChange={e => setCompanySearch(e.target.value)}
-                  placeholder="Søk selskaper..."
-                  className="text-[0.875rem]"
-                />
-                {companySearch.trim() && filteredCompanies.length > 0 && (
-                  <div className="border border-border rounded-lg mt-1 max-h-40 overflow-y-auto bg-popover">
-                    {filteredCompanies.map(c => (
-                      <button
-                        key={c.id}
-                        onClick={() => { set("company_id", c.id); setCompanySearch(""); }}
-                        className="w-full text-left px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors"
-                      >
-                        {c.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Type + Status */}
-          <div className="grid grid-cols-2 gap-3">
+            {/* CV Upload */}
             <div>
-              <label className={LABEL + " block mb-1.5"}>Type</label>
-              <div className="flex flex-wrap gap-1.5">
-                {(["freelance", "partner"] as const).map(t => (
-                  <button key={t} onClick={() => set("type", t)} className={form.type === t ? CHIP_ON : CHIP_OFF}>
-                    {TYPE_LABELS[t]}
+              <label className={LABEL}>CV-opplasting</label>
+              <div
+                onDragOver={e => e.preventDefault()}
+                onDrop={handleDrop}
+                onClick={() => fileRef.current?.click()}
+                className={cn(
+                  "mt-1 flex flex-col items-center gap-2 p-5 rounded-lg border-2 border-dashed cursor-pointer transition-colors",
+                  cvParsing
+                    ? "border-primary/40 bg-primary/5"
+                    : "border-border hover:border-primary/40 hover:bg-primary/5"
+                )}
+              >
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept=".pdf"
+                  className="hidden"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) handleCvUpload(file);
+                    e.target.value = "";
+                  }}
+                />
+                {cvParsing ? (
+                  <>
+                    <Loader2 className="h-6 w-6 text-primary animate-spin" />
+                    <span className="text-[0.8125rem] text-primary font-medium">Analyserer CV...</span>
+                  </>
+                ) : cvPrefilled.size > 0 ? (
+                  <>
+                    <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                    <span className="text-[0.8125rem] text-emerald-600 font-medium">CV analysert</span>
+                    <span className="text-[0.6875rem] text-muted-foreground">Klikk for å laste opp ny</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-6 w-6 text-muted-foreground" />
+                    <span className="text-[0.8125rem] text-muted-foreground">Dra og slipp PDF, eller klikk for å velge</span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Navn */}
+            <div>
+              <div className="flex items-center">
+                <label className={LABEL}>Navn *</label>
+                <CvBadge field="navn" />
+              </div>
+              <Input value={form.navn} onChange={e => set("navn", e.target.value)} placeholder="Fullt navn" className="mt-1 text-[0.875rem]" />
+            </div>
+
+            {/* Epost */}
+            <div>
+              <div className="flex items-center">
+                <label className={LABEL}>E-post</label>
+                <CvBadge field="epost" />
+              </div>
+              <Input value={form.epost} onChange={e => set("epost", e.target.value)} placeholder="epost@eksempel.no" className="mt-1 text-[0.875rem]" />
+            </div>
+
+            {/* Telefon */}
+            <div>
+              <div className="flex items-center">
+                <label className={LABEL}>Telefon</label>
+                <CvBadge field="telefon" />
+              </div>
+              <Input value={form.telefon} onChange={e => set("telefon", e.target.value)} placeholder="+47 ..." className="mt-1 text-[0.875rem]" />
+            </div>
+
+            {/* Freelance: Selskap (text) */}
+            {form.type === "freelance" && (
+              <div>
+                <label className={LABEL}>Selskap</label>
+                <Input value={form.selskap_tekst} onChange={e => set("selskap_tekst", e.target.value)} placeholder="Eget enkeltpersonforetak e.l." className="mt-1 text-[0.875rem]" />
+                <p className="text-[0.6875rem] text-muted-foreground mt-1">Ikke et salgsselskap i CRM</p>
+              </div>
+            )}
+
+            {/* Teknologier */}
+            <div>
+              <div className="flex items-center">
+                <label className={LABEL}>Teknologier</label>
+                <CvBadge field="teknologier" />
+              </div>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5 p-2 border border-border rounded-lg bg-background min-h-[38px]">
+                {form.teknologier.map(t => (
+                  <span key={t} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-[0.75rem] text-foreground">
+                    {t}
+                    <button onClick={() => set("teknologier", form.teknologier.filter(x => x !== t))} className="hover:text-destructive"><X className="h-3 w-3" /></button>
+                  </span>
+                ))}
+                <input
+                  value={tagInput}
+                  onChange={e => setTagInput(e.target.value)}
+                  onKeyDown={handleTagKeyDown}
+                  placeholder={form.teknologier.length === 0 ? "Legg til teknologi..." : ""}
+                  className="flex-1 min-w-[100px] bg-transparent outline-none text-[0.8125rem] placeholder:text-muted-foreground"
+                />
+              </div>
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {SUGGESTED_TECH.filter(s => !form.teknologier.includes(s)).slice(0, 10).map(s => (
+                  <button key={s} onClick={() => addTag(s)} className="h-6 px-2 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors">
+                    {s}
                   </button>
                 ))}
               </div>
             </div>
+
+            {/* Status */}
             <div>
               <label className={LABEL + " block mb-1.5"}>Status</label>
-              <div className="flex flex-wrap gap-1.5">
-                {([{ value: "ledig", label: "Tilgjengelig" }, { value: "utilgjengelig", label: "Ikke ledig" }] as const).map(s => (
-                  <button key={s.value} onClick={() => set("status", s.value)} className={form.status === s.value ? CHIP_ON : CHIP_OFF}>
-                    {s.label}
-                  </button>
-                ))}
+              <div className="flex gap-1.5">
+                <button onClick={() => set("status", "ledig")} className={form.status === "ledig" ? CHIP_ON : CHIP_OFF}>Tilgjengelig</button>
+                <button onClick={() => set("status", "utilgjengelig")} className={form.status === "utilgjengelig" ? CHIP_ON : CHIP_OFF}>Ikke ledig</button>
               </div>
             </div>
-          </div>
 
-          {/* Rolle + erfaring */}
-          <div className="grid grid-cols-2 gap-3">
+            {/* Tilgjengelig fra */}
             <div>
-              <label className={LABEL}>Rolle</label>
-              <Input value={form.rolle} onChange={e => set("rolle", e.target.value)} placeholder="Embedded SW Engineer" className="mt-1 text-[0.875rem]" />
-            </div>
-            <div>
-              <label className={LABEL}>Erfaring (år)</label>
-              <Input type="number" value={form.erfaring_aar} onChange={e => set("erfaring_aar", e.target.value)} placeholder="10" className="mt-1 text-[0.875rem]" />
-            </div>
-          </div>
-
-          {/* Teknologier */}
-          <div>
-            <label className={LABEL}>Teknologier</label>
-            <div className="mt-1 flex flex-wrap items-center gap-1.5 p-2 border border-border rounded-lg bg-background min-h-[38px]">
-              {form.teknologier.map(t => (
-                <span key={t} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-[0.75rem] text-foreground">
-                  {t}
-                  <button onClick={() => set("teknologier", form.teknologier.filter(x => x !== t))} className="hover:text-destructive"><X className="h-3 w-3" /></button>
-                </span>
-              ))}
-              <input
-                value={tagInput}
-                onChange={e => setTagInput(e.target.value)}
-                onKeyDown={handleTagKeyDown}
-                placeholder={form.teknologier.length === 0 ? "Legg til teknologi..." : ""}
-                className="flex-1 min-w-[100px] bg-transparent outline-none text-[0.8125rem] placeholder:text-muted-foreground"
-              />
-            </div>
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {SUGGESTED_TECH.filter(s => !form.teknologier.includes(s)).slice(0, 10).map(s => (
-                <button key={s} onClick={() => addTag(s)} className="h-6 px-2 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors">
-                  {s}
-                </button>
-              ))}
+              <label className={LABEL}>Tilgjengelig fra</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("mt-1 w-full justify-start text-left text-[0.875rem] font-normal", !form.tilgjengelig_fra && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {form.tilgjengelig_fra ? format(new Date(form.tilgjengelig_fra), "d. MMM yyyy", { locale: nb }) : "Velg dato"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={form.tilgjengelig_fra ? new Date(form.tilgjengelig_fra) : undefined}
+                    onSelect={(d) => set("tilgjengelig_fra", d ? format(d, "yyyy-MM-dd") : "")}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
-
-          {/* Tilgjengelighet */}
-          <div>
-            <label className={LABEL}>Tilgjengelig fra</label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className={cn("mt-1 w-full justify-start text-left text-[0.875rem] font-normal", !form.tilgjengelig_fra && "text-muted-foreground")}>
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {form.tilgjengelig_fra ? format(new Date(form.tilgjengelig_fra), "d. MMM yyyy", { locale: nb }) : "Velg dato"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={form.tilgjengelig_fra ? new Date(form.tilgjengelig_fra) : undefined}
-                  onSelect={(d) => set("tilgjengelig_fra", d ? format(d, "yyyy-MM-dd") : "")}
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Økonomi */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={LABEL}>Innpris (kr/t)</label>
-              <Input type="number" value={form.innpris_time} onChange={e => set("innpris_time", e.target.value)} placeholder="850" className="mt-1 text-[0.875rem]" />
-            </div>
-            <div>
-              <label className={LABEL}>Utpris (kr/t)</label>
-              <Input type="number" value={form.utpris_time} onChange={e => set("utpris_time", e.target.value)} placeholder="1200" className="mt-1 text-[0.875rem]" />
-            </div>
-          </div>
-
-          {/* CV URL */}
-          <div>
-            <label className={LABEL}>CV-lenke</label>
-            <Input value={form.cv_url} onChange={e => set("cv_url", e.target.value)} placeholder="https://..." className="mt-1 text-[0.875rem]" />
-          </div>
-
-          {/* Notat */}
-          <div>
-            <label className={LABEL}>Notat</label>
-            <textarea
-              value={form.notat}
-              onChange={e => set("notat", e.target.value)}
-              placeholder="Intern merknad..."
-              rows={2}
-              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-[0.875rem] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-            />
-          </div>
-        </div>
+        )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
-          <div>
-            {!isCreate && (
-              <button onClick={handleDelete} className="text-[0.8125rem] text-destructive hover:underline">
-                Slett
+        {(form.type || !isCreate) && (
+          <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
+            <div>
+              {!isCreate && (
+                <button onClick={handleDelete} className="text-[0.8125rem] text-destructive hover:underline">
+                  Slett
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <button onClick={onClose} className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">
+                Avbryt
               </button>
-            )}
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {saving ? "Lagrer..." : isCreate ? "Legg til" : "Lagre"}
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button onClick={onClose} className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">
-              Avbryt
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              {saving ? "Lagrer..." : isCreate ? "Legg til" : "Lagre"}
-            </button>
-          </div>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   );
