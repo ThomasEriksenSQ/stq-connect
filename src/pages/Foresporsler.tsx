@@ -300,7 +300,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
     searchTimer.current = setTimeout(async () => {
       const { data } = await supabase
         .from("companies")
-        .select("id, name, city")
+        .select("id, name, city, status")
         .ilike("name", `%${query}%`)
         .limit(8);
       if (data) setCompanyResults(data);
