@@ -619,14 +619,6 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
               <Input value={form.telefon} onChange={e => set("telefon", e.target.value)} placeholder="+47 ..." className="mt-1 text-[0.875rem]" />
             </div>
 
-            {/* Freelance: Selskap (text) */}
-            {form.type === "freelance" && (
-              <div>
-                <label className={LABEL}>Selskap</label>
-                <Input value={form.selskap_tekst} onChange={e => set("selskap_tekst", e.target.value)} placeholder="Eget enkeltpersonforetak e.l." className="mt-1 text-[0.875rem]" />
-                <p className="text-[0.6875rem] text-muted-foreground mt-1">Ikke et salgsselskap i CRM</p>
-              </div>
-            )}
 
             {/* Teknologier */}
             <div>
