@@ -21,6 +21,7 @@ import Foresporsler from "./pages/Foresporsler";
 
 const KonsulenterAnsatte = lazy(() => import("./pages/KonsulenterAnsatte"));
 const KonsulenterOppdrag = lazy(() => import("./pages/KonsulenterOppdrag"));
+const StacqPrisen = lazy(() => import("./pages/StacqPrisen"));
 
 const queryClient = new QueryClient();
 
@@ -85,6 +86,14 @@ const App = () => (
                   element={
                     <Suspense fallback={<LazyFallback />}>
                       <KonsulenterOppdrag />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="stacq/prisen"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <StacqPrisen />
                     </Suspense>
                   }
                 />
