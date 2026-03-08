@@ -357,17 +357,21 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             ) : null}
             {/* Type badge SECOND — neutral style */}
             {editable ? (
-              <Select value={company.status} onValueChange={(v) => updateMutation.mutate({ status: v })}>
-                <SelectTrigger className="h-auto w-auto max-w-none gap-0 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0 [&>svg]:hidden [&>span]:!flex [&>span]:!overflow-visible">
-                  <span className="inline-flex items-center rounded-full border bg-gray-100 text-gray-600 border-gray-200 px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="inline-flex items-center rounded-full border bg-gray-100 text-gray-600 border-gray-200 px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap cursor-pointer">
                     {currentStatus.label}
                     <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {STATUS_OPTIONS.map((s) => (
+                    <DropdownMenuItem key={s.value} onClick={() => updateMutation.mutate({ status: s.value })}>
+                      {s.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <span className="inline-flex items-center rounded-full border bg-gray-100 text-gray-600 border-gray-200 px-2.5 py-0.5 text-xs font-semibold">
                 {currentStatus.label}
