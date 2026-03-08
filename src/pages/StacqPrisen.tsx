@@ -128,38 +128,6 @@ export default function StacqPrisen() {
     ? aktive.reduce((s, r) => s + (r.utpris ? (r.stacqPris / r.utpris) * 100 : 0), 0) / aktive.length
     : 0;
 
-  // Monthly calculation — per-consultant working days in current month
-  const now = new Date();
-  const mYear = now.getFullYear();
-  const mMonth = now.getMonth();
-  const getWorkdays = (y: number, m: number): Date[] => {
-    const days: Date[] = [];
-    const dim = new Date(y, m + 1, 0).getDate();
-    for (let d = 1; d <= dim; d++) {
-      const date = new Date(y, m, d);
-      const dow = date.getDay();
-      if (dow !== 0 && dow !== 6) days.push(date);
-    }
-    return days;
-  };
-  const workdays = getWorkdays(mYear, mMonth);
-  const workdayCount = workdays.length;
-  const firstDay = new Date(mYear, mMonth, 1);
-  const lastDay = new Date(mYear, mMonth + 1, 0);
-
-  const monthlyTotal = enriched
-    .filter(o => o.status === "Aktiv" || o.status === "Oppstart")
-    .reduce((sum, o) => {
-      const stacq = o.stacqPris * TIMER_PER_DAG;
-      const start = o.start_dato
-        ? new Date(Math.max(new Date(o.start_dato).getTime(), firstDay.getTime()))
-        : firstDay;
-      const end = o.slutt_dato
-        ? new Date(Math.min(new Date(o.slutt_dato).getTime(), lastDay.getTime()))
-        : lastDay;
-      const activeDays = workdays.filter(d => d >= start && d <= end).length;
-      return sum + (stacq * activeDays);
-    }, 0);
 
   const SortHeader = ({ field, children, className = "" }: { field: SortField; children: React.ReactNode; className?: string }) => (
     <button
