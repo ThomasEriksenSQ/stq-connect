@@ -60,11 +60,9 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
   const [tagInput, setTagInput] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [companyResults, setCompanyResults] = useState<Array<{ id: string; name: string; city: string | null }>>([]);
-  const [contactResults, setContactResults] = useState<Array<{ id: string; first_name: string; last_name: string }>>([]);
   const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const contactTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const hasMultipleLocations = selectedLocations.length > 1;
 
@@ -73,7 +71,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
       setSelskap(""); setSelskapId(null); setSelectedLocations([]);
       setAvdeling(""); setSted(""); setKontakt(""); setKontaktId(null);
       setKommentar(""); setTags([]); setTagInput("");
-      setCompanyResults([]); setContactResults([]);
+      setCompanyResults([]);
     }
   }, [open]);
 
@@ -95,6 +93,9 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
     setSelskap(c.name);
     setSelskapId(c.id);
     setAvdeling("");
+    setKontakt("");
+    setKontaktId(null);
+    setShowKontaktDropdown(false);
     const locations = c.city ? c.city.split(",").map(l => l.trim()).filter(Boolean) : [];
     setSelectedLocations(locations);
     if (locations.length === 1) {
@@ -107,21 +108,28 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
     setShowDropdown(false);
   };
 
-  // Debounced contact search
-  const searchContacts = (query: string) => {
-    if (contactTimer.current) clearTimeout(contactTimer.current);
-    if (query.length < 1) { setContactResults([]); return; }
-    contactTimer.current = setTimeout(async () => {
-      let q = supabase
+  // Load contacts for selected company
+  const { data: companyContacts = [] } = useQuery({
+    queryKey: ["foresporsler-kontakter", selskapId],
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from("contacts")
-        .select("id, first_name, last_name")
-        .limit(6);
-      if (selskapId) q = q.eq("company_id", selskapId);
-      q = q.or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%`);
-      const { data } = await q;
-      if (data) setContactResults(data);
-    }, 300);
-  };
+        .select("id, first_name, last_name, title")
+        .eq("company_id", selskapId!)
+        .order("first_name");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!selskapId,
+  });
+
+  const filteredContacts = useMemo(() => {
+    if (!kontakt.trim()) return companyContacts;
+    const q = kontakt.toLowerCase();
+    return companyContacts.filter((c: any) =>
+      `${c.first_name} ${c.last_name}`.toLowerCase().includes(q)
+    );
+  }, [companyContacts, kontakt]);
 
   const addTag = (tag: string) => {
     const t = tag.trim();
@@ -236,35 +244,61 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
           <div>
             <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Kontaktperson</label>
             <div className="relative mt-1">
-              <Input
-                value={kontakt}
-                onChange={(e) => {
-                  setKontakt(e.target.value);
-                  setKontaktId(null);
-                  setShowKontaktDropdown(true);
-                  searchContacts(e.target.value);
-                }}
-                onFocus={() => setShowKontaktDropdown(true)}
-                onBlur={() => setTimeout(() => setShowKontaktDropdown(false), 200)}
-                placeholder="Søk etter kontaktperson..."
-                className="text-[0.875rem]"
-              />
-              {showKontaktDropdown && contactResults.length > 0 && (
-                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-md max-h-48 overflow-auto">
-                  {contactResults.map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() => {
-                        setKontakt(`${c.first_name} ${c.last_name}`);
-                        setKontaktId(c.id);
-                        setShowKontaktDropdown(false);
+              {!selskapId ? (
+                <Input
+                  disabled
+                  placeholder="Velg selskap først..."
+                  className="text-[0.875rem] opacity-50 cursor-not-allowed"
+                />
+              ) : (
+                <>
+                  <div className="relative">
+                    <Input
+                      value={kontakt}
+                      onChange={(e) => {
+                        setKontakt(e.target.value);
+                        setKontaktId(null);
+                        setShowKontaktDropdown(true);
                       }}
-                      className="w-full text-left px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors"
-                    >
-                      {c.first_name} {c.last_name}
-                    </button>
-                  ))}
-                </div>
+                      onFocus={() => setShowKontaktDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowKontaktDropdown(false), 200)}
+                      placeholder="Søk etter kontaktperson..."
+                      className="text-[0.875rem]"
+                    />
+                    {kontaktId && (
+                      <button
+                        onClick={() => { setKontakt(""); setKontaktId(null); }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  {showKontaktDropdown && !kontaktId && (
+                    <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-md max-h-[200px] overflow-y-auto">
+                      {filteredContacts.length === 0 ? (
+                        <p className="text-xs text-muted-foreground px-3 py-2.5 italic">
+                          Ingen kontakter registrert på dette selskapet
+                        </p>
+                      ) : (
+                        filteredContacts.map((c: any) => (
+                          <button
+                            key={c.id}
+                            onClick={() => {
+                              setKontakt(`${c.first_name} ${c.last_name}`);
+                              setKontaktId(c.id);
+                              setShowKontaktDropdown(false);
+                            }}
+                            className="w-full text-left px-3 py-2.5 hover:bg-muted/50 cursor-pointer transition-colors"
+                          >
+                            <p className="text-[0.875rem] font-medium">{c.first_name} {c.last_name}</p>
+                            {c.title && <p className="text-xs text-muted-foreground">{c.title}</p>}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
