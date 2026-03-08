@@ -619,8 +619,7 @@ export default function KonsulenterAnsatte() {
             <div
               key={a.id}
               className={cn(
-                "group grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_100px_180px_40px] gap-3 items-center px-4 py-3 hover:bg-muted/30 transition-colors",
-                i < filtered.length - 1 && "border-b border-border",
+                "group grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_100px_180px_40px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75",
                 isKommende && "opacity-80",
                 isSluttet && "opacity-50"
               )}
@@ -634,7 +633,7 @@ export default function KonsulenterAnsatte() {
                     {getInitials(a.navn)}
                   </div>
                 )}
-                <span className="font-medium text-[0.875rem] truncate">{a.navn}</span>
+                <span className="font-medium text-[0.8125rem] truncate">{a.navn}</span>
                 {inOppdrag && (
                   <span className="bg-emerald-100 text-emerald-700 text-[0.625rem] font-semibold uppercase rounded px-1.5 py-0.5 flex-shrink-0">
                     I OPPDRAG
@@ -654,7 +653,7 @@ export default function KonsulenterAnsatte() {
                 )}
               </div>
               {/* ANSETTELSE */}
-              <div className="text-sm text-muted-foreground">{getDuration(a)}</div>
+              <div className="text-[0.8125rem] text-muted-foreground">{getDuration(a)}</div>
               {/* OPPDRAG */}
               <div>
                 <DropdownMenu>
@@ -696,8 +695,8 @@ export default function KonsulenterAnsatte() {
               </div>
               {/* KONTAKT */}
               <div className="flex flex-col min-w-0">
-                <span className="text-sm text-muted-foreground truncate">{a.tlf}</span>
-                <span className="text-xs text-muted-foreground/70 mt-0.5 truncate">{a.epost}</span>
+                <span className="text-[0.8125rem] text-muted-foreground truncate">{a.tlf}</span>
+                <span className="text-[0.6875rem] text-muted-foreground/70 mt-0.5 truncate">{a.epost}</span>
               </div>
               {/* EDIT */}
               <button
@@ -709,6 +708,7 @@ export default function KonsulenterAnsatte() {
             </div>
           );
         })}
+        </div>
         {filtered.length === 0 && (
           <p className="text-muted-foreground text-center py-12">Ingen ansatte å vise</p>
         )}
