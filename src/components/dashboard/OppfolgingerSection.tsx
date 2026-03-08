@@ -405,7 +405,7 @@ function TaskRow({ task, isLast, profiles, signal, fadingIds, onComplete, onChan
   const contactName = contact?.first_name ? `${contact.first_name} ${contact.last_name}` : null;
   const contactId = contact?.id || null;
   const companyName = contact?.companies?.name || null;
-  const ownerProfile = task.profiles as any;
+  const ownerProfile = profiles.find(p => p.id === task.assigned_to);
   const ownerName = ownerProfile?.full_name || "";
 
   const dueDate = task.due_date ? new Date(task.due_date) : null;
