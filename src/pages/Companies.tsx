@@ -540,7 +540,7 @@ const Companies = () => {
                           const signalBadge = getSignalBadge(company.signal || null);
                           return signalBadge ? (
                             <button className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer ${signalBadge.color}`}>
-                              {company.signal}
+                              ✓ {company.signal}
                             </button>
                           ) : (
                             <button className="inline-flex items-center rounded-full border border-dashed border-border px-2 py-0.5 text-[0.6875rem] text-muted-foreground/50 cursor-pointer hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors">
