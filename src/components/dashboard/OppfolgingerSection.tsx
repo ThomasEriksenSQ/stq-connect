@@ -380,6 +380,7 @@ function TaskRow({ task, isOverdue, isLast, profiles, signal, onComplete, onChan
             {signal ? (
               <button className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold hover:opacity-80 transition-opacity", signalCat?.badgeColor)}>
                 {signal}
+                <ChevronDown className="h-3 w-3 ml-1" />
               </button>
             ) : (
               <button className="text-[0.75rem] text-muted-foreground/50 hover:text-muted-foreground transition-colors">
