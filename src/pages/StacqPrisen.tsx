@@ -42,10 +42,10 @@ function formatKr(n: number): string {
   return n.toLocaleString("nb-NO", { maximumFractionDigits: 0 });
 }
 
-function stacqColor(dagsPris: number): string {
-  if (dagsPris >= 3375) return "text-emerald-600";  // 450*7.5
-  if (dagsPris >= 2625) return "text-blue-600";      // 350*7.5
-  if (dagsPris >= 1875) return "text-amber-600";     // 250*7.5
+function stacqColor(timePris: number): string {
+  if (timePris >= 450) return "text-emerald-600";
+  if (timePris >= 350) return "text-blue-600";
+  if (timePris >= 250) return "text-amber-600";
   return "text-muted-foreground";
 }
 
@@ -82,9 +82,9 @@ export default function StacqPrisen() {
 
   const aktive = enriched.filter((r) => r.status === "Aktiv");
   const oppstart = enriched.filter((r) => r.status === "Oppstart");
-  const stacqTotal = aktive.reduce((s, r) => s + r.stacqPris * TIMER_PER_DAG, 0);
-  const oppstartTotal = oppstart.reduce((s, r) => s + r.stacqPris * TIMER_PER_DAG, 0);
-  const avgPris = aktive.length > 0 ? stacqTotal / aktive.length : 0;
+  const stacqTotalPerTime = aktive.reduce((s, r) => s + r.stacqPris, 0);
+  const oppstartTotalPerTime = oppstart.reduce((s, r) => s + r.stacqPris, 0);
+  const avgPrisPerTime = aktive.length > 0 ? stacqTotalPerTime / aktive.length : 0;
 
   const now = new Date();
   const workdayCount = (() => {
@@ -94,15 +94,14 @@ export default function StacqPrisen() {
     for (let d = 1; d <= dim; d++) { const dow = new Date(y, m, d).getDay(); if (dow !== 0 && dow !== 6) wd++; }
     return wd;
   })();
-  const monthlyTotal = stacqTotal * workdayCount;
-  const oppstartUtprisTotal = oppstart.reduce((s, r) => s + (r.utpris ?? 0), 0);
+  const monthlyTotal = stacqTotalPerTime * TIMER_PER_DAG * workdayCount;
 
   const chartData = useMemo(() => [
     ...SEED_HISTORY,
-    { label: "Nå", value: Math.round(stacqTotal) },
-  ], [stacqTotal]);
+    { label: "Nå", value: Math.round(stacqTotalPerTime) },
+  ], [stacqTotalPerTime]);
 
-  const mangler5000 = Math.max(0, 5000 - stacqTotal);
+  const mangler5000 = Math.max(0, 5000 - stacqTotalPerTime);
 
   const toggleSort = (field: SortField) => {
     setSort((p) => p.field === field ? { field, dir: p.dir === "asc" ? "desc" : "asc" } : { field, dir: "desc" });
@@ -148,10 +147,10 @@ export default function StacqPrisen() {
 
       {/* Hero stat cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard label="STACQ Prisen i dag" value={`kr ${formatKr(stacqTotal)}`} sub={`${aktive.length} konsulenter i oppdrag`} accent="emerald" suffix="/ dag" />
-        <StatCard label="STACQ Prisen månedlig" value={`kr ${formatKr(Math.round(monthlyTotal))}`} sub={`${workdayCount} arbeidsdager · ${format(now, "MMMM yyyy", { locale: nb })}`} suffix="/ mnd" />
-        <StatCard label="Snitt per konsulent" value={`kr ${formatKr(Math.round(avgPris))}`} sub="gjennomsnitt" suffix="/ dag" />
-        <StatCard label="Oppstart" value={`+ kr ${formatKr(oppstartUtprisTotal)}`} sub={`${oppstart.length} konsulenter kommer snart`} accent="amber" suffix="/ time" />
+        <StatCard label="STACQ Prisen / time" value={`kr ${formatKr(Math.round(stacqTotalPerTime))}`} sub={`${aktive.length} konsulenter i oppdrag`} accent="emerald" suffix="/ time" />
+        <StatCard label="STACQ Prisen / mnd" value={`kr ${formatKr(Math.round(monthlyTotal))}`} sub={`${workdayCount} arbeidsdager · ${format(now, "MMMM yyyy", { locale: nb })}`} suffix="/ mnd" />
+        <StatCard label="Snitt per konsulent" value={`kr ${formatKr(Math.round(avgPrisPerTime))}`} sub="gjennomsnitt" suffix="/ time" />
+        <StatCard label="Oppstart" value={`+ kr ${formatKr(Math.round(oppstartTotalPerTime))}`} sub={`${oppstart.length} konsulenter kommer snart`} accent="amber" suffix="/ time" />
       </div>
 
       {/* Chart */}
@@ -173,7 +172,7 @@ export default function StacqPrisen() {
               <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `${v}`} />
               <ReTooltip
                 contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 13 }}
-                formatter={(value: number) => [`kr ${formatKr(value)} / dag`, "STACQ Pris"]}
+                formatter={(value: number) => [`kr ${formatKr(value)} / time`, "STACQ Pris"]}
               />
               <ReferenceLine y={5000} stroke="hsl(var(--warning))" strokeDasharray="6 4" label={{ value: "Mål: 5 000", position: "right", fontSize: 11, fill: "hsl(var(--warning))" }} />
               <Area type="monotone" dataKey="value" stroke="rgb(16,185,129)" strokeWidth={2} fill="url(#stacqGrad)" />
@@ -182,8 +181,8 @@ export default function StacqPrisen() {
         </div>
         {mangler5000 > 0 && (
           <p className="text-[0.8125rem] text-muted-foreground mt-3">
-            Neste milepæl: <span className="font-medium text-foreground">kr 5 000/dag</span> — mangler{" "}
-            <span className="font-medium text-amber-600">kr {formatKr(Math.round(mangler5000))}/dag</span>
+            Neste milepæl: <span className="font-medium text-foreground">kr 5 000/time</span> — mangler{" "}
+            <span className="font-medium text-amber-600">kr {formatKr(Math.round(mangler5000))}/time</span>
           </p>
         )}
       </div>
@@ -231,8 +230,8 @@ export default function StacqPrisen() {
                         <span className="text-destructive/60">−{row.ekstra_kostnad}</span>
                       ) : "–"}
                     </span>
-                    <span className={`text-[0.8125rem] font-bold ${stacqColor(row.stacqPris * TIMER_PER_DAG)}`}>
-                      kr {formatKr(Math.round(row.stacqPris * TIMER_PER_DAG))}
+                    <span className={`text-[0.8125rem] font-bold ${stacqColor(row.stacqPris)}`}>
+                      kr {formatKr(Math.round(row.stacqPris))}
                     </span>
                     <span className={`text-[0.8125rem] text-right ${stacqColor(row.stacqPris)}`}>
                       {Math.round(pct)}%
@@ -254,7 +253,7 @@ export default function StacqPrisen() {
                 <span />
                 <span />
                 <span />
-                <span className="text-[0.8125rem] text-emerald-600">kr {formatKr(Math.round(stacqTotal + oppstartTotal))}/dag</span>
+                <span className="text-[0.8125rem] text-emerald-600">kr {formatKr(Math.round(stacqTotalPerTime + oppstartTotalPerTime))}/time</span>
                 <span className="text-[0.8125rem] text-right text-muted-foreground">{Math.round(totalPct)}%</span>
                 <span />
               </div>
