@@ -23,6 +23,7 @@ const KonsulenterAnsatte = lazy(() => import("./pages/KonsulenterAnsatte"));
 const KonsulenterOppdrag = lazy(() => import("./pages/KonsulenterOppdrag"));
 const EksterneKonsulenter = lazy(() => import("./pages/EksterneKonsulenter"));
 const StacqPrisen = lazy(() => import("./pages/StacqPrisen"));
+const ImporterCver = lazy(() => import("./pages/ImporterCver"));
 
 const queryClient = new QueryClient();
 
@@ -102,6 +103,14 @@ const App = () => (
                   element={
                     <Suspense fallback={<LazyFallback />}>
                       <StacqPrisen />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="stacq/importer-cver"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <ImporterCver />
                     </Suspense>
                   }
                 />

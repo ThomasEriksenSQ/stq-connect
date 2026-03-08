@@ -20,6 +20,7 @@ serve(async (req) => {
     const systemPrompt = `Du er en CV-analysator for et norsk konsulentselskap (STACQ) som matcher ingeniører/teknologer med oppdrag.
 Analyser CV-en og returner KUN gyldig JSON, ingen tekst rundt:
 {
+  "navn": <string, personens fulle navn fra CV-en>,
   "erfaring_aar": <number, totale år med relevant arbeidserfaring>,
   "kompetanse": <string[], topp 6-8 tekniske nøkkelord, kort og presist>,
   "geografi": <string, primær by der personen jobber/bor>,
