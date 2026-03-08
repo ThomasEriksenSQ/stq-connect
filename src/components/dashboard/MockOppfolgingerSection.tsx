@@ -64,8 +64,8 @@ const MOCK_DATA: MockRow[] = [
     signal: "Får fremtidig behov",
     company: "Commit AS",
     task: "Send CV-liste",
-    due: "Ingen dato",
-    dueType: "none",
+    due: "I dag",
+    dueType: "today",
     description: null,
     accent: "none",
   },
@@ -86,7 +86,6 @@ const DUE_CHIP: Record<string, string> = {
   overdue: "bg-destructive/10 text-destructive",
   today: "bg-primary/10 text-primary",
   future: "bg-muted text-muted-foreground",
-  none: "border border-dashed border-border text-muted-foreground",
 };
 
 const ACCENT_CLASS: Record<string, string> = {
@@ -96,7 +95,7 @@ const ACCENT_CLASS: Record<string, string> = {
   none: "",
 };
 
-const NAAR_FILTERS = ["Forfalt + I dag", "Denne uken", "Kommende", "Alle"];
+const NAAR_FILTERS = ["Forfalt + I dag", "Forfalt", "I dag", "Denne uken", "Alle"];
 const EIER_FILTERS = ["Thomas Eriksen", "Jon Richard Nygaard", "Alle"];
 const SIGNAL_FILTERS = ["Alle", "Behov nå", "Får fremtidig behov", "Får kanskje behov", "Ukjent om behov", "Ikke aktuelt"];
 
