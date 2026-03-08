@@ -770,7 +770,7 @@ export default function Foresporsler() {
 
       {/* Detail/Edit Sheet */}
       <Sheet open={!!selectedRow} onOpenChange={(o) => { if (!o) setSelectedRow(null); }}>
-        <SheetContent side="right" className="w-[420px] sm:w-[460px] p-0" hideCloseButton>
+        <SheetContent side="right" className="w-[520px] sm:w-[520px] p-0" hideCloseButton>
           <ForespørselSheet row={selectedRow} onClose={() => setSelectedRow(null)} />
         </SheetContent>
       </Sheet>
