@@ -143,6 +143,8 @@ const MockOppfolgingerSection = () => {
 
     // After fade, remove row and open modal
     setTimeout(() => {
+      const idx = rows.findIndex((r) => r.id === row.id);
+      setRemovedRow({ row, index: idx });
       setRows((prev) => prev.filter((r) => r.id !== row.id));
       setCompletingId(null);
       setModalData({
