@@ -509,6 +509,7 @@ Returner BARE JSON, ingen annen tekst.`,
       case "match": setMode("match"); break;
       case "epost": setMode("epost"); break;
       case "ukesoppsummering": handleUkesoppsummering(); break;
+      case "cv-upload": setMode("cv-upload"); break;
     }
   };
 
