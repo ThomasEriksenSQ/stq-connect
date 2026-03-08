@@ -16,7 +16,7 @@ import Tasks from "./pages/Tasks";
 import NotFound from "./pages/NotFound";
 import Import from "./pages/Import";
 import AdminBrregSync from "./pages/AdminBrregSync";
-
+import Foresporsler from "./pages/Foresporsler";
 
 const queryClient = new QueryClient();
 
