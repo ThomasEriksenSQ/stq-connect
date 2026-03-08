@@ -337,7 +337,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
               </Select>
             ) : effectiveSignal ? (
               <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", signalBadgeColor)}>
-                ✓ {effectiveSignal}
+                {effectiveSignal}
               </span>
             ) : null}
             {/* Type badge SECOND — neutral style */}

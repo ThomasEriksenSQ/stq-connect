@@ -463,7 +463,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                   <DropdownMenuTrigger asChild>
                     {signalCat ? (
                       <button className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer", signalCat.badgeColor)}>
-                        ✓ {signalCat.label}
+                        {signalCat.label}
                         <ChevronDown className="h-3 w-3 ml-1" />
                       </button>
                     ) : (
