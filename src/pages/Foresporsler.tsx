@@ -277,8 +277,9 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
-  const [companyResults, setCompanyResults] = useState<Array<{ id: string; name: string; city: string | null }>>([]);
+  const [companyResults, setCompanyResults] = useState<Array<{ id: string; name: string; city: string | null; status: string }>>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [sluttkunde, setSluttkunde] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
