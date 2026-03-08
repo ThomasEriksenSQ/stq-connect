@@ -596,7 +596,7 @@ export default function Foresporsler() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("foresporsler")
-        .select("*, contacts(id, first_name, last_name), foresporsler_konsulenter(id, stacq_ansatte(navn))")
+        .select("*, contacts(id, first_name, last_name), foresporsler_konsulenter(id, konsulent_type, stacq_ansatte(navn), external_consultants(navn))")
         .order("mottatt_dato", { ascending: false });
       if (error) throw error;
       return data;
@@ -702,15 +702,19 @@ export default function Foresporsler() {
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Kontakt</span>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Type</span>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Teknologier</span>
-            <SortHeader field="sendt_count" className="justify-end">Sendt</SortHeader>
+            <SortHeader field="sendt_count" className="justify-end">Sendt inn</SortHeader>
           </div>
           {/* Data rows */}
           <div className="divide-y divide-border">
           {sorted.map((row: any) => {
             const days = getDaysAgo(row.mottatt_dato);
             const sendt = row.foresporsler_konsulenter || [];
-            const antall = sendt.length;
-            const hvem = sendt.map((k: any) => k.stacq_ansatte?.navn?.split(" ")[0]).filter(Boolean).join(", ");
+            const firstNames = sendt.map((k: any) => {
+              const fullName = k.konsulent_type === "intern"
+                ? k.stacq_ansatte?.navn
+                : k.external_consultants?.navn;
+              return fullName?.split(" ")[0];
+            }).filter(Boolean) as string[];
 
             return (
               <div
@@ -753,18 +757,22 @@ export default function Foresporsler() {
                   )}
                 </div>
                 {/* Sendt inn */}
-                <div className="flex justify-end">
-                  {antall === 0 ? (
+                <div className="flex justify-end gap-1 flex-wrap">
+                  {firstNames.length === 0 ? (
                     <span className="text-[0.8125rem] text-muted-foreground">—</span>
                   ) : (
-                    <span className="text-[0.8125rem] font-semibold text-foreground">
-                      {antall}
-                      {hvem && (
-                        <span className="font-normal text-muted-foreground ml-1.5">
-                          {truncate(hvem, 15)}
+                    <>
+                      {firstNames.slice(0, 2).map((name, i) => (
+                        <span key={i} className="inline-flex items-center rounded-full bg-foreground text-background text-[0.6875rem] font-medium px-2 py-0.5">
+                          {name}
+                        </span>
+                      ))}
+                      {firstNames.length > 2 && (
+                        <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground text-[0.6875rem] font-medium px-2 py-0.5">
+                          +{firstNames.length - 2}
                         </span>
                       )}
-                    </span>
+                    </>
                   )}
                 </div>
               </div>
