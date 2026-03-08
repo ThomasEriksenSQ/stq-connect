@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { format, addDays, addWeeks, addMonths } from "date-fns";
-import { nb } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -36,17 +35,12 @@ const SIGNAL_DEFAULT_DATE: Record<string, string> = {
   "Ukjent om behov": "+1 uke",
 };
 
-const OWNERS = [
-  { key: "Thomas", full: "Thomas Eriksen" },
-  { key: "Jon", full: "Jon Richard Nygaard" },
-];
-
 export type FollowUpModalData = {
   name: string;
   company: string;
   task: string;
   signal: string;
-  owner: string;
+  ownerProfileId: string;
 };
 
 type Props = {
@@ -55,55 +49,113 @@ type Props = {
   onClose: () => void;
   onSubmit: (data: { title: string; dueDate: Date; owner: string }) => void;
   data: FollowUpModalData | null;
+  profiles: Array<{ id: string; full_name: string }>;
 };
 
 const CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors cursor-pointer";
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
 const CHIP_ON = `${CHIP_BASE} bg-primary/10 border-primary/30 text-primary font-medium`;
 
-const FollowUpModal = ({ open, onCancel, onClose, onSubmit, data }: Props) => {
+const FollowUpModal = ({ open, onCancel, onClose, onSubmit, data, profiles }: Props) => {
   const [title, setTitle] = useState("");
   const [selectedDate, setSelectedDate] = useState<string>("+1 uke");
   const [customDate, setCustomDate] = useState<Date | undefined>(undefined);
-  const [owner, setOwner] = useState("Thomas");
+  const [owner, setOwner] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggested, setAiSuggested] = useState(false);
   const userTypedRef = useRef(false);
 
   const firstName = data?.name.split(" ")[0] ?? "";
 
-  // Reset state when modal opens with new data
   useEffect(() => {
     if (open && data) {
       const fallback = `Følg opp ${firstName}`;
       setTitle(fallback);
       userTypedRef.current = false;
       setAiSuggested(false);
-      setOwner(data.owner);
+      setOwner(data.ownerProfileId);
 
       const defaultDate = SIGNAL_DEFAULT_DATE[data.signal] ?? "+1 uke";
       setSelectedDate(defaultDate);
       setCustomDate(undefined);
 
-      // Simulate AI suggestion (mockup — will be replaced with real API call)
+      // Real AI call via edge function
       setAiLoading(true);
-      const timer = setTimeout(() => {
-        if (!userTypedRef.current) {
-          // Mockup AI suggestions based on task context
-          const suggestions: Record<string, string> = {
-            "Send tilbud på konsulent": "Følg opp tilbudet",
-            "Ring tilbake": "Sjekk status etter samtale",
-            "Følg opp om behov": "Avklar Q2-planer",
-            "Send CV-liste": "Følg opp CV-feedback",
-            "Ta kontakt igjen": "Kartlegg behov",
-          };
-          const aiTitle = suggestions[data.task] ?? `Følg opp ${firstName}`;
-          setTitle(aiTitle);
-          setAiSuggested(true);
+      let cancelled = false;
+
+      const fetchAi = async () => {
+        try {
+          const resp = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+              },
+              body: JSON.stringify({
+                messages: [
+                  {
+                    role: "system",
+                    content: "Du er salgsassistent for STACQ, et norsk konsulentselskap som matcher IT-konsulenter med kunder. Foreslå EN kort oppgavetittel (maks 6 ord) på norsk for neste salgsoppfølging. Bare tittelen, ingenting annet.",
+                  },
+                  {
+                    role: "user",
+                    content: JSON.stringify({
+                      completedTask: data.task,
+                      contactName: data.name,
+                      company: data.company,
+                      signal: data.signal,
+                    }),
+                  },
+                ],
+              }),
+            }
+          );
+
+          if (!resp.ok || !resp.body) throw new Error("AI failed");
+
+          const reader = resp.body.getReader();
+          const decoder = new TextDecoder();
+          let buf = "";
+          let result = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += decoder.decode(value, { stream: true });
+            let idx: number;
+            while ((idx = buf.indexOf("\n")) !== -1) {
+              let line = buf.slice(0, idx);
+              buf = buf.slice(idx + 1);
+              if (line.endsWith("\r")) line = line.slice(0, -1);
+              if (!line.startsWith("data: ")) continue;
+              const json = line.slice(6).trim();
+              if (json === "[DONE]") break;
+              try {
+                const parsed = JSON.parse(json);
+                const content = parsed.choices?.[0]?.delta?.content;
+                if (content) result += content;
+              } catch {
+                buf = line + "\n" + buf;
+                break;
+              }
+            }
+          }
+
+          if (!cancelled && result.trim() && !userTypedRef.current) {
+            setTitle(result.trim().replace(/^["']|["']$/g, ""));
+            setAiSuggested(true);
+          }
+        } catch {
+          // Fail silently
+        } finally {
+          if (!cancelled) setAiLoading(false);
         }
-        setAiLoading(false);
-      }, 1200);
-      return () => clearTimeout(timer);
+      };
+
+      fetchAi();
+      return () => { cancelled = true; };
     }
   }, [open, data, firstName]);
 
@@ -114,11 +166,8 @@ const FollowUpModal = ({ open, onCancel, onClose, onSubmit, data }: Props) => {
   }, [selectedDate, customDate]);
 
   const formattedDate = format(computedDate(), "dd.MM.yyyy");
-
   const hasValidDate = selectedDate === "custom" ? !!customDate : !!selectedDate;
-
-  const ownerObj = OWNERS.find((o) => o.key === owner) ?? OWNERS[0];
-
+  const ownerObj = profiles.find((p) => p.id === owner);
   const canSubmit = title.trim().length > 0 && hasValidDate;
 
   return (
@@ -212,18 +261,18 @@ const FollowUpModal = ({ open, onCancel, onClose, onSubmit, data }: Props) => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="mt-1 flex items-center gap-1.5 h-8 px-3 text-[0.8125rem] rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors">
-                  {ownerObj.full}
+                  {ownerObj?.full_name || "Velg eier"}
                   <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
-                {OWNERS.map((o) => (
+                {profiles.map((p) => (
                   <DropdownMenuItem
-                    key={o.key}
-                    onSelect={() => setOwner(o.key)}
+                    key={p.id}
+                    onSelect={() => setOwner(p.id)}
                     className="cursor-pointer"
                   >
-                    {o.full}
+                    {p.full_name}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
