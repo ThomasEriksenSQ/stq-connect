@@ -108,8 +108,7 @@ function extractTitleAndCategory(subject: string, description: string | null) {
   };
   // Legacy: subject is a known category label
   if (CATEGORIES.some(c => c.label === normalizedSubject)) {
-    const descClean = cleanDescription(stripBracketOnly(description));
-    return { title: normalizedSubject, category: normalizedSubject, cleanDesc: descClean };
+    return { title: normalizedSubject, category: normalizedSubject, cleanDesc: "" };
   }
   // New format: category in description prefix
   const parsed = parseDescriptionCategory(description);
