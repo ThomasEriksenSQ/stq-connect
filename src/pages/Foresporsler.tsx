@@ -166,6 +166,26 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
             </div>
           </div>
 
+          {/* Avdeling — conditional */}
+          {hasMultipleLocations && (
+            <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+              <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Avdeling</label>
+              <select
+                value={avdeling}
+                onChange={(e) => {
+                  setAvdeling(e.target.value);
+                  if (e.target.value) setSted(e.target.value);
+                }}
+                className="mt-1 w-full h-9 rounded-lg border border-border bg-background px-3 text-[0.875rem] text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">Velg avdeling...</option>
+                {selectedCompany!.locations.map((loc) => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Sted */}
           <div>
             <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Sted</label>
