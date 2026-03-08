@@ -28,7 +28,7 @@ import { CATEGORIES as SIGNAL_CATEGORIES, getEffectiveSignal, extractCategory } 
 const CATEGORIES = [
   { label: "Behov nå", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200", selectedColor: "bg-emerald-500 text-white border-emerald-500" },
   { label: "Får fremtidig behov", badgeColor: "bg-blue-100 text-blue-800 border-blue-200", selectedColor: "bg-blue-500 text-white border-blue-500" },
-  { label: "Vil kanskje få behov", badgeColor: "bg-amber-100 text-amber-800 border-amber-200", selectedColor: "bg-amber-500 text-white border-amber-500" },
+  { label: "Får kanskje behov", badgeColor: "bg-amber-100 text-amber-800 border-amber-200", selectedColor: "bg-amber-500 text-white border-amber-500" },
   { label: "Ukjent om behov", badgeColor: "bg-gray-100 text-gray-600 border-gray-200", selectedColor: "bg-gray-400 text-white border-gray-400" },
   { label: "Ikke aktuelt", badgeColor: "bg-red-50 text-red-700 border-red-200", selectedColor: "bg-red-400 text-white border-red-400" },
 ] as const;
