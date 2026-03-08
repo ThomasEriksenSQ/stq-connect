@@ -82,9 +82,9 @@ export default function StacqPrisen() {
 
   const aktive = enriched.filter((r) => r.status === "Aktiv");
   const oppstart = enriched.filter((r) => r.status === "Oppstart");
-  const stacqTotal = aktive.reduce((s, r) => s + r.stacqPris * TIMER_PER_DAG, 0);
-  const oppstartTotal = oppstart.reduce((s, r) => s + r.stacqPris * TIMER_PER_DAG, 0);
-  const avgPris = aktive.length > 0 ? stacqTotal / aktive.length : 0;
+  const stacqTotalPerTime = aktive.reduce((s, r) => s + r.stacqPris, 0);
+  const oppstartTotalPerTime = oppstart.reduce((s, r) => s + r.stacqPris, 0);
+  const avgPrisPerTime = aktive.length > 0 ? stacqTotalPerTime / aktive.length : 0;
 
   const now = new Date();
   const workdayCount = (() => {
@@ -94,8 +94,7 @@ export default function StacqPrisen() {
     for (let d = 1; d <= dim; d++) { const dow = new Date(y, m, d).getDay(); if (dow !== 0 && dow !== 6) wd++; }
     return wd;
   })();
-  const monthlyTotal = stacqTotal * workdayCount;
-  const oppstartUtprisTotal = oppstart.reduce((s, r) => s + (r.utpris ?? 0), 0);
+  const monthlyTotal = stacqTotalPerTime * TIMER_PER_DAG * workdayCount;
 
   const chartData = useMemo(() => [
     ...SEED_HISTORY,
