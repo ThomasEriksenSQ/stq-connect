@@ -574,7 +574,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
 export default function Foresporsler() {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedRow, setSelectedRow] = useState<any>(null);
+  const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("aktive");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
   const [sort, setSort] = useState<{
