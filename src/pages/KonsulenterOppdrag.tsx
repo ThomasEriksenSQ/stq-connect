@@ -43,7 +43,7 @@ export default function KonsulenterOppdrag() {
   const stats = useMemo(() => {
     const aktive = enriched.filter((o: any) => o.status === "Aktiv");
     const oppstart = enriched.filter((o: any) => o.status === "Oppstart");
-    const totalDagspris = aktive.reduce((s: number, o: any) => s + (Number(o.utpris) || 0), 0);
+    const totalDagspris = aktive.reduce((s: number, o: any) => s + (Number(o.utpris) || 0) * TIMER_PER_DAG, 0);
     const avgMargin =
       aktive.length > 0
         ? aktive.reduce((s: number, o: any) => s + o.marginPct, 0) / aktive.length
