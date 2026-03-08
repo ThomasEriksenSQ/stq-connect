@@ -1,4 +1,4 @@
-import { differenceInDays } from "date-fns";
+
 
 export const CATEGORIES = [
   { label: "Behov nå", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
@@ -86,16 +86,9 @@ export function getEffectiveSignal(
   // 1. Check past activities (most recent first)
   const sortedActs = [...activities].sort((a, b) => b.created_at.localeCompare(a.created_at));
   for (const act of sortedActs) {
-    if (new Date(act.created_at) > now) continue; // skip future-dated activities
+    if (new Date(act.created_at) > now) continue;
     const cat = extractCategory(act.subject, act.description);
-    if (!cat) continue;
-    const ttl = SIGNAL_TTL[cat];
-    if (ttl === null) return cat; // never expires
-    if (ttl !== undefined) {
-      const daysSince = differenceInDays(now, new Date(act.created_at));
-      if (daysSince <= ttl) return cat;
-      // expired, keep looking
-    }
+    if (cat) return cat;
   }
 
   // 2. Fallback: future tasks (nearest due_date first)
