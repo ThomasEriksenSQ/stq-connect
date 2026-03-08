@@ -575,6 +575,7 @@ export default function Foresporsler() {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
+  const [sheetExpanded, setSheetExpanded] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("aktive");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
   const [sort, setSort] = useState<{

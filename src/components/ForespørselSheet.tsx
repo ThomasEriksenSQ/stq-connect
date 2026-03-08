@@ -75,9 +75,11 @@ function ScoreDot({ score }: { score: number }) {
 export function ForespørselSheet({
   row,
   onClose,
+  onExpandChange,
 }: {
   row: any;
   onClose: () => void;
+  onExpandChange?: (expanded: boolean) => void;
 }) {
   const queryClient = useQueryClient();
   const [editMode, setEditMode] = useState(false);
