@@ -692,6 +692,16 @@ function ForespørselSheet({
   const [kommentar, setKommentar] = useState("");
   const [sluttkunde, setSluttkunde] = useState("");
 
+  // Company/contact search state
+  const [selskapNavn, setSelskapNavn] = useState("");
+  const [selskapId, setSelskapId] = useState<string | null>(null);
+  const [companyResults, setCompanyResults] = useState<any[]>([]);
+  const [showSelskapDropdown, setShowSelskapDropdown] = useState(false);
+  const [kontakt, setKontakt] = useState("");
+  const [kontaktId, setKontaktId] = useState<string | null>(null);
+  const [showKontaktDropdown, setShowKontaktDropdown] = useState(false);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Linked consultants
   const { data: linkedKonsulenter = [], refetch: refetchLinked } = useQuery({
     queryKey: ["foresporsler-konsulenter", row?.id],
@@ -705,9 +715,38 @@ function ForespørselSheet({
     },
   });
 
+  // Contacts for selected company
+  const { data: companyContacts = [] } = useQuery({
+    queryKey: ["foresporsler-edit-kontakter", selskapId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("contacts")
+        .select("id, first_name, last_name, title")
+        .eq("company_id", selskapId!)
+        .order("first_name");
+      return data || [];
+    },
+    enabled: !!selskapId,
+  });
+
+  const filteredContacts = useMemo(() => {
+    if (!kontakt.trim()) return companyContacts;
+    const q = kontakt.toLowerCase();
+    return (companyContacts as any[]).filter(c =>
+      `${c.first_name} ${c.last_name}`.toLowerCase().includes(q)
+    );
+  }, [companyContacts, kontakt]);
+
   // Sync form when entering edit mode
   useEffect(() => {
     if (editMode && row) {
+      setSelskapNavn(row.selskap_navn || "");
+      setSelskapId(row.selskap_id || null);
+      setKontakt(row.contacts ? `${row.contacts.first_name} ${row.contacts.last_name}` : "");
+      setKontaktId(row.kontakt_id || null);
+      setCompanyResults([]);
+      setShowSelskapDropdown(false);
+      setShowKontaktDropdown(false);
       setSted(row.sted || "");
       setAvdeling(row.avdeling || "");
       setFristDato(row.frist_dato || "");
@@ -718,6 +757,34 @@ function ForespørselSheet({
       setTagInput("");
     }
   }, [editMode, row]);
+
+  const searchCompanies = (query: string) => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (query.length < 1) { setCompanyResults([]); return; }
+    searchTimer.current = setTimeout(async () => {
+      const { data } = await supabase
+        .from("companies")
+        .select("id, name, city, status")
+        .ilike("name", `%${query}%`)
+        .limit(8);
+      if (data) setCompanyResults(data);
+    }, 300);
+  };
+
+  const selectCompany = (c: any) => {
+    setSelskapNavn(c.name);
+    setSelskapId(c.id);
+    setSted(c.city?.split(",")[0]?.trim() || "");
+    setKontakt("");
+    setKontaktId(null);
+    setShowSelskapDropdown(false);
+    setCompanyResults([]);
+  };
+
+  const isPartner = companyResults.find(c => c.id === selskapId)?.status === "partner"
+    || row?.type === "VIA"
+    || row?.type === "via_partner"
+    || row?.type === "via_megler";
 
   const addTag = (tag: string) => {
     const t = tag.trim();
@@ -738,10 +805,13 @@ function ForespørselSheet({
     const { error } = await supabase
       .from("foresporsler")
       .update({
+        selskap_navn: selskapNavn || row.selskap_navn,
+        selskap_id: selskapId || row.selskap_id,
+        kontakt_id: kontaktId,
         sted: sted || null,
         avdeling: avdeling || null,
         frist_dato: fristDato || null,
-        type: type || null,
+        type: isPartner ? "VIA" : "DIR",
         teknologier,
         kommentar: kommentar || null,
         sluttkunde: sluttkunde || null,
@@ -820,10 +890,102 @@ function ForespørselSheet({
         {editMode ? (
           /* ─── EDIT MODE ─── */
           <div className="space-y-4">
+            {/* Selskap */}
+            <div>
+              <label className={LABEL}>Selskap</label>
+              <div className="relative mt-1">
+                <Input
+                  value={selskapNavn}
+                  onChange={(e) => {
+                    setSelskapNavn(e.target.value);
+                    setSelskapId(null);
+                    setShowSelskapDropdown(true);
+                    searchCompanies(e.target.value);
+                  }}
+                  onFocus={() => setShowSelskapDropdown(true)}
+                  placeholder="Søk etter selskap..."
+                  className="text-[0.875rem]"
+                />
+                {showSelskapDropdown && companyResults.length > 0 && (
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-md max-h-48 overflow-auto">
+                    {companyResults.map((c) => (
+                      <button key={c.id} onClick={() => selectCompany(c)}
+                        className="w-full text-left px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors">
+                        {c.name}
+                        {c.city && <span className="text-muted-foreground ml-2 text-[0.75rem]">{c.city}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Partner banner */}
+            {isPartner && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-600 border border-gray-200 px-2 py-0.5 text-[0.6875rem] font-semibold">
+                    Partner
+                  </span>
+                  <p className="text-[0.8125rem] text-amber-800">
+                    Forespørselen kom via en partner — hvem er sluttkunden?
+                  </p>
+                </div>
+                <div>
+                  <label className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-amber-700 block mb-1">SLUTTKUNDE</label>
+                  <Input
+                    value={sluttkunde}
+                    onChange={(e) => setSluttkunde(e.target.value)}
+                    placeholder="f.eks. Kongsberg Defence, Equinor..."
+                    className="h-10 rounded-lg bg-white"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Sted */}
             <div>
               <label className={LABEL}>Sted</label>
-              <Input value={sted} onChange={(e) => setSted(e.target.value)} className="mt-1 text-[0.875rem]" placeholder="f.eks. Oslo, Kongsberg" />
+              <Input value={sted} onChange={(e) => setSted(e.target.value)}
+                className="mt-1 text-[0.875rem]" placeholder="f.eks. Oslo, Kongsberg, Remote" />
+            </div>
+
+            {/* Kontaktperson */}
+            <div>
+              <label className={LABEL}>Kontaktperson</label>
+              <div className="relative mt-1">
+                {!selskapId ? (
+                  <Input disabled placeholder="Velg selskap først..."
+                    className="text-[0.875rem] opacity-50 cursor-not-allowed" />
+                ) : (
+                  <>
+                    <Input
+                      value={kontakt}
+                      onChange={(e) => { setKontakt(e.target.value); setKontaktId(null); setShowKontaktDropdown(true); }}
+                      onFocus={() => setShowKontaktDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowKontaktDropdown(false), 200)}
+                      placeholder="Søk etter kontaktperson..."
+                      className="text-[0.875rem]"
+                    />
+                    {showKontaktDropdown && !kontaktId && (
+                      <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-md max-h-[200px] overflow-y-auto">
+                        {filteredContacts.length === 0 ? (
+                          <p className="text-xs text-muted-foreground px-3 py-2.5 italic">Ingen kontakter på dette selskapet</p>
+                        ) : (
+                          (filteredContacts as any[]).map((c) => (
+                            <button key={c.id}
+                              onClick={() => { setKontakt(`${c.first_name} ${c.last_name}`); setKontaktId(c.id); setShowKontaktDropdown(false); }}
+                              className="w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors">
+                              <p className="text-[0.875rem] font-medium">{c.first_name} {c.last_name}</p>
+                              {c.title && <p className="text-xs text-muted-foreground">{c.title}</p>}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Avdeling */}
@@ -836,32 +998,6 @@ function ForespørselSheet({
             <div>
               <label className={LABEL}>Frist dato</label>
               <Input type="date" value={fristDato} onChange={(e) => setFristDato(e.target.value)} className="mt-1 text-[0.875rem]" />
-            </div>
-
-            {/* Type */}
-            <div>
-              <label className={LABEL}>Type</label>
-              <div className="flex gap-2 mt-1">
-                {["DIR", "VIA"].map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setType(t)}
-                    className={`h-8 px-4 text-[0.8125rem] rounded-lg border transition-colors ${
-                      type === t
-                        ? "bg-foreground text-background border-foreground font-medium"
-                        : "border-border text-muted-foreground hover:bg-secondary"
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Sluttkunde */}
-            <div>
-              <label className={LABEL}>Sluttkunde</label>
-              <Input value={sluttkunde} onChange={(e) => setSluttkunde(e.target.value)} className="mt-1 text-[0.875rem]" placeholder="f.eks. Kongsberg Defence, Equinor..." />
             </div>
 
             {/* Teknologier */}
