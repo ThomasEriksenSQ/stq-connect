@@ -30,6 +30,7 @@ const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-seco
 const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground font-medium`;
 
 const Contacts = () => {
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [signalFilter, setSignalFilter] = useState("all");
