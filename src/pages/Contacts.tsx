@@ -344,14 +344,6 @@ const Contacts = () => {
                       {contact.first_name} {contact.last_name}
                     </p>
                   </button>
-                  {/* COMPANY */}
-                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate flex items-center gap-1 text-left cursor-pointer">
-                    {companyName ? <><Building2 className="h-3 w-3 flex-shrink-0" />{companyName}</> : ""}
-                  </button>
-                  {/* TITLE */}
-                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate text-left cursor-pointer">
-                    {contact.title?.slice(0, 25) || ""}
-                  </button>
                   {/* SIGNAL - inline editable */}
                   <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
@@ -381,6 +373,14 @@ const Contacts = () => {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
+                  {/* COMPANY */}
+                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate flex items-center gap-1 text-left cursor-pointer">
+                    {companyName ? <><Building2 className="h-3 w-3 flex-shrink-0" />{companyName}</> : ""}
+                  </button>
+                  {/* TITLE */}
+                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate text-left cursor-pointer">
+                    {contact.title?.slice(0, 25) || ""}
+                  </button>
                   {/* TAGS */}
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                     <button
