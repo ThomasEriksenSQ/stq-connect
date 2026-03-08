@@ -33,7 +33,7 @@ const Contacts = () => {
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [signalFilter, setSignalFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "last_activity", dir: "desc" });
+  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "signal", dir: "asc" });
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const navigate = useNavigate();
