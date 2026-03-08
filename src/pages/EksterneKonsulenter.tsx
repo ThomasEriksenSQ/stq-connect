@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
-type TypeFilter = "Alle" | "freelance" | "partner" | "konsulenthus";
-type StatusFilter = "Alle" | "ledig" | "aktiv" | "utilgjengelig" | "utgått";
+type TypeFilter = "Alle" | "freelance" | "partner";
+type StatusFilter = "Alle" | "ledig" | "utilgjengelig";
 
 const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer";
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
@@ -19,18 +19,17 @@ const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground fo
 const TYPE_LABELS: Record<string, string> = {
   freelance: "Freelance",
   partner: "Partner",
-  konsulenthus: "Konsulenthus",
 };
 const STATUS_LABELS: Record<string, string> = {
-  ledig: "Ledig",
-  aktiv: "Aktiv",
-  utilgjengelig: "Utilgjengelig",
-  utgått: "Utgått",
+  ledig: "Tilgjengelig",
+  aktiv: "Tilgjengelig",
+  utilgjengelig: "Ikke ledig",
+  utgått: "Ikke ledig",
 };
 const STATUS_COLORS: Record<string, string> = {
   ledig: "bg-emerald-100 text-emerald-700",
-  aktiv: "bg-blue-100 text-blue-700",
-  utilgjengelig: "bg-amber-100 text-amber-700",
+  aktiv: "bg-emerald-100 text-emerald-700",
+  utilgjengelig: "bg-muted text-muted-foreground",
   utgått: "bg-muted text-muted-foreground",
 };
 
@@ -104,7 +103,13 @@ export default function EksterneKonsulenter() {
   const filtered = useMemo(() => {
     let items = rows;
     if (typeFilter !== "Alle") items = items.filter((r: any) => r.type === typeFilter);
-    if (statusFilter !== "Alle") items = items.filter((r: any) => r.status === statusFilter);
+    if (statusFilter !== "Alle") {
+      if (statusFilter === "ledig") {
+        items = items.filter((r: any) => r.status === "ledig" || r.status === "aktiv");
+      } else {
+        items = items.filter((r: any) => r.status === "utilgjengelig" || r.status === "utgått");
+      }
+    }
     if (search.trim()) {
       const q = search.toLowerCase();
       items = items.filter((r: any) => {
@@ -174,7 +179,7 @@ export default function EksterneKonsulenter() {
         <div className="flex items-center gap-2">
           <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-16 flex-shrink-0">Type</span>
           <div className="flex items-center gap-1.5">
-            {(["Alle", "freelance", "partner", "konsulenthus"] as TypeFilter[]).map(f => (
+            {(["Alle", "freelance", "partner"] as TypeFilter[]).map(f => (
               <button key={f} className={typeFilter === f ? CHIP_ON : CHIP_OFF} onClick={() => setTypeFilter(f)}>
                 {f === "Alle" ? "Alle" : TYPE_LABELS[f]}
               </button>
@@ -184,9 +189,9 @@ export default function EksterneKonsulenter() {
         <div className="flex items-center gap-2">
           <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-16 flex-shrink-0">Status</span>
           <div className="flex items-center gap-1.5">
-            {(["Alle", "ledig", "aktiv", "utilgjengelig", "utgått"] as StatusFilter[]).map(f => (
+            {(["Alle", "ledig", "utilgjengelig"] as StatusFilter[]).map(f => (
               <button key={f} className={statusFilter === f ? CHIP_ON : CHIP_OFF} onClick={() => setStatusFilter(f)}>
-                {f === "Alle" ? "Alle" : STATUS_LABELS[f]}
+                {f === "Alle" ? "Alle" : f === "ledig" ? "Tilgjengelig" : "Ikke ledig"}
               </button>
             ))}
           </div>
@@ -198,7 +203,7 @@ export default function EksterneKonsulenter() {
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
-              {["NAVN", "SELSKAP", "TYPE", "ROLLE", "TEKNOLOGIER", "STATUS", "TILGJ. FRA", "INNPRIS"].map(h => (
+              {["NAVN", "SELSKAP", "TYPE", "STATUS", "TEKNOLOGIER", "TILGJ. FRA"].map(h => (
                 <th key={h} className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground px-4 py-2.5 text-left">{h}</th>
               ))}
             </tr>
@@ -223,13 +228,16 @@ export default function EksterneKonsulenter() {
                     <span className={cn(
                       "rounded-full px-2.5 py-0.5 text-xs font-semibold",
                       row.type === "freelance" ? "bg-emerald-100 text-emerald-700" :
-                      row.type === "partner" ? "bg-violet-100 text-violet-700" :
-                      "bg-blue-100 text-blue-700"
+                      "bg-violet-100 text-violet-700"
                     )}>
                       {TYPE_LABELS[row.type] || row.type}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-[0.875rem]">{row.rolle || "—"}</td>
+                  <td className="px-4 py-3">
+                    <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_COLORS[row.status] || "bg-muted text-muted-foreground")}>
+                      {STATUS_LABELS[row.status] || row.status}
+                    </span>
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       {(row.teknologier || []).slice(0, 4).map((t: string) => (
@@ -240,16 +248,8 @@ export default function EksterneKonsulenter() {
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3">
-                    <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_COLORS[row.status] || "bg-muted text-muted-foreground")}>
-                      {STATUS_LABELS[row.status] || row.status}
-                    </span>
-                  </td>
                   <td className="px-4 py-3 text-[0.8125rem] text-muted-foreground">
                     {row.tilgjengelig_fra ? format(new Date(row.tilgjengelig_fra), "dd.MM.yyyy") : "—"}
-                  </td>
-                  <td className="px-4 py-3 text-[0.8125rem] font-medium">
-                    {row.innpris_time ? `kr ${Number(row.innpris_time).toLocaleString("nb-NO")}/t` : "—"}
                   </td>
                 </tr>
               );
