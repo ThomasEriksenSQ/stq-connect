@@ -1182,7 +1182,7 @@ function ActivityRow({
             </div>
           </div>
         ) : (
-          <div onClick={handleRowClick} className={cn("flex items-start gap-3", editable && "cursor-pointer")}>
+          <div onClick={handleRowClick} className={cn("group/row flex items-start gap-3", editable && "cursor-pointer")}>
             <div className="flex-1 min-w-0">
               {/* Title */}
               <span className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</span>
@@ -1191,8 +1191,8 @@ function ActivityRow({
               {confirmDelete && (
                 <div className="flex items-center gap-2 mt-1 text-[0.75rem] animate-in fade-in duration-150">
                   <span className="text-destructive">Slett denne aktiviteten?</span>
-                  <button onClick={() => { onDelete(activity.id); setConfirmDelete(false); }} className="text-destructive font-medium hover:underline">Ja, slett</button>
-                  <button onClick={() => setConfirmDelete(false)} className="text-muted-foreground hover:text-foreground">Avbryt</button>
+                  <button onClick={(e) => { e.stopPropagation(); onDelete(activity.id); setConfirmDelete(false); }} className="text-destructive font-medium hover:underline">Ja, slett</button>
+                  <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }} className="text-muted-foreground hover:text-foreground">Avbryt</button>
                 </div>
               )}
 
@@ -1213,16 +1213,26 @@ function ActivityRow({
               )}
             </div>
 
-            {/* Right side: Date + Category (same as task rows) */}
+            {/* Right side: Date + Category + Delete */}
             <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="text-[0.8125rem] text-muted-foreground">
-                    {format(d, "d. MMM yyyy", { locale: nb })}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
-              </Tooltip>
+              <div className="flex items-center gap-1">
+                {editable && !confirmDelete && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+                    className="opacity-0 group-hover/row:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive flex-shrink-0"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-[0.8125rem] text-muted-foreground">
+                      {format(d, "d. MMM yyyy", { locale: nb })}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
+                </Tooltip>
+              </div>
               {displayCategory && displayCategory !== displayTitle && <CategoryBadge label={displayCategory} />}
             </div>
           </div>
