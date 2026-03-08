@@ -702,7 +702,7 @@ export default function Foresporsler() {
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Kontakt</span>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Type</span>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Teknologier</span>
-            <SortHeader field="sendt_count" className="justify-end">Sendt</SortHeader>
+            <SortHeader field="sendt_count" className="justify-end">Sendt inn</SortHeader>
           </div>
           {/* Data rows */}
           <div className="divide-y divide-border">
