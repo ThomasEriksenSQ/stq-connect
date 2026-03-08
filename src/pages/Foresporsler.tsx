@@ -713,7 +713,7 @@ export default function Foresporsler() {
             return (
               <div
                 key={row.id}
-                onClick={() => setSelectedRow(row)}
+                onClick={() => setSelectedRowId(row.id)}
                 className="grid grid-cols-[90px_minmax(0,1.8fr)_80px_minmax(0,1.5fr)_90px] gap-3 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer"
               >
                 {/* Mottatt */}
