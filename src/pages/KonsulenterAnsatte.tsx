@@ -47,9 +47,13 @@ function AnsattModal({
 }) {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
+  const cvInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [tagInput, setTagInput] = useState("");
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [cvParsing, setCvParsing] = useState(false);
+  const [cvParsed, setCvParsed] = useState(false);
 
   const isCreate = !ansatt;
 
