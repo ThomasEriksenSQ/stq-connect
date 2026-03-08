@@ -224,14 +224,18 @@ const Companies = () => {
 
   const setSignalMutation = useMutation({
     mutationFn: async ({ companyId, label }: { companyId: string; label: string }) => {
-      const { error } = await supabase.from("activities").insert({
-        type: "note",
-        subject: label,
-        description: `[${label}]`,
-        company_id: companyId,
-        created_by: user?.id,
-      });
-      if (error) throw error;
+      const [actRes, catRes] = await Promise.all([
+        supabase.from("activities").insert({
+          type: "note",
+          subject: label,
+          description: `[${label}]`,
+          company_id: companyId,
+          created_by: user?.id,
+        }),
+        supabase.from("companies").update({ category: label }).eq("id", companyId),
+      ]);
+      if (actRes.error) throw actRes.error;
+      if (catRes.error) throw catRes.error;
     },
     onMutate: async ({ companyId, label }) => {
       queryClient.setQueryData(["companies-full"], (old: any[]) =>
