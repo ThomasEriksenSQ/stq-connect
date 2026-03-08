@@ -117,6 +117,7 @@ const OppfolgingerSection = () => {
   } else if (ownerFilter !== "all") {
     filtered = filtered.filter(t => t.assigned_to === ownerFilter || t.created_by === ownerFilter);
   }
+  console.log("TASKS after filter:", tasks.length, "filtered:", filtered.length, "user:", user?.id);
 
   // 3. Når filter
   const applyNaarFilter = (arr: typeof filtered, f: NaarFilter) => {
