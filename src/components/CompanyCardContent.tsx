@@ -131,7 +131,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
   const [newContactOpen, setNewContactOpen] = useState(false);
-  const [contactForm, setContactForm] = useState({ first_name: "", last_name: "", email: "", phone: "", title: "", linkedin: "" });
+  const [contactForm, setContactForm] = useState({ first_name: "", last_name: "", email: "", phone: "", title: "", linkedin: "", location: "" });
   const [editCompanyOpen, setEditCompanyOpen] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", org_number: "", city: "", website: "", linkedin: "", locations: [] as string[] });
   const [newLocation, setNewLocation] = useState("");
@@ -417,13 +417,14 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                       first_name: contactForm.first_name, last_name: contactForm.last_name,
                       email: contactForm.email || null, phone: contactForm.phone || null,
                       title: contactForm.title || null, linkedin: contactForm.linkedin || null,
+                      location: contactForm.location || null,
                       company_id: companyId, created_by: user?.id, owner_id: user?.id,
                     });
                     if (error) { toast.error("Kunne ikke opprette kontakt"); return; }
                     queryClient.invalidateQueries({ queryKey: ["company-contacts", companyId] });
                     queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
                     setNewContactOpen(false);
-                    setContactForm({ first_name: "", last_name: "", email: "", phone: "", title: "", linkedin: "" });
+                    setContactForm({ first_name: "", last_name: "", email: "", phone: "", title: "", linkedin: "", location: "" });
                     toast.success("Kontakt opprettet");
                   }} className="space-y-4 mt-3">
                     <div className="grid grid-cols-2 gap-3">
@@ -440,6 +441,26 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                       <Label className="text-label">Stilling</Label>
                       <Input value={contactForm.title} onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })} className="h-10 rounded-lg" />
                     </div>
+                    {(() => {
+                      const companyLocations = company?.city ? company.city.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
+                      if (companyLocations.length <= 1) return null;
+                      return (
+                        <div className="space-y-1.5">
+                          <Label className="text-label">Avdeling <span className="text-muted-foreground font-normal">(valgfritt)</span></Label>
+                          <Select value={contactForm.location} onValueChange={(v) => setContactForm({ ...contactForm, location: v === "__none__" ? "" : v })}>
+                            <SelectTrigger className="h-10 rounded-lg">
+                              {contactForm.location || "Ingen spesifikk avdeling"}
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">Ingen spesifikk avdeling</SelectItem>
+                              {companyLocations.map((loc: string) => (
+                                <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      );
+                    })()}
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
                         <Label className="text-label">E-post</Label>
