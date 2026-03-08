@@ -280,81 +280,91 @@ const OppfolgingerSection = () => {
       </div>
 
       {/* Task list */}
-      {visible.length === 0 && !showForfaltEmpty ? (
-        <div className="text-center py-12 text-muted-foreground">
-          Ingen oppfølginger å vise
-        </div>
-      ) : (
-        <>
-          {showForfaltEmpty && (
-            <p className="text-[0.9375rem] text-emerald-600 text-center py-4">
-              Ingen forfalne i dag 🎉
-            </p>
-          )}
+      {(() => {
+        const totalCount = visible.length;
+        const cappedVisible = showAll ? visible : visible.slice(0, 5);
+        const cappedWeekFallback = showAll ? weekFallback : weekFallback.slice(0, Math.max(0, 5 - cappedVisible.length));
 
-          {visible.length > 0 && (
-            <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-              {visible.map((task, i) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  isLast={i === visible.length - 1}
-                  profiles={profiles}
-                  signal={getContactSignal(task.contact_id)}
-                  fadingIds={fadingIds}
-                  onComplete={handleComplete}
-                  onChangeOwner={handleChangeOwner}
-                  onChangeSignal={handleChangeSignal}
-                  onPostpone={handlePostpone}
-                  navigate={navigate}
-                />
-              ))}
-            </div>
-          )}
-
-          {hiddenCount > 0 && (
-            <p className="text-center text-[0.8125rem] text-muted-foreground py-2">
-              + {hiddenCount} oppfølginger til — bruk filter for å avgrense
-            </p>
-          )}
-
-          {/* Week fallback */}
-          {showForfaltEmpty && weekFallback.length > 0 && (
-            <>
-              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mt-4">Denne uken</p>
-              <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-                {weekFallback.map((task, i) => (
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    isLast={i === weekFallback.length - 1}
-                    profiles={profiles}
-                    signal={getContactSignal(task.contact_id)}
-                    fadingIds={fadingIds}
-                    onComplete={handleComplete}
-                    onChangeOwner={handleChangeOwner}
-                    onChangeSignal={handleChangeSignal}
-                    onPostpone={handlePostpone}
-                    navigate={navigate}
-                  />
-                ))}
+        return (
+          <>
+            {cappedVisible.length === 0 && !showForfaltEmpty ? (
+              <div className="text-center py-12 text-muted-foreground">
+                Ingen oppfølginger å vise
               </div>
-            </>
-          )}
+            ) : (
+              <>
+                {showForfaltEmpty && (
+                  <p className="text-[0.9375rem] text-emerald-600 text-center py-4">
+                    Ingen forfalne i dag 🎉
+                  </p>
+                )}
 
-          {showForfaltEmpty && weekFallback.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              Ingen oppfølginger å vise 🎉
-            </div>
-          )}
-        </>
-      )}
+                {cappedVisible.length > 0 && (
+                  <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+                    {cappedVisible.map((task, i) => (
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        isLast={i === cappedVisible.length - 1}
+                        profiles={profiles}
+                        signal={getContactSignal(task.contact_id)}
+                        fadingIds={fadingIds}
+                        onComplete={handleComplete}
+                        onChangeOwner={handleChangeOwner}
+                        onChangeSignal={handleChangeSignal}
+                        onPostpone={handlePostpone}
+                      />
+                    ))}
+                  </div>
+                )}
 
-      <div className="flex justify-center">
-        <button onClick={() => navigate("/oppfolginger")} className="text-[0.8125rem] text-primary hover:underline">
-          Vis alle oppfølginger →
-        </button>
-      </div>
+                {hiddenCount > 0 && (
+                  <p className="text-center text-[0.8125rem] text-muted-foreground py-2">
+                    + {hiddenCount} oppfølginger til — bruk filter for å avgrense
+                  </p>
+                )}
+
+                {/* Week fallback */}
+                {showForfaltEmpty && cappedWeekFallback.length > 0 && (
+                  <>
+                    <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mt-4">Denne uken</p>
+                    <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+                      {cappedWeekFallback.map((task, i) => (
+                        <TaskRow
+                          key={task.id}
+                          task={task}
+                          isLast={i === cappedWeekFallback.length - 1}
+                          profiles={profiles}
+                          signal={getContactSignal(task.contact_id)}
+                          fadingIds={fadingIds}
+                          onComplete={handleComplete}
+                          onChangeOwner={handleChangeOwner}
+                          onChangeSignal={handleChangeSignal}
+                          onPostpone={handlePostpone}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {showForfaltEmpty && weekFallback.length === 0 && (
+                  <div className="text-center py-12 text-muted-foreground">
+                    Ingen oppfølginger å vise 🎉
+                  </div>
+                )}
+              </>
+            )}
+
+            {!showAll && (totalCount > 5 || (showForfaltEmpty && weekFallback.length > 5)) && (
+              <div className="flex justify-center">
+                <button onClick={() => setShowAll(true)} className="text-[0.8125rem] text-primary hover:underline">
+                  Vis alle oppfølginger ({totalCount + (showForfaltEmpty ? weekFallback.length : 0)}) →
+                </button>
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {/* Follow-up modal */}
       <FollowUpModal
