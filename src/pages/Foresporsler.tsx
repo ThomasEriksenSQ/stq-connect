@@ -1406,15 +1406,6 @@ export default function Foresporsler() {
                 </span>
                 {/* Type */}
                 <TypeBadge type={row.type} />
-                {/* Frist */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className={cn("text-[0.8125rem] font-medium", URGENCY_COLOR[dl.urgency])}>
-                      {dl.text}
-                    </span>
-                  </TooltipTrigger>
-                  {dl.tooltip && <TooltipContent>{dl.tooltip}</TooltipContent>}
-                </Tooltip>
                 {/* Teknologier */}
                 <div className="flex items-center gap-1 flex-wrap">
                   {(row.teknologier || []).slice(0, 3).map((t: string) => (
