@@ -405,8 +405,8 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             {editable && (
               <Dialog open={newContactOpen} onOpenChange={setNewContactOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg flex items-center gap-2 text-sm">
-                    <Plus className="h-4 w-4" />Ny kontakt
+                  <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium h-9 px-3.5 rounded-lg flex items-center gap-1.5 text-[0.8125rem]">
+                    <Plus className="h-3.5 w-3.5" />Ny kontakt
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[440px] rounded-xl">
