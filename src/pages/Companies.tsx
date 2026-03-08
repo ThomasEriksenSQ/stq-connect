@@ -108,18 +108,17 @@ const Companies = () => {
       if (error) throw error;
 
       const companyIds = data.map(c => c.id);
+      const companyIdSet = new Set(companyIds);
       // Get contact IDs for each company
       const contactIds = data.flatMap(c => (c.contacts || []).map((ct: any) => ct.id));
+      const contactIdSet = new Set(contactIds);
 
+      // Fetch ALL activities/tasks without .in() to avoid URL length limits (400 errors)
       const [actRes, taskRes, contactActRes, contactTaskRes] = await Promise.all([
-        supabase.from("activities").select("company_id, created_at, subject, description").in("company_id", companyIds).order("created_at", { ascending: false }),
-        supabase.from("tasks").select("company_id, due_date, title, description, status, created_at").in("company_id", companyIds).neq("status", "done"),
-        contactIds.length > 0
-          ? supabase.from("activities").select("contact_id, created_at, subject, description").in("contact_id", contactIds).order("created_at", { ascending: false })
-          : Promise.resolve({ data: [] }),
-        contactIds.length > 0
-          ? supabase.from("tasks").select("contact_id, due_date, title, description, status, created_at").in("contact_id", contactIds).neq("status", "done")
-          : Promise.resolve({ data: [] }),
+        supabase.from("activities").select("company_id, created_at, subject, description").not("company_id", "is", null).order("created_at", { ascending: false }).limit(2000),
+        supabase.from("tasks").select("company_id, due_date, title, description, status, created_at").not("company_id", "is", null).neq("status", "done").limit(2000),
+        supabase.from("activities").select("contact_id, created_at, subject, description").not("contact_id", "is", null).order("created_at", { ascending: false }).limit(2000),
+        supabase.from("tasks").select("contact_id, due_date, title, description, status, created_at").not("contact_id", "is", null).neq("status", "done").limit(2000),
       ]);
 
       // Build contact→company map
@@ -146,7 +145,7 @@ const Companies = () => {
       }
 
       (actRes.data || []).forEach(a => {
-        if (!a.company_id) return;
+        if (!a.company_id || !companyIdSet.has(a.company_id)) return;
         if (isPast(a.created_at) && !lastActivityMap[a.company_id]) lastActivityMap[a.company_id] = a.created_at;
         addAct(a.company_id, a);
       });
@@ -159,7 +158,7 @@ const Companies = () => {
       });
 
       (taskRes.data || []).forEach(t => {
-        if (!t.company_id) return;
+        if (!t.company_id || !companyIdSet.has(t.company_id)) return;
         taskCountMap[t.company_id] = (taskCountMap[t.company_id] || 0) + 1;
         if (t.due_date && new Date(t.due_date) < new Date()) overdueTaskMap[t.company_id] = true;
         addTask(t.company_id, t);
