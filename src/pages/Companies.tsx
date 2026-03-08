@@ -297,7 +297,7 @@ const Companies = () => {
         const bi = SIGNAL_ORDER.indexOf(b.signal as any || "");
         return dir * ((ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi));
       }
-      case "contacts": return dir * ((a.contacts?.length || 0) - (b.contacts?.length || 0));
+      case "city": return dir * (a.city || "").localeCompare(b.city || "", "nb");
       case "last_activity":
         if (!a.lastActivity && !b.lastActivity) return 0;
         if (!a.lastActivity) return 1;
