@@ -48,11 +48,23 @@ export default function KonsulenterOppdrag() {
       aktive.length > 0
         ? aktive.reduce((s: number, o: any) => s + o.marginPct, 0) / aktive.length
         : 0;
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth();
+    const dim = new Date(y, m + 1, 0).getDate();
+    let workdays = 0;
+    for (let d = 1; d <= dim; d++) { const dow = new Date(y, m, d).getDay(); if (dow !== 0 && dow !== 6) workdays++; }
+    const stacqPerDag = aktive.reduce((s: number, o: any) => s + o.margin, 0);
+    const stacqMonthly = stacqPerDag * workdays;
+    const oppstartUtpris = oppstart.reduce((s: number, o: any) => s + (Number(o.utpris) || 0), 0);
     return {
       aktive: aktive.length,
       oppstart: oppstart.length,
       totalDagspris,
       avgMargin,
+      stacqMonthly,
+      workdays,
+      monthLabel: format(now, "MMMM yyyy"),
+      oppstartUtpris,
     };
   }, [enriched]);
 
