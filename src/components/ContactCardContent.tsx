@@ -222,7 +222,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
-        .select("*, companies(id, name), profiles!contacts_owner_id_fkey(full_name)")
+        .select("*, companies(id, name, city), profiles!contacts_owner_id_fkey(full_name)")
         .eq("id", contactId).single();
       if (error) throw error;
       return data;
