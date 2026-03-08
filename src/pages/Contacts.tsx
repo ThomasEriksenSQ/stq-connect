@@ -265,7 +265,11 @@ const Contacts = () => {
           <Input placeholder="Søk..." value={search} onChange={(e) => setSearch(e.target.value)}
             className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border" />
         </div>
-        <span className="text-[0.75rem] text-muted-foreground ml-auto">{filtered.length} kontakter</span>
+        <span className="text-[0.75rem] text-muted-foreground ml-auto">
+          {filtered.length === contacts.length
+            ? `${totalCount}${capped ? "+" : ""} kontakter`
+            : `${filtered.length} kontakter`}
+        </span>
       </div>
 
       {/* Chip filters */}
