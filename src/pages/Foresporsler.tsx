@@ -86,13 +86,13 @@ const URGENCY_COLOR: Record<Urgency, string> = {
 
 function TypeBadge({ type }: { type: string | null }) {
   if (type === "DIR" || type === "direktekunde") return (
-    <span className="inline-flex items-center rounded-full bg-foreground text-background px-2.5 py-0.5 text-[0.6875rem] font-semibold">DIR</span>
+    <span className="inline-flex items-center rounded-full bg-blue-600 text-white px-2.5 py-0.5 text-[0.6875rem] font-semibold">Direkte</span>
   );
   if (type === "VIA" || type === "via_partner") return (
-    <span className="inline-flex items-center rounded-full bg-violet-100 text-violet-800 border border-violet-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Partner</span>
+    <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Partner</span>
   );
   if (type === "via_megler") return (
-    <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Megler</span>
+    <span className="inline-flex items-center rounded-full bg-violet-600 text-white px-2.5 py-0.5 text-[0.6875rem] font-semibold">Megler</span>
   );
   return <span className="text-[0.8125rem] text-muted-foreground">—</span>;
 }
