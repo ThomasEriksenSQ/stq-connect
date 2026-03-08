@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { cn, formatNOK, getInitials } from "@/lib/utils";
 import { format, differenceInDays } from "date-fns";
 import { Briefcase, CalendarCheck, TrendingUp, BarChart2 } from "lucide-react";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { OppdragEditSheet } from "@/components/OppdragEditSheet";
 
 type Filter = "Alle" | "Aktiv" | "Oppstart" | "Inaktiv";
 const TIMER_PER_DAG = 7.5;
