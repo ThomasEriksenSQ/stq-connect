@@ -394,6 +394,45 @@ export type Database = {
         }
         Relationships: []
       }
+      stacq_ansatte: {
+        Row: {
+          ansatt_id: number | null
+          created_at: string | null
+          epost: string | null
+          id: number
+          kommentar: string | null
+          navn: string
+          slutt_dato: string | null
+          start_dato: string | null
+          status: string | null
+          tlf: string | null
+        }
+        Insert: {
+          ansatt_id?: number | null
+          created_at?: string | null
+          epost?: string | null
+          id?: number
+          kommentar?: string | null
+          navn: string
+          slutt_dato?: string | null
+          start_dato?: string | null
+          status?: string | null
+          tlf?: string | null
+        }
+        Update: {
+          ansatt_id?: number | null
+          created_at?: string | null
+          epost?: string | null
+          id?: number
+          kommentar?: string | null
+          navn?: string
+          slutt_dato?: string | null
+          start_dato?: string | null
+          status?: string | null
+          tlf?: string | null
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           assigned_to: string | null
