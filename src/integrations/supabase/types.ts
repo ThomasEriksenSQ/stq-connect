@@ -259,6 +259,84 @@ export type Database = {
           },
         ]
       }
+      external_consultants: {
+        Row: {
+          company_id: string | null
+          contact_id: string | null
+          created_at: string
+          cv_url: string | null
+          erfaring_aar: number | null
+          id: string
+          innpris_time: number | null
+          kapasitet_prosent: number | null
+          notat: string | null
+          rolle: string | null
+          status: string
+          teknologier: string[] | null
+          tilgjengelig_fra: string | null
+          tilgjengelig_til: string | null
+          type: string
+          updated_at: string
+          utpris_time: number | null
+          valuta: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          cv_url?: string | null
+          erfaring_aar?: number | null
+          id?: string
+          innpris_time?: number | null
+          kapasitet_prosent?: number | null
+          notat?: string | null
+          rolle?: string | null
+          status?: string
+          teknologier?: string[] | null
+          tilgjengelig_fra?: string | null
+          tilgjengelig_til?: string | null
+          type?: string
+          updated_at?: string
+          utpris_time?: number | null
+          valuta?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          cv_url?: string | null
+          erfaring_aar?: number | null
+          id?: string
+          innpris_time?: number | null
+          kapasitet_prosent?: number | null
+          notat?: string | null
+          rolle?: string | null
+          status?: string
+          teknologier?: string[] | null
+          tilgjengelig_fra?: string | null
+          tilgjengelig_til?: string | null
+          type?: string
+          updated_at?: string
+          utpris_time?: number | null
+          valuta?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_consultants_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "external_consultants_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       foresporsler: {
         Row: {
           avdeling: string | null
