@@ -271,14 +271,18 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
 
   const changeSignalMutation = useMutation({
     mutationFn: async (newSignal: string) => {
-      const { error } = await supabase.from("activities").insert({
-        subject: newSignal,
-        type: "note",
-        company_id: companyId,
-        created_by: user?.id,
-        description: `[${newSignal}]`,
-      });
-      if (error) throw error;
+      const [actRes, catRes] = await Promise.all([
+        supabase.from("activities").insert({
+          subject: newSignal,
+          type: "note",
+          company_id: companyId,
+          created_by: user?.id,
+          description: `[${newSignal}]`,
+        }),
+        supabase.from("companies").update({ category: newSignal }).eq("id", companyId),
+      ]);
+      if (actRes.error) throw actRes.error;
+      if (catRes.error) throw catRes.error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company-activities-direct", companyId] });
