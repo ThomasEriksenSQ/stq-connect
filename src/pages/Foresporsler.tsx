@@ -426,7 +426,7 @@ function ForespørselSheet({
   const [avdeling, setAvdeling] = useState("");
   const [fristDato, setFristDato] = useState("");
   const [type, setType] = useState("");
-  const [referanse, setReferanse] = useState("");
+  
   const [teknologier, setTeknologier] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [antallSendt, setAntallSendt] = useState("");
