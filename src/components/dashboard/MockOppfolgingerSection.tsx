@@ -141,6 +141,36 @@ const MockOppfolgingerSection = () => {
     );
   };
 
+  const postponeRow = (id: string, newDate: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(newDate);
+    target.setHours(0, 0, 0, 0);
+    const diffMs = target.getTime() - today.getTime();
+    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+    let due: string;
+    let dueType: MockRow["dueType"];
+    if (diffDays < 0) {
+      due = `Forfalt ${Math.abs(diffDays)} dager`;
+      dueType = "overdue";
+    } else if (diffDays === 0) {
+      due = "I dag";
+      dueType = "today";
+    } else {
+      due = `Om ${diffDays} dager`;
+      dueType = "future";
+    }
+
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id === id
+          ? { ...r, due, dueType, fullDate: format(newDate, "dd.MM.yyyy"), accent: dueType === "overdue" ? "destructive" : "none" }
+          : r
+      )
+    );
+  };
+
   const handleCheckbox = (row: MockRow) => {
     // Start fade animation
     setCompletingId(row.id);
