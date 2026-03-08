@@ -361,9 +361,10 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             )}
             {editable ? (
               <Select value={company.owner_id || ""} onValueChange={(v) => updateMutation.mutate({ owner_id: v || null })}>
-                <SelectTrigger className="h-auto w-auto gap-1 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0">
+                <SelectTrigger className="h-auto w-auto gap-0 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0 [&>svg]:hidden">
                   <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
                     {company.owner_id && profileMapFull[company.owner_id] ? profileMapFull[company.owner_id] : "Eier"}
+                    <ChevronDown className="h-3 w-3 ml-1" />
                   </span>
                 </SelectTrigger>
                 <SelectContent>
