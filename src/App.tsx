@@ -90,6 +90,13 @@ const App = () => (
                   }
                 />
                 <Route
+                  path="konsulenter/eksterne"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <EksterneKonsulenter />
+                    </Suspense>
+                  }
+                <Route
                   path="stacq/prisen"
                   element={
                     <Suspense fallback={<LazyFallback />}>
