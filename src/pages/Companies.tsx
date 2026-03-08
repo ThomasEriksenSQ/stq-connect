@@ -180,7 +180,7 @@ const Companies = () => {
           (companyActsMap[c.id] || []).map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
           (companyTasksMap[c.id] || []).map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date })),
         );
-        if (sig) signalMap[c.id] = sig;
+        signalMap[c.id] = sig || (c as any).category || "";
       }
 
       return data.map(c => ({
