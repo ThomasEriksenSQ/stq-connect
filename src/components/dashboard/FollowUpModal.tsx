@@ -64,6 +64,7 @@ const CHIP_ON = `${CHIP_BASE} bg-primary/10 border-primary/30 text-primary font-
 const FollowUpModal = ({ open, onCancel, onClose, onSubmit, data }: Props) => {
   const [title, setTitle] = useState("");
   const [selectedDate, setSelectedDate] = useState<string>("+1 uke");
+  const [customDate, setCustomDate] = useState<Date | undefined>(undefined);
   const [owner, setOwner] = useState("Thomas");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggested, setAiSuggested] = useState(false);
