@@ -432,6 +432,31 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
             </div>
           </div>
 
+          {/* Sluttkunde — conditional for Partner */}
+          {isPartner && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 space-y-2">
+              <div className="flex items-center gap-1.5">
+                <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-600 border border-gray-200 px-2 py-0.5 text-[0.6875rem] font-semibold">
+                  Partner
+                </span>
+                <p className="text-[0.8125rem] text-amber-800">
+                  Forespørselen kom via en partner — hvem er sluttkunden?
+                </p>
+              </div>
+              <div>
+                <label className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-amber-700 block mb-1">
+                  SLUTTKUNDE
+                </label>
+                <Input
+                  value={sluttkunde}
+                  onChange={(e) => setSluttkunde(e.target.value)}
+                  placeholder="f.eks. Kongsberg Defence, Equinor..."
+                  className="h-10 rounded-lg bg-white"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Avdeling — conditional */}
           {hasMultipleLocations && (
             <div className="animate-in fade-in slide-in-from-top-1 duration-200">
