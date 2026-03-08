@@ -930,8 +930,12 @@ function AddKonsulentCombobox({
       const { data } = await supabase
         .from("external_consultants")
         .select("id, navn, teknologier, type, status")
-        .order("navn");
-      return data || [];
+        .order("created_at", { ascending: true });
+      // Deduplicate by navn
+      const unique = (data || []).filter((c: any, i: number, arr: any[]) =>
+        arr.findIndex((x: any) => x.navn === c.navn) === i
+      );
+      return unique;
     },
   });
 
@@ -980,7 +984,7 @@ function AddKonsulentCombobox({
           autoFocus
         />
 
-        <div className="space-y-0.5 max-h-[240px] overflow-y-auto">
+        <div className="space-y-0.5 max-h-[280px] overflow-y-auto">
           {subTab === "ansatte" ? (
             filteredAnsatte.length === 0 ? (
               <p className="text-[0.8125rem] text-muted-foreground px-2 py-2">Ingen treff</p>
