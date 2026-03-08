@@ -36,6 +36,7 @@ const QUICK_ACTIONS = [
   { icon: Search, label: "Match konsulent", sub: "Finn beste kandidat til oppdrag", action: "match" as const },
   { icon: Mail, label: "Skriv oppfølgings-epost", sub: "Basert på siste aktivitet", action: "epost" as const },
   { icon: BarChart3, label: "Ukesoppsummering", sub: "Pipeline og aktivitet denne uken", action: "ukesoppsummering" as const },
+  { icon: Upload, label: "Last opp CV", sub: "Registrer konsulent automatisk", action: "cv-upload" as const },
 ];
 
 const CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors cursor-pointer select-none";
