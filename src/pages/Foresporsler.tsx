@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { getInitials } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +15,11 @@ import {
   Sheet,
   SheetContent,
 } from "@/components/ui/sheet";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { format, differenceInDays } from "date-fns";
 import { nb } from "date-fns/locale";
@@ -77,6 +83,76 @@ function DeleteButton({ onConfirm }: { onConfirm: () => void }) {
         Avbryt
       </button>
     </div>
+  );
+}
+
+/* ─── Add Konsulent Combobox ─── */
+
+function AddKonsulentCombobox({
+  foresporslerID,
+  alreadyLinked,
+  onAdd,
+}: {
+  foresporslerID: number;
+  alreadyLinked: number[];
+  onAdd: (ansattId: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const { data: ansatte = [] } = useQuery({
+    queryKey: ["stacq-ansatte-aktive"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("stacq_ansatte")
+        .select("id, navn, status")
+        .in("status", ["AKTIV/SIGNERT"])
+        .order("navn");
+      return data || [];
+    },
+  });
+
+  const filtered = ansatte
+    .filter((a: any) => !alreadyLinked.includes(a.id))
+    .filter((a: any) => a.navn.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button className="flex items-center gap-1.5 text-[0.8125rem] text-primary hover:underline">
+          <Plus className="h-3.5 w-3.5" />
+          Legg til konsulent
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[280px] p-2" align="start">
+        <Input
+          placeholder="Søk konsulent..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-8 text-sm mb-2"
+          autoFocus
+        />
+        <div className="space-y-0.5 max-h-[200px] overflow-y-auto">
+          {filtered.map((a: any) => (
+            <button
+              key={a.id}
+              onClick={() => { onAdd(a.id); setOpen(false); setSearch(""); }}
+              className="w-full text-left px-2 py-1.5 rounded hover:bg-muted text-[0.875rem] flex items-center gap-2"
+            >
+              <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[0.625rem] font-semibold text-primary shrink-0">
+                {getInitials(a.navn)}
+              </div>
+              {a.navn}
+            </button>
+          ))}
+          {filtered.length === 0 && (
+            <p className="text-[0.8125rem] text-muted-foreground px-2 py-2">
+              Ingen treff
+            </p>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -426,12 +502,22 @@ function ForespørselSheet({
   const [avdeling, setAvdeling] = useState("");
   const [fristDato, setFristDato] = useState("");
   const [type, setType] = useState("");
-  
   const [teknologier, setTeknologier] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
-  const [antallSendt, setAntallSendt] = useState("");
-  const [hvemSendt, setHvemSendt] = useState("");
   const [kommentar, setKommentar] = useState("");
+
+  // Linked consultants
+  const { data: linkedKonsulenter = [], refetch: refetchLinked } = useQuery({
+    queryKey: ["foresporsler-konsulenter", row?.id],
+    enabled: !!row?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("foresporsler_konsulenter")
+        .select("id, ansatt_id, stacq_ansatte(id, navn)")
+        .eq("foresporsler_id", row.id);
+      return data || [];
+    },
+  });
 
   // Sync form when entering edit mode
   useEffect(() => {
@@ -440,10 +526,7 @@ function ForespørselSheet({
       setAvdeling(row.avdeling || "");
       setFristDato(row.frist_dato || "");
       setType(row.type || "DIR");
-      
       setTeknologier(row.teknologier || []);
-      setAntallSendt(String(row.antall_sendt ?? 0));
-      setHvemSendt(row.hvem_sendt || "");
       setKommentar(row.kommentar || "");
       setTagInput("");
     }
@@ -472,10 +555,7 @@ function ForespørselSheet({
         avdeling: avdeling || null,
         frist_dato: fristDato || null,
         type: type || null,
-        
         teknologier,
-        antall_sendt: parseInt(antallSendt) || 0,
-        hvem_sendt: hvemSendt || null,
         kommentar: kommentar || null,
         updated_at: new Date().toISOString(),
       })
@@ -500,6 +580,21 @@ function ForespørselSheet({
     toast.success("Forespørsel slettet");
     queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
     onClose();
+  };
+
+  const handleAddKonsulent = async (ansattId: number) => {
+    await supabase.from("foresporsler_konsulenter").insert({
+      foresporsler_id: row.id,
+      ansatt_id: ansattId,
+    });
+    queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
+    queryClient.invalidateQueries({ queryKey: ["foresporsler-konsulenter", row.id] });
+  };
+
+  const handleRemoveKonsulent = async (linkId: string) => {
+    await supabase.from("foresporsler_konsulenter").delete().eq("id", linkId);
+    queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
+    queryClient.invalidateQueries({ queryKey: ["foresporsler-konsulenter", row.id] });
   };
 
   if (!row) return null;
@@ -604,18 +699,6 @@ function ForespørselSheet({
               </div>
             </div>
 
-            {/* Antall sendt */}
-            <div>
-              <label className={LABEL}>Antall sendt</label>
-              <Input type="number" min={0} value={antallSendt} onChange={(e) => setAntallSendt(e.target.value)} className="mt-1 text-[0.875rem] w-24" />
-            </div>
-
-            {/* Hvem sendt */}
-            <div>
-              <label className={LABEL}>Hvem sendt</label>
-              <Input value={hvemSendt} onChange={(e) => setHvemSendt(e.target.value)} className="mt-1 text-[0.875rem]" placeholder="f.eks. Christian, Rikke" />
-            </div>
-
             {/* Kommentar */}
             <div>
               <label className={LABEL}>Kommentar</label>
@@ -669,14 +752,41 @@ function ForespørselSheet({
               </div>
             </div>
 
-            {/* Sendt inn */}
+            {/* Sendt inn — consultant linking */}
             <div>
-              <p className={LABEL}>Sendt inn</p>
-              <p className="text-[0.875rem] text-foreground mt-1">
-                {(row.antall_sendt ?? 0) === 0
-                  ? <span className="text-muted-foreground">Ikke sendt ennå</span>
-                  : `${row.antall_sendt}${row.hvem_sendt ? ` — ${row.hvem_sendt}` : ""}`}
-              </p>
+              <p className={`${LABEL} mb-2`}>Sendt inn</p>
+
+              <div className="space-y-1.5 mb-3">
+                {linkedKonsulenter.length === 0 && (
+                  <p className="text-[0.8125rem] text-amber-600">
+                    Ikke sendt til noen ennå
+                  </p>
+                )}
+                {linkedKonsulenter.map((k: any) => (
+                  <div key={k.id} className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[0.6875rem] font-semibold text-primary">
+                        {getInitials(k.stacq_ansatte?.navn || "")}
+                      </div>
+                      <span className="text-[0.875rem] font-medium">
+                        {k.stacq_ansatte?.navn || "Ukjent"}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveKonsulent(k.id)}
+                      className="text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <AddKonsulentCombobox
+                foresporslerID={row.id}
+                alreadyLinked={linkedKonsulenter.map((k: any) => k.ansatt_id)}
+                onAdd={handleAddKonsulent}
+              />
             </div>
 
             {/* Kommentar */}
@@ -726,7 +836,7 @@ export default function Foresporsler() {
   const [selectedRow, setSelectedRow] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("aktive");
   const [sort, setSort] = useState<{
-    field: "mottatt_dato" | "selskap_navn" | "antall_sendt";
+    field: "mottatt_dato" | "selskap_navn" | "sendt_count";
     dir: "asc" | "desc";
   }>({ field: "mottatt_dato", dir: "desc" });
 
@@ -743,7 +853,7 @@ export default function Foresporsler() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("foresporsler")
-        .select("*, contacts(id, first_name, last_name)")
+        .select("*, contacts(id, first_name, last_name), foresporsler_konsulenter(id, stacq_ansatte(navn))")
         .order("mottatt_dato", { ascending: false });
       if (error) throw error;
       return data;
@@ -752,7 +862,7 @@ export default function Foresporsler() {
 
   const filtered = useMemo(() => {
     if (!rows) return [];
-    return rows.filter((r) => {
+    return rows.filter((r: any) => {
       const days = getDaysAgo(r.mottatt_dato);
       if (statusFilter === "aktive") return days <= 45;
       if (statusFilter === "utgatte") return days > 45;
@@ -761,15 +871,15 @@ export default function Foresporsler() {
   }, [rows, statusFilter]);
 
   const sorted = useMemo(() => {
-    return [...filtered].sort((a, b) => {
+    return [...filtered].sort((a: any, b: any) => {
       const dir = sort.dir === "asc" ? 1 : -1;
       switch (sort.field) {
         case "mottatt_dato":
           return dir * (a.mottatt_dato || "").localeCompare(b.mottatt_dato || "");
         case "selskap_navn":
           return dir * (a.selskap_navn || "").localeCompare(b.selskap_navn || "", "nb");
-        case "antall_sendt":
-          return dir * ((a.antall_sendt || 0) - (b.antall_sendt || 0));
+        case "sendt_count":
+          return dir * ((a.foresporsler_konsulenter?.length || 0) - (b.foresporsler_konsulenter?.length || 0));
         default: return 0;
       }
     });
@@ -824,14 +934,17 @@ export default function Foresporsler() {
             <SortHeader field="selskap_navn">Selskap</SortHeader>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Sted</span>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Teknologier</span>
-            <SortHeader field="antall_sendt" className="justify-end">Sendt inn</SortHeader>
+            <SortHeader field="sendt_count" className="justify-end">Sendt inn</SortHeader>
           </div>
           {/* Data rows */}
           <div className="divide-y divide-border">
-          {sorted.map((row) => {
+          {sorted.map((row: any) => {
             const days = getDaysAgo(row.mottatt_dato);
             const isActive = row.status === "Ny" || row.status === "Aktiv";
-            const isNew = isActive && (row.antall_sendt ?? 0) === 0;
+            const sendt = row.foresporsler_konsulenter || [];
+            const antall = sendt.length;
+            const hvem = sendt.map((k: any) => k.stacq_ansatte?.navn?.split(" ")[0]).filter(Boolean).join(", ");
+            const isNew = isActive && antall === 0;
             const isAging = isActive && days > 21;
 
             return (
@@ -869,16 +982,16 @@ export default function Foresporsler() {
                 </div>
                 {/* Sendt inn */}
                 <div className="flex justify-end">
-                  {(row.antall_sendt ?? 0) === 0 ? (
+                  {antall === 0 ? (
                     <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.75rem] font-semibold">
                       0 sendt
                     </span>
                   ) : (
                     <span className="text-[0.8125rem] font-semibold text-foreground">
-                      {row.antall_sendt}
-                      {row.hvem_sendt && (
+                      {antall}
+                      {hvem && (
                         <span className="font-normal text-muted-foreground ml-1.5">
-                          {truncate(row.hvem_sendt, 25)}
+                          {truncate(hvem, 25)}
                         </span>
                       )}
                     </span>
