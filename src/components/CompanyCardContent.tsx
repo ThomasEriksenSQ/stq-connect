@@ -491,13 +491,43 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
         </div>
       </div>
 
-      {/* Notes */}
-      {editable && (editingNotes || company.notes) ? (
+      {/* Notes (inline edit via pencil) */}
+      {editable && editingNotes ? (
         <div className="mb-4">
-          <InlineEdit value={company.notes || ""} onSave={(v) => { updateField("notes")(v); setEditingNotes(false); }} placeholder="Legg til notater..." multiline />
+          <Textarea
+            value={notesDraft}
+            onChange={(e) => setNotesDraft(e.target.value)}
+            rows={3}
+            autoFocus
+            className="text-[0.875rem] rounded-md"
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setEditingNotes(false);
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                updateField("notes")(notesDraft);
+                setEditingNotes(false);
+              }
+            }}
+          />
+          <div className="flex gap-2 mt-1.5">
+            <Button size="sm" className="h-7 text-[0.75rem] px-3 rounded-md" onClick={() => { updateField("notes")(notesDraft); setEditingNotes(false); }}>Lagre</Button>
+            <Button variant="ghost" size="sm" className="h-7 text-[0.75rem] px-3 rounded-md" onClick={() => setEditingNotes(false)}>Avbryt</Button>
+          </div>
         </div>
       ) : company.notes ? (
-        <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap mb-4">{company.notes}</p>
+        <div className="group mb-4 relative">
+          <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{company.notes}</p>
+          {editable && (
+            <button onClick={() => { setNotesDraft(company.notes || ""); setEditingNotes(true); }}
+              className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-secondary">
+              <Pencil className="h-3 w-3 text-muted-foreground" />
+            </button>
+          )}
+        </div>
+      ) : editable ? (
+        <button onClick={() => { setNotesDraft(""); setEditingNotes(true); }}
+          className="text-[0.75rem] text-muted-foreground/50 hover:text-muted-foreground mb-4 inline-flex items-center gap-1 transition-colors">
+          <Pencil className="h-3 w-3" /> Legg til notat
+        </button>
       ) : null}
 
       {/* Two-column layout */}
