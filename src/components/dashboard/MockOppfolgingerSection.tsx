@@ -96,7 +96,7 @@ const ACCENT_CLASS: Record<string, string> = {
   none: "",
 };
 
-const NAAR_FILTERS = ["Forfalt + I dag", "Denne uken", "Kommende", "Alle"];
+const NAAR_FILTERS = ["Forfalt + I dag", "Forfalt", "I dag", "Denne uken", "Alle"];
 const EIER_FILTERS = ["Thomas Eriksen", "Jon Richard Nygaard", "Alle"];
 const SIGNAL_FILTERS = ["Alle", "Behov nå", "Får fremtidig behov", "Får kanskje behov", "Ukjent om behov", "Ikke aktuelt"];
 
