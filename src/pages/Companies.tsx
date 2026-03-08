@@ -287,7 +287,7 @@ const Companies = () => {
   const SIGNAL_PRIORITY: Record<string, number> = {
     "Behov nå": 0,
     "Får fremtidig behov": 1,
-    "Vil kanskje få behov": 2,
+    "Får kanskje behov": 2,
     "Ukjent om behov": 3,
     "Ikke aktuelt": 4,
   };

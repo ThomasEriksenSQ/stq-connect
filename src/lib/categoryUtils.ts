@@ -51,7 +51,7 @@ export const SIGNAL_ORDER = CATEGORIES.map(c => c.label);
 const SIGNAL_TTL: Record<string, number | null> = {
   "Behov nå": 30,
   "Får fremtidig behov": 90,
-  "Vil kanskje få behov": 180,
+  "Får kanskje behov": 180,
   "Ukjent om behov": null, // never expires
   "Ikke aktuelt": null,    // never expires
 };
