@@ -241,6 +241,7 @@ export function OppdragEditSheet({
         start_dato: startDato ? format(startDato, "yyyy-MM-dd") : null,
         kunde: selskapNavn || null,
         selskap_id: selskapId || null,
+        kommentar: kommentar || null,
       } as any)
       .eq("id", row.id);
     setSaving(false);

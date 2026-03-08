@@ -1,0 +1,1 @@
+ALTER TABLE public.stacq_oppdrag ADD COLUMN kommentar text DEFAULT NULL;
