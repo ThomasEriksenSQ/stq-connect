@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
-import { Phone, Mail, Globe, Linkedin, FileText, Calendar, CalendarDays, ExternalLink, ChevronRight, Pencil, User, MessageCircle, Plus, Trash2, MapPin } from "lucide-react";
+import { Phone, Mail, Globe, Linkedin, FileText, Calendar, CalendarDays, ExternalLink, ChevronRight, ChevronDown, Pencil, User, MessageCircle, Plus, Trash2, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday, getYear } from "date-fns";
 import { nb } from "date-fns/locale";
@@ -326,9 +326,10 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             {/* Signal badge FIRST */}
             {editable ? (
               <Select value={effectiveSignal || "__none__"} onValueChange={(v) => { if (v !== "__none__") changeSignalMutation.mutate(v); }}>
-                <SelectTrigger className="h-auto w-auto gap-1 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0">
+                <SelectTrigger className="h-auto w-auto gap-0 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0 [&>svg]:hidden">
                   <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", signalBadgeColor)}>
                     {effectiveSignal || "Signal"}
+                    <ChevronDown className="h-3 w-3 ml-1" />
                   </span>
                 </SelectTrigger>
                 <SelectContent>
@@ -343,9 +344,10 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             {/* Type badge SECOND — neutral style */}
             {editable ? (
               <Select value={company.status} onValueChange={(v) => updateMutation.mutate({ status: v })}>
-                <SelectTrigger className="h-auto w-auto gap-1 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0">
+                <SelectTrigger className="h-auto w-auto gap-0 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0 [&>svg]:hidden">
                   <span className="inline-flex items-center rounded-full border bg-gray-100 text-gray-600 border-gray-200 px-2.5 py-0.5 text-xs font-semibold">
                     {currentStatus.label}
+                    <ChevronDown className="h-3 w-3 ml-1" />
                   </span>
                 </SelectTrigger>
                 <SelectContent>
@@ -359,9 +361,10 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             )}
             {editable ? (
               <Select value={company.owner_id || ""} onValueChange={(v) => updateMutation.mutate({ owner_id: v || null })}>
-                <SelectTrigger className="h-auto w-auto gap-1 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0">
+                <SelectTrigger className="h-auto w-auto gap-0 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0 [&>svg]:hidden">
                   <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
                     {company.owner_id && profileMapFull[company.owner_id] ? profileMapFull[company.owner_id] : "Eier"}
+                    <ChevronDown className="h-3 w-3 ml-1" />
                   </span>
                 </SelectTrigger>
                 <SelectContent>
