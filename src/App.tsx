@@ -15,6 +15,7 @@ import ContactDetail from "./pages/ContactDetail";
 import Tasks from "./pages/Tasks";
 import NotFound from "./pages/NotFound";
 import Import from "./pages/Import";
+import AdminBrregSync from "./pages/AdminBrregSync";
 
 
 const queryClient = new QueryClient();
