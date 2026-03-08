@@ -459,6 +459,80 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                 </DialogContent>
               </Dialog>
             )}
+            {/* Edit company dialog */}
+            <Dialog open={editCompanyOpen} onOpenChange={setEditCompanyOpen}>
+              <DialogContent className="sm:max-w-[440px] rounded-xl">
+                <DialogHeader><DialogTitle>Rediger selskap</DialogTitle></DialogHeader>
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const cityValue = editForm.locations.length > 0 ? editForm.locations.join(", ") : editForm.city;
+                  updateMutation.mutate({
+                    name: editForm.name,
+                    org_number: editForm.org_number || null,
+                    city: cityValue || null,
+                    website: editForm.website || null,
+                    linkedin: editForm.linkedin || null,
+                  });
+                  setEditCompanyOpen(false);
+                }} className="space-y-4 mt-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-label">Selskapsnavn</Label>
+                    <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required className="h-10 rounded-lg" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-label">Org.nr</Label>
+                    <Input value={editForm.org_number} onChange={(e) => setEditForm({ ...editForm, org_number: e.target.value })} className="h-10 rounded-lg" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-label">Avdelinger</Label>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {editForm.locations.map((loc, i) => (
+                        <span key={i} className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs font-medium text-foreground">
+                          <MapPin className="h-3 w-3 text-muted-foreground" />
+                          {loc}
+                          <button type="button" onClick={() => setEditForm({ ...editForm, locations: editForm.locations.filter((_, idx) => idx !== i) })} className="ml-0.5 text-muted-foreground hover:text-destructive">×</button>
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newLocation}
+                        onChange={(e) => setNewLocation(e.target.value)}
+                        placeholder="Legg til sted..."
+                        className="h-9 rounded-lg flex-1"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && newLocation.trim()) {
+                            e.preventDefault();
+                            setEditForm({ ...editForm, locations: [...editForm.locations, newLocation.trim()] });
+                            setNewLocation("");
+                          }
+                        }}
+                      />
+                      <Button type="button" variant="outline" size="sm" className="h-9 rounded-lg" onClick={() => {
+                        if (newLocation.trim()) {
+                          setEditForm({ ...editForm, locations: [...editForm.locations, newLocation.trim()] });
+                          setNewLocation("");
+                        }
+                      }}>
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-label">Nettside</Label>
+                    <Input value={editForm.website} onChange={(e) => setEditForm({ ...editForm, website: e.target.value })} placeholder="https://..." className="h-10 rounded-lg" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-label">LinkedIn</Label>
+                    <Input value={editForm.linkedin} onChange={(e) => setEditForm({ ...editForm, linkedin: e.target.value })} placeholder="https://linkedin.com/company/..." className="h-10 rounded-lg" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" className="flex-1 h-10 rounded-lg" onClick={() => setEditCompanyOpen(false)}>Avbryt</Button>
+                    <Button type="submit" className="flex-1 h-10 rounded-lg">Lagre</Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
             {editable && (
               <button
                 onClick={() => {
