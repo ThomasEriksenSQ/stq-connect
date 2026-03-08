@@ -330,8 +330,10 @@ function TaskRow({ task, isOverdue, isLast, profiles, signal, onComplete, onChan
       {/* Middle content */}
       <div className="flex-1 min-w-0">
         <p className="text-[0.875rem] font-bold text-foreground">{task.title}</p>
-        {task.description && (
-          <p className="text-[0.8125rem] text-foreground/70 leading-relaxed whitespace-pre-wrap mt-0.5">{task.description}</p>
+        {task.description && !/^\[.+\]$/.test(task.description.trim()) && (
+          <p className="text-[0.8125rem] text-foreground/70 leading-relaxed whitespace-pre-wrap mt-0.5">
+            {task.description.replace(/^\[[^\]]+\]\n?/, "").trim()}
+          </p>
         )}
         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
           {contactName ? (

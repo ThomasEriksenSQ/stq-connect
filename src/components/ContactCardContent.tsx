@@ -1224,7 +1224,7 @@ function ActivityRow({
                 </TooltipTrigger>
                 <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
               </Tooltip>
-              {displayCategory && <CategoryBadge label={displayCategory} />}
+              {displayCategory && displayCategory !== displayTitle && <CategoryBadge label={displayCategory} />}
             </div>
           </div>
         )}
