@@ -808,6 +808,12 @@ function ForespørselSheet({
               </div>
             </div>
 
+            {/* Sluttkunde */}
+            <div>
+              <label className={LABEL}>Sluttkunde</label>
+              <Input value={sluttkunde} onChange={(e) => setSluttkunde(e.target.value)} className="mt-1 text-[0.875rem]" placeholder="f.eks. Kongsberg Defence, Equinor..." />
+            </div>
+
             {/* Teknologier */}
             <div>
               <AiTeknologiBox existingTags={teknologier} onTagsFound={setTeknologier} />
