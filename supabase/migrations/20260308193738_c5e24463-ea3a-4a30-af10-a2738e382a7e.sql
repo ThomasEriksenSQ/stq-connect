@@ -1,0 +1,1 @@
+ALTER TABLE public.stacq_oppdrag ADD COLUMN selskap_id uuid REFERENCES public.companies(id) ON DELETE SET NULL;
