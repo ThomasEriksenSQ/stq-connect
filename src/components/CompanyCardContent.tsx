@@ -526,15 +526,21 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</div>
+                        {contactName && (
+                          <a
+                            href={`/kontakter/${task.contact_id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-[0.8125rem] font-medium text-foreground/70 hover:text-foreground hover:underline block mt-0.5"
+                          >
+                            {contactName}
+                          </a>
+                        )}
                         {displayDesc && !/^\[.+\]$/.test(displayDesc.trim()) && (
                           <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{displayDesc}</p>
                         )}
                         <div className="flex items-center gap-1.5 mt-1">
                           {task.assigned_to && profileMapFull[task.assigned_to] && (
                             <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{profileMapFull[task.assigned_to]}</span>
-                          )}
-                          {contactName && (
-                            <span className="text-[0.6875rem] text-muted-foreground">{contactName}</span>
                           )}
                         </div>
                       </div>
