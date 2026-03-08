@@ -1215,24 +1215,14 @@ function ActivityRow({
 
             {/* Right side: Date + Category + Delete */}
             <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
-              <div className="flex items-center gap-1">
-                {editable && !confirmDelete && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
-                    className="opacity-0 group-hover/row:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive flex-shrink-0"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                )}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="text-[0.8125rem] text-muted-foreground">
-                      {format(d, "d. MMM yyyy", { locale: nb })}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
-                </Tooltip>
-              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-[0.8125rem] text-muted-foreground">
+                    {format(d, "d. MMM yyyy", { locale: nb })}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
+              </Tooltip>
               {displayCategory && displayCategory !== displayTitle && <CategoryBadge label={displayCategory} />}
             </div>
           </div>
