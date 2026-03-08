@@ -228,6 +228,18 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
               ))}
             </div>
           </div>
+
+          {/* Kommentar */}
+          <div>
+            <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Kommentar</label>
+            <textarea
+              value={kommentar}
+              onChange={(e) => setKommentar(e.target.value)}
+              placeholder="Notater, kilde, intern info..."
+              rows={3}
+              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-[0.875rem] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+            />
+          </div>
         </div>
 
         {/* Footer */}
