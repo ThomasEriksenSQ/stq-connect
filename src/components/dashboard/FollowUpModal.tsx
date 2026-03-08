@@ -168,12 +168,36 @@ const FollowUpModal = ({ open, onCancel, onClose, onSubmit, data }: Props) => {
               {DATE_OPTIONS.map((opt) => (
                 <button
                   key={opt.label}
-                  onClick={() => setSelectedDate(opt.label)}
+                  onClick={() => { setSelectedDate(opt.label); setCustomDate(undefined); }}
                   className={selectedDate === opt.label ? CHIP_ON : CHIP_OFF}
                 >
                   {opt.label}
                 </button>
               ))}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className={selectedDate === "custom" ? CHIP_ON : CHIP_OFF}>
+                    {selectedDate === "custom" && customDate
+                      ? format(customDate, "dd.MM.yyyy")
+                      : "Velg dato"}
+                    <CalendarIcon className="inline-block ml-1 h-3 w-3" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={customDate}
+                    onSelect={(d) => {
+                      if (d) {
+                        setCustomDate(d);
+                        setSelectedDate("custom");
+                      }
+                    }}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <p className="text-[0.75rem] text-muted-foreground mt-1.5">
               Forfallsdato: {formattedDate}
