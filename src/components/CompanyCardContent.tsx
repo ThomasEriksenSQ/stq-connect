@@ -445,7 +445,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
           {company.org_number && <span>Org.nr {company.org_number}</span>}
           {company.city && (
             <a
-              href={`https://www.google.com/maps/search/${encodeURIComponent(company.city + ', Norge')}`}
+              href={`https://maps.google.com/?q=${encodeURIComponent(company.city)},Norge`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
