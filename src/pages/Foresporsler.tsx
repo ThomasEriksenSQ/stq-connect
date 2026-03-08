@@ -376,6 +376,8 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
       kontakt_id: kontaktId,
       teknologier: tags,
       kommentar: kommentar || null,
+      type: isPartner ? "VIA" : "DIR",
+      sluttkunde: isPartner ? (sluttkunde || null) : null,
       status: "Ny",
       created_by: user?.id,
     });
