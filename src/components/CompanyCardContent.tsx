@@ -552,11 +552,6 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                 <Pencil className="h-3.5 w-3.5" />
               </button>
             )}
-            {editable && company.notes === null && !editingNotes && (
-              <button onClick={() => setEditingNotes(true)} className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-secondary text-muted-foreground">
-                <FileText className="h-3.5 w-3.5" />
-              </button>
-            )}
             {!editable && onNavigateToFullPage && (
               <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={onNavigateToFullPage}>
                 <ExternalLink className="h-3.5 w-3.5" />
