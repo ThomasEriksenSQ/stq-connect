@@ -56,17 +56,19 @@ function truncate(s: string, max: number): string {
 
 // Modal data
 const MOCK_COMPANIES = [
-  { name: "Kongsberg KDA", sted: "Kongsberg" },
-  { name: "Six Robotics", sted: "Oslo" },
-  { name: "SpinChip AS", sted: "Oslo" },
-  { name: "Remora Robotics", sted: "Stavanger" },
-  { name: "Norbit", sted: "Trondheim" },
-  { name: "Tomra", sted: "Oslo" },
-  { name: "Cisco", sted: "Oslo" },
-  { name: "AutoStore", sted: "Halden" },
-  { name: "Thales", sted: "Oslo" },
-  { name: "ABB", sted: "Oslo" },
-  { name: "TechnipFMC", sted: "Kongsberg" },
+  { name: "Kongsberg KDA", sted: "Kongsberg", locations: ["Kongsberg", "Oslo"] },
+  { name: "Six Robotics", sted: "Oslo", locations: ["Oslo"] },
+  { name: "SpinChip AS", sted: "Oslo", locations: ["Oslo"] },
+  { name: "Remora Robotics", sted: "Stavanger", locations: ["Stavanger"] },
+  { name: "Norbit", sted: "Trondheim", locations: ["Trondheim"] },
+  { name: "Tomra", sted: "Oslo", locations: ["Oslo"] },
+  { name: "Cisco", sted: "Oslo", locations: ["Oslo"] },
+  { name: "AutoStore", sted: "Halden", locations: ["Halden"] },
+  { name: "Thales", sted: "Oslo", locations: ["Oslo"] },
+  { name: "ABB", sted: "Oslo", locations: ["Oslo"] },
+  { name: "TechnipFMC", sted: "Kongsberg", locations: ["Kongsberg"] },
+  { name: "Kongsberggruppen", sted: "Kongsberg", locations: ["Kongsberg", "Horten", "Oslo"] },
+  { name: "Kongsberg Maritime", sted: "Kongsberg", locations: ["Kongsberg", "Horten"] },
 ];
 
 const MOCK_CONTACTS = [
@@ -79,6 +81,8 @@ const SUGGESTED_TAGS = ["C", "C++", "Embedded", "Python", "Yocto", "Linux", "Lab
 
 function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [selskap, setSelskap] = useState("");
+  const [selectedCompany, setSelectedCompany] = useState<typeof MOCK_COMPANIES[0] | null>(null);
+  const [avdeling, setAvdeling] = useState("");
   const [sted, setSted] = useState("");
   const [kontakt, setKontakt] = useState("");
   const [showKontaktDropdown, setShowKontaktDropdown] = useState(false);
@@ -88,9 +92,12 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
   const [showDropdown, setShowDropdown] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const hasMultipleLocations = selectedCompany && selectedCompany.locations.length > 1;
+
   useEffect(() => {
     if (open) {
-      setSelskap(""); setSted(""); setKontakt(""); setKommentar("");
+      setSelskap(""); setSelectedCompany(null); setAvdeling("");
+      setSted(""); setKontakt(""); setKommentar("");
       setTags([]); setTagInput("");
     }
   }, [open]);
@@ -101,7 +108,9 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
 
   const selectCompany = (c: typeof MOCK_COMPANIES[0]) => {
     setSelskap(c.name);
-    setSted(c.sted);
+    setSelectedCompany(c);
+    setAvdeling("");
+    setSted(c.locations.length === 1 ? c.locations[0] : c.sted);
     setShowDropdown(false);
   };
 
@@ -156,6 +165,26 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
               )}
             </div>
           </div>
+
+          {/* Avdeling — conditional */}
+          {hasMultipleLocations && (
+            <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+              <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Avdeling</label>
+              <select
+                value={avdeling}
+                onChange={(e) => {
+                  setAvdeling(e.target.value);
+                  if (e.target.value) setSted(e.target.value);
+                }}
+                className="mt-1 w-full h-9 rounded-lg border border-border bg-background px-3 text-[0.875rem] text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">Velg avdeling...</option>
+                {selectedCompany!.locations.map((loc) => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Sted */}
           <div>
