@@ -908,35 +908,96 @@ function ForespørselSheet({
         ) : (
           /* ─── VIEW MODE ─── */
           <div className="space-y-5">
+            {/* Urgency banner */}
+            {(() => {
+              const dl = relativeDeadline(row.frist_dato);
+              if (dl.urgency === "overdue") return (
+                <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2 text-[0.8125rem] text-destructive font-medium">⚠ Fristen er utgått</div>
+              );
+              if (dl.urgency === "critical") return (
+                <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-[0.8125rem] text-amber-700 font-medium">⏰ {dl.text}</div>
+              );
+              return null;
+            })()}
+
             {/* Mottatt / Frist */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className={LABEL}>Mottatt</p>
-                <p className="text-[0.875rem] text-foreground mt-1">
-                  {row.mottatt_dato ? format(new Date(row.mottatt_dato), "dd.MM.yyyy") : "—"}
-                </p>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <p className="text-[0.875rem] text-foreground mt-1 cursor-default">
+                      {row.mottatt_dato ? relativeDate(row.mottatt_dato) : "—"}
+                    </p>
+                  </TooltipTrigger>
+                  {row.mottatt_dato && <TooltipContent>{fullDate(row.mottatt_dato)}</TooltipContent>}
+                </Tooltip>
               </div>
               <div>
                 <p className={LABEL}>Frist</p>
-                <p className="text-[0.875rem] text-foreground mt-1">
-                  {row.frist_dato ? format(new Date(row.frist_dato), "dd.MM.yyyy") : "—"}
-                </p>
+                {(() => {
+                  const dl = relativeDeadline(row.frist_dato);
+                  return (
+                    <div className="mt-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <p className={cn("text-[0.875rem] font-medium cursor-default", URGENCY_COLOR[dl.urgency])}>
+                            {dl.text}
+                          </p>
+                        </TooltipTrigger>
+                        {dl.tooltip && <TooltipContent>{dl.tooltip}</TooltipContent>}
+                      </Tooltip>
+                      {row.frist_dato && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {format(parseISO(row.frist_dato), "d. MMMM yyyy", { locale: nb })}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
-            {/* Type */}
-            <div>
-              <p className={LABEL}>Type</p>
-              <p className="text-[0.875rem] text-foreground mt-1">{row.type || "—"}</p>
-            </div>
-
-            {/* Sluttkunde */}
-            {row.sluttkunde && (
+            {/* Type — inline editable dropdown */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className={LABEL}>Sluttkunde</p>
-                <p className="text-[0.875rem] font-medium text-foreground mt-1">{row.sluttkunde}</p>
+                <p className={LABEL}>Type</p>
+                <div className="mt-1">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+                        <TypeBadge type={row.type} />
+                        <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      {[
+                        { value: "DIR", label: "Direktekunde" },
+                        { value: "VIA", label: "Via partner" },
+                      ].map(opt => (
+                        <DropdownMenuItem
+                          key={opt.value}
+                          onClick={async () => {
+                            await supabase.from("foresporsler").update({ type: opt.value, updated_at: new Date().toISOString() }).eq("id", row.id);
+                            queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
+                          }}
+                        >
+                          <TypeBadge type={opt.value} />
+                          <span className="ml-2">{opt.label}</span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
-            )}
+              {/* Sluttkunde */}
+              {(row.type === "VIA" || row.type === "via_partner" || row.type === "via_megler") && (
+                <div>
+                  <p className={LABEL}>Sluttkunde</p>
+                  <p className="text-[0.875rem] font-medium text-foreground mt-1">{row.sluttkunde || "—"}</p>
+                </div>
+              )}
+            </div>
 
             {/* Teknologier */}
             <div>
