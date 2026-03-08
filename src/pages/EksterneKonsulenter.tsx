@@ -260,6 +260,7 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
 }) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [companySearch, setCompanySearch] = useState("");
   const [cvParsing, setCvParsing] = useState(false);
