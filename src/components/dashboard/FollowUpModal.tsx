@@ -45,6 +45,7 @@ export type FollowUpModalData = {
 
 type Props = {
   open: boolean;
+  onCancel: () => void;
   onClose: () => void;
   onSubmit: (data: { title: string; dueDate: Date; owner: string }) => void;
   data: FollowUpModalData | null;
