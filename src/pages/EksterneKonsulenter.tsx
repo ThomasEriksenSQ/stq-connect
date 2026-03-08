@@ -102,26 +102,26 @@ export default function EksterneKonsulenter() {
   }
 
   return (
-    <div>
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center justify-between">
         <h1 className="text-[1.375rem] font-bold">Eksterne konsulenter</h1>
-        <span className="bg-secondary text-muted-foreground rounded-full px-2.5 py-0.5 text-xs font-medium">
-          {filtered.length}
-        </span>
       </div>
 
-      {/* Search + Add */}
-      <div className="flex items-center gap-3 mb-4">
+      {/* Search + count + Add */}
+      <div className="flex items-center gap-3">
         <div className="relative max-w-xs flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Søk navn, selskap, teknologi..."
-            className="pl-9 text-[0.875rem]"
+            className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border"
           />
         </div>
+        <span className="text-[0.75rem] text-muted-foreground ml-auto">
+          {filtered.length} konsulenter
+        </span>
         <button
           onClick={openCreate}
           className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
@@ -132,86 +132,75 @@ export default function EksterneKonsulenter() {
       </div>
 
       {/* Filters */}
-      <div className="space-y-2 mb-5">
+      <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-16 flex-shrink-0">Type</span>
-          <div className="flex items-center gap-1.5">
-            {(["Alle", "freelance", "partner"] as TypeFilter[]).map(f => (
-              <button key={f} className={typeFilter === f ? CHIP_ON : CHIP_OFF} onClick={() => setTypeFilter(f)}>
-                {f === "Alle" ? "Alle" : TYPE_LABELS[f]}
-              </button>
-            ))}
-          </div>
+          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Type</span>
+          {(["Alle", "freelance", "partner"] as TypeFilter[]).map(f => (
+            <button key={f} className={typeFilter === f ? CHIP_ON : CHIP_OFF} onClick={() => setTypeFilter(f)}>
+              {f === "Alle" ? "Alle" : TYPE_LABELS[f]}
+            </button>
+          ))}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-16 flex-shrink-0">Status</span>
-          <div className="flex items-center gap-1.5">
-            {(["Alle", "ledig", "utilgjengelig"] as StatusFilter[]).map(f => (
-              <button key={f} className={statusFilter === f ? CHIP_ON : CHIP_OFF} onClick={() => setStatusFilter(f)}>
-                {f === "Alle" ? "Alle" : f === "ledig" ? "Tilgjengelig" : "Ikke ledig"}
-              </button>
-            ))}
-          </div>
+          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Status</span>
+          {(["Alle", "ledig", "utilgjengelig"] as StatusFilter[]).map(f => (
+            <button key={f} className={statusFilter === f ? CHIP_ON : CHIP_OFF} onClick={() => setStatusFilter(f)}>
+              {f === "Alle" ? "Alle" : f === "ledig" ? "Tilgjengelig" : "Ikke ledig"}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border">
-              {["NAVN", "SELSKAP", "TYPE", "STATUS", "TEKNOLOGIER", "TILGJ. FRA"].map(h => (
-                <th key={h} className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground px-4 py-2.5 text-left">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((row: any, i: number) => {
-              const name = (row as any).navn || "—";
-              const company = row.companies?.name || (row as any).selskap_tekst || "—";
-              return (
-                <tr
-                  key={row.id}
-                  onClick={() => openEdit(row)}
-                  className={cn(
-                    "hover:bg-muted/30 transition-colors cursor-pointer",
-                    i < filtered.length - 1 && "border-b border-border"
+      <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
+        {/* Header */}
+        <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_100px_110px_minmax(0,1.5fr)_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          {["NAVN", "SELSKAP", "TYPE", "STATUS", "TEKNOLOGIER", "TILGJ. FRA"].map(h => (
+            <span key={h} className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">{h}</span>
+          ))}
+        </div>
+        {/* Rows */}
+        <div className="divide-y divide-border">
+          {filtered.map((row: any) => {
+            const name = (row as any).navn || "—";
+            const company = row.companies?.name || (row as any).selskap_tekst || "—";
+            return (
+              <div
+                key={row.id}
+                onClick={() => openEdit(row)}
+                className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_100px_110px_minmax(0,1.5fr)_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 cursor-pointer"
+              >
+                <span className="text-[0.8125rem] font-medium text-foreground truncate">{name}</span>
+                <span className="text-[0.8125rem] text-muted-foreground truncate">{company}</span>
+                <div>
+                  <span className={cn(
+                    "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+                    row.type === "freelance" ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
+                    "bg-violet-100 text-violet-700 border-violet-200"
+                  )}>
+                    {TYPE_LABELS[row.type] || row.type}
+                  </span>
+                </div>
+                <div>
+                  <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_COLORS[row.status] || "bg-muted text-muted-foreground")}>
+                    {STATUS_LABELS[row.status] || row.status}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {(row.teknologier || []).slice(0, 3).map((t: string) => (
+                    <span key={t} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] text-muted-foreground">{t}</span>
+                  ))}
+                  {(row.teknologier || []).length > 3 && (
+                    <span className="text-[0.6875rem] text-muted-foreground">+{row.teknologier.length - 3}</span>
                   )}
-                >
-                  <td className="px-4 py-3 font-semibold text-[0.875rem]">{name}</td>
-                  <td className="px-4 py-3 text-[0.875rem] text-muted-foreground">{company}</td>
-                  <td className="px-4 py-3">
-                    <span className={cn(
-                      "rounded-full px-2.5 py-0.5 text-xs font-semibold",
-                      row.type === "freelance" ? "bg-emerald-100 text-emerald-700" :
-                      "bg-violet-100 text-violet-700"
-                    )}>
-                      {TYPE_LABELS[row.type] || row.type}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_COLORS[row.status] || "bg-muted text-muted-foreground")}>
-                      {STATUS_LABELS[row.status] || row.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {(row.teknologier || []).slice(0, 3).map((t: string) => (
-                        <span key={t} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] text-muted-foreground">{t}</span>
-                      ))}
-                      {(row.teknologier || []).length > 3 && (
-                        <span className="text-[0.6875rem] text-muted-foreground">+{row.teknologier.length - 3}</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-[0.8125rem] text-muted-foreground">
-                    {relativeFutureDate(row.tilgjengelig_fra)}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                </div>
+                <span className="text-[0.8125rem] text-muted-foreground">
+                  {relativeFutureDate(row.tilgjengelig_fra)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
         {filtered.length === 0 && (
           <p className="text-muted-foreground text-center py-12">Ingen eksterne konsulenter å vise</p>
         )}
