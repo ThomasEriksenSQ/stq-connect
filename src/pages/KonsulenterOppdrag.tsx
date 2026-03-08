@@ -6,6 +6,7 @@ import { format, differenceInDays } from "date-fns";
 import { Briefcase, CalendarCheck, TrendingUp, BarChart2 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { OppdragEditSheet } from "@/components/OppdragEditSheet";
+import { FornyelsesTimeline } from "@/components/FornyelsesTimeline";
 
 type Filter = "Alle" | "Aktiv" | "Oppstart" | "Inaktiv";
 const TIMER_PER_DAG = 7.5;
