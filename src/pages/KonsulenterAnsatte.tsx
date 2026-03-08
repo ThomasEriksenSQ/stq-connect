@@ -521,8 +521,27 @@ export default function KonsulenterAnsatte() {
     return formatMonths(months);
   };
 
+  const queryClient = useQueryClient();
   const openEdit = (a: any) => { setEditAnsatt(a); setModalOpen(true); };
   const openCreate = () => { setEditAnsatt(null); setModalOpen(true); };
+
+  const handleSetOppdragStatus = async (navn: string, status: string | null) => {
+    if (status === null) {
+      await supabase
+        .from("stacq_oppdrag")
+        .update({ status: "Inaktiv" })
+        .eq("kandidat", navn)
+        .in("status", ["Aktiv", "Oppstart"]);
+    } else {
+      await supabase
+        .from("stacq_oppdrag")
+        .update({ status })
+        .eq("kandidat", navn)
+        .in("status", ["Aktiv", "Oppstart", "Inaktiv"]);
+    }
+    queryClient.invalidateQueries({ queryKey: ["stacq-ansatte"] });
+    queryClient.invalidateQueries({ queryKey: ["stacq-oppdrag-active-names"] });
+  };
 
   const chips: Filter[] = ["Alle", "Aktiv", "Kommende", "Sluttet"];
 
