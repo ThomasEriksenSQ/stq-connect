@@ -234,7 +234,7 @@ export default function ImporterCver() {
         if (mode === "update") await saveEksternUpdate(cv);
         else await saveEksternNew(cv);
       }
-      toast.success(mode === "update" ? `${cv.data?.navn || "Konsulent"} oppdatert` : `${cv.data?.navn || "Konsulent"} opprettet`);
+      toast.success(mode === "update" ? `✓ Lagret — teknologier og CV oppdatert for ${cv.matchedName || cv.data?.navn || "konsulent"}` : `${cv.data?.navn || "Konsulent"} opprettet`);
       removeCv(idx);
       queryClient.invalidateQueries({ queryKey: tab === "ansatte" ? ["stacq-ansatte"] : ["external-consultants-all"] });
     } catch (err: any) {
