@@ -29,8 +29,9 @@ export default function KonsulenterOppdrag() {
       oppdrag.map((o: any) => {
         const utpris = Number(o.utpris) || 0;
         const tilKons = Number(o.til_konsulent) || 0;
-        const margin = utpris - tilKons;
-        const marginPct = utpris > 0 ? (margin / utpris) * 100 : 0;
+        const marginPerTime = utpris - tilKons;
+        const margin = marginPerTime * TIMER_PER_DAG;
+        const marginPct = utpris > 0 ? (marginPerTime / utpris) * 100 : 0;
         const daysUntilForny = o.forny_dato
           ? differenceInDays(new Date(o.forny_dato), today)
           : null;
