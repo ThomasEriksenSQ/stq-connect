@@ -676,7 +676,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
       ) : null}
 
       {/* Two-column layout */}
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_minmax(0,260px)] gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_minmax(0,300px)] gap-6">
         {/* Left: Tasks + Activities */}
         <div className="space-y-5">
           {/* ── Oppfølginger ── */}
@@ -748,14 +748,14 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
         </div>
 
         {/* Right: Contacts */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">Kontakter · {contacts.length}</h3>
+            <h3 className="text-sm font-medium uppercase tracking-[0.08em] text-muted-foreground">Kontakter · {contacts.length}</h3>
           </div>
           {contacts.length === 0 ? (
             <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen kontakter</p>
           ) : (
-            <div className="divide-y divide-border">
+            <div className="space-y-3">
               {contacts.map((c) => {
                 const contactOwner = (c as any).profiles?.full_name || null;
                 return (
@@ -766,15 +766,15 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <p className="text-[0.8125rem] font-medium truncate group-hover:text-primary transition-colors">{c.first_name} {c.last_name}</p>
+                        <p className="text-[0.9375rem] font-semibold truncate group-hover:text-primary transition-colors">{c.first_name} {c.last_name}</p>
                         {c.cv_email && (
-                          <span className="rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">CV</span>
+                          <span className="ml-1.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">CV</span>
                         )}
                         {c.call_list && (
-                          <span className="rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">INN</span>
+                          <span className="ml-1.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">INN</span>
                         )}
                       </div>
-                      <p className="text-[0.6875rem] text-muted-foreground truncate">
+                      <p className="text-[0.8125rem] text-muted-foreground truncate">
                         {[c.title, contactOwner].filter(Boolean).join(" · ") || ""}
                       </p>
                     </div>
