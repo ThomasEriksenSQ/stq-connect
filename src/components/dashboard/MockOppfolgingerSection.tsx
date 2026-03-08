@@ -160,8 +160,26 @@ const MockOppfolgingerSection = () => {
 
   const handleFollowUpSubmit = (data: { title: string; dueDate: Date; owner: string }) => {
     setModalOpen(false);
+    setRemovedRow(null);
     const firstName = modalData?.name.split(" ")[0] ?? "";
     toast.success(`Oppfølging opprettet for ${firstName}`);
+  };
+
+  const handleCancel = () => {
+    setModalOpen(false);
+    if (removedRow) {
+      setRows((prev) => {
+        const next = [...prev];
+        next.splice(removedRow.index, 0, removedRow.row);
+        return next;
+      });
+      setRemovedRow(null);
+    }
+  };
+
+  const handleSkip = () => {
+    setModalOpen(false);
+    setRemovedRow(null);
   };
 
   return (
