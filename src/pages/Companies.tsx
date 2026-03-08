@@ -583,9 +583,7 @@ const Companies = () => {
                             key={o.value}
                             onClick={() => setTypeMutation.mutate({ companyId: company.id, status: o.value })}
                           >
-                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${o.badgeColor}`}>
-                              {o.label}
-                            </span>
+                            {o.label}
                           </DropdownMenuItem>
                         ))}
                       </DropdownMenuContent>
