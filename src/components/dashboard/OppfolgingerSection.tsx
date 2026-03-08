@@ -31,7 +31,6 @@ const SIGNAL_CATEGORIES_NO_IKKE = CATEGORIES.filter(c => c.label !== "Ikke aktue
 const MAX_UNFILTERED = 25;
 
 const OppfolgingerSection = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
