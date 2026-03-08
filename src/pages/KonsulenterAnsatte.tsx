@@ -466,12 +466,21 @@ export default function KonsulenterAnsatte() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stacq_oppdrag")
-        .select("kandidat")
+        .select("kandidat, status")
         .in("status", ["Aktiv", "Oppstart"]);
       if (error) throw error;
       return data;
     },
   });
+
+  const oppdragMap = useMemo(() => {
+    const m = new Map<string, string>();
+    (oppdrag as any[]).forEach((o) => {
+      // Keep highest priority: Aktiv > Oppstart
+      if (!m.has(o.kandidat) || o.status === "Aktiv") m.set(o.kandidat, o.status);
+    });
+    return m;
+  }, [oppdrag]);
 
   const activeOppdragNames = useMemo(
     () => new Set(oppdrag.map((o: any) => o.kandidat)),
