@@ -480,7 +480,30 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
         {/* STEP 2: Fields (after type selected or edit mode) */}
         {(form.type || !isCreate) && (
           <div className="space-y-4">
-            {/* Partner: Company picker first */}
+            {/* Type toggle (always shown in edit, hidden in create until type selected via step 1) */}
+            {!isCreate && (
+              <div>
+                <label className={LABEL}>Type</label>
+                <div className="flex gap-2 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => { set("type", "freelance"); set("company_id", ""); }}
+                    className={form.type === "freelance" ? CHIP_ON : CHIP_OFF}
+                  >
+                    Freelance
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => set("type", "partner")}
+                    className={form.type === "partner" ? CHIP_ON : CHIP_OFF}
+                  >
+                    Via partner
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Partner: Company picker */}
             {form.type === "partner" && (
               <div>
                 <label className={LABEL}>Partnerselskap *</label>
@@ -512,6 +535,15 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
                     )}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Freelance: free-text selskap */}
+            {form.type === "freelance" && (
+              <div>
+                <label className={LABEL}>Selskap</label>
+                <Input value={form.selskap_tekst} onChange={e => set("selskap_tekst", e.target.value)} placeholder="Eget enkeltpersonforetak e.l." className="mt-1 text-[0.875rem]" />
+                <p className="text-[0.6875rem] text-muted-foreground mt-1">Ikke et salgsselskap i CRM</p>
               </div>
             )}
 
@@ -587,14 +619,6 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
               <Input value={form.telefon} onChange={e => set("telefon", e.target.value)} placeholder="+47 ..." className="mt-1 text-[0.875rem]" />
             </div>
 
-            {/* Freelance: Selskap (text) */}
-            {form.type === "freelance" && (
-              <div>
-                <label className={LABEL}>Selskap</label>
-                <Input value={form.selskap_tekst} onChange={e => set("selskap_tekst", e.target.value)} placeholder="Eget enkeltpersonforetak e.l." className="mt-1 text-[0.875rem]" />
-                <p className="text-[0.6875rem] text-muted-foreground mt-1">Ikke et salgsselskap i CRM</p>
-              </div>
-            )}
 
             {/* Teknologier */}
             <div>
