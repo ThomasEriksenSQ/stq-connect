@@ -397,7 +397,6 @@ interface TaskRowProps {
   onChangeOwner: (e: React.MouseEvent, taskId: string, profileId: string) => void;
   onChangeSignal: (e: React.MouseEvent, contactId: string, signal: string) => void;
   onPostpone: (e: React.MouseEvent, taskId: string, newDate: Date) => void;
-  navigate: (path: string) => void;
 }
 
 function TaskRow({ task, isLast, profiles, signal, fadingIds, onComplete, onChangeOwner, onChangeSignal, onPostpone, navigate }: TaskRowProps) {
