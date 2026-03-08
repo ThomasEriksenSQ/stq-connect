@@ -55,7 +55,9 @@ export default function KonsulenterOppdrag() {
     for (let d = 1; d <= dim; d++) { const dow = new Date(y, m, d).getDay(); if (dow !== 0 && dow !== 6) workdays++; }
     const stacqPerDag = aktive.reduce((s: number, o: any) => s + o.margin, 0);
     const stacqMonthly = stacqPerDag * workdays;
-    const oppstartUtpris = oppstart.reduce((s: number, o: any) => s + (Number(o.utpris) || 0), 0);
+    const oppstartMarginPerTime = oppstart.length > 0
+      ? oppstart.reduce((s: number, o: any) => s + o.marginPerTime, 0) / oppstart.length
+      : 0;
     return {
       aktive: aktive.length,
       oppstart: oppstart.length,
