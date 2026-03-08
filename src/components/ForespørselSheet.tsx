@@ -549,7 +549,7 @@ export function ForespørselSheet({
                           {m.begrunnelse}
                         </p>
                         {/* Add button */}
-                        {!isLinked && m.type === "intern" && (
+                        {!isLinked && (
                           <button
                             onClick={() => addFromMatch(m)}
                             className="mt-2 inline-flex items-center gap-1 text-[0.75rem] text-primary hover:underline font-medium"
