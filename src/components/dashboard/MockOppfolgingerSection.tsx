@@ -75,7 +75,7 @@ const INITIAL_DATA: MockRow[] = [
     fullDate: "11.03.2026",
     owner: "Jon",
     description: "Spurte om Q2-planer sist",
-    accent: "emerald",
+    accent: "none",
   },
   {
     id: "4",
