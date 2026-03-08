@@ -440,7 +440,7 @@ function ForespørselSheet({
       setAvdeling(row.avdeling || "");
       setFristDato(row.frist_dato || "");
       setType(row.type || "DIR");
-      setReferanse(row.referanse || "");
+      
       setTeknologier(row.teknologier || []);
       setAntallSendt(String(row.antall_sendt ?? 0));
       setHvemSendt(row.hvem_sendt || "");
