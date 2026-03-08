@@ -205,9 +205,9 @@ export default function KonsulenterOppdrag() {
                       {o.deal_type || "–"}
                     </span>
                   </td>
-                  {/* UTPRIS */}
+                  {/* UTPRIS (per time) */}
                   <td className="px-4 py-3.5 font-medium text-[0.875rem]">
-                    kr {formatNOK(Number(o.utpris) || 0)}
+                    kr {formatNOK(Number(o.utpris) || 0)}/t
                   </td>
                   {/* MARGIN */}
                   <td className="px-4 py-3.5">
