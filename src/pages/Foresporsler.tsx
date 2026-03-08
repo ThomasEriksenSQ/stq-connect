@@ -695,9 +695,10 @@ export default function Foresporsler() {
       ) : (
         <div className="border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
           {/* Header row */}
-          <div className="grid grid-cols-[90px_minmax(0,1.8fr)_80px_minmax(0,1.5fr)_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          <div className="grid grid-cols-[90px_minmax(0,1.5fr)_minmax(0,1fr)_80px_minmax(0,1.3fr)_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="mottatt_dato">Mottatt</SortHeader>
             <SortHeader field="selskap_navn">Selskap</SortHeader>
+            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Kontakt</span>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Type</span>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Teknologier</span>
             <SortHeader field="sendt_count" className="justify-end">Sendt</SortHeader>
@@ -714,7 +715,7 @@ export default function Foresporsler() {
               <div
                 key={row.id}
                 onClick={() => setSelectedRowId(row.id)}
-                className="grid grid-cols-[90px_minmax(0,1.8fr)_80px_minmax(0,1.5fr)_90px] gap-3 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer"
+                className="grid grid-cols-[90px_minmax(0,1.5fr)_minmax(0,1fr)_80px_minmax(0,1.3fr)_90px] gap-3 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer"
               >
                 {/* Mottatt */}
                 <Tooltip>
@@ -728,6 +729,12 @@ export default function Foresporsler() {
                 {/* Selskap */}
                 <span className="text-[0.875rem] font-semibold text-foreground truncate">
                   {row.selskap_navn}
+                </span>
+                {/* Kontakt */}
+                <span className="text-[0.8125rem] text-foreground truncate">
+                  {row.contacts
+                    ? `${row.contacts.first_name} ${row.contacts.last_name}`.trim()
+                    : <span className="text-muted-foreground">—</span>}
                 </span>
                 {/* Type */}
                 <TypeBadge type={row.type} />
