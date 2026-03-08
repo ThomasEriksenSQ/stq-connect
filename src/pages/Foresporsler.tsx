@@ -511,83 +511,75 @@ export default function Foresporsler() {
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">Laster...</div>
       ) : (
-        <div className="bg-card border border-border rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.07)] overflow-hidden">
-          <table className="w-full text-[0.8125rem]">
-            <thead>
-              <tr className="border-b border-border">
-                {["MOTTATT", "SELSKAP", "STED", "TEKNOLOGIER", "SENDT INN"].map((h) => (
-                  <th key={h} className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground text-left px-3 py-2.5">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((row, i) => {
-                const days = getDaysAgo(row.mottatt_dato);
-                const isNew = (row.status === "Ny" || row.status === "Aktiv") && row.antall_sendt === 0;
-                const isAging = row.status === "Aktiv" && days > 21;
+        <div className="border border-border rounded-lg overflow-hidden bg-card shadow-sm">
+          {/* Header row */}
+          <div className="grid grid-cols-[140px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] gap-3 px-4 py-2.5 border-b border-border bg-background">
+            <SortHeader field="mottatt_dato">Mottatt</SortHeader>
+            <SortHeader field="selskap_navn">Selskap</SortHeader>
+            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Sted</span>
+            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Teknologier</span>
+            <SortHeader field="antall_sendt" className="justify-end">Sendt inn</SortHeader>
+          </div>
+          {/* Data rows */}
+          {sorted.map((row) => {
+            const days = getDaysAgo(row.mottatt_dato);
+            const isNew = (row.status === "Ny" || row.status === "Aktiv") && row.antall_sendt === 0;
+            const isAging = row.status === "Aktiv" && days > 21;
 
-                return (
-                  <tr
-                    key={row.id}
-                    onClick={() => navigate(`/foresporsler/${row.id}`)}
-                    className={`border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors cursor-pointer ${
-                      isNew ? "border-l-[3px] border-l-amber-400" : isAging ? "border-l-[3px] border-l-destructive/40" : ""
-                    }`}
-                  >
-                    <td className={`px-3 py-2.5 ${getMottattClass(days)}`}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span>{days} dager siden</span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {format(new Date(row.mottatt_dato), "d. MMM yyyy", { locale: nb })}
-                        </TooltipContent>
-                      </Tooltip>
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <span className="font-medium hover:text-primary">{row.selskap_navn}</span>
-                    </td>
-                    <td className="px-3 py-2.5 text-muted-foreground text-sm">{row.sted}</td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex flex-wrap gap-1">
-                        {(row.teknologier || []).slice(0, 3).map((t: string) => (
-                          <span key={t} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] text-muted-foreground">{t}</span>
-                        ))}
-                        {(row.teknologier || []).length > 3 && (
-                          <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] text-muted-foreground">
-                            +{row.teknologier!.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-3 py-2.5">
-                      {row.antall_sendt === 0 ? (
-                        <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-                          0 sendt
-                        </span>
-                      ) : (
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-semibold text-foreground">{row.antall_sendt}</span>
-                          {row.hvem_sendt && (
-                            <span className="text-muted-foreground text-[0.75rem]">{truncate(row.hvem_sendt, 25)}</span>
-                          )}
-                        </div>
+            return (
+              <div
+                key={row.id}
+                onClick={() => navigate(`/foresporsler/${row.id}`)}
+                className={`grid grid-cols-[140px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 cursor-pointer border-b border-border last:border-b-0 ${
+                  isNew ? "border-l-[3px] border-l-amber-400" : isAging ? "border-l-[3px] border-l-destructive/40" : ""
+                }`}
+              >
+                <div className={getMottattClass(days)}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span>{days} dager siden</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {format(new Date(row.mottatt_dato), "d. MMM yyyy", { locale: nb })}
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <div>
+                  <span className="font-medium hover:text-primary">{row.selskap_navn}</span>
+                </div>
+                <div className="text-muted-foreground text-sm">{row.sted}</div>
+                <div className="flex flex-wrap gap-1">
+                  {(row.teknologier || []).slice(0, 3).map((t: string) => (
+                    <span key={t} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] text-muted-foreground">{t}</span>
+                  ))}
+                  {(row.teknologier || []).length > 3 && (
+                    <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] text-muted-foreground">
+                      +{row.teknologier!.length - 3}
+                    </span>
+                  )}
+                </div>
+                <div className="flex justify-end">
+                  {row.antall_sendt === 0 ? (
+                    <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
+                      0 sendt
+                    </span>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-foreground">{row.antall_sendt}</span>
+                      {row.hvem_sendt && (
+                        <span className="text-muted-foreground text-[0.75rem]">{truncate(row.hvem_sendt, 25)}</span>
                       )}
-                    </td>
-                  </tr>
-                );
-              })}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="text-center py-12 text-muted-foreground">
-                    Ingen forespørsler å vise
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {sorted.length === 0 && (
+            <div className="text-center py-12 text-muted-foreground">
+              Ingen forespørsler å vise
+            </div>
+          )}
         </div>
       )}
 
