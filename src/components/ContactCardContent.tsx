@@ -222,7 +222,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
-        .select("*, companies(id, name), profiles!contacts_owner_id_fkey(full_name)")
+        .select("*, companies(id, name, city), profiles!contacts_owner_id_fkey(full_name)")
         .eq("id", contactId).single();
       if (error) throw error;
       return data;
@@ -430,6 +430,9 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
 
   const companyName = (contact.companies as any)?.name;
   const companyId = (contact.companies as any)?.id;
+  const companyCity = (contact.companies as any)?.city as string | null;
+  const companyLocations: string[] = companyCity ? companyCity.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
+  const showAvdeling = companyLocations.length > 1;
 
   return (
     <div>
@@ -556,6 +559,36 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
               <InlineField value={contact.title || ""} onSave={updateField("title")} placeholder="Stilling" className="text-[0.9375rem]" />
             ) : (
               contact.title && <span>{contact.title}</span>
+            )}
+            {showAvdeling && (
+              <>
+                <span className="text-muted-foreground/40">·</span>
+                {editable ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className={cn(
+                        "group inline-flex items-center gap-1 transition-colors cursor-pointer text-[0.9375rem]",
+                        contact.location ? "hover:text-foreground/60" : "text-muted-foreground/40 italic hover:text-foreground/60"
+                      )}>
+                        <span>{contact.location || "Avdeling"}</span>
+                        <Pencil className="h-2.5 w-2.5 opacity-0 group-hover:opacity-50 transition-opacity flex-shrink-0" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem onClick={() => updateMutation.mutate({ location: null })}>
+                        <span className="text-muted-foreground italic">Ingen spesifikk avdeling</span>
+                      </DropdownMenuItem>
+                      {companyLocations.map((loc) => (
+                        <DropdownMenuItem key={loc} onClick={() => updateMutation.mutate({ location: loc })}>
+                          {loc}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  contact.location && <span>{contact.location}</span>
+                )}
+              </>
             )}
           </div>
           {changingCompany && (
