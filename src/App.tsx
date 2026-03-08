@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
+import { lazy, Suspense } from "react";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Companies from "./pages/Companies";
@@ -17,6 +18,9 @@ import NotFound from "./pages/NotFound";
 import Import from "./pages/Import";
 import AdminBrregSync from "./pages/AdminBrregSync";
 import Foresporsler from "./pages/Foresporsler";
+
+const KonsulenterAnsatte = lazy(() => import("./pages/KonsulenterAnsatte"));
+const KonsulenterOppdrag = lazy(() => import("./pages/KonsulenterOppdrag"));
 
 const queryClient = new QueryClient();
 
@@ -43,6 +47,10 @@ function AuthRoute() {
   return <Login />;
 }
 
+const LazyFallback = () => (
+  <p className="text-muted-foreground text-center py-12">Laster...</p>
+);
+
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
     <QueryClientProvider client={queryClient}>
@@ -64,6 +72,22 @@ const App = () => (
                 <Route path="foresporsler/:id" element={<Foresporsler />} />
                 <Route path="import" element={<Import />} />
                 <Route path="admin/brreg-sync" element={<AdminBrregSync />} />
+                <Route
+                  path="konsulenter/ansatte"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <KonsulenterAnsatte />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="konsulenter/i-oppdrag"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <KonsulenterOppdrag />
+                    </Suspense>
+                  }
+                />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
