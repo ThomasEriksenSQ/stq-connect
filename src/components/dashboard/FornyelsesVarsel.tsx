@@ -64,8 +64,10 @@ export default function FornyelsesVarsel() {
               <div className="flex-1 min-w-0">
                 <p className="text-[0.875rem] font-semibold text-foreground truncate">
                   {o.kandidat}
-                  {o.kunde && <span className="font-normal text-muted-foreground"> — {o.kunde}</span>}
                 </p>
+                {o.kunde && (
+                  <p className="text-[0.8125rem] text-muted-foreground truncate">{o.kunde}</p>
+                )}
               </div>
 
               {/* Date info - right aligned */}
