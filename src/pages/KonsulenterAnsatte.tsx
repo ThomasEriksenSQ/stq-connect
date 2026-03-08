@@ -310,10 +310,6 @@ function AnsattModal({
             />
           </div>
 
-          <div>
-            <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">LinkedIn URL</label>
-            <Input value={form.linkedin} onChange={e => set("linkedin", e.target.value)} placeholder="https://linkedin.com/in/..." className="mt-1 text-[0.875rem]" />
-          </div>
 
           <div className="flex items-center justify-between py-2">
             <div>
