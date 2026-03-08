@@ -478,7 +478,7 @@ function ConsultantModal({ open, onClose, editRow, contacts, companies, userId }
             <div>
               <label className={LABEL + " block mb-1.5"}>Type</label>
               <div className="flex flex-wrap gap-1.5">
-                {(["freelance", "partner", "konsulenthus"] as const).map(t => (
+                {(["freelance", "partner"] as const).map(t => (
                   <button key={t} onClick={() => set("type", t)} className={form.type === t ? CHIP_ON : CHIP_OFF}>
                     {TYPE_LABELS[t]}
                   </button>
@@ -488,9 +488,9 @@ function ConsultantModal({ open, onClose, editRow, contacts, companies, userId }
             <div>
               <label className={LABEL + " block mb-1.5"}>Status</label>
               <div className="flex flex-wrap gap-1.5">
-                {(["ledig", "aktiv", "utilgjengelig", "utgått"] as const).map(s => (
-                  <button key={s} onClick={() => set("status", s)} className={form.status === s ? CHIP_ON : CHIP_OFF}>
-                    {STATUS_LABELS[s]}
+                {([{ value: "ledig", label: "Tilgjengelig" }, { value: "utilgjengelig", label: "Ikke ledig" }] as const).map(s => (
+                  <button key={s.value} onClick={() => set("status", s.value)} className={form.status === s.value ? CHIP_ON : CHIP_OFF}>
+                    {s.label}
                   </button>
                 ))}
               </div>
