@@ -168,6 +168,34 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
             />
           </div>
 
+          {/* Kontaktperson */}
+          <div>
+            <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Kontaktperson</label>
+            <div className="relative mt-1">
+              <Input
+                value={kontakt}
+                onChange={(e) => { setKontakt(e.target.value); setShowKontaktDropdown(true); }}
+                onFocus={() => setShowKontaktDropdown(true)}
+                onBlur={() => setTimeout(() => setShowKontaktDropdown(false), 150)}
+                placeholder="Søk etter kontaktperson..."
+                className="text-[0.875rem]"
+              />
+              {showKontaktDropdown && filteredKontakter.length > 0 && (
+                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-md max-h-48 overflow-auto">
+                  {filteredKontakter.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => { setKontakt(c); setShowKontaktDropdown(false); }}
+                      className="w-full text-left px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors"
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Teknologier */}
           <div>
             <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Teknologier</label>
