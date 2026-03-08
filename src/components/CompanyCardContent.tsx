@@ -755,7 +755,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
           {contacts.length === 0 ? (
             <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen kontakter</p>
           ) : (
-            <div className="divide-y divide-border">
+            <div className="space-y-3">
               {contacts.map((c) => {
                 const contactOwner = (c as any).profiles?.full_name || null;
                 return (
@@ -766,15 +766,15 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <p className="text-[0.8125rem] font-medium truncate group-hover:text-primary transition-colors">{c.first_name} {c.last_name}</p>
+                        <p className="text-[0.9375rem] font-semibold truncate group-hover:text-primary transition-colors">{c.first_name} {c.last_name}</p>
                         {c.cv_email && (
-                          <span className="rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">CV</span>
+                          <span className="ml-1.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">CV</span>
                         )}
                         {c.call_list && (
-                          <span className="rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">INN</span>
+                          <span className="ml-1.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">INN</span>
                         )}
                       </div>
-                      <p className="text-[0.6875rem] text-muted-foreground truncate">
+                      <p className="text-[0.8125rem] text-muted-foreground truncate">
                         {[c.title, contactOwner].filter(Boolean).join(" · ") || ""}
                       </p>
                     </div>
