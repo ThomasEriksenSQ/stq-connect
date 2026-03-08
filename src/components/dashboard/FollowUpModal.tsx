@@ -119,7 +119,7 @@ const FollowUpModal = ({ open, onCancel, onClose, onSubmit, data }: Props) => {
 
   const ownerObj = OWNERS.find((o) => o.key === owner) ?? OWNERS[0];
 
-  const canSubmit = title.trim().length > 0 && selectedDate;
+  const canSubmit = title.trim().length > 0 && hasValidDate;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
