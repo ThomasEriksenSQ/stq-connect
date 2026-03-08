@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
-type TypeFilter = "Alle" | "freelance" | "partner" | "konsulenthus";
-type StatusFilter = "Alle" | "ledig" | "aktiv" | "utilgjengelig" | "utgått";
+type TypeFilter = "Alle" | "freelance" | "partner";
+type StatusFilter = "Alle" | "ledig" | "utilgjengelig";
 
 const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer";
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
@@ -19,18 +19,17 @@ const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground fo
 const TYPE_LABELS: Record<string, string> = {
   freelance: "Freelance",
   partner: "Partner",
-  konsulenthus: "Konsulenthus",
 };
 const STATUS_LABELS: Record<string, string> = {
-  ledig: "Ledig",
-  aktiv: "Aktiv",
-  utilgjengelig: "Utilgjengelig",
-  utgått: "Utgått",
+  ledig: "Tilgjengelig",
+  aktiv: "Tilgjengelig",
+  utilgjengelig: "Ikke ledig",
+  utgått: "Ikke ledig",
 };
 const STATUS_COLORS: Record<string, string> = {
   ledig: "bg-emerald-100 text-emerald-700",
-  aktiv: "bg-blue-100 text-blue-700",
-  utilgjengelig: "bg-amber-100 text-amber-700",
+  aktiv: "bg-emerald-100 text-emerald-700",
+  utilgjengelig: "bg-muted text-muted-foreground",
   utgått: "bg-muted text-muted-foreground",
 };
 
