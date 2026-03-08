@@ -74,8 +74,7 @@ function parseDescriptionCategory(description: string | null): { category: strin
 function extractTitleAndCategory(subject: string, description: string | null) {
   const normalizedSubject = normalizeCategoryLabel(subject);
   if (CATEGORIES.some(c => c.label === normalizedSubject)) {
-    const descClean = cleanDescription(description);
-    return { title: normalizedSubject, category: normalizedSubject, cleanDesc: descClean };
+    return { title: normalizedSubject, category: normalizedSubject, cleanDesc: "" };
   }
   const parsed = parseDescriptionCategory(description);
   return { title: subject, category: parsed.category, cleanDesc: cleanDescription(parsed.text) || "" };
@@ -438,7 +437,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                             <span className="text-[0.6875rem] text-muted-foreground">{contactName}</span>
                           )}
                         </div>
-                        {displayDesc && (
+                        {displayDesc && !/^\[.+\]$/.test(displayDesc.trim()) && (
                           <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{displayDesc}</p>
                         )}
                       </div>
