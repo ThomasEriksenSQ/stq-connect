@@ -472,7 +472,7 @@ const Companies = () => {
             { value: "churned", label: "Ikke relevant selskap" },
           ].map(o => (
             <button key={o.value} onClick={() => setStatusFilter(o.value)}
-              className={`h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer ${statusFilter === o.value ? "bg-foreground text-background border-foreground font-medium" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+              className={statusFilter === o.value ? CHIP_ON : CHIP_OFF}>
               {o.label}
             </button>
           ))}
