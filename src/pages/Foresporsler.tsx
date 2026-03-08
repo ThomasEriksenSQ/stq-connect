@@ -423,7 +423,7 @@ export default function Foresporsler() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [modalOpen, setModalOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("Alle");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("aktive");
   const [sort, setSort] = useState<{
     field: "mottatt_dato" | "selskap_navn" | "antall_sendt";
     dir: "asc" | "desc";
