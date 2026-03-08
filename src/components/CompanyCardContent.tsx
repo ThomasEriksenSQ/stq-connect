@@ -360,17 +360,23 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
               </span>
             )}
             {editable ? (
-              <Select value={company.owner_id || ""} onValueChange={(v) => updateMutation.mutate({ owner_id: v || null })}>
-                <SelectTrigger className="h-auto w-auto gap-0 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0 [&>svg]:hidden">
-                  <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium whitespace-nowrap cursor-pointer">
                     {company.owner_id && profileMapFull[company.owner_id] ? profileMapFull[company.owner_id] : "Eier"}
-                    <ChevronDown className="h-3 w-3 ml-1" />
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  {allProfiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+                    <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {allProfiles.map((p) => (
+                    <DropdownMenuItem key={p.id} onClick={() => updateMutation.mutate({ owner_id: p.id })}>
+                      <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+                        {p.full_name}
+                      </span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : ownerFullName ? (
               <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{ownerFullName}</span>
             ) : null}
