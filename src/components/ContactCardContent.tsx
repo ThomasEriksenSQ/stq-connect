@@ -690,6 +690,31 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
             <span className="text-[0.75rem] text-foreground">Innkjøper</span>
           </label>
         </div>
+
+        {/* AI Signal suggestion */}
+        {editable && activities.length > 0 && (() => {
+          const effectiveSignal = getEffectiveSignal(
+            activities.map(a => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+            tasks.map(t => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date })),
+          );
+          const lastTaskDue = tasks.length > 0 ? tasks[0]?.due_date || null : null;
+          return (
+            <AiSignalBanner
+              contactId={contactId}
+              contactName={`${contact.first_name} ${contact.last_name}`}
+              currentSignal={effectiveSignal}
+              activities={activities.slice(0, 5).map(a => ({ type: a.type, subject: a.subject, created_at: a.created_at }))}
+              lastTaskDueDate={lastTaskDue}
+              onUpdateSignal={(signal) => {
+                createActivityMutation.mutate({
+                  type: "note",
+                  subject: signal,
+                  description: `[${signal}]`,
+                });
+              }}
+            />
+          );
+        })()}
       </div>
 
       {/* Notes (inline edit via pencil) */}
