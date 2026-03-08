@@ -652,6 +652,18 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
                 </PopoverContent>
               </Popover>
             </div>
+
+            {/* Kommentar */}
+            <div>
+              <label className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">Kommentar</label>
+              <textarea
+                value={form.kommentar}
+                onChange={(e) => set("kommentar", e.target.value)}
+                rows={3}
+                placeholder="Notater om konsulenten, kilde, hvordan dere kom i kontakt..."
+                className="mt-1 flex w-full rounded-md border border-input bg-background px-3 py-2 text-[0.875rem] ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+            </div>
           </div>
         )}
 
