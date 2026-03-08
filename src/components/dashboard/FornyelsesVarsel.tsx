@@ -82,13 +82,6 @@ export default function FornyelsesVarsel() {
                 </p>
               </div>
 
-              {/* Price */}
-              {o.utpris && (
-                <span className="text-[0.75rem] text-muted-foreground shrink-0">
-                  kr {formatNOK(Number(o.utpris))}/t
-                </span>
-              )}
-
               {(overdue || urgent) && (
                 <AlertTriangle className={cn(
                   "h-4 w-4 shrink-0",
