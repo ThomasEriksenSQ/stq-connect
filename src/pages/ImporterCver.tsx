@@ -182,7 +182,7 @@ export default function ImporterCver() {
       erfaring_aar: cv.data.erfaring_aar || null,
       geografi: cv.data.geografi || null,
       updated_at: new Date().toISOString(),
-    }).eq("id", cv.matchedId);
+    }).eq("id", cv.matchedId as number);
     if (error) throw error;
   };
 
