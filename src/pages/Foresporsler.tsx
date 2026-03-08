@@ -874,6 +874,14 @@ function ForespørselSheet({
               <p className="text-[0.875rem] text-foreground mt-1">{row.type || "—"}</p>
             </div>
 
+            {/* Sluttkunde */}
+            {row.sluttkunde && (
+              <div>
+                <p className={LABEL}>Sluttkunde</p>
+                <p className="text-[0.875rem] font-medium text-foreground mt-1">{row.sluttkunde}</p>
+              </div>
+            )}
+
             {/* Teknologier */}
             <div>
               <p className={LABEL}>Teknologier</p>
