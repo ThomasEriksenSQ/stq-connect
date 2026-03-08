@@ -173,22 +173,17 @@ export default function KonsulenterOppdrag() {
                 >
                   {/* KONSULENT */}
                   <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary text-[0.6875rem] font-bold flex items-center justify-center flex-shrink-0">
-                        {getInitials(o.kandidat)}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-[0.875rem]">{o.kandidat}</p>
-                        {o.er_ansatt ? (
-                          <span className="bg-primary/10 text-primary text-[0.625rem] font-semibold uppercase rounded px-1.5 py-0.5">
-                            STACQ
-                          </span>
-                        ) : (
-                          <span className="bg-secondary text-muted-foreground text-[0.625rem] font-semibold uppercase rounded px-1.5 py-0.5">
-                            PARTNER
-                          </span>
-                        )}
-                      </div>
+                    <div>
+                      <p className="font-semibold text-[0.875rem]">{o.kandidat}</p>
+                      {o.er_ansatt ? (
+                        <span className="bg-primary/10 text-primary text-[0.625rem] font-semibold uppercase rounded px-1.5 py-0.5">
+                          STACQ
+                        </span>
+                      ) : (
+                        <span className="bg-secondary text-muted-foreground text-[0.625rem] font-semibold uppercase rounded px-1.5 py-0.5">
+                          PARTNER
+                        </span>
+                      )}
                     </div>
                   </td>
                   {/* KUNDE */}
