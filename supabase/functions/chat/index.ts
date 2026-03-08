@@ -10,9 +10,11 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages } = await req.json();
+    const { messages, system } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const systemMessage = system || `Du er en AI-assistent i STACQ CRM-systemet. Svar alltid på norsk. Vær kortfattet og handlingsrettet.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -21,26 +23,12 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "anthropic/claude-sonnet-4-20250514",
         messages: [
-          {
-            role: "system",
-            content: `Du er en AI-assistent i STACQ CRM-systemet. Du hjelper brukere med å forstå kundedata, planlegge oppfølginger, og gi råd om salgs- og relasjonsarbeid.
-
-Svar alltid på norsk. Vær kortfattet og handlingsrettet. Bruk markdown for formatering når det passer.
-
-Du kan hjelpe med:
-- Gi råd om kundeoppfølging og salgsstrategi
-- Foreslå oppfølgingsaktiviteter
-- Hjelpe med å prioritere oppgaver
-- Svare på generelle CRM-spørsmål
-- Gi tips om relasjonsbygging
-
-Vær profesjonell men vennlig. Korte, konsise svar er best.`,
-          },
+          { role: "system", content: systemMessage },
           ...messages,
         ],
-        stream: true,
+        max_tokens: 1024,
       }),
     });
 
@@ -52,7 +40,7 @@ Vær profesjonell men vennlig. Korte, konsise svar er best.`,
         });
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Mangler kreditter. Legg til midler i Lovable-arbeidsområdet." }), {
+        return new Response(JSON.stringify({ error: "Mangler kreditter." }), {
           status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -65,8 +53,12 @@ Vær profesjonell men vennlig. Korte, konsise svar er best.`,
       });
     }
 
-    return new Response(response.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    // Parse non-streaming response
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content || "";
+
+    return new Response(JSON.stringify({ text }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("chat error:", e);
