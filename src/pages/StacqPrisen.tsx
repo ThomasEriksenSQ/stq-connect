@@ -253,7 +253,7 @@ export default function StacqPrisen() {
                 <span />
                 <span />
                 <span />
-                <span className="text-[0.8125rem] text-emerald-600">kr {formatKr(Math.round(stacqTotal + oppstartTotal))}/dag</span>
+                <span className="text-[0.8125rem] text-emerald-600">kr {formatKr(Math.round(stacqTotalPerTime + oppstartTotalPerTime))}/time</span>
                 <span className="text-[0.8125rem] text-right text-muted-foreground">{Math.round(totalPct)}%</span>
                 <span />
               </div>
