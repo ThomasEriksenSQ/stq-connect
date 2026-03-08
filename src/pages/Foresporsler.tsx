@@ -20,7 +20,12 @@ import {
 import { format, differenceInDays } from "date-fns";
 import { nb } from "date-fns/locale";
 
-type StatusFilter = "Alle" | "Ny" | "Aktiv" | "Fullført" | "Tapt";
+type StatusFilter = "aktive" | "utgatte" | "alle";
+const STATUS_CHIPS: { value: StatusFilter; label: string }[] = [
+  { value: "aktive", label: "Aktive, siste 45 dager" },
+  { value: "utgatte", label: "Utgåtte, 45+ dager" },
+  { value: "alle", label: "Alle" },
+];
 
 const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer select-none";
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
@@ -418,7 +423,7 @@ export default function Foresporsler() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [modalOpen, setModalOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("Alle");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("aktive");
   const [sort, setSort] = useState<{
     field: "mottatt_dato" | "selskap_navn" | "antall_sendt";
     dir: "asc" | "desc";
@@ -447,8 +452,10 @@ export default function Foresporsler() {
   const filtered = useMemo(() => {
     if (!rows) return [];
     return rows.filter((r) => {
-      if (statusFilter === "Alle") return r.status !== "Tapt";
-      return r.status === statusFilter;
+      const days = getDaysAgo(r.mottatt_dato);
+      if (statusFilter === "aktive") return days <= 45;
+      if (statusFilter === "utgatte") return days > 45;
+      return true;
     });
   }, [rows, statusFilter]);
 
@@ -501,9 +508,9 @@ export default function Foresporsler() {
 
       {/* Filter chips */}
       <div className="flex items-center gap-2">
-        {(["Alle", "Ny", "Aktiv", "Fullført", "Tapt"] as StatusFilter[]).map((f) => (
-          <button key={f} className={statusFilter === f ? CHIP_ON : CHIP_OFF} onClick={() => setStatusFilter(f)}>
-            {f}
+        {STATUS_CHIPS.map((f) => (
+          <button key={f.value} className={statusFilter === f.value ? CHIP_ON : CHIP_OFF} onClick={() => setStatusFilter(f.value)}>
+            {f.label}
           </button>
         ))}
       </div>
