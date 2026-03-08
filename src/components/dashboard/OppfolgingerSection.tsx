@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { isPast, isToday, startOfDay, addDays, format, differenceInDays } from "date-fns";
 import { nb } from "date-fns/locale";
 import { CATEGORIES, getEffectiveSignal } from "@/lib/categoryUtils";
-import { Check, Calendar as CalendarIcon } from "lucide-react";
+import { Check, Calendar as CalendarIcon, ChevronDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
