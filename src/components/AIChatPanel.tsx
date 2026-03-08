@@ -254,21 +254,6 @@ export function AIChatPanel() {
         </div>
       </div>
 
-      {/* Context badge */}
-      <div className="px-5 py-2 border-b border-border flex items-center gap-2">
-        {contextLoading ? (
-          <span className="text-xs text-muted-foreground">Laster CRM-data...</span>
-        ) : crmContext ? (
-          <>
-            <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-[0.75rem] font-medium">
-              {crmContext.contacts.length} kontakter
-            </span>
-            <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-[0.75rem] font-medium">
-              {crmContext.foresporsler.length} forespørsler
-            </span>
-          </>
-        ) : null}
-      </div>
 
       {/* Chat area */}
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
