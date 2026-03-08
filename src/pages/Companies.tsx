@@ -93,6 +93,7 @@ const Companies = () => {
   }, [form.city]);
   const [signalFilter, setSignalFilter] = useState("all");
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "last_activity", dir: "desc" });
+  const [userHasSorted, setUserHasSorted] = useState(false);
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const navigate = useNavigate();
