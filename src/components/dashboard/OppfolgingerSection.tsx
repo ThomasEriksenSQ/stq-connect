@@ -399,7 +399,7 @@ interface TaskRowProps {
   onPostpone: (e: React.MouseEvent, taskId: string, newDate: Date) => void;
 }
 
-function TaskRow({ task, isLast, profiles, signal, fadingIds, onComplete, onChangeOwner, onChangeSignal, onPostpone, navigate }: TaskRowProps) {
+function TaskRow({ task, isLast, profiles, signal, fadingIds, onComplete, onChangeOwner, onChangeSignal, onPostpone }: TaskRowProps) {
   const contact = task.contacts as any;
   const contactName = contact?.first_name ? `${contact.first_name} ${contact.last_name}` : null;
   const contactId = contact?.id || null;
