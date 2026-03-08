@@ -384,7 +384,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             {editable ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium whitespace-nowrap cursor-pointer">
+                  <button className="inline-flex items-center rounded-full border bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap cursor-pointer">
                     {company.owner_id && profileMapFull[company.owner_id] ? profileMapFull[company.owner_id] : "Eier"}
                     <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
                   </button>
@@ -392,7 +392,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                 <DropdownMenuContent align="end">
                   {allProfiles.map((p) => (
                     <DropdownMenuItem key={p.id} onClick={() => updateMutation.mutate({ owner_id: p.id })}>
-                      <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+                      <span className="inline-flex items-center rounded-full border bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold">
                         {p.full_name}
                       </span>
                     </DropdownMenuItem>
@@ -400,7 +400,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : ownerFullName ? (
-              <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{ownerFullName}</span>
+              <span className="inline-flex items-center rounded-full border bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold">{ownerFullName}</span>
             ) : null}
             {editable && (
               <Dialog open={newContactOpen} onOpenChange={setNewContactOpen}>
