@@ -248,6 +248,7 @@ const emptyForm: ConsultantForm = {
   company_id: "", selskap_tekst: "",
   teknologier: [], status: "ledig",
   tilgjengelig_fra: "", cv_tekst: "",
+  kommentar: "",
 };
 
 function ConsultantModal({ open, onClose, editRow, userId }: {
