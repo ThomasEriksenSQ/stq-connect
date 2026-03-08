@@ -81,6 +81,8 @@ const SUGGESTED_TAGS = ["C", "C++", "Embedded", "Python", "Yocto", "Linux", "Lab
 
 function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [selskap, setSelskap] = useState("");
+  const [selectedCompany, setSelectedCompany] = useState<typeof MOCK_COMPANIES[0] | null>(null);
+  const [avdeling, setAvdeling] = useState("");
   const [sted, setSted] = useState("");
   const [kontakt, setKontakt] = useState("");
   const [showKontaktDropdown, setShowKontaktDropdown] = useState(false);
@@ -90,9 +92,12 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
   const [showDropdown, setShowDropdown] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const hasMultipleLocations = selectedCompany && selectedCompany.locations.length > 1;
+
   useEffect(() => {
     if (open) {
-      setSelskap(""); setSted(""); setKontakt(""); setKommentar("");
+      setSelskap(""); setSelectedCompany(null); setAvdeling("");
+      setSted(""); setKontakt(""); setKommentar("");
       setTags([]); setTagInput("");
     }
   }, [open]);
