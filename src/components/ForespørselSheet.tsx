@@ -493,11 +493,11 @@ export function ForespørselSheet({
               )}
 
               {matchResults && matchResults.length === 0 && !matching && (
-                <p className="text-[0.8125rem] text-muted-foreground">Ingen treff med score ≥ 5</p>
+                <p className="text-[0.8125rem] text-muted-foreground">Ingen treff med score ≥ 4</p>
               )}
 
               {matchResults && matchResults.length > 0 && (
-                <div className="space-y-2">
+                <div className="max-h-[600px] overflow-y-auto space-y-2">
                   {matchResults
                     .filter(m => matchSourceFilter === "Alle" ? true : matchSourceFilter === "Ansatte" ? m.type === "intern" : m.type === "ekstern")
                     .map((m, i) => {

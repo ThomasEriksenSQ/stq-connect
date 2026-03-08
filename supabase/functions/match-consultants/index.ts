@@ -25,7 +25,7 @@ serve(async (req) => {
     const systemPrompt = `You are a consultant matching assistant for STACQ, a Norwegian IT staffing company specializing in embedded systems and engineering.
 Rank consultants by fit for the assignment. Return ONLY a valid JSON array, no markdown, no explanation:
 [{ "id": <number|string>, "navn": "<name>", "type": "intern"|"ekstern", "score": <1-10>, "begrunnelse": "<1 short Norwegian sentence, max 12 words>", "match_tags": ["<matching technology>", ...] }]
-Rank best fit first. Only include consultants with score >= 5. Max 10 results.`;
+Rank best fit first. Return ALL consultants with score >= 4, ranked best first. Return as many matches as possible — do not limit the list.`;
 
     const userPrompt = `Forespørsel: ${teknologier.join(", ")}${sted ? ` — ${sted}` : ""}
 
