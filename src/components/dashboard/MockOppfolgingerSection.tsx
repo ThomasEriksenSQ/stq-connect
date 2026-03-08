@@ -218,8 +218,8 @@ const MockOppfolgingerSection = () => {
                 <span className={cn("text-[0.8125rem] font-medium", DATE_COLOR[row.dueType])}>
                   {row.due}
                 </span>
-                <span className={cn("text-xs", DATE_COLOR[row.dueType])}>·</span>
-                <span className={cn("text-xs", DATE_COLOR[row.dueType])}>{row.fullDate}</span>
+                <span className={cn("text-xs font-medium", DATE_COLOR[row.dueType])}>·</span>
+                <span className={cn("text-xs font-medium", DATE_COLOR[row.dueType])}>{row.fullDate}</span>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
