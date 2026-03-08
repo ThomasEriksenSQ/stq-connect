@@ -527,7 +527,7 @@ const Companies = () => {
                   onClick={() => navigate(`/selskaper/${company.id}`)}>
                   <div className="min-w-0">
                     <span className="text-[0.8125rem] font-medium text-foreground truncate block">{company.name}</span>
-                    {company.industry && (
+                    {false && company.industry && (
                       <p className="text-[0.6875rem] text-muted-foreground truncate mt-0.5">{company.industry}</p>
                     )}
                   </div>
