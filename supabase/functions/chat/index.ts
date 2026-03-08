@@ -23,7 +23,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "anthropic/claude-sonnet-4-20250514",
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemMessage },
           ...messages,
