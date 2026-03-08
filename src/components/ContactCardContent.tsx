@@ -557,9 +557,16 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           {contact.linkedin && (
             <>
               <span className="text-muted-foreground/40">·</span>
-              <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
-                <Linkedin className="h-3 w-3" />in
-              </a>
+              {editable ? (
+                <span className="inline-flex items-center gap-1">
+                  <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline"><Linkedin className="h-3 w-3" /></a>
+                  <InlineField value={contact.linkedin} onSave={updateField("linkedin")} className="text-[0.9375rem]" />
+                </span>
+              ) : (
+                <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                  <Linkedin className="h-3 w-3" />in
+                </a>
+              )}
             </>
           )}
           {editable && !contact.phone && (
@@ -572,6 +579,12 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
             <>
               <span className="text-muted-foreground/40">·</span>
               <InlineField value="" onSave={updateField("email")} placeholder="E-post" className="text-[0.9375rem]" />
+            </>
+          )}
+          {editable && !contact.linkedin && (
+            <>
+              <span className="text-muted-foreground/40">·</span>
+              <InlineField value="" onSave={updateField("linkedin")} placeholder="LinkedIn URL" className="text-[0.9375rem]" />
             </>
           )}
         </div>
