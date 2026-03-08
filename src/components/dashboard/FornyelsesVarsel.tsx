@@ -66,6 +66,10 @@ export default function FornyelsesVarsel() {
                   {o.kandidat}
                   {o.kunde && <span className="font-normal text-muted-foreground"> — {o.kunde}</span>}
                 </p>
+              </div>
+
+              {/* Date info - right aligned */}
+              <div className="text-right shrink-0">
                 <p className={cn(
                   "text-[0.8125rem] font-medium",
                   overdue && "text-destructive",
@@ -77,7 +81,8 @@ export default function FornyelsesVarsel() {
                     : o.daysLeft === 0
                       ? "Fornyes i dag"
                       : `Om ${o.daysLeft} dager`}
-                  {" · "}
+                </p>
+                <p className="text-[0.75rem] text-muted-foreground">
                   {format(o.fornyDate, "d. MMM yyyy", { locale: nb })}
                 </p>
               </div>
