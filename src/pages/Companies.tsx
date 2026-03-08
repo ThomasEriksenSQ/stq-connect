@@ -93,6 +93,7 @@ const Companies = () => {
   }, [form.city]);
   const [signalFilter, setSignalFilter] = useState("all");
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "last_activity", dir: "desc" });
+  const [userHasSorted, setUserHasSorted] = useState(false);
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -283,7 +284,32 @@ const Companies = () => {
     return matchSearch && matchOwner && matchStatus && matchSignal;
   });
 
+  const SIGNAL_PRIORITY: Record<string, number> = {
+    "Behov nå": 0,
+    "Får fremtidig behov": 1,
+    "Vil kanskje få behov": 2,
+    "Ukjent om behov": 3,
+    "Ikke aktuelt": 4,
+  };
+
+  const TYPE_PRIORITY: Record<string, number> = {
+    "customer": 0,
+    "kunde": 0,
+    "prospect": 1,
+    "partner": 2,
+    "churned": 3,
+  };
+
   const sorted = [...filtered].sort((a, b) => {
+    if (!userHasSorted) {
+      const as = SIGNAL_PRIORITY[a.signal ?? ""] ?? 5;
+      const bs = SIGNAL_PRIORITY[b.signal ?? ""] ?? 5;
+      if (as !== bs) return as - bs;
+      const at = TYPE_PRIORITY[a.status ?? ""] ?? 5;
+      const bt = TYPE_PRIORITY[b.status ?? ""] ?? 5;
+      if (at !== bt) return at - bt;
+      return a.name.localeCompare(b.name, "nb");
+    }
     const dir = sort.dir === "asc" ? 1 : -1;
     switch (sort.field) {
       case "name": return dir * a.name.localeCompare(b.name, "nb");
@@ -309,6 +335,7 @@ const Companies = () => {
   });
 
   const toggleSort = (field: SortField) => {
+    setUserHasSorted(true);
     setSort((prev) => prev.field === field ? { field, dir: prev.dir === "asc" ? "desc" : "asc" } : { field, dir: field === "last_activity" ? "desc" : "asc" });
   };
 
