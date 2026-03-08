@@ -6,6 +6,7 @@ import { format, differenceInDays } from "date-fns";
 import { Briefcase, CalendarCheck, TrendingUp, BarChart2 } from "lucide-react";
 
 type Filter = "Alle" | "Aktiv" | "Oppstart" | "Inaktiv";
+const TIMER_PER_DAG = 7.5;
 
 export default function KonsulenterOppdrag() {
   const [filter, setFilter] = useState<Filter>("Aktiv");
