@@ -64,7 +64,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
   const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const contactTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const hasMultipleLocations = selectedLocations.length > 1;
 
