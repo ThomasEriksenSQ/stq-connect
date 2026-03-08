@@ -572,8 +572,9 @@ const Companies = () => {
                           const t = TYPE_OPTIONS.find(o => o.value === company.status || (o.value === "customer" && company.status === "kunde"));
                           const label = t?.label || company.status;
                           return (
-                            <button className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors text-left cursor-pointer">
+                            <button className="inline-flex items-center text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors text-left cursor-pointer">
                               {label}
+                              <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
                             </button>
                           );
                         })()}
