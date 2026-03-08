@@ -1098,6 +1098,7 @@ export default function Foresporsler() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("aktive");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
   const [sort, setSort] = useState<{
     field: "mottatt_dato" | "selskap_navn" | "sendt_count";
     dir: "asc" | "desc";
@@ -1125,13 +1126,17 @@ export default function Foresporsler() {
 
   const filtered = useMemo(() => {
     if (!rows) return [];
-    return rows.filter((r: any) => {
+    let items = rows.filter((r: any) => {
       const days = getDaysAgo(r.mottatt_dato);
       if (statusFilter === "aktive") return days <= 45;
       if (statusFilter === "utgatte") return days > 45;
       return true;
     });
-  }, [rows, statusFilter]);
+    if (typeFilter !== "Alle") {
+      items = items.filter((r: any) => r.type === typeFilter);
+    }
+    return items;
+  }, [rows, statusFilter, typeFilter]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a: any, b: any) => {
@@ -1178,12 +1183,27 @@ export default function Foresporsler() {
       </div>
 
       {/* Filter chips */}
-      <div className="flex items-center gap-2">
-        {STATUS_CHIPS.map((f) => (
-          <button key={f.value} className={statusFilter === f.value ? CHIP_ON : CHIP_OFF} onClick={() => setStatusFilter(f.value)}>
-            {f.label}
-          </button>
-        ))}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-16 flex-shrink-0">Tid</span>
+          <div className="flex items-center gap-1.5">
+            {STATUS_CHIPS.map((f) => (
+              <button key={f.value} className={statusFilter === f.value ? CHIP_ON : CHIP_OFF} onClick={() => setStatusFilter(f.value)}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-16 flex-shrink-0">Type</span>
+          <div className="flex items-center gap-1.5">
+            {(["Alle", "DIR", "VIA"] as TypeFilter[]).map(f => (
+              <button key={f} className={typeFilter === f ? CHIP_ON : CHIP_OFF} onClick={() => setTypeFilter(f)}>
+                {f === "Alle" ? "Alle" : f === "DIR" ? "Direkte" : "Partner"}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Table */}
@@ -1192,44 +1212,60 @@ export default function Foresporsler() {
       ) : (
         <div className="border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
           {/* Header row */}
-          <div className="grid grid-cols-[140px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)_120px] gap-4 px-4 py-2.5 border-b border-border bg-background">
+          <div className="grid grid-cols-[90px_minmax(0,1.8fr)_70px_110px_minmax(0,1.5fr)_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="mottatt_dato">Mottatt</SortHeader>
             <SortHeader field="selskap_navn">Selskap</SortHeader>
-            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Sted</span>
+            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Type</span>
+            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Frist</span>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Teknologier</span>
-            <SortHeader field="sendt_count" className="justify-end">Sendt inn</SortHeader>
+            <SortHeader field="sendt_count" className="justify-end">Sendt</SortHeader>
           </div>
           {/* Data rows */}
           <div className="divide-y divide-border">
           {sorted.map((row: any) => {
             const days = getDaysAgo(row.mottatt_dato);
-            const isActive = row.status === "Ny" || row.status === "Aktiv";
             const sendt = row.foresporsler_konsulenter || [];
             const antall = sendt.length;
             const hvem = sendt.map((k: any) => k.stacq_ansatte?.navn?.split(" ")[0]).filter(Boolean).join(", ");
-            const isNew = isActive && antall === 0;
-            const isAging = isActive && days > 21;
+            const dl = relativeDeadline(row.frist_dato);
+
+            const accentClass = dl.urgency === "overdue" ? "border-l-[3px] border-l-destructive"
+              : dl.urgency === "critical" ? "border-l-[3px] border-l-amber-500"
+              : "";
 
             return (
               <div
                 key={row.id}
                 onClick={() => setSelectedRow(row)}
-                className={`grid grid-cols-[140px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)_120px] gap-4 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer relative ${
-                  isNew ? "border-l-[3px] border-l-amber-400" : isAging ? "border-l-[3px] border-l-destructive/40" : ""
-                }`}
+                className={cn(
+                  "grid grid-cols-[90px_minmax(0,1.8fr)_70px_110px_minmax(0,1.5fr)_90px] gap-3 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer",
+                  accentClass
+                )}
               >
                 {/* Mottatt */}
-                <span className={`text-[0.8125rem] ${getMottattClass(days)}`}>
-                  {relativeDate(row.mottatt_dato)}
-                </span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className={cn("text-[0.8125rem]", getMottattClass(days))}>
+                      {relativeDate(row.mottatt_dato)}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>{fullDate(row.mottatt_dato)}</TooltipContent>
+                </Tooltip>
                 {/* Selskap */}
                 <span className="text-[0.875rem] font-semibold text-foreground truncate">
                   {row.selskap_navn}
                 </span>
-                {/* Sted */}
-                <span className="text-[0.8125rem] text-muted-foreground truncate">
-                  {row.sted || "—"}
-                </span>
+                {/* Type */}
+                <TypeBadge type={row.type} />
+                {/* Frist */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className={cn("text-[0.8125rem] font-medium", URGENCY_COLOR[dl.urgency])}>
+                      {dl.text}
+                    </span>
+                  </TooltipTrigger>
+                  {dl.tooltip && <TooltipContent>{dl.tooltip}</TooltipContent>}
+                </Tooltip>
                 {/* Teknologier */}
                 <div className="flex items-center gap-1 flex-wrap">
                   {(row.teknologier || []).slice(0, 3).map((t: string) => (
@@ -1246,15 +1282,13 @@ export default function Foresporsler() {
                 {/* Sendt inn */}
                 <div className="flex justify-end">
                   {antall === 0 ? (
-                    <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.75rem] font-semibold">
-                      0 sendt
-                    </span>
+                    <span className="text-[0.8125rem] text-muted-foreground">—</span>
                   ) : (
                     <span className="text-[0.8125rem] font-semibold text-foreground">
                       {antall}
                       {hvem && (
                         <span className="font-normal text-muted-foreground ml-1.5">
-                          {truncate(hvem, 25)}
+                          {truncate(hvem, 15)}
                         </span>
                       )}
                     </span>
