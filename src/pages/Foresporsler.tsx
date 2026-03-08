@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Plus, X, ArrowUpDown } from "lucide-react";
+import { relativeDate } from "@/lib/relativeDate";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -511,9 +512,9 @@ export default function Foresporsler() {
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">Laster...</div>
       ) : (
-        <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
+        <div className="border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
           {/* Header row */}
-          <div className="grid grid-cols-[120px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          <div className="grid grid-cols-[140px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)_120px] gap-4 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="mottatt_dato">Mottatt</SortHeader>
             <SortHeader field="selskap_navn">Selskap</SortHeader>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Sted</span>
@@ -524,53 +525,58 @@ export default function Foresporsler() {
           <div className="divide-y divide-border">
           {sorted.map((row) => {
             const days = getDaysAgo(row.mottatt_dato);
-            const isNew = (row.status === "Ny" || row.status === "Aktiv") && row.antall_sendt === 0;
-            const isAging = row.status === "Aktiv" && days > 21;
+            const isActive = row.status === "Ny" || row.status === "Aktiv";
+            const isNew = isActive && (row.antall_sendt ?? 0) === 0;
+            const isAging = isActive && days > 21;
 
             return (
               <div
                 key={row.id}
                 onClick={() => navigate(`/foresporsler/${row.id}`)}
-                className={`grid grid-cols-[120px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 cursor-pointer ${
+                className={`grid grid-cols-[140px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)_120px] gap-4 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer relative ${
                   isNew ? "border-l-[3px] border-l-amber-400" : isAging ? "border-l-[3px] border-l-destructive/40" : ""
                 }`}
               >
-                <div className={getMottattClass(days)}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span>{days} dager siden</span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {format(new Date(row.mottatt_dato), "d. MMM yyyy", { locale: nb })}
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                <div>
-                  <span className="font-medium hover:text-primary">{row.selskap_navn}</span>
-                </div>
-                <div className="text-muted-foreground text-sm">{row.sted}</div>
-                <div className="flex flex-wrap gap-1">
+                {/* Mottatt */}
+                <span className={`text-[0.8125rem] ${getMottattClass(days)}`}>
+                  {relativeDate(row.mottatt_dato)}
+                </span>
+                {/* Selskap */}
+                <span className="text-[0.875rem] font-semibold text-foreground truncate">
+                  {row.selskap_navn}
+                </span>
+                {/* Sted */}
+                <span className="text-[0.8125rem] text-muted-foreground truncate">
+                  {row.sted || "—"}
+                </span>
+                {/* Teknologier */}
+                <div className="flex items-center gap-1 flex-wrap">
                   {(row.teknologier || []).slice(0, 3).map((t: string) => (
-                    <span key={t} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] text-muted-foreground">{t}</span>
+                    <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-foreground">
+                      {t}
+                    </span>
                   ))}
                   {(row.teknologier || []).length > 3 && (
-                    <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] text-muted-foreground">
+                    <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-[0.6875rem] text-muted-foreground">
                       +{row.teknologier!.length - 3}
                     </span>
                   )}
                 </div>
+                {/* Sendt inn */}
                 <div className="flex justify-end">
-                  {row.antall_sendt === 0 ? (
-                    <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
+                  {(row.antall_sendt ?? 0) === 0 ? (
+                    <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.75rem] font-semibold">
                       0 sendt
                     </span>
                   ) : (
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-foreground">{row.antall_sendt}</span>
+                    <span className="text-[0.8125rem] font-semibold text-foreground">
+                      {row.antall_sendt}
                       {row.hvem_sendt && (
-                        <span className="text-muted-foreground text-[0.75rem]">{truncate(row.hvem_sendt, 25)}</span>
+                        <span className="font-normal text-muted-foreground ml-1.5">
+                          {truncate(row.hvem_sendt, 25)}
+                        </span>
                       )}
-                    </div>
+                    </span>
                   )}
                 </div>
               </div>
