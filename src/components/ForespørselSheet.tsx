@@ -493,7 +493,7 @@ export function ForespørselSheet({
               )}
 
               {matchResults && matchResults.length === 0 && !matching && (
-                <p className="text-[0.8125rem] text-muted-foreground">Ingen treff med score ≥ 5</p>
+                <p className="text-[0.8125rem] text-muted-foreground">Ingen treff med score ≥ 4</p>
               )}
 
               {matchResults && matchResults.length > 0 && (
