@@ -443,7 +443,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-md rounded-xl p-6 gap-0" hideCloseButton onInteractOutside={(e) => e.preventDefault()}>
+      <DialogContent className="max-w-md rounded-xl p-6 gap-0" hideCloseButton>
         <DialogTitle className="text-[1.125rem] font-bold text-foreground mb-5">Ny forespørsel</DialogTitle>
 
         <div className="space-y-4">
