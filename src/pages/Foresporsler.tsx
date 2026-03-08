@@ -472,7 +472,7 @@ function ForespørselSheet({
         avdeling: avdeling || null,
         frist_dato: fristDato || null,
         type: type || null,
-        referanse: referanse || null,
+        
         teknologier,
         antall_sendt: parseInt(antallSendt) || 0,
         hvem_sendt: hvemSendt || null,
