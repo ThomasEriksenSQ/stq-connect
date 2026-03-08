@@ -35,7 +35,7 @@ const OppfolgingerSection = () => {
   const queryClient = useQueryClient();
 
   const [naarFilter, setNaarFilter] = useState<NaarFilter>("Alle");
-  const [ownerFilter, setOwnerFilter] = useState<string>("all");
+  const [ownerFilter, setOwnerFilter] = useState<string>(user?.id || "all");
   const [signalFilter, setSignalFilter] = useState<SignalFilter>("Alle");
   const [fadingIds, setFadingIds] = useState<Set<string>>(new Set());
   const [showAll, setShowAll] = useState(false);
@@ -99,9 +99,7 @@ const OppfolgingerSection = () => {
   });
 
   // 2. Owner filter
-  if (ownerFilter === "mine") {
-    filtered = filtered.filter(t => t.assigned_to === user?.id || t.created_by === user?.id);
-  } else if (ownerFilter !== "all") {
+  if (ownerFilter !== "all") {
     filtered = filtered.filter(t => t.assigned_to === ownerFilter || t.created_by === ownerFilter);
   }
   
@@ -256,7 +254,7 @@ const OppfolgingerSection = () => {
         <div className="flex items-center gap-2">
           <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-14 flex-shrink-0">Eier</span>
           <div className="flex items-center gap-1.5">
-            <button className={ownerFilter === "mine" ? CHIP_ON : CHIP_OFF} onClick={() => setOwnerFilter("mine")}>
+            <button className={ownerFilter === user?.id ? CHIP_ON : CHIP_OFF} onClick={() => setOwnerFilter(user?.id || "all")}>
               {currentUserProfile?.full_name || "Mine"}
             </button>
             {profiles.filter(p => p.id !== user?.id).map(p => (
