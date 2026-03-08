@@ -74,8 +74,7 @@ function parseDescriptionCategory(description: string | null): { category: strin
 function extractTitleAndCategory(subject: string, description: string | null) {
   const normalizedSubject = normalizeCategoryLabel(subject);
   if (CATEGORIES.some(c => c.label === normalizedSubject)) {
-    const descClean = cleanDescription(description);
-    return { title: normalizedSubject, category: normalizedSubject, cleanDesc: descClean };
+    return { title: normalizedSubject, category: normalizedSubject, cleanDesc: "" };
   }
   const parsed = parseDescriptionCategory(description);
   return { title: subject, category: parsed.category, cleanDesc: cleanDescription(parsed.text) || "" };
