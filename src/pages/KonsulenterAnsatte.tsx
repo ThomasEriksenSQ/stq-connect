@@ -550,15 +550,10 @@ export default function KonsulenterAnsatte() {
   }
 
   return (
-    <div>
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <h1 className="text-[1.375rem] font-bold">Ansatte</h1>
-          <span className="bg-secondary text-muted-foreground rounded-full px-2.5 py-0.5 text-xs font-medium">
-            {stats.aktive + stats.kommende}
-          </span>
-        </div>
+      <div className="flex items-center justify-between">
+        <h1 className="text-[1.375rem] font-bold">Ansatte</h1>
         <button
           onClick={openCreate}
           className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
@@ -568,22 +563,14 @@ export default function KonsulenterAnsatte() {
         </button>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-card border border-border rounded-xl px-5 py-4 shadow-sm">
-          <p className="text-2xl font-bold text-emerald-600">{stats.aktive}</p>
-          <p className="text-[0.8125rem] text-muted-foreground">Aktive ansatte</p>
-          <p className="text-xs text-muted-foreground">i dag</p>
-        </div>
-        <div className="bg-card border border-border rounded-xl px-5 py-4 shadow-sm">
-          <p className="text-2xl font-bold text-amber-600">{stats.kommende}</p>
-          <p className="text-[0.8125rem] text-muted-foreground">Kommende</p>
-          <p className="text-xs text-muted-foreground">venter oppstart</p>
-        </div>
+      <div className="flex items-center gap-3">
+        <span className="text-[0.75rem] text-muted-foreground ml-auto">
+          {stats.aktive + stats.kommende} ansatte
+        </span>
       </div>
 
       {/* Filter chips */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2">
         {chips.map((c) => (
           <button
             key={c}
@@ -591,7 +578,7 @@ export default function KonsulenterAnsatte() {
             className={cn(
               "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
               filter === c
-                ? "bg-foreground text-background border-foreground"
+                ? "bg-foreground text-background border-foreground font-medium"
                 : "border-border text-muted-foreground hover:bg-secondary"
             )}
           >
@@ -601,7 +588,7 @@ export default function KonsulenterAnsatte() {
       </div>
 
       {/* Table */}
-      <div className="border border-border rounded-lg overflow-hidden bg-card shadow-sm">
+      <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
         {/* Header */}
         <div className="grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_100px_180px_40px] gap-3 px-4 py-2.5 border-b border-border bg-background">
           {["NAVN", "START", "ANSETTELSE", "OPPDRAG", "ANSATT", "KONTAKT", ""].map((h) => (
