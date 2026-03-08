@@ -69,6 +69,12 @@ const MOCK_COMPANIES = [
   { name: "TechnipFMC", sted: "Kongsberg" },
 ];
 
+const MOCK_CONTACTS = [
+  "Elin Lindtvedt", "Mathias Nedrebø", "Harald Moldsvor",
+  "Øystein Kopstad", "Abdullah Akkoca", "Morten Røraas",
+  "Sondre Russholm", "Karl Eirik Hansen", "Helge Myhre",
+];
+
 const SUGGESTED_TAGS = ["C", "C++", "Embedded", "Python", "Yocto", "Linux", "Lab", "Sikkerhet"];
 
 function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => void }) {
