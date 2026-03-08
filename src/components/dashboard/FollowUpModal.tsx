@@ -18,7 +18,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { ChevronDown, CalendarIcon } from "lucide-react";
+import { ChevronDown, CalendarIcon, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 const DATE_OPTIONS = [
@@ -173,11 +173,18 @@ const FollowUpModal = ({ open, onCancel, onClose, onSubmit, data, profiles }: Pr
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent
-        className="max-w-md rounded-xl p-6 gap-0"
+        className="relative max-w-md rounded-xl p-6 gap-0"
         hideCloseButton
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogTitle className="sr-only">Opprett oppfølging</DialogTitle>
+
+        <button
+          onClick={onCancel}
+          className="absolute top-4 right-4 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        >
+          <X className="h-4 w-4" />
+        </button>
 
         {/* Header */}
         <div className="pb-4 mb-4 border-b border-border">
