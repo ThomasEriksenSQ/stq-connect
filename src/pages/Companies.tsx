@@ -569,10 +569,10 @@ const Companies = () => {
                       <DropdownMenuTrigger asChild>
                         {(() => {
                           const t = TYPE_OPTIONS.find(o => o.value === company.status || (o.value === "customer" && company.status === "kunde"));
-                          const badge = t || { label: company.status, badgeColor: "bg-gray-100 text-gray-600 border-gray-200" };
+                          const label = t?.label || company.status;
                           return (
-                            <button className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer ${badge.badgeColor}`}>
-                              {badge.label}
+                            <button className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors text-left cursor-pointer">
+                              {label}
                             </button>
                           );
                         })()}
