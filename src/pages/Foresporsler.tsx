@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Plus, X, ArrowUpDown } from "lucide-react";
+import { Plus, X, ArrowUpDown, Pencil, Trash2 } from "lucide-react";
 import { relativeDate } from "@/lib/relativeDate";
-import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,12 +10,11 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Sheet,
+  SheetContent,
+} from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
 import { format, differenceInDays } from "date-fns";
 import { nb } from "date-fns/locale";
 
@@ -45,6 +43,41 @@ function getMottattClass(days: number): string {
 
 function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max) + "…" : s;
+}
+
+/* ─── Delete button with inline confirmation ─── */
+
+function DeleteButton({ onConfirm }: { onConfirm: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+
+  if (!confirming)
+    return (
+      <button
+        onClick={() => setConfirming(true)}
+        className="flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground hover:text-destructive transition-colors"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+        Slett forespørsel
+      </button>
+    );
+
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-[0.8125rem] text-foreground font-medium">Er du sikker?</span>
+      <button
+        onClick={onConfirm}
+        className="text-[0.8125rem] text-destructive font-medium hover:underline"
+      >
+        Ja, slett
+      </button>
+      <button
+        onClick={() => setConfirming(false)}
+        className="text-[0.8125rem] text-muted-foreground hover:text-foreground"
+      >
+        Avbryt
+      </button>
+    </div>
+  );
 }
 
 /* ─── Ny forespørsel modal ─── */
@@ -81,7 +114,6 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
     }
   }, [open]);
 
-  // Debounced company search
   const searchCompanies = (query: string) => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
     if (query.length < 1) { setCompanyResults([]); return; }
@@ -114,7 +146,6 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
     setShowDropdown(false);
   };
 
-  // Load contacts for selected company
   const { data: companyContacts = [] } = useQuery({
     queryKey: ["foresporsler-kontakter", selskapId],
     queryFn: async () => {
@@ -377,41 +408,323 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
   );
 }
 
-/* ─── Detail placeholder ─── */
+/* ─── Detail/Edit Sheet Panel ─── */
 
-function ForespørselDetail({ id }: { id: string }) {
-  const navigate = useNavigate();
-  const { data, isLoading } = useQuery({
-    queryKey: ["foresporsel-detail", id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("foresporsler")
-        .select("*, contacts(id, first_name, last_name)")
-        .eq("id", Number(id))
-        .single();
-      if (error) throw error;
-      return data;
-    },
-  });
+function ForespørselSheet({
+  row,
+  onClose,
+}: {
+  row: any;
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  if (isLoading) return <p className="text-muted-foreground py-12 text-center">Laster...</p>;
-  if (!data) return <p className="text-muted-foreground py-12 text-center">Fant ikke forespørsel</p>;
+  // Edit form state
+  const [sted, setSted] = useState("");
+  const [avdeling, setAvdeling] = useState("");
+  const [fristDato, setFristDato] = useState("");
+  const [type, setType] = useState("");
+  const [referanse, setReferanse] = useState("");
+  const [teknologier, setTeknologier] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+  const [antallSendt, setAntallSendt] = useState("");
+  const [hvemSendt, setHvemSendt] = useState("");
+  const [kommentar, setKommentar] = useState("");
+
+  // Sync form when entering edit mode
+  useEffect(() => {
+    if (editMode && row) {
+      setSted(row.sted || "");
+      setAvdeling(row.avdeling || "");
+      setFristDato(row.frist_dato || "");
+      setType(row.type || "DIR");
+      setReferanse(row.referanse || "");
+      setTeknologier(row.teknologier || []);
+      setAntallSendt(String(row.antall_sendt ?? 0));
+      setHvemSendt(row.hvem_sendt || "");
+      setKommentar(row.kommentar || "");
+      setTagInput("");
+    }
+  }, [editMode, row]);
+
+  const addTag = (tag: string) => {
+    const t = tag.trim();
+    if (t && !teknologier.includes(t)) setTeknologier([...teknologier, t]);
+    setTagInput("");
+  };
+
+  const handleTagKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.key === "Enter" || e.key === ",") && tagInput.trim()) {
+      e.preventDefault();
+      addTag(tagInput);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!row || saving) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("foresporsler")
+      .update({
+        sted: sted || null,
+        avdeling: avdeling || null,
+        frist_dato: fristDato || null,
+        type: type || null,
+        referanse: referanse || null,
+        teknologier,
+        antall_sendt: parseInt(antallSendt) || 0,
+        hvem_sendt: hvemSendt || null,
+        kommentar: kommentar || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", row.id);
+    setSaving(false);
+    if (error) {
+      toast.error("Kunne ikke oppdatere");
+      return;
+    }
+    toast.success("Forespørsel oppdatert");
+    queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
+    setEditMode(false);
+  };
+
+  const handleDelete = async () => {
+    if (!row) return;
+    const { error } = await supabase.from("foresporsler").delete().eq("id", row.id);
+    if (error) {
+      toast.error("Kunne ikke slette");
+      return;
+    }
+    toast.success("Forespørsel slettet");
+    queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
+    onClose();
+  };
+
+  if (!row) return null;
+
+  const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
 
   return (
-    <div className="space-y-4">
-      <button onClick={() => navigate("/foresporsler")} className="text-[0.8125rem] text-primary hover:underline">
-        ← Tilbake til forespørsler
-      </button>
-      <h1 className="text-[1.5rem] font-bold text-foreground">{data.selskap_navn}</h1>
-      <div className="text-muted-foreground text-[0.875rem] space-y-1">
-        {data.sted && <p>Sted: {data.sted}</p>}
-        {data.teknologier && data.teknologier.length > 0 && (
-          <p>Teknologier: {data.teknologier.join(", ")}</p>
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="px-6 py-5 border-b border-border">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h2 className="text-[1.25rem] font-bold text-foreground truncate">
+              {row.selskap_navn}
+            </h2>
+            <p className="text-[0.8125rem] text-muted-foreground mt-0.5">
+              {row.sted || "Ukjent sted"}
+              {row.avdeling && ` · ${row.avdeling}`}
+            </p>
+          </div>
+          {!editMode && (
+            <button
+              onClick={() => setEditMode(true)}
+              className="flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 hover:bg-muted transition-colors shrink-0"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Rediger
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto px-6 py-5">
+        {editMode ? (
+          /* ─── EDIT MODE ─── */
+          <div className="space-y-4">
+            {/* Sted */}
+            <div>
+              <label className={LABEL}>Sted</label>
+              <Input value={sted} onChange={(e) => setSted(e.target.value)} className="mt-1 text-[0.875rem]" placeholder="f.eks. Oslo, Kongsberg" />
+            </div>
+
+            {/* Avdeling */}
+            <div>
+              <label className={LABEL}>Avdeling</label>
+              <Input value={avdeling} onChange={(e) => setAvdeling(e.target.value)} className="mt-1 text-[0.875rem]" placeholder="f.eks. Defence, Maritime" />
+            </div>
+
+            {/* Frist dato */}
+            <div>
+              <label className={LABEL}>Frist dato</label>
+              <Input type="date" value={fristDato} onChange={(e) => setFristDato(e.target.value)} className="mt-1 text-[0.875rem]" />
+            </div>
+
+            {/* Type */}
+            <div>
+              <label className={LABEL}>Type</label>
+              <div className="flex gap-2 mt-1">
+                {["DIR", "VIA"].map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setType(t)}
+                    className={`h-8 px-4 text-[0.8125rem] rounded-lg border transition-colors ${
+                      type === t
+                        ? "bg-foreground text-background border-foreground font-medium"
+                        : "border-border text-muted-foreground hover:bg-secondary"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Referanse */}
+            <div>
+              <label className={LABEL}>Referanse</label>
+              <Input value={referanse} onChange={(e) => setReferanse(e.target.value)} className="mt-1 text-[0.875rem]" placeholder="f.eks. navn på mellomledd" />
+            </div>
+
+            {/* Teknologier */}
+            <div>
+              <label className={LABEL}>Teknologier</label>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5 p-2 border border-border rounded-lg bg-background min-h-[38px]">
+                {teknologier.map((t) => (
+                  <span key={t} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-[0.75rem] text-foreground">
+                    {t}
+                    <button onClick={() => setTeknologier(teknologier.filter((x) => x !== t))} className="hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleTagKeyDown}
+                  placeholder={teknologier.length === 0 ? "Legg til..." : ""}
+                  className="flex-1 min-w-[80px] bg-transparent outline-none text-[0.8125rem] placeholder:text-muted-foreground"
+                />
+              </div>
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {SUGGESTED_TAGS.filter((s) => !teknologier.includes(s)).map((s) => (
+                  <button key={s} onClick={() => addTag(s)} className="h-6 px-2 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors">
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Antall sendt */}
+            <div>
+              <label className={LABEL}>Antall sendt</label>
+              <Input type="number" min={0} value={antallSendt} onChange={(e) => setAntallSendt(e.target.value)} className="mt-1 text-[0.875rem] w-24" />
+            </div>
+
+            {/* Hvem sendt */}
+            <div>
+              <label className={LABEL}>Hvem sendt</label>
+              <Input value={hvemSendt} onChange={(e) => setHvemSendt(e.target.value)} className="mt-1 text-[0.875rem]" placeholder="f.eks. Christian, Rikke" />
+            </div>
+
+            {/* Kommentar */}
+            <div>
+              <label className={LABEL}>Kommentar</label>
+              <textarea
+                value={kommentar}
+                onChange={(e) => setKommentar(e.target.value)}
+                rows={4}
+                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-[0.875rem] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                placeholder="Notater, kilde, intern info..."
+              />
+            </div>
+          </div>
+        ) : (
+          /* ─── VIEW MODE ─── */
+          <div className="space-y-5">
+            {/* Mottatt / Frist */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className={LABEL}>Mottatt</p>
+                <p className="text-[0.875rem] text-foreground mt-1">
+                  {row.mottatt_dato ? format(new Date(row.mottatt_dato), "dd.MM.yyyy") : "—"}
+                </p>
+              </div>
+              <div>
+                <p className={LABEL}>Frist</p>
+                <p className="text-[0.875rem] text-foreground mt-1">
+                  {row.frist_dato ? format(new Date(row.frist_dato), "dd.MM.yyyy") : "—"}
+                </p>
+              </div>
+            </div>
+
+            {/* Type / Referanse */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className={LABEL}>Type</p>
+                <p className="text-[0.875rem] text-foreground mt-1">{row.type || "—"}</p>
+              </div>
+              <div>
+                <p className={LABEL}>Referanse</p>
+                <p className="text-[0.875rem] text-foreground mt-1">{row.referanse || "—"}</p>
+              </div>
+            </div>
+
+            {/* Teknologier */}
+            <div>
+              <p className={LABEL}>Teknologier</p>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {(row.teknologier || []).length > 0 ? (
+                  row.teknologier.map((t: string) => (
+                    <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.75rem] font-medium text-foreground">
+                      {t}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-[0.8125rem] text-muted-foreground">—</span>
+                )}
+              </div>
+            </div>
+
+            {/* Sendt inn */}
+            <div>
+              <p className={LABEL}>Sendt inn</p>
+              <p className="text-[0.875rem] text-foreground mt-1">
+                {(row.antall_sendt ?? 0) === 0
+                  ? <span className="text-muted-foreground">Ikke sendt ennå</span>
+                  : `${row.antall_sendt}${row.hvem_sendt ? ` — ${row.hvem_sendt}` : ""}`}
+              </p>
+            </div>
+
+            {/* Kommentar */}
+            {row.kommentar && (
+              <div>
+                <p className={LABEL}>Kommentar</p>
+                <p className="text-[0.875rem] text-foreground/70 mt-1 whitespace-pre-wrap leading-relaxed">
+                  {row.kommentar}
+                </p>
+              </div>
+            )}
+          </div>
         )}
-        {data.kommentar && <p>Kommentar: {data.kommentar}</p>}
-        <p>Status: {data.status}</p>
-        <p>Mottatt: {data.mottatt_dato}</p>
-        {data.frist_dato && <p>Frist: {data.frist_dato}</p>}
+      </div>
+
+      {/* Footer */}
+      <div className="px-6 py-4 border-t border-border">
+        {editMode ? (
+          <div className="flex gap-3">
+            <button
+              onClick={() => setEditMode(false)}
+              className="flex-1 h-9 text-[0.8125rem] rounded-lg border border-border text-muted-foreground hover:bg-secondary transition-colors"
+            >
+              Avbryt
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 h-9 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              {saving ? "Lagrer..." : "Lagre endringer"}
+            </button>
+          </div>
+        ) : (
+          <DeleteButton onConfirm={handleDelete} />
+        )}
       </div>
     </div>
   );
@@ -420,9 +733,9 @@ function ForespørselDetail({ id }: { id: string }) {
 /* ─── Main page ─── */
 
 export default function Foresporsler() {
-  const navigate = useNavigate();
-  const { id } = useParams();
+  const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
+  const [selectedRow, setSelectedRow] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("aktive");
   const [sort, setSort] = useState<{
     field: "mottatt_dato" | "selskap_navn" | "antall_sendt";
@@ -484,9 +797,6 @@ export default function Foresporsler() {
     </button>
   );
 
-  // If we have an ID param, show detail view
-  if (id) return <ForespørselDetail id={id} />;
-
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -539,7 +849,7 @@ export default function Foresporsler() {
             return (
               <div
                 key={row.id}
-                onClick={() => navigate(`/foresporsler/${row.id}`)}
+                onClick={() => setSelectedRow(row)}
                 className={`grid grid-cols-[140px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)_120px] gap-4 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer relative ${
                   isNew ? "border-l-[3px] border-l-amber-400" : isAging ? "border-l-[3px] border-l-destructive/40" : ""
                 }`}
@@ -599,6 +909,13 @@ export default function Foresporsler() {
       )}
 
       <NyForesporselModal open={modalOpen} onClose={() => setModalOpen(false)} />
+
+      {/* Detail/Edit Sheet */}
+      <Sheet open={!!selectedRow} onOpenChange={(o) => { if (!o) setSelectedRow(null); }}>
+        <SheetContent side="right" className="w-[420px] sm:w-[460px] p-0" hideCloseButton>
+          <ForespørselSheet row={selectedRow} onClose={() => setSelectedRow(null)} />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
