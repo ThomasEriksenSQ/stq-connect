@@ -682,6 +682,18 @@ function EditMode(props: any) {
   const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
   const SUGGESTED_TAGS = ["C++", "C", "Embedded", "Yocto", "Linux", "Qt", "FPGA", "Python", "SPI/I2C", "MCU", "Embedded Linux", "Sikkerhet"];
 
+  // Fetch company locations (avdelinger) from companies.city
+  const { data: companyCity } = useQuery({
+    queryKey: ["company-city", selskapId],
+    enabled: !!selskapId,
+    queryFn: async () => {
+      const { data } = await supabase.from("companies").select("city").eq("id", selskapId!).single();
+      return data?.city || null;
+    },
+  });
+  const companyLocations: string[] = companyCity ? companyCity.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
+  const hasAvdelinger = companyLocations.length > 1;
+
   return (
     <div className="space-y-4">
       {/* Selskap */}
