@@ -645,7 +645,7 @@ function CompanyActivityTimeline({ activities, profileMap }: { activities: any[]
                       <span className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</span>
 
                       {/* Category badge */}
-                      {displayCategory && (
+                      {displayCategory && displayCategory !== displayTitle && (
                         <div className="mt-1">
                           <CategoryBadge label={displayCategory} />
                         </div>
