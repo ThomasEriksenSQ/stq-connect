@@ -691,6 +691,7 @@ function ForespørselSheet({
   const [tagInput, setTagInput] = useState("");
   const [kommentar, setKommentar] = useState("");
   const [sluttkunde, setSluttkunde] = useState("");
+  const [status, setStatus] = useState("");
 
   // Company/contact search state
   const [selskapNavn, setSelskapNavn] = useState("");
