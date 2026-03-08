@@ -521,7 +521,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
 
           {/* Teknologier */}
           <div>
-            <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Teknologier</label>
+            <AiTeknologiBox existingTags={tags} onTagsFound={setTags} />
             <div className="mt-1 flex flex-wrap items-center gap-1.5 p-2 border border-border rounded-lg bg-background min-h-[38px]">
               {tags.map((t) => (
                 <span key={t} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-[0.75rem] text-foreground">
