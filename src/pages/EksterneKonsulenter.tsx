@@ -189,9 +189,9 @@ export default function EksterneKonsulenter() {
         <div className="flex items-center gap-2">
           <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-16 flex-shrink-0">Status</span>
           <div className="flex items-center gap-1.5">
-            {(["Alle", "ledig", "aktiv", "utilgjengelig", "utgått"] as StatusFilter[]).map(f => (
+            {(["Alle", "ledig", "utilgjengelig"] as StatusFilter[]).map(f => (
               <button key={f} className={statusFilter === f ? CHIP_ON : CHIP_OFF} onClick={() => setStatusFilter(f)}>
-                {f === "Alle" ? "Alle" : STATUS_LABELS[f]}
+                {f === "Alle" ? "Alle" : f === "ledig" ? "Tilgjengelig" : "Ikke ledig"}
               </button>
             ))}
           </div>
