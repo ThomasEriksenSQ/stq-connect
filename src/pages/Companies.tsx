@@ -324,121 +324,122 @@ const Companies = () => {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-[1.375rem] font-bold">Selskaper</h1>
-
-      {/* Filter bar */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-            <Input placeholder="Søk..." value={search} onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border" />
-          </div>
-          <span className="text-[0.75rem] text-muted-foreground ml-auto">{filtered.length} selskaper</span>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button className="rounded-lg h-9 px-3.5 text-[0.8125rem] font-medium gap-1.5">
-                <Plus className="h-4 w-4" />Nytt selskap
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[440px] rounded-xl">
-              <DialogHeader><DialogTitle>Nytt selskap</DialogTitle></DialogHeader>
-              <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }} className="space-y-4 mt-3">
+      <div className="flex items-center justify-between">
+        <h1 className="text-[1.375rem] font-bold">Selskaper</h1>
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+          <Input placeholder="Søk..." value={search} onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border" />
+        </div>
+        <span className="text-[0.75rem] text-muted-foreground ml-auto">{filtered.length} selskaper</span>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button className="rounded-lg h-9 px-3.5 text-[0.8125rem] font-medium gap-1.5">
+              <Plus className="h-4 w-4" />Nytt selskap
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[440px] rounded-xl">
+            <DialogHeader><DialogTitle>Nytt selskap</DialogTitle></DialogHeader>
+            <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }} className="space-y-4 mt-3">
+              <div className="space-y-1.5">
+                <Label className="text-label">Selskapsnavn</Label>
+                <BrregSearch
+                  value={form.name}
+                  onChange={(name) => setForm((f) => ({ ...f, name }))}
+                  onSelect={(r) => setForm((f) => ({ ...f, name: r.name, org_number: r.org_number, city: r.city }))}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-label">Selskapsnavn</Label>
-                  <BrregSearch
-                    value={form.name}
-                    onChange={(name) => setForm((f) => ({ ...f, name }))}
-                    onSelect={(r) => setForm((f) => ({ ...f, name: r.name, org_number: r.org_number, city: r.city }))}
+                  <Label className="text-label">Org.nr</Label>
+                  <OrgNrInput
+                    value={form.org_number}
+                    onChange={(org_number) => setForm((f) => ({ ...f, org_number }))}
+                    onLookup={(name, city) => setForm((f) => ({ ...f, name: name || f.name, city: city || f.city }))}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-label">Org.nr</Label>
-                    <OrgNrInput
-                      value={form.org_number}
-                      onChange={(org_number) => setForm((f) => ({ ...f, org_number }))}
-                      onLookup={(name, city) => setForm((f) => ({ ...f, name: name || f.name, city: city || f.city }))}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-label">Sted</Label>
-                    <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Oslo" className="h-10 rounded-lg" />
-                  </div>
-                </div>
                 <div className="space-y-1.5">
-                  <Label className="text-label">Nettside</Label>
-                  <Input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://" className="h-10 rounded-lg" type="url" />
+                  <Label className="text-label">Sted</Label>
+                  <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Oslo" className="h-10 rounded-lg" />
                 </div>
-                {/* STATUS */}
-                <div className="space-y-1.5">
-                  <Label className="text-label">Status</Label>
-                  <div className="flex gap-1.5">
-                    {([
-                      { value: "prospect", label: "Potensiell kunde", activeClass: "bg-blue-500 text-white border-blue-500" },
-                      { value: "customer", label: "Kunde", activeClass: "bg-emerald-500 text-white border-emerald-500" },
-                      { value: "partner", label: "Partner", activeClass: "bg-gray-400 text-white border-gray-400" },
-                      { value: "churned", label: "Ikke relevant selskap", activeClass: "bg-red-400 text-white border-red-400" },
-                    ] as const).map((opt) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => setForm((f) => ({ ...f, status: opt.value }))}
-                        className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                          form.status === opt.value
-                            ? opt.activeClass
-                            : "bg-secondary text-muted-foreground hover:bg-secondary/80"
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {/* AVDELINGER */}
-                <div className="space-y-1.5">
-                  <Label className="text-label">Avdelinger</Label>
-                  <div className="space-y-2">
-                    {locations.map((loc, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <Input
-                          value={loc}
-                          onChange={(e) => {
-                            const next = [...locations];
-                            next[i] = e.target.value;
-                            setLocations(next);
-                          }}
-                          placeholder="By eller sted"
-                          className="h-10 rounded-lg flex-1"
-                        />
-                        {locations.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => setLocations(locations.filter((_, j) => j !== i))}
-                            className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-label">Nettside</Label>
+                <Input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://" className="h-10 rounded-lg" type="url" />
+              </div>
+              {/* STATUS */}
+              <div className="space-y-1.5">
+                <Label className="text-label">Status</Label>
+                <div className="flex gap-1.5">
+                  {([
+                    { value: "prospect", label: "Potensiell kunde", activeClass: "bg-blue-500 text-white border-blue-500" },
+                    { value: "customer", label: "Kunde", activeClass: "bg-emerald-500 text-white border-emerald-500" },
+                    { value: "partner", label: "Partner", activeClass: "bg-gray-400 text-white border-gray-400" },
+                    { value: "churned", label: "Ikke relevant selskap", activeClass: "bg-red-400 text-white border-red-400" },
+                  ] as const).map((opt) => (
                     <button
+                      key={opt.value}
                       type="button"
-                      onClick={() => setLocations([...locations, ""])}
-                      className="w-full h-9 text-[0.8125rem] text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg border border-dashed border-border transition-colors"
+                      onClick={() => setForm((f) => ({ ...f, status: opt.value }))}
+                      className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                        form.status === opt.value
+                          ? opt.activeClass
+                          : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                      }`}
                     >
-                      + Legg til avdeling
+                      {opt.label}
                     </button>
-                  </div>
+                  ))}
                 </div>
-                <Button type="submit" className="w-full h-10 rounded-lg" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "Oppretter..." : "Opprett"}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-        {/* Eier chips */}
+              </div>
+              {/* AVDELINGER */}
+              <div className="space-y-1.5">
+                <Label className="text-label">Avdelinger</Label>
+                <div className="space-y-2">
+                  {locations.map((loc, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <Input
+                        value={loc}
+                        onChange={(e) => {
+                          const next = [...locations];
+                          next[i] = e.target.value;
+                          setLocations(next);
+                        }}
+                        placeholder="By eller sted"
+                        className="h-10 rounded-lg flex-1"
+                      />
+                      {locations.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setLocations(locations.filter((_, j) => j !== i))}
+                          className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setLocations([...locations, ""])}
+                    className="w-full h-9 text-[0.8125rem] text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg border border-dashed border-border transition-colors"
+                  >
+                    + Legg til avdeling
+                  </button>
+                </div>
+              </div>
+              <Button type="submit" className="w-full h-10 rounded-lg" disabled={createMutation.isPending}>
+                {createMutation.isPending ? "Oppretter..." : "Opprett"}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Chip filters */}
+      <div className="space-y-2">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Eier</span>
           {[{ id: "all", name: "Alle" }, ...ownerList.map(([id, name]) => ({ id: id as string, name: name as string }))].map(o => (
