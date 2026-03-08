@@ -774,11 +774,6 @@ function EditMode(props: any) {
         </div>
       </div>
 
-      {/* Frist dato */}
-      <div>
-        <label className={LABEL}>Frist</label>
-        <Input type="date" value={fristDato} onChange={(e: any) => setFristDato(e.target.value)} className="mt-1 text-[0.875rem]" />
-      </div>
 
       {/* Status */}
       <div>
