@@ -498,7 +498,9 @@ export function ForespørselSheet({
 
               {matchResults && matchResults.length > 0 && (
                 <div className="space-y-2">
-                  {matchResults.map((m, i) => {
+                  {matchResults
+                    .filter(m => matchSourceFilter === "Alle" ? true : matchSourceFilter === "Ansatte" ? m.type === "intern" : m.type === "ekstern")
+                    .map((m, i) => {
                     const isLinked = alreadyLinkedIds.has(m.id);
                     return (
                       <div key={`${m.type}-${m.id}`} className="rounded-lg border border-border bg-card p-3">
