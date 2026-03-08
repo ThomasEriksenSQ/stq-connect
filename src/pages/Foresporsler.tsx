@@ -105,6 +105,10 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
     setShowDropdown(false);
   };
 
+  const filteredKontakter = kontakt.length > 0
+    ? MOCK_CONTACTS.filter((c) => c.toLowerCase().includes(kontakt.toLowerCase()))
+    : [];
+
   const addTag = (tag: string) => {
     const t = tag.trim();
     if (t && !tags.includes(t)) setTags([...tags, t]);
