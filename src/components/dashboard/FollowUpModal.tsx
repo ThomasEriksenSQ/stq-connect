@@ -108,11 +108,14 @@ const FollowUpModal = ({ open, onCancel, onClose, onSubmit, data }: Props) => {
   }, [open, data, firstName]);
 
   const computedDate = useCallback(() => {
+    if (selectedDate === "custom" && customDate) return customDate;
     const opt = DATE_OPTIONS.find((o) => o.label === selectedDate);
     return opt ? opt.fn(new Date()) : new Date();
-  }, [selectedDate]);
+  }, [selectedDate, customDate]);
 
   const formattedDate = format(computedDate(), "dd.MM.yyyy");
+
+  const hasValidDate = selectedDate === "custom" ? !!customDate : !!selectedDate;
 
   const ownerObj = OWNERS.find((o) => o.key === owner) ?? OWNERS[0];
 
