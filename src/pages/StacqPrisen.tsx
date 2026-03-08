@@ -86,6 +86,7 @@ export default function StacqPrisen() {
   const oppstartTotal = oppstart.reduce((s, r) => s + r.stacqPris * TIMER_PER_DAG, 0);
   const avgPris = aktive.length > 0 ? stacqTotal / aktive.length : 0;
 
+  const now = new Date();
   const workdayCount = (() => {
     const y = now.getFullYear(), m = now.getMonth();
     const dim = new Date(y, m + 1, 0).getDate();
