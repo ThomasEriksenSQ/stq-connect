@@ -326,17 +326,30 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
           <div className="ml-auto flex items-center gap-2 flex-shrink-0">
             {/* Signal badge FIRST */}
             {editable ? (
-              <Select value={effectiveSignal || "__none__"} onValueChange={(v) => { if (v !== "__none__") changeSignalMutation.mutate(v); }}>
-                <SelectTrigger className="h-auto w-auto max-w-none gap-0 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0 [&>svg]:hidden [&>span]:!flex [&>span]:!overflow-visible">
-                  <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap", signalBadgeColor)}>
-                    {effectiveSignal || "Signal"}
-                    <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  {SIGNAL_CATEGORIES.map((c) => <SelectItem key={c.label} value={c.label}>{c.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  {effectiveSignal ? (
+                    <button className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap cursor-pointer", signalBadgeColor)}>
+                      {effectiveSignal}
+                      <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
+                    </button>
+                  ) : (
+                    <button className="inline-flex items-center rounded-full border border-dashed border-border px-2.5 py-0.5 text-[0.6875rem] text-muted-foreground/50 cursor-pointer hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors">
+                      Signal
+                      <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
+                    </button>
+                  )}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {SIGNAL_CATEGORIES.map((c) => (
+                    <DropdownMenuItem key={c.label} onClick={() => changeSignalMutation.mutate(c.label)}>
+                      <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold", c.badgeColor)}>
+                        {c.label}
+                      </span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : effectiveSignal ? (
               <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", signalBadgeColor)}>
                 {effectiveSignal}
@@ -344,17 +357,21 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             ) : null}
             {/* Type badge SECOND — neutral style */}
             {editable ? (
-              <Select value={company.status} onValueChange={(v) => updateMutation.mutate({ status: v })}>
-                <SelectTrigger className="h-auto w-auto max-w-none gap-0 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0 [&>svg]:hidden [&>span]:!flex [&>span]:!overflow-visible">
-                  <span className="inline-flex items-center rounded-full border bg-gray-100 text-gray-600 border-gray-200 px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="inline-flex items-center rounded-full border bg-gray-100 text-gray-600 border-gray-200 px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap cursor-pointer">
                     {currentStatus.label}
                     <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {STATUS_OPTIONS.map((s) => (
+                    <DropdownMenuItem key={s.value} onClick={() => updateMutation.mutate({ status: s.value })}>
+                      {s.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <span className="inline-flex items-center rounded-full border bg-gray-100 text-gray-600 border-gray-200 px-2.5 py-0.5 text-xs font-semibold">
                 {currentStatus.label}
