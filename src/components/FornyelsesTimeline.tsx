@@ -94,7 +94,7 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
                 const pill = getPillColor(r.fornyDate, r.status === "Oppstart");
                 return (
                   <div key={r.id} className="flex items-center hover:bg-muted/30 transition-colors">
-                    <div className="w-[160px] shrink-0 px-3 py-2.5 sticky left-0 z-20 bg-card">
+                    <div className="w-[160px] shrink-0 px-3 py-2.5 sticky left-0 z-10 bg-card">
                       <p className="text-[0.8125rem] font-semibold text-foreground truncate">{r.navn}</p>
                       <p className="text-[0.6875rem] text-muted-foreground truncate">{r.kunde}</p>
                     </div>
