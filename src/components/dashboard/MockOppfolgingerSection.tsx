@@ -300,14 +300,49 @@ const MockOppfolgingerSection = () => {
 
             {/* Right column — stacked */}
             <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-              <div className="flex items-center gap-1.5 justify-end">
-                <span className={cn("text-[0.8125rem] font-medium", DATE_COLOR[row.dueType])}>
-                  {row.due}
-                </span>
-                <span className={cn("text-[0.8125rem] font-medium", DATE_COLOR[row.dueType])}>
-                  · {row.fullDate}
-                </span>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center gap-1.5 cursor-pointer hover:opacity-70 transition-opacity"
+                  >
+                    <span className={cn("text-[0.8125rem] font-medium", DATE_COLOR[row.dueType])}>
+                      {row.due}
+                    </span>
+                    <span className={cn("text-[0.8125rem] font-medium", DATE_COLOR[row.dueType])}>
+                      · {row.fullDate}
+                    </span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[160px]">
+                  <DropdownMenuItem className="cursor-pointer" onSelect={() => postponeRow(row.id, addWeeks(new Date(), 1))}>
+                    1 uke
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer" onSelect={() => postponeRow(row.id, addWeeks(new Date(), 2))}>
+                    2 uker
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer" onSelect={() => postponeRow(row.id, addMonths(new Date(), 1))}>
+                    1 måned
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="w-full flex items-center gap-2 px-2 py-1.5 text-[0.8125rem] hover:bg-secondary rounded-sm transition-colors">
+                        <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                        Velg dato
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <Calendar
+                        mode="single"
+                        onSelect={(d) => { if (d) postponeRow(row.id, d); }}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
