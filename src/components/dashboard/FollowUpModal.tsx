@@ -199,31 +199,39 @@ const FollowUpModal = ({ open, onCancel, onClose, onSubmit, data }: Props) => {
         {/* Footer */}
         <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
           <button
-            onClick={onClose}
+            onClick={onCancel}
             className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors"
           >
-            Hopp over
+            Avbryt
           </button>
-          <button
-            disabled={!canSubmit}
-            onClick={() => {
-              if (canSubmit) {
-                onSubmit({
-                  title: title.trim(),
-                  dueDate: computedDate(),
-                  owner,
-                });
-              }
-            }}
-            className={cn(
-              "inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg transition-colors",
-              canSubmit
-                ? "bg-primary text-primary-foreground hover:opacity-90"
-                : "bg-muted text-muted-foreground cursor-not-allowed"
-            )}
-          >
-            Opprett oppfølging →
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onClose}
+              className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Hopp over
+            </button>
+            <button
+              disabled={!canSubmit}
+              onClick={() => {
+                if (canSubmit) {
+                  onSubmit({
+                    title: title.trim(),
+                    dueDate: computedDate(),
+                    owner,
+                  });
+                }
+              }}
+              className={cn(
+                "inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg transition-colors",
+                canSubmit
+                  ? "bg-primary text-primary-foreground hover:opacity-90"
+                  : "bg-muted text-muted-foreground cursor-not-allowed"
+              )}
+            >
+              Opprett →
+            </button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
