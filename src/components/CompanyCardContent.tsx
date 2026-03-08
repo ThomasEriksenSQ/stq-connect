@@ -368,6 +368,63 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             ) : ownerFullName ? (
               <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{ownerFullName}</span>
             ) : null}
+            {editable && (
+              <Dialog open={newContactOpen} onOpenChange={setNewContactOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg flex items-center gap-2 text-sm">
+                    <Plus className="h-4 w-4" />Ny kontakt
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[440px] rounded-xl">
+                  <DialogHeader><DialogTitle>Ny kontakt</DialogTitle></DialogHeader>
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    const { error } = await supabase.from("contacts").insert({
+                      first_name: contactForm.first_name, last_name: contactForm.last_name,
+                      email: contactForm.email || null, phone: contactForm.phone || null,
+                      title: contactForm.title || null, linkedin: contactForm.linkedin || null,
+                      company_id: companyId, created_by: user?.id, owner_id: user?.id,
+                    });
+                    if (error) { toast.error("Kunne ikke opprette kontakt"); return; }
+                    queryClient.invalidateQueries({ queryKey: ["company-contacts", companyId] });
+                    queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
+                    setNewContactOpen(false);
+                    setContactForm({ first_name: "", last_name: "", email: "", phone: "", title: "", linkedin: "" });
+                    toast.success("Kontakt opprettet");
+                  }} className="space-y-4 mt-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-label">Fornavn</Label>
+                        <Input value={contactForm.first_name} onChange={(e) => setContactForm({ ...contactForm, first_name: e.target.value })} required className="h-10 rounded-lg" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-label">Etternavn</Label>
+                        <Input value={contactForm.last_name} onChange={(e) => setContactForm({ ...contactForm, last_name: e.target.value })} required className="h-10 rounded-lg" />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-label">Stilling</Label>
+                      <Input value={contactForm.title} onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })} className="h-10 rounded-lg" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-label">E-post</Label>
+                        <Input value={contactForm.email} onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })} type="email" className="h-10 rounded-lg" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-label">Telefon</Label>
+                        <Input value={contactForm.phone} onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })} className="h-10 rounded-lg" />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-label">LinkedIn</Label>
+                      <Input value={contactForm.linkedin} onChange={(e) => setContactForm({ ...contactForm, linkedin: e.target.value })} placeholder="https://linkedin.com/in/..." className="h-10 rounded-lg" />
+                    </div>
+                    <Button type="submit" className="w-full h-10 rounded-lg">Opprett kontakt</Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
             {editable && company.notes === null && !editingNotes && (
               <button onClick={() => setEditingNotes(true)} className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-secondary text-muted-foreground">
                 <Pencil className="h-3.5 w-3.5" />
@@ -497,63 +554,6 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">Kontakter · {contacts.length}</h3>
-            {editable && (
-              <Dialog open={newContactOpen} onOpenChange={setNewContactOpen}>
-                <DialogTrigger asChild>
-                  <Button className="rounded-lg h-7 px-2.5 text-[0.75rem] font-medium gap-1">
-                    <Plus className="h-3 w-3" />Ny kontakt
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[440px] rounded-xl">
-                  <DialogHeader><DialogTitle>Ny kontakt</DialogTitle></DialogHeader>
-                  <form onSubmit={async (e) => {
-                    e.preventDefault();
-                    const { error } = await supabase.from("contacts").insert({
-                      first_name: contactForm.first_name, last_name: contactForm.last_name,
-                      email: contactForm.email || null, phone: contactForm.phone || null,
-                      title: contactForm.title || null, linkedin: contactForm.linkedin || null,
-                      company_id: companyId, created_by: user?.id, owner_id: user?.id,
-                    });
-                    if (error) { toast.error("Kunne ikke opprette kontakt"); return; }
-                    queryClient.invalidateQueries({ queryKey: ["company-contacts", companyId] });
-                    queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
-                    setNewContactOpen(false);
-                    setContactForm({ first_name: "", last_name: "", email: "", phone: "", title: "", linkedin: "" });
-                    toast.success("Kontakt opprettet");
-                  }} className="space-y-4 mt-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-label">Fornavn</Label>
-                        <Input value={contactForm.first_name} onChange={(e) => setContactForm({ ...contactForm, first_name: e.target.value })} required className="h-10 rounded-lg" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-label">Etternavn</Label>
-                        <Input value={contactForm.last_name} onChange={(e) => setContactForm({ ...contactForm, last_name: e.target.value })} required className="h-10 rounded-lg" />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-label">Stilling</Label>
-                      <Input value={contactForm.title} onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })} className="h-10 rounded-lg" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-label">E-post</Label>
-                        <Input value={contactForm.email} onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })} type="email" className="h-10 rounded-lg" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-label">Telefon</Label>
-                        <Input value={contactForm.phone} onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })} className="h-10 rounded-lg" />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-label">LinkedIn</Label>
-                      <Input value={contactForm.linkedin} onChange={(e) => setContactForm({ ...contactForm, linkedin: e.target.value })} placeholder="https://linkedin.com/in/..." className="h-10 rounded-lg" />
-                    </div>
-                    <Button type="submit" className="w-full h-10 rounded-lg">Opprett</Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            )}
           </div>
           {contacts.length === 0 ? (
             <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen kontakter</p>
