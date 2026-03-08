@@ -110,21 +110,28 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
     setShowDropdown(false);
   };
 
-  // Debounced contact search
-  const searchContacts = (query: string) => {
-    if (contactTimer.current) clearTimeout(contactTimer.current);
-    if (query.length < 1) { setContactResults([]); return; }
-    contactTimer.current = setTimeout(async () => {
-      let q = supabase
+  // Load contacts for selected company
+  const { data: companyContacts = [] } = useQuery({
+    queryKey: ["foresporsler-kontakter", selskapId],
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from("contacts")
-        .select("id, first_name, last_name")
-        .limit(6);
-      if (selskapId) q = q.eq("company_id", selskapId);
-      q = q.or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%`);
-      const { data } = await q;
-      if (data) setContactResults(data);
-    }, 300);
-  };
+        .select("id, first_name, last_name, title")
+        .eq("company_id", selskapId!)
+        .order("first_name");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!selskapId,
+  });
+
+  const filteredContacts = useMemo(() => {
+    if (!kontakt.trim()) return companyContacts;
+    const q = kontakt.toLowerCase();
+    return companyContacts.filter((c: any) =>
+      `${c.first_name} ${c.last_name}`.toLowerCase().includes(q)
+    );
+  }, [companyContacts, kontakt]);
 
   const addTag = (tag: string) => {
     const t = tag.trim();
