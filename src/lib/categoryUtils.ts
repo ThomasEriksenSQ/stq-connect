@@ -1,4 +1,4 @@
-import { differenceInDays } from "date-fns";
+
 
 export const CATEGORIES = [
   { label: "Behov nå", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
