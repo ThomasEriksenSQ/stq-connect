@@ -10,7 +10,7 @@ export const CATEGORIES = [
 
 export const LEGACY_CATEGORY_MAP: Record<string, string> = {
   "Fremtidig behov": "Får fremtidig behov",
-  "Har kanskje behov": "Vil kanskje få behov",
+  "Har kanskje behov": "Får kanskje behov",
   "Aldri aktuelt": "Ikke aktuelt",
 };
 
