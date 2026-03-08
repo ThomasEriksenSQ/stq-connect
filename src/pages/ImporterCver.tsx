@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Upload, FileText, Loader2, Check, X, AlertCircle, Search, CloudOff } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
@@ -233,7 +234,7 @@ export default function ImporterCver() {
         if (mode === "update") await saveEksternUpdate(cv);
         else await saveEksternNew(cv);
       }
-      toast.success(mode === "update" ? `${cv.data?.navn || "Konsulent"} oppdatert` : `${cv.data?.navn || "Konsulent"} opprettet`);
+      toast.success(mode === "update" ? `✓ Lagret — teknologier og CV oppdatert for ${cv.matchedName || cv.data?.navn || "konsulent"}` : `${cv.data?.navn || "Konsulent"} opprettet`);
       removeCv(idx);
       queryClient.invalidateQueries({ queryKey: tab === "ansatte" ? ["stacq-ansatte"] : ["external-consultants-all"] });
     } catch (err: any) {
@@ -429,13 +430,25 @@ export default function ImporterCver() {
                 {/* Actions */}
                 <div className="flex gap-2 pt-1">
                   {cv.matchedId && (
-                    <button
-                      onClick={() => handleSave(idx, "update")}
-                      className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                      {tab === "ansatte" ? "Oppdater teknologier" : "Oppdater konsulent"}
-                    </button>
+                    <div className="flex flex-col gap-0.5">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => handleSave(idx, "update")}
+                              className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                              Lagre til {cv.matchedName || "matchet"}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Lagrer: teknologier[], cv_tekst til {tab === "ansatte" ? "stacq_ansatte" : "external_consultants"}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <span className="text-[0.6875rem] text-muted-foreground">Oppdaterer teknologier og lagrer CV-tekst for matching</span>
+                    </div>
                   )}
                   <button
                     onClick={() => handleSave(idx, "new")}
