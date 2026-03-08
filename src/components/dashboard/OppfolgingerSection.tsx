@@ -110,11 +110,11 @@ const OppfolgingerSection = () => {
   const applyNaarFilter = (arr: typeof filtered, f: NaarFilter) => {
     switch (f) {
       case "Forfalt + I dag":
-        return arr.filter(t => t.due_date && (isPast(new Date(t.due_date)) || isToday(new Date(t.due_date))));
+        return arr.filter(t => !t.due_date || isPast(new Date(t.due_date)) || isToday(new Date(t.due_date)));
       case "Forfalt":
         return arr.filter(t => t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date)));
       case "I dag":
-        return arr.filter(t => t.due_date && isToday(new Date(t.due_date)));
+        return arr.filter(t => !t.due_date || isToday(new Date(t.due_date)));
       case "Denne uken":
         return arr.filter(t => {
           if (!t.due_date) return false;
