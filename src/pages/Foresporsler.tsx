@@ -647,16 +647,10 @@ function ForespørselSheet({
               </div>
             </div>
 
-            {/* Type / Referanse */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className={LABEL}>Type</p>
-                <p className="text-[0.875rem] text-foreground mt-1">{row.type || "—"}</p>
-              </div>
-              <div>
-                <p className={LABEL}>Referanse</p>
-                <p className="text-[0.875rem] text-foreground mt-1">{row.referanse || "—"}</p>
-              </div>
+            {/* Type */}
+            <div>
+              <p className={LABEL}>Type</p>
+              <p className="text-[0.875rem] text-foreground mt-1">{row.type || "—"}</p>
             </div>
 
             {/* Teknologier */}
