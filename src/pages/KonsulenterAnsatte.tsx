@@ -33,7 +33,6 @@ interface AnsattForm {
   geografi: string;
   kompetanse: string[];
   bio: string;
-  linkedin: string;
   synlig_web: boolean;
 }
 
