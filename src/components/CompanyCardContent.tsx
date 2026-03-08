@@ -132,6 +132,9 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   const [notesDraft, setNotesDraft] = useState("");
   const [newContactOpen, setNewContactOpen] = useState(false);
   const [contactForm, setContactForm] = useState({ first_name: "", last_name: "", email: "", phone: "", title: "", linkedin: "" });
+  const [editCompanyOpen, setEditCompanyOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", org_number: "", city: "", website: "", linkedin: "", locations: [] as string[] });
+  const [newLocation, setNewLocation] = useState("");
   const { user } = useAuth();
 
   const { data: company, isLoading } = useQuery({
