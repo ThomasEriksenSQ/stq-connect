@@ -307,13 +307,14 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
     }, 300);
   };
 
-  const selectCompany = (c: { id: string; name: string; city: string | null }) => {
+  const selectCompany = (c: { id: string; name: string; city: string | null; status: string }) => {
     setSelskap(c.name);
     setSelskapId(c.id);
     setAvdeling("");
     setKontakt("");
     setKontaktId(null);
     setShowKontaktDropdown(false);
+    setSluttkunde("");
     const locations = c.city ? c.city.split(",").map(l => l.trim()).filter(Boolean) : [];
     setSelectedLocations(locations);
     if (locations.length === 1) {
@@ -325,6 +326,9 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
     }
     setShowDropdown(false);
   };
+
+  const selectedCompany = companyResults.find(c => c.id === selskapId);
+  const isPartner = selectedCompany?.status === "partner";
 
   const { data: companyContacts = [] } = useQuery({
     queryKey: ["foresporsler-kontakter", selskapId],
