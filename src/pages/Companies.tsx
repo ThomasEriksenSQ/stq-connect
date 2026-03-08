@@ -592,7 +592,6 @@ const Companies = () => {
                   </div>
                   {/* STED */}
                   <span className="text-[0.8125rem] text-muted-foreground truncate">{company.city || ""}</span>
-                  </span>
                   <span className="text-[0.75rem] text-muted-foreground text-right">
                     {company.lastActivity ? (
                       <Tooltip>
