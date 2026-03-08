@@ -6,6 +6,7 @@ import { format, differenceInDays } from "date-fns";
 import { Briefcase, CalendarCheck, TrendingUp, BarChart2 } from "lucide-react";
 
 type Filter = "Alle" | "Aktiv" | "Oppstart" | "Inaktiv";
+const TIMER_PER_DAG = 7.5;
 
 export default function KonsulenterOppdrag() {
   const [filter, setFilter] = useState<Filter>("Aktiv");
@@ -28,8 +29,9 @@ export default function KonsulenterOppdrag() {
       oppdrag.map((o: any) => {
         const utpris = Number(o.utpris) || 0;
         const tilKons = Number(o.til_konsulent) || 0;
-        const margin = utpris - tilKons;
-        const marginPct = utpris > 0 ? (margin / utpris) * 100 : 0;
+        const marginPerTime = utpris - tilKons;
+        const margin = marginPerTime * TIMER_PER_DAG;
+        const marginPct = utpris > 0 ? (marginPerTime / utpris) * 100 : 0;
         const daysUntilForny = o.forny_dato
           ? differenceInDays(new Date(o.forny_dato), today)
           : null;
@@ -41,7 +43,7 @@ export default function KonsulenterOppdrag() {
   const stats = useMemo(() => {
     const aktive = enriched.filter((o: any) => o.status === "Aktiv");
     const oppstart = enriched.filter((o: any) => o.status === "Oppstart");
-    const totalDagspris = aktive.reduce((s: number, o: any) => s + (Number(o.utpris) || 0), 0);
+    const totalDagspris = aktive.reduce((s: number, o: any) => s + (Number(o.utpris) || 0) * TIMER_PER_DAG, 0);
     const avgMargin =
       aktive.length > 0
         ? aktive.reduce((s: number, o: any) => s + o.marginPct, 0) / aktive.length
@@ -203,9 +205,9 @@ export default function KonsulenterOppdrag() {
                       {o.deal_type || "–"}
                     </span>
                   </td>
-                  {/* UTPRIS */}
+                  {/* UTPRIS (per time) */}
                   <td className="px-4 py-3.5 font-medium text-[0.875rem]">
-                    kr {formatNOK(Number(o.utpris) || 0)}
+                    kr {formatNOK(Number(o.utpris) || 0)}/t
                   </td>
                   {/* MARGIN */}
                   <td className="px-4 py-3.5">
@@ -219,7 +221,7 @@ export default function KonsulenterOppdrag() {
                           : "text-destructive"
                       )}
                     >
-                      kr {formatNOK(o.margin)}
+                      kr {formatNOK(o.margin)}/dag
                     </p>
                     <p className="text-xs text-muted-foreground">{o.marginPct.toFixed(1)}%</p>
                   </td>

@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 
 type SortField = "kandidat" | "kunde" | "stacq" | "utpris";
+const TIMER_PER_DAG = 7.5;
 type SortDir = "asc" | "desc";
 
 const SEED_HISTORY = [
@@ -41,10 +42,10 @@ function formatKr(n: number): string {
   return n.toLocaleString("nb-NO", { maximumFractionDigits: 0 });
 }
 
-function stacqColor(v: number): string {
-  if (v >= 450) return "text-emerald-600";
-  if (v >= 350) return "text-blue-600";
-  if (v >= 250) return "text-amber-600";
+function stacqColor(dagsPris: number): string {
+  if (dagsPris >= 3375) return "text-emerald-600";  // 450*7.5
+  if (dagsPris >= 2625) return "text-blue-600";      // 350*7.5
+  if (dagsPris >= 1875) return "text-amber-600";     // 250*7.5
   return "text-muted-foreground";
 }
 
@@ -81,8 +82,8 @@ export default function StacqPrisen() {
 
   const aktive = enriched.filter((r) => r.status === "Aktiv");
   const oppstart = enriched.filter((r) => r.status === "Oppstart");
-  const stacqTotal = aktive.reduce((s, r) => s + r.stacqPris, 0);
-  const oppstartTotal = oppstart.reduce((s, r) => s + r.stacqPris, 0);
+  const stacqTotal = aktive.reduce((s, r) => s + r.stacqPris * TIMER_PER_DAG, 0);
+  const oppstartTotal = oppstart.reduce((s, r) => s + r.stacqPris * TIMER_PER_DAG, 0);
   const avgPris = aktive.length > 0 ? stacqTotal / aktive.length : 0;
 
   const chartData = useMemo(() => [
@@ -138,7 +139,7 @@ export default function StacqPrisen() {
   const monthlyTotal = enriched
     .filter(o => o.status === "Aktiv" || o.status === "Oppstart")
     .reduce((sum, o) => {
-      const stacq = o.stacqPris;
+      const stacq = o.stacqPris * TIMER_PER_DAG;
       const start = o.start_dato
         ? new Date(Math.max(new Date(o.start_dato).getTime(), firstDay.getTime()))
         : firstDay;
@@ -251,8 +252,8 @@ export default function StacqPrisen() {
                         <span className="text-destructive/60">−{row.ekstra_kostnad}</span>
                       ) : "–"}
                     </span>
-                    <span className={`text-[0.8125rem] font-bold ${stacqColor(row.stacqPris)}`}>
-                      kr {formatKr(Math.round(row.stacqPris))}
+                    <span className={`text-[0.8125rem] font-bold ${stacqColor(row.stacqPris * TIMER_PER_DAG)}`}>
+                      kr {formatKr(Math.round(row.stacqPris * TIMER_PER_DAG))}
                     </span>
                     <span className={`text-[0.8125rem] text-right ${stacqColor(row.stacqPris)}`}>
                       {Math.round(pct)}%
