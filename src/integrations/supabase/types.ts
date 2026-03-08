@@ -397,39 +397,63 @@ export type Database = {
       stacq_ansatte: {
         Row: {
           ansatt_id: number | null
+          bilde_url: string | null
+          bio: string | null
           created_at: string | null
           epost: string | null
+          erfaring_aar: number | null
+          geografi: string | null
           id: number
           kommentar: string | null
+          kompetanse: string[] | null
+          linkedin: string | null
           navn: string
           slutt_dato: string | null
           start_dato: string | null
           status: string | null
+          synlig_web: boolean | null
           tlf: string | null
+          updated_at: string | null
         }
         Insert: {
           ansatt_id?: number | null
+          bilde_url?: string | null
+          bio?: string | null
           created_at?: string | null
           epost?: string | null
+          erfaring_aar?: number | null
+          geografi?: string | null
           id?: number
           kommentar?: string | null
+          kompetanse?: string[] | null
+          linkedin?: string | null
           navn: string
           slutt_dato?: string | null
           start_dato?: string | null
           status?: string | null
+          synlig_web?: boolean | null
           tlf?: string | null
+          updated_at?: string | null
         }
         Update: {
           ansatt_id?: number | null
+          bilde_url?: string | null
+          bio?: string | null
           created_at?: string | null
           epost?: string | null
+          erfaring_aar?: number | null
+          geografi?: string | null
           id?: number
           kommentar?: string | null
+          kompetanse?: string[] | null
+          linkedin?: string | null
           navn?: string
           slutt_dato?: string | null
           start_dato?: string | null
           status?: string | null
+          synlig_web?: boolean | null
           tlf?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
