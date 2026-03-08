@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   Sparkles, RefreshCw, ArrowUp, X, Copy, Loader2,
-  ClipboardList, Inbox, FileText, Search, Mail, BarChart3,
+  ClipboardList, Inbox, FileText, Search, Mail, BarChart3, Upload,
 } from "lucide-react";
+import { CvUploadFlow } from "@/components/CvUploadFlow";
 import { SheetClose } from "@/components/ui/sheet";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
