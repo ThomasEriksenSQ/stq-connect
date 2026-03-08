@@ -98,10 +98,10 @@ export default function StacqPrisen() {
 
   const chartData = useMemo(() => [
     ...SEED_HISTORY,
-    { label: "Nå", value: Math.round(stacqTotal) },
-  ], [stacqTotal]);
+    { label: "Nå", value: Math.round(stacqTotalPerTime) },
+  ], [stacqTotalPerTime]);
 
-  const mangler5000 = Math.max(0, 5000 - stacqTotal);
+  const mangler5000 = Math.max(0, 5000 - stacqTotalPerTime);
 
   const toggleSort = (field: SortField) => {
     setSort((p) => p.field === field ? { field, dir: p.dir === "asc" ? "desc" : "asc" } : { field, dir: "desc" });
