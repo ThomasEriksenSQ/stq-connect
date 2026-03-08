@@ -50,6 +50,10 @@ const statusLabels: Record<string, { label: string; className: string; badgeColo
 
 const TYPE_ORDER = ["prospect", "customer", "churned", "partner", "lead"];
 
+const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer";
+const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
+const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground font-medium`;
+
 const OrgNrInput = ({ value, onChange, onLookup }: { value: string; onChange: (v: string) => void; onLookup: (name: string | null, city: string | null) => void }) => {
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
   const [loading, setLoading] = useState(false);
