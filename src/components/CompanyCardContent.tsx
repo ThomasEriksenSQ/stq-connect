@@ -459,9 +459,28 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                 </DialogContent>
               </Dialog>
             )}
+            {editable && (
+              <button
+                onClick={() => {
+                  setEditForm({
+                    name: company.name || "",
+                    org_number: company.org_number || "",
+                    city: company.city || "",
+                    website: company.website || "",
+                    linkedin: company.linkedin || "",
+                    locations: company.city ? company.city.split(",").map((s: string) => s.trim()).filter(Boolean) : [],
+                  });
+                  setNewLocation("");
+                  setEditCompanyOpen(true);
+                }}
+                className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-secondary text-muted-foreground"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            )}
             {editable && company.notes === null && !editingNotes && (
               <button onClick={() => setEditingNotes(true)} className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-secondary text-muted-foreground">
-                <Pencil className="h-3.5 w-3.5" />
+                <FileText className="h-3.5 w-3.5" />
               </button>
             )}
             {!editable && onNavigateToFullPage && (
