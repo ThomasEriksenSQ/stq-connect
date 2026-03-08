@@ -284,7 +284,8 @@ const Companies = () => {
     const matchOwner = ownerFilter === "all" || getOwnerId(c) === ownerFilter;
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
     const matchSignal = signalFilter === "all" || c.signal === signalFilter;
-    return matchSearch && matchOwner && matchStatus && matchSignal;
+    const matchMustHave = !mustHaveFilter || (c.notes && c.notes.includes("[Must-have]"));
+    return matchSearch && matchOwner && matchStatus && matchSignal && matchMustHave;
   });
 
   const SIGNAL_PRIORITY: Record<string, number> = {
