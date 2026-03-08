@@ -68,7 +68,7 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
         <div className="overflow-x-auto">
           <div className="min-w-[900px]">
             {/* Header */}
-            <div className="flex border-b border-border bg-background sticky top-[52px] z-20">
+            <div className="flex border-b border-border bg-background sticky top-0 z-20">
               <div className="w-[160px] shrink-0 px-3 py-2 sticky left-0 z-30 bg-background" />
               {MONTHS_SHORT.map((m, i) => (
                 <div
