@@ -396,16 +396,6 @@ const Contacts = () => {
                       }
                     >INN</button>
                   </div>
-                  {/* OPPFØLGINGER */}
-                  <div className="text-center">
-                    {openTasks.count > 0 ? (
-                      <span className={`text-[0.8125rem] font-medium ${openTasks.overdue ? "text-destructive" : "text-foreground"}`}>
-                        {openTasks.count}
-                      </span>
-                    ) : (
-                      <span className="text-[0.75rem] text-muted-foreground">—</span>
-                    )}
-                  </div>
                   {/* SISTE AKT */}
                   <span className="text-[0.75rem] text-muted-foreground text-right">
                     {(contact as any).lastActivity ? (
