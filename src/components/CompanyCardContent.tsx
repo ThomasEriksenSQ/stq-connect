@@ -594,7 +594,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
 }
 
 /* ── Company Activity Timeline ── */
-function CompanyActivityTimeline({ activities, profileMap }: { activities: any[]; profileMap: Record<string, string> }) {
+function CompanyActivityTimeline({ activities, profileMap, companyId }: { activities: any[]; profileMap: Record<string, string>; companyId: string }) {
   const navigate = useNavigate();
   const currentYear = getYear(new Date());
 
@@ -635,7 +635,6 @@ function CompanyActivityTimeline({ activities, profileMap }: { activities: any[]
 
       {grouped.map((group, gi) => (
         <div key={group.key}>
-          {/* Month header */}
           <div className={cn("flex items-center gap-3 mb-3", gi > 0 && "mt-6")}>
             <span className="text-[0.8125rem] font-bold tracking-[0.04em] text-foreground whitespace-nowrap">
               {group.label}
@@ -644,72 +643,177 @@ function CompanyActivityTimeline({ activities, profileMap }: { activities: any[]
             <div className="flex-1 h-px bg-border" />
           </div>
 
-          {/* Timeline spine */}
           <div className="relative pl-7">
             <div className="absolute left-[5px] top-[5px] bottom-0 w-[2px] bg-border" />
-
             <div className="space-y-6">
-              {group.items.map((activity) => {
-                const { title: displayTitle, category: displayCategory, cleanDesc } = extractTitleAndCategory(activity.subject, activity.description);
-                const ownerName = activity.created_by ? profileMap[activity.created_by] : null;
-                const d = new Date(activity.created_at);
-                const contactName = (activity.contacts as any)?.first_name
-                  ? `${(activity.contacts as any).first_name} ${(activity.contacts as any).last_name}` : null;
-
-                const typeIcon = activity.type === "call" || activity.type === "phone"
-                  ? <MessageCircle className="h-3.5 w-3.5 text-[hsl(var(--success))]" />
-                  : <FileText className="h-3.5 w-3.5 text-primary" />;
-
-                return (
-                  <div key={activity.id} className="relative group cursor-pointer" onClick={() => { if (activity.contact_id) navigate(`/kontakter/${activity.contact_id}`); }}>
-                    {/* Icon on spine */}
-                    <div className="absolute -left-7 top-[2px] w-[12px] h-[12px] flex items-center justify-center bg-background rounded-full">
-                      {typeIcon}
-                    </div>
-
-                    <div className="min-w-0">
-                      {/* Title */}
-                      <span className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</span>
-
-                      {/* Category badge */}
-                      {displayCategory && displayCategory !== displayTitle && (
-                        <div className="mt-1">
-                          <CategoryBadge label={displayCategory} />
-                        </div>
-                      )}
-
-                      {/* Description */}
-                      {cleanDesc && (
-                        <div className="mt-1">
-                          <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70">{cleanDesc}</p>
-                        </div>
-                      )}
-
-                      {/* Meta */}
-                      <div className="flex items-center gap-2 mt-1.5">
-                        {ownerName && (
-                          <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{ownerName}</span>
-                        )}
-                        {contactName && (
-                          <span className="text-[0.8125rem] text-muted-foreground">{contactName}</span>
-                        )}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="text-[0.8125rem] text-muted-foreground">
-                              {format(d, "d. MMM yyyy", { locale: nb })}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              {group.items.map((activity) => (
+                <CompanyActivityRow
+                  key={activity.id}
+                  activity={activity}
+                  profileMap={profileMap}
+                  companyId={companyId}
+                  navigate={navigate}
+                />
+              ))}
             </div>
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+/* ── Company Activity Row (with inline edit) ── */
+function CompanyActivityRow({ activity, profileMap, companyId, navigate }: {
+  activity: any;
+  profileMap: Record<string, string>;
+  companyId: string;
+  navigate: (path: string) => void;
+}) {
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const { title: displayTitle, category: displayCategory, cleanDesc } = extractTitleAndCategory(activity.subject, activity.description);
+  const ownerName = activity.created_by ? profileMap[activity.created_by] : null;
+  const d = new Date(activity.created_at);
+  const contactName = (activity.contacts as any)?.first_name
+    ? `${(activity.contacts as any).first_name} ${(activity.contacts as any).last_name}` : null;
+
+  const typeIcon = activity.type === "call" || activity.type === "phone"
+    ? <MessageCircle className="h-3.5 w-3.5 text-[hsl(var(--success))]" />
+    : <FileText className="h-3.5 w-3.5 text-primary" />;
+
+  const handleRowClick = () => {
+    if (editing) return;
+    const parsed = extractTitleAndCategory(activity.subject, activity.description);
+    let cat = parsed.category;
+    if (!cat && CATEGORIES.some(c => c.label === activity.subject)) {
+      cat = activity.subject;
+    }
+    setEditTitle(parsed.title);
+    setEditCategory(cat);
+    setEditDesc(parsed.cleanDesc);
+    setEditDate(activity.created_at ? format(new Date(activity.created_at), "yyyy-MM-dd") : "");
+    setConfirmDelete(false);
+    setEditing(true);
+  };
+
+  const handleSave = async () => {
+    if (!editTitle.trim() || !editCategory) return;
+    const descWithCat = buildDescriptionWithCategory(editCategory, editDesc.trim());
+    const updates: Record<string, any> = { subject: editTitle.trim(), description: descWithCat || null };
+    if (editDate) {
+      updates.created_at = new Date(editDate).toISOString();
+    }
+    await supabase.from("activities").update(updates).eq("id", activity.id);
+    queryClient.invalidateQueries({ queryKey: ["company-activities-direct", companyId] });
+    queryClient.invalidateQueries({ queryKey: ["company-contact-activities", companyId] });
+    setEditing(false);
+    toast.success("Aktivitet oppdatert");
+  };
+
+  const handleDelete = async () => {
+    await supabase.from("activities").delete().eq("id", activity.id);
+    queryClient.invalidateQueries({ queryKey: ["company-activities-direct", companyId] });
+    queryClient.invalidateQueries({ queryKey: ["company-contact-activities", companyId] });
+    toast.success("Aktivitet slettet");
+  };
+
+  return (
+    <div className="relative group">
+      <div className="absolute -left-7 top-[2px] w-[12px] h-[12px] flex items-center justify-center bg-background rounded-full">
+        {typeIcon}
+      </div>
+
+      <div className="min-w-0">
+        {editing ? (
+          <div className="space-y-2 animate-in fade-in duration-150">
+            <div>
+              <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">Tittel</span>
+              <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="text-[0.9375rem] rounded-md" autoFocus />
+            </div>
+            <div>
+              <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">Kategori</span>
+              <CategoryPicker selected={editCategory} onSelect={setEditCategory} />
+            </div>
+            <Textarea
+              value={editDesc}
+              onChange={(e) => setEditDesc(e.target.value)}
+              rows={3}
+              placeholder="Beskrivelse (valgfritt)"
+              className="text-[0.875rem] rounded-md"
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setEditing(false);
+                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") handleSave();
+              }}
+            />
+            <div className="flex items-center gap-2">
+              <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Dato:</span>
+              <input
+                type="date"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+                className="h-7 px-2 text-[0.75rem] rounded-full border border-border text-muted-foreground bg-background"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" className="h-6 text-[0.6875rem] px-2 rounded" disabled={!editTitle.trim() || !editCategory} onClick={handleSave}>Lagre</Button>
+              <Button variant="ghost" size="sm" className="h-6 text-[0.6875rem] px-2 rounded" onClick={() => setEditing(false)}>Avbryt</Button>
+              <div className="ml-auto">
+                {confirmDelete ? (
+                  <span className="text-[0.75rem] animate-in fade-in duration-150">
+                    <span className="text-destructive mr-1">Er du sikker?</span>
+                    <button onClick={() => { handleDelete(); setConfirmDelete(false); }} className="text-destructive font-medium hover:underline mr-1">Ja, slett</button>
+                    <button onClick={() => setConfirmDelete(false)} className="text-muted-foreground hover:text-foreground">Avbryt</button>
+                  </span>
+                ) : (
+                  <button onClick={() => setConfirmDelete(true)} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div onClick={handleRowClick} className="cursor-pointer">
+            <span className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</span>
+
+            {displayCategory && displayCategory !== displayTitle && (
+              <div className="mt-1">
+                <CategoryBadge label={displayCategory} />
+              </div>
+            )}
+
+            {cleanDesc && (
+              <div className="mt-1">
+                <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70">{cleanDesc}</p>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 mt-1.5">
+              {ownerName && (
+                <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{ownerName}</span>
+              )}
+              {contactName && (
+                <span className="text-[0.8125rem] text-muted-foreground">{contactName}</span>
+              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-[0.8125rem] text-muted-foreground">
+                    {format(d, "d. MMM yyyy", { locale: nb })}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
