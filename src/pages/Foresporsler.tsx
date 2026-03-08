@@ -95,6 +95,9 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
     setSelskap(c.name);
     setSelskapId(c.id);
     setAvdeling("");
+    setKontakt("");
+    setKontaktId(null);
+    setContactResults([]);
     const locations = c.city ? c.city.split(",").map(l => l.trim()).filter(Boolean) : [];
     setSelectedLocations(locations);
     if (locations.length === 1) {
