@@ -267,6 +267,14 @@ export default function KonsulenterOppdrag() {
           <p className="text-muted-foreground text-center py-12">Ingen oppdrag å vise</p>
         )}
       </div>
+      <Sheet open={selectedRowId !== null} onOpenChange={(o) => { if (!o) setSelectedRowId(null); }}>
+        <SheetContent side="right" className="w-[480px] sm:max-w-[480px] p-0" hideCloseButton>
+          <OppdragEditSheet
+            row={enriched.find((o: any) => o.id === selectedRowId) || null}
+            onClose={() => setSelectedRowId(null)}
+          />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
