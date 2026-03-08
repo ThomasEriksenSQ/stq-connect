@@ -35,7 +35,7 @@ export default function KonsulenterOppdrag() {
         const daysUntilForny = o.forny_dato
           ? differenceInDays(new Date(o.forny_dato), today)
           : null;
-        return { ...o, margin, marginPct, daysUntilForny };
+        return { ...o, margin, marginPerTime, marginPct, daysUntilForny };
       }),
     [oppdrag]
   );
