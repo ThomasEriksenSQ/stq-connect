@@ -676,9 +676,9 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
       ) : null}
 
       {/* Two-column layout */}
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_minmax(0,300px)] gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_1px_minmax(0,300px)] gap-0">
         {/* Left: Tasks + Activities */}
-        <div className="space-y-5">
+        <div className="space-y-5 pr-6">
           {/* ── Oppfølginger ── */}
           {tasks.length > 0 && (
             <div className="bg-card border border-border rounded-lg shadow-card p-4 mb-6">
