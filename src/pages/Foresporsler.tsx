@@ -775,7 +775,7 @@ function ForespørselSheet({
 
             {/* Teknologier */}
             <div>
-              <label className={LABEL}>Teknologier</label>
+              <AiTeknologiBox existingTags={teknologier} onTagsFound={setTeknologier} />
               <div className="mt-1 flex flex-wrap items-center gap-1.5 p-2 border border-border rounded-lg bg-background min-h-[38px]">
                 {teknologier.map((t) => (
                   <span key={t} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-[0.75rem] text-foreground">
