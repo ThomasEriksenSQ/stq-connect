@@ -497,7 +497,7 @@ export function ForespørselSheet({
               )}
 
               {matchResults && matchResults.length > 0 && (
-                <div className="space-y-2">
+                <div className="max-h-[600px] overflow-y-auto space-y-2">
                   {matchResults
                     .filter(m => matchSourceFilter === "Alle" ? true : matchSourceFilter === "Ansatte" ? m.type === "intern" : m.type === "ekstern")
                     .map((m, i) => {
