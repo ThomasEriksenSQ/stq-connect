@@ -461,6 +461,7 @@ export type Database = {
         Row: {
           created_at: string | null
           deal_type: string | null
+          ekstra_kostnad: number | null
           er_ansatt: boolean | null
           forny_dato: string | null
           id: number
@@ -471,11 +472,13 @@ export type Database = {
           start_dato: string | null
           status: string | null
           til_konsulent: number | null
+          til_konsulent_override: number | null
           utpris: number | null
         }
         Insert: {
           created_at?: string | null
           deal_type?: string | null
+          ekstra_kostnad?: number | null
           er_ansatt?: boolean | null
           forny_dato?: string | null
           id?: number
@@ -486,11 +489,13 @@ export type Database = {
           start_dato?: string | null
           status?: string | null
           til_konsulent?: number | null
+          til_konsulent_override?: number | null
           utpris?: number | null
         }
         Update: {
           created_at?: string | null
           deal_type?: string | null
+          ekstra_kostnad?: number | null
           er_ansatt?: boolean | null
           forny_dato?: string | null
           id?: number
@@ -501,6 +506,7 @@ export type Database = {
           start_dato?: string | null
           status?: string | null
           til_konsulent?: number | null
+          til_konsulent_override?: number | null
           utpris?: number | null
         }
         Relationships: []
