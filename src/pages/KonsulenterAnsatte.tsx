@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState, useRef } from "react";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
 import { format, differenceInMonths, isAfter } from "date-fns";
-import { Pencil, Plus, X, Globe, Loader2 } from "lucide-react";
+import { Pencil, Plus, X, Globe, Loader2, Upload, FileText, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
