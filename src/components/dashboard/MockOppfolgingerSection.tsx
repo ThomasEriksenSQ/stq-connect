@@ -222,7 +222,6 @@ const MockOppfolgingerSection = () => {
                   · {row.fullDate}
                 </span>
               </div>
-              </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
