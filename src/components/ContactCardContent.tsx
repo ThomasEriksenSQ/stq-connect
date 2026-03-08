@@ -464,10 +464,12 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                     {signalCat ? (
                       <button className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer", signalCat.badgeColor)}>
                         {signalCat.label}
+                        <ChevronDown className="h-3 w-3 ml-1" />
                       </button>
                     ) : (
                       <button className="inline-flex items-center rounded-full border border-dashed border-border px-2.5 py-0.5 text-[0.6875rem] text-muted-foreground/50 cursor-pointer hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors">
                         Legg til signal
+                        <ChevronDown className="h-3 w-3 ml-1" />
                       </button>
                     )}
                   </DropdownMenuTrigger>
