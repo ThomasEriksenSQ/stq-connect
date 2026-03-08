@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Plus, X, ArrowUpDown, Pencil, Trash2, Sparkles, Loader2 } from "lucide-react";
-import { relativeDate } from "@/lib/relativeDate";
+import { Plus, X, ArrowUpDown, Pencil, Trash2, Sparkles, Loader2, ChevronDown, Check } from "lucide-react";
+import { relativeDate, fullDate } from "@/lib/relativeDate";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { getInitials } from "@/lib/utils";
+import { getInitials, cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -20,11 +20,23 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, parseISO, startOfDay } from "date-fns";
 import { nb } from "date-fns/locale";
 
 type StatusFilter = "aktive" | "utgatte" | "alle";
+type TypeFilter = "Alle" | "DIR" | "VIA";
 const STATUS_CHIPS: { value: StatusFilter; label: string }[] = [
   { value: "aktive", label: "Aktive, siste 45 dager" },
   { value: "utgatte", label: "Utgåtte, 45+ dager" },
@@ -45,6 +57,44 @@ function getMottattClass(days: number): string {
   if (days <= 7) return "text-foreground font-medium";
   if (days <= 21) return "text-amber-600 font-medium";
   return "text-destructive font-medium";
+}
+
+/* ─── Deadline helper ─── */
+
+type Urgency = "overdue" | "critical" | "soon" | "ok" | "none";
+
+function relativeDeadline(dateStr: string | null): { text: string; urgency: Urgency; tooltip: string } {
+  if (!dateStr) return { text: "—", urgency: "none", tooltip: "" };
+  const days = differenceInDays(parseISO(dateStr), startOfDay(new Date()));
+  const tooltip = format(parseISO(dateStr), "EEEE d. MMMM yyyy", { locale: nb });
+  if (days < 0) return { text: `Utgått ${Math.abs(days)}d`, urgency: "overdue", tooltip };
+  if (days === 0) return { text: "Frist i dag", urgency: "critical", tooltip };
+  if (days <= 3) return { text: `Frist om ${days}d`, urgency: "critical", tooltip };
+  if (days <= 14) return { text: `Frist om ${days}d`, urgency: "soon", tooltip };
+  return { text: `Frist ${format(parseISO(dateStr), "d. MMM", { locale: nb })}`, urgency: "ok", tooltip };
+}
+
+const URGENCY_COLOR: Record<Urgency, string> = {
+  overdue: "text-destructive",
+  critical: "text-amber-600",
+  soon: "text-amber-500",
+  ok: "text-muted-foreground",
+  none: "text-muted-foreground",
+};
+
+/* ─── Type badge helper ─── */
+
+function TypeBadge({ type }: { type: string | null }) {
+  if (type === "DIR" || type === "direktekunde") return (
+    <span className="inline-flex items-center rounded-full bg-foreground text-background px-2.5 py-0.5 text-[0.6875rem] font-semibold">DIR</span>
+  );
+  if (type === "VIA" || type === "via_partner") return (
+    <span className="inline-flex items-center rounded-full bg-violet-100 text-violet-800 border border-violet-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Partner</span>
+  );
+  if (type === "via_megler") return (
+    <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Megler</span>
+  );
+  return <span className="text-[0.8125rem] text-muted-foreground">—</span>;
 }
 
 function truncate(s: string, max: number): string {
@@ -858,35 +908,96 @@ function ForespørselSheet({
         ) : (
           /* ─── VIEW MODE ─── */
           <div className="space-y-5">
+            {/* Urgency banner */}
+            {(() => {
+              const dl = relativeDeadline(row.frist_dato);
+              if (dl.urgency === "overdue") return (
+                <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2 text-[0.8125rem] text-destructive font-medium">⚠ Fristen er utgått</div>
+              );
+              if (dl.urgency === "critical") return (
+                <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-[0.8125rem] text-amber-700 font-medium">⏰ {dl.text}</div>
+              );
+              return null;
+            })()}
+
             {/* Mottatt / Frist */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className={LABEL}>Mottatt</p>
-                <p className="text-[0.875rem] text-foreground mt-1">
-                  {row.mottatt_dato ? format(new Date(row.mottatt_dato), "dd.MM.yyyy") : "—"}
-                </p>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <p className="text-[0.875rem] text-foreground mt-1 cursor-default">
+                      {row.mottatt_dato ? relativeDate(row.mottatt_dato) : "—"}
+                    </p>
+                  </TooltipTrigger>
+                  {row.mottatt_dato && <TooltipContent>{fullDate(row.mottatt_dato)}</TooltipContent>}
+                </Tooltip>
               </div>
               <div>
                 <p className={LABEL}>Frist</p>
-                <p className="text-[0.875rem] text-foreground mt-1">
-                  {row.frist_dato ? format(new Date(row.frist_dato), "dd.MM.yyyy") : "—"}
-                </p>
+                {(() => {
+                  const dl = relativeDeadline(row.frist_dato);
+                  return (
+                    <div className="mt-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <p className={cn("text-[0.875rem] font-medium cursor-default", URGENCY_COLOR[dl.urgency])}>
+                            {dl.text}
+                          </p>
+                        </TooltipTrigger>
+                        {dl.tooltip && <TooltipContent>{dl.tooltip}</TooltipContent>}
+                      </Tooltip>
+                      {row.frist_dato && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {format(parseISO(row.frist_dato), "d. MMMM yyyy", { locale: nb })}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
-            {/* Type */}
-            <div>
-              <p className={LABEL}>Type</p>
-              <p className="text-[0.875rem] text-foreground mt-1">{row.type || "—"}</p>
-            </div>
-
-            {/* Sluttkunde */}
-            {row.sluttkunde && (
+            {/* Type — inline editable dropdown */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className={LABEL}>Sluttkunde</p>
-                <p className="text-[0.875rem] font-medium text-foreground mt-1">{row.sluttkunde}</p>
+                <p className={LABEL}>Type</p>
+                <div className="mt-1">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+                        <TypeBadge type={row.type} />
+                        <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      {[
+                        { value: "DIR", label: "Direktekunde" },
+                        { value: "VIA", label: "Via partner" },
+                      ].map(opt => (
+                        <DropdownMenuItem
+                          key={opt.value}
+                          onClick={async () => {
+                            await supabase.from("foresporsler").update({ type: opt.value, updated_at: new Date().toISOString() }).eq("id", row.id);
+                            queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
+                          }}
+                        >
+                          <TypeBadge type={opt.value} />
+                          <span className="ml-2">{opt.label}</span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
-            )}
+              {/* Sluttkunde */}
+              {(row.type === "VIA" || row.type === "via_partner" || row.type === "via_megler") && (
+                <div>
+                  <p className={LABEL}>Sluttkunde</p>
+                  <p className="text-[0.875rem] font-medium text-foreground mt-1">{row.sluttkunde || "—"}</p>
+                </div>
+              )}
+            </div>
 
             {/* Teknologier */}
             <div>
@@ -987,6 +1098,7 @@ export default function Foresporsler() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("aktive");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
   const [sort, setSort] = useState<{
     field: "mottatt_dato" | "selskap_navn" | "sendt_count";
     dir: "asc" | "desc";
@@ -1014,13 +1126,17 @@ export default function Foresporsler() {
 
   const filtered = useMemo(() => {
     if (!rows) return [];
-    return rows.filter((r: any) => {
+    let items = rows.filter((r: any) => {
       const days = getDaysAgo(r.mottatt_dato);
       if (statusFilter === "aktive") return days <= 45;
       if (statusFilter === "utgatte") return days > 45;
       return true;
     });
-  }, [rows, statusFilter]);
+    if (typeFilter !== "Alle") {
+      items = items.filter((r: any) => r.type === typeFilter);
+    }
+    return items;
+  }, [rows, statusFilter, typeFilter]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a: any, b: any) => {
@@ -1067,12 +1183,27 @@ export default function Foresporsler() {
       </div>
 
       {/* Filter chips */}
-      <div className="flex items-center gap-2">
-        {STATUS_CHIPS.map((f) => (
-          <button key={f.value} className={statusFilter === f.value ? CHIP_ON : CHIP_OFF} onClick={() => setStatusFilter(f.value)}>
-            {f.label}
-          </button>
-        ))}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-16 flex-shrink-0">Tid</span>
+          <div className="flex items-center gap-1.5">
+            {STATUS_CHIPS.map((f) => (
+              <button key={f.value} className={statusFilter === f.value ? CHIP_ON : CHIP_OFF} onClick={() => setStatusFilter(f.value)}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-16 flex-shrink-0">Type</span>
+          <div className="flex items-center gap-1.5">
+            {(["Alle", "DIR", "VIA"] as TypeFilter[]).map(f => (
+              <button key={f} className={typeFilter === f ? CHIP_ON : CHIP_OFF} onClick={() => setTypeFilter(f)}>
+                {f === "Alle" ? "Alle" : f === "DIR" ? "Direkte" : "Partner"}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Table */}
@@ -1081,44 +1212,60 @@ export default function Foresporsler() {
       ) : (
         <div className="border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
           {/* Header row */}
-          <div className="grid grid-cols-[140px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)_120px] gap-4 px-4 py-2.5 border-b border-border bg-background">
+          <div className="grid grid-cols-[90px_minmax(0,1.8fr)_70px_110px_minmax(0,1.5fr)_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="mottatt_dato">Mottatt</SortHeader>
             <SortHeader field="selskap_navn">Selskap</SortHeader>
-            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Sted</span>
+            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Type</span>
+            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Frist</span>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Teknologier</span>
-            <SortHeader field="sendt_count" className="justify-end">Sendt inn</SortHeader>
+            <SortHeader field="sendt_count" className="justify-end">Sendt</SortHeader>
           </div>
           {/* Data rows */}
           <div className="divide-y divide-border">
           {sorted.map((row: any) => {
             const days = getDaysAgo(row.mottatt_dato);
-            const isActive = row.status === "Ny" || row.status === "Aktiv";
             const sendt = row.foresporsler_konsulenter || [];
             const antall = sendt.length;
             const hvem = sendt.map((k: any) => k.stacq_ansatte?.navn?.split(" ")[0]).filter(Boolean).join(", ");
-            const isNew = isActive && antall === 0;
-            const isAging = isActive && days > 21;
+            const dl = relativeDeadline(row.frist_dato);
+
+            const accentClass = dl.urgency === "overdue" ? "border-l-[3px] border-l-destructive"
+              : dl.urgency === "critical" ? "border-l-[3px] border-l-amber-500"
+              : "";
 
             return (
               <div
                 key={row.id}
                 onClick={() => setSelectedRow(row)}
-                className={`grid grid-cols-[140px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)_120px] gap-4 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer relative ${
-                  isNew ? "border-l-[3px] border-l-amber-400" : isAging ? "border-l-[3px] border-l-destructive/40" : ""
-                }`}
+                className={cn(
+                  "grid grid-cols-[90px_minmax(0,1.8fr)_70px_110px_minmax(0,1.5fr)_90px] gap-3 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer",
+                  accentClass
+                )}
               >
                 {/* Mottatt */}
-                <span className={`text-[0.8125rem] ${getMottattClass(days)}`}>
-                  {relativeDate(row.mottatt_dato)}
-                </span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className={cn("text-[0.8125rem]", getMottattClass(days))}>
+                      {relativeDate(row.mottatt_dato)}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>{fullDate(row.mottatt_dato)}</TooltipContent>
+                </Tooltip>
                 {/* Selskap */}
                 <span className="text-[0.875rem] font-semibold text-foreground truncate">
                   {row.selskap_navn}
                 </span>
-                {/* Sted */}
-                <span className="text-[0.8125rem] text-muted-foreground truncate">
-                  {row.sted || "—"}
-                </span>
+                {/* Type */}
+                <TypeBadge type={row.type} />
+                {/* Frist */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className={cn("text-[0.8125rem] font-medium", URGENCY_COLOR[dl.urgency])}>
+                      {dl.text}
+                    </span>
+                  </TooltipTrigger>
+                  {dl.tooltip && <TooltipContent>{dl.tooltip}</TooltipContent>}
+                </Tooltip>
                 {/* Teknologier */}
                 <div className="flex items-center gap-1 flex-wrap">
                   {(row.teknologier || []).slice(0, 3).map((t: string) => (
@@ -1135,15 +1282,13 @@ export default function Foresporsler() {
                 {/* Sendt inn */}
                 <div className="flex justify-end">
                   {antall === 0 ? (
-                    <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.75rem] font-semibold">
-                      0 sendt
-                    </span>
+                    <span className="text-[0.8125rem] text-muted-foreground">—</span>
                   ) : (
                     <span className="text-[0.8125rem] font-semibold text-foreground">
                       {antall}
                       {hvem && (
                         <span className="font-normal text-muted-foreground ml-1.5">
-                          {truncate(hvem, 25)}
+                          {truncate(hvem, 15)}
                         </span>
                       )}
                     </span>
