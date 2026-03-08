@@ -133,6 +133,45 @@ function AnsattModal({
     }
   };
 
+  const handleCvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { toast.error("Maks 10 MB"); return; }
+    setCvFile(file);
+    setCvParsing(true);
+    setCvParsed(false);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(",")[1]);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const { data, error } = await supabase.functions.invoke("parse-cv", {
+        body: { base64, filename: file.name },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      if (data.erfaring_aar) set("erfaring_aar", String(data.erfaring_aar));
+      if (data.kompetanse?.length) set("kompetanse", data.kompetanse);
+      if (data.geografi) set("geografi", data.geografi);
+      if (data.bio) set("bio", data.bio);
+      setCvParsed(true);
+      toast.success("CV analysert — feltene er fylt inn");
+    } catch (err) {
+      console.error("CV parsing failed:", err);
+      toast.error("Kunne ikke analysere CV — fyll inn manuelt");
+    } finally {
+      setCvParsing(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!form.navn.trim()) return;
     setSaving(true);
