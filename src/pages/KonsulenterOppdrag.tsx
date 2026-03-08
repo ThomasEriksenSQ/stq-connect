@@ -6,6 +6,7 @@ import { format, differenceInDays } from "date-fns";
 import { Briefcase, CalendarCheck, TrendingUp, BarChart2 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { OppdragEditSheet } from "@/components/OppdragEditSheet";
+import { FornyelsesTimeline } from "@/components/FornyelsesTimeline";
 
 type Filter = "Alle" | "Aktiv" | "Oppstart" | "Inaktiv";
 const TIMER_PER_DAG = 7.5;
@@ -135,6 +136,9 @@ export default function KonsulenterOppdrag() {
           <p className="text-xs text-muted-foreground">{stats.oppstart} konsulenter kommer snart</p>
         </div>
       </div>
+
+      {/* Renewal timeline */}
+      <FornyelsesTimeline enriched={enriched} />
 
       {/* Filter chips */}
       <div className="flex items-center gap-2 mb-4">
