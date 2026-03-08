@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, Building2, ArrowUpDown, ChevronDown } from "lucide-react";
+import { Search, Building2, ArrowUpDown, ChevronDown, Sparkles } from "lucide-react";
+import { BulkSignalModal } from "@/components/BulkSignalModal";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { relativeDate } from "@/lib/relativeDate";
@@ -29,6 +30,7 @@ const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-seco
 const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground font-medium`;
 
 const Contacts = () => {
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [signalFilter, setSignalFilter] = useState("all");
@@ -271,6 +273,13 @@ const Contacts = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-[1.375rem] font-bold">Kontakter</h1>
+        <button
+          onClick={() => setBulkModalOpen(true)}
+          className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
+        >
+          <Sparkles className="h-3.5 w-3.5 text-primary" />
+          Oppdater signaler
+        </button>
       </div>
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-xs">
@@ -413,6 +422,7 @@ const Contacts = () => {
           </div>
         </div>
       )}
+      <BulkSignalModal open={bulkModalOpen} onClose={() => setBulkModalOpen(false)} />
     </div>
   );
 };
