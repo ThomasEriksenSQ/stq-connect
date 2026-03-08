@@ -83,7 +83,7 @@ export function AppLayout() {
                 )}
               >
                 <Users2 className="h-4 w-4 stroke-[1.5]" />
-                <span className="hidden sm:inline">Konsulenter</span>
+                <span className="hidden sm:inline">STACQ</span>
                 <ChevronDown
                   className={cn(
                     "h-3 w-3 transition-transform",
