@@ -930,8 +930,12 @@ function AddKonsulentCombobox({
       const { data } = await supabase
         .from("external_consultants")
         .select("id, navn, teknologier, type, status")
-        .order("navn");
-      return data || [];
+        .order("created_at", { ascending: true });
+      // Deduplicate by navn
+      const unique = (data || []).filter((c: any, i: number, arr: any[]) =>
+        arr.findIndex((x: any) => x.navn === c.navn) === i
+      );
+      return unique;
     },
   });
 
