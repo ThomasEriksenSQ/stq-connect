@@ -4,6 +4,13 @@ import { useMemo, useState, useRef } from "react";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
 import { format, differenceInMonths, isAfter } from "date-fns";
 import { Pencil, Plus, X, Globe, Loader2, Upload, FileText, Sparkles } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -459,12 +466,21 @@ export default function KonsulenterAnsatte() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stacq_oppdrag")
-        .select("kandidat")
+        .select("kandidat, status")
         .in("status", ["Aktiv", "Oppstart"]);
       if (error) throw error;
       return data;
     },
   });
+
+  const oppdragMap = useMemo(() => {
+    const m = new Map<string, string>();
+    (oppdrag as any[]).forEach((o) => {
+      // Keep highest priority: Aktiv > Oppstart
+      if (!m.has(o.kandidat) || o.status === "Aktiv") m.set(o.kandidat, o.status);
+    });
+    return m;
+  }, [oppdrag]);
 
   const activeOppdragNames = useMemo(
     () => new Set(oppdrag.map((o: any) => o.kandidat)),
@@ -505,8 +521,27 @@ export default function KonsulenterAnsatte() {
     return formatMonths(months);
   };
 
+  const queryClient = useQueryClient();
   const openEdit = (a: any) => { setEditAnsatt(a); setModalOpen(true); };
   const openCreate = () => { setEditAnsatt(null); setModalOpen(true); };
+
+  const handleSetOppdragStatus = async (navn: string, status: string | null) => {
+    if (status === null) {
+      await supabase
+        .from("stacq_oppdrag")
+        .update({ status: "Inaktiv" })
+        .eq("kandidat", navn)
+        .in("status", ["Aktiv", "Oppstart"]);
+    } else {
+      await supabase
+        .from("stacq_oppdrag")
+        .update({ status })
+        .eq("kandidat", navn)
+        .in("status", ["Aktiv", "Oppstart", "Inaktiv"]);
+    }
+    queryClient.invalidateQueries({ queryKey: ["stacq-ansatte"] });
+    queryClient.invalidateQueries({ queryKey: ["stacq-oppdrag-active-names"] });
+  };
 
   const chips: Filter[] = ["Alle", "Aktiv", "Kommende", "Sluttet"];
 
@@ -568,8 +603,8 @@ export default function KonsulenterAnsatte() {
       {/* Table */}
       <div className="border border-border rounded-lg overflow-hidden bg-card shadow-sm">
         {/* Header */}
-        <div className="grid grid-cols-[minmax(0,2fr)_130px_100px_minmax(0,1.5fr)_90px_minmax(0,1.2fr)_36px] gap-3 px-4 py-2.5 border-b border-border bg-background">
-          {["NAVN", "START", "ANSETTELSE", "KOMPETANSE", "STATUS", "KONTAKT", ""].map((h) => (
+        <div className="grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_100px_180px_40px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          {["NAVN", "START", "ANSETTELSE", "OPPDRAG", "ANSATT", "KONTAKT", ""].map((h) => (
             <span key={h} className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">{h}</span>
           ))}
         </div>
@@ -579,13 +614,25 @@ export default function KonsulenterAnsatte() {
           const isKommende = status === "Kommende";
           const isSluttet = status === "Sluttet";
           const inOppdrag = activeOppdragNames.has(a.navn);
-          const kompetanse: string[] = a.kompetanse || [];
+          const oppdragStatus = oppdragMap.get(a.navn) || null;
+
+          const oppdragBadge = oppdragStatus === "Aktiv" ? (
+            <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 text-[0.75rem] font-semibold">
+              I oppdrag
+            </span>
+          ) : oppdragStatus === "Oppstart" ? (
+            <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.75rem] font-semibold">
+              Oppstart
+            </span>
+          ) : (
+            <span className="text-[0.8125rem] text-muted-foreground">—</span>
+          );
 
           return (
             <div
               key={a.id}
               className={cn(
-                "group grid grid-cols-[minmax(0,2fr)_130px_100px_minmax(0,1.5fr)_90px_minmax(0,1.2fr)_36px] gap-3 items-center px-4 py-3 hover:bg-muted/30 transition-colors",
+                "group grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_100px_180px_40px] gap-3 items-center px-4 py-3 hover:bg-muted/30 transition-colors",
                 i < filtered.length - 1 && "border-b border-border",
                 isKommende && "opacity-80",
                 isSluttet && "opacity-50"
@@ -621,22 +668,32 @@ export default function KonsulenterAnsatte() {
               </div>
               {/* ANSETTELSE */}
               <div className="text-sm text-muted-foreground">{getDuration(a)}</div>
-              {/* KOMPETANSE */}
-              <div className="flex flex-wrap gap-1 min-w-0">
-                {kompetanse.length === 0 ? (
-                  <span className="text-muted-foreground text-sm">–</span>
-                ) : (
-                  <>
-                    {kompetanse.slice(0, 2).map(t => (
-                      <span key={t} className="bg-secondary text-muted-foreground rounded-full px-2 py-0.5 text-[0.75rem] truncate max-w-[120px]">{t}</span>
-                    ))}
-                    {kompetanse.length > 2 && (
-                      <span className="bg-secondary text-muted-foreground rounded-full px-2 py-0.5 text-[0.75rem]">+{kompetanse.length - 2}</span>
-                    )}
-                  </>
-                )}
+              {/* OPPDRAG */}
+              <div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <button className="hover:opacity-70 transition-opacity">
+                      {oppdragBadge}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenuItem onClick={() => handleSetOppdragStatus(a.navn, "Aktiv")}>
+                      <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-xs font-semibold mr-2">I oppdrag</span>
+                      Sett til aktiv
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSetOppdragStatus(a.navn, "Oppstart")}>
+                      <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2 py-0.5 text-xs font-semibold mr-2">Oppstart</span>
+                      Sett til oppstart
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleSetOppdragStatus(a.navn, null)}>
+                      <span className="text-muted-foreground mr-2">—</span>
+                      Ikke i oppdrag
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-              {/* STATUS */}
+              {/* ANSATT */}
               <div className="flex items-center gap-1">
                 <span
                   className={cn(
