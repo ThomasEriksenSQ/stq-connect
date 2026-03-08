@@ -203,7 +203,7 @@ export default function EksterneKonsulenter() {
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
-              {["NAVN", "SELSKAP", "TYPE", "ROLLE", "TEKNOLOGIER", "STATUS", "TILGJ. FRA", "INNPRIS"].map(h => (
+              {["NAVN", "SELSKAP", "TYPE", "STATUS", "TEKNOLOGIER", "TILGJ. FRA"].map(h => (
                 <th key={h} className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground px-4 py-2.5 text-left">{h}</th>
               ))}
             </tr>
@@ -228,13 +228,16 @@ export default function EksterneKonsulenter() {
                     <span className={cn(
                       "rounded-full px-2.5 py-0.5 text-xs font-semibold",
                       row.type === "freelance" ? "bg-emerald-100 text-emerald-700" :
-                      row.type === "partner" ? "bg-violet-100 text-violet-700" :
-                      "bg-blue-100 text-blue-700"
+                      "bg-violet-100 text-violet-700"
                     )}>
                       {TYPE_LABELS[row.type] || row.type}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-[0.875rem]">{row.rolle || "—"}</td>
+                  <td className="px-4 py-3">
+                    <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_COLORS[row.status] || "bg-muted text-muted-foreground")}>
+                      {STATUS_LABELS[row.status] || row.status}
+                    </span>
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       {(row.teknologier || []).slice(0, 4).map((t: string) => (
@@ -245,16 +248,8 @@ export default function EksterneKonsulenter() {
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3">
-                    <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_COLORS[row.status] || "bg-muted text-muted-foreground")}>
-                      {STATUS_LABELS[row.status] || row.status}
-                    </span>
-                  </td>
                   <td className="px-4 py-3 text-[0.8125rem] text-muted-foreground">
                     {row.tilgjengelig_fra ? format(new Date(row.tilgjengelig_fra), "dd.MM.yyyy") : "—"}
-                  </td>
-                  <td className="px-4 py-3 text-[0.8125rem] font-medium">
-                    {row.innpris_time ? `kr ${Number(row.innpris_time).toLocaleString("nb-NO")}/t` : "—"}
                   </td>
                 </tr>
               );
