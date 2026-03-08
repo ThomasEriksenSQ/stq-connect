@@ -566,19 +566,20 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
         </div>
 
         {/* Line 2: org number · city */}
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+        <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
           {company.org_number && <span>Org.nr {company.org_number}</span>}
-          {company.city && (
+          {company.city && company.city.split(",").map((loc: string) => loc.trim()).filter(Boolean).map((loc: string, i: number) => (
             <a
-              href={`https://maps.google.com/?q=${encodeURIComponent(company.city)},Norge`}
+              key={i}
+              href={`https://maps.google.com/?q=${encodeURIComponent(loc)},Norge`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
             >
               <MapPin className="h-3.5 w-3.5" />
-              {company.city}
+              {loc}
             </a>
-          )}
+          ))}
         </div>
 
         {/* Line 3: phone · links */}
