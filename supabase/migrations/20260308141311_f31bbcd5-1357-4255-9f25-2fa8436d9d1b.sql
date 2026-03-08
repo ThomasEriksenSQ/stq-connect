@@ -1,0 +1,1 @@
+UPDATE tasks SET due_date = CURRENT_DATE WHERE due_date IS NULL AND status != 'done';
