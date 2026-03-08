@@ -422,6 +422,7 @@ const Contacts = () => {
           </div>
         </div>
       )}
+      <BulkSignalModal open={bulkModalOpen} onClose={() => setBulkModalOpen(false)} />
     </div>
   );
 };
