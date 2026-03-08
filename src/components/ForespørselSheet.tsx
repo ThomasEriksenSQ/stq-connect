@@ -340,7 +340,10 @@ export function ForespørselSheet({
   if (!row) return null;
 
   const contactName = row.contacts ? `${row.contacts.first_name} ${row.contacts.last_name}` : null;
-  const alreadyLinkedIds = new Set(linkedKonsulenter.map((k: any) => k.ansatt_id));
+  const alreadyLinkedIds = new Set([
+    ...linkedKonsulenter.filter((k: any) => k.konsulent_type === "intern").map((k: any) => k.ansatt_id),
+    ...linkedKonsulenter.filter((k: any) => k.konsulent_type === "ekstern").map((k: any) => k.ekstern_id),
+  ]);
 
   return (
     <div className="flex flex-col h-full">
