@@ -129,6 +129,7 @@ const MockOppfolgingerSection = () => {
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState<FollowUpModalData | null>(null);
+  const [removedRow, setRemovedRow] = useState<{ row: MockRow; index: number } | null>(null);
 
   const updateSignal = (id: string, newSignal: string) => {
     setRows((prev) =>
@@ -142,6 +143,8 @@ const MockOppfolgingerSection = () => {
 
     // After fade, remove row and open modal
     setTimeout(() => {
+      const idx = rows.findIndex((r) => r.id === row.id);
+      setRemovedRow({ row, index: idx });
       setRows((prev) => prev.filter((r) => r.id !== row.id));
       setCompletingId(null);
       setModalData({
@@ -157,8 +160,26 @@ const MockOppfolgingerSection = () => {
 
   const handleFollowUpSubmit = (data: { title: string; dueDate: Date; owner: string }) => {
     setModalOpen(false);
+    setRemovedRow(null);
     const firstName = modalData?.name.split(" ")[0] ?? "";
     toast.success(`Oppfølging opprettet for ${firstName}`);
+  };
+
+  const handleCancel = () => {
+    setModalOpen(false);
+    if (removedRow) {
+      setRows((prev) => {
+        const next = [...prev];
+        next.splice(removedRow.index, 0, removedRow.row);
+        return next;
+      });
+      setRemovedRow(null);
+    }
+  };
+
+  const handleSkip = () => {
+    setModalOpen(false);
+    setRemovedRow(null);
   };
 
   return (
@@ -293,7 +314,8 @@ const MockOppfolgingerSection = () => {
       {/* Follow-up modal */}
       <FollowUpModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onCancel={handleCancel}
+        onClose={handleSkip}
         onSubmit={handleFollowUpSubmit}
         data={modalData}
       />

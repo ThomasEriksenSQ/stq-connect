@@ -45,6 +45,7 @@ export type FollowUpModalData = {
 
 type Props = {
   open: boolean;
+  onCancel: () => void;
   onClose: () => void;
   onSubmit: (data: { title: string; dueDate: Date; owner: string }) => void;
   data: FollowUpModalData | null;
@@ -54,7 +55,7 @@ const CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colo
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
 const CHIP_ON = `${CHIP_BASE} bg-primary/10 border-primary/30 text-primary font-medium`;
 
-const FollowUpModal = ({ open, onClose, onSubmit, data }: Props) => {
+const FollowUpModal = ({ open, onCancel, onClose, onSubmit, data }: Props) => {
   const [title, setTitle] = useState("");
   const [selectedDate, setSelectedDate] = useState<string>("+1 uke");
   const [owner, setOwner] = useState("Thomas");
@@ -114,6 +115,7 @@ const FollowUpModal = ({ open, onClose, onSubmit, data }: Props) => {
       <DialogContent
         className="max-w-md rounded-xl p-6 gap-0"
         hideCloseButton
+        onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogTitle className="sr-only">Opprett oppfølging</DialogTitle>
 
@@ -197,31 +199,39 @@ const FollowUpModal = ({ open, onClose, onSubmit, data }: Props) => {
         {/* Footer */}
         <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
           <button
-            onClick={onClose}
+            onClick={onCancel}
             className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors"
           >
-            Hopp over
+            Avbryt
           </button>
-          <button
-            disabled={!canSubmit}
-            onClick={() => {
-              if (canSubmit) {
-                onSubmit({
-                  title: title.trim(),
-                  dueDate: computedDate(),
-                  owner,
-                });
-              }
-            }}
-            className={cn(
-              "inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg transition-colors",
-              canSubmit
-                ? "bg-primary text-primary-foreground hover:opacity-90"
-                : "bg-muted text-muted-foreground cursor-not-allowed"
-            )}
-          >
-            Opprett oppfølging →
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onClose}
+              className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Hopp over
+            </button>
+            <button
+              disabled={!canSubmit}
+              onClick={() => {
+                if (canSubmit) {
+                  onSubmit({
+                    title: title.trim(),
+                    dueDate: computedDate(),
+                    owner,
+                  });
+                }
+              }}
+              className={cn(
+                "inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg transition-colors",
+                canSubmit
+                  ? "bg-primary text-primary-foreground hover:opacity-90"
+                  : "bg-muted text-muted-foreground cursor-not-allowed"
+              )}
+            >
+              Opprett →
+            </button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
