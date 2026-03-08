@@ -554,11 +554,6 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">Kontakter · {contacts.length}</h3>
-                    <Button type="submit" className="w-full h-10 rounded-lg">Opprett</Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            )}
           </div>
           {contacts.length === 0 ? (
             <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen kontakter</p>
