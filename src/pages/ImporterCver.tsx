@@ -430,13 +430,25 @@ export default function ImporterCver() {
                 {/* Actions */}
                 <div className="flex gap-2 pt-1">
                   {cv.matchedId && (
-                    <button
-                      onClick={() => handleSave(idx, "update")}
-                      className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                      {tab === "ansatte" ? "Oppdater teknologier" : "Oppdater konsulent"}
-                    </button>
+                    <div className="flex flex-col gap-0.5">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => handleSave(idx, "update")}
+                              className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                              Lagre til {cv.matchedName || "matchet"}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Lagrer: teknologier[], cv_tekst til {tab === "ansatte" ? "stacq_ansatte" : "external_consultants"}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <span className="text-[0.6875rem] text-muted-foreground">Oppdaterer teknologier og lagrer CV-tekst for matching</span>
+                    </div>
                   )}
                   <button
                     onClick={() => handleSave(idx, "new")}
