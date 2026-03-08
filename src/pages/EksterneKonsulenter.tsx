@@ -240,6 +240,7 @@ interface ConsultantForm {
   status: string;
   tilgjengelig_fra: string;
   cv_tekst: string;
+  kommentar: string;
 }
 
 const emptyForm: ConsultantForm = {
@@ -247,6 +248,7 @@ const emptyForm: ConsultantForm = {
   company_id: "", selskap_tekst: "",
   teknologier: [], status: "ledig",
   tilgjengelig_fra: "", cv_tekst: "",
+  kommentar: "",
 };
 
 function ConsultantModal({ open, onClose, editRow, userId }: {
@@ -286,6 +288,7 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
         status: editRow.status || "ledig",
         tilgjengelig_fra: editRow.tilgjengelig_fra || "",
         cv_tekst: (editRow as any).cv_tekst || "",
+        kommentar: (editRow as any).notat || "",
       });
     } else {
       setForm({ ...emptyForm });
@@ -402,6 +405,7 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
       status: form.status,
       tilgjengelig_fra: form.tilgjengelig_fra || null,
       cv_tekst: form.cv_tekst || null,
+      notat: form.kommentar.trim() || null,
       updated_at: new Date().toISOString(),
     };
 
@@ -648,6 +652,18 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
                   />
                 </PopoverContent>
               </Popover>
+            </div>
+
+            {/* Kommentar */}
+            <div>
+              <label className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">Kommentar</label>
+              <textarea
+                value={form.kommentar}
+                onChange={(e) => set("kommentar", e.target.value)}
+                rows={3}
+                placeholder="Notater om konsulenten, kilde, hvordan dere kom i kontakt..."
+                className="mt-1 flex w-full rounded-md border border-input bg-background px-3 py-2 text-[0.875rem] ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
             </div>
           </div>
         )}
