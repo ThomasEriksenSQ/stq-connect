@@ -575,6 +575,7 @@ export default function Foresporsler() {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
+  const [sheetExpanded, setSheetExpanded] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("aktive");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
   const [sort, setSort] = useState<{
@@ -781,9 +782,9 @@ export default function Foresporsler() {
       <NyForesporselModal open={modalOpen} onClose={() => setModalOpen(false)} />
 
       {/* Detail/Edit Sheet */}
-      <Sheet open={!!selectedRow} onOpenChange={(o) => { if (!o) setSelectedRowId(null); }}>
-        <SheetContent side="right" className="w-[520px] sm:w-[520px] p-0" hideCloseButton>
-          <ForespørselSheet row={selectedRow} onClose={() => setSelectedRowId(null)} />
+      <Sheet open={!!selectedRow} onOpenChange={(o) => { if (!o) { setSelectedRowId(null); setSheetExpanded(false); } }}>
+        <SheetContent side="right" className={cn("p-0 transition-all duration-300 ease-in-out", sheetExpanded ? "w-[860px] sm:max-w-[860px]" : "w-[520px] sm:max-w-[520px]")} hideCloseButton>
+          <ForespørselSheet row={selectedRow} onClose={() => { setSelectedRowId(null); setSheetExpanded(false); }} onExpandChange={setSheetExpanded} />
         </SheetContent>
       </Sheet>
     </div>
