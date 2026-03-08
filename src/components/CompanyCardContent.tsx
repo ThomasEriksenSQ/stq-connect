@@ -490,7 +490,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
           )}
 
           {/* ── Activities Timeline ── */}
-          <CompanyActivityTimeline activities={activities} profileMap={profileMapFull} />
+          <CompanyActivityTimeline activities={activities} profileMap={profileMapFull} companyId={companyId} />
         </div>
 
         {/* Right: Contacts */}
