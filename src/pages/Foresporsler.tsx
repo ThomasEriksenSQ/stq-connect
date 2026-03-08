@@ -581,6 +581,7 @@ export default function Foresporsler() {
               Ingen forespørsler å vise
             </div>
           )}
+          </div>
         </div>
       )}
 
