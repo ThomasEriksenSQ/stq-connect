@@ -709,8 +709,12 @@ export default function Foresporsler() {
           {sorted.map((row: any) => {
             const days = getDaysAgo(row.mottatt_dato);
             const sendt = row.foresporsler_konsulenter || [];
-            const antall = sendt.length;
-            const hvem = sendt.map((k: any) => k.stacq_ansatte?.navn?.split(" ")[0]).filter(Boolean).join(", ");
+            const firstNames = sendt.map((k: any) => {
+              const fullName = k.konsulent_type === "intern"
+                ? k.stacq_ansatte?.navn
+                : k.external_consultants?.navn;
+              return fullName?.split(" ")[0];
+            }).filter(Boolean) as string[];
 
             return (
               <div
