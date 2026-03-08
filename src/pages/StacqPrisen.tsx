@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 
 type SortField = "kandidat" | "kunde" | "stacq" | "utpris";
+const TIMER_PER_DAG = 7.5;
 type SortDir = "asc" | "desc";
 
 const SEED_HISTORY = [
