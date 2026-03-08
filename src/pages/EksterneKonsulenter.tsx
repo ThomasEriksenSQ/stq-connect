@@ -179,7 +179,7 @@ export default function EksterneKonsulenter() {
         <div className="flex items-center gap-2">
           <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-16 flex-shrink-0">Type</span>
           <div className="flex items-center gap-1.5">
-            {(["Alle", "freelance", "partner", "konsulenthus"] as TypeFilter[]).map(f => (
+            {(["Alle", "freelance", "partner"] as TypeFilter[]).map(f => (
               <button key={f} className={typeFilter === f ? CHIP_ON : CHIP_OFF} onClick={() => setTypeFilter(f)}>
                 {f === "Alle" ? "Alle" : TYPE_LABELS[f]}
               </button>
