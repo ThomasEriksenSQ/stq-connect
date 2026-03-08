@@ -261,12 +261,10 @@ export type Database = {
       }
       foresporsler: {
         Row: {
-          antall_sendt: number | null
           avdeling: string | null
           created_at: string | null
           created_by: string | null
           frist_dato: string | null
-          hvem_sendt: string | null
           id: number
           kommentar: string | null
           kontakt_id: string | null
@@ -281,12 +279,10 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          antall_sendt?: number | null
           avdeling?: string | null
           created_at?: string | null
           created_by?: string | null
           frist_dato?: string | null
-          hvem_sendt?: string | null
           id?: number
           kommentar?: string | null
           kontakt_id?: string | null
@@ -301,12 +297,10 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          antall_sendt?: number | null
           avdeling?: string | null
           created_at?: string | null
           created_by?: string | null
           frist_dato?: string | null
-          hvem_sendt?: string | null
           id?: number
           kommentar?: string | null
           kontakt_id?: string | null
@@ -333,6 +327,42 @@ export type Database = {
             columns: ["selskap_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      foresporsler_konsulenter: {
+        Row: {
+          ansatt_id: number
+          created_at: string | null
+          foresporsler_id: number
+          id: string
+        }
+        Insert: {
+          ansatt_id: number
+          created_at?: string | null
+          foresporsler_id: number
+          id?: string
+        }
+        Update: {
+          ansatt_id?: number
+          created_at?: string | null
+          foresporsler_id?: number
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "foresporsler_konsulenter_ansatt_id_fkey"
+            columns: ["ansatt_id"]
+            isOneToOne: false
+            referencedRelation: "stacq_ansatte"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "foresporsler_konsulenter_foresporsler_id_fkey"
+            columns: ["foresporsler_id"]
+            isOneToOne: false
+            referencedRelation: "foresporsler"
             referencedColumns: ["id"]
           },
         ]
