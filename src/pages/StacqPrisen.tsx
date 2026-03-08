@@ -181,8 +181,8 @@ export default function StacqPrisen() {
         </div>
         {mangler5000 > 0 && (
           <p className="text-[0.8125rem] text-muted-foreground mt-3">
-            Neste milepæl: <span className="font-medium text-foreground">kr 5 000/dag</span> — mangler{" "}
-            <span className="font-medium text-amber-600">kr {formatKr(Math.round(mangler5000))}/dag</span>
+            Neste milepæl: <span className="font-medium text-foreground">kr 5 000/time</span> — mangler{" "}
+            <span className="font-medium text-amber-600">kr {formatKr(Math.round(mangler5000))}/time</span>
           </p>
         )}
       </div>
