@@ -327,12 +327,11 @@ export function ForespørselSheet({
   // Add from match result
   const addFromMatch = async (match: MatchResult) => {
     if (match.type === "intern") {
-      // Only stacq_ansatte can be linked via foresporsler_konsulenter
       await handleAddKonsulent(match.id as number);
       toast.success(`${match.navn} lagt til`);
     } else {
-      // For now just show confirmation — external linking needs separate table
-      toast.success(`${match.navn} (ekstern) registrert`);
+      await handleAddEkstern(match.id as string);
+      toast.success(`${match.navn} (ekstern) lagt til`);
     }
   };
 
