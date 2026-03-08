@@ -452,8 +452,10 @@ export default function Foresporsler() {
   const filtered = useMemo(() => {
     if (!rows) return [];
     return rows.filter((r) => {
-      if (statusFilter === "Alle") return r.status !== "Tapt";
-      return r.status === statusFilter;
+      const days = getDaysAgo(r.mottatt_dato);
+      if (statusFilter === "aktive") return days <= 45;
+      if (statusFilter === "utgatte") return days > 45;
+      return true;
     });
   }, [rows, statusFilter]);
 
