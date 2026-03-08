@@ -328,7 +328,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
               <Select value={effectiveSignal || "__none__"} onValueChange={(v) => { if (v !== "__none__") changeSignalMutation.mutate(v); }}>
                 <SelectTrigger className="h-auto w-auto gap-1 border-none shadow-none p-0 focus:ring-0 focus:ring-offset-0">
                   <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", signalBadgeColor)}>
-                    {effectiveSignal ? `✓ ${effectiveSignal}` : "Signal"}
+                    {effectiveSignal || "Signal"}
                   </span>
                 </SelectTrigger>
                 <SelectContent>
