@@ -103,7 +103,13 @@ export default function EksterneKonsulenter() {
   const filtered = useMemo(() => {
     let items = rows;
     if (typeFilter !== "Alle") items = items.filter((r: any) => r.type === typeFilter);
-    if (statusFilter !== "Alle") items = items.filter((r: any) => r.status === statusFilter);
+    if (statusFilter !== "Alle") {
+      if (statusFilter === "ledig") {
+        items = items.filter((r: any) => r.status === "ledig" || r.status === "aktiv");
+      } else {
+        items = items.filter((r: any) => r.status === "utilgjengelig" || r.status === "utgått");
+      }
+    }
     if (search.trim()) {
       const q = search.toLowerCase();
       items = items.filter((r: any) => {
