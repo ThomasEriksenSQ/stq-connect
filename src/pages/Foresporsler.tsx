@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Plus, X, ArrowUpDown, Pencil, Trash2, Sparkles, Loader2 } from "lucide-react";
-import { relativeDate } from "@/lib/relativeDate";
+import { Plus, X, ArrowUpDown, Pencil, Trash2, Sparkles, Loader2, ChevronDown, Check } from "lucide-react";
+import { relativeDate, fullDate } from "@/lib/relativeDate";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { getInitials } from "@/lib/utils";
+import { getInitials, cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -20,11 +20,23 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, parseISO, startOfDay } from "date-fns";
 import { nb } from "date-fns/locale";
 
 type StatusFilter = "aktive" | "utgatte" | "alle";
+type TypeFilter = "Alle" | "DIR" | "VIA";
 const STATUS_CHIPS: { value: StatusFilter; label: string }[] = [
   { value: "aktive", label: "Aktive, siste 45 dager" },
   { value: "utgatte", label: "Utgåtte, 45+ dager" },
@@ -45,6 +57,44 @@ function getMottattClass(days: number): string {
   if (days <= 7) return "text-foreground font-medium";
   if (days <= 21) return "text-amber-600 font-medium";
   return "text-destructive font-medium";
+}
+
+/* ─── Deadline helper ─── */
+
+type Urgency = "overdue" | "critical" | "soon" | "ok" | "none";
+
+function relativeDeadline(dateStr: string | null): { text: string; urgency: Urgency; tooltip: string } {
+  if (!dateStr) return { text: "—", urgency: "none", tooltip: "" };
+  const days = differenceInDays(parseISO(dateStr), startOfDay(new Date()));
+  const tooltip = format(parseISO(dateStr), "EEEE d. MMMM yyyy", { locale: nb });
+  if (days < 0) return { text: `Utgått ${Math.abs(days)}d`, urgency: "overdue", tooltip };
+  if (days === 0) return { text: "Frist i dag", urgency: "critical", tooltip };
+  if (days <= 3) return { text: `Frist om ${days}d`, urgency: "critical", tooltip };
+  if (days <= 14) return { text: `Frist om ${days}d`, urgency: "soon", tooltip };
+  return { text: `Frist ${format(parseISO(dateStr), "d. MMM", { locale: nb })}`, urgency: "ok", tooltip };
+}
+
+const URGENCY_COLOR: Record<Urgency, string> = {
+  overdue: "text-destructive",
+  critical: "text-amber-600",
+  soon: "text-amber-500",
+  ok: "text-muted-foreground",
+  none: "text-muted-foreground",
+};
+
+/* ─── Type badge helper ─── */
+
+function TypeBadge({ type }: { type: string | null }) {
+  if (type === "DIR" || type === "direktekunde") return (
+    <span className="inline-flex items-center rounded-full bg-foreground text-background px-2.5 py-0.5 text-[0.6875rem] font-semibold">DIR</span>
+  );
+  if (type === "VIA" || type === "via_partner") return (
+    <span className="inline-flex items-center rounded-full bg-violet-100 text-violet-800 border border-violet-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Partner</span>
+  );
+  if (type === "via_megler") return (
+    <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Megler</span>
+  );
+  return <span className="text-[0.8125rem] text-muted-foreground">—</span>;
 }
 
 function truncate(s: string, max: number): string {
