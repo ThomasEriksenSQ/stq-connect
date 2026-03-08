@@ -172,8 +172,9 @@ export default function KonsulenterOppdrag() {
             return (
               <div
                 key={o.id}
+                onClick={() => setSelectedRowId(o.id)}
                 className={cn(
-                  "grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 items-center px-4 py-3 hover:bg-muted/40 transition-colors",
+                  "grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 items-center px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer",
                   isInaktiv && "opacity-60"
                 )}
               >
