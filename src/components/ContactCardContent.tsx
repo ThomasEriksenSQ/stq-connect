@@ -1182,7 +1182,7 @@ function ActivityRow({
             </div>
           </div>
         ) : (
-          <div onClick={handleRowClick} className={cn("group/row flex items-start gap-3", editable && "cursor-pointer")}>
+          <div onClick={handleRowClick} className={cn("flex items-start gap-3", editable && "cursor-pointer")}>
             <div className="flex-1 min-w-0">
               {/* Title */}
               <span className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</span>
