@@ -83,6 +83,7 @@ const FollowUpModal = ({ open, onCancel, onClose, onSubmit, data }: Props) => {
 
       const defaultDate = SIGNAL_DEFAULT_DATE[data.signal] ?? "+1 uke";
       setSelectedDate(defaultDate);
+      setCustomDate(undefined);
 
       // Simulate AI suggestion (mockup — will be replaced with real API call)
       setAiLoading(true);
