@@ -537,19 +537,25 @@ function ConsultantModal({ open, onClose, editRow, contacts, companies, userId }
           </div>
 
           {/* Tilgjengelighet */}
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className={LABEL}>Tilgjengelig fra</label>
-              <Input type="date" value={form.tilgjengelig_fra} onChange={e => set("tilgjengelig_fra", e.target.value)} className="mt-1 text-[0.875rem]" />
-            </div>
-            <div>
-              <label className={LABEL}>Tilgjengelig til</label>
-              <Input type="date" value={form.tilgjengelig_til} onChange={e => set("tilgjengelig_til", e.target.value)} className="mt-1 text-[0.875rem]" />
-            </div>
-            <div>
-              <label className={LABEL}>Kapasitet %</label>
-              <Input type="number" value={form.kapasitet_prosent} onChange={e => set("kapasitet_prosent", e.target.value)} placeholder="100" className="mt-1 text-[0.875rem]" />
-            </div>
+          <div>
+            <label className={LABEL}>Tilgjengelig fra</label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("mt-1 w-full justify-start text-left text-[0.875rem] font-normal", !form.tilgjengelig_fra && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {form.tilgjengelig_fra ? format(new Date(form.tilgjengelig_fra), "d. MMM yyyy", { locale: nb }) : "Velg dato"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={form.tilgjengelig_fra ? new Date(form.tilgjengelig_fra) : undefined}
+                  onSelect={(d) => set("tilgjengelig_fra", d ? format(d, "yyyy-MM-dd") : "")}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Økonomi */}

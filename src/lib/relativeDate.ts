@@ -50,3 +50,21 @@ export function relativeTimeShort(dateStr: string): string {
 export function fullDate(dateStr: string): string {
   return format(new Date(dateStr), "d. MMMM yyyy", { locale: nb });
 }
+
+/** Future-aware relative date: "Nå" if today/past, "om 2 uker" if future, "—" if null */
+export function relativeFutureDate(dateStr: string | null): string {
+  if (!dateStr) return "—";
+  const date = new Date(dateStr);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diff = Math.floor((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  if (diff <= 0) return "Nå";
+  if (diff === 1) return "i morgen";
+  if (diff < 7) return `om ${diff} dager`;
+  if (diff < 14) return "om 1 uke";
+  if (diff < 30) return `om ${Math.floor(diff / 7)} uker`;
+  if (diff < 60) return "om 1 mnd";
+  if (diff < 365) return `om ${Math.floor(diff / 30)} mnd`;
+  return `om ${Math.floor(diff / 365)} år`;
+}
