@@ -55,7 +55,7 @@ const CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colo
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
 const CHIP_ON = `${CHIP_BASE} bg-primary/10 border-primary/30 text-primary font-medium`;
 
-const FollowUpModal = ({ open, onClose, onSubmit, data }: Props) => {
+const FollowUpModal = ({ open, onCancel, onClose, onSubmit, data }: Props) => {
   const [title, setTitle] = useState("");
   const [selectedDate, setSelectedDate] = useState<string>("+1 uke");
   const [owner, setOwner] = useState("Thomas");
