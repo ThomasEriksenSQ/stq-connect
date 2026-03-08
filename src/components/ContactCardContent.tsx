@@ -430,6 +430,9 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
 
   const companyName = (contact.companies as any)?.name;
   const companyId = (contact.companies as any)?.id;
+  const companyCity = (contact.companies as any)?.city as string | null;
+  const companyLocations: string[] = companyCity ? companyCity.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
+  const showAvdeling = companyLocations.length > 1;
 
   return (
     <div>
