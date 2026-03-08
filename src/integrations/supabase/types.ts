@@ -429,22 +429,28 @@ export type Database = {
       }
       foresporsler_konsulenter: {
         Row: {
-          ansatt_id: number
+          ansatt_id: number | null
           created_at: string | null
+          ekstern_id: string | null
           foresporsler_id: number
           id: string
+          konsulent_type: string
         }
         Insert: {
-          ansatt_id: number
+          ansatt_id?: number | null
           created_at?: string | null
+          ekstern_id?: string | null
           foresporsler_id: number
           id?: string
+          konsulent_type?: string
         }
         Update: {
-          ansatt_id?: number
+          ansatt_id?: number | null
           created_at?: string | null
+          ekstern_id?: string | null
           foresporsler_id?: number
           id?: string
+          konsulent_type?: string
         }
         Relationships: [
           {
@@ -452,6 +458,13 @@ export type Database = {
             columns: ["ansatt_id"]
             isOneToOne: false
             referencedRelation: "stacq_ansatte"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "foresporsler_konsulenter_ekstern_id_fkey"
+            columns: ["ekstern_id"]
+            isOneToOne: false
+            referencedRelation: "external_consultants"
             referencedColumns: ["id"]
           },
           {
