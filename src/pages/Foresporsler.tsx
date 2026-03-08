@@ -20,7 +20,12 @@ import {
 import { format, differenceInDays } from "date-fns";
 import { nb } from "date-fns/locale";
 
-type StatusFilter = "Alle" | "Ny" | "Aktiv" | "Fullført" | "Tapt";
+type StatusFilter = "aktive" | "utgatte" | "alle";
+const STATUS_CHIPS: { value: StatusFilter; label: string }[] = [
+  { value: "aktive", label: "Aktive, siste 45 dager" },
+  { value: "utgatte", label: "Utgåtte, 45+ dager" },
+  { value: "alle", label: "Alle" },
+];
 
 const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer select-none";
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
