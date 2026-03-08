@@ -106,6 +106,14 @@ const App = () => (
                     </Suspense>
                   }
                 />
+                <Route
+                  path="stacq/importer-cver"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <ImporterCver />
+                    </Suspense>
+                  }
+                />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
