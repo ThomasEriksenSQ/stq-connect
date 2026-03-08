@@ -444,6 +444,17 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
         <p className="text-[0.9375rem] text-foreground/70 mt-0.5">
           {[company.org_number && `Org.nr ${company.org_number}`, company.industry].filter(Boolean).join(" · ")}
         </p>
+        {company.city && (
+          <a
+            href={`https://www.google.com/maps/search/${encodeURIComponent(company.city)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <MapPin className="h-3.5 w-3.5" />
+            {company.city}
+          </a>
+        )}
 
         {/* Line 3: phone · links */}
         <div className="flex items-center gap-2 flex-wrap text-[0.9375rem] text-foreground/70 mt-1">
