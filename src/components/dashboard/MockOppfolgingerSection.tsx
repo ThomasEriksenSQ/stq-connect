@@ -314,7 +314,8 @@ const MockOppfolgingerSection = () => {
       {/* Follow-up modal */}
       <FollowUpModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onCancel={handleCancel}
+        onClose={handleSkip}
         onSubmit={handleFollowUpSubmit}
         data={modalData}
       />
