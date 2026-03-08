@@ -86,13 +86,13 @@ const URGENCY_COLOR: Record<Urgency, string> = {
 
 function TypeBadge({ type }: { type: string | null }) {
   if (type === "DIR" || type === "direktekunde") return (
-    <span className="inline-flex items-center rounded-full bg-foreground text-background px-2.5 py-0.5 text-[0.6875rem] font-semibold">DIR</span>
+    <span className="inline-flex items-center rounded-full bg-blue-600 text-white px-2.5 py-0.5 text-[0.6875rem] font-semibold">Direkte</span>
   );
   if (type === "VIA" || type === "via_partner") return (
-    <span className="inline-flex items-center rounded-full bg-violet-100 text-violet-800 border border-violet-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Partner</span>
+    <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Partner</span>
   );
   if (type === "via_megler") return (
-    <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Megler</span>
+    <span className="inline-flex items-center rounded-full bg-violet-600 text-white px-2.5 py-0.5 text-[0.6875rem] font-semibold">Megler</span>
   );
   return <span className="text-[0.8125rem] text-muted-foreground">—</span>;
 }
@@ -1370,11 +1370,10 @@ export default function Foresporsler() {
       ) : (
         <div className="border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
           {/* Header row */}
-          <div className="grid grid-cols-[90px_minmax(0,1.8fr)_70px_110px_minmax(0,1.5fr)_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          <div className="grid grid-cols-[90px_minmax(0,1.8fr)_80px_minmax(0,1.5fr)_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="mottatt_dato">Mottatt</SortHeader>
             <SortHeader field="selskap_navn">Selskap</SortHeader>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Type</span>
-            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Frist</span>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Teknologier</span>
             <SortHeader field="sendt_count" className="justify-end">Sendt</SortHeader>
           </div>
@@ -1385,20 +1384,12 @@ export default function Foresporsler() {
             const sendt = row.foresporsler_konsulenter || [];
             const antall = sendt.length;
             const hvem = sendt.map((k: any) => k.stacq_ansatte?.navn?.split(" ")[0]).filter(Boolean).join(", ");
-            const dl = relativeDeadline(row.frist_dato);
-
-            const accentClass = dl.urgency === "overdue" ? "border-l-[3px] border-l-destructive"
-              : dl.urgency === "critical" ? "border-l-[3px] border-l-amber-500"
-              : "";
 
             return (
               <div
                 key={row.id}
                 onClick={() => setSelectedRow(row)}
-                className={cn(
-                  "grid grid-cols-[90px_minmax(0,1.8fr)_70px_110px_minmax(0,1.5fr)_90px] gap-3 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer",
-                  accentClass
-                )}
+                className="grid grid-cols-[90px_minmax(0,1.8fr)_80px_minmax(0,1.5fr)_90px] gap-3 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer"
               >
                 {/* Mottatt */}
                 <Tooltip>
@@ -1415,15 +1406,6 @@ export default function Foresporsler() {
                 </span>
                 {/* Type */}
                 <TypeBadge type={row.type} />
-                {/* Frist */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className={cn("text-[0.8125rem] font-medium", URGENCY_COLOR[dl.urgency])}>
-                      {dl.text}
-                    </span>
-                  </TooltipTrigger>
-                  {dl.tooltip && <TooltipContent>{dl.tooltip}</TooltipContent>}
-                </Tooltip>
                 {/* Teknologier */}
                 <div className="flex items-center gap-1 flex-wrap">
                   {(row.teknologier || []).slice(0, 3).map((t: string) => (
