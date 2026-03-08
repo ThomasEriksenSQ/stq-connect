@@ -127,6 +127,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [editingNotes, setEditingNotes] = useState(false);
+  const [notesDraft, setNotesDraft] = useState("");
   const [newContactOpen, setNewContactOpen] = useState(false);
   const [contactForm, setContactForm] = useState({ first_name: "", last_name: "", email: "", phone: "", title: "", linkedin: "" });
   const { user } = useAuth();
