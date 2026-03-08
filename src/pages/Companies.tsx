@@ -145,7 +145,7 @@ const Companies = () => {
       }
 
       (actRes.data || []).forEach(a => {
-        if (!a.company_id) return;
+        if (!a.company_id || !companyIdSet.has(a.company_id)) return;
         if (isPast(a.created_at) && !lastActivityMap[a.company_id]) lastActivityMap[a.company_id] = a.created_at;
         addAct(a.company_id, a);
       });
