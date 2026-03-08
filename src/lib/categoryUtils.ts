@@ -3,14 +3,15 @@ import { differenceInDays } from "date-fns";
 export const CATEGORIES = [
   { label: "Behov nå", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
   { label: "Får fremtidig behov", badgeColor: "bg-blue-100 text-blue-800 border-blue-200" },
-  { label: "Vil kanskje få behov", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
+  { label: "Får kanskje behov", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
   { label: "Ukjent om behov", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" },
   { label: "Ikke aktuelt", badgeColor: "bg-red-50 text-red-700 border-red-200" },
 ] as const;
 
 export const LEGACY_CATEGORY_MAP: Record<string, string> = {
   "Fremtidig behov": "Får fremtidig behov",
-  "Har kanskje behov": "Vil kanskje få behov",
+  "Har kanskje behov": "Får kanskje behov",
+  "Vil kanskje få behov": "Får kanskje behov",
   "Aldri aktuelt": "Ikke aktuelt",
 };
 
@@ -51,7 +52,7 @@ export const SIGNAL_ORDER = CATEGORIES.map(c => c.label);
 const SIGNAL_TTL: Record<string, number | null> = {
   "Behov nå": 30,
   "Får fremtidig behov": 90,
-  "Vil kanskje få behov": 180,
+  "Får kanskje behov": 180,
   "Ukjent om behov": null, // never expires
   "Ikke aktuelt": null,    // never expires
 };
