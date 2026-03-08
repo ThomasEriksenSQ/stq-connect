@@ -35,7 +35,7 @@ export default function KonsulenterOppdrag() {
         const daysUntilForny = o.forny_dato
           ? differenceInDays(new Date(o.forny_dato), today)
           : null;
-        return { ...o, margin, marginPct, daysUntilForny };
+        return { ...o, margin, marginPerTime, marginPct, daysUntilForny };
       }),
     [oppdrag]
   );
@@ -218,7 +218,7 @@ export default function KonsulenterOppdrag() {
                         : "text-destructive"
                     )}
                   >
-                    kr {formatNOK(o.margin)}/dag
+                    kr {formatNOK(o.marginPerTime)}/t
                   </p>
                   <p className="text-[0.6875rem] text-muted-foreground">{o.marginPct.toFixed(1)}%</p>
                 </div>
