@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Plus, X, ArrowUpDown, Pencil, Trash2 } from "lucide-react";
+import { Plus, X, ArrowUpDown, Pencil, Trash2, Sparkles, Loader2 } from "lucide-react";
 import { relativeDate } from "@/lib/relativeDate";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
