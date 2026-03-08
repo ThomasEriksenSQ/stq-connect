@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Plus, X, ArrowUpDown, Pencil, Trash2 } from "lucide-react";
+import { Plus, X, ArrowUpDown, Pencil, Trash2, Sparkles, Loader2 } from "lucide-react";
 import { relativeDate } from "@/lib/relativeDate";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -49,6 +49,109 @@ function getMottattClass(days: number): string {
 
 function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max) + "…" : s;
+}
+
+/* ─── AI Tech Analysis ─── */
+
+const AI_SYSTEM_PROMPT = `Du er en teknisk rekrutterer for et norsk konsulentselskap som spesialiserer seg på embedded systems og ingeniørfag.
+Analyser teksten og returner KUN en JSON-array med tekniske nøkkelord/teknologier som er nevnt eller sterkt implisert.
+Eksempler: ["C++", "Embedded", "Linux", "Yocto", "Python", "FPGA", "ROS", "Rust", "Java", "Sikkerhet", "Lab", "C", "Qt", "CMake"]
+Returner BARE arrayen, ingen annen tekst. Maks 8 tags. Bruk korte presise navn, ikke setninger.`;
+
+async function analyzeTextForTech(rawText: string): Promise<string[]> {
+  const { data, error } = await supabase.functions.invoke("chat", {
+    body: {
+      system: AI_SYSTEM_PROMPT,
+      messages: [{ role: "user", content: rawText.trim() }],
+    },
+  });
+  if (error) throw error;
+  const text = data?.text ?? "[]";
+  const clean = text.replace(/```json|```/g, "").trim();
+  return JSON.parse(clean);
+}
+
+function AiTeknologiBox({
+  existingTags,
+  onTagsFound,
+}: {
+  existingTags: string[];
+  onTagsFound: (merged: string[]) => void;
+}) {
+  const [show, setShow] = useState(false);
+  const [rawText, setRawText] = useState("");
+  const [analyzing, setAnalyzing] = useState(false);
+
+  const handleAnalyze = async () => {
+    if (!rawText.trim()) return;
+    setAnalyzing(true);
+    try {
+      const found = await analyzeTextForTech(rawText);
+      const merged = [...new Set([...existingTags, ...found])];
+      onTagsFound(merged);
+      setShow(false);
+      setRawText("");
+      toast.success(`${found.length} teknologier lagt til`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Kunne ikke analysere teksten");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          Teknologier
+        </label>
+        <button
+          type="button"
+          onClick={() => setShow((prev) => !prev)}
+          className="flex items-center gap-1 text-[0.75rem] text-primary hover:underline"
+        >
+          <Sparkles className="h-3 w-3" />
+          Analyser tekst
+        </button>
+      </div>
+      {show && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2 mb-2">
+          <p className="text-[0.75rem] text-muted-foreground">
+            Lim inn stillingsbeskrivelse, e-post eller kravspesifikasjon — AI finner relevante teknologier automatisk.
+          </p>
+          <textarea
+            value={rawText}
+            onChange={(e) => setRawText(e.target.value)}
+            placeholder="Lim inn tekst her..."
+            className="w-full h-24 text-[0.875rem] rounded-md border border-border bg-background px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+            autoFocus
+          />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleAnalyze}
+              disabled={!rawText.trim() || analyzing}
+              className="flex items-center gap-1.5 text-[0.8125rem] font-medium bg-primary text-primary-foreground rounded-lg px-3 py-1.5 hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            >
+              {analyzing ? (
+                <><Loader2 className="h-3.5 w-3.5 animate-spin" />Analyserer...</>
+              ) : (
+                <><Sparkles className="h-3.5 w-3.5" />Finn teknologier</>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShow(false); setRawText(""); }}
+              className="text-[0.8125rem] text-muted-foreground hover:text-foreground"
+            >
+              Avbryt
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
 }
 
 /* ─── Delete button with inline confirmation ─── */
@@ -418,7 +521,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
 
           {/* Teknologier */}
           <div>
-            <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Teknologier</label>
+            <AiTeknologiBox existingTags={tags} onTagsFound={setTags} />
             <div className="mt-1 flex flex-wrap items-center gap-1.5 p-2 border border-border rounded-lg bg-background min-h-[38px]">
               {tags.map((t) => (
                 <span key={t} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-[0.75rem] text-foreground">
@@ -672,7 +775,7 @@ function ForespørselSheet({
 
             {/* Teknologier */}
             <div>
-              <label className={LABEL}>Teknologier</label>
+              <AiTeknologiBox existingTags={teknologier} onTagsFound={setTeknologier} />
               <div className="mt-1 flex flex-wrap items-center gap-1.5 p-2 border border-border rounded-lg bg-background min-h-[38px]">
                 {teknologier.map((t) => (
                   <span key={t} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-[0.75rem] text-foreground">
