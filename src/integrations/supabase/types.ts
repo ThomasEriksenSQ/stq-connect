@@ -264,15 +264,20 @@ export type Database = {
           company_id: string | null
           contact_id: string | null
           created_at: string
+          cv_tekst: string | null
           cv_url: string | null
+          epost: string | null
           erfaring_aar: number | null
           id: string
           innpris_time: number | null
           kapasitet_prosent: number | null
+          navn: string | null
           notat: string | null
           rolle: string | null
+          selskap_tekst: string | null
           status: string
           teknologier: string[] | null
+          telefon: string | null
           tilgjengelig_fra: string | null
           tilgjengelig_til: string | null
           type: string
@@ -284,15 +289,20 @@ export type Database = {
           company_id?: string | null
           contact_id?: string | null
           created_at?: string
+          cv_tekst?: string | null
           cv_url?: string | null
+          epost?: string | null
           erfaring_aar?: number | null
           id?: string
           innpris_time?: number | null
           kapasitet_prosent?: number | null
+          navn?: string | null
           notat?: string | null
           rolle?: string | null
+          selskap_tekst?: string | null
           status?: string
           teknologier?: string[] | null
+          telefon?: string | null
           tilgjengelig_fra?: string | null
           tilgjengelig_til?: string | null
           type?: string
@@ -304,15 +314,20 @@ export type Database = {
           company_id?: string | null
           contact_id?: string | null
           created_at?: string
+          cv_tekst?: string | null
           cv_url?: string | null
+          epost?: string | null
           erfaring_aar?: number | null
           id?: string
           innpris_time?: number | null
           kapasitet_prosent?: number | null
+          navn?: string | null
           notat?: string | null
           rolle?: string | null
+          selskap_tekst?: string | null
           status?: string
           teknologier?: string[] | null
+          telefon?: string | null
           tilgjengelig_fra?: string | null
           tilgjengelig_til?: string | null
           type?: string
