@@ -69,7 +69,6 @@ function AnsattModal({
     geografi: "",
     kompetanse: [],
     bio: "",
-    linkedin: "",
     synlig_web: false,
   });
 
