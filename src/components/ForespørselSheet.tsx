@@ -149,6 +149,14 @@ export function ForespørselSheet({
     );
   }, [companyContacts, kontakt]);
 
+  // Derived expanded state
+  const showMatch = matching || (matchResults !== null && matchResults.length > 0);
+
+  // Notify parent of expand state
+  useEffect(() => {
+    onExpandChange?.(showMatch);
+  }, [showMatch, onExpandChange]);
+
   // Reset match when row changes
   useEffect(() => {
     setMatchResults(null);
