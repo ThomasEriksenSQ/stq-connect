@@ -417,13 +417,14 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                       first_name: contactForm.first_name, last_name: contactForm.last_name,
                       email: contactForm.email || null, phone: contactForm.phone || null,
                       title: contactForm.title || null, linkedin: contactForm.linkedin || null,
+                      location: contactForm.location || null,
                       company_id: companyId, created_by: user?.id, owner_id: user?.id,
                     });
                     if (error) { toast.error("Kunne ikke opprette kontakt"); return; }
                     queryClient.invalidateQueries({ queryKey: ["company-contacts", companyId] });
                     queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
                     setNewContactOpen(false);
-                    setContactForm({ first_name: "", last_name: "", email: "", phone: "", title: "", linkedin: "" });
+                    setContactForm({ first_name: "", last_name: "", email: "", phone: "", title: "", linkedin: "", location: "" });
                     toast.success("Kontakt opprettet");
                   }} className="space-y-4 mt-3">
                     <div className="grid grid-cols-2 gap-3">
