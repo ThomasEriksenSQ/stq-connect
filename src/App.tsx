@@ -115,6 +115,14 @@ const App = () => (
                     </Suspense>
                   }
                 />
+                <Route
+                  path="admin/importer-selskaper"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <ImporterSelskaper />
+                    </Suspense>
+                  }
+                />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
