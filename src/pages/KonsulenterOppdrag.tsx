@@ -150,134 +150,113 @@ export default function KonsulenterOppdrag() {
       </div>
 
       {/* Table */}
-      <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border">
-              {["KONSULENT", "KUNDE", "TYPE", "UTPRIS", "MARGIN", "FORNY", "STATUS"].map((h) => (
-                <th
-                  key={h}
-                  className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground px-4 py-2.5 text-left"
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((o: any, i: number) => {
-              const isInaktiv = o.status === "Inaktiv";
-              const borderClass =
-                o.daysUntilForny !== null && o.daysUntilForny < 0
-                  ? "border-l-destructive"
-                  : o.daysUntilForny !== null && o.daysUntilForny <= 30
-                  ? "border-l-amber-400"
-                  : o.status === "Oppstart"
-                  ? "border-l-blue-400"
-                  : "border-l-transparent";
+      <div className="border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
+        {/* Header row */}
+        <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          {["Konsulent", "Kunde", "Type", "Utpris", "Margin", "Forny", "Status"].map((h) => (
+            <span key={h} className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+              {h}
+            </span>
+          ))}
+        </div>
+        {/* Data rows */}
+        <div className="divide-y divide-border">
+          {filtered.map((o: any) => {
+            const isInaktiv = o.status === "Inaktiv";
 
-              return (
-                <tr
-                  key={o.id}
-                  className={cn(
-                    "hover:bg-muted/30 transition-colors border-l-[3px]",
-                    borderClass,
-                    i < filtered.length - 1 && "border-b border-border",
-                    isInaktiv && "opacity-60"
+            return (
+              <div
+                key={o.id}
+                className={cn(
+                  "grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 items-center px-4 py-3 hover:bg-muted/40 transition-colors",
+                  isInaktiv && "opacity-60"
+                )}
+              >
+                {/* KONSULENT */}
+                <div className="min-w-0">
+                  <p className="text-[0.875rem] font-semibold text-foreground truncate">{o.kandidat}</p>
+                  {o.er_ansatt ? (
+                    <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.625rem] font-semibold uppercase mt-0.5">
+                      STACQ
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground px-2 py-0.5 text-[0.625rem] font-semibold uppercase mt-0.5">
+                      Partner
+                    </span>
                   )}
-                >
-                  {/* KONSULENT */}
-                  <td className="px-4 py-3.5">
-                    <div>
-                      <p className="font-semibold text-[0.875rem]">{o.kandidat}</p>
-                      {o.er_ansatt ? (
-                        <span className="bg-primary/10 text-primary text-[0.625rem] font-semibold uppercase rounded px-1.5 py-0.5">
-                          STACQ
-                        </span>
-                      ) : (
-                        <span className="bg-secondary text-muted-foreground text-[0.625rem] font-semibold uppercase rounded px-1.5 py-0.5">
-                          PARTNER
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  {/* KUNDE */}
-                  <td className="px-4 py-3.5 font-medium text-[0.875rem]">{o.kunde}</td>
-                  {/* TYPE */}
-                  <td className="px-4 py-3.5">
-                    <span
-                      className={cn(
-                        "rounded-full px-2.5 py-0.5 text-xs font-semibold",
-                        o.deal_type === "DIR"
-                          ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                          : o.deal_type === "VIA"
-                          ? "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
-                          : "bg-muted text-muted-foreground"
-                      )}
-                    >
-                      {o.deal_type || "–"}
-                    </span>
-                  </td>
-                  {/* UTPRIS (per time) */}
-                  <td className="px-4 py-3.5 font-medium text-[0.875rem]">
-                    kr {formatNOK(Number(o.utpris) || 0)}/t
-                  </td>
-                  {/* MARGIN */}
-                  <td className="px-4 py-3.5">
-                    <p
-                      className={cn(
-                        "font-medium text-[0.875rem]",
-                        o.marginPct >= 28
-                          ? "text-emerald-600"
-                          : o.marginPct >= 20
-                          ? "text-amber-600"
-                          : "text-destructive"
-                      )}
-                    >
-                      kr {formatNOK(o.margin)}/dag
-                    </p>
-                    <p className="text-xs text-muted-foreground">{o.marginPct.toFixed(1)}%</p>
-                  </td>
-                  {/* FORNY */}
-                  <td className="px-4 py-3.5 text-[0.8125rem]">
-                    {o.daysUntilForny === null ? (
-                      <span className="text-muted-foreground">–</span>
-                    ) : o.daysUntilForny < 0 ? (
-                      <span className="bg-destructive/10 text-destructive rounded-full px-2 py-0.5 text-xs font-medium">
-                        Utløpt
-                      </span>
-                    ) : o.daysUntilForny <= 30 ? (
-                      <span className="bg-amber-100 text-amber-700 rounded-full px-2.5 py-0.5 text-xs font-medium">
-                        Om {o.daysUntilForny} dager
-                      </span>
-                    ) : o.daysUntilForny <= 90 ? (
-                      <span className="text-amber-600 font-medium">
-                        {format(new Date(o.forny_dato), "dd.MM.yy")}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">
-                        {format(new Date(o.forny_dato), "dd.MM.yy")}
-                      </span>
+                </div>
+                {/* KUNDE */}
+                <span className="text-[0.875rem] font-medium text-foreground truncate">{o.kunde}</span>
+                {/* TYPE */}
+                <div>
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold",
+                      o.deal_type === "DIR"
+                        ? "bg-blue-100 text-blue-700"
+                        : o.deal_type === "VIA"
+                        ? "bg-amber-100 text-amber-700"
+                        : "bg-muted text-muted-foreground"
                     )}
-                  </td>
-                  {/* STATUS */}
-                  <td className="px-4 py-3.5">
-                    <span
-                      className={cn(
-                        "rounded-full px-2.5 py-0.5 text-xs font-medium",
-                        o.status === "Aktiv" && "bg-emerald-100 text-emerald-700",
-                        o.status === "Oppstart" && "bg-amber-100 text-amber-700",
-                        o.status === "Inaktiv" && "bg-muted text-muted-foreground"
-                      )}
-                    >
-                      {o.status}
+                  >
+                    {o.deal_type === "DIR" ? "Direkte" : o.deal_type === "VIA" ? "Partner" : o.deal_type || "–"}
+                  </span>
+                </div>
+                {/* UTPRIS */}
+                <span className="text-[0.8125rem] font-medium text-foreground">
+                  kr {formatNOK(Number(o.utpris) || 0)}/t
+                </span>
+                {/* MARGIN */}
+                <div>
+                  <p
+                    className={cn(
+                      "text-[0.8125rem] font-medium",
+                      o.marginPct >= 28
+                        ? "text-emerald-600"
+                        : o.marginPct >= 20
+                        ? "text-amber-600"
+                        : "text-destructive"
+                    )}
+                  >
+                    kr {formatNOK(o.margin)}/dag
+                  </p>
+                  <p className="text-[0.6875rem] text-muted-foreground">{o.marginPct.toFixed(1)}%</p>
+                </div>
+                {/* FORNY */}
+                <div className="text-[0.8125rem]">
+                  {o.daysUntilForny === null ? (
+                    <span className="text-muted-foreground">–</span>
+                  ) : o.daysUntilForny < 0 ? (
+                    <span className="text-destructive font-medium">Utløpt</span>
+                  ) : o.daysUntilForny <= 30 ? (
+                    <span className="text-amber-600 font-medium">Om {o.daysUntilForny}d</span>
+                  ) : o.daysUntilForny <= 90 ? (
+                    <span className="text-amber-600">
+                      {format(new Date(o.forny_dato), "dd.MM.yy")}
                     </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                  ) : (
+                    <span className="text-muted-foreground">
+                      {format(new Date(o.forny_dato), "dd.MM.yy")}
+                    </span>
+                  )}
+                </div>
+                {/* STATUS */}
+                <div>
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold",
+                      o.status === "Aktiv" && "bg-emerald-100 text-emerald-700",
+                      o.status === "Oppstart" && "bg-amber-100 text-amber-700",
+                      o.status === "Inaktiv" && "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    {o.status}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
         {filtered.length === 0 && (
           <p className="text-muted-foreground text-center py-12">Ingen oppdrag å vise</p>
         )}
