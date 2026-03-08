@@ -18,7 +18,7 @@ import { getEffectiveSignal } from "@/lib/categoryUtils";
 /* ─── Types ─── */
 
 type Msg = { role: "user" | "assistant"; content: string; error?: boolean; showCopy?: boolean };
-type Mode = null | "forespørsel" | "pitch" | "match" | "epost";
+type Mode = null | "forespørsel" | "pitch" | "match" | "epost" | "cv-upload";
 
 interface CrmContext {
   contacts: Array<{ name: string; company: string; signal: string; daysAgo: number | null }>;
