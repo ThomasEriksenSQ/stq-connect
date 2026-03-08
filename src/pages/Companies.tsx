@@ -428,6 +428,35 @@ const Companies = () => {
                   </button>
                 </div>
               </div>
+              <div className="space-y-1.5">
+                <Label className="text-label">Nettside</Label>
+                <Input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://" className="h-10 rounded-lg" type="url" />
+              </div>
+              {/* STATUS */}
+              <div className="space-y-1.5">
+                <Label className="text-label">Status</Label>
+                <div className="flex gap-1.5">
+                  {([
+                    { value: "prospect", label: "Potensiell kunde", activeClass: "bg-blue-500 text-white border-blue-500" },
+                    { value: "customer", label: "Kunde", activeClass: "bg-emerald-500 text-white border-emerald-500" },
+                    { value: "partner", label: "Partner", activeClass: "bg-gray-400 text-white border-gray-400" },
+                    { value: "churned", label: "Ikke relevant selskap", activeClass: "bg-red-400 text-white border-red-400" },
+                  ] as const).map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, status: opt.value }))}
+                      className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                        form.status === opt.value
+                          ? opt.activeClass
+                          : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <Button type="submit" className="w-full h-10 rounded-lg" disabled={createMutation.isPending}>
                 {createMutation.isPending ? "Oppretter..." : "Opprett"}
               </Button>
