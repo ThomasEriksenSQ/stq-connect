@@ -400,7 +400,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : ownerFullName ? (
-              <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{ownerFullName}</span>
+              <span className="inline-flex items-center rounded-full border bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold">{ownerFullName}</span>
             ) : null}
             {editable && (
               <Dialog open={newContactOpen} onOpenChange={setNewContactOpen}>
