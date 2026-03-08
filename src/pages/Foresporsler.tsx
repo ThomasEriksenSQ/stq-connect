@@ -418,6 +418,18 @@ export default function Foresporsler() {
   const { id } = useParams();
   const [modalOpen, setModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("Alle");
+  const [sort, setSort] = useState<{
+    field: "mottatt_dato" | "selskap_navn" | "antall_sendt";
+    dir: "asc" | "desc";
+  }>({ field: "mottatt_dato", dir: "desc" });
+
+  const toggleSort = (field: typeof sort.field) => {
+    setSort(prev =>
+      prev.field === field
+        ? { field, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { field, dir: field === "mottatt_dato" ? "desc" : "asc" }
+    );
+  };
 
   const { data: rows, isLoading } = useQuery({
     queryKey: ["foresporsler-list"],
@@ -438,6 +450,31 @@ export default function Foresporsler() {
       return r.status === statusFilter;
     });
   }, [rows, statusFilter]);
+
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const dir = sort.dir === "asc" ? 1 : -1;
+      switch (sort.field) {
+        case "mottatt_dato":
+          return dir * (a.mottatt_dato || "").localeCompare(b.mottatt_dato || "");
+        case "selskap_navn":
+          return dir * (a.selskap_navn || "").localeCompare(b.selskap_navn || "", "nb");
+        case "antall_sendt":
+          return dir * ((a.antall_sendt || 0) - (b.antall_sendt || 0));
+        default: return 0;
+      }
+    });
+  }, [filtered, sort]);
+
+  const SortHeader = ({ field, children, className = "" }: { field: string; children: React.ReactNode; className?: string }) => (
+    <button
+      onClick={() => toggleSort(field as any)}
+      className={`flex items-center gap-1 text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground hover:text-foreground transition-colors ${className}`}
+    >
+      {children}
+      <ArrowUpDown className={`h-3 w-3 ${sort.field === field ? "text-foreground" : "text-muted-foreground/20"}`} />
+    </button>
+  );
 
   // If we have an ID param, show detail view
   if (id) return <ForespørselDetail id={id} />;
