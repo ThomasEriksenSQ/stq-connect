@@ -575,12 +575,6 @@ function ForespørselSheet({
               </div>
             </div>
 
-            {/* Referanse */}
-            <div>
-              <label className={LABEL}>Referanse</label>
-              <Input value={referanse} onChange={(e) => setReferanse(e.target.value)} className="mt-1 text-[0.875rem]" placeholder="f.eks. navn på mellomledd" />
-            </div>
-
             {/* Teknologier */}
             <div>
               <label className={LABEL}>Teknologier</label>
