@@ -991,16 +991,35 @@ function ForespørselSheet({
               </div>
             </div>
 
+            {/* Frist dato */}
+            <div>
+              <label className={LABEL}>Frist</label>
+              <Input type="date" value={fristDato} onChange={(e) => setFristDato(e.target.value)} className="mt-1 text-[0.875rem]" />
+              {fristDato && (
+                <p className={cn("text-[0.75rem] mt-1", URGENCY_COLOR[relativeDeadline(fristDato).urgency])}>
+                  {relativeDeadline(fristDato).text} · {format(parseISO(fristDato), "d. MMMM yyyy", { locale: nb })}
+                </p>
+              )}
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className={LABEL}>Status</label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="mt-1 w-full h-9 rounded-lg border border-border bg-background px-3 text-[0.875rem] text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                {["Ny", "Aktiv", "Tilbud sendt", "Vunnet", "Tapt", "Utgått"].map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+
             {/* Avdeling */}
             <div>
               <label className={LABEL}>Avdeling</label>
               <Input value={avdeling} onChange={(e) => setAvdeling(e.target.value)} className="mt-1 text-[0.875rem]" placeholder="f.eks. Defence, Maritime" />
-            </div>
-
-            {/* Frist dato */}
-            <div>
-              <label className={LABEL}>Frist dato</label>
-              <Input type="date" value={fristDato} onChange={(e) => setFristDato(e.target.value)} className="mt-1 text-[0.875rem]" />
             </div>
 
             {/* Teknologier */}
