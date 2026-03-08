@@ -115,6 +115,7 @@ const FollowUpModal = ({ open, onCancel, onClose, onSubmit, data }: Props) => {
       <DialogContent
         className="max-w-md rounded-xl p-6 gap-0"
         hideCloseButton
+        onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogTitle className="sr-only">Opprett oppfølging</DialogTitle>
 
