@@ -82,8 +82,8 @@ export default function StacqPrisen() {
 
   const aktive = enriched.filter((r) => r.status === "Aktiv");
   const oppstart = enriched.filter((r) => r.status === "Oppstart");
-  const stacqTotal = aktive.reduce((s, r) => s + r.stacqPris, 0);
-  const oppstartTotal = oppstart.reduce((s, r) => s + r.stacqPris, 0);
+  const stacqTotal = aktive.reduce((s, r) => s + r.stacqPris * TIMER_PER_DAG, 0);
+  const oppstartTotal = oppstart.reduce((s, r) => s + r.stacqPris * TIMER_PER_DAG, 0);
   const avgPris = aktive.length > 0 ? stacqTotal / aktive.length : 0;
 
   const chartData = useMemo(() => [
