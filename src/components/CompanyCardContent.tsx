@@ -60,6 +60,33 @@ function CategoryBadge({ label, className }: { label: string; className?: string
   );
 }
 
+function CategoryPicker({ selected, onSelect }: { selected: string; onSelect: (v: string) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {CATEGORIES.map((cat) => (
+        <button
+          key={cat.label}
+          type="button"
+          onClick={() => onSelect(cat.label)}
+          className={cn(
+            "h-8 px-3 text-[0.8125rem] rounded-full border transition-all font-medium",
+            selected === cat.label
+              ? cat.selectedColor
+              : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
+          )}
+        >
+          {cat.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function buildDescriptionWithCategory(category: string, description: string): string {
+  if (!category) return description;
+  return description ? `[${category}]\n${description}` : `[${category}]`;
+}
+
 function parseDescriptionCategory(description: string | null): { category: string; text: string } {
   if (!description) return { category: "", text: "" };
   const match = description.match(/^\[([^\]]+)\]\n?([\s\S]*)$/);
