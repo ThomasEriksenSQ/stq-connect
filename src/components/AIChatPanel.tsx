@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   Sparkles, RefreshCw, ArrowUp, X, Copy, Loader2,
-  ClipboardList, Inbox, FileText, Search, Mail, BarChart3,
+  ClipboardList, Inbox, FileText, Search, Mail, BarChart3, Upload,
 } from "lucide-react";
+import { CvUploadFlow } from "@/components/CvUploadFlow";
 import { SheetClose } from "@/components/ui/sheet";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,7 +18,7 @@ import { getEffectiveSignal } from "@/lib/categoryUtils";
 /* ─── Types ─── */
 
 type Msg = { role: "user" | "assistant"; content: string; error?: boolean; showCopy?: boolean };
-type Mode = null | "forespørsel" | "pitch" | "match" | "epost";
+type Mode = null | "forespørsel" | "pitch" | "match" | "epost" | "cv-upload";
 
 interface CrmContext {
   contacts: Array<{ name: string; company: string; signal: string; daysAgo: number | null }>;
@@ -35,6 +36,7 @@ const QUICK_ACTIONS = [
   { icon: Search, label: "Match konsulent", sub: "Finn beste kandidat til oppdrag", action: "match" as const },
   { icon: Mail, label: "Skriv oppfølgings-epost", sub: "Basert på siste aktivitet", action: "epost" as const },
   { icon: BarChart3, label: "Ukesoppsummering", sub: "Pipeline og aktivitet denne uken", action: "ukesoppsummering" as const },
+  { icon: Upload, label: "Last opp CV", sub: "Registrer konsulent automatisk", action: "cv-upload" as const },
 ];
 
 const CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors cursor-pointer select-none";
@@ -507,6 +509,7 @@ Returner BARE JSON, ingen annen tekst.`,
       case "match": setMode("match"); break;
       case "epost": setMode("epost"); break;
       case "ukesoppsummering": handleUkesoppsummering(); break;
+      case "cv-upload": setMode("cv-upload"); break;
     }
   };
 
@@ -768,6 +771,14 @@ Returner BARE JSON, ingen annen tekst.`,
               <Mail className="h-3.5 w-3.5" />Skriv epost
             </button>
           </div>
+        )}
+
+        {/* ── Mode: CV Upload */}
+        {mode === "cv-upload" && (
+          <CvUploadFlow
+            onClose={() => setMode(null)}
+            onAddMessage={(msg) => setMessages(prev => [...prev, msg])}
+          />
         )}
 
         {/* Messages */}

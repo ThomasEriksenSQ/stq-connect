@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -21,8 +21,11 @@ serve(async (req) => {
 Analyser CV-en og returner KUN gyldig JSON, ingen tekst rundt:
 {
   "navn": <string, personens fulle navn fra CV-en>,
+  "epost": <string | null, e-postadresse hvis funnet>,
+  "telefon": <string | null, telefonnummer hvis funnet>,
   "erfaring_aar": <number, totale år med relevant arbeidserfaring>,
   "kompetanse": <string[], topp 6-8 tekniske nøkkelord, kort og presist>,
+  "rolle": <string | null, f.eks. "Senior Embedded Engineer">,
   "geografi": <string, primær by der personen jobber/bor>,
   "bio": <string, 2-3 setninger om hvem konsulenten er, hva de er best på og hva slags oppdrag de passer til. Skriv i tredjeperson. Profesjonell men menneskelig tone. Maks 60 ord.>
 }
@@ -85,7 +88,6 @@ Kompetanse: bruk tekniske nøkkelord som C++, Embedded, Python, Linux, Yocto, FP
 
     const data = await response.json();
     const text = data.choices?.[0]?.message?.content ?? "";
-    // Extract JSON robustly: find first { and last }
     let clean = text.replace(/```json|```/g, "").trim();
     const firstBrace = clean.indexOf("{");
     const lastBrace = clean.lastIndexOf("}");
@@ -98,7 +100,6 @@ Kompetanse: bruk tekniske nøkkelord som C++, Embedded, Python, Linux, Yocto, FP
       parsed = JSON.parse(clean);
     } catch {
       console.error("Failed to parse AI response:", text);
-      // AI refused or couldn't produce JSON — likely not a valid CV
       return new Response(
         JSON.stringify({ error: "Dokumentet ser ikke ut til å være en CV. Last opp en CV i PDF-format." }),
         { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
