@@ -508,9 +508,9 @@ export default function Foresporsler() {
 
       {/* Filter chips */}
       <div className="flex items-center gap-2">
-        {(["Alle", "Ny", "Aktiv", "Fullført", "Tapt"] as StatusFilter[]).map((f) => (
-          <button key={f} className={statusFilter === f ? CHIP_ON : CHIP_OFF} onClick={() => setStatusFilter(f)}>
-            {f}
+        {STATUS_CHIPS.map((f) => (
+          <button key={f.value} className={statusFilter === f.value ? CHIP_ON : CHIP_OFF} onClick={() => setStatusFilter(f.value)}>
+            {f.label}
           </button>
         ))}
       </div>
