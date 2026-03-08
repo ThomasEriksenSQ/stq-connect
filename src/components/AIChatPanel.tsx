@@ -20,7 +20,6 @@ interface CrmContext {
     selskap: string;
     sted: string | null;
     teknologier: string[];
-    antallSendt: number | null;
     daysOld: number;
   }>;
 }
