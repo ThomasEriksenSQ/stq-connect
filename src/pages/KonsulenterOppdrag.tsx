@@ -66,7 +66,7 @@ export default function KonsulenterOppdrag() {
       stacqMonthly,
       workdays,
       monthLabel: format(now, "MMMM yyyy"),
-      oppstartUtpris,
+      oppstartMarginPerTime,
     };
   }, [enriched]);
 
