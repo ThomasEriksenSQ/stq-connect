@@ -544,17 +544,26 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
               <Phone className="h-3 w-3" />{editable ? <InlineField value={contact.phone} onSave={updateField("phone")} className="text-[0.9375rem]" /> : contact.phone}
             </button>
           )}
+          {editable && !contact.phone && (
+            <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3 text-muted-foreground/40" /><InlineField value="" onSave={updateField("phone")} placeholder="Telefon" className="text-[0.9375rem]" /></span>
+          )}
           {contact.email && (
             <>
-              {contact.phone && <span className="text-muted-foreground/40">·</span>}
+              <span className="text-muted-foreground/40">·</span>
               <button onClick={() => copyToClipboard(contact.email!)} className="inline-flex items-center gap-1 hover:text-foreground">
                 <Mail className="h-3 w-3" />{editable ? <InlineField value={contact.email} onSave={updateField("email")} className="text-[0.9375rem]" /> : contact.email}
               </button>
             </>
           )}
+          {editable && !contact.email && (
+            <>
+              <span className="text-muted-foreground/40">·</span>
+              <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3 text-muted-foreground/40" /><InlineField value="" onSave={updateField("email")} placeholder="E-post" className="text-[0.9375rem]" /></span>
+            </>
+          )}
           {contact.linkedin && (
             <>
-              {(contact.phone || contact.email) && <span className="text-muted-foreground/40">·</span>}
+              <span className="text-muted-foreground/40">·</span>
               {editable ? (
                 <span className="inline-flex items-center gap-1">
                   <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline"><Linkedin className="h-3 w-3" /></a>
@@ -567,19 +576,10 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
               )}
             </>
           )}
-          {editable && !contact.phone && (
-            <InlineField value="" onSave={updateField("phone")} placeholder="Telefon" className="text-[0.9375rem]" />
-          )}
-          {editable && !contact.email && (
-            <>
-              {(contact.phone || (editable && !contact.phone)) && <span className="text-muted-foreground/40">·</span>}
-              <InlineField value="" onSave={updateField("email")} placeholder="E-post" className="text-[0.9375rem]" />
-            </>
-          )}
           {editable && !contact.linkedin && (
             <>
               <span className="text-muted-foreground/40">·</span>
-              <InlineField value="" onSave={updateField("linkedin")} placeholder="LinkedIn URL" className="text-[0.9375rem]" />
+              <span className="inline-flex items-center gap-1"><Linkedin className="h-3 w-3 text-muted-foreground/40" /><InlineField value="" onSave={updateField("linkedin")} placeholder="LinkedIn URL" className="text-[0.9375rem]" /></span>
             </>
           )}
         </div>
