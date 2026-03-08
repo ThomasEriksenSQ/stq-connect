@@ -105,7 +105,7 @@ export default function KonsulenterOppdrag() {
     <div>
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <h1 className="text-[1.375rem] font-bold">I oppdrag</h1>
+        <h1 className="text-[1.375rem] font-bold">Aktive oppdrag</h1>
         <span className="bg-secondary text-muted-foreground rounded-full px-2.5 py-0.5 text-xs font-medium">
           {stats.aktive + stats.oppstart}
         </span>
