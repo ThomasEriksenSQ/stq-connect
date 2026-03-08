@@ -181,63 +181,30 @@ const MockOppfolgingerSection = () => {
           <div
             key={row.id}
             className={cn(
-              "flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-secondary/40 transition-colors",
+              "flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-secondary/40 transition-colors",
               i < rows.length - 1 && "border-b border-border",
               ACCENT_CLASS[row.accent]
             )}
           >
             {/* Checkbox — vertically centered */}
-            <button className="h-[16px] w-[16px] rounded border border-border flex-shrink-0 flex items-center justify-center hover:border-primary hover:bg-primary/5 transition-colors self-center">
+            <button className="h-[16px] w-[16px] rounded border border-border flex-shrink-0 flex items-center justify-center hover:border-primary hover:bg-primary/5 transition-colors mt-1">
               <Check className="h-3 w-3 text-transparent" />
             </button>
 
-            {/* Content */}
+            {/* Left content */}
             <div className="flex-1 min-w-0">
-              {/* Line 1: Name · Signal dropdown · Company */}
+              {/* Line 1: Name · Company */}
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[0.9375rem] font-semibold text-foreground">{row.name}</span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      className={cn(
-                        "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity",
-                        SIGNAL_BADGES[row.signal] || "bg-gray-100 text-gray-600 border-gray-200"
-                      )}
-                    >
-                      {row.signal}
-                      <ChevronDown className="h-3 w-3" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="min-w-[180px]">
-                    {SIGNAL_OPTIONS.map((opt) => (
-                      <DropdownMenuItem
-                        key={opt.label}
-                        onSelect={() => updateSignal(row.id, opt.label)}
-                        className="cursor-pointer"
-                      >
-                        <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", opt.color)}>
-                          {opt.label}
-                        </span>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
                 <span className="text-[0.8125rem] text-muted-foreground">· {row.company}</span>
               </div>
 
-              {/* Line 2: Task + Due chip + spacer + date·owner + calendar */}
+              {/* Line 2: Task + Due chip */}
               <div className="flex items-center gap-2.5 mt-1.5">
                 <span className="text-[0.8125rem] text-foreground">{row.task}</span>
                 <span className={cn("rounded-full px-2 py-0.5 text-[0.6875rem] font-medium whitespace-nowrap", DUE_CHIP[row.dueType])}>
                   {row.due}
                 </span>
-                <div className="flex-1" />
-                <span className={cn("text-[0.8125rem] whitespace-nowrap", DATE_COLOR[row.dueType])}>
-                  {row.fullDate} · {row.owner}
-                </span>
-                <button className="text-muted-foreground hover:text-foreground transition-colors p-0.5">
-                  <CalendarIcon className="h-3.5 w-3.5" />
-                </button>
               </div>
 
               {/* Line 3: Description */}
@@ -246,6 +213,42 @@ const MockOppfolgingerSection = () => {
                   {row.description}
                 </p>
               )}
+            </div>
+
+            {/* Right column — stacked */}
+            <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+              <span className={cn("text-[0.8125rem] font-medium whitespace-nowrap", DATE_COLOR[row.dueType])}>
+                {row.due}
+              </span>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                {row.fullDate}
+              </span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity mt-0.5",
+                      SIGNAL_BADGES[row.signal] || "bg-gray-100 text-gray-600 border-gray-200"
+                    )}
+                  >
+                    {row.signal}
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[180px]">
+                  {SIGNAL_OPTIONS.map((opt) => (
+                    <DropdownMenuItem
+                      key={opt.label}
+                      onSelect={() => updateSignal(row.id, opt.label)}
+                      className="cursor-pointer"
+                    >
+                      <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", opt.color)}>
+                        {opt.label}
+                      </span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         ))}
