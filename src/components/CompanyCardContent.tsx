@@ -799,6 +799,16 @@ function CompanyActivityRow({ activity, profileMap, companyId, navigate }: {
             <div className="flex-1 min-w-0">
               <span className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</span>
 
+              {contactName && (
+                <a
+                  href={`/kontakter/${activity.contact_id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-[0.8125rem] font-medium text-foreground/70 hover:text-foreground hover:underline block mt-0.5"
+                >
+                  {contactName}
+                </a>
+              )}
+
               {cleanDesc && (
                 <div className="mt-0.5">
                   <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70">{cleanDesc}</p>
@@ -808,9 +818,6 @@ function CompanyActivityRow({ activity, profileMap, companyId, navigate }: {
               <div className="flex items-center gap-2 mt-1">
                 {ownerName && (
                   <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{ownerName}</span>
-                )}
-                {contactName && (
-                  <span className="text-[0.8125rem] text-muted-foreground">{contactName}</span>
                 )}
               </div>
             </div>
