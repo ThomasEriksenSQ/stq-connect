@@ -1,4 +1,4 @@
-import { Building2, Users, CalendarCheck, LogOut } from "lucide-react";
+import { Building2, Users, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { title: "Selskaper", url: "/selskaper", icon: Building2 },
   { title: "Kontakter", url: "/kontakter", icon: Users },
-  { title: "Oppfølginger", url: "/oppfolginger", icon: CalendarCheck },
 ];
 
 export function AppSidebar() {
