@@ -404,6 +404,7 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
       status: form.status,
       tilgjengelig_fra: form.tilgjengelig_fra || null,
       cv_tekst: form.cv_tekst || null,
+      notat: form.kommentar.trim() || null,
       updated_at: new Date().toISOString(),
     };
 
