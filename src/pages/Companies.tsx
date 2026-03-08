@@ -495,44 +495,15 @@ const Companies = () => {
           <div className="divide-y divide-border">
             {sorted.map((company) => {
               const status = getStatus(company.status);
-              const contactCount = company.contacts?.length || 0;
               return (
                 <div key={company.id}
-                  className="w-full grid grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1.2fr)_60px_70px_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer"
+                  className="w-full grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)_70px_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer"
                   onClick={() => navigate(`/selskaper/${company.id}`)}>
                   <div className="min-w-0">
                     <span className="text-[0.8125rem] font-medium text-foreground truncate block">{company.name}</span>
                     {company.industry && (
                       <p className="text-[0.6875rem] text-muted-foreground truncate mt-0.5">{company.industry}</p>
                     )}
-                  </div>
-                  {/* TYPE - inline editable */}
-                  <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        {(() => {
-                          const t = TYPE_OPTIONS.find(o => o.value === company.status || (o.value === "customer" && company.status === "kunde"));
-                          const badge = t || { label: company.status, badgeColor: "bg-gray-100 text-gray-600 border-gray-200" };
-                          return (
-                            <button className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer ${badge.badgeColor}`}>
-                              {badge.label}
-                            </button>
-                          );
-                        })()}
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        {TYPE_OPTIONS.map(o => (
-                          <DropdownMenuItem
-                            key={o.value}
-                            onClick={() => setTypeMutation.mutate({ companyId: company.id, status: o.value })}
-                          >
-                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${o.badgeColor}`}>
-                              {o.label}
-                            </span>
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </div>
                   {/* SIGNAL - inline editable */}
                   <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
@@ -565,9 +536,36 @@ const Companies = () => {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <span className="text-[0.8125rem] text-muted-foreground">
-                    {contactCount > 0 ? <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" />{contactCount}</span> : ""}
-                  </span>
+                  {/* TYPE - inline editable */}
+                  <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        {(() => {
+                          const t = TYPE_OPTIONS.find(o => o.value === company.status || (o.value === "customer" && company.status === "kunde"));
+                          const badge = t || { label: company.status, badgeColor: "bg-gray-100 text-gray-600 border-gray-200" };
+                          return (
+                            <button className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer ${badge.badgeColor}`}>
+                              {badge.label}
+                            </button>
+                          );
+                        })()}
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        {TYPE_OPTIONS.map(o => (
+                          <DropdownMenuItem
+                            key={o.value}
+                            onClick={() => setTypeMutation.mutate({ companyId: company.id, status: o.value })}
+                          >
+                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${o.badgeColor}`}>
+                              {o.label}
+                            </span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  {/* STED */}
+                  <span className="text-[0.8125rem] text-muted-foreground truncate">{company.city || ""}</span>
                   <span className={`text-[0.8125rem] ${company.hasOverdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
                     {company.taskCount > 0 ? company.taskCount : ""}
                   </span>
