@@ -692,6 +692,16 @@ function ForespørselSheet({
   const [kommentar, setKommentar] = useState("");
   const [sluttkunde, setSluttkunde] = useState("");
 
+  // Company/contact search state
+  const [selskapNavn, setSelskapNavn] = useState("");
+  const [selskapId, setSelskapId] = useState<string | null>(null);
+  const [companyResults, setCompanyResults] = useState<any[]>([]);
+  const [showSelskapDropdown, setShowSelskapDropdown] = useState(false);
+  const [kontakt, setKontakt] = useState("");
+  const [kontaktId, setKontaktId] = useState<string | null>(null);
+  const [showKontaktDropdown, setShowKontaktDropdown] = useState(false);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Linked consultants
   const { data: linkedKonsulenter = [], refetch: refetchLinked } = useQuery({
     queryKey: ["foresporsler-konsulenter", row?.id],
@@ -705,9 +715,38 @@ function ForespørselSheet({
     },
   });
 
+  // Contacts for selected company
+  const { data: companyContacts = [] } = useQuery({
+    queryKey: ["foresporsler-edit-kontakter", selskapId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("contacts")
+        .select("id, first_name, last_name, title")
+        .eq("company_id", selskapId!)
+        .order("first_name");
+      return data || [];
+    },
+    enabled: !!selskapId,
+  });
+
+  const filteredContacts = useMemo(() => {
+    if (!kontakt.trim()) return companyContacts;
+    const q = kontakt.toLowerCase();
+    return (companyContacts as any[]).filter(c =>
+      `${c.first_name} ${c.last_name}`.toLowerCase().includes(q)
+    );
+  }, [companyContacts, kontakt]);
+
   // Sync form when entering edit mode
   useEffect(() => {
     if (editMode && row) {
+      setSelskapNavn(row.selskap_navn || "");
+      setSelskapId(row.selskap_id || null);
+      setKontakt(row.contacts ? `${row.contacts.first_name} ${row.contacts.last_name}` : "");
+      setKontaktId(row.kontakt_id || null);
+      setCompanyResults([]);
+      setShowSelskapDropdown(false);
+      setShowKontaktDropdown(false);
       setSted(row.sted || "");
       setAvdeling(row.avdeling || "");
       setFristDato(row.frist_dato || "");
@@ -718,6 +757,34 @@ function ForespørselSheet({
       setTagInput("");
     }
   }, [editMode, row]);
+
+  const searchCompanies = (query: string) => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (query.length < 1) { setCompanyResults([]); return; }
+    searchTimer.current = setTimeout(async () => {
+      const { data } = await supabase
+        .from("companies")
+        .select("id, name, city, status")
+        .ilike("name", `%${query}%`)
+        .limit(8);
+      if (data) setCompanyResults(data);
+    }, 300);
+  };
+
+  const selectCompany = (c: any) => {
+    setSelskapNavn(c.name);
+    setSelskapId(c.id);
+    setSted(c.city?.split(",")[0]?.trim() || "");
+    setKontakt("");
+    setKontaktId(null);
+    setShowSelskapDropdown(false);
+    setCompanyResults([]);
+  };
+
+  const isPartner = companyResults.find(c => c.id === selskapId)?.status === "partner"
+    || row?.type === "VIA"
+    || row?.type === "via_partner"
+    || row?.type === "via_megler";
 
   const addTag = (tag: string) => {
     const t = tag.trim();
