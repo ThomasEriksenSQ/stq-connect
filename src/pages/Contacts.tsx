@@ -124,46 +124,45 @@ const Contacts = () => {
   const pendingToggles = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const handleToggle = (contact: any, field: "cv_email" | "call_list", newValue: boolean) => {
-    const name = `${contact.first_name} ${contact.last_name}`;
     const key = `${contact.id}-${field}`;
-    const label = field === "cv_email" ? "CV-epost" : "Innkjøper";
-    const msg = newValue ? `${label} lagt til ${name}` : `${label} fjernet fra ${name}`;
+    const label = field === "cv_email" ? "CV-Epost" : "Innkjøper";
+    const msg = newValue ? `${label} aktivert` : `${label} deaktivert`;
 
-    // Cancel any pending save for same contact+field
     if (pendingToggles.current[key]) {
       clearTimeout(pendingToggles.current[key]);
       delete pendingToggles.current[key];
     }
 
-    // Optimistic UI update
-    queryClient.setQueryData(["contacts-full"], (old: any[]) =>
-      old?.map(c => c.id === contact.id ? { ...c, [field]: newValue } : c)
-    );
+    queryClient.setQueryData(["contacts-full"], (old: any) => ({
+      ...old,
+      rows: old?.rows?.map((c: any) => c.id === contact.id ? { ...c, [field]: newValue } : c),
+    }));
 
-    // Schedule save after 5s
     const timeout = setTimeout(async () => {
       delete pendingToggles.current[key];
       const { error } = await supabase.from("contacts").update({ [field]: newValue }).eq("id", contact.id);
       if (error) {
         toast.error("Kunne ikke oppdatere");
-        queryClient.setQueryData(["contacts-full"], (old: any[]) =>
-          old?.map(c => c.id === contact.id ? { ...c, [field]: !newValue } : c)
-        );
+        queryClient.setQueryData(["contacts-full"], (old: any) => ({
+          ...old,
+          rows: old?.rows?.map((c: any) => c.id === contact.id ? { ...c, [field]: !newValue } : c),
+        }));
       }
       queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
-    }, 5000);
+    }, 10000);
     pendingToggles.current[key] = timeout;
 
     toast(msg, {
-      duration: 5000,
+      duration: 10000,
       action: {
         label: "Angre",
         onClick: () => {
           clearTimeout(pendingToggles.current[key]);
           delete pendingToggles.current[key];
-          queryClient.setQueryData(["contacts-full"], (old: any[]) =>
-            old?.map(c => c.id === contact.id ? { ...c, [field]: !newValue } : c)
-          );
+          queryClient.setQueryData(["contacts-full"], (old: any) => ({
+            ...old,
+            rows: old?.rows?.map((c: any) => c.id === contact.id ? { ...c, [field]: !newValue } : c),
+          }));
         },
       },
     });
