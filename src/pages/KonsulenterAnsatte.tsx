@@ -1,13 +1,353 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
 import { format, differenceInMonths, isAfter } from "date-fns";
+import { Pencil, Plus, X, Globe, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 
 type Filter = "Alle" | "Aktiv" | "Kommende" | "Sluttet";
 
+const SUGGESTED_KOMPETANSE = [
+  "Embedded Linux", "RTOS", "C", "C++", "Python", "Yocto",
+  "FreeRTOS", "CANopen", "STM32", "Security", "Autonomi",
+  "Regulering", "Defence", "Java", "Rust",
+];
+
+const SUPABASE_URL = "https://kbvzpcebfopqqrvmbiap.supabase.co";
+
+/* ─── Edit/Create Modal ─── */
+
+interface AnsattForm {
+  navn: string;
+  epost: string;
+  tlf: string;
+  start_dato: string;
+  slutt_dato: string;
+  status: string;
+  bilde_url: string;
+  erfaring_aar: string;
+  geografi: string;
+  kompetanse: string[];
+  bio: string;
+  linkedin: string;
+  synlig_web: boolean;
+}
+
+function AnsattModal({
+  open,
+  onClose,
+  ansatt,
+}: {
+  open: boolean;
+  onClose: () => void;
+  ansatt: any | null; // null = create mode
+}) {
+  const queryClient = useQueryClient();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [tagInput, setTagInput] = useState("");
+
+  const isCreate = !ansatt;
+
+  const [form, setForm] = useState<AnsattForm>({
+    navn: "",
+    epost: "",
+    tlf: "",
+    start_dato: "",
+    slutt_dato: "",
+    status: "AKTIV/SIGNERT",
+    bilde_url: "",
+    erfaring_aar: "",
+    geografi: "",
+    kompetanse: [],
+    bio: "",
+    linkedin: "",
+    synlig_web: false,
+  });
+
+  // Reset form when modal opens
+  const [lastId, setLastId] = useState<number | null>(null);
+  if (open && (ansatt?.id ?? null) !== lastId) {
+    setLastId(ansatt?.id ?? null);
+    setTagInput("");
+    if (ansatt) {
+      setForm({
+        navn: ansatt.navn || "",
+        epost: ansatt.epost || "",
+        tlf: ansatt.tlf || "",
+        start_dato: ansatt.start_dato || "",
+        slutt_dato: ansatt.slutt_dato || "",
+        status: ansatt.status || "AKTIV/SIGNERT",
+        bilde_url: ansatt.bilde_url || "",
+        erfaring_aar: ansatt.erfaring_aar?.toString() || "",
+        geografi: ansatt.geografi || "",
+        kompetanse: ansatt.kompetanse || [],
+        bio: ansatt.bio || "",
+        linkedin: ansatt.linkedin || "",
+        synlig_web: ansatt.synlig_web || false,
+      });
+    } else {
+      setForm({
+        navn: "", epost: "", tlf: "", start_dato: "", slutt_dato: "",
+        status: "AKTIV/SIGNERT", bilde_url: "", erfaring_aar: "",
+        geografi: "", kompetanse: [], bio: "", linkedin: "", synlig_web: false,
+      });
+    }
+  }
+
+  const set = (key: keyof AnsattForm, val: any) => setForm(prev => ({ ...prev, [key]: val }));
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("Maks 5 MB"); return; }
+    setUploading(true);
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `${ansatt?.id || "new"}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("ansatte-bilder").upload(path, file, { upsert: true });
+    setUploading(false);
+    if (error) { toast.error("Opplasting feilet"); return; }
+    const url = `${SUPABASE_URL}/storage/v1/object/public/ansatte-bilder/${path}`;
+    set("bilde_url", url);
+  };
+
+  const addTag = (tag: string) => {
+    const t = tag.trim();
+    if (t && !form.kompetanse.includes(t)) set("kompetanse", [...form.kompetanse, t]);
+    setTagInput("");
+  };
+
+  const handleTagKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.key === "Enter" || e.key === ",") && tagInput.trim()) {
+      e.preventDefault();
+      addTag(tagInput);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!form.navn.trim()) return;
+    setSaving(true);
+    const payload: any = {
+      navn: form.navn.trim(),
+      epost: form.epost.trim() || null,
+      tlf: form.tlf.trim() || null,
+      start_dato: form.start_dato || null,
+      slutt_dato: form.slutt_dato || null,
+      status: form.status,
+      bilde_url: form.bilde_url || null,
+      erfaring_aar: form.erfaring_aar ? parseInt(form.erfaring_aar) : null,
+      geografi: form.geografi.trim() || null,
+      kompetanse: form.kompetanse,
+      bio: form.bio.trim() || null,
+      linkedin: form.linkedin.trim() || null,
+      synlig_web: form.synlig_web,
+      updated_at: new Date().toISOString(),
+    };
+
+    let error;
+    if (isCreate) {
+      ({ error } = await supabase.from("stacq_ansatte").insert(payload));
+    } else {
+      ({ error } = await supabase.from("stacq_ansatte").update(payload).eq("id", ansatt.id));
+    }
+    setSaving(false);
+    if (error) { toast.error("Kunne ikke lagre"); return; }
+    toast.success(isCreate ? "Ansatt lagt til" : "Profil oppdatert");
+    queryClient.invalidateQueries({ queryKey: ["stacq-ansatte"] });
+    onClose();
+  };
+
+  const statusChips = ["AKTIV/SIGNERT", "SLUTTET"] as const;
+  const statusLabel = (s: string) => {
+    if (s === "AKTIV/SIGNERT") return "Aktiv";
+    return "Sluttet";
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-lg rounded-xl p-6 gap-0 max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
+        <DialogTitle className="text-[1.125rem] font-bold text-foreground mb-5">
+          {isCreate ? "Ny ansatt" : `Rediger ${form.navn.split(" ")[0]}`}
+        </DialogTitle>
+
+        <div className="space-y-4">
+          {/* ── INTERN ── */}
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Intern (CRM)</p>
+
+          <div>
+            <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Navn</label>
+            <Input value={form.navn} onChange={e => set("navn", e.target.value)} className="mt-1 text-[0.875rem]" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Epost</label>
+              <Input type="email" value={form.epost} onChange={e => set("epost", e.target.value)} className="mt-1 text-[0.875rem]" />
+            </div>
+            <div>
+              <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Telefon</label>
+              <Input value={form.tlf} onChange={e => set("tlf", e.target.value)} className="mt-1 text-[0.875rem]" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Startdato</label>
+              <Input type="date" value={form.start_dato} onChange={e => set("start_dato", e.target.value)} className="mt-1 text-[0.875rem]" />
+            </div>
+            <div>
+              <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Sluttdato <span className="text-muted-foreground/50 normal-case font-normal">(valgfritt)</span>
+              </label>
+              <Input type="date" value={form.slutt_dato} onChange={e => set("slutt_dato", e.target.value)} className="mt-1 text-[0.875rem]" />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">Status</label>
+            <div className="flex gap-2">
+              {statusChips.map(s => (
+                <button
+                  key={s}
+                  onClick={() => set("status", s)}
+                  className={cn(
+                    "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
+                    form.status === s
+                      ? "bg-foreground text-background border-foreground"
+                      : "border-border text-muted-foreground hover:bg-secondary"
+                  )}
+                >
+                  {statusLabel(s)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── PROFIL ── */}
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mt-4">
+            Profil — vises på nettsiden
+          </p>
+
+          {/* Bilde */}
+          <div className="flex items-center gap-4">
+            {form.bilde_url ? (
+              <img src={form.bilde_url} alt="" className="w-20 h-20 rounded-full object-cover border border-border" />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg font-bold">
+                {form.navn ? getInitials(form.navn) : "?"}
+              </div>
+            )}
+            <div>
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+              <button
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="text-[0.8125rem] font-medium text-primary hover:underline disabled:opacity-50"
+              >
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin inline mr-1" /> : null}
+                {uploading ? "Laster opp..." : "Last opp nytt bilde"}
+              </button>
+              <p className="text-xs text-muted-foreground mt-0.5">Maks 5 MB, bilde</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Erfaring (år)</label>
+              <Input type="number" value={form.erfaring_aar} onChange={e => set("erfaring_aar", e.target.value)} placeholder="15" className="mt-1 text-[0.875rem]" />
+            </div>
+            <div>
+              <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">By / geografi</label>
+              <Input value={form.geografi} onChange={e => set("geografi", e.target.value)} placeholder="Oslo" className="mt-1 text-[0.875rem]" />
+            </div>
+          </div>
+
+          {/* Kompetanse tags */}
+          <div>
+            <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Kompetanse</label>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 p-2 border border-border rounded-lg bg-background min-h-[38px]">
+              {form.kompetanse.map(t => (
+                <span key={t} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-[0.75rem] text-foreground">
+                  {t}
+                  <button onClick={() => set("kompetanse", form.kompetanse.filter(x => x !== t))} className="hover:text-destructive">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+              <input
+                value={tagInput}
+                onChange={e => setTagInput(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                placeholder={form.kompetanse.length === 0 ? "Legg til kompetanse..." : ""}
+                className="flex-1 min-w-[100px] bg-transparent outline-none text-[0.8125rem] placeholder:text-muted-foreground"
+              />
+            </div>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {SUGGESTED_KOMPETANSE.filter(s => !form.kompetanse.includes(s)).slice(0, 10).map(s => (
+                <button key={s} onClick={() => addTag(s)} className="h-6 px-2 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors">
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Kort bio</label>
+            <textarea
+              value={form.bio}
+              onChange={e => set("bio", e.target.value)}
+              placeholder="2-3 setninger om bakgrunn og spesialitet..."
+              rows={3}
+              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-[0.875rem] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">LinkedIn URL</label>
+            <Input value={form.linkedin} onChange={e => set("linkedin", e.target.value)} placeholder="https://linkedin.com/in/..." className="mt-1 text-[0.875rem]" />
+          </div>
+
+          <div className="flex items-center justify-between py-2">
+            <div>
+              <p className="text-[0.875rem] font-medium">Vis på stacq.no</p>
+              <p className="text-xs text-muted-foreground">Profilen vises på nettsidens konsulentside</p>
+            </div>
+            <Switch checked={form.synlig_web} onCheckedChange={v => set("synlig_web", v)} />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
+          <button onClick={onClose} className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">Avbryt</button>
+          <button
+            disabled={!form.navn.trim() || saving}
+            onClick={handleSave}
+            className={cn(
+              "inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg transition-colors",
+              form.navn.trim() && !saving
+                ? "bg-primary text-primary-foreground hover:opacity-90"
+                : "bg-muted text-muted-foreground cursor-not-allowed"
+            )}
+          >
+            {saving ? "Lagrer..." : "Lagre"}
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ─── Main Page ─── */
+
 export default function KonsulenterAnsatte() {
   const [filter, setFilter] = useState<Filter>("Aktiv");
+  const [editAnsatt, setEditAnsatt] = useState<any | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
   const today = new Date();
 
   const { data: ansatte = [], isLoading } = useQuery({
@@ -46,14 +386,13 @@ export default function KonsulenterAnsatte() {
   };
 
   const stats = useMemo(() => {
-    let aktive = 0, kommende = 0, sluttet = 0;
+    let aktive = 0, kommende = 0;
     ansatte.forEach((a: any) => {
       const s = getStatus(a);
       if (s === "Aktiv") aktive++;
       else if (s === "Kommende") kommende++;
-      else sluttet++;
     });
-    return { aktive, kommende, sluttet };
+    return { aktive, kommende };
   }, [ansatte]);
 
   const filtered = useMemo(() => {
@@ -74,6 +413,9 @@ export default function KonsulenterAnsatte() {
     return formatMonths(months);
   };
 
+  const openEdit = (a: any) => { setEditAnsatt(a); setModalOpen(true); };
+  const openCreate = () => { setEditAnsatt(null); setModalOpen(true); };
+
   const chips: Filter[] = ["Alle", "Aktiv", "Kommende", "Sluttet"];
 
   if (isLoading) {
@@ -83,11 +425,20 @@ export default function KonsulenterAnsatte() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <h1 className="text-[1.375rem] font-bold">Ansatte</h1>
-        <span className="bg-secondary text-muted-foreground rounded-full px-2.5 py-0.5 text-xs font-medium">
-          {stats.aktive + stats.kommende}
-        </span>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <h1 className="text-[1.375rem] font-bold">Ansatte</h1>
+          <span className="bg-secondary text-muted-foreground rounded-full px-2.5 py-0.5 text-xs font-medium">
+            {stats.aktive + stats.kommende}
+          </span>
+        </div>
+        <button
+          onClick={openCreate}
+          className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
+        >
+          <Plus className="h-4 w-4" />
+          Ny ansatt
+        </button>
       </div>
 
       {/* Stat cards */}
@@ -123,95 +474,111 @@ export default function KonsulenterAnsatte() {
       </div>
 
       {/* Table */}
-      <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border">
-              {["NAVN", "START", "ANSETTELSE", "STATUS", "KONTAKT"].map((h) => (
-                <th
-                  key={h}
-                  className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground px-4 py-2.5 text-left"
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((a: any, i: number) => {
-              const status = getStatus(a);
-              const isKommende = status === "Kommende";
-              const isSluttet = status === "Sluttet";
-              const inOppdrag = activeOppdragNames.has(a.navn);
-              return (
-                <tr
-                  key={a.id}
+      <div className="border border-border rounded-lg overflow-hidden bg-card shadow-sm">
+        {/* Header */}
+        <div className="grid grid-cols-[minmax(0,2fr)_130px_100px_minmax(0,1.5fr)_90px_minmax(0,1.2fr)_36px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          {["NAVN", "START", "ANSETTELSE", "KOMPETANSE", "STATUS", "KONTAKT", ""].map((h) => (
+            <span key={h} className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">{h}</span>
+          ))}
+        </div>
+        {/* Rows */}
+        {filtered.map((a: any, i: number) => {
+          const status = getStatus(a);
+          const isKommende = status === "Kommende";
+          const isSluttet = status === "Sluttet";
+          const inOppdrag = activeOppdragNames.has(a.navn);
+          const kompetanse: string[] = a.kompetanse || [];
+
+          return (
+            <div
+              key={a.id}
+              className={cn(
+                "group grid grid-cols-[minmax(0,2fr)_130px_100px_minmax(0,1.5fr)_90px_minmax(0,1.2fr)_36px] gap-3 items-center px-4 py-3 hover:bg-muted/30 transition-colors",
+                i < filtered.length - 1 && "border-b border-border",
+                isKommende && "opacity-80",
+                isSluttet && "opacity-50"
+              )}
+            >
+              {/* NAVN */}
+              <div className="flex items-center gap-3 min-w-0">
+                {a.bilde_url ? (
+                  <img src={a.bilde_url} alt={a.navn} className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-border" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-primary/10 text-primary text-[0.6875rem] font-bold flex items-center justify-center flex-shrink-0">
+                    {getInitials(a.navn)}
+                  </div>
+                )}
+                <span className="font-medium text-[0.875rem] truncate">{a.navn}</span>
+                {inOppdrag && (
+                  <span className="bg-emerald-100 text-emerald-700 text-[0.625rem] font-semibold uppercase rounded px-1.5 py-0.5 flex-shrink-0">
+                    I OPPDRAG
+                  </span>
+                )}
+              </div>
+              {/* START */}
+              <div className="text-[0.8125rem]">
+                {isKommende ? (
+                  <span className="bg-amber-100 text-amber-700 text-xs font-medium rounded-full px-2.5 py-0.5">
+                    Starter {format(new Date(a.start_dato), "dd.MM")}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">
+                    {a.start_dato ? format(new Date(a.start_dato), "dd.MM.yyyy") : "–"}
+                  </span>
+                )}
+              </div>
+              {/* ANSETTELSE */}
+              <div className="text-sm text-muted-foreground">{getDuration(a)}</div>
+              {/* KOMPETANSE */}
+              <div className="flex flex-wrap gap-1 min-w-0">
+                {kompetanse.length === 0 ? (
+                  <span className="text-muted-foreground text-sm">–</span>
+                ) : (
+                  <>
+                    {kompetanse.slice(0, 2).map(t => (
+                      <span key={t} className="bg-secondary text-muted-foreground rounded-full px-2 py-0.5 text-[0.75rem] truncate max-w-[120px]">{t}</span>
+                    ))}
+                    {kompetanse.length > 2 && (
+                      <span className="bg-secondary text-muted-foreground rounded-full px-2 py-0.5 text-[0.75rem]">+{kompetanse.length - 2}</span>
+                    )}
+                  </>
+                )}
+              </div>
+              {/* STATUS */}
+              <div className="flex items-center gap-1">
+                <span
                   className={cn(
-                    "hover:bg-muted/30 transition-colors",
-                    i < filtered.length - 1 && "border-b border-border",
-                    isKommende && "opacity-80",
-                    isSluttet && "opacity-50"
+                    "rounded-full px-2.5 py-0.5 text-xs font-medium",
+                    status === "Aktiv" && "bg-emerald-100 text-emerald-700",
+                    status === "Kommende" && "bg-amber-100 text-amber-700",
+                    status === "Sluttet" && "bg-muted text-muted-foreground"
                   )}
                 >
-                  {/* NAVN */}
-                  <td className="px-4 py-3 min-h-[52px]">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary text-[0.6875rem] font-bold flex items-center justify-center flex-shrink-0">
-                        {getInitials(a.navn)}
-                      </div>
-                      <span className="font-medium text-[0.875rem]">{a.navn}</span>
-                      {inOppdrag && (
-                        <span className="bg-emerald-100 text-emerald-700 text-[0.625rem] font-semibold uppercase rounded px-1.5 py-0.5 ml-1.5">
-                          I OPPDRAG
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  {/* START */}
-                  <td className="px-4 py-3 text-[0.8125rem]">
-                    {isKommende ? (
-                      <span className="bg-amber-100 text-amber-700 text-xs font-medium rounded-full px-2.5 py-0.5">
-                        Starter {format(new Date(a.start_dato), "dd.MM")}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">
-                        {format(new Date(a.start_dato), "dd.MM.yyyy")}
-                      </span>
-                    )}
-                  </td>
-                  {/* ANSETTELSE */}
-                  <td className="px-4 py-3 text-sm text-muted-foreground">
-                    {getDuration(a)}
-                  </td>
-                  {/* STATUS */}
-                  <td className="px-4 py-3">
-                    <span
-                      className={cn(
-                        "rounded-full px-2.5 py-0.5 text-xs font-medium",
-                        status === "Aktiv" && "bg-emerald-100 text-emerald-700",
-                        status === "Kommende" && "bg-amber-100 text-amber-700",
-                        status === "Sluttet" && "bg-muted text-muted-foreground"
-                      )}
-                    >
-                      {status}
-                    </span>
-                  </td>
-                  {/* KONTAKT */}
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col">
-                      <span className="text-sm text-muted-foreground">{a.tlf}</span>
-                      <span className="text-xs text-muted-foreground/70 mt-0.5">{a.epost}</span>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                  {status}
+                </span>
+                {a.synlig_web && <Globe className="h-3 w-3 text-primary flex-shrink-0" />}
+              </div>
+              {/* KONTAKT */}
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm text-muted-foreground truncate">{a.tlf}</span>
+                <span className="text-xs text-muted-foreground/70 mt-0.5 truncate">{a.epost}</span>
+              </div>
+              {/* EDIT */}
+              <button
+                onClick={(e) => { e.stopPropagation(); openEdit(a); }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          );
+        })}
         {filtered.length === 0 && (
           <p className="text-muted-foreground text-center py-12">Ingen ansatte å vise</p>
         )}
       </div>
+
+      <AnsattModal open={modalOpen} onClose={() => setModalOpen(false)} ansatt={editAnsatt} />
     </div>
   );
 }
