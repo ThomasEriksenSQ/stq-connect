@@ -180,7 +180,7 @@ const Companies = () => {
           (companyActsMap[c.id] || []).map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
           (companyTasksMap[c.id] || []).map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date })),
         );
-        signalMap[c.id] = sig || (c as any).category || "";
+        signalMap[c.id] = sig || c.category || "";
       }
 
       return data.map(c => ({
@@ -224,14 +224,18 @@ const Companies = () => {
 
   const setSignalMutation = useMutation({
     mutationFn: async ({ companyId, label }: { companyId: string; label: string }) => {
-      const { error } = await supabase.from("activities").insert({
-        type: "note",
-        subject: label,
-        description: `[${label}]`,
-        company_id: companyId,
-        created_by: user?.id,
-      });
-      if (error) throw error;
+      const [actRes, catRes] = await Promise.all([
+        supabase.from("activities").insert({
+          type: "note",
+          subject: label,
+          description: `[${label}]`,
+          company_id: companyId,
+          created_by: user?.id,
+        }),
+        supabase.from("companies").update({ category: label }).eq("id", companyId),
+      ]);
+      if (actRes.error) throw actRes.error;
+      if (catRes.error) throw catRes.error;
     },
     onMutate: async ({ companyId, label }) => {
       queryClient.setQueryData(["companies-full"], (old: any[]) =>
