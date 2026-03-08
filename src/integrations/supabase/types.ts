@@ -272,6 +272,7 @@ export type Database = {
           referanse: string | null
           selskap_id: string | null
           selskap_navn: string
+          sluttkunde: string | null
           status: string | null
           sted: string | null
           teknologier: string[] | null
@@ -290,6 +291,7 @@ export type Database = {
           referanse?: string | null
           selskap_id?: string | null
           selskap_navn: string
+          sluttkunde?: string | null
           status?: string | null
           sted?: string | null
           teknologier?: string[] | null
@@ -308,6 +310,7 @@ export type Database = {
           referanse?: string | null
           selskap_id?: string | null
           selskap_navn?: string
+          sluttkunde?: string | null
           status?: string | null
           sted?: string | null
           teknologier?: string[] | null

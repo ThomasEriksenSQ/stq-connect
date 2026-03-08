@@ -1,0 +1,1 @@
+ALTER TABLE public.foresporsler ADD COLUMN IF NOT EXISTS sluttkunde text DEFAULT null;

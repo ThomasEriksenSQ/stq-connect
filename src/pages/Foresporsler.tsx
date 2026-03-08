@@ -277,8 +277,9 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
-  const [companyResults, setCompanyResults] = useState<Array<{ id: string; name: string; city: string | null }>>([]);
+  const [companyResults, setCompanyResults] = useState<Array<{ id: string; name: string; city: string | null; status: string }>>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [sluttkunde, setSluttkunde] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -289,7 +290,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
       setSelskap(""); setSelskapId(null); setSelectedLocations([]);
       setAvdeling(""); setSted(""); setKontakt(""); setKontaktId(null);
       setKommentar(""); setTags([]); setTagInput("");
-      setCompanyResults([]);
+      setCompanyResults([]); setSluttkunde("");
     }
   }, [open]);
 
@@ -299,20 +300,21 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
     searchTimer.current = setTimeout(async () => {
       const { data } = await supabase
         .from("companies")
-        .select("id, name, city")
+        .select("id, name, city, status")
         .ilike("name", `%${query}%`)
         .limit(8);
       if (data) setCompanyResults(data);
     }, 300);
   };
 
-  const selectCompany = (c: { id: string; name: string; city: string | null }) => {
+  const selectCompany = (c: { id: string; name: string; city: string | null; status: string }) => {
     setSelskap(c.name);
     setSelskapId(c.id);
     setAvdeling("");
     setKontakt("");
     setKontaktId(null);
     setShowKontaktDropdown(false);
+    setSluttkunde("");
     const locations = c.city ? c.city.split(",").map(l => l.trim()).filter(Boolean) : [];
     setSelectedLocations(locations);
     if (locations.length === 1) {
@@ -324,6 +326,9 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
     }
     setShowDropdown(false);
   };
+
+  const selectedCompany = companyResults.find(c => c.id === selskapId);
+  const isPartner = selectedCompany?.status === "partner";
 
   const { data: companyContacts = [] } = useQuery({
     queryKey: ["foresporsler-kontakter", selskapId],
@@ -371,6 +376,8 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
       kontakt_id: kontaktId,
       teknologier: tags,
       kommentar: kommentar || null,
+      type: isPartner ? "VIA" : "DIR",
+      sluttkunde: isPartner ? (sluttkunde || null) : null,
       status: "Ny",
       created_by: user?.id,
     });
@@ -424,6 +431,31 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
               )}
             </div>
           </div>
+
+          {/* Sluttkunde — conditional for Partner */}
+          {isPartner && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 space-y-2">
+              <div className="flex items-center gap-1.5">
+                <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-600 border border-gray-200 px-2 py-0.5 text-[0.6875rem] font-semibold">
+                  Partner
+                </span>
+                <p className="text-[0.8125rem] text-amber-800">
+                  Forespørselen kom via en partner — hvem er sluttkunden?
+                </p>
+              </div>
+              <div>
+                <label className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-amber-700 block mb-1">
+                  SLUTTKUNDE
+                </label>
+                <Input
+                  value={sluttkunde}
+                  onChange={(e) => setSluttkunde(e.target.value)}
+                  placeholder="f.eks. Kongsberg Defence, Equinor..."
+                  className="h-10 rounded-lg bg-white"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Avdeling — conditional */}
           {hasMultipleLocations && (
@@ -608,6 +640,7 @@ function ForespørselSheet({
   const [teknologier, setTeknologier] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [kommentar, setKommentar] = useState("");
+  const [sluttkunde, setSluttkunde] = useState("");
 
   // Linked consultants
   const { data: linkedKonsulenter = [], refetch: refetchLinked } = useQuery({
@@ -631,6 +664,7 @@ function ForespørselSheet({
       setType(row.type || "DIR");
       setTeknologier(row.teknologier || []);
       setKommentar(row.kommentar || "");
+      setSluttkunde(row.sluttkunde || "");
       setTagInput("");
     }
   }, [editMode, row]);
@@ -660,6 +694,7 @@ function ForespørselSheet({
         type: type || null,
         teknologier,
         kommentar: kommentar || null,
+        sluttkunde: sluttkunde || null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", row.id);
@@ -773,6 +808,12 @@ function ForespørselSheet({
               </div>
             </div>
 
+            {/* Sluttkunde */}
+            <div>
+              <label className={LABEL}>Sluttkunde</label>
+              <Input value={sluttkunde} onChange={(e) => setSluttkunde(e.target.value)} className="mt-1 text-[0.875rem]" placeholder="f.eks. Kongsberg Defence, Equinor..." />
+            </div>
+
             {/* Teknologier */}
             <div>
               <AiTeknologiBox existingTags={teknologier} onTagsFound={setTeknologier} />
@@ -838,6 +879,14 @@ function ForespørselSheet({
               <p className={LABEL}>Type</p>
               <p className="text-[0.875rem] text-foreground mt-1">{row.type || "—"}</p>
             </div>
+
+            {/* Sluttkunde */}
+            {row.sluttkunde && (
+              <div>
+                <p className={LABEL}>Sluttkunde</p>
+                <p className="text-[0.875rem] font-medium text-foreground mt-1">{row.sluttkunde}</p>
+              </div>
+            )}
 
             {/* Teknologier */}
             <div>
