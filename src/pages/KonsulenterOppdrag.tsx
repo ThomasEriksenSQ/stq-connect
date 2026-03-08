@@ -221,7 +221,7 @@ export default function KonsulenterOppdrag() {
                           : "text-destructive"
                       )}
                     >
-                      kr {formatNOK(o.margin)}
+                      kr {formatNOK(o.margin)}/dag
                     </p>
                     <p className="text-xs text-muted-foreground">{o.marginPct.toFixed(1)}%</p>
                   </td>
