@@ -252,8 +252,8 @@ export default function StacqPrisen() {
                         <span className="text-destructive/60">−{row.ekstra_kostnad}</span>
                       ) : "–"}
                     </span>
-                    <span className={`text-[0.8125rem] font-bold ${stacqColor(row.stacqPris)}`}>
-                      kr {formatKr(Math.round(row.stacqPris))}
+                    <span className={`text-[0.8125rem] font-bold ${stacqColor(row.stacqPris * TIMER_PER_DAG)}`}>
+                      kr {formatKr(Math.round(row.stacqPris * TIMER_PER_DAG))}
                     </span>
                     <span className={`text-[0.8125rem] text-right ${stacqColor(row.stacqPris)}`}>
                       {Math.round(pct)}%
