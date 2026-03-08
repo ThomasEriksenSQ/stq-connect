@@ -66,7 +66,7 @@ function buildSystemPrompt(userName: string, ctx: CrmContext): string {
 
   const fLines = ctx.foresporsler
     .slice(0, 16)
-    .map((f) => `- ${f.selskap} | ${f.sted || "?"} | ${f.teknologier.join(", ")} | ${f.antallSendt ?? 0} sendt | ${f.daysOld} dager gammel`)
+    .map((f) => `- ${f.selskap} | ${f.sted || "?"} | ${f.teknologier.join(", ")} | ${f.daysOld} dager gammel`)
     .join("\n");
 
   return `Du er en presis og direkte salgsassistent for STACQ — et norsk IT-konsulentselskap som matcher embedded/tech-konsulenter med industrielle kunder (Kongsberg, Tomra, Cisco osv.).
