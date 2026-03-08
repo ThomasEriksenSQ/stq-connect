@@ -50,6 +50,10 @@ const statusLabels: Record<string, { label: string; className: string; badgeColo
 
 const TYPE_ORDER = ["prospect", "customer", "churned", "partner", "lead"];
 
+const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer";
+const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
+const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground font-medium`;
+
 const OrgNrInput = ({ value, onChange, onLookup }: { value: string; onChange: (v: string) => void; onLookup: (name: string | null, city: string | null) => void }) => {
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
   const [loading, setLoading] = useState(false);
@@ -442,7 +446,7 @@ const Companies = () => {
           <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Eier</span>
           {[{ id: "all", name: "Alle" }, ...ownerList.map(([id, name]) => ({ id: id as string, name: name as string }))].map(o => (
             <button key={o.id} onClick={() => setOwnerFilter(o.id)}
-              className={`h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer ${ownerFilter === o.id ? "bg-foreground text-background border-foreground font-medium" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+              className={ownerFilter === o.id ? CHIP_ON : CHIP_OFF}>
               {o.name}
             </button>
           ))}
@@ -452,7 +456,7 @@ const Companies = () => {
           <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Signal</span>
           {[{ value: "all", label: "Alle" }, ...CATEGORIES.map(c => ({ value: c.label, label: c.label }))].map(o => (
             <button key={o.value} onClick={() => setSignalFilter(o.value)}
-              className={`h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer ${signalFilter === o.value ? "bg-foreground text-background border-foreground font-medium" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+              className={signalFilter === o.value ? CHIP_ON : CHIP_OFF}>
               {o.label}
             </button>
           ))}
@@ -468,7 +472,7 @@ const Companies = () => {
             { value: "churned", label: "Ikke relevant selskap" },
           ].map(o => (
             <button key={o.value} onClick={() => setStatusFilter(o.value)}
-              className={`h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer ${statusFilter === o.value ? "bg-foreground text-background border-foreground font-medium" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+              className={statusFilter === o.value ? CHIP_ON : CHIP_OFF}>
               {o.label}
             </button>
           ))}
