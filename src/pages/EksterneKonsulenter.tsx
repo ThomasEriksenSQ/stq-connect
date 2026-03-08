@@ -3,7 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { Plus, X, Search } from "lucide-react";
+import { nb } from "date-fns/locale";
+import { Plus, X, Search, CalendarIcon } from "lucide-react";
+import { relativeFutureDate } from "@/lib/relativeDate";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -240,16 +245,16 @@ export default function EksterneKonsulenter() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
-                      {(row.teknologier || []).slice(0, 4).map((t: string) => (
+                      {(row.teknologier || []).slice(0, 3).map((t: string) => (
                         <span key={t} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] text-muted-foreground">{t}</span>
                       ))}
-                      {(row.teknologier || []).length > 4 && (
-                        <span className="text-[0.6875rem] text-muted-foreground">+{row.teknologier.length - 4}</span>
+                      {(row.teknologier || []).length > 3 && (
+                        <span className="text-[0.6875rem] text-muted-foreground">+{row.teknologier.length - 3}</span>
                       )}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-[0.8125rem] text-muted-foreground">
-                    {row.tilgjengelig_fra ? format(new Date(row.tilgjengelig_fra), "dd.MM.yyyy") : "—"}
+                    {relativeFutureDate(row.tilgjengelig_fra)}
                   </td>
                 </tr>
               );
@@ -473,7 +478,7 @@ function ConsultantModal({ open, onClose, editRow, contacts, companies, userId }
             <div>
               <label className={LABEL + " block mb-1.5"}>Type</label>
               <div className="flex flex-wrap gap-1.5">
-                {(["freelance", "partner", "konsulenthus"] as const).map(t => (
+                {(["freelance", "partner"] as const).map(t => (
                   <button key={t} onClick={() => set("type", t)} className={form.type === t ? CHIP_ON : CHIP_OFF}>
                     {TYPE_LABELS[t]}
                   </button>
@@ -483,9 +488,9 @@ function ConsultantModal({ open, onClose, editRow, contacts, companies, userId }
             <div>
               <label className={LABEL + " block mb-1.5"}>Status</label>
               <div className="flex flex-wrap gap-1.5">
-                {(["ledig", "aktiv", "utilgjengelig", "utgått"] as const).map(s => (
-                  <button key={s} onClick={() => set("status", s)} className={form.status === s ? CHIP_ON : CHIP_OFF}>
-                    {STATUS_LABELS[s]}
+                {([{ value: "ledig", label: "Tilgjengelig" }, { value: "utilgjengelig", label: "Ikke ledig" }] as const).map(s => (
+                  <button key={s.value} onClick={() => set("status", s.value)} className={form.status === s.value ? CHIP_ON : CHIP_OFF}>
+                    {s.label}
                   </button>
                 ))}
               </div>
@@ -532,19 +537,25 @@ function ConsultantModal({ open, onClose, editRow, contacts, companies, userId }
           </div>
 
           {/* Tilgjengelighet */}
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className={LABEL}>Tilgjengelig fra</label>
-              <Input type="date" value={form.tilgjengelig_fra} onChange={e => set("tilgjengelig_fra", e.target.value)} className="mt-1 text-[0.875rem]" />
-            </div>
-            <div>
-              <label className={LABEL}>Tilgjengelig til</label>
-              <Input type="date" value={form.tilgjengelig_til} onChange={e => set("tilgjengelig_til", e.target.value)} className="mt-1 text-[0.875rem]" />
-            </div>
-            <div>
-              <label className={LABEL}>Kapasitet %</label>
-              <Input type="number" value={form.kapasitet_prosent} onChange={e => set("kapasitet_prosent", e.target.value)} placeholder="100" className="mt-1 text-[0.875rem]" />
-            </div>
+          <div>
+            <label className={LABEL}>Tilgjengelig fra</label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("mt-1 w-full justify-start text-left text-[0.875rem] font-normal", !form.tilgjengelig_fra && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {form.tilgjengelig_fra ? format(new Date(form.tilgjengelig_fra), "d. MMM yyyy", { locale: nb }) : "Velg dato"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={form.tilgjengelig_fra ? new Date(form.tilgjengelig_fra) : undefined}
+                  onSelect={(d) => set("tilgjengelig_fra", d ? format(d, "yyyy-MM-dd") : "")}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Økonomi */}
