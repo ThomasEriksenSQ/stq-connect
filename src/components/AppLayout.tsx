@@ -125,7 +125,7 @@ export function AppLayout() {
                     }
                   >
                     <Briefcase className="h-4 w-4 stroke-[1.5]" />
-                    I oppdrag
+                    Aktive oppdrag
                   </RouterNavLink>
                   <RouterNavLink
                     to="/konsulenter/eksterne"
