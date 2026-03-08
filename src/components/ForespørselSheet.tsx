@@ -583,37 +583,54 @@ export function ForespørselSheet({
                     Ingen konsulenter sendt inn ennå
                   </p>
                 )}
-                {linkedKonsulenter.map((k: any) => (
-                  <div key={k.id} className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[0.6875rem] font-semibold text-primary">
-                        {getInitials(k.stacq_ansatte?.navn || "")}
+                {linkedKonsulenter.map((k: any) => {
+                  const isIntern = k.konsulent_type === "intern";
+                  const navn = isIntern ? k.stacq_ansatte?.navn : k.external_consultants?.navn;
+                  const eksterntType = k.external_consultants?.type;
+                  return (
+                    <div key={k.id} className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[0.6875rem] font-semibold text-primary">
+                          {getInitials(navn || "")}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[0.875rem] font-medium">
+                              {navn || "Ukjent"}
+                            </span>
+                            <span className={cn(
+                              "inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold",
+                              isIntern
+                                ? "bg-foreground text-background"
+                                : "bg-blue-100 text-blue-700"
+                            )}>
+                              {isIntern ? "Ansatt" : eksterntType === "via_partner" ? "Partner" : "Freelance"}
+                            </span>
+                          </div>
+                          {k.created_at && (
+                            <span className="text-[0.6875rem] text-muted-foreground">
+                              lagt til {relativeTime(k.created_at)}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-[0.875rem] font-medium block">
-                          {k.stacq_ansatte?.navn || "Ukjent"}
-                        </span>
-                        {k.created_at && (
-                          <span className="text-[0.6875rem] text-muted-foreground">
-                            lagt til {relativeTime(k.created_at)}
-                          </span>
-                        )}
-                      </div>
+                      <button
+                        onClick={() => handleRemoveKonsulent(k.id)}
+                        className="text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => handleRemoveKonsulent(k.id)}
-                      className="text-muted-foreground hover:text-destructive transition-colors"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <AddKonsulentCombobox
                 foresporslerID={row.id}
-                alreadyLinked={linkedKonsulenter.map((k: any) => k.ansatt_id)}
-                onAdd={handleAddKonsulent}
+                alreadyLinkedIntern={linkedKonsulenter.filter((k: any) => k.konsulent_type === "intern").map((k: any) => k.ansatt_id)}
+                alreadyLinkedEkstern={linkedKonsulenter.filter((k: any) => k.konsulent_type === "ekstern").map((k: any) => k.ekstern_id)}
+                onAddIntern={handleAddKonsulent}
+                onAddEkstern={handleAddEkstern}
               />
             </div>
 
