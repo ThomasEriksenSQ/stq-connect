@@ -392,7 +392,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                 <DropdownMenuContent align="end">
                   {allProfiles.map((p) => (
                     <DropdownMenuItem key={p.id} onClick={() => updateMutation.mutate({ owner_id: p.id })}>
-                      <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+                      <span className="inline-flex items-center rounded-full border bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold">
                         {p.full_name}
                       </span>
                     </DropdownMenuItem>
