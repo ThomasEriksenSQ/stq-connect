@@ -212,6 +212,10 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
   const descTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const [changingCompany, setChangingCompany] = useState(false);
+  const [companySearch, setCompanySearch] = useState("");
+  const [companyResults, setCompanyResults] = useState<{ id: string; name: string }[]>([]);
+  const companySearchRef = useRef<HTMLInputElement>(null);
 
   const { data: contact, isLoading } = useQuery({
     queryKey: ["contact", contactId],
