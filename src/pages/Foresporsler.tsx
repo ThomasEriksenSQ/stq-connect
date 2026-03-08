@@ -640,6 +640,7 @@ function ForespørselSheet({
   const [teknologier, setTeknologier] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [kommentar, setKommentar] = useState("");
+  const [sluttkunde, setSluttkunde] = useState("");
 
   // Linked consultants
   const { data: linkedKonsulenter = [], refetch: refetchLinked } = useQuery({
