@@ -61,9 +61,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
   const [showDropdown, setShowDropdown] = useState(false);
   const [companyResults, setCompanyResults] = useState<Array<{ id: string; name: string; city: string | null }>>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const hasMultipleLocations = selectedLocations.length > 1;
