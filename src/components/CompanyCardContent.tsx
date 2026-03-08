@@ -743,9 +743,14 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             </div>
           )}
 
+          <hr className="border-border my-4" />
+
           {/* ── Activities Timeline ── */}
           <CompanyActivityTimeline activities={activities} profileMap={profileMapFull} companyId={companyId} />
         </div>
+
+        {/* Vertical divider */}
+        <div className="hidden md:block w-px bg-border flex-shrink-0" />
 
         {/* Right: Contacts */}
         <div className="space-y-3">
