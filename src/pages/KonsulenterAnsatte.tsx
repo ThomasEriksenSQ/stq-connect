@@ -148,7 +148,6 @@ function AnsattModal({
       geografi: form.geografi.trim() || null,
       kompetanse: form.kompetanse,
       bio: form.bio.trim() || null,
-      linkedin: form.linkedin.trim() || null,
       synlig_web: form.synlig_web,
       updated_at: new Date().toISOString(),
     };
