@@ -773,6 +773,14 @@ Returner BARE JSON, ingen annen tekst.`,
           </div>
         )}
 
+        {/* ── Mode: CV Upload */}
+        {mode === "cv-upload" && (
+          <CvUploadFlow
+            onClose={() => setMode(null)}
+            onAddMessage={(msg) => setMessages(prev => [...prev, msg])}
+          />
+        )}
+
         {/* Messages */}
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
