@@ -1113,8 +1113,13 @@ function ActivityRow({
   const handleRowClick = () => {
     if (!editable || editing) return;
     const parsed = extractTitleAndCategory(activity.subject, activity.description);
+    let cat = parsed.category;
+    // Signal-activities: subject IS the category label
+    if (!cat && CATEGORIES.some(c => c.label === activity.subject)) {
+      cat = activity.subject;
+    }
     setEditTitle(parsed.title);
-    setEditCategory(parsed.category);
+    setEditCategory(cat);
     setEditDesc(parsed.cleanDesc);
     setEditDate(activity.created_at ? format(new Date(activity.created_at), "yyyy-MM-dd") : "");
     setConfirmDelete(false);
