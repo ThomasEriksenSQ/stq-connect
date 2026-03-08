@@ -175,7 +175,7 @@ function InlineField({
     <button
       onClick={() => setEditing(true)}
       className={cn(
-        "group inline-flex items-center gap-1 hover:text-primary transition-colors cursor-text",
+        "group inline-flex items-center gap-1 hover:text-foreground/60 transition-colors cursor-text",
         !value && "text-muted-foreground/40 italic",
         className
       )}
