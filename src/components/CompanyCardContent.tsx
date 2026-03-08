@@ -486,7 +486,11 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                 <DialogHeader><DialogTitle>Rediger selskap</DialogTitle></DialogHeader>
                 <form onSubmit={(e) => {
                   e.preventDefault();
-                  const cityValue = editForm.locations.length > 0 ? editForm.locations.join(", ") : editForm.city;
+                  const finalLocations = newLocation.trim()
+                    ? [...editForm.locations, newLocation.trim()]
+                    : editForm.locations;
+                  setNewLocation("");
+                  const cityValue = finalLocations.length > 0 ? finalLocations.join(", ") : editForm.city;
                   updateMutation.mutate({
                     name: editForm.name,
                     org_number: editForm.org_number || null,
