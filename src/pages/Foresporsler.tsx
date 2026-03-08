@@ -95,7 +95,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
     setAvdeling("");
     setKontakt("");
     setKontaktId(null);
-    setContactResults([]);
+    setShowKontaktDropdown(false);
     const locations = c.city ? c.city.split(",").map(l => l.trim()).filter(Boolean) : [];
     setSelectedLocations(locations);
     if (locations.length === 1) {
