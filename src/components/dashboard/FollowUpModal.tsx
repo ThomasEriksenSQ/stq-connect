@@ -18,7 +18,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { ChevronDown, CalendarIcon } from "lucide-react";
+import { ChevronDown, CalendarIcon, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 const DATE_OPTIONS = [
