@@ -21,6 +21,7 @@ import Foresporsler from "./pages/Foresporsler";
 
 const KonsulenterAnsatte = lazy(() => import("./pages/KonsulenterAnsatte"));
 const KonsulenterOppdrag = lazy(() => import("./pages/KonsulenterOppdrag"));
+const EksterneKonsulenter = lazy(() => import("./pages/EksterneKonsulenter"));
 const StacqPrisen = lazy(() => import("./pages/StacqPrisen"));
 
 const queryClient = new QueryClient();
