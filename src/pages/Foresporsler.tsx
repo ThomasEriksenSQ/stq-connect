@@ -244,35 +244,61 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
           <div>
             <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Kontaktperson</label>
             <div className="relative mt-1">
-              <Input
-                value={kontakt}
-                onChange={(e) => {
-                  setKontakt(e.target.value);
-                  setKontaktId(null);
-                  setShowKontaktDropdown(true);
-                  searchContacts(e.target.value);
-                }}
-                onFocus={() => setShowKontaktDropdown(true)}
-                onBlur={() => setTimeout(() => setShowKontaktDropdown(false), 200)}
-                placeholder="Søk etter kontaktperson..."
-                className="text-[0.875rem]"
-              />
-              {showKontaktDropdown && contactResults.length > 0 && (
-                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-md max-h-48 overflow-auto">
-                  {contactResults.map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() => {
-                        setKontakt(`${c.first_name} ${c.last_name}`);
-                        setKontaktId(c.id);
-                        setShowKontaktDropdown(false);
+              {!selskapId ? (
+                <Input
+                  disabled
+                  placeholder="Velg selskap først..."
+                  className="text-[0.875rem] opacity-50 cursor-not-allowed"
+                />
+              ) : (
+                <>
+                  <div className="relative">
+                    <Input
+                      value={kontakt}
+                      onChange={(e) => {
+                        setKontakt(e.target.value);
+                        setKontaktId(null);
+                        setShowKontaktDropdown(true);
                       }}
-                      className="w-full text-left px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors"
-                    >
-                      {c.first_name} {c.last_name}
-                    </button>
-                  ))}
-                </div>
+                      onFocus={() => setShowKontaktDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowKontaktDropdown(false), 200)}
+                      placeholder="Søk etter kontaktperson..."
+                      className="text-[0.875rem]"
+                    />
+                    {kontaktId && (
+                      <button
+                        onClick={() => { setKontakt(""); setKontaktId(null); }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  {showKontaktDropdown && !kontaktId && (
+                    <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-md max-h-[200px] overflow-y-auto">
+                      {filteredContacts.length === 0 ? (
+                        <p className="text-xs text-muted-foreground px-3 py-2.5 italic">
+                          Ingen kontakter registrert på dette selskapet
+                        </p>
+                      ) : (
+                        filteredContacts.map((c: any) => (
+                          <button
+                            key={c.id}
+                            onClick={() => {
+                              setKontakt(`${c.first_name} ${c.last_name}`);
+                              setKontaktId(c.id);
+                              setShowKontaktDropdown(false);
+                            }}
+                            className="w-full text-left px-3 py-2.5 hover:bg-muted/50 cursor-pointer transition-colors"
+                          >
+                            <p className="text-[0.875rem] font-medium">{c.first_name} {c.last_name}</p>
+                            {c.title && <p className="text-xs text-muted-foreground">{c.title}</p>}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
