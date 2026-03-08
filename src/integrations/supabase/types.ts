@@ -608,6 +608,7 @@ export type Database = {
           forny_dato: string | null
           id: number
           kandidat: string
+          kommentar: string | null
           kunde: string | null
           oppdrag_id: number | null
           selskap_id: string | null
@@ -626,6 +627,7 @@ export type Database = {
           forny_dato?: string | null
           id?: number
           kandidat: string
+          kommentar?: string | null
           kunde?: string | null
           oppdrag_id?: number | null
           selskap_id?: string | null
@@ -644,6 +646,7 @@ export type Database = {
           forny_dato?: string | null
           id?: number
           kandidat?: string
+          kommentar?: string | null
           kunde?: string | null
           oppdrag_id?: number | null
           selskap_id?: string | null

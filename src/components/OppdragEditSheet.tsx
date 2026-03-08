@@ -207,7 +207,7 @@ export function OppdragEditSheet({
       setTilKonsulent(String(row.til_konsulent || ""));
       setFornyDato(row.forny_dato ? new Date(row.forny_dato) : undefined);
       setStartDato(row.start_dato ? new Date(row.start_dato) : undefined);
-      setKommentar("");
+      setKommentar((row as any).kommentar || "");
       setConfirmTerminate(false);
       setSelskapId((row as any).selskap_id || null);
       setSelskapNavn(row.kunde || null);
@@ -241,6 +241,7 @@ export function OppdragEditSheet({
         start_dato: startDato ? format(startDato, "yyyy-MM-dd") : null,
         kunde: selskapNavn || null,
         selskap_id: selskapId || null,
+        kommentar: kommentar || null,
       } as any)
       .eq("id", row.id);
     setSaving(false);
