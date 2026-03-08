@@ -109,6 +109,7 @@ export function ForespørselSheet({
   // Match state
   const [matching, setMatching] = useState(false);
   const [matchResults, setMatchResults] = useState<MatchResult[] | null>(null);
+  const [matchSourceFilter, setMatchSourceFilter] = useState<"Alle" | "Ansatte" | "Eksterne">("Alle");
 
   // Linked consultants
   const { data: linkedKonsulenter = [], refetch: refetchLinked } = useQuery({
