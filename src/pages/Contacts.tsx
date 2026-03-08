@@ -33,7 +33,7 @@ const Contacts = () => {
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [signalFilter, setSignalFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "last_activity", dir: "desc" });
+  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "signal", dir: "asc" });
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -221,13 +221,27 @@ const Contacts = () => {
     return matchSearch && matchOwner && matchSignal && matchType;
   });
 
+  const SIGNAL_ORDER: Record<string, number> = {
+    "Behov nå": 0,
+    "Får fremtidig behov": 1,
+    "Får kanskje behov": 2,
+    "Ukjent om behov": 3,
+    "Ikke aktuelt": 4,
+  };
+
   const sorted = [...filtered].sort((a, b) => {
     const dir = sort.dir === "asc" ? 1 : -1;
     switch (sort.field) {
       case "name": return dir * `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`, "nb");
       case "company": return dir * ((a.companies as any)?.name || "").localeCompare((b.companies as any)?.name || "", "nb");
       case "title": return dir * (a.title || "").localeCompare(b.title || "", "nb");
-      case "signal": return dir * ((a as any).signal || "").localeCompare((b as any).signal || "", "nb");
+      case "signal": {
+        const sa = (a as any).signal as string | null;
+        const sb = (b as any).signal as string | null;
+        const oa = sa ? (SIGNAL_ORDER[sa] ?? 5) : 6;
+        const ob = sb ? (SIGNAL_ORDER[sb] ?? 5) : 6;
+        return dir * (oa - ob);
+      }
       case "owner": return dir * (getOwnerName(a) || "").localeCompare(getOwnerName(b) || "", "nb");
       case "last_activity":
         if (!(a as any).lastActivity && !(b as any).lastActivity) return 0;
@@ -308,9 +322,9 @@ const Contacts = () => {
         <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
           <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_90px_70px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="name">Navn</SortHeader>
+            <SortHeader field="signal">Signal</SortHeader>
             <SortHeader field="company">Selskap</SortHeader>
             <SortHeader field="title">Stilling</SortHeader>
-            <SortHeader field="signal">Signal</SortHeader>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Tags</span>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground text-center">Oppf.</span>
             <SortHeader field="last_activity" className="justify-end">Siste akt.</SortHeader>
@@ -329,14 +343,6 @@ const Contacts = () => {
                     <p className="text-[0.8125rem] font-medium text-foreground truncate">
                       {contact.first_name} {contact.last_name}
                     </p>
-                  </button>
-                  {/* COMPANY */}
-                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate flex items-center gap-1 text-left cursor-pointer">
-                    {companyName ? <><Building2 className="h-3 w-3 flex-shrink-0" />{companyName}</> : ""}
-                  </button>
-                  {/* TITLE */}
-                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate text-left cursor-pointer">
-                    {contact.title?.slice(0, 25) || ""}
                   </button>
                   {/* SIGNAL - inline editable */}
                   <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
@@ -367,6 +373,14 @@ const Contacts = () => {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
+                  {/* COMPANY */}
+                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate flex items-center gap-1 text-left cursor-pointer">
+                    {companyName ? <><Building2 className="h-3 w-3 flex-shrink-0" />{companyName}</> : ""}
+                  </button>
+                  {/* TITLE */}
+                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate text-left cursor-pointer">
+                    {contact.title?.slice(0, 25) || ""}
+                  </button>
                   {/* TAGS */}
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                     <button
