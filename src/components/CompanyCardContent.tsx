@@ -526,8 +526,10 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</div>
+                        {displayDesc && !/^\[.+\]$/.test(displayDesc.trim()) && (
+                          <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{displayDesc}</p>
+                        )}
                         <div className="flex items-center gap-1.5 mt-1">
-                          {displayCategory && <CategoryBadge label={displayCategory} />}
                           {task.assigned_to && profileMapFull[task.assigned_to] && (
                             <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{profileMapFull[task.assigned_to]}</span>
                           )}
@@ -535,23 +537,23 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                             <span className="text-[0.6875rem] text-muted-foreground">{contactName}</span>
                           )}
                         </div>
-                        {displayDesc && !/^\[.+\]$/.test(displayDesc.trim()) && (
-                          <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{displayDesc}</p>
-                        )}
                       </div>
-                      {task.due_date && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className={cn(
-                              "text-[0.8125rem] font-medium px-2 py-0.5 rounded-md flex-shrink-0 mt-0.5",
-                              overdue ? "text-destructive" : today ? "text-[hsl(var(--warning))]" : "text-muted-foreground"
-                            )}>
-                              {format(new Date(task.due_date), "d. MMM yyyy", { locale: nb })}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>{fullDate(task.due_date)}</TooltipContent>
-                        </Tooltip>
-                      )}
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
+                        {task.due_date && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className={cn(
+                                "text-[0.8125rem] font-medium",
+                                overdue ? "text-destructive" : today ? "text-[hsl(var(--warning))]" : "text-muted-foreground"
+                              )}>
+                                {format(new Date(task.due_date), "d. MMM yyyy", { locale: nb })}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>{fullDate(task.due_date)}</TooltipContent>
+                          </Tooltip>
+                        )}
+                        {displayCategory && <CategoryBadge label={displayCategory} />}
+                      </div>
                     </div>
                   );
                 })}
@@ -793,28 +795,27 @@ function CompanyActivityRow({ activity, profileMap, companyId, navigate }: {
             </div>
           </div>
         ) : (
-          <div onClick={handleRowClick} className="cursor-pointer">
-            <span className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</span>
+          <div onClick={handleRowClick} className="cursor-pointer flex items-start gap-3">
+            <div className="flex-1 min-w-0">
+              <span className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</span>
 
-            {displayCategory && displayCategory !== displayTitle && (
-              <div className="mt-1">
-                <CategoryBadge label={displayCategory} />
-              </div>
-            )}
-
-            {cleanDesc && (
-              <div className="mt-1">
-                <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70">{cleanDesc}</p>
-              </div>
-            )}
-
-            <div className="flex items-center gap-2 mt-1.5">
-              {ownerName && (
-                <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{ownerName}</span>
+              {cleanDesc && (
+                <div className="mt-0.5">
+                  <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70">{cleanDesc}</p>
+                </div>
               )}
-              {contactName && (
-                <span className="text-[0.8125rem] text-muted-foreground">{contactName}</span>
-              )}
+
+              <div className="flex items-center gap-2 mt-1">
+                {ownerName && (
+                  <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{ownerName}</span>
+                )}
+                {contactName && (
+                  <span className="text-[0.8125rem] text-muted-foreground">{contactName}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="text-[0.8125rem] text-muted-foreground">
@@ -823,6 +824,7 @@ function CompanyActivityRow({ activity, profileMap, companyId, navigate }: {
                 </TooltipTrigger>
                 <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
               </Tooltip>
+              {displayCategory && displayCategory !== displayTitle && <CategoryBadge label={displayCategory} />}
             </div>
           </div>
         )}
