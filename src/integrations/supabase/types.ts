@@ -433,6 +433,54 @@ export type Database = {
         }
         Relationships: []
       }
+      stacq_oppdrag: {
+        Row: {
+          created_at: string | null
+          deal_type: string | null
+          er_ansatt: boolean | null
+          forny_dato: string | null
+          id: number
+          kandidat: string
+          kunde: string | null
+          oppdrag_id: number | null
+          slutt_dato: string | null
+          start_dato: string | null
+          status: string | null
+          til_konsulent: number | null
+          utpris: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          deal_type?: string | null
+          er_ansatt?: boolean | null
+          forny_dato?: string | null
+          id?: number
+          kandidat: string
+          kunde?: string | null
+          oppdrag_id?: number | null
+          slutt_dato?: string | null
+          start_dato?: string | null
+          status?: string | null
+          til_konsulent?: number | null
+          utpris?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          deal_type?: string | null
+          er_ansatt?: boolean | null
+          forny_dato?: string | null
+          id?: number
+          kandidat?: string
+          kunde?: string | null
+          oppdrag_id?: number | null
+          slutt_dato?: string | null
+          start_dato?: string | null
+          status?: string | null
+          til_konsulent?: number | null
+          utpris?: number | null
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           assigned_to: string | null
