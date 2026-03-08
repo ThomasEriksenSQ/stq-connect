@@ -86,7 +86,6 @@ const DUE_CHIP: Record<string, string> = {
   overdue: "bg-destructive/10 text-destructive",
   today: "bg-primary/10 text-primary",
   future: "bg-muted text-muted-foreground",
-  none: "border border-dashed border-border text-muted-foreground",
 };
 
 const ACCENT_CLASS: Record<string, string> = {
