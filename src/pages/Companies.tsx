@@ -438,28 +438,28 @@ const Companies = () => {
           <span className="text-[0.75rem] text-muted-foreground ml-auto">{filtered.length} selskaper</span>
         </div>
         {/* Eier chips */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground min-w-[64px] shrink-0">Eier</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Eier</span>
           {[{ id: "all", name: "Alle" }, ...ownerList.map(([id, name]) => ({ id: id as string, name: name as string }))].map(o => (
             <button key={o.id} onClick={() => setOwnerFilter(o.id)}
-              className={`h-8 px-3 text-[0.8125rem] rounded-full border transition-colors ${ownerFilter === o.id ? "bg-foreground text-background border-foreground font-medium" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+              className={`h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer ${ownerFilter === o.id ? "bg-foreground text-background border-foreground font-medium" : "border-border text-muted-foreground hover:bg-secondary"}`}>
               {o.name}
             </button>
           ))}
         </div>
         {/* Signal chips */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground min-w-[64px] shrink-0">Signal</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Signal</span>
           {[{ value: "all", label: "Alle" }, ...CATEGORIES.map(c => ({ value: c.label, label: c.label }))].map(o => (
             <button key={o.value} onClick={() => setSignalFilter(o.value)}
-              className={`h-8 px-3 text-[0.8125rem] rounded-full border transition-colors ${signalFilter === o.value ? "bg-foreground text-background border-foreground font-medium" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+              className={`h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer ${signalFilter === o.value ? "bg-foreground text-background border-foreground font-medium" : "border-border text-muted-foreground hover:bg-secondary"}`}>
               {o.label}
             </button>
           ))}
         </div>
         {/* Type chips */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground min-w-[64px] shrink-0">Type</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Type</span>
           {[
             { value: "all", label: "Alle" },
             { value: "prospect", label: "Potensiell kunde" },
@@ -468,7 +468,7 @@ const Companies = () => {
             { value: "churned", label: "Ikke relevant selskap" },
           ].map(o => (
             <button key={o.value} onClick={() => setStatusFilter(o.value)}
-              className={`h-8 px-3 text-[0.8125rem] rounded-full border transition-colors ${statusFilter === o.value ? "bg-foreground text-background border-foreground font-medium" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+              className={`h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer ${statusFilter === o.value ? "bg-foreground text-background border-foreground font-medium" : "border-border text-muted-foreground hover:bg-secondary"}`}>
               {o.label}
             </button>
           ))}
