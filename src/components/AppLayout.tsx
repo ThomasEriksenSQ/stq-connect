@@ -187,7 +187,7 @@ export function AppLayout() {
       </main>
 
       <Sheet open={aiOpen} onOpenChange={setAiOpen}>
-        <SheetContent className="sm:max-w-[420px] p-0">
+        <SheetContent className="sm:max-w-[420px] p-0" hideCloseButton>
           <AIChatPanel />
         </SheetContent>
       </Sheet>
