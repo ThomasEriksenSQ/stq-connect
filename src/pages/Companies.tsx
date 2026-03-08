@@ -7,8 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Search, ArrowUpDown, Loader2, X, MapPin, ChevronDown, Upload } from "lucide-react";
-import { ImportCompaniesModal } from "@/components/ImportCompaniesModal";
+import { Plus, Search, ArrowUpDown, Loader2, X, MapPin, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
