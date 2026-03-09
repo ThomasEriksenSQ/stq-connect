@@ -468,6 +468,17 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
         <DialogTitle className="text-[1.125rem] font-bold text-foreground mb-5">Ny forespørsel</DialogTitle>
 
         <div className="space-y-4">
+          {/* Mottatt dato */}
+          <div>
+            <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Mottatt</label>
+            <Input
+              type="date"
+              value={mottattDato}
+              onChange={(e) => setMottattDato(e.target.value)}
+              className="mt-1 text-[0.875rem] w-full"
+            />
+          </div>
+
           {/* Selskap */}
           <div>
             <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Selskap <span className="text-destructive">*</span></label>
