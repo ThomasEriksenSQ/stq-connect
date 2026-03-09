@@ -456,6 +456,11 @@ export function ForespørselSheet({
               showMatch ? "w-[320px] flex-shrink-0" : "flex-1"
             )}>
               <div className="space-y-5">
+                {/* Missing contact warning */}
+                {!row.kontakt_id && (
+                  <MissingContactBanner row={row} />
+                )}
+
                 {/* Info row */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
