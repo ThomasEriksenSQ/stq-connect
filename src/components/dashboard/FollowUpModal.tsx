@@ -173,7 +173,7 @@ const FollowUpModal = ({ open, onCancel, onClose, onSubmit, data, profiles }: Pr
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent
-        className="relative max-w-md rounded-xl p-6 gap-0"
+        className="max-w-md rounded-xl p-6 gap-0"
         hideCloseButton
         onInteractOutside={(e) => e.preventDefault()}
       >
