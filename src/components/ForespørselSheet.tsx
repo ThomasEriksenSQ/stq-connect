@@ -677,6 +677,12 @@ export function ForespørselSheet({
                                 >
                                   Avslag
                                 </button>
+                                <button
+                                  onClick={() => updateKonsulentStatus(k.id, "bortfalt")}
+                                  className="inline-flex items-center gap-1 h-7 px-3 text-[0.75rem] font-medium rounded-md border border-gray-300 text-gray-500 hover:bg-gray-50 transition-colors"
+                                >
+                                  Bortfalt
+                                </button>
                               </>
                             )}
                             {status === "intervju" && (
