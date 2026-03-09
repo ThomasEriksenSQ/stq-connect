@@ -448,6 +448,8 @@ export default function KonsulenterAnsatte() {
   const [filter, setFilter] = useState<Filter>("Aktiv");
   const [editAnsatt, setEditAnsatt] = useState<any | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [detailAnsatt, setDetailAnsatt] = useState<any | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const today = new Date();
 
   const { data: ansatte = [], isLoading } = useQuery({
