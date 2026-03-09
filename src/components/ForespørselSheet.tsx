@@ -967,20 +967,6 @@ Returner BARE arrayen, ingen annen tekst. Maks 8 tags. Bruk korte presise navn, 
       </div>
 
 
-      {/* Status */}
-      <div>
-        <label className={LABEL}>Status</label>
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="mt-1 w-full h-9 rounded-lg border border-border bg-background px-3 text-[0.875rem] text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          {["Ny", "Aktiv", "Tilbud sendt", "Vunnet", "Tapt", "Utgått"].map(s => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-      </div>
-
       {/* Avdeling — only if company has multiple locations */}
       {hasAvdelinger && (
         <div className="animate-in fade-in slide-in-from-top-1 duration-200">
