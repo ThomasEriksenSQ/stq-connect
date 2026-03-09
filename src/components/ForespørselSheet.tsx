@@ -325,6 +325,7 @@ export function ForespørselSheet({
         selskap_navn: selskapNavn || row.selskap_navn,
         selskap_id: selskapId || row.selskap_id,
         kontakt_id: kontaktId,
+        mottatt_dato: mottattDato || row.mottatt_dato,
         sted: sted || null,
         avdeling: avdeling || null,
         frist_dato: fristDato || null,
