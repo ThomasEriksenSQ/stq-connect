@@ -255,6 +255,7 @@ export function ForespørselSheet({
   // Sync form when entering edit mode
   useEffect(() => {
     if (editMode && row) {
+      setMottattDato(row.mottatt_dato || "");
       setSelskapNavn(row.selskap_navn || "");
       setSelskapId(row.selskap_id || null);
       setKontakt(row.contacts ? `${row.contacts.first_name} ${row.contacts.last_name}` : "");
