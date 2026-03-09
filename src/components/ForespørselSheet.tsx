@@ -171,6 +171,7 @@ export function ForespørselSheet({
   const [saving, setSaving] = useState(false);
 
   // Edit form state
+  const [mottattDato, setMottattDato] = useState("");
   const [sted, setSted] = useState("");
   const [avdeling, setAvdeling] = useState("");
   const [fristDato, setFristDato] = useState("");
