@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.match-foresporsler]
 verify_jwt = false
+
+[functions.markedsradar-analyse]
+verify_jwt = false

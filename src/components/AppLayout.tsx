@@ -1,6 +1,6 @@
 import { Outlet, NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
-import { Moon, Sun, LogOut, Building2, Users, LayoutDashboard, Sparkles, Briefcase, ChevronDown, Users2, TrendingUp, UserPlus, Upload } from "lucide-react";
+import { Moon, Sun, LogOut, Building2, Users, LayoutDashboard, Sparkles, Briefcase, ChevronDown, Users2, TrendingUp, UserPlus, Upload, Radar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -22,7 +22,7 @@ export function AppLayout() {
   const [aiOpen, setAiOpen] = useState(false);
   const [konsDropOpen, setKonsDropOpen] = useState(false);
   const konsRef = useRef<HTMLDivElement>(null);
-  const isKonsActive = location.pathname.startsWith("/konsulenter") || location.pathname.startsWith("/stacq");
+  const isKonsActive = location.pathname.startsWith("/konsulenter") || location.pathname.startsWith("/stacq") || location.pathname.startsWith("/markedsradar");
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -171,6 +171,21 @@ export function AppLayout() {
                   >
                     <Upload className="h-4 w-4 stroke-[1.5]" />
                     Importer CVer
+                  </RouterNavLink>
+                  <RouterNavLink
+                    to="/markedsradar"
+                    onClick={() => setKonsDropOpen(false)}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-3 px-4 py-2.5 text-[0.8125rem] font-medium transition-colors",
+                        isActive
+                          ? "bg-muted text-foreground"
+                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      )
+                    }
+                  >
+                    <Radar className="h-4 w-4 stroke-[1.5]" />
+                    Markedsradar
                   </RouterNavLink>
                 </div>
               )}
