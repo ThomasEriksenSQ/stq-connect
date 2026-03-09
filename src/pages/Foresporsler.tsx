@@ -281,6 +281,13 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
   const [companyResults, setCompanyResults] = useState<Array<{ id: string; name: string; city: string | null; status: string }>>([]);
   const [submitting, setSubmitting] = useState(false);
   const [sluttkunde, setSluttkunde] = useState("");
+  const [showCreateContact, setShowCreateContact] = useState(false);
+  const [newFirstName, setNewFirstName] = useState("");
+  const [newLastName, setNewLastName] = useState("");
+  const [newTitle, setNewTitle] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [creatingContact, setCreatingContact] = useState(false);
+  const [kontaktError, setKontaktError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -292,6 +299,8 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
       setAvdeling(""); setSted(""); setKontakt(""); setKontaktId(null);
       setKommentar(""); setTags([]); setTagInput("");
       setCompanyResults([]); setSluttkunde("");
+      setShowCreateContact(false); setNewFirstName(""); setNewLastName("");
+      setNewTitle(""); setNewEmail(""); setKontaktError(false);
     }
   }, [open]);
 
@@ -316,6 +325,8 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
     setKontaktId(null);
     setShowKontaktDropdown(false);
     setSluttkunde("");
+    setShowCreateContact(false);
+    setKontaktError(false);
     const locations = c.city ? c.city.split(",").map(l => l.trim()).filter(Boolean) : [];
     setSelectedLocations(locations);
     if (locations.length === 1) {
@@ -366,9 +377,39 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
     }
   };
 
+  const handleCreateContact = async () => {
+    if (!newFirstName.trim() || !newLastName.trim() || !selskapId || creatingContact) return;
+    setCreatingContact(true);
+    const { data, error } = await supabase.from("contacts").insert({
+      first_name: newFirstName.trim(),
+      last_name: newLastName.trim(),
+      title: newTitle.trim() || null,
+      email: newEmail.trim() || null,
+      company_id: selskapId,
+      created_by: user?.id,
+    }).select("id, first_name, last_name").single();
+    setCreatingContact(false);
+    if (error || !data) {
+      toast.error("Kunne ikke opprette kontakt");
+      return;
+    }
+    setKontakt(`${data.first_name} ${data.last_name}`);
+    setKontaktId(data.id);
+    setShowCreateContact(false);
+    setKontaktError(false);
+    queryClient.invalidateQueries({ queryKey: ["foresporsler-kontakter", selskapId] });
+    toast.success(`${data.first_name} ${data.last_name} opprettet`);
+  };
+
   const handleSubmit = async () => {
     if (!selskap.trim() || submitting) return;
+    if (!kontaktId) {
+      setKontaktError(true);
+      return;
+    }
     setSubmitting(true);
+
+    // 1. Insert forespørsel
     const { error } = await supabase.from("foresporsler").insert({
       selskap_navn: selskap,
       selskap_id: selskapId,
@@ -382,15 +423,36 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
       status: "Ny",
       created_by: user?.id,
     });
-    setSubmitting(false);
+
     if (error) {
+      setSubmitting(false);
       toast.error("Kunne ikke opprette forespørsel");
       return;
     }
-    toast.success("Forespørsel opprettet");
+
+    // 2. Auto-signal: insert "Behov nå" activity
+    await supabase.from("activities").insert({
+      type: "note",
+      subject: "Behov nå",
+      description: "[Behov nå]",
+      contact_id: kontaktId,
+      company_id: selskapId,
+      created_by: user?.id,
+    });
+
+    // 3. Update company category
+    if (selskapId) {
+      await supabase.from("companies").update({ category: "Behov nå" }).eq("id", selskapId);
+    }
+
+    setSubmitting(false);
+    const contactDisplayName = kontakt || "kontakten";
+    toast.success(`Forespørsel opprettet · 🔥 Behov nå satt på ${contactDisplayName}`);
     queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
     onClose();
   };
+
+  const canSubmit = selskap.trim() && kontaktId && !submitting;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
@@ -400,7 +462,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
         <div className="space-y-4">
           {/* Selskap */}
           <div>
-            <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Selskap</label>
+            <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Selskap <span className="text-destructive">*</span></label>
             <div className="relative mt-1">
               <Input
                 ref={inputRef}
@@ -489,9 +551,11 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
             />
           </div>
 
-          {/* Kontaktperson */}
+          {/* Kontaktperson — REQUIRED */}
           <div>
-            <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Kontaktperson</label>
+            <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Kontaktperson <span className="text-destructive">*</span>
+            </label>
             <div className="relative mt-1">
               {!selskapId ? (
                 <Input
@@ -499,6 +563,53 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
                   placeholder="Velg selskap først..."
                   className="text-[0.875rem] opacity-50 cursor-not-allowed"
                 />
+              ) : showCreateContact ? (
+                /* Inline create contact form */
+                <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
+                  <p className="text-[0.75rem] font-medium text-foreground">Ny kontakt for {selskap}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      value={newFirstName}
+                      onChange={(e) => setNewFirstName(e.target.value)}
+                      placeholder="Fornavn *"
+                      className="text-[0.8125rem] h-8"
+                      autoFocus
+                    />
+                    <Input
+                      value={newLastName}
+                      onChange={(e) => setNewLastName(e.target.value)}
+                      placeholder="Etternavn *"
+                      className="text-[0.8125rem] h-8"
+                    />
+                  </div>
+                  <Input
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    placeholder="Tittel (valgfritt)"
+                    className="text-[0.8125rem] h-8"
+                  />
+                  <Input
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="E-post (valgfritt)"
+                    className="text-[0.8125rem] h-8"
+                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleCreateContact}
+                      disabled={!newFirstName.trim() || !newLastName.trim() || creatingContact}
+                      className="inline-flex items-center gap-1 h-7 px-3 text-[0.75rem] font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-colors"
+                    >
+                      {creatingContact ? "Oppretter..." : "Opprett kontakt"}
+                    </button>
+                    <button
+                      onClick={() => setShowCreateContact(false)}
+                      className="text-[0.75rem] text-muted-foreground hover:text-foreground"
+                    >
+                      Avbryt
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <>
                   <div className="relative">
@@ -507,12 +618,13 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
                       onChange={(e) => {
                         setKontakt(e.target.value);
                         setKontaktId(null);
+                        setKontaktError(false);
                         setShowKontaktDropdown(true);
                       }}
                       onFocus={() => setShowKontaktDropdown(true)}
                       onBlur={() => setTimeout(() => setShowKontaktDropdown(false), 200)}
                       placeholder="Søk etter kontaktperson..."
-                      className="text-[0.875rem]"
+                      className={cn("text-[0.875rem]", kontaktError && "border-destructive")}
                     />
                     {kontaktId && (
                       <button
@@ -525,31 +637,48 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
                   </div>
                   {showKontaktDropdown && !kontaktId && (
                     <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-md max-h-[200px] overflow-y-auto">
-                      {filteredContacts.length === 0 ? (
-                        <p className="text-xs text-muted-foreground px-3 py-2.5 italic">
-                          Ingen kontakter registrert på dette selskapet
+                      {filteredContacts.map((c: any) => (
+                        <button
+                          key={c.id}
+                          onClick={() => {
+                            setKontakt(`${c.first_name} ${c.last_name}`);
+                            setKontaktId(c.id);
+                            setKontaktError(false);
+                            setShowKontaktDropdown(false);
+                          }}
+                          className="w-full text-left px-3 py-2.5 hover:bg-muted/50 cursor-pointer transition-colors"
+                        >
+                          <p className="text-[0.875rem] font-medium">{c.first_name} {c.last_name}</p>
+                          {c.title && <p className="text-xs text-muted-foreground">{c.title}</p>}
+                        </button>
+                      ))}
+                      {/* Create new contact option */}
+                      <button
+                        onClick={() => {
+                          setShowKontaktDropdown(false);
+                          setShowCreateContact(true);
+                          setNewFirstName("");
+                          setNewLastName("");
+                          setNewTitle("");
+                          setNewEmail("");
+                        }}
+                        className="w-full text-left px-3 py-2.5 hover:bg-muted/50 cursor-pointer transition-colors border-t border-border"
+                      >
+                        <p className="text-[0.8125rem] font-medium text-primary flex items-center gap-1">
+                          <Plus className="h-3.5 w-3.5" />
+                          Opprett ny kontakt for {selskap}
                         </p>
-                      ) : (
-                        filteredContacts.map((c: any) => (
-                          <button
-                            key={c.id}
-                            onClick={() => {
-                              setKontakt(`${c.first_name} ${c.last_name}`);
-                              setKontaktId(c.id);
-                              setShowKontaktDropdown(false);
-                            }}
-                            className="w-full text-left px-3 py-2.5 hover:bg-muted/50 cursor-pointer transition-colors"
-                          >
-                            <p className="text-[0.875rem] font-medium">{c.first_name} {c.last_name}</p>
-                            {c.title && <p className="text-xs text-muted-foreground">{c.title}</p>}
-                          </button>
-                        ))
-                      )}
+                      </button>
                     </div>
                   )}
                 </>
               )}
             </div>
+            {kontaktError && (
+              <p className="text-[0.75rem] text-destructive mt-1">
+                En forespørsel må alltid knyttes til en kontakt
+              </p>
+            )}
           </div>
 
           {/* Teknologier */}
@@ -604,10 +733,10 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
             Avbryt
           </button>
           <button
-            disabled={!selskap.trim() || submitting}
+            disabled={!canSubmit}
             onClick={handleSubmit}
             className={`inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg transition-colors ${
-              selskap.trim() && !submitting
+              canSubmit
                 ? "bg-primary text-primary-foreground hover:opacity-90"
                 : "bg-muted text-muted-foreground cursor-not-allowed"
             }`}
