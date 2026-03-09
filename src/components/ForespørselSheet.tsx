@@ -980,6 +980,17 @@ Returner BARE arrayen, ingen annen tekst. Maks 8 tags. Bruk korte presise navn, 
 
   return (
     <div className="space-y-4">
+      {/* Mottatt dato */}
+      <div>
+        <label className={LABEL}>Mottatt</label>
+        <Input
+          type="date"
+          value={mottattDato}
+          onChange={(e: any) => setMottattDato(e.target.value)}
+          className="mt-1 text-[0.875rem] w-full"
+        />
+      </div>
+
       {/* Selskap */}
       <div>
         <label className={LABEL}>Selskap</label>
