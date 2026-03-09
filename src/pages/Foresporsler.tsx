@@ -799,6 +799,7 @@ export default function Foresporsler() {
       )}
 
       <NyForesporselModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <ImportForesporslerModal open={importOpen} onOpenChange={setImportOpen} />
 
       {/* Detail/Edit Sheet */}
       <Sheet open={!!selectedRow} onOpenChange={(o) => { if (!o) { setSelectedRowId(null); setSheetExpanded(false); } }}>
