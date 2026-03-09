@@ -649,6 +649,20 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
               </div>
             </div>
 
+            {/* Oppdragsmatch — only in edit mode */}
+            {!isCreate && form.teknologier.length > 0 && (
+              <div className="pt-2 border-t border-border">
+                <OppdragsMatchPanel
+                  konsulent={{
+                    navn: form.navn,
+                    teknologier: form.teknologier,
+                    cv_tekst: form.cv_tekst || null,
+                    ekstern_id: editRow?.id,
+                  }}
+                />
+              </div>
+            )}
+
             {/* Tilgjengelig fra */}
             <div>
               <label className={LABEL}>Tilgjengelig fra</label>
