@@ -921,7 +921,8 @@ export function ForespørselSheet({
 
 function EditMode(props: any) {
   const {
-    row, selskapNavn, setSelskapNavn, setSelskapId, setShowSelskapDropdown,
+    row, mottattDato, setMottattDato,
+    selskapNavn, setSelskapNavn, setSelskapId, setShowSelskapDropdown,
     showSelskapDropdown, companyResults, searchCompanies, selectCompany,
     isPartner, sluttkunde, setSluttkunde, sted, setSted, selskapId,
     kontakt, setKontakt, kontaktId, setKontaktId, showKontaktDropdown,
