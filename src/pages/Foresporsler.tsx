@@ -99,6 +99,58 @@ function TypeBadge({ type }: { type: string | null }) {
   return <span className="text-[0.8125rem] text-muted-foreground">—</span>;
 }
 
+/* ─── Pipeline config ─── */
+
+const PIPELINE: Record<string, { label: string; dot: string; badge: string; step: number | null }> = {
+  sendt_cv: { label: "Sendt CV", dot: "bg-amber-400", badge: "bg-amber-50 text-amber-700 border-amber-200", step: 1 },
+  intervju: { label: "Intervju", dot: "bg-blue-500", badge: "bg-blue-50 text-blue-700 border-blue-200", step: 2 },
+  vunnet:   { label: "Vunnet 🎉", dot: "bg-green-500", badge: "bg-green-50 text-green-700 border-green-200", step: 3 },
+  avslag:   { label: "Avslag", dot: "bg-red-400", badge: "bg-red-50 text-red-600 border-red-200", step: null },
+};
+
+const PIPELINE_BORDER: Record<string, string> = {
+  sendt_cv: "border-l-amber-400",
+  intervju: "border-l-blue-500",
+  vunnet: "border-l-green-500",
+  avslag: "border-l-red-400",
+};
+
+function PipelineTrack({ status }: { status: string }) {
+  const steps = [1, 2, 3]; // sendt_cv, intervju, vunnet
+  const cfg = PIPELINE[status] || PIPELINE.sendt_cv;
+  const currentStep = cfg.step;
+  const isAvslag = status === "avslag";
+
+  // For avslag: find which step was the last before avslag (default sendt_cv = step 1)
+  return (
+    <div className="flex items-center gap-0">
+      {steps.map((step, i) => {
+        let filled = false;
+        let color = "bg-muted-foreground/30";
+
+        if (isAvslag) {
+          // First node filled amber (was at sendt_cv), rest gray, last filled = red
+          if (step === 1) { filled = true; color = "bg-red-400"; }
+        } else if (currentStep !== null) {
+          if (step <= currentStep) {
+            filled = true;
+            color = step === currentStep ? cfg.dot : PIPELINE[step === 1 ? "sendt_cv" : step === 2 ? "intervju" : "vunnet"].dot;
+          }
+        }
+
+        return (
+          <div key={step} className="flex items-center">
+            {i > 0 && (
+              <div className={cn("w-3 h-[2px]", filled ? color : "bg-muted-foreground/20")} />
+            )}
+            <div className={cn("h-2 w-2 rounded-full", filled ? color : "bg-muted-foreground/20")} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max) + "…" : s;
 }
