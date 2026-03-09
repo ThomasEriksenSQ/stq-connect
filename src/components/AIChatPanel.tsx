@@ -856,6 +856,49 @@ Returner BARE JSON, ingen annen tekst.`,
           </div>
         )}
 
+        {/* ── Mode: Oppdragsmatch */}
+        {mode === "oppdragsmatch" && (
+          <div className="space-y-3 p-4 rounded-xl border border-border bg-muted/40">
+            <div className="flex items-center justify-between">
+              <p className="text-[0.875rem] font-semibold">🎯 Match til oppdrag</p>
+              <button onClick={() => setMode(null)} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+            </div>
+            <p className="text-[0.8125rem] text-muted-foreground">Søk etter en konsulent (ansatt eller ekstern) for å finne passende forespørsler.</p>
+            <div className="relative">
+              <Input
+                value={omSearch}
+                onChange={(e) => { setOmSearch(e.target.value); searchOmConsultants(e.target.value); }}
+                placeholder="Søk konsulent..."
+                className="text-[0.875rem]"
+              />
+              {omResults.length > 0 && (
+                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-md max-h-48 overflow-auto">
+                  {omResults.map((r: any) => (
+                    <button
+                      key={`${r._type}-${r.id}`}
+                      onClick={() => handleOmMatch(r)}
+                      className="w-full text-left px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors flex items-center gap-2"
+                    >
+                      <span className="font-medium">{r.navn}</span>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold ${
+                        r._type === "intern" ? "bg-foreground text-background" : "bg-blue-100 text-blue-700"
+                      }`}>
+                        {r._type === "intern" ? "Ansatt" : "Ekstern"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {omMatching && (
+              <p className="text-[0.8125rem] text-primary font-medium flex items-center gap-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Analyserer match for {omSelected?.navn}...
+              </p>
+            )}
+          </div>
+        )}
+
         {/* ── Mode: CV Upload */}
         {mode === "cv-upload" && (
           <CvUploadFlow
