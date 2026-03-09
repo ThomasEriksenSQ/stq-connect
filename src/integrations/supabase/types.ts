@@ -355,6 +355,51 @@ export type Database = {
           },
         ]
       }
+      finn_annonser: {
+        Row: {
+          created_at: string | null
+          dato: string
+          id: string
+          kontakt_epost: string | null
+          kontakt_telefon: string | null
+          kontaktnavn: string | null
+          lenke: string | null
+          lokasjon: string | null
+          selskap: string | null
+          stillingsrolle: string | null
+          teknologier: string | null
+          uke: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          dato: string
+          id?: string
+          kontakt_epost?: string | null
+          kontakt_telefon?: string | null
+          kontaktnavn?: string | null
+          lenke?: string | null
+          lokasjon?: string | null
+          selskap?: string | null
+          stillingsrolle?: string | null
+          teknologier?: string | null
+          uke?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          dato?: string
+          id?: string
+          kontakt_epost?: string | null
+          kontakt_telefon?: string | null
+          kontaktnavn?: string | null
+          lenke?: string | null
+          lokasjon?: string | null
+          selskap?: string | null
+          stillingsrolle?: string | null
+          teknologier?: string | null
+          uke?: string | null
+        }
+        Relationships: []
+      }
       foresporsler: {
         Row: {
           avdeling: string | null
