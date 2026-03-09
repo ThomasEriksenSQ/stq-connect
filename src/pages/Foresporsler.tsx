@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Plus, X, ArrowUpDown, Pencil, Trash2, Sparkles, Loader2, ChevronDown, Check, FileUp } from "lucide-react";
+import { Plus, X, ArrowUpDown, Pencil, Trash2, Sparkles, Loader2, ChevronDown, Check, FileUp, ClipboardList, UserX, Users, Trophy } from "lucide-react";
 import { ImportForesporslerModal } from "@/components/ImportForesporslerModal";
 import { ForespørselSheet } from "@/components/ForespørselSheet";
 import { relativeDate, fullDate } from "@/lib/relativeDate";
@@ -830,6 +830,25 @@ export default function Foresporsler() {
     </button>
   );
 
+  const stats = useMemo(() => {
+    if (!rows) return { aktive: 0, utenKonsulent: 0, iProsess: 0, vunnet: 0 };
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 45);
+
+    const aktive = rows.filter((r: any) => new Date(r.mottatt_dato) >= cutoff);
+    const utenKonsulent = aktive.filter((r: any) => !r.foresporsler_konsulenter || r.foresporsler_konsulenter.length === 0).length;
+
+    const allKonsulenter = aktive.flatMap((r: any) => r.foresporsler_konsulenter || []);
+    const iProsess = allKonsulenter.filter((k: any) => k.status === "sendt_cv" || k.status === "intervju").length;
+
+    const allKonsulenterAll = rows.flatMap((r: any) => r.foresporsler_konsulenter || []);
+    const vunnet = allKonsulenterAll.filter((k: any) =>
+      k.status === "vunnet" && k.status_updated_at && new Date(k.status_updated_at) >= cutoff
+    ).length;
+
+    return { aktive: aktive.length, utenKonsulent, iProsess, vunnet };
+  }, [rows]);
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -855,6 +874,30 @@ export default function Foresporsler() {
             <Plus className="h-4 w-4" />
             Ny forespørsel
           </button>
+        </div>
+      </div>
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-100 rounded-xl px-5 py-4 shadow-sm">
+          <ClipboardList className="h-4 w-4 text-blue-600 mb-1" />
+          <p className="text-2xl font-bold text-blue-600">{stats.aktive}</p>
+          <p className="text-[0.8125rem] text-muted-foreground">Aktive forespørsler</p>
+        </div>
+        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 rounded-xl px-5 py-4 shadow-sm">
+          <UserX className="h-4 w-4 text-amber-600 mb-1" />
+          <p className="text-2xl font-bold text-amber-600">{stats.utenKonsulent}</p>
+          <p className="text-[0.8125rem] text-muted-foreground">Uten konsulent</p>
+        </div>
+        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-100 rounded-xl px-5 py-4 shadow-sm">
+          <Users className="h-4 w-4 text-blue-600 mb-1" />
+          <p className="text-2xl font-bold text-blue-600">{stats.iProsess}</p>
+          <p className="text-[0.8125rem] text-muted-foreground">I prosess</p>
+        </div>
+        <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 rounded-xl px-5 py-4 shadow-sm">
+          <Trophy className="h-4 w-4 text-emerald-600 mb-1" />
+          <p className="text-2xl font-bold text-emerald-600">{stats.vunnet}</p>
+          <p className="text-[0.8125rem] text-muted-foreground">Vunnet (siste 45d)</p>
         </div>
       </div>
 
