@@ -271,6 +271,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  const [mottattDato, setMottattDato] = useState(format(new Date(), "yyyy-MM-dd"));
   const [selskap, setSelskap] = useState("");
   const [selskapId, setSelskapId] = useState<string | null>(null);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
@@ -300,6 +301,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
 
   useEffect(() => {
     if (open) {
+      setMottattDato(format(new Date(), "yyyy-MM-dd"));
       setSelskap(""); setSelskapId(null); setSelectedLocations([]);
       setAvdeling(""); setSted(""); setKontakt(""); setKontaktId(null);
       setKommentar(""); setTags([]); setTagInput("");
