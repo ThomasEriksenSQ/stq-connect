@@ -22,7 +22,7 @@ export function AppLayout() {
   const [aiOpen, setAiOpen] = useState(false);
   const [konsDropOpen, setKonsDropOpen] = useState(false);
   const konsRef = useRef<HTMLDivElement>(null);
-  const isKonsActive = location.pathname.startsWith("/konsulenter") || location.pathname.starts || location.pathname.startsWith("/markedsradar")With("/ || location.pathname.startsWith("/markedsradar")stacq");
+  const isKonsActive = location.pathname.startsWith("/konsulenter") || location.pathname.startsWith("/stacq") || location.pathname.startsWith("/markedsradar");
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {

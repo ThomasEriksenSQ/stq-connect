@@ -124,6 +124,14 @@ const App = () => (
                     </Suspense>
                   }
                 />
+                <Route
+                  path="markedsradar"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <Markedsradar />
+                    </Suspense>
+                  }
+                />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
