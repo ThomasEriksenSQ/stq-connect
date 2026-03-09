@@ -263,102 +263,159 @@ function UkjentPotensialSection() {
 }
 
 // ── Markedsradar section ──
+interface StaleAd { selskap: string; antall_uker: number; antall_annonser: number; roller: string; inCRM: boolean; companyId?: string }
+interface NewThisWeek { selskap: string; stillingsrolle: string | null; teknologier: string | null; lenke: string | null }
+interface SignalCandidate { selskap: string; companyId: string; crmName: string; finnCount: number; category: string }
+
 function MarkedsradarSection() {
   const [ready, setReady] = useState(false);
-  const [aiText, setAiText] = useState<string | null>(null);
-  const [topTechs, setTopTechs] = useState<{ name: string; count: number }[]>([]);
-  const [topCompanies, setTopCompanies] = useState<string[]>([]);
-  const [techPuls, setTechPuls] = useState<{ name: string; count: number; trend: "up" | "down" | "same" }[]>([]);
-  const [techPulsTotal, setTechPulsTotal] = useState(0);
+  const [marketSentence, setMarketSentence] = useState<string | null>(null);
+  const [staleAds, setStaleAds] = useState<StaleAd[]>([]);
+  const [newThisWeek, setNewThisWeek] = useState<NewThisWeek[]>([]);
+  const [techSpike, setTechSpike] = useState<{ name: string; thisWeek: number; lastWeek: number; delta: number } | null>(null);
+  const [signalCandidates, setSignalCandidates] = useState<SignalCandidate[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     (async () => {
       try {
         const now = new Date();
-        const d90 = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-        const d30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        const currentWeek = `${getISOWeekYear(now)}-W${String(getISOWeek(now)).padStart(2, "0")}`;
+        const prevWeekDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const prevWeek = `${getISOWeekYear(prevWeekDate)}-W${String(getISOWeek(prevWeekDate)).padStart(2, "0")}`;
         const d60 = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
         const d21 = new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-        const [trendRes, hotRes, last30Res, prev30Res] = await Promise.all([
-          supabase.from("finn_annonser").select("teknologier").gte("dato", d90),
-          supabase.from("finn_annonser").select("selskap").gte("dato", d21),
-          supabase.from("finn_annonser").select("teknologier, dato").gte("dato", d30),
-          supabase.from("finn_annonser").select("teknologier, dato").gte("dato", d60).lt("dato", d30),
+        const [finnRes, companiesRes, thisWeekRes, lastWeekRes] = await Promise.all([
+          supabase.from("finn_annonser").select("selskap, dato, uke, stillingsrolle, teknologier, lenke").gte("dato", d60),
+          supabase.from("companies").select("id, name, category"),
+          supabase.from("finn_annonser").select("teknologier").eq("uke", currentWeek),
+          supabase.from("finn_annonser").select("teknologier").eq("uke", prevWeek),
         ]);
 
-        const trendRows = trendRes.data ?? [];
-        const hotRows = hotRes.data ?? [];
-        const last30Rows = last30Res.data ?? [];
-        const prev30Rows = prev30Res.data ?? [];
+        const finnRows = finnRes.data ?? [];
+        const companies = companiesRes.data ?? [];
+        const thisWeekRows = thisWeekRes.data ?? [];
+        const lastWeekRows = lastWeekRes.data ?? [];
 
-        if (trendRows.length === 0 && hotRows.length === 0) return;
+        if (finnRows.length === 0) return;
 
-        // 90-day tech counts for Varmest
-        const tc: Record<string, number> = {};
-        for (const r of trendRows) {
-          if (!r.teknologier) continue;
-          for (const kw of TECH_KEYWORDS) {
-            if (matchTech(r.teknologier, kw)) tc[kw] = (tc[kw] || 0) + 1;
+        // 6. STALE ADS — companies appearing 3+ weeks
+        const bySelskap = new Map<string, { uker: Set<string>; count: number; roller: Set<string> }>();
+        for (const r of finnRows) {
+          if (!r.selskap || !r.uke) continue;
+          const s = r.selskap.trim();
+          const entry = bySelskap.get(s) || { uker: new Set(), count: 0, roller: new Set() };
+          entry.uker.add(r.uke);
+          entry.count++;
+          if (r.stillingsrolle) entry.roller.add(r.stillingsrolle);
+          bySelskap.set(s, entry);
+        }
+        const staleResults: StaleAd[] = [];
+        for (const [selskap, info] of bySelskap) {
+          if (info.uker.size >= 3) {
+            const matched = companies.find(c => companiesMatch(selskap, c.name));
+            staleResults.push({
+              selskap,
+              antall_uker: info.uker.size,
+              antall_annonser: info.count,
+              roller: [...info.roller].join(" / "),
+              inCRM: !!matched,
+              companyId: matched?.id,
+            });
           }
         }
-        const sortedTechs = Object.entries(tc).sort((a, b) => b[1] - a[1]);
-        setTopTechs(sortedTechs.slice(0, 3).map(([name, count]) => ({ name, count })));
+        staleResults.sort((a, b) => b.antall_uker - a.antall_uker);
+        setStaleAds(staleResults.slice(0, 5));
 
-        // Teknologipuls: last 30 vs prev 30
-        const tc30: Record<string, number> = {};
-        for (const r of last30Rows) {
-          if (!r.teknologier) continue;
-          for (const kw of TECH_KEYWORDS) {
-            if (matchTech(r.teknologier, kw)) tc30[kw] = (tc30[kw] || 0) + 1;
+        // 7. NEW THIS WEEK — not in CRM
+        const thisWeekAds = finnRows.filter(r => r.uke === currentWeek && r.selskap);
+        const uniqueNew = new Map<string, NewThisWeek>();
+        for (const r of thisWeekAds) {
+          const s = r.selskap!.trim();
+          if (!companies.some(c => companiesMatch(s, c.name)) && !uniqueNew.has(normalizeCompanyName(s))) {
+            uniqueNew.set(normalizeCompanyName(s), { selskap: s, stillingsrolle: r.stillingsrolle, teknologier: r.teknologier, lenke: r.lenke });
           }
         }
-        const tcPrev: Record<string, number> = {};
-        for (const r of prev30Rows) {
-          if (!r.teknologier) continue;
-          for (const kw of TECH_KEYWORDS) {
-            if (matchTech(r.teknologier, kw)) tcPrev[kw] = (tcPrev[kw] || 0) + 1;
-          }
-        }
-        const pulsEntries = Object.entries(tc30)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 5)
-          .map(([name, count]) => {
-            const prev = tcPrev[name] || 0;
-            const trend: "up" | "down" | "same" = count > prev ? "up" : count < prev ? "down" : "same";
-            return { name, count, trend };
-          });
-        setTechPuls(pulsEntries);
-        setTechPulsTotal(last30Rows.length);
+        setNewThisWeek([...uniqueNew.values()]);
 
-        const cc: Record<string, number> = {};
-        for (const r of hotRows) {
-          if (r.selskap) {
-            const s = r.selskap.trim();
-            cc[s] = (cc[s] || 0) + 1;
+        // 8. TECH SPIKE
+        const SPIKE_TECHS = ["C++", "Rust", "Zephyr", "Yocto", "FreeRTOS", "FPGA"];
+        const countTech = (rows: typeof thisWeekRows) => {
+          const counts: Record<string, number> = {};
+          for (const r of rows) {
+            if (!r.teknologier) continue;
+            for (const kw of SPIKE_TECHS) {
+              if (matchTech(r.teknologier, kw)) counts[kw] = (counts[kw] || 0) + 1;
+            }
+          }
+          return counts;
+        };
+        const twCounts = countTech(thisWeekRows);
+        const lwCounts = countTech(lastWeekRows);
+        let bestSpike: typeof techSpike = null;
+        for (const tech of SPIKE_TECHS) {
+          const tw = twCounts[tech] || 0;
+          const lw = lwCounts[tech] || 0;
+          const delta = tw - lw;
+          if (delta > 0 && (!bestSpike || delta > bestSpike.delta)) {
+            bestSpike = { name: tech, thisWeek: tw, lastWeek: lw, delta };
           }
         }
-        const sortedCompanies = Object.entries(cc).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n]) => n);
-        setTopCompanies(sortedCompanies);
+        setTechSpike(bestSpike);
+
+        // 9. CRM SIGNAL UPGRADE CANDIDATES
+        const upgradeCategories = ["Ukjent om behov", "Aldri aktuelt", "Har kanskje behov"];
+        const recentFinn = finnRows.filter(r => r.dato >= d21 && r.selskap);
+        const candidateMap = new Map<string, { selskap: string; companyId: string; crmName: string; finnCount: number; category: string }>();
+        for (const r of recentFinn) {
+          const s = r.selskap!.trim();
+          for (const c of companies) {
+            if (c.category && upgradeCategories.includes(c.category) && companiesMatch(s, c.name)) {
+              const key = c.id;
+              const existing = candidateMap.get(key);
+              if (existing) {
+                existing.finnCount++;
+              } else {
+                candidateMap.set(key, { selskap: s, companyId: c.id, crmName: c.name, finnCount: 1, category: c.category });
+              }
+            }
+          }
+        }
+        const candidates = [...candidateMap.values()].filter(c => c.finnCount >= 2).sort((a, b) => b.finnCount - a.finnCount).slice(0, 5);
+        setSignalCandidates(candidates);
+
+        const hasAnyRow = staleResults.length > 0 || uniqueNew.size > 0 || bestSpike || candidates.length > 0;
+        if (!hasAnyRow) return;
 
         setReady(true);
 
-        const techStr = sortedTechs.map(([k, v]) => `${k}: ${v}`).join(", ");
-        const techStr30d = Object.entries(tc30).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}:${v}`).join(", ");
-        const compStr = Object.entries(cc).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => `${k}: ${v}`).join(", ");
-
+        // AI call for market sentence
         try {
+          const staleStr = staleResults.slice(0, 5).map(s => `${s.selskap} (${s.antall_uker} uker, ${s.roller})`).join(", ");
+          const newStr = [...uniqueNew.values()].slice(0, 5).map(r => r.selskap).join(", ");
+          const spikeStr = bestSpike ? `${bestSpike.name} +${bestSpike.delta} annonser fra forrige uke` : "ingen spike";
+          const candStr = candidates.map(s => `${s.crmName} (${s.finnCount} annonser, nå: ${s.category})`).join(", ");
+
           const { data } = await supabase.functions.invoke("markedsradar-analyse", {
             body: {
-              currentWeek: "",
+              currentWeek,
               thisWeekRows: "",
-              techCounts: `${techStr}\nTeknologifordeling siste 30 dager: ${techStr30d}\nSammenlign med forrige 30-dager periode og noter hvilke vokser.`,
-              topCompanies: compStr,
+              techCounts: `Selskaper som sliter med rekruttering (3+ uker): ${staleStr}\nNye selskaper ikke i CRM: ${newStr}\nTeknologi-spike: ${spikeStr}\nCRM-signal kandidater: ${candStr}\nAvslutt med én setning merket 'MARKED:' om det viktigste markedssignalet (maks 15 ord).`,
+              topCompanies: "",
               notInCRM: "",
               brief: true,
             },
           });
-          if (data?.analysis) setAiText(data.analysis);
+          if (data?.analysis) {
+            const text = data.analysis as string;
+            const markedMatch = text.match(/MARKED:\s*(.+)/i);
+            if (markedMatch) {
+              setMarketSentence(markedMatch[1].trim());
+            } else {
+              setMarketSentence(text.split("\n")[0].trim());
+            }
+          }
         } catch {
           // fail silently
         }
@@ -370,74 +427,132 @@ function MarkedsradarSection() {
 
   if (!ready) return null;
 
-  const trendChipClass = (trend: "up" | "down" | "same") => {
-    if (trend === "up") return "bg-emerald-100 text-emerald-800 border-emerald-200";
-    if (trend === "down") return "bg-muted text-muted-foreground border-border";
-    return "bg-secondary text-secondary-foreground border-border";
-  };
+  const topStale = staleAds[0];
+  const spikePercent = techSpike && techSpike.lastWeek > 0
+    ? Math.round(((techSpike.thisWeek - techSpike.lastWeek) / techSpike.lastWeek) * 100)
+    : null;
+  const topCandidate = signalCandidates[0];
 
   return (
-    <>
+    <TooltipProvider>
       <div className="border-t border-border my-3" />
       <div className="space-y-2.5">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Radio className="h-4 w-4 text-primary" />
-            <span className="text-[0.875rem] font-semibold text-foreground">Markedsradar</span>
+            <span className="text-[0.875rem] font-semibold text-foreground">📡 Markedsradar</span>
           </div>
           <Link to="/markedsradar" className="text-[0.75rem] text-primary hover:underline">
-            Se mer →
+            Se full radar →
           </Link>
         </div>
 
-        {aiText && (
-          <p className="text-[0.8125rem] leading-relaxed text-foreground/70">{aiText}</p>
+        {/* AI market sentence */}
+        {marketSentence && (
+          <p className="text-[0.8125rem] italic text-muted-foreground">{marketSentence}</p>
         )}
 
-        {topTechs.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[0.75rem] text-muted-foreground font-medium">Varmest:</span>
-            {topTechs.map((t) => (
-              <span
-                key={t.name}
-                className={`inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold ${TECH_COLORS[t.name] || "bg-secondary text-secondary-foreground"}`}
-              >
-                {t.name}
-              </span>
-            ))}
+        {/* ROW A: Sliter med rekruttering */}
+        {topStale && (
+          <div className="flex items-start justify-between gap-2 py-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="min-w-0 flex-1 cursor-default">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[0.8125rem]">🔥</span>
+                    <span className="text-[0.75rem] font-medium text-muted-foreground">Sliter med rekruttering</span>
+                  </div>
+                  <p className="text-[0.8125rem] text-foreground mt-0.5">
+                    <span className="font-semibold">{topStale.selskap}</span> har søkt {topStale.roller || "stilling"} i <span className="font-semibold">{topStale.antall_uker} uker</span> — ring nå
+                  </p>
+                </div>
+              </TooltipTrigger>
+              {staleAds.length > 1 && (
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <div className="text-[0.75rem] space-y-1">
+                    {staleAds.map(s => (
+                      <div key={s.selskap}>{s.selskap} — {s.antall_uker} uker, {s.roller}</div>
+                    ))}
+                  </div>
+                </TooltipContent>
+              )}
+            </Tooltip>
+            <div className="flex-shrink-0 mt-1">
+              {topStale.inCRM && topStale.companyId ? (
+                <button
+                  onClick={() => navigate(`/selskaper/${topStale.companyId}`)}
+                  className="text-[0.75rem] text-primary hover:underline flex items-center gap-1"
+                >
+                  <Phone className="h-3 w-3" /> Ring →
+                </button>
+              ) : (
+                <Link to="/markedsradar" className="text-[0.75rem] text-primary hover:underline flex items-center gap-1">
+                  <PlusCircle className="h-3 w-3" /> Legg til CRM
+                </Link>
+              )}
+            </div>
           </div>
         )}
 
-        {/* ROW E: Teknologipuls */}
-        {techPuls.length > 0 && (
-          <div className="space-y-1.5">
-            <span className="text-[0.75rem] text-muted-foreground font-medium">🔧 Teknologipuls</span>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {techPuls.map((t) => (
-                <span
-                  key={t.name}
-                  className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold ${trendChipClass(t.trend)}`}
-                >
-                  {t.name} · {t.count}
-                </span>
-              ))}
+        {/* ROW B: Nye denne uken */}
+        {newThisWeek.length > 0 && (
+          <div className="flex items-start justify-between gap-2 py-1">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[0.8125rem]">🆕</span>
+                <span className="text-[0.75rem] font-medium text-muted-foreground">Nye denne uken</span>
+              </div>
+              <p className="text-[0.8125rem] text-foreground mt-0.5">
+                <span className="font-semibold">{newThisWeek.length}</span> nye selskaper på Finn ikke i CRM
+              </p>
+              <p className="text-[0.75rem] text-muted-foreground mt-0.5">
+                {newThisWeek.slice(0, 2).map(r => r.selskap).join(" · ")}
+                {newThisWeek.length > 2 && ` +${newThisWeek.length - 2} til`}
+              </p>
             </div>
-            <p className="text-[0.6875rem] text-muted-foreground">
-              Basert på siste 30 dager · {techPulsTotal} annonser
+            <Link to="/markedsradar" className="text-[0.75rem] text-primary hover:underline flex-shrink-0 mt-1">
+              Se i radar →
+            </Link>
+          </div>
+        )}
+
+        {/* ROW C: Teknologi-spike */}
+        {techSpike && techSpike.delta > 0 && (
+          <div className="py-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[0.8125rem]">📈</span>
+              <span className="text-[0.75rem] font-medium text-muted-foreground">Teknologi-spike</span>
+            </div>
+            <p className="text-[0.8125rem] text-foreground mt-0.5">
+              <span className="font-semibold">{techSpike.name}</span>
+              {spikePercent !== null ? ` +${spikePercent}%` : ` +${techSpike.delta}`} fra forrige uke ({techSpike.lastWeek} → {techSpike.thisWeek} annonser)
             </p>
           </div>
         )}
 
-        {topCompanies.length > 0 && (
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[0.75rem] text-muted-foreground font-medium">Aktive:</span>
-            <span className="text-[0.8125rem] text-foreground">
-              {topCompanies.join(" · ")}
-            </span>
+        {/* ROW D: Oppgrader CRM-signal */}
+        {topCandidate && (
+          <div className="flex items-start justify-between gap-2 py-1">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[0.8125rem]">⚡</span>
+                <span className="text-[0.75rem] font-medium text-muted-foreground">Oppgrader CRM-signal</span>
+              </div>
+              <p className="text-[0.8125rem] text-foreground mt-0.5">
+                <span className="font-semibold">{topCandidate.crmName}</span> har {topCandidate.finnCount} Finn-annonser men er markert «{topCandidate.category}» i CRM
+              </p>
+            </div>
+            <button
+              onClick={() => navigate(`/selskaper/${topCandidate.companyId}`)}
+              className="text-[0.75rem] text-primary hover:underline flex-shrink-0 mt-1"
+            >
+              Oppdater signal →
+            </button>
           </div>
         )}
       </div>
-    </>
+    </TooltipProvider>
   );
 }
 
