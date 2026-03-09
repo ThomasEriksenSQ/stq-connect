@@ -539,37 +539,18 @@ const Companies = () => {
                       <p className="text-[0.6875rem] text-muted-foreground truncate mt-0.5">{company.industry}</p>
                     )}
                   </div>
-                  {/* SIGNAL - inline editable */}
-                  <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        {(() => {
-                          const signalBadge = getSignalBadge(company.signal || null);
-                          return signalBadge ? (
-                            <button className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer ${signalBadge.color}`}>
-                              {company.signal}
-                              <ChevronDown className="h-3 w-3 ml-1" />
-                            </button>
-                          ) : (
-                            <button className="inline-flex items-center rounded-full border border-dashed border-border px-2 py-0.5 text-[0.6875rem] text-muted-foreground/50 cursor-pointer hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors">
-                              + Signal
-                            </button>
-                          );
-                        })()}
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        {SIGNAL_OPTIONS.map(s => (
-                          <DropdownMenuItem
-                            key={s.label}
-                            onClick={() => setSignalMutation.mutate({ companyId: company.id, label: s.label })}
-                          >
-                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${s.color}`}>
-                              {s.label}
-                            </span>
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                  {/* SIGNAL - read-only badge */}
+                  <div className="min-w-0">
+                    {(() => {
+                      const signalBadge = getSignalBadge(company.signal || null);
+                      return signalBadge ? (
+                        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${signalBadge.color}`}>
+                          {signalBadge.label}
+                        </span>
+                      ) : (
+                        <span className="text-[0.75rem] text-muted-foreground">—</span>
+                      );
+                    })()}
                   </div>
                   {/* TYPE - inline editable */}
                   <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
