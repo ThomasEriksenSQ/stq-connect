@@ -498,10 +498,10 @@ export function ForespørselSheet({
                   </div>
                 )}
 
-                {/* ─── Sendt inn ─── */}
+                {/* ─── Sendt inn (pipeline) ─── */}
                 <div>
-                  <p className={`${LABEL} mb-2`}>Sendt inn</p>
-                  <div className="space-y-1.5 mb-3">
+                  <p className={`${LABEL} mb-2`}>Sendt inn ({linkedKonsulenter.length})</p>
+                  <div className="space-y-2 mb-3">
                     {linkedKonsulenter.length === 0 && (
                       <p className="text-[0.8125rem] text-muted-foreground">
                         Ingen konsulenter sendt inn ennå
@@ -511,39 +511,94 @@ export function ForespørselSheet({
                       const isIntern = k.konsulent_type === "intern";
                       const navn = isIntern ? k.stacq_ansatte?.navn : k.external_consultants?.navn;
                       const eksterntType = k.external_consultants?.type;
+                      const status = k.status || "sendt_cv";
+                      const cfg = PIPELINE_CONFIG[status] || PIPELINE_CONFIG.sendt_cv;
+                      const borderColor = PIPELINE_BORDER_MAP[status] || PIPELINE_BORDER_MAP.sendt_cv;
+                      const isTerminal = status === "vunnet" || status === "avslag";
+                      const statusAge = k.status_updated_at ? relativeTime(k.status_updated_at) : "";
+
                       return (
-                        <div key={k.id} className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2">
-                          <div className="flex items-center gap-2">
-                            <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[0.6875rem] font-semibold text-primary">
-                              {getInitials(navn || "")}
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-[0.875rem] font-medium">
-                                  {navn || "Ukjent"}
-                                </span>
-                                <span className={cn(
-                                  "inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold",
-                                  isIntern
-                                    ? "bg-foreground text-background"
-                                    : "bg-blue-100 text-blue-700"
-                                )}>
-                                  {isIntern ? "Ansatt" : eksterntType === "via_partner" ? "Partner" : "Freelance"}
-                                </span>
-                              </div>
-                              {k.created_at && (
-                                <span className="text-[0.6875rem] text-muted-foreground">
-                                  lagt til {relativeTime(k.created_at)}
-                                </span>
-                              )}
-                            </div>
-                          </div>
+                        <div
+                          key={k.id}
+                          className={cn(
+                            "rounded-lg border border-border bg-card px-3 py-2.5 border-l-4 relative transition-colors",
+                            borderColor,
+                            k._flash && "bg-green-50"
+                          )}
+                        >
+                          {/* Remove button */}
                           <button
                             onClick={() => handleRemoveKonsulent(k.id)}
-                            className="text-muted-foreground hover:text-destructive transition-colors"
+                            className="absolute top-2 right-2 text-muted-foreground hover:text-destructive transition-colors"
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
+
+                          {/* Top line: dot + name + type badge */}
+                          <div className="flex items-center gap-2 pr-6">
+                            <span className={cn("h-2.5 w-2.5 rounded-full shrink-0", cfg.dot)} />
+                            <span className="text-[0.875rem] font-medium text-foreground">{navn || "Ukjent"}</span>
+                            <span className={cn(
+                              "inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold",
+                              isIntern ? "bg-foreground text-background" : "bg-blue-100 text-blue-700"
+                            )}>
+                              {isIntern ? "Intern" : eksterntType === "via_partner" ? "Partner" : "Freelance"}
+                            </span>
+                          </div>
+
+                          {/* Status line */}
+                          <p className="text-[0.8125rem] text-muted-foreground mt-1 ml-[18px]">
+                            {cfg.label}{statusAge ? ` · ${statusAge}` : ""}
+                          </p>
+
+                          {/* Action buttons */}
+                          <div className="flex items-center gap-2 mt-2 ml-[18px]">
+                            {status === "sendt_cv" && (
+                              <>
+                                <button
+                                  onClick={() => updateKonsulentStatus(k.id, "intervju")}
+                                  className="inline-flex items-center gap-1 h-7 px-3 text-[0.75rem] font-medium rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+                                >
+                                  Til intervju →
+                                </button>
+                                <button
+                                  onClick={() => updateKonsulentStatus(k.id, "avslag")}
+                                  className="inline-flex items-center gap-1 h-7 px-3 text-[0.75rem] font-medium rounded-md border border-red-300 text-red-600 hover:bg-red-50 transition-colors"
+                                >
+                                  Avslag
+                                </button>
+                              </>
+                            )}
+                            {status === "intervju" && (
+                              <>
+                                <button
+                                  onClick={() => updateKonsulentStatus(k.id, "vunnet")}
+                                  className="inline-flex items-center gap-1 h-7 px-3 text-[0.75rem] font-medium rounded-md bg-green-500 text-white hover:bg-green-600 transition-colors"
+                                >
+                                  Vunnet 🎉
+                                </button>
+                                <button
+                                  onClick={() => updateKonsulentStatus(k.id, "avslag")}
+                                  className="inline-flex items-center gap-1 h-7 px-3 text-[0.75rem] font-medium rounded-md border border-red-300 text-red-600 hover:bg-red-50 transition-colors"
+                                >
+                                  Avslag
+                                </button>
+                              </>
+                            )}
+                            {isTerminal && (
+                              <div className="flex items-center gap-2">
+                                <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-[0.75rem] font-semibold", cfg.badge)}>
+                                  {cfg.label}
+                                </span>
+                                <button
+                                  onClick={() => updateKonsulentStatus(k.id, status === "vunnet" ? "intervju" : "sendt_cv")}
+                                  className="text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                  ← Angre
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
