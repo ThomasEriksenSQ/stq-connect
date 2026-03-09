@@ -306,6 +306,16 @@ export function ForespørselSheet({
   };
 
   // Save kommentar inline
+  const updateKonsulentStatus = async (linkId: string, newStatus: string) => {
+    await supabase
+      .from("foresporsler_konsulenter")
+      .update({ status: newStatus, status_updated_at: new Date().toISOString() })
+      .eq("id", linkId);
+    queryClient.invalidateQueries({ queryKey: ["foresporsler-konsulenter", row.id] });
+    queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
+  };
+
+  // Save kommentar inline
   const saveKommentar = async () => {
     setEditingKommentar(false);
     if (kommentar === (row?.kommentar || "")) return;
