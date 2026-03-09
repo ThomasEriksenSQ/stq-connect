@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { companiesMatch } from "@/lib/companyMatch";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -83,18 +84,12 @@ export default function Markedsradar() {
     },
   });
 
-  const companyMap = useMemo(() => {
-    const m = new Map<string, CompanyRef>();
-    companies.forEach((c) => m.set(c.name.toLowerCase().trim(), c));
-    return m;
-  }, [companies]);
-
   const findCompany = useCallback(
     (selskap: string | null) => {
       if (!selskap) return null;
-      return companyMap.get(selskap.toLowerCase().trim()) || null;
+      return companies.find((c) => companiesMatch(selskap, c.name)) || null;
     },
-    [companyMap]
+    [companies]
   );
 
   const currentWeek = getIsoWeekStr(new Date());
