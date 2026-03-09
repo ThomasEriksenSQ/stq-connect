@@ -102,10 +102,11 @@ function TypeBadge({ type }: { type: string | null }) {
 /* ─── Pipeline config ─── */
 
 const PIPELINE: Record<string, { label: string; dot: string; badge: string; step: number | null }> = {
-  sendt_cv: { label: "Sendt CV", dot: "bg-amber-400", badge: "bg-amber-50 text-amber-700 border-amber-200", step: 1 },
-  intervju: { label: "Intervju", dot: "bg-blue-500", badge: "bg-blue-50 text-blue-700 border-blue-200", step: 2 },
-  vunnet:   { label: "Vunnet 🎉", dot: "bg-green-500", badge: "bg-green-50 text-green-700 border-green-200", step: 3 },
-  avslag:   { label: "Avslag", dot: "bg-red-400", badge: "bg-red-50 text-red-600 border-red-200", step: null },
+  sendt_cv:  { label: "Sendt CV", dot: "bg-amber-400", badge: "bg-amber-50 text-amber-700 border-amber-200", step: 1 },
+  intervju:  { label: "Intervju", dot: "bg-blue-500", badge: "bg-blue-50 text-blue-700 border-blue-200", step: 2 },
+  vunnet:    { label: "Vunnet 🎉", dot: "bg-green-500", badge: "bg-green-50 text-green-700 border-green-200", step: 3 },
+  avslag:    { label: "Avslag", dot: "bg-red-400", badge: "bg-red-50 text-red-600 border-red-200", step: null },
+  bortfalt:  { label: "Bortfalt", dot: "bg-gray-400", badge: "bg-gray-50 text-gray-500 border-gray-200", step: null },
 };
 
 const PIPELINE_BORDER: Record<string, string> = {
@@ -113,6 +114,7 @@ const PIPELINE_BORDER: Record<string, string> = {
   intervju: "border-l-blue-500",
   vunnet: "border-l-green-500",
   avslag: "border-l-red-400",
+  bortfalt: "border-l-gray-400",
 };
 
 function PipelineTrack({ status }: { status: string }) {
@@ -120,16 +122,19 @@ function PipelineTrack({ status }: { status: string }) {
   const cfg = PIPELINE[status] || PIPELINE.sendt_cv;
   const currentStep = cfg.step;
   const isAvslag = status === "avslag";
+  const isBortfalt = status === "bortfalt";
 
-  // For avslag: find which step was the last before avslag (default sendt_cv = step 1)
   return (
     <div className="flex items-center gap-0">
       {steps.map((step, i) => {
         let filled = false;
         let color = "bg-muted-foreground/30";
 
-        if (isAvslag) {
-          // First node filled amber (was at sendt_cv), rest gray, last filled = red
+        if (isBortfalt) {
+          // All nodes gray
+          filled = false;
+          color = "bg-muted-foreground/20";
+        } else if (isAvslag) {
           if (step === 1) { filled = true; color = "bg-red-400"; }
         } else if (currentStep !== null) {
           if (step <= currentStep) {
@@ -1001,7 +1006,7 @@ export default function Foresporsler() {
                         const status = k.status || "sendt_cv";
                         return (
                           <div key={k.id} className="flex items-center gap-2">
-                            <span className="text-[0.75rem] text-foreground min-w-[70px] truncate">{shortName}</span>
+                            <span className={cn("text-[0.75rem] text-foreground min-w-[70px] truncate", status === "bortfalt" && "line-through text-muted-foreground")}>{shortName}</span>
                             <PipelineTrack status={status} />
                           </div>
                         );

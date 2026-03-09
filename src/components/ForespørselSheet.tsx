@@ -23,10 +23,11 @@ import { nb } from "date-fns/locale";
 const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
 
 const PIPELINE_CONFIG: Record<string, { label: string; dot: string; badge: string; step: number | null }> = {
-  sendt_cv: { label: "Sendt CV", dot: "bg-amber-400", badge: "bg-amber-50 text-amber-700 border-amber-200", step: 1 },
-  intervju: { label: "Intervju", dot: "bg-blue-500", badge: "bg-blue-50 text-blue-700 border-blue-200", step: 2 },
-  vunnet:   { label: "Vunnet 🎉", dot: "bg-green-500", badge: "bg-green-50 text-green-700 border-green-200", step: 3 },
-  avslag:   { label: "Avslag", dot: "bg-red-400", badge: "bg-red-50 text-red-600 border-red-200", step: null },
+  sendt_cv:  { label: "Sendt CV", dot: "bg-amber-400", badge: "bg-amber-50 text-amber-700 border-amber-200", step: 1 },
+  intervju:  { label: "Intervju", dot: "bg-blue-500", badge: "bg-blue-50 text-blue-700 border-blue-200", step: 2 },
+  vunnet:    { label: "Vunnet 🎉", dot: "bg-green-500", badge: "bg-green-50 text-green-700 border-green-200", step: 3 },
+  avslag:    { label: "Avslag", dot: "bg-red-400", badge: "bg-red-50 text-red-600 border-red-200", step: null },
+  bortfalt:  { label: "Bortfalt", dot: "bg-gray-400", badge: "bg-gray-50 text-gray-500 border-gray-200", step: null },
 };
 
 const PIPELINE_BORDER_MAP: Record<string, string> = {
@@ -34,6 +35,7 @@ const PIPELINE_BORDER_MAP: Record<string, string> = {
   intervju: "border-l-blue-500",
   vunnet: "border-l-green-500",
   avslag: "border-l-red-400",
+  bortfalt: "border-l-gray-400",
 };
 
 interface MatchResult {
@@ -622,7 +624,7 @@ export function ForespørselSheet({
                       const status = k.status || "sendt_cv";
                       const cfg = PIPELINE_CONFIG[status] || PIPELINE_CONFIG.sendt_cv;
                       const borderColor = PIPELINE_BORDER_MAP[status] || PIPELINE_BORDER_MAP.sendt_cv;
-                      const isTerminal = status === "vunnet" || status === "avslag";
+                      const isTerminal = status === "vunnet" || status === "avslag" || status === "bortfalt";
                       const statusAge = k.status_updated_at ? relativeTime(k.status_updated_at) : "";
 
                       return (
@@ -645,7 +647,7 @@ export function ForespørselSheet({
                           {/* Top line: dot + name + type badge */}
                           <div className="flex items-center gap-2 pr-6">
                             <span className={cn("h-2.5 w-2.5 rounded-full shrink-0", cfg.dot)} />
-                            <span className="text-[0.875rem] font-medium text-foreground">{navn || "Ukjent"}</span>
+                            <span className={cn("text-[0.875rem] font-medium text-foreground", status === "bortfalt" && "line-through text-muted-foreground")}>{navn || "Ukjent"}</span>
                             <span className={cn(
                               "inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold",
                               isIntern ? "bg-foreground text-background" : "bg-blue-100 text-blue-700"
@@ -675,6 +677,12 @@ export function ForespørselSheet({
                                 >
                                   Avslag
                                 </button>
+                                <button
+                                  onClick={() => updateKonsulentStatus(k.id, "bortfalt")}
+                                  className="inline-flex items-center gap-1 h-7 px-3 text-[0.75rem] font-medium rounded-md border border-gray-300 text-gray-500 hover:bg-gray-50 transition-colors"
+                                >
+                                  Bortfalt
+                                </button>
                               </>
                             )}
                             {status === "intervju" && (
@@ -690,6 +698,12 @@ export function ForespørselSheet({
                                   className="inline-flex items-center gap-1 h-7 px-3 text-[0.75rem] font-medium rounded-md border border-red-300 text-red-600 hover:bg-red-50 transition-colors"
                                 >
                                   Avslag
+                                </button>
+                                <button
+                                  onClick={() => updateKonsulentStatus(k.id, "bortfalt")}
+                                  className="inline-flex items-center gap-1 h-7 px-3 text-[0.75rem] font-medium rounded-md border border-gray-300 text-gray-500 hover:bg-gray-50 transition-colors"
+                                >
+                                  Bortfalt
                                 </button>
                               </>
                             )}
