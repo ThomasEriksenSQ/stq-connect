@@ -830,6 +830,25 @@ export default function Foresporsler() {
     </button>
   );
 
+  const stats = useMemo(() => {
+    if (!rows) return { aktive: 0, utenKonsulent: 0, iProsess: 0, vunnet: 0 };
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 45);
+
+    const aktive = rows.filter((r: any) => new Date(r.mottatt_dato) >= cutoff);
+    const utenKonsulent = aktive.filter((r: any) => !r.foresporsler_konsulenter || r.foresporsler_konsulenter.length === 0).length;
+
+    const allKonsulenter = aktive.flatMap((r: any) => r.foresporsler_konsulenter || []);
+    const iProsess = allKonsulenter.filter((k: any) => k.status === "sendt_cv" || k.status === "intervju").length;
+
+    const allKonsulenterAll = rows.flatMap((r: any) => r.foresporsler_konsulenter || []);
+    const vunnet = allKonsulenterAll.filter((k: any) =>
+      k.status === "vunnet" && k.status_updated_at && new Date(k.status_updated_at) >= cutoff
+    ).length;
+
+    return { aktive: aktive.length, utenKonsulent, iProsess, vunnet };
+  }, [rows]);
+
   return (
     <div className="space-y-5">
       {/* Header */}
