@@ -125,6 +125,13 @@ export function AIChatPanel() {
   const [epostTone, setEpostTone] = useState("Vennlig");
   const [epostContactResults, setEpostContactResults] = useState<any[]>([]);
 
+  // ── Oppdragsmatch state
+  const [omSearch, setOmSearch] = useState("");
+  const [omResults, setOmResults] = useState<any[]>([]);
+  const [omSelected, setOmSelected] = useState<any | null>(null);
+  const [omMatching, setOmMatching] = useState(false);
+  const [omMatchResults, setOmMatchResults] = useState<any[] | null>(null);
+
   // Auto-scroll
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
