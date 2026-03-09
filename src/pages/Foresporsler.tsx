@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Plus, X, ArrowUpDown, Pencil, Trash2, Sparkles, Loader2, ChevronDown, Check } from "lucide-react";
+import { Plus, X, ArrowUpDown, Pencil, Trash2, Sparkles, Loader2, ChevronDown, Check, FileUp } from "lucide-react";
+import { ImportForesporslerModal } from "@/components/ImportForesporslerModal";
 import { ForespørselSheet } from "@/components/ForespørselSheet";
 import { relativeDate, fullDate } from "@/lib/relativeDate";
 import { toast } from "sonner";
@@ -574,6 +575,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
 export default function Foresporsler() {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
   const [sheetExpanded, setSheetExpanded] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("aktive");
@@ -657,13 +659,22 @@ export default function Foresporsler() {
             {filtered.length}
           </span>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
-        >
-          <Plus className="h-4 w-4" />
-          Ny forespørsel
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setImportOpen(true)}
+            className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary"
+          >
+            <FileUp className="h-4 w-4" />
+            Importer historikk
+          </button>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
+          >
+            <Plus className="h-4 w-4" />
+            Ny forespørsel
+          </button>
+        </div>
       </div>
 
       {/* Filter chips */}
@@ -788,6 +799,7 @@ export default function Foresporsler() {
       )}
 
       <NyForesporselModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <ImportForesporslerModal open={importOpen} onOpenChange={setImportOpen} />
 
       {/* Detail/Edit Sheet */}
       <Sheet open={!!selectedRow} onOpenChange={(o) => { if (!o) { setSelectedRowId(null); setSheetExpanded(false); } }}>
