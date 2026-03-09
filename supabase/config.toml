@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.match-consultants]
 verify_jwt = false
+
+[functions.match-foresporsler]
+verify_jwt = false
