@@ -483,6 +483,8 @@ export type Database = {
           foresporsler_id: number
           id: string
           konsulent_type: string
+          status: string
+          status_updated_at: string
         }
         Insert: {
           ansatt_id?: number | null
@@ -491,6 +493,8 @@ export type Database = {
           foresporsler_id: number
           id?: string
           konsulent_type?: string
+          status?: string
+          status_updated_at?: string
         }
         Update: {
           ansatt_id?: number | null
@@ -499,6 +503,8 @@ export type Database = {
           foresporsler_id?: number
           id?: string
           konsulent_type?: string
+          status?: string
+          status_updated_at?: string
         }
         Relationships: [
           {

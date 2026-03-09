@@ -99,6 +99,58 @@ function TypeBadge({ type }: { type: string | null }) {
   return <span className="text-[0.8125rem] text-muted-foreground">—</span>;
 }
 
+/* ─── Pipeline config ─── */
+
+const PIPELINE: Record<string, { label: string; dot: string; badge: string; step: number | null }> = {
+  sendt_cv: { label: "Sendt CV", dot: "bg-amber-400", badge: "bg-amber-50 text-amber-700 border-amber-200", step: 1 },
+  intervju: { label: "Intervju", dot: "bg-blue-500", badge: "bg-blue-50 text-blue-700 border-blue-200", step: 2 },
+  vunnet:   { label: "Vunnet 🎉", dot: "bg-green-500", badge: "bg-green-50 text-green-700 border-green-200", step: 3 },
+  avslag:   { label: "Avslag", dot: "bg-red-400", badge: "bg-red-50 text-red-600 border-red-200", step: null },
+};
+
+const PIPELINE_BORDER: Record<string, string> = {
+  sendt_cv: "border-l-amber-400",
+  intervju: "border-l-blue-500",
+  vunnet: "border-l-green-500",
+  avslag: "border-l-red-400",
+};
+
+function PipelineTrack({ status }: { status: string }) {
+  const steps = [1, 2, 3]; // sendt_cv, intervju, vunnet
+  const cfg = PIPELINE[status] || PIPELINE.sendt_cv;
+  const currentStep = cfg.step;
+  const isAvslag = status === "avslag";
+
+  // For avslag: find which step was the last before avslag (default sendt_cv = step 1)
+  return (
+    <div className="flex items-center gap-0">
+      {steps.map((step, i) => {
+        let filled = false;
+        let color = "bg-muted-foreground/30";
+
+        if (isAvslag) {
+          // First node filled amber (was at sendt_cv), rest gray, last filled = red
+          if (step === 1) { filled = true; color = "bg-red-400"; }
+        } else if (currentStep !== null) {
+          if (step <= currentStep) {
+            filled = true;
+            color = step === currentStep ? cfg.dot : PIPELINE[step === 1 ? "sendt_cv" : step === 2 ? "intervju" : "vunnet"].dot;
+          }
+        }
+
+        return (
+          <div key={step} className="flex items-center">
+            {i > 0 && (
+              <div className={cn("w-3 h-[2px]", filled ? color : "bg-muted-foreground/20")} />
+            )}
+            <div className={cn("h-2 w-2 rounded-full", filled ? color : "bg-muted-foreground/20")} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max) + "…" : s;
 }
@@ -598,7 +650,7 @@ export default function Foresporsler() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("foresporsler")
-        .select("*, contacts(id, first_name, last_name), foresporsler_konsulenter(id, konsulent_type, stacq_ansatte(navn), external_consultants(navn))")
+        .select("*, contacts(id, first_name, last_name), foresporsler_konsulenter(id, konsulent_type, status, status_updated_at, stacq_ansatte(navn), external_consultants(navn))")
         .order("mottatt_dato", { ascending: false });
       if (error) throw error;
       return data;
@@ -707,31 +759,25 @@ export default function Foresporsler() {
       ) : (
         <div className="border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
           {/* Header row */}
-          <div className="grid grid-cols-[90px_minmax(0,1.5fr)_minmax(0,1fr)_80px_minmax(0,1.3fr)_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          <div className="grid grid-cols-[90px_minmax(0,1.5fr)_minmax(0,1fr)_80px_minmax(0,1.3fr)_minmax(220px,1fr)] gap-3 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="mottatt_dato">Mottatt</SortHeader>
             <SortHeader field="selskap_navn">Selskap</SortHeader>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Kontakt</span>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Type</span>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Teknologier</span>
-            <SortHeader field="sendt_count" className="justify-end">Sendt inn</SortHeader>
+            <SortHeader field="sendt_count">Sendt inn</SortHeader>
           </div>
           {/* Data rows */}
           <div className="divide-y divide-border">
           {sorted.map((row: any) => {
             const days = getDaysAgo(row.mottatt_dato);
             const sendt = row.foresporsler_konsulenter || [];
-            const firstNames = sendt.map((k: any) => {
-              const fullName = k.konsulent_type === "intern"
-                ? k.stacq_ansatte?.navn
-                : k.external_consultants?.navn;
-              return fullName?.split(" ")[0];
-            }).filter(Boolean) as string[];
 
             return (
               <div
                 key={row.id}
                 onClick={() => setSelectedRowId(row.id)}
-                className="grid grid-cols-[90px_minmax(0,1.5fr)_minmax(0,1fr)_80px_minmax(0,1.3fr)_90px] gap-3 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer"
+                className="grid grid-cols-[90px_minmax(0,1.5fr)_minmax(0,1fr)_80px_minmax(0,1.3fr)_minmax(220px,1fr)] gap-3 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer"
               >
                 {/* Mottatt */}
                 <Tooltip>
@@ -767,21 +813,29 @@ export default function Foresporsler() {
                     </span>
                   )}
                 </div>
-                {/* Sendt inn */}
-                <div className="flex justify-end gap-1 flex-wrap">
-                  {firstNames.length === 0 ? (
+                {/* Sendt inn — pipeline */}
+                <div className="space-y-1">
+                  {sendt.length === 0 ? (
                     <span className="text-[0.8125rem] text-muted-foreground">—</span>
                   ) : (
                     <>
-                      {firstNames.slice(0, 2).map((name, i) => (
-                        <span key={i} className="inline-flex items-center rounded-full bg-foreground text-background text-[0.6875rem] font-medium px-2 py-0.5">
-                          {name}
-                        </span>
-                      ))}
-                      {firstNames.length > 2 && (
-                        <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground text-[0.6875rem] font-medium px-2 py-0.5">
-                          +{firstNames.length - 2}
-                        </span>
+                      {sendt.slice(0, 3).map((k: any) => {
+                        const fullName = k.konsulent_type === "intern"
+                          ? k.stacq_ansatte?.navn
+                          : k.external_consultants?.navn;
+                        const shortName = fullName
+                          ? `${fullName.split(" ")[0]} ${(fullName.split(" ").pop() || "")[0]}.`
+                          : "?";
+                        const status = k.status || "sendt_cv";
+                        return (
+                          <div key={k.id} className="flex items-center gap-2">
+                            <span className="text-[0.75rem] text-foreground min-w-[70px] truncate">{shortName}</span>
+                            <PipelineTrack status={status} />
+                          </div>
+                        );
+                      })}
+                      {sendt.length > 3 && (
+                        <span className="text-[0.6875rem] text-muted-foreground">+{sendt.length - 3} til</span>
                       )}
                     </>
                   )}
