@@ -374,12 +374,22 @@ export function ForespørselSheet({
     queryClient.invalidateQueries({ queryKey: ["foresporsler-konsulenter", row.id] });
   };
 
-  // Save kommentar inline
+  const fireConfetti = () => {
+    import("canvas-confetti").then(({ default: confetti }) => {
+      confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: ["#22c55e", "#3b82f6", "#f59e0b", "#ec4899", "#8b5cf6"] });
+      setTimeout(() => {
+        confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 }, colors: ["#22c55e", "#f59e0b"] });
+        confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 }, colors: ["#3b82f6", "#8b5cf6"] });
+      }, 300);
+    });
+  };
+
   const updateKonsulentStatus = async (linkId: string, newStatus: string) => {
     await supabase
       .from("foresporsler_konsulenter")
       .update({ status: newStatus, status_updated_at: new Date().toISOString() })
       .eq("id", linkId);
+    if (newStatus === "vunnet") fireConfetti();
     queryClient.invalidateQueries({ queryKey: ["foresporsler-konsulenter", row.id] });
     queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
   };
