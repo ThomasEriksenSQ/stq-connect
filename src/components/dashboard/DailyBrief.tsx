@@ -217,14 +217,12 @@ function UkjentPotensialSection() {
         const finnRows = finnRes.data ?? [];
         const companies = companiesRes.data ?? [];
 
-        const crmNames = new Set(companies.map(c => c.name.toLowerCase().trim()));
-
         const uniqueFinn = new Set<string>();
         for (const r of finnRows) {
           if (r.selskap) uniqueFinn.add(r.selskap.trim());
         }
 
-        const unmatched = [...uniqueFinn].filter(n => !crmNames.has(n.toLowerCase().trim()));
+        const unmatched = [...uniqueFinn].filter(n => !companies.some(c => companiesMatch(n, c.name)));
         setTotalCount(unmatched.length);
         setUnmatchedNames(unmatched.slice(0, 3));
       } catch {
