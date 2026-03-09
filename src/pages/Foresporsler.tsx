@@ -420,6 +420,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
     const { error } = await supabase.from("foresporsler").insert({
       selskap_navn: selskap,
       selskap_id: selskapId,
+      mottatt_dato: mottattDato,
       sted: sted || null,
       avdeling: avdeling || null,
       kontakt_id: kontaktId,
