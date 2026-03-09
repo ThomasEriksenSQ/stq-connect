@@ -598,7 +598,7 @@ export default function Foresporsler() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("foresporsler")
-        .select("*, contacts(id, first_name, last_name), foresporsler_konsulenter(id, konsulent_type, stacq_ansatte(navn), external_consultants(navn))")
+        .select("*, contacts(id, first_name, last_name), foresporsler_konsulenter(id, konsulent_type, status, status_updated_at, stacq_ansatte(navn), external_consultants(navn))")
         .order("mottatt_dato", { ascending: false });
       if (error) throw error;
       return data;
