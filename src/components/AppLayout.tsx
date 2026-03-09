@@ -98,7 +98,7 @@ export function AppLayout() {
               {konsDropOpen && (
                 <div className="absolute top-full left-0 mt-2 w-44 bg-card border border-border rounded-xl shadow-lg overflow-hidden z-50">
                   <RouterNavLink
-                    to="/konsulenter/ansatte"
+                    to="/stacq/prisen"
                     onClick={() => setKonsDropOpen(false)}
                     className={({ isActive }) =>
                       cn(
@@ -109,8 +109,23 @@ export function AppLayout() {
                       )
                     }
                   >
-                    <Users className="h-4 w-4 stroke-[1.5]" />
-                    Ansatte
+                    <TrendingUp className="h-4 w-4 stroke-[1.5]" />
+                    STACQ Prisen
+                  </RouterNavLink>
+                  <RouterNavLink
+                    to="/markedsradar"
+                    onClick={() => setKonsDropOpen(false)}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-3 px-4 py-2.5 text-[0.8125rem] font-medium transition-colors",
+                        isActive
+                          ? "bg-muted text-foreground"
+                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      )
+                    }
+                  >
+                    <Radar className="h-4 w-4 stroke-[1.5]" />
+                    Markedsradar
                   </RouterNavLink>
                   <RouterNavLink
                     to="/konsulenter/i-oppdrag"
@@ -128,6 +143,21 @@ export function AppLayout() {
                     Aktive oppdrag
                   </RouterNavLink>
                   <RouterNavLink
+                    to="/konsulenter/ansatte"
+                    onClick={() => setKonsDropOpen(false)}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-3 px-4 py-2.5 text-[0.8125rem] font-medium transition-colors",
+                        isActive
+                          ? "bg-muted text-foreground"
+                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      )
+                    }
+                  >
+                    <Users className="h-4 w-4 stroke-[1.5]" />
+                    Ansatte
+                  </RouterNavLink>
+                  <RouterNavLink
                     to="/konsulenter/eksterne"
                     onClick={() => setKonsDropOpen(false)}
                     className={({ isActive }) =>
@@ -143,21 +173,6 @@ export function AppLayout() {
                     Eksterne
                   </RouterNavLink>
                   <RouterNavLink
-                    to="/stacq/prisen"
-                    onClick={() => setKonsDropOpen(false)}
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center gap-3 px-4 py-2.5 text-[0.8125rem] font-medium transition-colors",
-                        isActive
-                          ? "bg-muted text-foreground"
-                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                      )
-                    }
-                  >
-                    <TrendingUp className="h-4 w-4 stroke-[1.5]" />
-                    STACQ Prisen
-                  </RouterNavLink>
-                  <RouterNavLink
                     to="/stacq/importer-cver"
                     onClick={() => setKonsDropOpen(false)}
                     className={({ isActive }) =>
@@ -171,21 +186,6 @@ export function AppLayout() {
                   >
                     <Upload className="h-4 w-4 stroke-[1.5]" />
                     Importer CVer
-                  </RouterNavLink>
-                  <RouterNavLink
-                    to="/markedsradar"
-                    onClick={() => setKonsDropOpen(false)}
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center gap-3 px-4 py-2.5 text-[0.8125rem] font-medium transition-colors",
-                        isActive
-                          ? "bg-muted text-foreground"
-                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                      )
-                    }
-                  >
-                    <Radar className="h-4 w-4 stroke-[1.5]" />
-                    Markedsradar
                   </RouterNavLink>
                 </div>
               )}
