@@ -495,6 +495,8 @@ export function ForespørselSheet({
           /* ─── EDIT MODE ─── */
           <EditMode
             row={row}
+            mottattDato={mottattDato}
+            setMottattDato={setMottattDato}
             selskapNavn={selskapNavn}
             setSelskapNavn={setSelskapNavn}
             setSelskapId={setSelskapId}
