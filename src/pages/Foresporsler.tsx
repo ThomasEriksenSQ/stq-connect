@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Plus, X, ArrowUpDown, Pencil, Trash2, Sparkles, Loader2, ChevronDown, Check, FileUp } from "lucide-react";
+import { Plus, X, ArrowUpDown, Pencil, Trash2, Sparkles, Loader2, ChevronDown, Check, FileUp, ClipboardList, UserX, Users, Trophy } from "lucide-react";
 import { ImportForesporslerModal } from "@/components/ImportForesporslerModal";
 import { ForespørselSheet } from "@/components/ForespørselSheet";
 import { relativeDate, fullDate } from "@/lib/relativeDate";
