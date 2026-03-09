@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, ClipboardList, Flame, RefreshCw, Sparkles } from "lucide-react";
+import { AlertCircle, ClipboardList, Flame, RefreshCw, Sparkles, Radio } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { extractCategory } from "@/lib/categoryUtils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "react-router-dom";
 
 interface BriefData {
   overdueCount: number;
@@ -13,11 +14,143 @@ interface BriefData {
   behovNaNames: string[];
 }
 
+const TECH_KEYWORDS = ["C++", "C", "Rust", "Python", "Zephyr", "Yocto", "Embedded Linux", "FreeRTOS", "FPGA"];
+const TECH_COLORS: Record<string, string> = {
+  "C++": "bg-blue-100 text-blue-800", C: "bg-emerald-100 text-emerald-800", Rust: "bg-orange-100 text-orange-800",
+  Python: "bg-yellow-100 text-yellow-800", Zephyr: "bg-violet-100 text-violet-800", Yocto: "bg-pink-100 text-pink-800",
+  "Embedded Linux": "bg-teal-100 text-teal-800", FreeRTOS: "bg-rose-100 text-rose-800", FPGA: "bg-indigo-100 text-indigo-800",
+};
+
+function matchTech(text: string, keyword: string): boolean {
+  if (keyword === "C") return /\bC\b/.test(text);
+  return text.toLowerCase().includes(keyword.toLowerCase());
+}
+
 function getGreeting(): string {
   const h = new Date().getHours();
   if (h < 12) return "God morgen";
   if (h < 18) return "God ettermiddag";
   return "God kveld";
+}
+
+// ── Markedsradar section ──
+function MarkedsradarSection() {
+  const [ready, setReady] = useState(false);
+  const [aiText, setAiText] = useState<string | null>(null);
+  const [topTechs, setTopTechs] = useState<{ name: string; count: number }[]>([]);
+  const [topCompanies, setTopCompanies] = useState<string[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const now = new Date();
+        const d90 = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        const d21 = new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+        const [trendRes, hotRes] = await Promise.all([
+          supabase.from("finn_annonser").select("teknologier").gte("dato", d90),
+          supabase.from("finn_annonser").select("selskap").gte("dato", d21),
+        ]);
+
+        const trendRows = trendRes.data ?? [];
+        const hotRows = hotRes.data ?? [];
+
+        if (trendRows.length === 0 && hotRows.length === 0) return; // hide section
+
+        // Tech counts
+        const tc: Record<string, number> = {};
+        for (const r of trendRows) {
+          if (!r.teknologier) continue;
+          for (const kw of TECH_KEYWORDS) {
+            if (matchTech(r.teknologier, kw)) tc[kw] = (tc[kw] || 0) + 1;
+          }
+        }
+        const sortedTechs = Object.entries(tc).sort((a, b) => b[1] - a[1]);
+        setTopTechs(sortedTechs.slice(0, 3).map(([name, count]) => ({ name, count })));
+
+        // Company counts
+        const cc: Record<string, number> = {};
+        for (const r of hotRows) {
+          if (r.selskap) {
+            const s = r.selskap.trim();
+            cc[s] = (cc[s] || 0) + 1;
+          }
+        }
+        const sortedCompanies = Object.entries(cc).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n]) => n);
+        setTopCompanies(sortedCompanies);
+
+        setReady(true);
+
+        // AI call (non-blocking, fail silently)
+        const techStr = sortedTechs.map(([k, v]) => `${k}: ${v}`).join(", ");
+        const compStr = Object.entries(cc).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => `${k}: ${v}`).join(", ");
+
+        try {
+          const { data } = await supabase.functions.invoke("markedsradar-analyse", {
+            body: {
+              currentWeek: "",
+              thisWeekRows: "",
+              techCounts: techStr,
+              topCompanies: compStr,
+              notInCRM: "",
+              brief: true,
+            },
+          });
+          if (data?.analysis) setAiText(data.analysis);
+        } catch {
+          // fail silently
+        }
+      } catch {
+        // fail silently
+      }
+    })();
+  }, []);
+
+  if (!ready) return null;
+
+  return (
+    <>
+      <div className="border-t border-border my-3" />
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Radio className="h-4 w-4 text-primary" />
+            <span className="text-[0.875rem] font-semibold text-foreground">Markedsradar</span>
+          </div>
+          <Link to="/markedsradar" className="text-[0.75rem] text-primary hover:underline">
+            Se mer →
+          </Link>
+        </div>
+
+        {aiText && (
+          <p className="text-[0.8125rem] leading-relaxed text-foreground/70">{aiText}</p>
+        )}
+
+        {topTechs.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[0.75rem] text-muted-foreground font-medium">Varmest:</span>
+            {topTechs.map((t) => (
+              <span
+                key={t.name}
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold ${TECH_COLORS[t.name] || "bg-secondary text-secondary-foreground"}`}
+              >
+                {t.name}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {topCompanies.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[0.75rem] text-muted-foreground font-medium">Aktive:</span>
+            <span className="text-[0.8125rem] text-foreground">
+              {topCompanies.join(" · ")}
+            </span>
+          </div>
+        )}
+      </div>
+    </>
+  );
 }
 
 const DailyBrief = () => {
@@ -98,7 +231,7 @@ const DailyBrief = () => {
             });
             break;
           }
-          if (cat) break; // Different signal found first
+          if (cat) break;
         }
       }
 
@@ -116,7 +249,6 @@ const DailyBrief = () => {
       setFetchedAt(new Date());
       setLoading(false);
 
-      // Fetch AI sentence (non-blocking)
       fetchAiSentence(briefData);
     } catch (e) {
       console.error("DailyBrief fetch error:", e);
@@ -246,6 +378,9 @@ const DailyBrief = () => {
           Kunne ikke laste data.
         </div>
       )}
+
+      {/* Markedsradar section */}
+      <MarkedsradarSection />
 
       {/* Footer */}
       {timeStr && (
