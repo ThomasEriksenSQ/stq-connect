@@ -1,6 +1,6 @@
 import { Outlet, NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
-import { Moon, Sun, LogOut, Building2, Users, LayoutDashboard, Sparkles, Briefcase, ChevronDown, Users2, TrendingUp, UserPlus, Upload, Radar, Radar } from "lucide-react";
+import { Moon, Sun, LogOut, Building2, Users, LayoutDashboard, Sparkles, Briefcase, ChevronDown, Users2, TrendingUp, UserPlus, Upload, Radar, Radar, Radar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -22,7 +22,7 @@ export function AppLayout() {
   const [aiOpen, setAiOpen] = useState(false);
   const [konsDropOpen, setKonsDropOpen] = useState(false);
   const konsRef = useRef<HTMLDivElement>(null);
-  const isKonsActive = location.pathname.startsWith("/konsulenter") || location.pathname.startsWith("/ || location.pathname.startsWith("/markedsradar")stacq");
+  const isKonsActive = location.pathname.startsWith("/konsulenter") || location.pathname.starts || location.pathname.startsWith("/markedsradar")With("/ || location.pathname.startsWith("/markedsradar")stacq");
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
