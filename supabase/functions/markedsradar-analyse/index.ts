@@ -9,13 +9,21 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { currentWeek, thisWeekRows, techCounts, topCompanies, notInCRM } = await req.json();
+    const { currentWeek, thisWeekRows, techCounts, topCompanies, notInCRM, brief } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const systemPrompt = `Du er markedsanalytiker for STACQ, et norsk IT-konsulentbyrå spesialisert på embedded/firmware C/C++ konsulenter. Analyser Finn.no-data og gi konkrete, handlingsrettede innsikter på norsk. Fokuser på: trender, muligheter, hvilke selskaper STACQ bør prioritere å kontakte.`;
+    let systemPrompt: string;
+    let userPrompt: string;
+    let maxTokens: number;
 
-    const userPrompt = `Analyser dette markedsbildet:
+    if (brief) {
+      systemPrompt = "Du er markedsanalytiker for STACQ. Gi en kort, skarp markedsoppsummering på 2-3 setninger. Kun det viktigste. Norsk.";
+      userPrompt = `Teknologitrender siste 90 dager: ${techCounts}\nVarmeste selskaper siste 3 uker: ${topCompanies}\nSkriv 2-3 setninger om hva dette betyr for STACQ akkurat nå. Vær konkret og handlingsrettet.`;
+      maxTokens = 600;
+    } else {
+      systemPrompt = `Du er markedsanalytiker for STACQ, et norsk IT-konsulentbyrå spesialisert på embedded/firmware C/C++ konsulenter. Analyser Finn.no-data og gi konkrete, handlingsrettede innsikter på norsk. Fokuser på: trender, muligheter, hvilke selskaper STACQ bør prioritere å kontakte.`;
+      userPrompt = `Analyser dette markedsbildet:
 
 SISTE UKE (${currentWeek}):
 ${thisWeekRows}
@@ -35,6 +43,8 @@ Lag en analyse med disse seksjonene:
 3. 🔧 TEKNOLOGISIGNALER (hvilke tech-stacks vokser, hvilke synker)
 4. ⚡ MULIGHETER (selskaper som ansetter mye = voksende team = potensielt konsulentbehov)
 5. 🏴 IKKE I CRM (hvilke av disse bør legges til)`;
+      maxTokens = 2000;
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -48,7 +58,7 @@ Lag en analyse med disse seksjonene:
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        max_tokens: 2000,
+        max_tokens: maxTokens,
       }),
     });
 
