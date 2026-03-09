@@ -86,6 +86,75 @@ function ScoreDot({ score }: { score: number }) {
   return <span className={cn("inline-block h-2.5 w-2.5 rounded-full", color)} />;
 }
 
+/* ─── Missing Contact Banner ─── */
+
+function MissingContactBanner({ row }: { row: any }) {
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [results, setResults] = useState<any[]>([]);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const doSearch = (q: string) => {
+    if (timer.current) clearTimeout(timer.current);
+    if (!q.trim() || !row.selskap_id) { setResults([]); return; }
+    timer.current = setTimeout(async () => {
+      const { data } = await supabase
+        .from("contacts")
+        .select("id, first_name, last_name, title")
+        .eq("company_id", row.selskap_id)
+        .ilike("first_name", `%${q}%`)
+        .limit(8);
+      setResults(data || []);
+    }, 250);
+  };
+
+  const selectContact = async (c: any) => {
+    await supabase.from("foresporsler").update({
+      kontakt_id: c.id,
+      updated_at: new Date().toISOString(),
+    }).eq("id", row.id);
+    queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
+    toast.success(`Kontakt ${c.first_name} ${c.last_name} koblet til`);
+    setSearch("");
+    setShowDropdown(false);
+  };
+
+  return (
+    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 space-y-2">
+      <p className="text-[0.8125rem] text-amber-800">
+        ⚠️ Denne forespørselen mangler kontakt — legg til en kontakt for å holde CRM oppdatert
+      </p>
+      {row.selskap_id && (
+        <div className="relative">
+          <Input
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setShowDropdown(true); doSearch(e.target.value); }}
+            onFocus={() => { setShowDropdown(true); if (search) doSearch(search); }}
+            onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+            placeholder="Søk etter kontakt..."
+            className="text-[0.8125rem] h-8 bg-white"
+          />
+          {showDropdown && results.length > 0 && (
+            <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-md max-h-[160px] overflow-y-auto">
+              {results.map((c: any) => (
+                <button
+                  key={c.id}
+                  onClick={() => selectContact(c)}
+                  className="w-full text-left px-3 py-2 hover:bg-muted/50 transition-colors"
+                >
+                  <p className="text-[0.8125rem] font-medium">{c.first_name} {c.last_name}</p>
+                  {c.title && <p className="text-[0.6875rem] text-muted-foreground">{c.title}</p>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ForespørselSheet({
   row,
   onClose,
