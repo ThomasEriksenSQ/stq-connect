@@ -720,18 +720,12 @@ export default function Foresporsler() {
           {sorted.map((row: any) => {
             const days = getDaysAgo(row.mottatt_dato);
             const sendt = row.foresporsler_konsulenter || [];
-            const firstNames = sendt.map((k: any) => {
-              const fullName = k.konsulent_type === "intern"
-                ? k.stacq_ansatte?.navn
-                : k.external_consultants?.navn;
-              return fullName?.split(" ")[0];
-            }).filter(Boolean) as string[];
 
             return (
               <div
                 key={row.id}
                 onClick={() => setSelectedRowId(row.id)}
-                className="grid grid-cols-[90px_minmax(0,1.5fr)_minmax(0,1fr)_80px_minmax(0,1.3fr)_90px] gap-3 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer"
+                className="grid grid-cols-[90px_minmax(0,1.5fr)_minmax(0,1fr)_80px_minmax(0,1.3fr)_minmax(220px,1fr)] gap-3 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer"
               >
                 {/* Mottatt */}
                 <Tooltip>
@@ -767,21 +761,29 @@ export default function Foresporsler() {
                     </span>
                   )}
                 </div>
-                {/* Sendt inn */}
-                <div className="flex justify-end gap-1 flex-wrap">
-                  {firstNames.length === 0 ? (
+                {/* Sendt inn — pipeline */}
+                <div className="space-y-1">
+                  {sendt.length === 0 ? (
                     <span className="text-[0.8125rem] text-muted-foreground">—</span>
                   ) : (
                     <>
-                      {firstNames.slice(0, 2).map((name, i) => (
-                        <span key={i} className="inline-flex items-center rounded-full bg-foreground text-background text-[0.6875rem] font-medium px-2 py-0.5">
-                          {name}
-                        </span>
-                      ))}
-                      {firstNames.length > 2 && (
-                        <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground text-[0.6875rem] font-medium px-2 py-0.5">
-                          +{firstNames.length - 2}
-                        </span>
+                      {sendt.slice(0, 3).map((k: any) => {
+                        const fullName = k.konsulent_type === "intern"
+                          ? k.stacq_ansatte?.navn
+                          : k.external_consultants?.navn;
+                        const shortName = fullName
+                          ? `${fullName.split(" ")[0]} ${(fullName.split(" ").pop() || "")[0]}.`
+                          : "?";
+                        const status = k.status || "sendt_cv";
+                        return (
+                          <div key={k.id} className="flex items-center gap-2">
+                            <span className="text-[0.75rem] text-foreground min-w-[70px] truncate">{shortName}</span>
+                            <PipelineTrack status={status} />
+                          </div>
+                        );
+                      })}
+                      {sendt.length > 3 && (
+                        <span className="text-[0.6875rem] text-muted-foreground">+{sendt.length - 3} til</span>
                       )}
                     </>
                   )}
