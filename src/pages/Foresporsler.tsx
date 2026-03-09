@@ -1006,7 +1006,7 @@ export default function Foresporsler() {
                         const status = k.status || "sendt_cv";
                         return (
                           <div key={k.id} className="flex items-center gap-2">
-                            <span className="text-[0.75rem] text-foreground min-w-[70px] truncate">{shortName}</span>
+                            <span className={cn("text-[0.75rem] text-foreground min-w-[70px] truncate", status === "bortfalt" && "line-through text-muted-foreground")}>{shortName}</span>
                             <PipelineTrack status={status} />
                           </div>
                         );
