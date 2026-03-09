@@ -1,17 +1,28 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, ClipboardList, Flame, RefreshCw, Sparkles, Radio } from "lucide-react";
+import { AlertCircle, ChevronRight, ClipboardList, Flame, RefreshCw, Sparkles, Radio, Search, ClipboardCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { extractCategory } from "@/lib/categoryUtils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
+import { formatDistanceToNow } from "date-fns";
+import { nb } from "date-fns/locale";
 
 interface BriefData {
   overdueCount: number;
   foresporslerCount: number;
   foresporslerNames: string[];
   behovNaCount: number;
-  behovNaNames: string[];
+  behovNaContacts: { id: string; name: string }[];
+}
+
+interface BuyerCandidate {
+  id: string;
+  name: string;
+  companyName: string;
+  signal: string;
+  lastActivity: string | null;
 }
 
 const TECH_KEYWORDS = ["C++", "C", "Rust", "Python", "Zephyr", "Yocto", "Embedded Linux", "FreeRTOS", "FPGA"];
@@ -31,6 +42,224 @@ function getGreeting(): string {
   if (h < 12) return "God morgen";
   if (h < 18) return "God ettermiddag";
   return "God kveld";
+}
+
+const SIGNAL_ICONS: Record<string, string> = {
+  "Behov nå": "🔥",
+  "Får fremtidig behov": "⏳",
+  "Får kanskje behov": "❓",
+};
+
+// ── Innkjøper-kandidater section ──
+function InnkjoperSection() {
+  const [candidates, setCandidates] = useState<BuyerCandidate[]>([]);
+  const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [contactsRes, activitiesRes, companiesRes] = await Promise.all([
+          supabase.from("contacts").select("id, first_name, last_name, company_id, call_list"),
+          supabase.from("activities").select("contact_id, subject, description, created_at").order("created_at", { ascending: false }),
+          supabase.from("companies").select("id, name"),
+        ]);
+
+        const contacts = contactsRes.data ?? [];
+        const activities = activitiesRes.data ?? [];
+        const companies = companiesRes.data ?? [];
+
+        const companyMap = new Map(companies.map(c => [c.id, c.name]));
+
+        // Group activities by contact
+        const actByContact = new Map<string, typeof activities>();
+        for (const a of activities) {
+          if (!a.contact_id) continue;
+          const list = actByContact.get(a.contact_id) || [];
+          list.push(a);
+          actByContact.set(a.contact_id, list);
+        }
+
+        const targetSignals = ["Behov nå", "Får fremtidig behov", "Får kanskje behov"];
+        const results: BuyerCandidate[] = [];
+
+        for (const c of contacts) {
+          if (c.call_list) continue; // already on list
+
+          const cActs = actByContact.get(c.id) || [];
+          const sorted = [...cActs].sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+          let signal = "";
+          for (const act of sorted) {
+            const cat = extractCategory(act.subject, act.description);
+            if (cat && targetSignals.includes(cat)) {
+              signal = cat;
+              break;
+            }
+            if (cat) break;
+          }
+
+          if (!signal) continue;
+
+          const lastAct = sorted[0]?.created_at || null;
+
+          results.push({
+            id: c.id,
+            name: `${c.first_name} ${c.last_name}`.trim(),
+            companyName: c.company_id ? (companyMap.get(c.company_id) || "") : "",
+            signal,
+            lastActivity: lastAct,
+          });
+        }
+
+        // Sort by signal priority
+        const priority = { "Behov nå": 0, "Får fremtidig behov": 1, "Får kanskje behov": 2 };
+        results.sort((a, b) => (priority[a.signal as keyof typeof priority] ?? 9) - (priority[b.signal as keyof typeof priority] ?? 9));
+
+        setCandidates(results.slice(0, 4));
+      } catch {
+        // fail silently
+      }
+    })();
+  }, []);
+
+  const handleAdd = async (contactId: string) => {
+    try {
+      const { error } = await supabase.from("contacts").update({ call_list: true }).eq("id", contactId);
+      if (error) throw error;
+      setAddedIds(prev => new Set(prev).add(contactId));
+      toast({ title: "Lagt til innkjøperlisten" });
+    } catch {
+      toast({ title: "Kunne ikke legge til", variant: "destructive" });
+    }
+  };
+
+  if (candidates.length === 0) return null;
+
+  return (
+    <>
+      <div className="border-t border-border my-3" />
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ClipboardCheck className="h-4 w-4 text-primary" />
+            <span className="text-[0.875rem] font-semibold text-foreground">Innkjøper-kandidater</span>
+          </div>
+          <Link to="/kontakter" className="text-[0.75rem] text-primary hover:underline">
+            Se alle →
+          </Link>
+        </div>
+
+        <div className="space-y-1.5">
+          {candidates.map((c) => {
+            const added = addedIds.has(c.id);
+            const icon = SIGNAL_ICONS[c.signal] || "";
+            const timeAgo = c.lastActivity
+              ? formatDistanceToNow(new Date(c.lastActivity), { locale: nb, addSuffix: false })
+              : null;
+
+            return (
+              <div key={c.id} className="flex items-start justify-between gap-2 py-1.5">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[0.8125rem]">{icon}</span>
+                    <Link
+                      to={`/kontakter/${c.id}`}
+                      className="text-[0.8125rem] font-medium text-foreground hover:underline truncate"
+                    >
+                      {c.name}
+                    </Link>
+                    {c.companyName && (
+                      <span className="text-[0.75rem] text-muted-foreground">· {c.companyName}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="text-[0.6875rem] text-muted-foreground">{c.signal}</span>
+                    {timeAgo && (
+                      <span className="text-[0.6875rem] text-muted-foreground">· Sist kontakt: {timeAgo}</span>
+                    )}
+                  </div>
+                </div>
+                {added ? (
+                  <span className="text-[hsl(var(--success))] text-[0.75rem] font-medium flex-shrink-0 mt-0.5">✓</span>
+                ) : (
+                  <button
+                    onClick={() => handleAdd(c.id)}
+                    className="text-[0.75rem] text-primary hover:underline flex-shrink-0 mt-0.5"
+                  >
+                    + Add
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Ukjent potensial section ──
+function UkjentPotensialSection() {
+  const [unmatchedNames, setUnmatchedNames] = useState<string[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const d30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+        const [finnRes, companiesRes] = await Promise.all([
+          supabase.from("finn_annonser").select("selskap").gte("dato", d30),
+          supabase.from("companies").select("name"),
+        ]);
+
+        const finnRows = finnRes.data ?? [];
+        const companies = companiesRes.data ?? [];
+
+        const crmNames = new Set(companies.map(c => c.name.toLowerCase().trim()));
+
+        const uniqueFinn = new Set<string>();
+        for (const r of finnRows) {
+          if (r.selskap) uniqueFinn.add(r.selskap.trim());
+        }
+
+        const unmatched = [...uniqueFinn].filter(n => !crmNames.has(n.toLowerCase().trim()));
+        setTotalCount(unmatched.length);
+        setUnmatchedNames(unmatched.slice(0, 3));
+      } catch {
+        // fail silently
+      }
+    })();
+  }, []);
+
+  if (totalCount === 0) return null;
+
+  const remaining = totalCount - unmatchedNames.length;
+
+  return (
+    <>
+      <div className="border-t border-border my-3" />
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 text-[hsl(var(--warning))]" />
+            <span className="text-[0.875rem] font-semibold text-foreground">Ukjent potensial</span>
+          </div>
+          <Link to="/markedsradar" className="text-[0.75rem] text-primary hover:underline">
+            Se i Markedsradar →
+          </Link>
+        </div>
+        <p className="text-[0.8125rem] text-foreground">
+          <span className="font-semibold">{totalCount}</span> selskaper på Finn.no er ikke i CRM
+        </p>
+        <p className="text-[0.75rem] text-muted-foreground">
+          {unmatchedNames.join(" · ")}
+          {remaining > 0 && ` +${remaining} til`}
+        </p>
+      </div>
+    </>
+  );
 }
 
 // ── Markedsradar section ──
@@ -55,9 +284,8 @@ function MarkedsradarSection() {
         const trendRows = trendRes.data ?? [];
         const hotRows = hotRes.data ?? [];
 
-        if (trendRows.length === 0 && hotRows.length === 0) return; // hide section
+        if (trendRows.length === 0 && hotRows.length === 0) return;
 
-        // Tech counts
         const tc: Record<string, number> = {};
         for (const r of trendRows) {
           if (!r.teknologier) continue;
@@ -68,7 +296,6 @@ function MarkedsradarSection() {
         const sortedTechs = Object.entries(tc).sort((a, b) => b[1] - a[1]);
         setTopTechs(sortedTechs.slice(0, 3).map(([name, count]) => ({ name, count })));
 
-        // Company counts
         const cc: Record<string, number> = {};
         for (const r of hotRows) {
           if (r.selskap) {
@@ -81,7 +308,6 @@ function MarkedsradarSection() {
 
         setReady(true);
 
-        // AI call (non-blocking, fail silently)
         const techStr = sortedTechs.map(([k, v]) => `${k}: ${v}`).join(", ");
         const compStr = Object.entries(cc).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => `${k}: ${v}`).join(", ");
 
@@ -155,6 +381,7 @@ function MarkedsradarSection() {
 
 const DailyBrief = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<{ full_name: string } | null>(null);
   const [data, setData] = useState<BriefData | null>(null);
   const [aiSentence, setAiSentence] = useState<string | null>(null);
@@ -206,7 +433,6 @@ const DailyBrief = () => {
       const foresporslerCount = foresporslerCountRes.count ?? 0;
       const foresporslerNames = (foresporslerRes.data ?? []).map((f) => f.selskap_navn);
 
-      // Compute "Behov nå" contacts from activities
       const activities = activitiesRes.data ?? [];
       const contacts = contactsRes.data ?? [];
 
@@ -218,7 +444,7 @@ const DailyBrief = () => {
         actByContact.set(a.contact_id, list);
       }
 
-      const behovNaContacts: { name: string; updated_at: string }[] = [];
+      const behovNaContacts: { id: string; name: string; updated_at: string }[] = [];
       for (const c of contacts) {
         const cActs = actByContact.get(c.id) || [];
         const sorted = [...cActs].sort((a, b) => b.created_at.localeCompare(a.created_at));
@@ -226,6 +452,7 @@ const DailyBrief = () => {
           const cat = extractCategory(act.subject, act.description);
           if (cat === "Behov nå") {
             behovNaContacts.push({
+              id: c.id,
               name: `${c.first_name} ${c.last_name}`.trim(),
               updated_at: c.updated_at,
             });
@@ -242,7 +469,7 @@ const DailyBrief = () => {
         foresporslerCount,
         foresporslerNames,
         behovNaCount: behovNaContacts.length,
-        behovNaNames: behovNaContacts.slice(0, 2).map((c) => c.name),
+        behovNaContacts: behovNaContacts.slice(0, 2).map((c) => ({ id: c.id, name: c.name })),
       };
 
       setData(briefData);
@@ -339,17 +566,24 @@ const DailyBrief = () => {
       ) : data ? (
         <div className="space-y-2">
           {data.overdueCount > 0 && (
-            <div className="flex items-center gap-3 py-2">
+            <div
+              className="flex items-center gap-3 py-2 cursor-pointer hover:bg-secondary/50 rounded-md px-1 -mx-1 transition-colors"
+              onClick={() => navigate("/oppgaver")}
+            >
               <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
-              <span className="text-[0.875rem] text-foreground">
+              <span className="text-[0.875rem] text-foreground flex-1">
                 <span className="font-semibold">{data.overdueCount}</span> oppfølginger er forfalt
               </span>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
             </div>
           )}
 
-          <div className="flex items-center gap-3 py-2">
+          <div
+            className="flex items-center gap-3 py-2 cursor-pointer hover:bg-secondary/50 rounded-md px-1 -mx-1 transition-colors"
+            onClick={() => navigate("/foresporsler")}
+          >
             <ClipboardList className="h-4 w-4 text-primary flex-shrink-0" />
-            <span className="text-[0.875rem] text-foreground">
+            <span className="text-[0.875rem] text-foreground flex-1">
               <span className="font-semibold">{data.foresporslerCount}</span> forespørsler
               {data.foresporslerNames.length > 0 && (
                 <span className="text-muted-foreground">
@@ -358,16 +592,31 @@ const DailyBrief = () => {
                 </span>
               )}
             </span>
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
           </div>
 
           <div className="flex items-center gap-3 py-2">
             <Flame className="h-4 w-4 text-[hsl(var(--warning))] flex-shrink-0" />
-            <span className="text-[0.875rem] text-foreground">
+            <span className="text-[0.875rem] text-foreground flex-1">
               <span className="font-semibold">{data.behovNaCount}</span> kontakter har aktivt behov nå
-              {data.behovNaNames.length > 0 && (
+              {data.behovNaContacts.length > 0 && (
                 <span className="text-muted-foreground">
                   {" — "}
-                  {formatNameList(data.behovNaNames, data.behovNaCount)}
+                  {data.behovNaContacts.map((c, i) => (
+                    <span key={c.id}>
+                      {i > 0 && ", "}
+                      <Link
+                        to={`/kontakter/${c.id}`}
+                        className="text-primary hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {c.name}
+                      </Link>
+                    </span>
+                  ))}
+                  {data.behovNaCount > data.behovNaContacts.length && (
+                    <span> +{data.behovNaCount - data.behovNaContacts.length} til</span>
+                  )}
                 </span>
               )}
             </span>
@@ -378,6 +627,12 @@ const DailyBrief = () => {
           Kunne ikke laste data.
         </div>
       )}
+
+      {/* Innkjøper-kandidater section */}
+      <InnkjoperSection />
+
+      {/* Ukjent potensial section */}
+      <UkjentPotensialSection />
 
       {/* Markedsradar section */}
       <MarkedsradarSection />
