@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, ChevronRight, ClipboardList, Flame, RefreshCw, Sparkles, Radio, Search, ClipboardCheck } from "lucide-react";
+import { AlertCircle, ChevronRight, ClipboardList, Flame, RefreshCw, Sparkles, Radio, Search, ClipboardCheck, TrendingUp, Zap, PlusCircle, Phone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { extractCategory } from "@/lib/categoryUtils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, getISOWeek, getISOWeekYear } from "date-fns";
 import { nb } from "date-fns/locale";
-import { companiesMatch } from "@/lib/companyMatch";
+import { companiesMatch, normalizeCompanyName } from "@/lib/companyMatch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface BriefData {
   overdueCount: number;
