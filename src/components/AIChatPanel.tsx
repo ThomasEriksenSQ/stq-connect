@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   Sparkles, RefreshCw, ArrowUp, X, Copy, Loader2,
-  ClipboardList, Inbox, FileText, Search, Mail, BarChart3, Upload,
+  ClipboardList, Inbox, FileText, Search, Mail, BarChart3, Upload, ArrowLeftRight, Target,
 } from "lucide-react";
 import { CvUploadFlow } from "@/components/CvUploadFlow";
 import { SheetClose } from "@/components/ui/sheet";
