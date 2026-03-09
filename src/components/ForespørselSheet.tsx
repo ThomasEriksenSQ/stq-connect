@@ -647,7 +647,7 @@ export function ForespørselSheet({
                           {/* Top line: dot + name + type badge */}
                           <div className="flex items-center gap-2 pr-6">
                             <span className={cn("h-2.5 w-2.5 rounded-full shrink-0", cfg.dot)} />
-                            <span className="text-[0.875rem] font-medium text-foreground">{navn || "Ukjent"}</span>
+                            <span className={cn("text-[0.875rem] font-medium text-foreground", status === "bortfalt" && "line-through text-muted-foreground")}>{navn || "Ukjent"}</span>
                             <span className={cn(
                               "inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold",
                               isIntern ? "bg-foreground text-background" : "bg-blue-100 text-blue-700"
