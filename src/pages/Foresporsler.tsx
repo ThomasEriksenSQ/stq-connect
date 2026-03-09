@@ -102,10 +102,11 @@ function TypeBadge({ type }: { type: string | null }) {
 /* ─── Pipeline config ─── */
 
 const PIPELINE: Record<string, { label: string; dot: string; badge: string; step: number | null }> = {
-  sendt_cv: { label: "Sendt CV", dot: "bg-amber-400", badge: "bg-amber-50 text-amber-700 border-amber-200", step: 1 },
-  intervju: { label: "Intervju", dot: "bg-blue-500", badge: "bg-blue-50 text-blue-700 border-blue-200", step: 2 },
-  vunnet:   { label: "Vunnet 🎉", dot: "bg-green-500", badge: "bg-green-50 text-green-700 border-green-200", step: 3 },
-  avslag:   { label: "Avslag", dot: "bg-red-400", badge: "bg-red-50 text-red-600 border-red-200", step: null },
+  sendt_cv:  { label: "Sendt CV", dot: "bg-amber-400", badge: "bg-amber-50 text-amber-700 border-amber-200", step: 1 },
+  intervju:  { label: "Intervju", dot: "bg-blue-500", badge: "bg-blue-50 text-blue-700 border-blue-200", step: 2 },
+  vunnet:    { label: "Vunnet 🎉", dot: "bg-green-500", badge: "bg-green-50 text-green-700 border-green-200", step: 3 },
+  avslag:    { label: "Avslag", dot: "bg-red-400", badge: "bg-red-50 text-red-600 border-red-200", step: null },
+  bortfalt:  { label: "Bortfalt", dot: "bg-gray-400", badge: "bg-gray-50 text-gray-500 border-gray-200", step: null },
 };
 
 const PIPELINE_BORDER: Record<string, string> = {
@@ -113,6 +114,7 @@ const PIPELINE_BORDER: Record<string, string> = {
   intervju: "border-l-blue-500",
   vunnet: "border-l-green-500",
   avslag: "border-l-red-400",
+  bortfalt: "border-l-gray-400",
 };
 
 function PipelineTrack({ status }: { status: string }) {
