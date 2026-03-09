@@ -508,6 +508,80 @@ Returner BARE JSON, ingen annen tekst.`,
     setEpostContactName("");
   };
 
+  /* ── Oppdragsmatch: search consultants */
+  const searchOmConsultants = (query: string) => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (query.length < 1) { setOmResults([]); return; }
+    searchTimer.current = setTimeout(async () => {
+      const [{ data: interne }, { data: eksterne }] = await Promise.all([
+        supabase.from("stacq_ansatte").select("id, navn, kompetanse, bio, geografi, status").ilike("navn", `%${query}%`).limit(5),
+        supabase.from("external_consultants").select("id, navn, teknologier, cv_tekst, status").ilike("navn", `%${query}%`).limit(5),
+      ]);
+      const results = [
+        ...(interne || []).map((r: any) => ({ ...r, _type: "intern" as const, teknologier: r.kompetanse })),
+        ...(eksterne || []).map((r: any) => ({ ...r, _type: "ekstern" as const })),
+      ];
+      setOmResults(results);
+    }, 300);
+  };
+
+  const handleOmMatch = async (consultant: any) => {
+    setOmSelected(consultant);
+    setOmMatching(true);
+    setOmMatchResults(null);
+    setOmResults([]);
+    setOmSearch("");
+    try {
+      const fortyFiveDaysAgo = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: fData } = await supabase
+        .from("foresporsler")
+        .select("id, selskap_navn, sted, teknologier, frist_dato, status")
+        .gte("created_at", fortyFiveDaysAgo)
+        .in("status", ["Ny", "Aktiv"])
+        .order("frist_dato", { ascending: true });
+
+      const { data, error } = await supabase.functions.invoke("match-foresporsler", {
+        body: {
+          konsulent: {
+            navn: consultant.navn,
+            teknologier: consultant.teknologier || [],
+            cv_tekst: consultant.bio || consultant.cv_tekst || null,
+            geografi: consultant.geografi || null,
+          },
+          foresporsler: fData || [],
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setOmMatchResults(Array.isArray(data) ? data : []);
+
+      // Show results as a message
+      const results = Array.isArray(data) ? data : [];
+      if (results.length === 0) {
+        setMessages(prev => [...prev,
+          { role: "user", content: `🎯 Finn oppdrag for ${consultant.navn} (${consultant._type === "intern" ? "Ansatt" : "Ekstern"})` },
+          { role: "assistant", content: "Ingen forespørsler med score ≥ 4 funnet." },
+        ]);
+      } else {
+        const lines = results.map((r: any, i: number) =>
+          `**#${i + 1} ${r.selskap_navn}** — score ${r.score}/10\n${r.match_tags?.join(", ") || ""}\n_${r.begrunnelse}_`
+        ).join("\n\n");
+        setMessages(prev => [...prev,
+          { role: "user", content: `🎯 Finn oppdrag for ${consultant.navn} (${consultant._type === "intern" ? "Ansatt" : "Ekstern"})` },
+          { role: "assistant", content: `### Oppdragsmatch for ${consultant.navn}\n\n${lines}` },
+        ]);
+      }
+    } catch (err: any) {
+      setMessages(prev => [...prev,
+        { role: "user", content: `🎯 Finn oppdrag for ${consultant.navn}` },
+        { role: "assistant", content: err.message || "Kunne ikke kjøre matching", error: true },
+      ]);
+    } finally {
+      setOmMatching(false);
+      setMode(null);
+    }
+  };
+
   /* ── Quick action dispatch */
   const handleQuickAction = (action: string) => {
     switch (action) {
@@ -518,6 +592,7 @@ Returner BARE JSON, ingen annen tekst.`,
       case "epost": setMode("epost"); break;
       case "ukesoppsummering": handleUkesoppsummering(); break;
       case "cv-upload": setMode("cv-upload"); break;
+      case "oppdragsmatch": setMode("oppdragsmatch"); setOmSearch(""); setOmResults([]); setOmSelected(null); setOmMatchResults(null); break;
     }
   };
 
