@@ -624,7 +624,7 @@ export function ForespørselSheet({
                       const status = k.status || "sendt_cv";
                       const cfg = PIPELINE_CONFIG[status] || PIPELINE_CONFIG.sendt_cv;
                       const borderColor = PIPELINE_BORDER_MAP[status] || PIPELINE_BORDER_MAP.sendt_cv;
-                      const isTerminal = status === "vunnet" || status === "avslag";
+                      const isTerminal = status === "vunnet" || status === "avslag" || status === "bortfalt";
                       const statusAge = k.status_updated_at ? relativeTime(k.status_updated_at) : "";
 
                       return (
