@@ -643,6 +643,172 @@ function AIAnalyseTab({ annonser, currentWeek, findCompany }: {
     }
   };
 
+  const navigate = useNavigate();
+
+  const parsedSections = useMemo(() => {
+    if (!analysis) return [];
+    // Split on numbered sections like "1. " "2. " etc
+    const parts = analysis.split(/(?=\d\.\s)/);
+    return parts
+      .map((part) => {
+        const match = part.match(/^\d\.\s*(.*)/s);
+        if (!match) return null;
+        const content = match[1].trim();
+        // Extract emoji + title from first line
+        const lines = content.split("\n");
+        const headerLine = lines[0].replace(/^\*+|\*+$/g, "").trim();
+        const body = lines.slice(1).join("\n").trim();
+        // Detect section number
+        const numMatch = part.match(/^(\d)\./);
+        const sectionNum = numMatch ? parseInt(numMatch[1]) : 0;
+        return { sectionNum, header: headerLine, body };
+      })
+      .filter(Boolean) as { sectionNum: number; header: string; body: string }[];
+  }, [analysis]);
+
+  const renderBold = (text: string) => {
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    return parts.map((p, i) => {
+      if (p.startsWith("**") && p.endsWith("**")) {
+        return <strong key={i} className="font-semibold text-foreground">{p.slice(2, -2)}</strong>;
+      }
+      return <span key={i}>{p}</span>;
+    });
+  };
+
+  const renderParagraphs = (body: string) => {
+    const paragraphs = body.split(/\n\n+/).filter(Boolean);
+    return paragraphs.map((p, i) => (
+      <p key={i} className="text-[0.9375rem] leading-relaxed text-foreground/70">
+        {renderBold(p.replace(/\n/g, " "))}
+      </p>
+    ));
+  };
+
+  const renderLeadsSection = (body: string) => {
+    // Split into sub-cards per company lead (lines starting with - or • or **CompanyName**)
+    const blocks: { title: string; desc: string }[] = [];
+    const lines = body.split("\n").filter((l) => l.trim());
+    let current: { title: string; desc: string } | null = null;
+
+    for (const line of lines) {
+      const leadMatch = line.match(/^[-•*]*\s*\*?\*?(.+?)\*?\*?\s*[·–—:]\s*(.*)/);
+      const boldLeadMatch = line.match(/^\*\*(.+?)\*\*\s*[·–—:]\s*(.*)/);
+      const bulletMatch = line.match(/^[-•]\s*\*?\*?(.+?)\*?\*?\s*$/);
+
+      if (boldLeadMatch) {
+        if (current) blocks.push(current);
+        current = { title: boldLeadMatch[1].trim(), desc: boldLeadMatch[2].trim() };
+      } else if (leadMatch && (line.startsWith("-") || line.startsWith("•") || line.startsWith("*"))) {
+        if (current) blocks.push(current);
+        current = { title: leadMatch[1].trim(), desc: leadMatch[2].trim() };
+      } else if (current) {
+        current.desc += " " + line.trim();
+      } else {
+        // Standalone line, create a block
+        if (current) blocks.push(current);
+        current = { title: "", desc: line.trim() };
+      }
+    }
+    if (current) blocks.push(current);
+
+    if (blocks.length === 0) return renderParagraphs(body);
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {blocks.map((b, i) => {
+          const company = findCompany(b.title);
+          return (
+            <div
+              key={i}
+              className="rounded-lg border border-border bg-secondary/30 p-4 space-y-1.5"
+            >
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-primary shrink-0" />
+                <span className="text-[1rem] font-bold text-foreground">{b.title || `Lead ${i + 1}`}</span>
+              </div>
+              {b.desc && (
+                <p className="text-[0.875rem] leading-relaxed text-foreground/70">{renderBold(b.desc)}</p>
+              )}
+              {b.title && (
+                <div className="pt-1">
+                  {company ? (
+                    <button
+                      onClick={() => navigate(`/companies/${company.id}`)}
+                      className="text-[0.8125rem] text-primary hover:underline"
+                    >
+                      Åpne i CRM →
+                    </button>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[0.75rem] text-muted-foreground">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--warning))]" />
+                      Ikke i CRM
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderCRMChips = (body: string) => {
+    // Extract company names from the body text
+    const names = body
+      .split(/[,\n•\-]/)
+      .map((s) => s.replace(/\*\*/g, "").trim())
+      .filter((s) => s.length > 1 && s.length < 60);
+
+    if (names.length === 0) return renderParagraphs(body);
+
+    return (
+      <div className="flex flex-wrap gap-2">
+        {names.map((name, i) => {
+          const company = findCompany(name);
+          return (
+            <button
+              key={i}
+              onClick={() => {
+                if (company) navigate(`/companies/${company.id}`);
+              }}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[0.8125rem] font-medium transition-colors",
+                company
+                  ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20"
+                  : "border-border bg-secondary text-foreground hover:bg-accent"
+              )}
+            >
+              {!company && <Plus className="h-3 w-3" />}
+              {name}
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderSection = (section: { sectionNum: number; header: string; body: string }) => {
+    const isLeads = section.sectionNum === 2;
+    const isCRM = section.sectionNum === 5;
+
+    return (
+      <Card key={section.sectionNum} className="overflow-hidden">
+        <div className="border-b border-border px-5 py-3">
+          <h3 className="text-[1.0625rem] font-bold text-foreground">{section.header}</h3>
+        </div>
+        <CardContent className="pt-4 pb-5 space-y-3">
+          {isLeads
+            ? renderLeadsSection(section.body)
+            : isCRM
+              ? renderCRMChips(section.body)
+              : renderParagraphs(section.body)}
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <div className="space-y-6 mt-4">
       <div className="flex items-center gap-4">
@@ -666,11 +832,9 @@ function AIAnalyseTab({ annonser, currentWeek, findCompany }: {
       )}
 
       {analysis && !loading && (
-        <Card>
-          <CardContent className="pt-6 prose prose-sm max-w-none dark:prose-invert">
-            <ReactMarkdown>{analysis}</ReactMarkdown>
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          {parsedSections.map((s) => renderSection(s))}
+        </div>
       )}
 
       {!analysis && !loading && (
