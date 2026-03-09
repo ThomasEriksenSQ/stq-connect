@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 import { Plus, X, Search, CalendarIcon, Upload, CheckCircle2, Loader2, Users, User } from "lucide-react";
 import { relativeFutureDate } from "@/lib/relativeDate";
+import { OppdragsMatchPanel } from "@/components/OppdragsMatchPanel";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
