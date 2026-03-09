@@ -608,14 +608,8 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
 
         {/* Line 3: phone · links */}
         <div className="flex items-center gap-2 flex-wrap text-[0.9375rem] text-foreground/70 mt-1">
-          {company.phone && (
-            <a href={`tel:${company.phone}`} className="inline-flex items-center gap-1 hover:text-foreground">
-              <Phone className="h-3 w-3" />{company.phone}
-            </a>
-          )}
           {company.website && (
             <>
-              {company.phone && <span className="text-muted-foreground/40">·</span>}
               <a href={company.website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
                 <Globe className="h-3 w-3" />{company.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
               </a>
