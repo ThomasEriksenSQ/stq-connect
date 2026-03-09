@@ -966,7 +966,7 @@ Returner BARE arrayen, ingen annen tekst. Maks 8 tags. Bruk korte presise navn, 
               </button>
             </div>
           </div>
-        )}
+        <div className="mt-1 flex flex-wrap items-center gap-1.5 p-2 border border-border rounded-lg bg-background min-h-[38px]">
           {teknologier.map((t: string) => (
             <span key={t} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-[0.75rem] text-foreground">
               {t}
