@@ -751,6 +751,38 @@ function EditMode(props: any) {
   const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
   const SUGGESTED_TAGS = ["C++", "C", "Embedded", "Yocto", "Linux", "Qt", "FPGA", "Python", "SPI/I2C", "MCU", "Embedded Linux", "Sikkerhet"];
 
+  const [showAnalyze, setShowAnalyze] = useState(false);
+  const [analyzeText, setAnalyzeText] = useState("");
+  const [analyzing, setAnalyzing] = useState(false);
+
+  const handleAnalyze = async () => {
+    if (!analyzeText.trim()) return;
+    setAnalyzing(true);
+    try {
+      const AI_SYSTEM_PROMPT = `Du er en teknisk rekrutterer for et norsk konsulentselskap som spesialiserer seg på embedded systems og ingeniørfag.
+Analyser teksten og returner KUN en JSON-array med tekniske nøkkelord/teknologier som er nevnt eller sterkt implisert.
+Eksempler: ["C++", "Embedded", "Linux", "Yocto", "Python", "FPGA", "ROS", "Rust", "Java", "Sikkerhet", "Lab", "C", "Qt", "CMake"]
+Returner BARE arrayen, ingen annen tekst. Maks 8 tags. Bruk korte presise navn, ikke setninger.`;
+      const { data, error } = await supabase.functions.invoke("chat", {
+        body: { system: AI_SYSTEM_PROMPT, messages: [{ role: "user", content: analyzeText.trim() }] },
+      });
+      if (error) throw error;
+      const text = data?.text ?? "[]";
+      const clean = text.replace(/```json|```/g, "").trim();
+      const found: string[] = JSON.parse(clean);
+      const merged = [...new Set([...teknologier, ...found])];
+      setTeknologier(merged);
+      setShowAnalyze(false);
+      setAnalyzeText("");
+      toast.success(`${found.length} teknologier lagt til`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Kunne ikke analysere teksten");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
   // Fetch company locations (avdelinger) from companies.city
   const { data: companyCity } = useQuery({
     queryKey: ["company-city", selskapId],
