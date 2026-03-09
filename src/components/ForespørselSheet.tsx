@@ -921,8 +921,52 @@ Returner BARE arrayen, ingen annen tekst. Maks 8 tags. Bruk korte presise navn, 
 
       {/* Teknologier */}
       <div>
-        <label className={LABEL}>Teknologier</label>
-        <div className="mt-1 flex flex-wrap items-center gap-1.5 p-2 border border-border rounded-lg bg-background min-h-[38px]">
+        <div className="flex items-center justify-between mb-1.5">
+          <label className={LABEL}>Teknologier</label>
+          <button
+            type="button"
+            onClick={() => setShowAnalyze((prev) => !prev)}
+            className="flex items-center gap-1 text-[0.75rem] text-primary hover:underline"
+          >
+            <Sparkles className="h-3 w-3" />
+            Analyser tekst
+          </button>
+        </div>
+        {showAnalyze && (
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2 mb-2">
+            <p className="text-[0.75rem] text-muted-foreground">
+              Lim inn stillingsbeskrivelse, e-post eller kravspesifikasjon — AI finner relevante teknologier automatisk.
+            </p>
+            <textarea
+              value={analyzeText}
+              onChange={(e) => setAnalyzeText(e.target.value)}
+              placeholder="Lim inn tekst her..."
+              className="w-full h-24 text-[0.875rem] rounded-md border border-border bg-background px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+              autoFocus
+            />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleAnalyze}
+                disabled={!analyzeText.trim() || analyzing}
+                className="flex items-center gap-1.5 text-[0.8125rem] font-medium bg-primary text-primary-foreground rounded-lg px-3 py-1.5 hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              >
+                {analyzing ? (
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin" />Analyserer...</>
+                ) : (
+                  <><Sparkles className="h-3.5 w-3.5" />Finn teknologier</>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowAnalyze(false); setAnalyzeText(""); }}
+                className="text-[0.8125rem] text-muted-foreground hover:text-foreground"
+              >
+                Avbryt
+              </button>
+            </div>
+          </div>
+        )}
           {teknologier.map((t: string) => (
             <span key={t} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-[0.75rem] text-foreground">
               {t}
