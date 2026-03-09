@@ -120,7 +120,7 @@ export function ForespørselSheet({
     queryFn: async () => {
       const { data } = await supabase
         .from("foresporsler_konsulenter")
-        .select("id, ansatt_id, ekstern_id, konsulent_type, created_at, stacq_ansatte(id, navn), external_consultants(id, navn, type)")
+        .select("id, ansatt_id, ekstern_id, konsulent_type, created_at, status, status_updated_at, stacq_ansatte(id, navn), external_consultants(id, navn, type)")
         .eq("foresporsler_id", row.id)
         .order("created_at", { ascending: false });
       return data || [];
