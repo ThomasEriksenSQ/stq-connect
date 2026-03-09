@@ -271,6 +271,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  const [mottattDato, setMottattDato] = useState(format(new Date(), "yyyy-MM-dd"));
   const [selskap, setSelskap] = useState("");
   const [selskapId, setSelskapId] = useState<string | null>(null);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
@@ -300,6 +301,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
 
   useEffect(() => {
     if (open) {
+      setMottattDato(format(new Date(), "yyyy-MM-dd"));
       setSelskap(""); setSelskapId(null); setSelectedLocations([]);
       setAvdeling(""); setSted(""); setKontakt(""); setKontaktId(null);
       setKommentar(""); setTags([]); setTagInput("");
@@ -418,6 +420,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
     const { error } = await supabase.from("foresporsler").insert({
       selskap_navn: selskap,
       selskap_id: selskapId,
+      mottatt_dato: mottattDato,
       sted: sted || null,
       avdeling: avdeling || null,
       kontakt_id: kontaktId,
@@ -465,6 +468,17 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
         <DialogTitle className="text-[1.125rem] font-bold text-foreground mb-5">Ny forespørsel</DialogTitle>
 
         <div className="space-y-4">
+          {/* Mottatt dato */}
+          <div>
+            <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Mottatt</label>
+            <Input
+              type="date"
+              value={mottattDato}
+              onChange={(e) => setMottattDato(e.target.value)}
+              className="mt-1 text-[0.875rem] w-full"
+            />
+          </div>
+
           {/* Selskap */}
           <div>
             <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Selskap <span className="text-destructive">*</span></label>

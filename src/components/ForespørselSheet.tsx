@@ -171,6 +171,7 @@ export function ForespørselSheet({
   const [saving, setSaving] = useState(false);
 
   // Edit form state
+  const [mottattDato, setMottattDato] = useState("");
   const [sted, setSted] = useState("");
   const [avdeling, setAvdeling] = useState("");
   const [fristDato, setFristDato] = useState("");
@@ -254,6 +255,7 @@ export function ForespørselSheet({
   // Sync form when entering edit mode
   useEffect(() => {
     if (editMode && row) {
+      setMottattDato(row.mottatt_dato || "");
       setSelskapNavn(row.selskap_navn || "");
       setSelskapId(row.selskap_id || null);
       setKontakt(row.contacts ? `${row.contacts.first_name} ${row.contacts.last_name}` : "");
@@ -323,6 +325,7 @@ export function ForespørselSheet({
         selskap_navn: selskapNavn || row.selskap_navn,
         selskap_id: selskapId || row.selskap_id,
         kontakt_id: kontaktId,
+        mottatt_dato: mottattDato || row.mottatt_dato,
         sted: sted || null,
         avdeling: avdeling || null,
         frist_dato: fristDato || null,
@@ -492,6 +495,8 @@ export function ForespørselSheet({
           /* ─── EDIT MODE ─── */
           <EditMode
             row={row}
+            mottattDato={mottattDato}
+            setMottattDato={setMottattDato}
             selskapNavn={selskapNavn}
             setSelskapNavn={setSelskapNavn}
             setSelskapId={setSelskapId}
@@ -916,7 +921,8 @@ export function ForespørselSheet({
 
 function EditMode(props: any) {
   const {
-    row, selskapNavn, setSelskapNavn, setSelskapId, setShowSelskapDropdown,
+    row, mottattDato, setMottattDato,
+    selskapNavn, setSelskapNavn, setSelskapId, setShowSelskapDropdown,
     showSelskapDropdown, companyResults, searchCompanies, selectCompany,
     isPartner, sluttkunde, setSluttkunde, sted, setSted, selskapId,
     kontakt, setKontakt, kontaktId, setKontaktId, showKontaktDropdown,
@@ -974,6 +980,17 @@ Returner BARE arrayen, ingen annen tekst. Maks 8 tags. Bruk korte presise navn, 
 
   return (
     <div className="space-y-4">
+      {/* Mottatt dato */}
+      <div>
+        <label className={LABEL}>Mottatt</label>
+        <Input
+          type="date"
+          value={mottattDato}
+          onChange={(e: any) => setMottattDato(e.target.value)}
+          className="mt-1 text-[0.875rem] w-full"
+        />
+      </div>
+
       {/* Selskap */}
       <div>
         <label className={LABEL}>Selskap</label>
