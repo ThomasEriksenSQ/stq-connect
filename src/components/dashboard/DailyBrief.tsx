@@ -267,24 +267,33 @@ function MarkedsradarSection() {
   const [aiText, setAiText] = useState<string | null>(null);
   const [topTechs, setTopTechs] = useState<{ name: string; count: number }[]>([]);
   const [topCompanies, setTopCompanies] = useState<string[]>([]);
+  const [techPuls, setTechPuls] = useState<{ name: string; count: number; trend: "up" | "down" | "same" }[]>([]);
+  const [techPulsTotal, setTechPulsTotal] = useState(0);
 
   useEffect(() => {
     (async () => {
       try {
         const now = new Date();
         const d90 = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        const d30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        const d60 = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
         const d21 = new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-        const [trendRes, hotRes] = await Promise.all([
+        const [trendRes, hotRes, last30Res, prev30Res] = await Promise.all([
           supabase.from("finn_annonser").select("teknologier").gte("dato", d90),
           supabase.from("finn_annonser").select("selskap").gte("dato", d21),
+          supabase.from("finn_annonser").select("teknologier, dato").gte("dato", d30),
+          supabase.from("finn_annonser").select("teknologier, dato").gte("dato", d60).lt("dato", d30),
         ]);
 
         const trendRows = trendRes.data ?? [];
         const hotRows = hotRes.data ?? [];
+        const last30Rows = last30Res.data ?? [];
+        const prev30Rows = prev30Res.data ?? [];
 
         if (trendRows.length === 0 && hotRows.length === 0) return;
 
+        // 90-day tech counts for Varmest
         const tc: Record<string, number> = {};
         for (const r of trendRows) {
           if (!r.teknologier) continue;
@@ -294,6 +303,32 @@ function MarkedsradarSection() {
         }
         const sortedTechs = Object.entries(tc).sort((a, b) => b[1] - a[1]);
         setTopTechs(sortedTechs.slice(0, 3).map(([name, count]) => ({ name, count })));
+
+        // Teknologipuls: last 30 vs prev 30
+        const tc30: Record<string, number> = {};
+        for (const r of last30Rows) {
+          if (!r.teknologier) continue;
+          for (const kw of TECH_KEYWORDS) {
+            if (matchTech(r.teknologier, kw)) tc30[kw] = (tc30[kw] || 0) + 1;
+          }
+        }
+        const tcPrev: Record<string, number> = {};
+        for (const r of prev30Rows) {
+          if (!r.teknologier) continue;
+          for (const kw of TECH_KEYWORDS) {
+            if (matchTech(r.teknologier, kw)) tcPrev[kw] = (tcPrev[kw] || 0) + 1;
+          }
+        }
+        const pulsEntries = Object.entries(tc30)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(([name, count]) => {
+            const prev = tcPrev[name] || 0;
+            const trend: "up" | "down" | "same" = count > prev ? "up" : count < prev ? "down" : "same";
+            return { name, count, trend };
+          });
+        setTechPuls(pulsEntries);
+        setTechPulsTotal(last30Rows.length);
 
         const cc: Record<string, number> = {};
         for (const r of hotRows) {
@@ -308,6 +343,7 @@ function MarkedsradarSection() {
         setReady(true);
 
         const techStr = sortedTechs.map(([k, v]) => `${k}: ${v}`).join(", ");
+        const techStr30d = Object.entries(tc30).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}:${v}`).join(", ");
         const compStr = Object.entries(cc).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => `${k}: ${v}`).join(", ");
 
         try {
@@ -315,7 +351,7 @@ function MarkedsradarSection() {
             body: {
               currentWeek: "",
               thisWeekRows: "",
-              techCounts: techStr,
+              techCounts: `${techStr}\nTeknologifordeling siste 30 dager: ${techStr30d}\nSammenlign med forrige 30-dager periode og noter hvilke vokser.`,
               topCompanies: compStr,
               notInCRM: "",
               brief: true,
@@ -332,6 +368,12 @@ function MarkedsradarSection() {
   }, []);
 
   if (!ready) return null;
+
+  const trendChipClass = (trend: "up" | "down" | "same") => {
+    if (trend === "up") return "bg-emerald-100 text-emerald-800 border-emerald-200";
+    if (trend === "down") return "bg-muted text-muted-foreground border-border";
+    return "bg-secondary text-secondary-foreground border-border";
+  };
 
   return (
     <>
@@ -362,6 +404,26 @@ function MarkedsradarSection() {
                 {t.name}
               </span>
             ))}
+          </div>
+        )}
+
+        {/* ROW E: Teknologipuls */}
+        {techPuls.length > 0 && (
+          <div className="space-y-1.5">
+            <span className="text-[0.75rem] text-muted-foreground font-medium">🔧 Teknologipuls</span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {techPuls.map((t) => (
+                <span
+                  key={t.name}
+                  className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold ${trendChipClass(t.trend)}`}
+                >
+                  {t.name} · {t.count}
+                </span>
+              ))}
+            </div>
+            <p className="text-[0.6875rem] text-muted-foreground">
+              Basert på siste 30 dager · {techPulsTotal} annonser
+            </p>
           </div>
         )}
 
