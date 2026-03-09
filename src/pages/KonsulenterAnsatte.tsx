@@ -4,6 +4,7 @@ import { useMemo, useState, useRef } from "react";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
 import { format, differenceInMonths, isAfter } from "date-fns";
 import { Pencil, Plus, X, Globe, Loader2, Upload, FileText, Sparkles } from "lucide-react";
+import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -447,6 +448,8 @@ export default function KonsulenterAnsatte() {
   const [filter, setFilter] = useState<Filter>("Aktiv");
   const [editAnsatt, setEditAnsatt] = useState<any | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [detailAnsatt, setDetailAnsatt] = useState<any | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const today = new Date();
 
   const { data: ansatte = [], isLoading } = useQuery({
@@ -618,8 +621,9 @@ export default function KonsulenterAnsatte() {
           return (
             <div
               key={a.id}
+              onClick={() => { setDetailAnsatt(a); setDetailOpen(true); }}
               className={cn(
-                "group grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_100px_180px_40px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75",
+                "group grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_100px_180px_40px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 cursor-pointer",
                 isKommende && "opacity-80",
                 isSluttet && "opacity-50"
               )}
@@ -715,6 +719,7 @@ export default function KonsulenterAnsatte() {
       </div>
 
       <AnsattModal open={modalOpen} onClose={() => setModalOpen(false)} ansatt={editAnsatt} />
+      <AnsattDetailSheet open={detailOpen} onClose={() => setDetailOpen(false)} ansatt={detailAnsatt} />
     </div>
   );
 }

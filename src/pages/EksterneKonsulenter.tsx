@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 import { Plus, X, Search, CalendarIcon, Upload, CheckCircle2, Loader2, Users, User } from "lucide-react";
 import { relativeFutureDate } from "@/lib/relativeDate";
+import { OppdragsMatchPanel } from "@/components/OppdragsMatchPanel";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -647,6 +648,20 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
                 <button onClick={() => set("status", "utilgjengelig")} className={form.status === "utilgjengelig" ? CHIP_ON : CHIP_OFF}>Ikke ledig</button>
               </div>
             </div>
+
+            {/* Oppdragsmatch — only in edit mode */}
+            {!isCreate && form.teknologier.length > 0 && (
+              <div className="pt-2 border-t border-border">
+                <OppdragsMatchPanel
+                  konsulent={{
+                    navn: form.navn,
+                    teknologier: form.teknologier,
+                    cv_tekst: form.cv_tekst || null,
+                    ekstern_id: editRow?.id,
+                  }}
+                />
+              </div>
+            )}
 
             {/* Tilgjengelig fra */}
             <div>

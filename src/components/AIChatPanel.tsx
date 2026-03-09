@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   Sparkles, RefreshCw, ArrowUp, X, Copy, Loader2,
-  ClipboardList, Inbox, FileText, Search, Mail, BarChart3, Upload,
+  ClipboardList, Inbox, FileText, Search, Mail, BarChart3, Upload, ArrowLeftRight, Target,
 } from "lucide-react";
 import { CvUploadFlow } from "@/components/CvUploadFlow";
 import { SheetClose } from "@/components/ui/sheet";
@@ -18,7 +18,7 @@ import { getEffectiveSignal } from "@/lib/categoryUtils";
 /* ─── Types ─── */
 
 type Msg = { role: "user" | "assistant"; content: string; error?: boolean; showCopy?: boolean };
-type Mode = null | "forespørsel" | "pitch" | "match" | "epost" | "cv-upload";
+type Mode = null | "forespørsel" | "pitch" | "match" | "epost" | "cv-upload" | "oppdragsmatch";
 
 interface CrmContext {
   contacts: Array<{ name: string; company: string; signal: string; daysAgo: number | null }>;
@@ -37,6 +37,7 @@ const QUICK_ACTIONS = [
   { icon: Mail, label: "Skriv oppfølgings-epost", sub: "Basert på siste aktivitet", action: "epost" as const },
   { icon: BarChart3, label: "Ukesoppsummering", sub: "Pipeline og aktivitet denne uken", action: "ukesoppsummering" as const },
   { icon: Upload, label: "Last opp CV", sub: "Registrer konsulent automatisk", action: "cv-upload" as const },
+  { icon: ArrowLeftRight, label: "Match til oppdrag", sub: "Finn beste forespørsel for en konsulent", action: "oppdragsmatch" as const },
 ];
 
 const CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors cursor-pointer select-none";
@@ -123,6 +124,13 @@ export function AIChatPanel() {
   const [epostContactName, setEpostContactName] = useState("");
   const [epostTone, setEpostTone] = useState("Vennlig");
   const [epostContactResults, setEpostContactResults] = useState<any[]>([]);
+
+  // ── Oppdragsmatch state
+  const [omSearch, setOmSearch] = useState("");
+  const [omResults, setOmResults] = useState<any[]>([]);
+  const [omSelected, setOmSelected] = useState<any | null>(null);
+  const [omMatching, setOmMatching] = useState(false);
+  const [omMatchResults, setOmMatchResults] = useState<any[] | null>(null);
 
   // Auto-scroll
   useEffect(() => {
@@ -500,6 +508,80 @@ Returner BARE JSON, ingen annen tekst.`,
     setEpostContactName("");
   };
 
+  /* ── Oppdragsmatch: search consultants */
+  const searchOmConsultants = (query: string) => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (query.length < 1) { setOmResults([]); return; }
+    searchTimer.current = setTimeout(async () => {
+      const [{ data: interne }, { data: eksterne }] = await Promise.all([
+        supabase.from("stacq_ansatte").select("id, navn, kompetanse, bio, geografi, status").ilike("navn", `%${query}%`).limit(5),
+        supabase.from("external_consultants").select("id, navn, teknologier, cv_tekst, status").ilike("navn", `%${query}%`).limit(5),
+      ]);
+      const results = [
+        ...(interne || []).map((r: any) => ({ ...r, _type: "intern" as const, teknologier: r.kompetanse })),
+        ...(eksterne || []).map((r: any) => ({ ...r, _type: "ekstern" as const })),
+      ];
+      setOmResults(results);
+    }, 300);
+  };
+
+  const handleOmMatch = async (consultant: any) => {
+    setOmSelected(consultant);
+    setOmMatching(true);
+    setOmMatchResults(null);
+    setOmResults([]);
+    setOmSearch("");
+    try {
+      const fortyFiveDaysAgo = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: fData } = await supabase
+        .from("foresporsler")
+        .select("id, selskap_navn, sted, teknologier, frist_dato, status")
+        .gte("created_at", fortyFiveDaysAgo)
+        .in("status", ["Ny", "Aktiv"])
+        .order("frist_dato", { ascending: true });
+
+      const { data, error } = await supabase.functions.invoke("match-foresporsler", {
+        body: {
+          konsulent: {
+            navn: consultant.navn,
+            teknologier: consultant.teknologier || [],
+            cv_tekst: consultant.bio || consultant.cv_tekst || null,
+            geografi: consultant.geografi || null,
+          },
+          foresporsler: fData || [],
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setOmMatchResults(Array.isArray(data) ? data : []);
+
+      // Show results as a message
+      const results = Array.isArray(data) ? data : [];
+      if (results.length === 0) {
+        setMessages(prev => [...prev,
+          { role: "user", content: `🎯 Finn oppdrag for ${consultant.navn} (${consultant._type === "intern" ? "Ansatt" : "Ekstern"})` },
+          { role: "assistant", content: "Ingen forespørsler med score ≥ 4 funnet." },
+        ]);
+      } else {
+        const lines = results.map((r: any, i: number) =>
+          `**#${i + 1} ${r.selskap_navn}** — score ${r.score}/10\n${r.match_tags?.join(", ") || ""}\n_${r.begrunnelse}_`
+        ).join("\n\n");
+        setMessages(prev => [...prev,
+          { role: "user", content: `🎯 Finn oppdrag for ${consultant.navn} (${consultant._type === "intern" ? "Ansatt" : "Ekstern"})` },
+          { role: "assistant", content: `### Oppdragsmatch for ${consultant.navn}\n\n${lines}` },
+        ]);
+      }
+    } catch (err: any) {
+      setMessages(prev => [...prev,
+        { role: "user", content: `🎯 Finn oppdrag for ${consultant.navn}` },
+        { role: "assistant", content: err.message || "Kunne ikke kjøre matching", error: true },
+      ]);
+    } finally {
+      setOmMatching(false);
+      setMode(null);
+    }
+  };
+
   /* ── Quick action dispatch */
   const handleQuickAction = (action: string) => {
     switch (action) {
@@ -510,6 +592,7 @@ Returner BARE JSON, ingen annen tekst.`,
       case "epost": setMode("epost"); break;
       case "ukesoppsummering": handleUkesoppsummering(); break;
       case "cv-upload": setMode("cv-upload"); break;
+      case "oppdragsmatch": setMode("oppdragsmatch"); setOmSearch(""); setOmResults([]); setOmSelected(null); setOmMatchResults(null); break;
     }
   };
 
@@ -770,6 +853,49 @@ Returner BARE JSON, ingen annen tekst.`,
               className="flex items-center gap-1.5 text-[0.8125rem] font-medium bg-primary text-primary-foreground rounded-lg px-4 py-2 hover:opacity-90 disabled:opacity-50 transition-opacity">
               <Mail className="h-3.5 w-3.5" />Skriv epost
             </button>
+          </div>
+        )}
+
+        {/* ── Mode: Oppdragsmatch */}
+        {mode === "oppdragsmatch" && (
+          <div className="space-y-3 p-4 rounded-xl border border-border bg-muted/40">
+            <div className="flex items-center justify-between">
+              <p className="text-[0.875rem] font-semibold">🎯 Match til oppdrag</p>
+              <button onClick={() => setMode(null)} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+            </div>
+            <p className="text-[0.8125rem] text-muted-foreground">Søk etter en konsulent (ansatt eller ekstern) for å finne passende forespørsler.</p>
+            <div className="relative">
+              <Input
+                value={omSearch}
+                onChange={(e) => { setOmSearch(e.target.value); searchOmConsultants(e.target.value); }}
+                placeholder="Søk konsulent..."
+                className="text-[0.875rem]"
+              />
+              {omResults.length > 0 && (
+                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-md max-h-48 overflow-auto">
+                  {omResults.map((r: any) => (
+                    <button
+                      key={`${r._type}-${r.id}`}
+                      onClick={() => handleOmMatch(r)}
+                      className="w-full text-left px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors flex items-center gap-2"
+                    >
+                      <span className="font-medium">{r.navn}</span>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold ${
+                        r._type === "intern" ? "bg-foreground text-background" : "bg-blue-100 text-blue-700"
+                      }`}>
+                        {r._type === "intern" ? "Ansatt" : "Ekstern"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {omMatching && (
+              <p className="text-[0.8125rem] text-primary font-medium flex items-center gap-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Analyserer match for {omSelected?.navn}...
+              </p>
+            )}
           </div>
         )}
 
