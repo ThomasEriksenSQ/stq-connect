@@ -122,16 +122,19 @@ function PipelineTrack({ status }: { status: string }) {
   const cfg = PIPELINE[status] || PIPELINE.sendt_cv;
   const currentStep = cfg.step;
   const isAvslag = status === "avslag";
+  const isBortfalt = status === "bortfalt";
 
-  // For avslag: find which step was the last before avslag (default sendt_cv = step 1)
   return (
     <div className="flex items-center gap-0">
       {steps.map((step, i) => {
         let filled = false;
         let color = "bg-muted-foreground/30";
 
-        if (isAvslag) {
-          // First node filled amber (was at sendt_cv), rest gray, last filled = red
+        if (isBortfalt) {
+          // All nodes gray
+          filled = false;
+          color = "bg-muted-foreground/20";
+        } else if (isAvslag) {
           if (step === 1) { filled = true; color = "bg-red-400"; }
         } else if (currentStep !== null) {
           if (step <= currentStep) {
