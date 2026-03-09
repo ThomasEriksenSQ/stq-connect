@@ -8,6 +8,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { nb } from "date-fns/locale";
+import { companiesMatch } from "@/lib/companyMatch";
 
 interface BriefData {
   overdueCount: number;
