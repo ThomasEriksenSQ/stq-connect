@@ -14,6 +14,9 @@ const TRACKED_TECHS = [
   "Docker", "Git", "Jenkins", "Buildroot", "OpenWRT",
   "Cortex-M", "NRF52", "ESP32", "Raspberry Pi",
   "AUTOSAR", "MISRA", "ISO 26262", "IEC 62443",
+  "Modbus", "MQTT", "OPC-UA", "AWS IoT", "Azure IoT",
+  "DSP", "Signal processing", "OpenCV", "CUDA",
+  "Bootloader", "OTA", "Functional Safety",
   "WebAssembly", "Golang", "Java",
 ];
 
