@@ -1,5 +1,13 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { X, Pencil, Trash2, Sparkles, Loader2, ChevronDown, Plus, Target } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { relativeDate, fullDate } from "@/lib/relativeDate";
 import { relativeTime } from "@/lib/relativeDate";
 import { toast } from "sonner";
@@ -199,6 +207,16 @@ export function ForespørselSheet({
   const [matchResults, setMatchResults] = useState<MatchResult[] | null>(null);
   const [matchSourceFilter, setMatchSourceFilter] = useState<"Alle" | "Ansatte" | "Eksterne">("Alle");
 
+  // Opprett oppdrag modal state
+  const [oppdragModalOpen, setOppdragModalOpen] = useState(false);
+  const [oppdragKonsulentNavn, setOppdragKonsulentNavn] = useState("");
+  const [oppdragUtpris, setOppdragUtpris] = useState("");
+  const [oppdragInnpris, setOppdragInnpris] = useState("");
+  const [oppdragStartDato, setOppdragStartDato] = useState("");
+  const [oppdragFornyDato, setOppdragFornyDato] = useState("");
+  const [oppdragKommentar, setOppdragKommentar] = useState("");
+  const [oppdragSubmitting, setOppdragSubmitting] = useState(false);
+
   // Linked consultants (both intern and ekstern)
   const { data: linkedKonsulenter = [], refetch: refetchLinked } = useQuery({
     queryKey: ["foresporsler-konsulenter", row?.id],
@@ -389,14 +407,48 @@ export function ForespørselSheet({
     });
   };
 
-  const updateKonsulentStatus = async (linkId: string, newStatus: string) => {
+  const updateKonsulentStatus = async (linkId: string, newStatus: string, konsulentNavn?: string) => {
     await supabase
       .from("foresporsler_konsulenter")
       .update({ status: newStatus, status_updated_at: new Date().toISOString() })
       .eq("id", linkId);
-    if (newStatus === "vunnet") fireConfetti();
+    if (newStatus === "vunnet") {
+      fireConfetti();
+      // Open oppdrag creation modal
+      setOppdragKonsulentNavn(konsulentNavn || "");
+      setOppdragUtpris("");
+      setOppdragInnpris("");
+      setOppdragStartDato("");
+      setOppdragFornyDato("");
+      setOppdragKommentar("");
+      setTimeout(() => setOppdragModalOpen(true), 600);
+    }
     queryClient.invalidateQueries({ queryKey: ["foresporsler-konsulenter", row.id] });
     queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
+  };
+
+  const handleCreateOppdrag = async (fillLater: boolean) => {
+    setOppdragSubmitting(true);
+    const { error } = await supabase.from("stacq_oppdrag").insert({
+      kandidat: oppdragKonsulentNavn,
+      kunde: row.selskap_navn,
+      deal_type: row.type || null,
+      utpris: fillLater ? null : (oppdragUtpris ? Number(oppdragUtpris) : null),
+      til_konsulent: fillLater ? null : (oppdragInnpris ? Number(oppdragInnpris) : null),
+      start_dato: fillLater ? null : (oppdragStartDato || null),
+      forny_dato: fillLater ? null : (oppdragFornyDato || null),
+      kommentar: fillLater ? null : (oppdragKommentar || null),
+      status: "Oppstart",
+      er_ansatt: true,
+    });
+    setOppdragSubmitting(false);
+    if (error) {
+      toast.error("Kunne ikke opprette oppdrag");
+      return;
+    }
+    toast.success("Oppdrag opprettet");
+    queryClient.invalidateQueries({ queryKey: ["stacq-oppdrag-prisen"] });
+    setOppdragModalOpen(false);
   };
 
   // Save kommentar inline
@@ -657,12 +709,7 @@ export function ForespørselSheet({
                             {PIPELINE.map(s => (
                               <button
                                 key={s.key}
-                                onClick={async () => {
-                                  await supabase.from("foresporsler_konsulenter").update({ status: s.key, status_updated_at: new Date().toISOString() }).eq("id", k.id);
-                                  if (s.key === "vunnet") fireConfetti();
-                                  queryClient.invalidateQueries({ queryKey: ["foresporsler-konsulenter", row.id] });
-                                  queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
-                                }}
+                                onClick={() => updateKonsulentStatus(k.id, s.key, navn || "Ukjent")}
                                 className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold transition-all ${
                                   status === s.key
                                     ? `${s.color} ring-2 ring-offset-1 ring-current`
@@ -860,6 +907,102 @@ export function ForespørselSheet({
           <DeleteButton onConfirm={handleDelete} />
         )}
       </div>
+
+      {/* Opprett oppdrag modal */}
+      <Dialog open={oppdragModalOpen} onOpenChange={setOppdragModalOpen}>
+        <DialogContent className="max-w-md rounded-xl p-6 gap-0">
+          <DialogHeader>
+            <DialogTitle className="text-[1.125rem] font-bold text-foreground">Opprett oppdrag</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            {/* Read-only fields */}
+            <div>
+              <p className={LABEL}>Konsulent</p>
+              <p className="text-[0.875rem] font-medium mt-0.5">{oppdragKonsulentNavn}</p>
+            </div>
+            <div>
+              <p className={LABEL}>Kunde</p>
+              <p className="text-[0.875rem] font-medium mt-0.5">{row?.selskap_navn}</p>
+            </div>
+            <div>
+              <p className={LABEL}>Type</p>
+              <p className="text-[0.875rem] font-medium mt-0.5">{row?.type === "VIA" ? "Partner" : "Direkte"}</p>
+            </div>
+
+            {/* Editable fields */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={LABEL}>Utpris / time</label>
+                <Input
+                  type="number"
+                  value={oppdragUtpris}
+                  onChange={(e) => setOppdragUtpris(e.target.value)}
+                  placeholder="f.eks. 1500"
+                  className="mt-1 text-[0.875rem]"
+                />
+              </div>
+              <div>
+                <label className={LABEL}>Innpris / time</label>
+                <Input
+                  type="number"
+                  value={oppdragInnpris}
+                  onChange={(e) => setOppdragInnpris(e.target.value)}
+                  placeholder="f.eks. 1050"
+                  className="mt-1 text-[0.875rem]"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={LABEL}>Startdato</label>
+                <Input
+                  type="date"
+                  value={oppdragStartDato}
+                  onChange={(e) => setOppdragStartDato(e.target.value)}
+                  className="mt-1 text-[0.875rem]"
+                />
+              </div>
+              <div>
+                <label className={LABEL}>Fornyelsesdato</label>
+                <Input
+                  type="date"
+                  value={oppdragFornyDato}
+                  onChange={(e) => setOppdragFornyDato(e.target.value)}
+                  className="mt-1 text-[0.875rem]"
+                />
+              </div>
+            </div>
+            <div>
+              <label className={LABEL}>Kommentar</label>
+              <Textarea
+                value={oppdragKommentar}
+                onChange={(e) => setOppdragKommentar(e.target.value)}
+                placeholder="Notater om oppdraget..."
+                rows={3}
+                className="mt-1 text-[0.875rem]"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="mt-6 pt-4 border-t border-border">
+            <button
+              onClick={() => handleCreateOppdrag(true)}
+              disabled={oppdragSubmitting}
+              className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            >
+              Fyll ut senere
+            </button>
+            <button
+              onClick={() => handleCreateOppdrag(false)}
+              disabled={oppdragSubmitting}
+              className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-colors"
+            >
+              {oppdragSubmitting ? "Oppretter..." : "Opprett oppdrag"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
