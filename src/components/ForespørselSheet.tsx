@@ -207,6 +207,16 @@ export function ForespørselSheet({
   const [matchResults, setMatchResults] = useState<MatchResult[] | null>(null);
   const [matchSourceFilter, setMatchSourceFilter] = useState<"Alle" | "Ansatte" | "Eksterne">("Alle");
 
+  // Opprett oppdrag modal state
+  const [oppdragModalOpen, setOppdragModalOpen] = useState(false);
+  const [oppdragKonsulentNavn, setOppdragKonsulentNavn] = useState("");
+  const [oppdragUtpris, setOppdragUtpris] = useState("");
+  const [oppdragInnpris, setOppdragInnpris] = useState("");
+  const [oppdragStartDato, setOppdragStartDato] = useState("");
+  const [oppdragFornyDato, setOppdragFornyDato] = useState("");
+  const [oppdragKommentar, setOppdragKommentar] = useState("");
+  const [oppdragSubmitting, setOppdragSubmitting] = useState(false);
+
   // Linked consultants (both intern and ekstern)
   const { data: linkedKonsulenter = [], refetch: refetchLinked } = useQuery({
     queryKey: ["foresporsler-konsulenter", row?.id],
