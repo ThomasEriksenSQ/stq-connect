@@ -40,6 +40,7 @@ export default function KonsulenterOppdrag() {
   const enriched = useMemo(
     () =>
       oppdrag.map((o: any) => {
+        const computedStatus = computeOppdragStatus(o);
         const utpris = Number(o.utpris) || 0;
         const tilKons = Number(o.til_konsulent) || 0;
         const marginPerTime = utpris - tilKons;
@@ -48,7 +49,7 @@ export default function KonsulenterOppdrag() {
         const daysUntilForny = o.forny_dato
           ? differenceInDays(new Date(o.forny_dato), today)
           : null;
-        return { ...o, margin, marginPerTime, marginPct, daysUntilForny };
+        return { ...o, status: computedStatus, margin, marginPerTime, marginPct, daysUntilForny };
       }),
     [oppdrag]
   );
