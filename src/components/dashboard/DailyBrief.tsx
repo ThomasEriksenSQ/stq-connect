@@ -346,7 +346,7 @@ const DailyBrief = () => {
               ) : aiMarket ? (
                 <p className="text-sm text-muted-foreground mb-4 animate-in fade-in duration-500">{aiMarket}</p>
               ) : null}
-              <div className="flex flex-wrap gap-1.5 pb-1 mt-4">
+              <div className="flex flex-wrap gap-1.5 pb-1" style={{ marginTop: '1rem' }}>
                 {market.techPulse.map(t => (
                   <span
                     key={t.name}
