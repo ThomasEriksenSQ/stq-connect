@@ -301,9 +301,9 @@ const DailyBrief = () => {
               </div>
               {/* AI market summary */}
               {aiMarketLoading ? (
-                <Skeleton className="h-4 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-3/4 mb-3" />
               ) : aiMarket ? (
-                <p className="text-sm text-muted-foreground mb-2 animate-in fade-in duration-500">{aiMarket}</p>
+                <p className="text-sm text-muted-foreground mb-3 animate-in fade-in duration-500">{aiMarket}</p>
               ) : null}
               <div className="flex flex-wrap gap-1.5 pb-1">
                 {market.techPulse.map(t => (
@@ -312,6 +312,8 @@ const DailyBrief = () => {
                     className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[0.75rem] font-medium text-muted-foreground"
                   >
                     {t.name} <span className="font-bold">{t.count}</span>
+                    {t.trend === "up" && <span className="text-emerald-500">↑</span>}
+                    {t.trend === "down" && <span className="text-red-400">↓</span>}
                   </span>
                 ))}
               </div>
