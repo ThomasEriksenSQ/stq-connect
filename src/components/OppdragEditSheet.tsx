@@ -212,6 +212,14 @@ export function OppdragEditSheet({
       setConfirmTerminate(false);
       setSelskapId((row as any).selskap_id || null);
       setSelskapNavn(row.kunde || null);
+
+      // Auto-check løpende if forny_dato is 25-35 days from today
+      if (row.forny_dato) {
+        const diff = Math.round((new Date(row.forny_dato).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        setIsLopende(diff >= 25 && diff <= 35);
+      } else {
+        setIsLopende(false);
+      }
     }
   }, [row?.id]);
 
