@@ -20,25 +20,6 @@ function getGreeting(): string {
   return "God kveld";
 }
 
-interface OverdueTask {
-  contactName: string;
-  companyName: string;
-  contactId: string;
-}
-
-interface BehovNaItem {
-  contactName: string;
-  companyName: string;
-  contactId: string;
-  daysSince: number;
-}
-
-interface RenewalItem {
-  konsulent: string;
-  kunde: string;
-  daysUntil: number;
-}
-
 interface OpenForesporsel {
   id: number;
   selskap: string;
@@ -59,14 +40,36 @@ interface MarketData {
 const DailyBrief = () => {
   const { user } = useAuth();
   const [firstName, setFirstName] = useState("");
-  const [overdue, setOverdue] = useState<OverdueTask[]>([]);
-  const [behovNa, setBehovNa] = useState<BehovNaItem[]>([]);
-  const [renewals, setRenewals] = useState<RenewalItem[]>([]);
   const [openForesp, setOpenForesp] = useState<OpenForesporsel[]>([]);
   const [muligheter, setMuligheter] = useState<MulighetItem[]>([]);
   const [market, setMarket] = useState<MarketData | null>(null);
+  const [aiMarket, setAiMarket] = useState<string | null>(null);
+  const [aiMarketLoading, setAiMarketLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
+
+  const fetchMarketAI = useCallback(async (techPulse: { name: string; count: number }[]) => {
+    if (techPulse.length === 0) return;
+    setAiMarketLoading(true);
+    setAiMarket(null);
+    try {
+      const techStr = techPulse.map(t => `${t.name}(${t.count})`).join(", ");
+      const { data } = await supabase.functions.invoke("chat", {
+        body: {
+          system: "Du er markedsanalytiker for STACQ, et norsk konsulentselskap innen embedded/firmware. Svar KUN med 2-3 korte setninger på norsk. Maks 40 ord totalt. Vær konkret og direkte.",
+          messages: [{
+            role: "user",
+            content: `Basert på disse teknologifrekvensene fra nylige bemanningsforespørsler siste 30 dager: ${techStr}. Oppsummer hva embedded/firmware-markedet etterspør akkurat nå.`,
+          }],
+        },
+      });
+      if (data?.text) setAiMarket(data.text as string);
+    } catch {
+      // AI failure is fine
+    } finally {
+      setAiMarketLoading(false);
+    }
+  }, []);
 
   const fetchAll = useCallback(async () => {
     if (!user?.id) return;
@@ -74,18 +77,12 @@ const DailyBrief = () => {
 
     try {
       const now = new Date();
-      const todayStr = now.toISOString().slice(0, 10);
-      const d7 = new Date(now.getTime() - 7 * 86400000).toISOString();
+      const d45 = new Date(now.getTime() - 45 * 86400000).toISOString().slice(0, 10);
       const d60 = new Date(now.getTime() - 60 * 86400000).toISOString().slice(0, 10);
       const d30 = new Date(now.getTime() - 30 * 86400000).toISOString().slice(0, 10);
 
       const [
         profileRes,
-        overdueTasksRes,
-        contactsRes,
-        activitiesRes,
-        companiesRes,
-        renewalRes,
         foresporlerRes,
         fkRes,
         fkActiveRes,
@@ -93,15 +90,8 @@ const DailyBrief = () => {
         finnRes,
       ] = await Promise.all([
         supabase.from("profiles").select("full_name").eq("id", user.id).single(),
-        supabase.from("tasks").select("id, contact_id, company_id")
-          .eq("status", "open").lt("due_date", todayStr),
-        supabase.from("contacts").select("id, first_name, last_name, company_id"),
-        supabase.from("activities").select("contact_id, subject, description, created_at")
-          .order("created_at", { ascending: false }),
-        supabase.from("companies").select("id, name"),
-        supabase.from("stacq_oppdrag").select("kandidat, kunde, forny_dato")
-          .gte("forny_dato", todayStr).order("forny_dato", { ascending: true }).limit(3),
         supabase.from("foresporsler").select("id, selskap_navn, teknologier, mottatt_dato")
+          .gte("mottatt_dato", d45)
           .order("mottatt_dato", { ascending: true }),
         supabase.from("foresporsler_konsulenter").select("foresporsler_id, status, ansatt_id, ekstern_id"),
         supabase.from("foresporsler_konsulenter").select("foresporsler_id, status, ansatt_id, ekstern_id")
@@ -114,71 +104,7 @@ const DailyBrief = () => {
         setFirstName(profileRes.data.full_name?.split(" ")[0] ?? "");
       }
 
-      const contacts = contactsRes.data ?? [];
-      const companies = companiesRes.data ?? [];
-      const contactMap = new Map(contacts.map(c => [c.id, c]));
-      const companyMap = new Map(companies.map(c => [c.id, c.name]));
-
-      // SECTION 2a: Overdue tasks with contact/company names
-      const overdueTasks = overdueTasksRes.data ?? [];
-      const overdueItems: OverdueTask[] = [];
-      for (const t of overdueTasks.slice(0, 3)) {
-        const contact = t.contact_id ? contactMap.get(t.contact_id) : null;
-        const companyName = t.company_id ? (companyMap.get(t.company_id) ?? "") : 
-          (contact?.company_id ? (companyMap.get(contact.company_id) ?? "") : "");
-        if (contact) {
-          overdueItems.push({
-            contactName: `${contact.first_name} ${contact.last_name}`.trim(),
-            companyName,
-            contactId: contact.id,
-          });
-        }
-      }
-      setOverdue(overdueItems);
-
-      // SECTION 2b: Behov nå not contacted in 7+ days
-      const { extractCategory } = await import("@/lib/categoryUtils");
-      const activities = activitiesRes.data ?? [];
-      const actByContact = new Map<string, typeof activities>();
-      for (const a of activities) {
-        if (!a.contact_id) continue;
-        const list = actByContact.get(a.contact_id) || [];
-        list.push(a);
-        actByContact.set(a.contact_id, list);
-      }
-      const behovItems: BehovNaItem[] = [];
-      for (const c of contacts) {
-        const cActs = actByContact.get(c.id) || [];
-        const sorted = [...cActs].sort((a, b) => b.created_at.localeCompare(a.created_at));
-        for (const act of sorted) {
-          const cat = extractCategory(act.subject, act.description);
-          if (cat === "Behov nå") {
-            const lastContactDate = new Date(sorted[0].created_at);
-            const daysSince = Math.floor((now.getTime() - lastContactDate.getTime()) / 86400000);
-            if (daysSince >= 7) {
-              behovItems.push({
-                contactName: `${c.first_name} ${c.last_name}`.trim(),
-                companyName: c.company_id ? (companyMap.get(c.company_id) ?? "") : "",
-                contactId: c.id,
-                daysSince,
-              });
-            }
-            break;
-          }
-          if (cat) break;
-        }
-      }
-      setBehovNa(behovItems.slice(0, 3));
-
-      // SECTION 2c: Nearest renewals
-      const renewalItems: RenewalItem[] = (renewalRes.data ?? []).map(r => ({
-        konsulent: r.kandidat,
-        kunde: r.kunde ?? "",
-        daysUntil: Math.max(0, Math.floor((new Date(r.forny_dato!).getTime() - now.getTime()) / 86400000)),
-      }));
-      setRenewals(renewalItems.slice(0, 3));
-
-      // SECTION 3: Open forespørsler without consultants
+      // Åpne forespørsler without consultants (already filtered to 45 days by query)
       const allForesp = foresporlerRes.data ?? [];
       const fkData = fkRes.data ?? [];
       const fkByForesp = new Set(fkData.map(r => r.foresporsler_id));
@@ -193,7 +119,7 @@ const DailyBrief = () => {
         }));
       setOpenForesp(openItems);
 
-      // SECTION 4: Biggest opportunities (Intervju > Sendt CV)
+      // Biggest opportunities (Intervju > Sendt CV)
       const activeFk = fkActiveRes.data ?? [];
       const ansatte = ansatteRes.data ?? [];
       const ansattMap = new Map(ansatte.map(a => [a.id, a.navn]));
@@ -220,7 +146,7 @@ const DailyBrief = () => {
         });
       setMuligheter(mulighetItems);
 
-      // SECTION 5: Market tech tags
+      // Market tech tags
       const finnRows = finnRes.data ?? [];
       if (finnRows.length > 0) {
         const recentRows = finnRows.filter(r => r.dato >= d30);
@@ -237,6 +163,7 @@ const DailyBrief = () => {
           .sort((a, b) => b.count - a.count)
           .slice(0, 5);
         setMarket({ techPulse });
+        fetchMarketAI(techPulse);
       } else {
         setMarket(null);
       }
@@ -247,15 +174,13 @@ const DailyBrief = () => {
       console.error("DailyBrief error:", e);
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, fetchMarketAI]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const timeStr = fetchedAt
     ? `kl. ${fetchedAt.getHours().toString().padStart(2, "0")}:${fetchedAt.getMinutes().toString().padStart(2, "0")}`
     : "";
-
-  const hasOppfolging = overdue.length > 0 || behovNa.length > 0 || renewals.length > 0;
 
   return (
     <div className="bg-card border border-border rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.07)] overflow-hidden px-5 pt-4 pb-4">
@@ -278,38 +203,7 @@ const DailyBrief = () => {
         </div>
       ) : (
         <div className="space-y-0">
-          {/* SECTION 2: Oppfølging */}
-          {hasOppfolging && (
-            <>
-              <div className="border-t border-border pt-3 pb-2">
-                <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Oppfølging</span>
-              </div>
-              <div className="space-y-1 pb-2">
-                {overdue.map((item, i) => (
-                  <Link key={`od-${i}`} to={`/kontakter/${item.contactId}`} className="block text-[0.875rem] text-foreground hover:bg-secondary/50 rounded px-1 -mx-1 py-0.5 transition-colors">
-                    ⚠️ Forfalt: <span className="font-medium">{item.contactName}</span>
-                    {item.companyName && <span className="text-muted-foreground"> · {item.companyName}</span>}
-                  </Link>
-                ))}
-                {behovNa.map((item, i) => (
-                  <Link key={`bn-${i}`} to={`/kontakter/${item.contactId}`} className="block text-[0.875rem] text-foreground hover:bg-secondary/50 rounded px-1 -mx-1 py-0.5 transition-colors">
-                    🔥 Behov nå: <span className="font-medium">{item.contactName}</span>
-                    {item.companyName && <span className="text-muted-foreground"> · {item.companyName}</span>}
-                    <span className="text-muted-foreground"> · {item.daysSince}d siden</span>
-                  </Link>
-                ))}
-                {renewals.map((item, i) => (
-                  <Link key={`rn-${i}`} to="/stacq/prisen" className="block text-[0.875rem] text-foreground hover:bg-secondary/50 rounded px-1 -mx-1 py-0.5 transition-colors">
-                    🔄 Fornyelse: <span className="font-medium">{item.konsulent}</span>
-                    {item.kunde && <span className="text-muted-foreground"> · {item.kunde}</span>}
-                    <span className="text-muted-foreground"> · om {item.daysUntil}d</span>
-                  </Link>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* SECTION 3: Åpne forespørsler */}
+          {/* Åpne forespørsler */}
           {openForesp.length > 0 && (
             <>
               <div className="border-t border-border pt-3 pb-2">
@@ -327,7 +221,7 @@ const DailyBrief = () => {
             </>
           )}
 
-          {/* SECTION 4: Største muligheter */}
+          {/* Største muligheter */}
           {muligheter.length > 0 && (
             <>
               <div className="border-t border-border pt-3 pb-2">
@@ -351,7 +245,7 @@ const DailyBrief = () => {
             </>
           )}
 
-          {/* SECTION 5: Marked */}
+          {/* Marked */}
           {market && market.techPulse.length > 0 && (
             <>
               <div className="border-t border-border pt-3 pb-2">
@@ -360,6 +254,12 @@ const DailyBrief = () => {
                   <Link to="/markedsradar" className="text-[0.75rem] text-primary hover:underline">Se mer →</Link>
                 </div>
               </div>
+              {/* AI market summary */}
+              {aiMarketLoading ? (
+                <Skeleton className="h-4 w-3/4 mb-2" />
+              ) : aiMarket ? (
+                <p className="text-sm text-muted-foreground mb-2 animate-in fade-in duration-500">{aiMarket}</p>
+              ) : null}
               <div className="flex flex-wrap gap-1.5 pb-1">
                 {market.techPulse.map(t => (
                   <span
