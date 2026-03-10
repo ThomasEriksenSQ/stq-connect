@@ -422,6 +422,7 @@ export function ForespørselSheet({
       setOppdragStartDato("");
       setOppdragFornyDato("");
       setOppdragKommentar("");
+      setOppdragLopende(false);
       setTimeout(() => setOppdragModalOpen(true), 600);
     }
     queryClient.invalidateQueries({ queryKey: ["foresporsler-konsulenter", row.id] });
