@@ -243,7 +243,7 @@ const DailyBrief = () => {
           }
           return { name: t, count: curr, trend };
         })
-        .filter(t => t.count >= 2)
+        .filter(t => t.count >= 1)
         .sort((a, b) => b.count - a.count)
         .slice(0, 8);
 
