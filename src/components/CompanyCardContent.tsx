@@ -273,24 +273,22 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   });
 
   const changeSignalMutation = useMutation({
-    mutationFn: async (newSignal: string) => {
-      const [actRes, catRes] = await Promise.all([
-        supabase.from("activities").insert({
-          subject: newSignal,
-          type: "note",
-          company_id: companyId,
-          created_by: user?.id,
-          description: `[${newSignal}]`,
-        }),
-        supabase.from("companies").update({ category: newSignal }).eq("id", companyId),
-      ]);
-      if (actRes.error) throw actRes.error;
-      if (catRes.error) throw catRes.error;
+    mutationFn: async ({ signal, contactId }: { signal: string; contactId: string }) => {
+      const { error } = await supabase.from("activities").insert({
+        subject: signal,
+        type: "note",
+        contact_id: contactId,
+        company_id: companyId,
+        created_by: user?.id,
+        description: `[${signal}]`,
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company-activities-direct", companyId] });
       queryClient.invalidateQueries({ queryKey: ["company-contact-activities", companyId] });
       queryClient.invalidateQueries({ queryKey: ["companies-full"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
       toast.success("Signal oppdatert");
     },
     onError: () => toast.error("Kunne ikke oppdatere signal"),
