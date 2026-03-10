@@ -49,6 +49,13 @@ function stacqColor(timePris: number): string {
   return "text-muted-foreground";
 }
 
+function getKundeTypeLabel(companyStatus: string | null): string {
+  if (companyStatus === "partner") return "Partner";
+  if (companyStatus === "customer" || companyStatus === "kunde") return "Kunde";
+  if (companyStatus === "prospect") return "Potensiell kunde";
+  return "Direkte";
+}
+
 function computeOppdragStatus(r: any): string {
   if (r.status === "Inaktiv") return "Inaktiv";
   const today = new Date();
