@@ -646,7 +646,7 @@ export function ForespørselSheet({
                                 "inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold",
                                 isIntern ? "bg-foreground text-background" : "bg-blue-100 text-blue-700"
                               )}>
-                                {isIntern ? "Intern" : "Ekstern"}
+                                {isIntern ? "Ansatt" : "Ekstern"}
                               </span>
                             </div>
                             <button onClick={() => handleRemoveKonsulent(k.id)} className="text-muted-foreground hover:text-destructive transition-colors">
@@ -792,7 +792,7 @@ export function ForespørselSheet({
                                   ? "bg-foreground text-background"
                                   : "bg-blue-100 text-blue-700"
                               )}>
-                                {m.type === "intern" ? "Intern" : "Ekstern"}
+                                {m.type === "intern" ? "Ansatt" : "Ekstern"}
                               </span>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
