@@ -194,6 +194,7 @@ export function OppdragEditSheet({
   const [kommentar, setKommentar] = useState("");
   const [selskapId, setSelskapId] = useState<string | null>(null);
   const [selskapNavn, setSelskapNavn] = useState<string | null>(null);
+  const [isLopende, setIsLopende] = useState(false);
 
   // Confirm terminate
   const [confirmTerminate, setConfirmTerminate] = useState(false);
@@ -211,6 +212,14 @@ export function OppdragEditSheet({
       setConfirmTerminate(false);
       setSelskapId((row as any).selskap_id || null);
       setSelskapNavn(row.kunde || null);
+
+      // Auto-check løpende if forny_dato is 25-35 days from today
+      if (row.forny_dato) {
+        const diff = Math.round((new Date(row.forny_dato).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        setIsLopende(diff >= 25 && diff <= 35);
+      } else {
+        setIsLopende(false);
+      }
     }
   }, [row?.id]);
 
@@ -374,9 +383,11 @@ export function OppdragEditSheet({
             <Popover>
               <PopoverTrigger asChild>
                 <button
+                  disabled={isLopende}
                   className={cn(
                     "w-full h-9 px-3 rounded-lg border border-border bg-background text-left text-[0.875rem] flex items-center gap-2",
-                    !fornyDato && "text-muted-foreground"
+                    !fornyDato && "text-muted-foreground",
+                    isLopende && "opacity-50 cursor-not-allowed"
                   )}
                 >
                   <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
@@ -394,6 +405,30 @@ export function OppdragEditSheet({
               </PopoverContent>
             </Popover>
           </div>
+          <div className="flex items-center gap-2 mt-2">
+            <input
+              type="checkbox"
+              id="lopende"
+              checked={isLopende}
+              onChange={(e) => {
+                setIsLopende(e.target.checked);
+                if (e.target.checked) {
+                  const d = new Date();
+                  d.setDate(d.getDate() + 30);
+                  setFornyDato(d);
+                }
+              }}
+              className="h-4 w-4 rounded border-border"
+            />
+            <label htmlFor="lopende" className="text-[0.8125rem] text-muted-foreground cursor-pointer select-none">
+              Løpende 30 dager (fornyes automatisk fra i dag)
+            </label>
+          </div>
+          {isLopende && fornyDato && (
+            <p className="text-[0.75rem] text-muted-foreground ml-6 mt-1">
+              Utløper: {format(fornyDato, "d. MMMM yyyy", { locale: nb })}
+            </p>
+          )}
         </div>
 
         {/* STARTDATO */}
