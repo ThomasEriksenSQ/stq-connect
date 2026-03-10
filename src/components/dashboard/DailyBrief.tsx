@@ -190,8 +190,8 @@ const DailyBrief = () => {
       // Count from finn_annonser
       for (const r of finnRows) {
         if (!r.teknologier) continue;
-        const isCurrent = isInWeekRange(r.dato, 0, 4);
-        const isPrev = isInWeekRange(r.dato, 4, 8);
+        const isCurrent = isInWeekRange(r.dato, 0, 2);
+        const isPrev = isInWeekRange(r.dato, 2, 4);
         if (!isCurrent && !isPrev) continue;
         const counts = isCurrent ? currentCounts : prevCounts;
         for (const kw of TRACKED_TECHS) {
