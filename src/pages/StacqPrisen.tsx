@@ -257,11 +257,13 @@ export default function StacqPrisen() {
                     <span className="text-[0.8125rem] font-medium text-foreground truncate">{row.kandidat}</span>
                     <span className="text-[0.8125rem] text-muted-foreground truncate">{row.kunde || "–"}</span>
                     <span>
-                      {row.er_ansatt ? (
-                        <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">STACQ</span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-full bg-secondary text-muted-foreground px-2 py-0.5 text-[0.6875rem] font-medium">Partner</span>
-                      )}
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold border ${
+                        row.companyStatus === "partner"
+                          ? "bg-violet-100 text-violet-800 border-violet-200"
+                          : "bg-foreground text-background border-transparent"
+                      }`}>
+                        {getKundeTypeLabel(row.companyStatus)}
+                      </span>
                     </span>
                     <span className="text-[0.8125rem] text-muted-foreground">{row.utpris ?? "–"}</span>
                     <span className="text-[0.8125rem]">
