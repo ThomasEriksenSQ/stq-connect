@@ -78,28 +78,20 @@ export default function StacqPrisen() {
         .select("id, kandidat, er_ansatt, status, utpris, til_konsulent, til_konsulent_override, ekstra_kostnad, kunde, selskap_id, deal_type, start_dato, forny_dato, slutt_dato")
         .neq("status", "Inaktiv");
       if (error) throw error;
-
-      // Fetch company statuses for linked selskap_ids
-      const selskapIds = (data || []).map((r) => r.selskap_id).filter(Boolean) as string[];
-      let companyStatusMap: Record<string, string> = {};
-      if (selskapIds.length > 0) {
-        const { data: companies } = await supabase
-          .from("companies")
-          .select("id, status")
-          .in("id", selskapIds);
-        if (companies) {
-          for (const c of companies) {
-            companyStatusMap[c.id] = c.status;
-          }
-        }
-      }
-
-      return (data || []).map((r) => ({
-        ...r,
-        companyStatus: r.selskap_id ? (companyStatusMap[r.selskap_id] || null) : null,
-      }));
+      return data || [];
     },
   });
+
+  const { data: allCompanies = [] } = useQuery({
+    queryKey: ["all-companies-status"],
+    queryFn: async () => {
+      const { data } = await supabase.from("companies").select("id, status");
+      return data || [];
+    },
+  });
+  const companyStatusMap: Record<string, string> = Object.fromEntries(
+    allCompanies.map((c: any) => [c.id, c.status])
+  );
 
   const enriched = useMemo(() =>
     rows.map((r) => {
