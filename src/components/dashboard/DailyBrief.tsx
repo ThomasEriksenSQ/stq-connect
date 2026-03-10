@@ -92,7 +92,7 @@ const DailyBrief = () => {
         supabase.from("profiles").select("full_name").eq("id", user.id).single(),
         supabase.from("foresporsler").select("id, selskap_navn, teknologier, mottatt_dato")
           .gte("mottatt_dato", d45)
-          .order("mottatt_dato", { ascending: true }),
+          .order("mottatt_dato", { ascending: false }),
         supabase.from("foresporsler_konsulenter").select("foresporsler_id, status, ansatt_id, ekstern_id"),
         supabase.from("foresporsler_konsulenter").select("foresporsler_id, status, ansatt_id, ekstern_id")
           .in("status", ["intervju", "sendt_cv", "Intervju", "Sendt CV"]),
