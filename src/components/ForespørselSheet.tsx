@@ -907,6 +907,102 @@ export function ForespørselSheet({
           <DeleteButton onConfirm={handleDelete} />
         )}
       </div>
+
+      {/* Opprett oppdrag modal */}
+      <Dialog open={oppdragModalOpen} onOpenChange={setOppdragModalOpen}>
+        <DialogContent className="max-w-md rounded-xl p-6 gap-0">
+          <DialogHeader>
+            <DialogTitle className="text-[1.125rem] font-bold text-foreground">Opprett oppdrag</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            {/* Read-only fields */}
+            <div>
+              <p className={LABEL}>Konsulent</p>
+              <p className="text-[0.875rem] font-medium mt-0.5">{oppdragKonsulentNavn}</p>
+            </div>
+            <div>
+              <p className={LABEL}>Kunde</p>
+              <p className="text-[0.875rem] font-medium mt-0.5">{row?.selskap_navn}</p>
+            </div>
+            <div>
+              <p className={LABEL}>Type</p>
+              <p className="text-[0.875rem] font-medium mt-0.5">{row?.type === "VIA" ? "Partner" : "Direkte"}</p>
+            </div>
+
+            {/* Editable fields */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={LABEL}>Utpris / time</label>
+                <Input
+                  type="number"
+                  value={oppdragUtpris}
+                  onChange={(e) => setOppdragUtpris(e.target.value)}
+                  placeholder="f.eks. 1500"
+                  className="mt-1 text-[0.875rem]"
+                />
+              </div>
+              <div>
+                <label className={LABEL}>Innpris / time</label>
+                <Input
+                  type="number"
+                  value={oppdragInnpris}
+                  onChange={(e) => setOppdragInnpris(e.target.value)}
+                  placeholder="f.eks. 1050"
+                  className="mt-1 text-[0.875rem]"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={LABEL}>Startdato</label>
+                <Input
+                  type="date"
+                  value={oppdragStartDato}
+                  onChange={(e) => setOppdragStartDato(e.target.value)}
+                  className="mt-1 text-[0.875rem]"
+                />
+              </div>
+              <div>
+                <label className={LABEL}>Fornyelsesdato</label>
+                <Input
+                  type="date"
+                  value={oppdragFornyDato}
+                  onChange={(e) => setOppdragFornyDato(e.target.value)}
+                  className="mt-1 text-[0.875rem]"
+                />
+              </div>
+            </div>
+            <div>
+              <label className={LABEL}>Kommentar</label>
+              <Textarea
+                value={oppdragKommentar}
+                onChange={(e) => setOppdragKommentar(e.target.value)}
+                placeholder="Notater om oppdraget..."
+                rows={3}
+                className="mt-1 text-[0.875rem]"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="mt-6 pt-4 border-t border-border">
+            <button
+              onClick={() => handleCreateOppdrag(true)}
+              disabled={oppdragSubmitting}
+              className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            >
+              Fyll ut senere
+            </button>
+            <button
+              onClick={() => handleCreateOppdrag(false)}
+              disabled={oppdragSubmitting}
+              className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-colors"
+            >
+              {oppdragSubmitting ? "Oppretter..." : "Opprett oppdrag"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
