@@ -1235,7 +1235,8 @@ function ActivityRow({
   const handleSaveEdit = () => {
     if (!editTitle || !editCategory) return;
     const descWithCat = buildDescriptionWithCategory(editCategory, editDesc.trim());
-    const updates: Record<string, any> = { subject: editTitle.trim(), description: descWithCat || null };
+    const subjectValue = CATEGORIES.some(c => c.label === editTitle.trim()) ? editCategory : editTitle.trim();
+    const updates: Record<string, any> = { subject: subjectValue, description: descWithCat || null };
     if (editDate) {
       updates.created_at = new Date(editDate).toISOString();
     }
