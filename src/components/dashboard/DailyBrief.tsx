@@ -346,7 +346,7 @@ const DailyBrief = () => {
               ) : aiMarket ? (
                 <p className="text-sm text-muted-foreground mb-3 animate-in fade-in duration-500">{aiMarket}</p>
               ) : null}
-              <span className="text-[0.6875rem] text-muted-foreground mb-2 block">Siste 4 uker · finn.no</span>
+              <span className="text-[0.6875rem] text-muted-foreground mb-2 block">Siste 2 uker · forespørsler + finn.no</span>
               <div className="flex flex-wrap gap-1.5 pb-1">
                 {market.techPulse.map(t => (
                   <span
