@@ -250,19 +250,11 @@ export default function StacqPrisen() {
                     <span className="text-[0.8125rem] text-muted-foreground truncate">{row.kunde || "–"}</span>
                     <span>
                       {(() => {
-                        const status = row.companyStatus;
-                        if (status === "partner") return (
-                          <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Partner</span>
-                        );
-                        if (status === "customer" || status === "kunde") return (
-                          <span className="inline-flex items-center rounded-full bg-foreground text-background px-2.5 py-0.5 text-[0.6875rem] font-semibold">Kunde</span>
-                        );
-                        if (status === "prospect") return (
-                          <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Potensiell</span>
-                        );
-                        return (
-                          <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground border border-border px-2.5 py-0.5 text-[0.6875rem] font-semibold">—</span>
-                        );
+                        const cs = row.selskap_id ? companyStatusMap[row.selskap_id] : null;
+                        if (cs === "partner") return <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Partner</span>;
+                        if (cs === "customer" || cs === "kunde") return <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Kunde</span>;
+                        if (cs === "prospect") return <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Potensiell</span>;
+                        return <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-500 border border-gray-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">—</span>;
                       })()}
                     </span>
                     <span className="text-[0.8125rem] text-muted-foreground">{row.utpris ?? "–"}</span>
