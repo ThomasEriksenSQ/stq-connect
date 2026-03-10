@@ -1,5 +1,13 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { X, Pencil, Trash2, Sparkles, Loader2, ChevronDown, Plus, Target } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { relativeDate, fullDate } from "@/lib/relativeDate";
 import { relativeTime } from "@/lib/relativeDate";
 import { toast } from "sonner";
