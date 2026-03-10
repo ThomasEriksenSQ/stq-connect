@@ -319,10 +319,6 @@ const Companies = () => {
           <Input placeholder="Søk..." value={search} onChange={(e) => setSearch(e.target.value)}
             className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border" />
         </div>
-        <div className="text-right ml-auto">
-          <span className="text-[1.125rem] font-bold text-foreground">{filtered.length}</span>
-          <span className="text-[0.75rem] text-muted-foreground ml-1">selskaper</span>
-        </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="rounded-lg h-9 px-3.5 text-[0.8125rem] font-medium gap-1.5">
@@ -428,31 +424,40 @@ const Companies = () => {
       </div>
 
       {/* Chip filters */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Eier</span>
-          {[{ id: "all", name: "Alle" }, ...ownerList.map(([id, name]) => ({ id: id as string, name: name as string }))].map(o => (
-            <button key={o.id} onClick={() => setOwnerFilter(o.id)}
-              className={ownerFilter === o.id ? CHIP_ON : CHIP_OFF}>
-              {o.name}
-            </button>
-          ))}
+      <div className="flex items-start gap-3">
+        <div className="space-y-2 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Eier</span>
+            {[{ id: "all", name: "Alle" }, ...ownerList.map(([id, name]) => ({ id: id as string, name: name as string }))].map(o => (
+              <button key={o.id} onClick={() => setOwnerFilter(o.id)}
+                className={ownerFilter === o.id ? CHIP_ON : CHIP_OFF}>
+                {o.name}
+              </button>
+            ))}
+          </div>
+          {/* Type chips */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Type</span>
+            {[
+              { value: "all", label: "Alle" },
+              { value: "prospect", label: "Potensiell kunde" },
+              { value: "customer", label: "Kunde" },
+              { value: "partner", label: "Partner" },
+              { value: "churned", label: "Ikke relevant selskap" },
+            ].map(o => (
+              <button key={o.value} onClick={() => setStatusFilter(o.value)}
+                className={statusFilter === o.value ? CHIP_ON : CHIP_OFF}>
+                {o.label}
+              </button>
+            ))}
+          </div>
         </div>
-        {/* Type chips */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Type</span>
-          {[
-            { value: "all", label: "Alle" },
-            { value: "prospect", label: "Potensiell kunde" },
-            { value: "customer", label: "Kunde" },
-            { value: "partner", label: "Partner" },
-            { value: "churned", label: "Ikke relevant selskap" },
-          ].map(o => (
-            <button key={o.value} onClick={() => setStatusFilter(o.value)}
-              className={statusFilter === o.value ? CHIP_ON : CHIP_OFF}>
-              {o.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-3 ml-auto shrink-0">
+          <div className="w-px h-8 bg-border" />
+          <div className="text-right">
+            <span className="text-[0.9375rem] font-semibold text-foreground">{filtered.length}</span>
+            <span className="text-[0.9375rem] text-muted-foreground ml-1.5">selskaper</span>
+          </div>
         </div>
       </div>
 

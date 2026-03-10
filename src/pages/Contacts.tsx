@@ -289,40 +289,45 @@ const Contacts = () => {
           <Input placeholder="Søk..." value={search} onChange={(e) => setSearch(e.target.value)}
             className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border" />
         </div>
-        <div className="text-right ml-auto">
-          <span className="text-[1.125rem] font-bold text-foreground">
-            {filtered.length === contacts.length
-              ? `${totalCount}${capped ? "+" : ""}`
-              : filtered.length}
-          </span>
-          <span className="text-[0.75rem] text-muted-foreground ml-1">kontakter</span>
-        </div>
       </div>
 
       {/* Chip filters */}
-      <div className="space-y-2">
-        {/* EIER */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Eier</span>
-          <Chip label="Alle" value="all" current={ownerFilter} onSelect={setOwnerFilter} />
-          {uniqueOwners.map(([id, name]) => (
-            <Chip key={id} label={name} value={id} current={ownerFilter} onSelect={setOwnerFilter} />
-          ))}
+      <div className="flex items-start gap-3">
+        <div className="space-y-2 flex-1">
+          {/* EIER */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Eier</span>
+            <Chip label="Alle" value="all" current={ownerFilter} onSelect={setOwnerFilter} />
+            {uniqueOwners.map(([id, name]) => (
+              <Chip key={id} label={name} value={id} current={ownerFilter} onSelect={setOwnerFilter} />
+            ))}
+          </div>
+          {/* SIGNAL */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Signal</span>
+            <Chip label="Alle" value="all" current={signalFilter} onSelect={setSignalFilter} />
+            {SIGNAL_OPTIONS.map((s) => (
+              <Chip key={s.label} label={s.label} value={s.label} current={signalFilter} onSelect={setSignalFilter} />
+            ))}
+          </div>
+          {/* TYPE */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Type</span>
+            <Chip label="Alle" value="all" current={typeFilter} onSelect={setTypeFilter} />
+            <Chip label="Innkjøper" value="call_list" current={typeFilter} onSelect={setTypeFilter} />
+            <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
+          </div>
         </div>
-        {/* SIGNAL */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Signal</span>
-          <Chip label="Alle" value="all" current={signalFilter} onSelect={setSignalFilter} />
-          {SIGNAL_OPTIONS.map((s) => (
-            <Chip key={s.label} label={s.label} value={s.label} current={signalFilter} onSelect={setSignalFilter} />
-          ))}
-        </div>
-        {/* TYPE */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Type</span>
-          <Chip label="Alle" value="all" current={typeFilter} onSelect={setTypeFilter} />
-          <Chip label="Innkjøper" value="call_list" current={typeFilter} onSelect={setTypeFilter} />
-          <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
+        <div className="flex items-center gap-3 ml-auto shrink-0">
+          <div className="w-px h-8 bg-border" />
+          <div className="text-right">
+            <span className="text-[0.9375rem] font-semibold text-foreground">
+              {filtered.length === contacts.length
+                ? `${totalCount}${capped ? "+" : ""}`
+                : filtered.length}
+            </span>
+            <span className="text-[0.9375rem] text-muted-foreground ml-1.5">kontakter</span>
+          </div>
         </div>
       </div>
 
