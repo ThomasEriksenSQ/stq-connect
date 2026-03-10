@@ -19,6 +19,7 @@ import { nb } from "date-fns/locale";
 import { relativeDate, fullDate } from "@/lib/relativeDate";
 import { cleanDescription } from "@/lib/cleanDescription";
 import InlineEdit from "@/components/InlineEdit";
+import { lookupByOrgNr } from "@/components/BrregSearch";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { CATEGORIES as SIGNAL_CATEGORIES, getEffectiveSignal, extractCategory } from "@/lib/categoryUtils";
