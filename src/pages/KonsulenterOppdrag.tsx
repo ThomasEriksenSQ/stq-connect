@@ -206,32 +206,18 @@ export default function KonsulenterOppdrag() {
                 {/* KONSULENT */}
                 <div className="min-w-0">
                   <p className="text-[0.875rem] font-semibold text-foreground truncate">{o.kandidat}</p>
-                  {o.er_ansatt ? (
-                    <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.625rem] font-semibold uppercase mt-0.5">
-                      STACQ
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground px-2 py-0.5 text-[0.625rem] font-semibold uppercase mt-0.5">
-                      Partner
-                    </span>
-                  )}
                 </div>
                 {/* KUNDE */}
                 <span className="text-[0.875rem] font-medium text-foreground truncate">{o.kunde}</span>
                 {/* TYPE */}
                 <div>
-                  <span
-                    className={cn(
-                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold",
-                      o.deal_type === "DIR"
-                        ? "bg-blue-100 text-blue-700"
-                        : o.deal_type === "VIA"
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-muted text-muted-foreground"
-                    )}
-                  >
-                    {o.deal_type === "DIR" ? "Direkte" : o.deal_type === "VIA" ? "Partner" : o.deal_type || "–"}
-                  </span>
+                  {(() => {
+                    const cs = o.selskap_id ? companyStatusMap[o.selskap_id] : null;
+                    if (cs === "partner") return <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Partner</span>;
+                    if (cs === "customer" || cs === "kunde") return <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Kunde</span>;
+                    if (cs === "prospect") return <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Potensiell</span>;
+                    return <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-500 border border-gray-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">—</span>;
+                  })()}
                 </div>
                 {/* UTPRIS */}
                 <span className="text-[0.8125rem] font-medium text-foreground">
