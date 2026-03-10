@@ -194,6 +194,7 @@ export function OppdragEditSheet({
   const [kommentar, setKommentar] = useState("");
   const [selskapId, setSelskapId] = useState<string | null>(null);
   const [selskapNavn, setSelskapNavn] = useState<string | null>(null);
+  const [isLopende, setIsLopende] = useState(false);
 
   // Confirm terminate
   const [confirmTerminate, setConfirmTerminate] = useState(false);
