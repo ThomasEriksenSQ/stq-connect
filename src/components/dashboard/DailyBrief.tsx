@@ -73,7 +73,7 @@ const DailyBrief = () => {
           system: "Du er markedsanalytiker for STACQ, et norsk konsulentselskap innen embedded/firmware. Svar KUN med 2-3 korte setninger på norsk. Maks 40 ord totalt. Vær konkret og direkte.",
           messages: [{
             role: "user",
-            content: `Basert på disse teknologifrekvensene fra nylige bemanningsforespørsler siste 30 dager: ${techStr}. Oppsummer hva embedded/firmware-markedet etterspør akkurat nå.`,
+            content: `Basert på disse teknologifrekvensene fra bemanningsforespørsler og stillingsannonser siste 2 uker: ${techStr}. Oppsummer hva embedded/firmware-markedet etterspør akkurat nå.`,
           }],
         },
       });
