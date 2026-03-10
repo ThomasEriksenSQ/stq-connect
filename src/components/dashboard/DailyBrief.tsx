@@ -202,8 +202,8 @@ const DailyBrief = () => {
       // Count from forespørsler teknologier
       for (const f of allForespFull) {
         if (!f.teknologier) continue;
-        const isCurrent = isInWeekRange(f.mottatt_dato, 0, 4);
-        const isPrev = isInWeekRange(f.mottatt_dato, 4, 8);
+        const isCurrent = isInWeekRange(f.mottatt_dato, 0, 2);
+        const isPrev = isInWeekRange(f.mottatt_dato, 2, 4);
         if (!isCurrent && !isPrev) continue;
         const counts = isCurrent ? currentCounts : prevCounts;
         for (const tech of f.teknologier) {
