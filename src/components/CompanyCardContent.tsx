@@ -135,6 +135,9 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   const [editCompanyOpen, setEditCompanyOpen] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", org_number: "", city: "", website: "", linkedin: "", locations: [] as string[] });
   const [newLocation, setNewLocation] = useState("");
+  const [signalPickerOpen, setSignalPickerOpen] = useState(false);
+  const [pendingSignal, setPendingSignal] = useState<string | null>(null);
+  const [signalContactId, setSignalContactId] = useState<string>("");
   const { user } = useAuth();
 
   const { data: company, isLoading } = useQuery({
