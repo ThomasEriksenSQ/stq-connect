@@ -49,6 +49,15 @@ function stacqColor(timePris: number): string {
   return "text-muted-foreground";
 }
 
+function computeOppdragStatus(r: any): string {
+  if (r.status === "Inaktiv") return "Inaktiv";
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const startDate = r.start_dato ? new Date(r.start_dato) : null;
+  if (startDate && startDate > today) return "Oppstart";
+  return "Aktiv";
+}
+
 export default function StacqPrisen() {
   const queryClient = useQueryClient();
   const [editRow, setEditRow] = useState<any | null>(null);
@@ -60,23 +69,27 @@ export default function StacqPrisen() {
       const { data, error } = await supabase
         .from("stacq_oppdrag")
         .select("id, kandidat, er_ansatt, status, utpris, til_konsulent, til_konsulent_override, ekstra_kostnad, kunde, deal_type, start_dato, forny_dato, slutt_dato")
-        .in("status", ["Aktiv", "Oppstart"]);
+        .neq("status", "Inaktiv");
       if (error) throw error;
       return data || [];
     },
   });
 
   const enriched = useMemo(() =>
-    rows.map((r) => ({
-      ...r,
-      stacqPris: calcStacqPris({
-        utpris: r.utpris ?? 0,
-        til_konsulent: r.til_konsulent ?? null,
-        til_konsulent_override: r.til_konsulent_override ?? null,
-        er_ansatt: r.er_ansatt ?? false,
-        ekstra_kostnad: r.ekstra_kostnad ?? null,
-      }),
-    })),
+    rows.map((r) => {
+      const computedStatus = computeOppdragStatus(r);
+      return {
+        ...r,
+        status: computedStatus,
+        stacqPris: calcStacqPris({
+          utpris: r.utpris ?? 0,
+          til_konsulent: r.til_konsulent ?? null,
+          til_konsulent_override: r.til_konsulent_override ?? null,
+          er_ansatt: r.er_ansatt ?? false,
+          ekstra_kostnad: r.ekstra_kostnad ?? null,
+        }),
+      };
+    }),
     [rows]
   );
 
