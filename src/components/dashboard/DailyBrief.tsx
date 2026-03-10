@@ -14,6 +14,9 @@ const TRACKED_TECHS = [
   "Docker", "Git", "Jenkins", "Buildroot", "OpenWRT",
   "Cortex-M", "NRF52", "ESP32", "Raspberry Pi",
   "AUTOSAR", "MISRA", "ISO 26262", "IEC 62443",
+  "Modbus", "MQTT", "OPC-UA", "AWS IoT", "Azure IoT",
+  "DSP", "Signal processing", "OpenCV", "CUDA",
+  "Bootloader", "OTA", "Functional Safety",
   "WebAssembly", "Golang", "Java",
 ];
 
@@ -70,7 +73,7 @@ const DailyBrief = () => {
           system: "Du er markedsanalytiker for STACQ, et norsk konsulentselskap innen embedded/firmware. Svar KUN med 2-3 korte setninger på norsk. Maks 40 ord totalt. Vær konkret og direkte.",
           messages: [{
             role: "user",
-            content: `Basert på disse teknologifrekvensene fra nylige bemanningsforespørsler siste 30 dager: ${techStr}. Oppsummer hva embedded/firmware-markedet etterspør akkurat nå.`,
+            content: `Basert på disse teknologifrekvensene fra bemanningsforespørsler og stillingsannonser siste 2 uker: ${techStr}. Oppsummer hva embedded/firmware-markedet etterspør akkurat nå.`,
           }],
         },
       });
@@ -173,7 +176,7 @@ const DailyBrief = () => {
       const currentWeek = getISOWeek(now);
       const currentYear = now.getFullYear();
 
-      // Current period: last 4 weeks, Previous: 4 weeks before that
+      // Current period: last 2 weeks, Previous: 2 weeks before that
       const isInWeekRange = (dato: string, weeksAgo: number, weeksEnd: number) => {
         const d = new Date(dato);
         const diffMs = now.getTime() - d.getTime();
@@ -187,8 +190,8 @@ const DailyBrief = () => {
       // Count from finn_annonser
       for (const r of finnRows) {
         if (!r.teknologier) continue;
-        const isCurrent = isInWeekRange(r.dato, 0, 4);
-        const isPrev = isInWeekRange(r.dato, 4, 8);
+        const isCurrent = isInWeekRange(r.dato, 0, 2);
+        const isPrev = isInWeekRange(r.dato, 2, 4);
         if (!isCurrent && !isPrev) continue;
         const counts = isCurrent ? currentCounts : prevCounts;
         for (const kw of TRACKED_TECHS) {
@@ -199,8 +202,8 @@ const DailyBrief = () => {
       // Count from forespørsler teknologier
       for (const f of allForespFull) {
         if (!f.teknologier) continue;
-        const isCurrent = isInWeekRange(f.mottatt_dato, 0, 4);
-        const isPrev = isInWeekRange(f.mottatt_dato, 4, 8);
+        const isCurrent = isInWeekRange(f.mottatt_dato, 0, 2);
+        const isPrev = isInWeekRange(f.mottatt_dato, 2, 4);
         if (!isCurrent && !isPrev) continue;
         const counts = isCurrent ? currentCounts : prevCounts;
         for (const tech of f.teknologier) {
@@ -210,13 +213,13 @@ const DailyBrief = () => {
         }
       }
 
-      // Also fetch previous period forespørsler (4-8 weeks ago) not in current query
-      const d56 = new Date(now.getTime() - 56 * 86400000).toISOString().slice(0, 10);
+      // Also fetch previous period forespørsler (2-4 weeks ago) not in current query
       const d28 = new Date(now.getTime() - 28 * 86400000).toISOString().slice(0, 10);
+      const d14 = new Date(now.getTime() - 14 * 86400000).toISOString().slice(0, 10);
       const { data: prevForesp } = await supabase.from("foresporsler")
         .select("teknologier, mottatt_dato")
-        .gte("mottatt_dato", d56)
-        .lt("mottatt_dato", d45);
+        .gte("mottatt_dato", d28)
+        .lt("mottatt_dato", d14);
 
       for (const f of (prevForesp ?? [])) {
         if (!f.teknologier) continue;
@@ -240,7 +243,7 @@ const DailyBrief = () => {
           }
           return { name: t, count: curr, trend };
         })
-        .filter(t => t.count >= 2)
+        .filter(t => t.count >= 1)
         .sort((a, b) => b.count - a.count)
         .slice(0, 8);
 
@@ -333,7 +336,7 @@ const DailyBrief = () => {
             <>
               <div className="border-t border-border pt-3 pb-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Marked</span>
+                  <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Marked siste 2 uker</span>
                   <Link to="/markedsradar" className="text-[0.75rem] text-primary hover:underline">Se mer →</Link>
                 </div>
               </div>
@@ -343,7 +346,7 @@ const DailyBrief = () => {
               ) : aiMarket ? (
                 <p className="text-sm text-muted-foreground mb-3 animate-in fade-in duration-500">{aiMarket}</p>
               ) : null}
-              <span className="text-[0.6875rem] text-muted-foreground mb-2 block">Siste 4 uker · finn.no</span>
+              <span className="text-[0.6875rem] text-muted-foreground mb-2 block">Siste 2 uker · forespørsler + finn.no</span>
               <div className="flex flex-wrap gap-1.5 pb-1">
                 {market.techPulse.map(t => (
                   <span
