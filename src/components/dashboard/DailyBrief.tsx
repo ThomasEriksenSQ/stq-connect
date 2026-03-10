@@ -146,19 +146,64 @@ const DailyBrief = () => {
         });
       setMuligheter(mulighetItems);
 
-      // Market tech tags
-      const finnRows = finnRes.data ?? [];
-      if (finnRows.length > 0) {
-        const recentRows = finnRows.filter(r => r.dato >= d30);
-        const counts: Record<string, number> = {};
-        for (const r of recentRows) {
-          if (!r.teknologier) continue;
+      // Market tech tags — current period from forespørsler teknologier
+      const d90 = new Date(now.getTime() - 90 * 86400000).toISOString().slice(0, 10);
+      const allForespFull = foresporlerRes.data ?? [];
+
+      // Fetch previous period forespørsler (45-90 days ago) for trend comparison
+      const { data: prevForesp } = await supabase.from("foresporsler")
+        .select("teknologier")
+        .gte("mottatt_dato", d90)
+        .lt("mottatt_dato", d45);
+
+      // Current period counts from forespørsler teknologier
+      const currentCounts: Record<string, number> = {};
+      for (const f of allForespFull) {
+        if (!f.teknologier) continue;
+        for (const tech of f.teknologier) {
           for (const kw of TRACKED_TECHS) {
-            if (matchTech(r.teknologier, kw)) counts[kw] = (counts[kw] || 0) + 1;
+            if (matchTech(tech, kw)) currentCounts[kw] = (currentCounts[kw] || 0) + 1;
           }
         }
+      }
+
+      // Previous period counts
+      const prevCounts: Record<string, number> = {};
+      for (const f of (prevForesp ?? [])) {
+        if (!f.teknologier) continue;
+        for (const tech of f.teknologier) {
+          for (const kw of TRACKED_TECHS) {
+            if (matchTech(tech, kw)) prevCounts[kw] = (prevCounts[kw] || 0) + 1;
+          }
+        }
+      }
+
+      // Also use finn_annonser for additional signal
+      const finnRows = finnRes.data ?? [];
+      const recentFinnRows = finnRows.filter(r => r.dato >= d30);
+      for (const r of recentFinnRows) {
+        if (!r.teknologier) continue;
+        for (const kw of TRACKED_TECHS) {
+          if (matchTech(r.teknologier, kw)) currentCounts[kw] = (currentCounts[kw] || 0) + 1;
+        }
+      }
+
+      const hasAnyCount = TRACKED_TECHS.some(t => (currentCounts[t] || 0) > 0);
+      if (hasAnyCount) {
         const techPulse = TRACKED_TECHS
-          .map(t => ({ name: t, count: counts[t] || 0 }))
+          .map(t => {
+            const curr = currentCounts[t] || 0;
+            const prev = prevCounts[t] || 0;
+            let trend: "up" | "down" | "flat" = "flat";
+            if (prev > 0) {
+              const change = (curr - prev) / prev;
+              if (change > 0.1) trend = "up";
+              else if (change < -0.1) trend = "down";
+            } else if (curr > 0) {
+              trend = "up";
+            }
+            return { name: t, count: curr, trend };
+          })
           .filter(t => t.count > 0)
           .sort((a, b) => b.count - a.count)
           .slice(0, 5);
