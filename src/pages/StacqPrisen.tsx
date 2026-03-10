@@ -257,13 +257,21 @@ export default function StacqPrisen() {
                     <span className="text-[0.8125rem] font-medium text-foreground truncate">{row.kandidat}</span>
                     <span className="text-[0.8125rem] text-muted-foreground truncate">{row.kunde || "–"}</span>
                     <span>
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold border ${
-                        row.companyStatus === "partner"
-                          ? "bg-violet-100 text-violet-800 border-violet-200"
-                          : "bg-foreground text-background border-transparent"
-                      }`}>
-                        {getKundeTypeLabel(row.companyStatus)}
-                      </span>
+                      {(() => {
+                        const status = row.companyStatus;
+                        if (status === "partner") return (
+                          <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Partner</span>
+                        );
+                        if (status === "customer" || status === "kunde") return (
+                          <span className="inline-flex items-center rounded-full bg-foreground text-background px-2.5 py-0.5 text-[0.6875rem] font-semibold">Kunde</span>
+                        );
+                        if (status === "prospect") return (
+                          <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Potensiell</span>
+                        );
+                        return (
+                          <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground border border-border px-2.5 py-0.5 text-[0.6875rem] font-semibold">—</span>
+                        );
+                      })()}
                     </span>
                     <span className="text-[0.8125rem] text-muted-foreground">{row.utpris ?? "–"}</span>
                     <span className="text-[0.8125rem]">
