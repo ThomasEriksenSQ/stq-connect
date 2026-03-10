@@ -1196,8 +1196,8 @@ function AddKonsulentCombobox({
   return (
     <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setSearch(""); } }}>
       <PopoverTrigger asChild>
-        <button className="flex items-center gap-1.5 text-[0.8125rem] text-primary hover:underline">
-          <Plus className="h-3.5 w-3.5" />
+        <button className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors">
+          <Plus className="h-4 w-4" />
           Legg til konsulent
         </button>
       </PopoverTrigger>
