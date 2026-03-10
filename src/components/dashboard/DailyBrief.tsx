@@ -86,7 +86,7 @@ const DailyBrief = () => {
         supabase.from("stacq_oppdrag").select("kandidat, forny_dato")
           .gte("forny_dato", todayStr).lte("forny_dato", d30future),
         supabase.from("finn_annonser").select("selskap, teknologier, dato").gte("dato", d60),
-        supabase.from("companies").select("id, name, category"),
+        supabase.from("companies").select("id, name"),
       ]);
 
       if (profileRes.data) setProfile(profileRes.data);
