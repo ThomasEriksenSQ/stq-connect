@@ -37,6 +37,17 @@ export default function KonsulenterOppdrag() {
     },
   });
 
+  const { data: allCompanies = [] } = useQuery({
+    queryKey: ["all-companies-status"],
+    queryFn: async () => {
+      const { data } = await supabase.from("companies").select("id, status");
+      return data || [];
+    },
+  });
+  const companyStatusMap: Record<string, string> = Object.fromEntries(
+    allCompanies.map((c: any) => [c.id, c.status])
+  );
+
   const enriched = useMemo(
     () =>
       oppdrag.map((o: any) => {
