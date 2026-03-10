@@ -1026,16 +1026,30 @@ export default function Foresporsler() {
                   })()}
                 </div>
                 {/* Sendt inn */}
-                <div className="flex flex-col items-end gap-0.5">
+                <div className="flex flex-col items-end gap-1">
                   {sendt.length === 0 ? (
                     <span className="text-[0.8125rem] text-muted-foreground">—</span>
                   ) : (
                     sendt.map((k: any) => {
-                      const navn = (k.konsulent_type === "intern" ? k.stacq_ansatte?.navn : k.external_consultants?.navn)?.split(" ")[0] || "";
+                      const navn = (k.konsulent_type === "intern" ? k.stacq_ansatte?.navn : k.external_consultants?.navn)?.split(" ")[0] || "Ukjent";
+                      const ks = k.status;
+                      const cfg: Record<string, string> = {
+                        "Sendt CV":  "bg-blue-50 text-blue-700 border-blue-200",
+                        "Intervju":  "bg-violet-50 text-violet-700 border-violet-200",
+                        "Vunnet":    "bg-emerald-100 text-emerald-800 border-emerald-200",
+                        "Avslag":    "bg-red-50 text-red-700 border-red-200",
+                        "Bortfalt":  "bg-gray-100 text-gray-500 border-gray-200",
+                      };
+                      const color = cfg[ks] || "";
                       return (
-                        <span key={k.id} className="text-[0.8125rem] text-foreground font-medium">
-                          {navn}
-                        </span>
+                        <div key={k.id} className="flex items-center gap-1.5">
+                          <span className="text-[0.8125rem] font-medium text-foreground">{navn}</span>
+                          {color && (
+                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold ${color}`}>
+                              {ks}
+                            </span>
+                          )}
+                        </div>
                       );
                     })
                   )}
