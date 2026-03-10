@@ -213,9 +213,9 @@ const DailyBrief = () => {
         }
       }
 
-      // Also fetch previous period forespørsler (4-8 weeks ago) not in current query
-      const d56 = new Date(now.getTime() - 56 * 86400000).toISOString().slice(0, 10);
+      // Also fetch previous period forespørsler (2-4 weeks ago) not in current query
       const d28 = new Date(now.getTime() - 28 * 86400000).toISOString().slice(0, 10);
+      const d14 = new Date(now.getTime() - 14 * 86400000).toISOString().slice(0, 10);
       const { data: prevForesp } = await supabase.from("foresporsler")
         .select("teknologier, mottatt_dato")
         .gte("mottatt_dato", d56)
