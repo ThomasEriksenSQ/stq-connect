@@ -568,39 +568,6 @@ export function ForespørselSheet({
                   </div>
                 </div>
 
-                {/* Status picker */}
-                <div>
-                  <p className={LABEL}>Status</p>
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {["Ny", "Sendt CV", "Intervju", "Vunnet", "Avslag", "Bortfalt"].map(s => {
-                      const active = (row.status || "Ny") === s;
-                      const cfg: Record<string, string> = {
-                        "Sendt CV": "bg-blue-50 text-blue-700 border-blue-200",
-                        "Intervju": "bg-violet-50 text-violet-700 border-violet-200",
-                        "Vunnet":   "bg-emerald-100 text-emerald-800 border-emerald-200",
-                        "Avslag":   "bg-red-50 text-red-700 border-red-200",
-                        "Bortfalt": "bg-gray-100 text-gray-500 border-gray-200",
-                        "Ny":       "bg-gray-50 text-gray-400 border-gray-200",
-                      };
-                      return (
-                        <button
-                          key={s}
-                          onClick={async () => {
-                            await supabase.from("foresporsler").update({ status: s, updated_at: new Date().toISOString() }).eq("id", row.id);
-                            queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
-                          }}
-                          className={`inline-flex items-center rounded-full border px-3 py-1 text-[0.8125rem] font-medium transition-all ${
-                            active
-                              ? `${cfg[s]} ring-2 ring-offset-1 ring-current`
-                              : "border-border text-muted-foreground hover:bg-secondary"
-                          }`}
-                        >
-                          {s}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
 
                 {/* Teknologier */}
                 <div>
