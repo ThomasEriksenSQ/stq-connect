@@ -17,7 +17,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 
-type SortField = "name" | "type" | "signal" | "city" | "last_activity" | "tasks";
+type SortField = "name" | "type" | "city" | "last_activity" | "tasks";
 type SortDir = "asc" | "desc";
 
 import { CATEGORIES, LEGACY_CATEGORY_MAP, normalizeCategoryLabel, extractCategory, SIGNAL_ORDER, getEffectiveSignal } from "@/lib/categoryUtils";
@@ -91,8 +91,7 @@ const Companies = () => {
       setLocations((prev) => [form.city, ...prev.slice(1)]);
     }
   }, [form.city]);
-  const [signalFilter, setSignalFilter] = useState("all");
-  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "signal", dir: "asc" });
+  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "name", dir: "asc" });
   const [userHasSorted, setUserHasSorted] = useState(false);
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -249,8 +248,7 @@ const Companies = () => {
     const matchSearch = !q || c.name.toLowerCase().includes(q) || c.org_number?.includes(q) || c.industry?.toLowerCase().includes(q);
     const matchOwner = ownerFilter === "all" || getOwnerId(c) === ownerFilter;
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
-    const matchSignal = signalFilter === "all" || c.signal === signalFilter;
-    return matchSearch && matchOwner && matchStatus && matchSignal;
+    return matchSearch && matchOwner && matchStatus;
   });
 
   const SIGNAL_PRIORITY: Record<string, number> = {
@@ -271,9 +269,6 @@ const Companies = () => {
 
   const sorted = [...filtered].sort((a, b) => {
     if (!userHasSorted) {
-      const as = SIGNAL_PRIORITY[a.signal ?? ""] ?? 5;
-      const bs = SIGNAL_PRIORITY[b.signal ?? ""] ?? 5;
-      if (as !== bs) return as - bs;
       const at = TYPE_PRIORITY[a.status ?? ""] ?? 5;
       const bt = TYPE_PRIORITY[b.status ?? ""] ?? 5;
       if (at !== bt) return at - bt;
@@ -285,11 +280,6 @@ const Companies = () => {
       case "type": {
         const ai = TYPE_ORDER.indexOf(a.status);
         const bi = TYPE_ORDER.indexOf(b.status);
-        return dir * ((ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi));
-      }
-      case "signal": {
-        const ai = SIGNAL_ORDER.indexOf(a.signal as any || "");
-        const bi = SIGNAL_ORDER.indexOf(b.signal as any || "");
         return dir * ((ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi));
       }
       case "city": return dir * (a.city || "").localeCompare(b.city || "", "nb");
@@ -445,16 +435,6 @@ const Companies = () => {
             </button>
           ))}
         </div>
-        {/* Signal chips */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Signal</span>
-          {[{ value: "all", label: "Alle" }, ...CATEGORIES.map(c => ({ value: c.label, label: c.label }))].map(o => (
-            <button key={o.value} onClick={() => setSignalFilter(o.value)}
-              className={signalFilter === o.value ? CHIP_ON : CHIP_OFF}>
-              {o.label}
-            </button>
-          ))}
-        </div>
         {/* Type chips */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Type</span>
@@ -480,9 +460,8 @@ const Companies = () => {
         <p className="text-sm text-muted-foreground py-12 text-center">Ingen selskaper funnet</p>
       ) : (
         <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
-          <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="name">Selskap</SortHeader>
-            <SortHeader field="signal">Signal</SortHeader>
             <SortHeader field="type">Type</SortHeader>
             <SortHeader field="city">Sted</SortHeader>
             <SortHeader field="last_activity" className="justify-end">Siste akt.</SortHeader>
@@ -492,26 +471,13 @@ const Companies = () => {
               const status = getStatus(company.status);
               return (
                 <div key={company.id}
-                  className="w-full grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer"
+                  className="w-full grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer"
                   onClick={() => navigate(`/selskaper/${company.id}`)}>
                   <div className="min-w-0">
                     <span className="text-[0.8125rem] font-medium text-foreground truncate block">{company.name}</span>
                     {false && company.industry && (
                       <p className="text-[0.6875rem] text-muted-foreground truncate mt-0.5">{company.industry}</p>
                     )}
-                  </div>
-                  {/* SIGNAL - read-only badge */}
-                  <div className="min-w-0">
-                    {(() => {
-                      const signalBadge = getSignalBadge(company.signal || null);
-                      return signalBadge ? (
-                        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${signalBadge.color}`}>
-                          {signalBadge.label}
-                        </span>
-                      ) : (
-                        <span className="text-[0.75rem] text-muted-foreground">—</span>
-                      );
-                    })()}
                   </div>
                   {/* TYPE - inline editable */}
                   <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
