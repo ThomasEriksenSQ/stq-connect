@@ -709,12 +709,7 @@ export function ForespørselSheet({
                             {PIPELINE.map(s => (
                               <button
                                 key={s.key}
-                                onClick={async () => {
-                                  await supabase.from("foresporsler_konsulenter").update({ status: s.key, status_updated_at: new Date().toISOString() }).eq("id", k.id);
-                                  if (s.key === "vunnet") fireConfetti();
-                                  queryClient.invalidateQueries({ queryKey: ["foresporsler-konsulenter", row.id] });
-                                  queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
-                                }}
+                                onClick={() => updateKonsulentStatus(k.id, s.key, navn || "Ukjent")}
                                 className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold transition-all ${
                                   status === s.key
                                     ? `${s.color} ring-2 ring-offset-1 ring-current`
