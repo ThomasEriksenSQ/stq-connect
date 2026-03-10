@@ -860,9 +860,9 @@ export default function Foresporsler() {
     const allKonsulenter = aktive.flatMap((r: any) => r.foresporsler_konsulenter || []);
     const iProsess = allKonsulenter.filter((k: any) => k.status === "sendt_cv" || k.status === "intervju").length;
 
-    const allKonsulenterAll = rows.flatMap((r: any) => r.foresporsler_konsulenter || []);
-    const vunnet = allKonsulenterAll.filter((k: any) =>
-      k.status === "vunnet" && k.status_updated_at && new Date(k.status_updated_at) >= cutoff
+    const vunnetCutoff = new Date(); vunnetCutoff.setDate(vunnetCutoff.getDate() - 45);
+    const vunnet = rows.filter((r: any) =>
+      r.status === "Vunnet" && r.updated_at && new Date(r.updated_at) >= cutoff
     ).length;
 
     return { aktive: aktive.length, utenKonsulent, iProsess, vunnet };
@@ -950,12 +950,13 @@ export default function Foresporsler() {
       ) : (
         <div className="border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
           {/* Header row */}
-          <div className="grid grid-cols-[90px_minmax(0,1.5fr)_minmax(0,1fr)_80px_minmax(0,1.3fr)_minmax(220px,1fr)] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          <div className="grid grid-cols-[90px_minmax(0,1.5fr)_minmax(0,1fr)_80px_minmax(0,1.3fr)_100px_minmax(220px,1fr)] gap-3 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="mottatt_dato">Mottatt</SortHeader>
             <SortHeader field="selskap_navn">Selskap</SortHeader>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Kontakt</span>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Type</span>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Teknologier</span>
+            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Status</span>
             <SortHeader field="sendt_count">Sendt inn</SortHeader>
           </div>
           {/* Data rows */}
@@ -968,7 +969,7 @@ export default function Foresporsler() {
               <div
                 key={row.id}
                 onClick={() => setSelectedRowId(row.id)}
-                className="grid grid-cols-[90px_minmax(0,1.5fr)_minmax(0,1fr)_80px_minmax(0,1.3fr)_minmax(220px,1fr)] gap-3 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer"
+                className="grid grid-cols-[90px_minmax(0,1.5fr)_minmax(0,1fr)_80px_minmax(0,1.3fr)_100px_minmax(220px,1fr)] gap-3 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer"
               >
                 {/* Mottatt */}
                 <Tooltip>
@@ -1003,6 +1004,26 @@ export default function Foresporsler() {
                       +{row.teknologier!.length - 3}
                     </span>
                   )}
+                </div>
+                {/* Status */}
+                <div className="flex justify-end">
+                  {(() => {
+                    const s = row.status;
+                    const cfg: Record<string, string> = {
+                      "Sendt CV":   "bg-blue-50 text-blue-700 border-blue-200",
+                      "Intervju":   "bg-violet-50 text-violet-700 border-violet-200",
+                      "Vunnet":     "bg-emerald-100 text-emerald-800 border-emerald-200",
+                      "Avslag":     "bg-red-50 text-red-700 border-red-200",
+                      "Bortfalt":   "bg-gray-100 text-gray-500 border-gray-200",
+                    };
+                    const color = cfg[s] || "bg-gray-50 text-gray-400 border-gray-200";
+                    const label = cfg[s] ? s : "Ny";
+                    return (
+                      <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold ${color}`}>
+                        {label}
+                      </span>
+                    );
+                  })()}
                 </div>
                 {/* Sendt inn — pipeline */}
                 <div className="space-y-1">
