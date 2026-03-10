@@ -344,7 +344,7 @@ const DailyBrief = () => {
               {aiMarketLoading ? (
                 <Skeleton className="h-4 w-3/4 mb-3" />
               ) : aiMarket ? (
-                <p className="text-sm text-muted-foreground mb-3 animate-in fade-in duration-500">{aiMarket}</p>
+                <p className="text-sm text-muted-foreground mb-4 animate-in fade-in duration-500">{aiMarket}</p>
               ) : null}
               <div className="flex flex-wrap gap-1.5 pb-1 mt-3">
                 {market.techPulse.map(t => (
