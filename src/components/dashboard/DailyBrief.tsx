@@ -6,10 +6,21 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
 import { relativeDate } from "@/lib/relativeDate";
 
-const TRACKED_TECHS = ["C++", "Rust", "Zephyr", "Yocto", "FreeRTOS", "Embedded Linux"];
+const TRACKED_TECHS = [
+  "C++", "C", "Rust", "Python", "Zephyr", "Yocto", "Embedded Linux",
+  "FreeRTOS", "FPGA", "Qt", "ROS", "CMake", "Linux", "ARM", "RTOS",
+  "Bare metal", "Nordic", "STM32", "CAN", "Ethernet", "TCP/IP",
+  "Bluetooth", "BLE", "Wi-Fi", "UART", "SPI", "I2C", "USB",
+  "Docker", "Git", "Jenkins", "Buildroot", "OpenWRT",
+  "Cortex-M", "NRF52", "ESP32", "Raspberry Pi",
+  "AUTOSAR", "MISRA", "ISO 26262", "IEC 62443",
+  "WebAssembly", "Golang", "Java",
+];
 
 function matchTech(text: string, keyword: string): boolean {
   if (keyword === "C") return /\bC\b/.test(text);
+  if (keyword === "C++") return text.includes("C++");
+  if (keyword === "BLE") return /\bBLE\b/i.test(text);
   return text.toLowerCase().includes(keyword.toLowerCase());
 }
 
@@ -97,7 +108,7 @@ const DailyBrief = () => {
         supabase.from("foresporsler_konsulenter").select("foresporsler_id, status, ansatt_id, ekstern_id")
           .in("status", ["intervju", "sendt_cv", "Intervju", "Sendt CV"]),
         supabase.from("stacq_ansatte").select("id, navn"),
-        supabase.from("finn_annonser").select("teknologier, dato").gte("dato", d60),
+        supabase.from("finn_annonser").select("teknologier, dato, uke").gte("dato", d60),
       ]);
 
       if (profileRes.data) {
@@ -146,29 +157,67 @@ const DailyBrief = () => {
         });
       setMuligheter(mulighetItems);
 
-      // Market tech tags — current period from forespørsler teknologier
-      const d90 = new Date(now.getTime() - 90 * 86400000).toISOString().slice(0, 10);
+      // Market tech tags — use finn_annonser + forespørsler combined
+      const finnRows = finnRes.data ?? [];
       const allForespFull = foresporlerRes.data ?? [];
 
-      // Fetch previous period forespørsler (45-90 days ago) for trend comparison
-      const { data: prevForesp } = await supabase.from("foresporsler")
-        .select("teknologier")
-        .gte("mottatt_dato", d90)
-        .lt("mottatt_dato", d45);
+      // Get current ISO week number
+      const getISOWeek = (d: Date) => {
+        const date = new Date(d.getTime());
+        date.setHours(0, 0, 0, 0);
+        date.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7));
+        const week1 = new Date(date.getFullYear(), 0, 4);
+        return 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+      };
 
-      // Current period counts from forespørsler teknologier
+      const currentWeek = getISOWeek(now);
+      const currentYear = now.getFullYear();
+
+      // Current period: last 4 weeks, Previous: 4 weeks before that
+      const isInWeekRange = (dato: string, weeksAgo: number, weeksEnd: number) => {
+        const d = new Date(dato);
+        const diffMs = now.getTime() - d.getTime();
+        const diffWeeks = diffMs / (7 * 86400000);
+        return diffWeeks >= weeksAgo && diffWeeks < weeksEnd;
+      };
+
       const currentCounts: Record<string, number> = {};
+      const prevCounts: Record<string, number> = {};
+
+      // Count from finn_annonser
+      for (const r of finnRows) {
+        if (!r.teknologier) continue;
+        const isCurrent = isInWeekRange(r.dato, 0, 4);
+        const isPrev = isInWeekRange(r.dato, 4, 8);
+        if (!isCurrent && !isPrev) continue;
+        const counts = isCurrent ? currentCounts : prevCounts;
+        for (const kw of TRACKED_TECHS) {
+          if (matchTech(r.teknologier, kw)) counts[kw] = (counts[kw] || 0) + 1;
+        }
+      }
+
+      // Count from forespørsler teknologier
       for (const f of allForespFull) {
         if (!f.teknologier) continue;
+        const isCurrent = isInWeekRange(f.mottatt_dato, 0, 4);
+        const isPrev = isInWeekRange(f.mottatt_dato, 4, 8);
+        if (!isCurrent && !isPrev) continue;
+        const counts = isCurrent ? currentCounts : prevCounts;
         for (const tech of f.teknologier) {
           for (const kw of TRACKED_TECHS) {
-            if (matchTech(tech, kw)) currentCounts[kw] = (currentCounts[kw] || 0) + 1;
+            if (matchTech(tech, kw)) counts[kw] = (counts[kw] || 0) + 1;
           }
         }
       }
 
-      // Previous period counts
-      const prevCounts: Record<string, number> = {};
+      // Also fetch previous period forespørsler (4-8 weeks ago) not in current query
+      const d56 = new Date(now.getTime() - 56 * 86400000).toISOString().slice(0, 10);
+      const d28 = new Date(now.getTime() - 28 * 86400000).toISOString().slice(0, 10);
+      const { data: prevForesp } = await supabase.from("foresporsler")
+        .select("teknologier, mottatt_dato")
+        .gte("mottatt_dato", d56)
+        .lt("mottatt_dato", d45);
+
       for (const f of (prevForesp ?? [])) {
         if (!f.teknologier) continue;
         for (const tech of f.teknologier) {
@@ -178,35 +227,24 @@ const DailyBrief = () => {
         }
       }
 
-      // Also use finn_annonser for additional signal
-      const finnRows = finnRes.data ?? [];
-      const recentFinnRows = finnRows.filter(r => r.dato >= d30);
-      for (const r of recentFinnRows) {
-        if (!r.teknologier) continue;
-        for (const kw of TRACKED_TECHS) {
-          if (matchTech(r.teknologier, kw)) currentCounts[kw] = (currentCounts[kw] || 0) + 1;
-        }
-      }
+      const techPulse = TRACKED_TECHS
+        .map(t => {
+          const curr = currentCounts[t] || 0;
+          const prev = prevCounts[t] || 0;
+          let trend: "up" | "down" | "flat" = "flat";
+          if (prev > 0) {
+            if (curr > prev * 1.15) trend = "up";
+            else if (curr < prev * 0.85) trend = "down";
+          } else if (curr > 0) {
+            trend = "up";
+          }
+          return { name: t, count: curr, trend };
+        })
+        .filter(t => t.count >= 2)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 8);
 
-      const hasAnyCount = TRACKED_TECHS.some(t => (currentCounts[t] || 0) > 0);
-      if (hasAnyCount) {
-        const techPulse = TRACKED_TECHS
-          .map(t => {
-            const curr = currentCounts[t] || 0;
-            const prev = prevCounts[t] || 0;
-            let trend: "up" | "down" | "flat" = "flat";
-            if (prev > 0) {
-              const change = (curr - prev) / prev;
-              if (change > 0.1) trend = "up";
-              else if (change < -0.1) trend = "down";
-            } else if (curr > 0) {
-              trend = "up";
-            }
-            return { name: t, count: curr, trend };
-          })
-          .filter(t => t.count > 0)
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 5);
+      if (techPulse.length > 0) {
         setMarket({ techPulse });
         fetchMarketAI(techPulse);
       } else {
