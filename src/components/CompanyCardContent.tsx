@@ -141,6 +141,16 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   const [signalContactId, setSignalContactId] = useState<string>("");
   const { user } = useAuth();
 
+  const { data: company, isLoading } = useQuery({
+    queryKey: ["company", companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("companies").select("*, profiles!companies_owner_id_fkey(full_name)").eq("id", companyId).single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!companyId,
+  });
+
   // Pre-fill edit form when dialog opens
   useEffect(() => {
     if (editCompanyOpen && company) {
@@ -171,16 +181,6 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
       }
     });
   }, [editForm.org_number]);
-
-  const { data: company, isLoading } = useQuery({
-    queryKey: ["company", companyId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("companies").select("*, profiles!companies_owner_id_fkey(full_name)").eq("id", companyId).single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!companyId,
-  });
 
   const { data: allProfiles = [] } = useQuery({
     queryKey: ["profiles"],
