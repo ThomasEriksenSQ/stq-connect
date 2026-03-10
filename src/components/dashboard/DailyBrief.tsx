@@ -336,7 +336,7 @@ const DailyBrief = () => {
             <>
               <div className="border-t border-border pt-3 pb-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Marked</span>
+                  <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Marked siste 2 uker</span>
                   <Link to="/markedsradar" className="text-[0.75rem] text-primary hover:underline">Se mer →</Link>
                 </div>
               </div>
