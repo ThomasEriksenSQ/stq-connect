@@ -49,6 +49,13 @@ function stacqColor(timePris: number): string {
   return "text-muted-foreground";
 }
 
+function getKundeTypeLabel(companyStatus: string | null): string {
+  if (companyStatus === "partner") return "Partner";
+  if (companyStatus === "customer" || companyStatus === "kunde") return "Kunde";
+  if (companyStatus === "prospect") return "Potensiell kunde";
+  return "Direkte";
+}
+
 function computeOppdragStatus(r: any): string {
   if (r.status === "Inaktiv") return "Inaktiv";
   const today = new Date();
@@ -68,10 +75,29 @@ export default function StacqPrisen() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stacq_oppdrag")
-        .select("id, kandidat, er_ansatt, status, utpris, til_konsulent, til_konsulent_override, ekstra_kostnad, kunde, deal_type, start_dato, forny_dato, slutt_dato")
+        .select("id, kandidat, er_ansatt, status, utpris, til_konsulent, til_konsulent_override, ekstra_kostnad, kunde, selskap_id, deal_type, start_dato, forny_dato, slutt_dato")
         .neq("status", "Inaktiv");
       if (error) throw error;
-      return data || [];
+
+      // Fetch company statuses for linked selskap_ids
+      const selskapIds = (data || []).map((r) => r.selskap_id).filter(Boolean) as string[];
+      let companyStatusMap: Record<string, string> = {};
+      if (selskapIds.length > 0) {
+        const { data: companies } = await supabase
+          .from("companies")
+          .select("id, status")
+          .in("id", selskapIds);
+        if (companies) {
+          for (const c of companies) {
+            companyStatusMap[c.id] = c.status;
+          }
+        }
+      }
+
+      return (data || []).map((r) => ({
+        ...r,
+        companyStatus: r.selskap_id ? (companyStatusMap[r.selskap_id] || null) : null,
+      }));
     },
   });
 
@@ -231,11 +257,13 @@ export default function StacqPrisen() {
                     <span className="text-[0.8125rem] font-medium text-foreground truncate">{row.kandidat}</span>
                     <span className="text-[0.8125rem] text-muted-foreground truncate">{row.kunde || "–"}</span>
                     <span>
-                      {row.er_ansatt ? (
-                        <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">STACQ</span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-full bg-secondary text-muted-foreground px-2 py-0.5 text-[0.6875rem] font-medium">Partner</span>
-                      )}
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold border ${
+                        row.companyStatus === "partner"
+                          ? "bg-violet-100 text-violet-800 border-violet-200"
+                          : "bg-foreground text-background border-transparent"
+                      }`}>
+                        {getKundeTypeLabel(row.companyStatus)}
+                      </span>
                     </span>
                     <span className="text-[0.8125rem] text-muted-foreground">{row.utpris ?? "–"}</span>
                     <span className="text-[0.8125rem]">
