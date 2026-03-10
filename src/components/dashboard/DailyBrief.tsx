@@ -108,7 +108,7 @@ const DailyBrief = () => {
         supabase.from("foresporsler_konsulenter").select("foresporsler_id, status, ansatt_id, ekstern_id")
           .in("status", ["intervju", "sendt_cv", "Intervju", "Sendt CV"]),
         supabase.from("stacq_ansatte").select("id, navn"),
-        supabase.from("finn_annonser").select("teknologier, dato").gte("dato", d60),
+        supabase.from("finn_annonser").select("teknologier, dato, uke").gte("dato", d60),
       ]);
 
       if (profileRes.data) {
