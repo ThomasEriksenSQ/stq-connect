@@ -11,6 +11,15 @@ import { FornyelsesTimeline } from "@/components/FornyelsesTimeline";
 type Filter = "Alle" | "Aktiv" | "Oppstart" | "Inaktiv";
 const TIMER_PER_DAG = 7.5;
 
+function computeOppdragStatus(oppdrag: any): string {
+  if (oppdrag.status === "Inaktiv") return "Inaktiv";
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const startDate = oppdrag.start_dato ? new Date(oppdrag.start_dato) : null;
+  if (startDate && startDate > today) return "Oppstart";
+  return "Aktiv";
+}
+
 export default function KonsulenterOppdrag() {
   const [filter, setFilter] = useState<Filter>("Aktiv");
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
