@@ -6,10 +6,21 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
 import { relativeDate } from "@/lib/relativeDate";
 
-const TRACKED_TECHS = ["C++", "Rust", "Zephyr", "Yocto", "FreeRTOS", "Embedded Linux"];
+const TRACKED_TECHS = [
+  "C++", "C", "Rust", "Python", "Zephyr", "Yocto", "Embedded Linux",
+  "FreeRTOS", "FPGA", "Qt", "ROS", "CMake", "Linux", "ARM", "RTOS",
+  "Bare metal", "Nordic", "STM32", "CAN", "Ethernet", "TCP/IP",
+  "Bluetooth", "BLE", "Wi-Fi", "UART", "SPI", "I2C", "USB",
+  "Docker", "Git", "Jenkins", "Buildroot", "OpenWRT",
+  "Cortex-M", "NRF52", "ESP32", "Raspberry Pi",
+  "AUTOSAR", "MISRA", "ISO 26262", "IEC 62443",
+  "WebAssembly", "Golang", "Java",
+];
 
 function matchTech(text: string, keyword: string): boolean {
   if (keyword === "C") return /\bC\b/.test(text);
+  if (keyword === "C++") return text.includes("C++");
+  if (keyword === "BLE") return /\bBLE\b/i.test(text);
   return text.toLowerCase().includes(keyword.toLowerCase());
 }
 
