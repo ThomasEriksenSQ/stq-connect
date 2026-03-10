@@ -969,7 +969,7 @@ export default function Foresporsler() {
               <div
                 key={row.id}
                 onClick={() => setSelectedRowId(row.id)}
-                className="grid grid-cols-[90px_minmax(0,1.5fr)_minmax(0,1fr)_80px_minmax(0,1.3fr)_minmax(220px,1fr)] gap-3 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer"
+                className="grid grid-cols-[90px_minmax(0,1.5fr)_minmax(0,1fr)_80px_minmax(0,1.3fr)_100px_minmax(220px,1fr)] gap-3 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer"
               >
                 {/* Mottatt */}
                 <Tooltip>
