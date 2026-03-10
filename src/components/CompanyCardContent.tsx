@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { DescriptionText } from "@/components/DescriptionText";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -19,6 +19,7 @@ import { nb } from "date-fns/locale";
 import { relativeDate, fullDate } from "@/lib/relativeDate";
 import { cleanDescription } from "@/lib/cleanDescription";
 import InlineEdit from "@/components/InlineEdit";
+import { lookupByOrgNr } from "@/components/BrregSearch";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { CATEGORIES as SIGNAL_CATEGORIES, getEffectiveSignal, extractCategory } from "@/lib/categoryUtils";
@@ -149,6 +150,37 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
     },
     enabled: !!companyId,
   });
+
+  // Pre-fill edit form when dialog opens
+  useEffect(() => {
+    if (editCompanyOpen && company) {
+      const locs = company.city ? company.city.split(",").map((l: string) => l.trim()).filter(Boolean) : [];
+      setEditForm({
+        name: company.name || "",
+        org_number: company.org_number || "",
+        city: company.city || "",
+        website: company.website || "",
+        linkedin: company.linkedin || "",
+        locations: locs.length > 0 ? locs : [],
+      });
+      setNewLocation("");
+    }
+  }, [editCompanyOpen, company]);
+
+  // BRREG lookup when org.nr is 9 digits
+  useEffect(() => {
+    const cleaned = editForm.org_number.replace(/\s/g, "");
+    if (cleaned.length !== 9 || !/^\d{9}$/.test(cleaned)) return;
+    lookupByOrgNr(cleaned).then(r => {
+      if (r) {
+        if (!editForm.name) setEditForm(prev => ({ ...prev, name: r.navn }));
+        const city = r.forretningsadresse?.kommune || null;
+        if (city && editForm.locations.length === 0) {
+          setEditForm(prev => ({ ...prev, locations: [city] }));
+        }
+      }
+    });
+  }, [editForm.org_number]);
 
   const { data: allProfiles = [] } = useQuery({
     queryKey: ["profiles"],
