@@ -471,26 +471,13 @@ const Companies = () => {
               const status = getStatus(company.status);
               return (
                 <div key={company.id}
-                  className="w-full grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer"
+                  className="w-full grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer"
                   onClick={() => navigate(`/selskaper/${company.id}`)}>
                   <div className="min-w-0">
                     <span className="text-[0.8125rem] font-medium text-foreground truncate block">{company.name}</span>
                     {false && company.industry && (
                       <p className="text-[0.6875rem] text-muted-foreground truncate mt-0.5">{company.industry}</p>
                     )}
-                  </div>
-                  {/* SIGNAL - read-only badge */}
-                  <div className="min-w-0">
-                    {(() => {
-                      const signalBadge = getSignalBadge(company.signal || null);
-                      return signalBadge ? (
-                        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${signalBadge.color}`}>
-                          {signalBadge.label}
-                        </span>
-                      ) : (
-                        <span className="text-[0.75rem] text-muted-foreground">—</span>
-                      );
-                    })()}
                   </div>
                   {/* TYPE - inline editable */}
                   <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
