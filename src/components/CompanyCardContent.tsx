@@ -476,6 +476,59 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                 </DialogContent>
               </Dialog>
             )}
+            {/* Signal picker dialog */}
+            <Dialog open={signalPickerOpen} onOpenChange={setSignalPickerOpen}>
+              <DialogContent className="sm:max-w-[360px] rounded-xl">
+                <DialogHeader>
+                  <DialogTitle>Sett signal</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 mt-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-label">Signal</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {SIGNAL_CATEGORIES.map(c => (
+                        <button
+                          key={c.label}
+                          type="button"
+                          onClick={() => setPendingSignal(c.label)}
+                          className={cn(
+                            "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer transition-all",
+                            pendingSignal === c.label ? c.badgeColor + " ring-2 ring-offset-1 ring-primary" : c.badgeColor + " opacity-50"
+                          )}
+                        >
+                          {c.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-label">Gjelder kontakt</Label>
+                    <select
+                      value={signalContactId}
+                      onChange={e => setSignalContactId(e.target.value)}
+                      className="w-full h-10 rounded-lg border border-input bg-background px-3 text-[0.8125rem]"
+                    >
+                      {contacts.map(c => (
+                        <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <Button
+                    className="w-full h-10 rounded-lg"
+                    disabled={!pendingSignal || !signalContactId}
+                    onClick={() => {
+                      if (pendingSignal && signalContactId) {
+                        changeSignalMutation.mutate({ signal: pendingSignal, contactId: signalContactId });
+                        setSignalPickerOpen(false);
+                        setPendingSignal(null);
+                      }
+                    }}
+                  >
+                    Lagre signal
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
             {/* Edit company dialog */}
             <Dialog open={editCompanyOpen} onOpenChange={setEditCompanyOpen}>
               <DialogContent className="sm:max-w-[440px] rounded-xl">
