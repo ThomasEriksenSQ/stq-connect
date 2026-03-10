@@ -221,35 +221,7 @@ const Companies = () => {
   });
   const ownerList = Array.from(ownerMap.entries());
 
-  const setSignalMutation = useMutation({
-    mutationFn: async ({ companyId, label }: { companyId: string; label: string }) => {
-      const [actRes, catRes] = await Promise.all([
-        supabase.from("activities").insert({
-          type: "note",
-          subject: label,
-          description: `[${label}]`,
-          company_id: companyId,
-          created_by: user?.id,
-        }),
-        supabase.from("companies").update({ category: label }).eq("id", companyId),
-      ]);
-      if (actRes.error) throw actRes.error;
-      if (catRes.error) throw catRes.error;
-    },
-    onMutate: async ({ companyId, label }) => {
-      queryClient.setQueryData(["companies-full"], (old: any[]) =>
-        old?.map(c => c.id === companyId ? { ...c, signal: label } : c)
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
-      toast.success("Signal oppdatert");
-    },
-    onError: () => {
-      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
-      toast.error("Kunne ikke oppdatere signal");
-    },
-  });
+  // Signal is read-only in company list — users set signals from the company detail page
 
   const TYPE_OPTIONS = [
     { value: "prospect", label: "Potensiell kunde", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },

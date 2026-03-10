@@ -135,6 +135,9 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   const [editCompanyOpen, setEditCompanyOpen] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", org_number: "", city: "", website: "", linkedin: "", locations: [] as string[] });
   const [newLocation, setNewLocation] = useState("");
+  const [signalPickerOpen, setSignalPickerOpen] = useState(false);
+  const [pendingSignal, setPendingSignal] = useState<string | null>(null);
+  const [signalContactId, setSignalContactId] = useState<string>("");
   const { user } = useAuth();
 
   const { data: company, isLoading } = useQuery({
@@ -270,24 +273,22 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   });
 
   const changeSignalMutation = useMutation({
-    mutationFn: async (newSignal: string) => {
-      const [actRes, catRes] = await Promise.all([
-        supabase.from("activities").insert({
-          subject: newSignal,
-          type: "note",
-          company_id: companyId,
-          created_by: user?.id,
-          description: `[${newSignal}]`,
-        }),
-        supabase.from("companies").update({ category: newSignal }).eq("id", companyId),
-      ]);
-      if (actRes.error) throw actRes.error;
-      if (catRes.error) throw catRes.error;
+    mutationFn: async ({ signal, contactId }: { signal: string; contactId: string }) => {
+      const { error } = await supabase.from("activities").insert({
+        subject: signal,
+        type: "note",
+        contact_id: contactId,
+        company_id: companyId,
+        created_by: user?.id,
+        description: `[${signal}]`,
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company-activities-direct", companyId] });
       queryClient.invalidateQueries({ queryKey: ["company-contact-activities", companyId] });
       queryClient.invalidateQueries({ queryKey: ["companies-full"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
       toast.success("Signal oppdatert");
     },
     onError: () => toast.error("Kunne ikke oppdatere signal"),
@@ -334,30 +335,21 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
           <div className="ml-auto flex items-center gap-2 flex-shrink-0">
             {/* Signal badge FIRST */}
             {editable ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  {effectiveSignal ? (
-                    <button className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap cursor-pointer", signalBadgeColor)}>
-                      {effectiveSignal}
-                      <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
-                    </button>
-                  ) : (
-                    <button className="inline-flex items-center rounded-full border border-dashed border-border px-2.5 py-0.5 text-[0.6875rem] text-muted-foreground/50 cursor-pointer hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors">
-                      Signal
-                      <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
-                    </button>
-                  )}
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {SIGNAL_CATEGORIES.map((c) => (
-                    <DropdownMenuItem key={c.label} onClick={() => changeSignalMutation.mutate(c.label)}>
-                      <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold", c.badgeColor)}>
-                        {c.label}
-                      </span>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <button
+                onClick={() => {
+                  const defaultContact = activities.find(a => a.contact_id)?.contact_id || contacts[0]?.id || "";
+                  setSignalContactId(defaultContact);
+                  setSignalPickerOpen(true);
+                }}
+                className={cn(
+                  effectiveSignal
+                    ? "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer"
+                    : "inline-flex items-center rounded-full border border-dashed border-border px-2.5 py-0.5 text-[0.6875rem] text-muted-foreground/50 cursor-pointer hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors",
+                  effectiveSignal ? signalBadgeColor : ""
+                )}
+              >
+                {effectiveSignal || "Sett signal"}
+              </button>
             ) : effectiveSignal ? (
               <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", signalBadgeColor)}>
                 {effectiveSignal}
@@ -484,6 +476,59 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                 </DialogContent>
               </Dialog>
             )}
+            {/* Signal picker dialog */}
+            <Dialog open={signalPickerOpen} onOpenChange={setSignalPickerOpen}>
+              <DialogContent className="sm:max-w-[360px] rounded-xl">
+                <DialogHeader>
+                  <DialogTitle>Sett signal</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 mt-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-label">Signal</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {SIGNAL_CATEGORIES.map(c => (
+                        <button
+                          key={c.label}
+                          type="button"
+                          onClick={() => setPendingSignal(c.label)}
+                          className={cn(
+                            "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer transition-all",
+                            pendingSignal === c.label ? c.badgeColor + " ring-2 ring-offset-1 ring-primary" : c.badgeColor + " opacity-50"
+                          )}
+                        >
+                          {c.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-label">Gjelder kontakt</Label>
+                    <select
+                      value={signalContactId}
+                      onChange={e => setSignalContactId(e.target.value)}
+                      className="w-full h-10 rounded-lg border border-input bg-background px-3 text-[0.8125rem]"
+                    >
+                      {contacts.map(c => (
+                        <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <Button
+                    className="w-full h-10 rounded-lg"
+                    disabled={!pendingSignal || !signalContactId}
+                    onClick={() => {
+                      if (pendingSignal && signalContactId) {
+                        changeSignalMutation.mutate({ signal: pendingSignal, contactId: signalContactId });
+                        setSignalPickerOpen(false);
+                        setPendingSignal(null);
+                      }
+                    }}
+                  >
+                    Lagre signal
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
             {/* Edit company dialog */}
             <Dialog open={editCompanyOpen} onOpenChange={setEditCompanyOpen}>
               <DialogContent className="sm:max-w-[440px] rounded-xl">
