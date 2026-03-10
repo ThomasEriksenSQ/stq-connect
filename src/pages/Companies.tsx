@@ -269,9 +269,6 @@ const Companies = () => {
 
   const sorted = [...filtered].sort((a, b) => {
     if (!userHasSorted) {
-      const as = SIGNAL_PRIORITY[a.signal ?? ""] ?? 5;
-      const bs = SIGNAL_PRIORITY[b.signal ?? ""] ?? 5;
-      if (as !== bs) return as - bs;
       const at = TYPE_PRIORITY[a.status ?? ""] ?? 5;
       const bt = TYPE_PRIORITY[b.status ?? ""] ?? 5;
       if (at !== bt) return at - bt;
@@ -283,11 +280,6 @@ const Companies = () => {
       case "type": {
         const ai = TYPE_ORDER.indexOf(a.status);
         const bi = TYPE_ORDER.indexOf(b.status);
-        return dir * ((ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi));
-      }
-      case "signal": {
-        const ai = SIGNAL_ORDER.indexOf(a.signal as any || "");
-        const bi = SIGNAL_ORDER.indexOf(b.signal as any || "");
         return dir * ((ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi));
       }
       case "city": return dir * (a.city || "").localeCompare(b.city || "", "nb");
