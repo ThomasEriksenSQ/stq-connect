@@ -335,30 +335,21 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
           <div className="ml-auto flex items-center gap-2 flex-shrink-0">
             {/* Signal badge FIRST */}
             {editable ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  {effectiveSignal ? (
-                    <button className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap cursor-pointer", signalBadgeColor)}>
-                      {effectiveSignal}
-                      <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
-                    </button>
-                  ) : (
-                    <button className="inline-flex items-center rounded-full border border-dashed border-border px-2.5 py-0.5 text-[0.6875rem] text-muted-foreground/50 cursor-pointer hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors">
-                      Signal
-                      <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
-                    </button>
-                  )}
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {SIGNAL_CATEGORIES.map((c) => (
-                    <DropdownMenuItem key={c.label} onClick={() => changeSignalMutation.mutate(c.label)}>
-                      <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold", c.badgeColor)}>
-                        {c.label}
-                      </span>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <button
+                onClick={() => {
+                  const defaultContact = activities.find(a => a.contact_id)?.contact_id || contacts[0]?.id || "";
+                  setSignalContactId(defaultContact);
+                  setSignalPickerOpen(true);
+                }}
+                className={cn(
+                  effectiveSignal
+                    ? "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer"
+                    : "inline-flex items-center rounded-full border border-dashed border-border px-2.5 py-0.5 text-[0.6875rem] text-muted-foreground/50 cursor-pointer hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors",
+                  effectiveSignal ? signalBadgeColor : ""
+                )}
+              >
+                {effectiveSignal || "Sett signal"}
+              </button>
             ) : effectiveSignal ? (
               <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", signalBadgeColor)}>
                 {effectiveSignal}
