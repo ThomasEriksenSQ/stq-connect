@@ -407,14 +407,48 @@ export function ForespørselSheet({
     });
   };
 
-  const updateKonsulentStatus = async (linkId: string, newStatus: string) => {
+  const updateKonsulentStatus = async (linkId: string, newStatus: string, konsulentNavn?: string) => {
     await supabase
       .from("foresporsler_konsulenter")
       .update({ status: newStatus, status_updated_at: new Date().toISOString() })
       .eq("id", linkId);
-    if (newStatus === "vunnet") fireConfetti();
+    if (newStatus === "vunnet") {
+      fireConfetti();
+      // Open oppdrag creation modal
+      setOppdragKonsulentNavn(konsulentNavn || "");
+      setOppdragUtpris("");
+      setOppdragInnpris("");
+      setOppdragStartDato("");
+      setOppdragFornyDato("");
+      setOppdragKommentar("");
+      setTimeout(() => setOppdragModalOpen(true), 600);
+    }
     queryClient.invalidateQueries({ queryKey: ["foresporsler-konsulenter", row.id] });
     queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
+  };
+
+  const handleCreateOppdrag = async (fillLater: boolean) => {
+    setOppdragSubmitting(true);
+    const { error } = await supabase.from("stacq_oppdrag").insert({
+      kandidat: oppdragKonsulentNavn,
+      kunde: row.selskap_navn,
+      deal_type: row.type || null,
+      utpris: fillLater ? null : (oppdragUtpris ? Number(oppdragUtpris) : null),
+      til_konsulent: fillLater ? null : (oppdragInnpris ? Number(oppdragInnpris) : null),
+      start_dato: fillLater ? null : (oppdragStartDato || null),
+      forny_dato: fillLater ? null : (oppdragFornyDato || null),
+      kommentar: fillLater ? null : (oppdragKommentar || null),
+      status: "Oppstart",
+      er_ansatt: true,
+    });
+    setOppdragSubmitting(false);
+    if (error) {
+      toast.error("Kunne ikke opprette oppdrag");
+      return;
+    }
+    toast.success("Oppdrag opprettet");
+    queryClient.invalidateQueries({ queryKey: ["stacq-oppdrag-prisen"] });
+    setOppdragModalOpen(false);
   };
 
   // Save kommentar inline
