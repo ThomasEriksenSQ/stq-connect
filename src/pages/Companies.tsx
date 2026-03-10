@@ -167,19 +167,13 @@ const Companies = () => {
         companyTasksMap[cid].push(t);
       });
 
-      // Use companies.category as primary source of truth for signal.
-      // Fall back to getEffectiveSignal from activities only if category is empty.
       const signalMap: Record<string, string> = {};
       for (const c of data) {
-        if (c.category) {
-          signalMap[c.id] = c.category;
-        } else {
-          const sig = getEffectiveSignal(
-            (companyActsMap[c.id] || []).map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
-            (companyTasksMap[c.id] || []).map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date })),
-          );
-          signalMap[c.id] = sig || "";
-        }
+        const sig = getEffectiveSignal(
+          (companyActsMap[c.id] || []).map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+          (companyTasksMap[c.id] || []).map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date })),
+        );
+        signalMap[c.id] = sig || "";
       }
 
       return data.map(c => ({

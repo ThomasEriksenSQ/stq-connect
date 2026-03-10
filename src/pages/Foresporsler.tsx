@@ -448,10 +448,6 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
       created_by: user?.id,
     });
 
-    // 3. Update company category
-    if (selskapId) {
-      await supabase.from("companies").update({ category: "Behov nå" }).eq("id", selskapId);
-    }
 
     setSubmitting(false);
     const contactDisplayName = kontakt || "kontakten";
