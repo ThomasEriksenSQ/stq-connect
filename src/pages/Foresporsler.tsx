@@ -860,7 +860,7 @@ export default function Foresporsler() {
     const allKonsulenter = aktive.flatMap((r: any) => r.foresporsler_konsulenter || []);
     const iProsess = allKonsulenter.filter((k: any) => k.status === "sendt_cv" || k.status === "intervju").length;
 
-    const allKonsulenterAll = rows.flatMap((r: any) => r.foresporsler_konsulenter || []);
+    const vunnetCutoff = new Date(); vunnetCutoff.setDate(vunnetCutoff.getDate() - 45);
     const vunnet = rows.filter((r: any) =>
       r.status === "Vunnet" && r.updated_at && new Date(r.updated_at) >= cutoff
     ).length;
