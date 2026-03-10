@@ -1025,31 +1025,19 @@ export default function Foresporsler() {
                     );
                   })()}
                 </div>
-                {/* Sendt inn — pipeline */}
-                <div className="space-y-1">
+                {/* Sendt inn */}
+                <div className="flex flex-col items-end gap-0.5">
                   {sendt.length === 0 ? (
                     <span className="text-[0.8125rem] text-muted-foreground">—</span>
                   ) : (
-                    <>
-                      {sendt.slice(0, 3).map((k: any) => {
-                        const fullName = k.konsulent_type === "intern"
-                          ? k.stacq_ansatte?.navn
-                          : k.external_consultants?.navn;
-                        const shortName = fullName
-                          ? `${fullName.split(" ")[0]} ${(fullName.split(" ").pop() || "")[0]}.`
-                          : "?";
-                        const status = k.status || "sendt_cv";
-                        return (
-                          <div key={k.id} className="flex items-center gap-2">
-                            <span className={cn("text-[0.75rem] text-foreground min-w-[70px] truncate", status === "bortfalt" && "line-through text-muted-foreground")}>{shortName}</span>
-                            <PipelineTrack status={status} />
-                          </div>
-                        );
-                      })}
-                      {sendt.length > 3 && (
-                        <span className="text-[0.6875rem] text-muted-foreground">+{sendt.length - 3} til</span>
-                      )}
-                    </>
+                    sendt.map((k: any) => {
+                      const navn = (k.konsulent_type === "intern" ? k.stacq_ansatte?.navn : k.external_consultants?.navn)?.split(" ")[0] || "";
+                      return (
+                        <span key={k.id} className="text-[0.8125rem] text-foreground font-medium">
+                          {navn}
+                        </span>
+                      );
+                    })
                   )}
                 </div>
               </div>
