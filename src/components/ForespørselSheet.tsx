@@ -429,17 +429,17 @@ export function ForespørselSheet({
     queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
   };
 
-  const handleCreateOppdrag = async (fillLater: boolean) => {
+  const handleCreateOppdrag = async () => {
     setOppdragSubmitting(true);
     const { error } = await supabase.from("stacq_oppdrag").insert({
       kandidat: oppdragKonsulentNavn,
       kunde: row.selskap_navn,
       deal_type: row.type || null,
-      utpris: fillLater ? null : (oppdragUtpris ? Number(oppdragUtpris) : null),
-      til_konsulent: fillLater ? null : (oppdragInnpris ? Number(oppdragInnpris) : null),
-      start_dato: fillLater ? null : (oppdragStartDato || null),
-      forny_dato: fillLater ? null : (oppdragFornyDato || null),
-      kommentar: fillLater ? null : (oppdragKommentar || null),
+      utpris: oppdragUtpris ? Number(oppdragUtpris) : null,
+      til_konsulent: oppdragInnpris ? Number(oppdragInnpris) : null,
+      start_dato: oppdragStartDato || null,
+      forny_dato: oppdragFornyDato || null,
+      kommentar: oppdragKommentar || null,
       status: "Oppstart",
       er_ansatt: true,
     });
