@@ -216,6 +216,7 @@ export function ForespørselSheet({
   const [oppdragFornyDato, setOppdragFornyDato] = useState("");
   const [oppdragKommentar, setOppdragKommentar] = useState("");
   const [oppdragSubmitting, setOppdragSubmitting] = useState(false);
+  const [oppdragLopende, setOppdragLopende] = useState(false);
 
   // Linked consultants (both intern and ekstern)
   const { data: linkedKonsulenter = [], refetch: refetchLinked } = useQuery({
@@ -421,23 +422,24 @@ export function ForespørselSheet({
       setOppdragStartDato("");
       setOppdragFornyDato("");
       setOppdragKommentar("");
+      setOppdragLopende(false);
       setTimeout(() => setOppdragModalOpen(true), 600);
     }
     queryClient.invalidateQueries({ queryKey: ["foresporsler-konsulenter", row.id] });
     queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
   };
 
-  const handleCreateOppdrag = async (fillLater: boolean) => {
+  const handleCreateOppdrag = async () => {
     setOppdragSubmitting(true);
     const { error } = await supabase.from("stacq_oppdrag").insert({
       kandidat: oppdragKonsulentNavn,
       kunde: row.selskap_navn,
       deal_type: row.type || null,
-      utpris: fillLater ? null : (oppdragUtpris ? Number(oppdragUtpris) : null),
-      til_konsulent: fillLater ? null : (oppdragInnpris ? Number(oppdragInnpris) : null),
-      start_dato: fillLater ? null : (oppdragStartDato || null),
-      forny_dato: fillLater ? null : (oppdragFornyDato || null),
-      kommentar: fillLater ? null : (oppdragKommentar || null),
+      utpris: oppdragUtpris ? Number(oppdragUtpris) : null,
+      til_konsulent: oppdragInnpris ? Number(oppdragInnpris) : null,
+      start_dato: oppdragStartDato || null,
+      forny_dato: oppdragFornyDato || null,
+      kommentar: oppdragKommentar || null,
       status: "Oppstart",
       er_ansatt: true,
     });
@@ -910,24 +912,22 @@ export function ForespørselSheet({
 
       {/* Opprett oppdrag modal */}
       <Dialog open={oppdragModalOpen} onOpenChange={setOppdragModalOpen}>
-        <DialogContent className="max-w-md rounded-xl p-6 gap-0">
-          <DialogHeader>
-            <DialogTitle className="text-[1.125rem] font-bold text-foreground">Opprett oppdrag</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-md rounded-xl p-6 gap-0" hideCloseButton>
+          <DialogTitle className="text-[1.125rem] font-bold text-foreground mb-5">Opprett oppdrag</DialogTitle>
 
-          <div className="space-y-4 mt-4">
+          <div className="space-y-4">
             {/* Read-only fields */}
             <div>
               <p className={LABEL}>Konsulent</p>
-              <p className="text-[0.875rem] font-medium mt-0.5">{oppdragKonsulentNavn}</p>
+              <p className="text-[0.875rem] font-medium text-foreground mt-0.5 mb-3">{oppdragKonsulentNavn}</p>
             </div>
             <div>
               <p className={LABEL}>Kunde</p>
-              <p className="text-[0.875rem] font-medium mt-0.5">{row?.selskap_navn}</p>
+              <p className="text-[0.875rem] font-medium text-foreground mt-0.5 mb-3">{row?.selskap_navn}</p>
             </div>
             <div>
               <p className={LABEL}>Type</p>
-              <p className="text-[0.875rem] font-medium mt-0.5">{row?.type === "VIA" ? "Partner" : "Direkte"}</p>
+              <p className="text-[0.875rem] font-medium text-foreground mt-0.5 mb-3">{row?.type === "VIA" ? "Partner" : "Direkte"}</p>
             </div>
 
             {/* Editable fields */}
@@ -970,7 +970,34 @@ export function ForespørselSheet({
                   value={oppdragFornyDato}
                   onChange={(e) => setOppdragFornyDato(e.target.value)}
                   className="mt-1 text-[0.875rem]"
+                  disabled={oppdragLopende}
                 />
+                <div className="flex items-center gap-2 mt-2">
+                  <input
+                    type="checkbox"
+                    id="lopende-ny"
+                    checked={oppdragLopende}
+                    onChange={(e) => {
+                      setOppdragLopende(e.target.checked);
+                      if (e.target.checked) {
+                        const d = new Date();
+                        d.setDate(d.getDate() + 30);
+                        setOppdragFornyDato(d.toISOString().slice(0, 10));
+                      } else {
+                        setOppdragFornyDato("");
+                      }
+                    }}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  <label htmlFor="lopende-ny" className="text-[0.8125rem] text-muted-foreground cursor-pointer select-none">
+                    Løpende 30 dager
+                  </label>
+                </div>
+                {oppdragLopende && oppdragFornyDato && (
+                  <p className="text-[0.75rem] text-muted-foreground ml-6 mt-1">
+                    Utløper: {format(new Date(oppdragFornyDato), "d. MMMM yyyy", { locale: nb })}
+                  </p>
+                )}
               </div>
             </div>
             <div>
@@ -985,22 +1012,22 @@ export function ForespørselSheet({
             </div>
           </div>
 
-          <DialogFooter className="mt-6 pt-4 border-t border-border">
+          {/* Footer */}
+          <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
             <button
-              onClick={() => handleCreateOppdrag(true)}
-              disabled={oppdragSubmitting}
-              className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+              onClick={() => setOppdragModalOpen(false)}
+              className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors"
             >
-              Fyll ut senere
+              Avbryt
             </button>
             <button
-              onClick={() => handleCreateOppdrag(false)}
+              onClick={() => handleCreateOppdrag()}
               disabled={oppdragSubmitting}
               className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-colors"
             >
               {oppdragSubmitting ? "Oppretter..." : "Opprett oppdrag"}
             </button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
