@@ -792,7 +792,7 @@ export function ForespørselSheet({
                                   ? "bg-foreground text-background"
                                   : "bg-blue-100 text-blue-700"
                               )}>
-                                {m.type === "intern" ? "Intern" : "Ekstern"}
+                                {m.type === "intern" ? "Ansatt" : "Ekstern"}
                               </span>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
