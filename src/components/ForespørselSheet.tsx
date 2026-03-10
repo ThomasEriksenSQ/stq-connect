@@ -659,6 +659,7 @@ export function ForespørselSheet({
                                 key={s.key}
                                 onClick={async () => {
                                   await supabase.from("foresporsler_konsulenter").update({ status: s.key, status_updated_at: new Date().toISOString() }).eq("id", k.id);
+                                  if (s.key === "vunnet") fireConfetti();
                                   queryClient.invalidateQueries({ queryKey: ["foresporsler-konsulenter", row.id] });
                                   queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
                                 }}
