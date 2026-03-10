@@ -34,7 +34,7 @@ interface MulighetItem {
 }
 
 interface MarketData {
-  techPulse: { name: string; count: number }[];
+  techPulse: { name: string; count: number; trend: "up" | "down" | "flat" }[];
 }
 
 const DailyBrief = () => {
