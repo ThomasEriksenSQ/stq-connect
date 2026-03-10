@@ -176,7 +176,7 @@ const DailyBrief = () => {
       const currentWeek = getISOWeek(now);
       const currentYear = now.getFullYear();
 
-      // Current period: last 4 weeks, Previous: 4 weeks before that
+      // Current period: last 2 weeks, Previous: 2 weeks before that
       const isInWeekRange = (dato: string, weeksAgo: number, weeksEnd: number) => {
         const d = new Date(dato);
         const diffMs = now.getTime() - d.getTime();
