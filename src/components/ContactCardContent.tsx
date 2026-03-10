@@ -1298,8 +1298,8 @@ function ActivityRow({
               />
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" className="h-6 text-[0.6875rem] px-2 rounded" disabled={!editTitle.trim() || !editCategory} onClick={handleSaveEdit}>Lagre</Button>
-              <Button variant="ghost" size="sm" className="h-6 text-[0.6875rem] px-2 rounded" onClick={() => setEditing(false)}>Avbryt</Button>
+              <Button size="sm" className="h-[34px] px-4 text-[0.8125rem] font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50" disabled={!editTitle.trim() || !editCategory} onClick={handleSaveEdit}>Lagre</Button>
+              <Button variant="ghost" size="sm" className="h-[34px] px-3 text-[0.8125rem] text-muted-foreground rounded-md hover:bg-secondary transition-colors" onClick={() => setEditing(false)}>Avbryt</Button>
               <div className="ml-auto">
                 {confirmDelete ? (
                   <span className="text-[0.75rem] animate-in fade-in duration-150">
