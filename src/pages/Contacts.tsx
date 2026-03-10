@@ -57,11 +57,13 @@ const Contacts = () => {
           .from("activities")
           .select("contact_id, created_at, description, subject")
           .not("contact_id", "is", null)
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false })
+          .limit(5000),
         supabase
           .from("tasks")
           .select("contact_id, created_at, due_date, status, description, title")
-          .not("contact_id", "is", null),
+          .not("contact_id", "is", null)
+          .limit(5000),
       ]);
 
       // Last activity date map — only past activities count
