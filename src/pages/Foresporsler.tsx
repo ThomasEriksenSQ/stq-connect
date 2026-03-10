@@ -861,8 +861,8 @@ export default function Foresporsler() {
     const iProsess = allKonsulenter.filter((k: any) => k.status === "sendt_cv" || k.status === "intervju").length;
 
     const allKonsulenterAll = rows.flatMap((r: any) => r.foresporsler_konsulenter || []);
-    const vunnet = allKonsulenterAll.filter((k: any) =>
-      k.status === "vunnet" && k.status_updated_at && new Date(k.status_updated_at) >= cutoff
+    const vunnet = rows.filter((r: any) =>
+      r.status === "Vunnet" && r.updated_at && new Date(r.updated_at) >= cutoff
     ).length;
 
     return { aktive: aktive.length, utenKonsulent, iProsess, vunnet };
