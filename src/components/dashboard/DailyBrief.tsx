@@ -218,8 +218,8 @@ const DailyBrief = () => {
       const d14 = new Date(now.getTime() - 14 * 86400000).toISOString().slice(0, 10);
       const { data: prevForesp } = await supabase.from("foresporsler")
         .select("teknologier, mottatt_dato")
-        .gte("mottatt_dato", d56)
-        .lt("mottatt_dato", d45);
+        .gte("mottatt_dato", d28)
+        .lt("mottatt_dato", d14);
 
       for (const f of (prevForesp ?? [])) {
         if (!f.teknologier) continue;
