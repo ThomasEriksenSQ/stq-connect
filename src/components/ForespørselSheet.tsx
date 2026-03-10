@@ -216,6 +216,7 @@ export function ForespørselSheet({
   const [oppdragFornyDato, setOppdragFornyDato] = useState("");
   const [oppdragKommentar, setOppdragKommentar] = useState("");
   const [oppdragSubmitting, setOppdragSubmitting] = useState(false);
+  const [oppdragLopende, setOppdragLopende] = useState(false);
 
   // Linked consultants (both intern and ekstern)
   const { data: linkedKonsulenter = [], refetch: refetchLinked } = useQuery({
