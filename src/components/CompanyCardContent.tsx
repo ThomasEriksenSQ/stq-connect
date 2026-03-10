@@ -141,6 +141,37 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   const [signalContactId, setSignalContactId] = useState<string>("");
   const { user } = useAuth();
 
+  // Pre-fill edit form when dialog opens
+  useEffect(() => {
+    if (editCompanyOpen && company) {
+      const locs = company.city ? company.city.split(",").map((l: string) => l.trim()).filter(Boolean) : [];
+      setEditForm({
+        name: company.name || "",
+        org_number: company.org_number || "",
+        city: company.city || "",
+        website: company.website || "",
+        linkedin: company.linkedin || "",
+        locations: locs.length > 0 ? locs : [],
+      });
+      setNewLocation("");
+    }
+  }, [editCompanyOpen, company]);
+
+  // BRREG lookup when org.nr is 9 digits
+  useEffect(() => {
+    const cleaned = editForm.org_number.replace(/\s/g, "");
+    if (cleaned.length !== 9 || !/^\d{9}$/.test(cleaned)) return;
+    lookupByOrgNr(cleaned).then(r => {
+      if (r) {
+        if (!editForm.name) setEditForm(prev => ({ ...prev, name: r.navn }));
+        const city = r.forretningsadresse?.kommune || null;
+        if (city && editForm.locations.length === 0) {
+          setEditForm(prev => ({ ...prev, locations: [city] }));
+        }
+      }
+    });
+  }, [editForm.org_number]);
+
   const { data: company, isLoading } = useQuery({
     queryKey: ["company", companyId],
     queryFn: async () => {
