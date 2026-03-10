@@ -1004,26 +1004,6 @@ export default function Foresporsler() {
                     </span>
                   )}
                 </div>
-                {/* Status */}
-                <div className="flex justify-end">
-                  {(() => {
-                    const s = row.status;
-                    const cfg: Record<string, string> = {
-                      "Sendt CV":   "bg-blue-50 text-blue-700 border-blue-200",
-                      "Intervju":   "bg-violet-50 text-violet-700 border-violet-200",
-                      "Vunnet":     "bg-emerald-100 text-emerald-800 border-emerald-200",
-                      "Avslag":     "bg-red-50 text-red-700 border-red-200",
-                      "Bortfalt":   "bg-gray-100 text-gray-500 border-gray-200",
-                    };
-                    const color = cfg[s] || "bg-gray-50 text-gray-400 border-gray-200";
-                    const label = cfg[s] ? s : "Ny";
-                    return (
-                      <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold ${color}`}>
-                        {label}
-                      </span>
-                    );
-                  })()}
-                </div>
                 {/* Sendt inn */}
                 <div className="flex flex-col items-end gap-1">
                   {sendt.length === 0 ? (
@@ -1033,20 +1013,28 @@ export default function Foresporsler() {
                       const navn = (k.konsulent_type === "intern" ? k.stacq_ansatte?.navn : k.external_consultants?.navn)?.split(" ")[0] || "Ukjent";
                       const ks = k.status;
                       const cfg: Record<string, string> = {
-                        "Sendt CV":  "bg-blue-50 text-blue-700 border-blue-200",
-                        "Intervju":  "bg-violet-50 text-violet-700 border-violet-200",
-                        "Vunnet":    "bg-emerald-100 text-emerald-800 border-emerald-200",
-                        "Avslag":    "bg-red-50 text-red-700 border-red-200",
-                        "Bortfalt":  "bg-gray-100 text-gray-500 border-gray-200",
+                        "sendt_cv":  "bg-blue-50 text-blue-700 border-blue-200",
+                        "intervju":  "bg-violet-50 text-violet-700 border-violet-200",
+                        "vunnet":    "bg-emerald-100 text-emerald-800 border-emerald-200",
+                        "avslag":    "bg-red-50 text-red-700 border-red-200",
+                        "bortfalt":  "bg-gray-100 text-gray-500 border-gray-200",
                       };
-                      const color = cfg[ks] || "";
+                      const labelMap: Record<string, string> = {
+                        "sendt_cv": "Sendt CV",
+                        "intervju": "Intervju",
+                        "vunnet": "Vunnet",
+                        "avslag": "Avslag",
+                        "bortfalt": "Bortfalt",
+                      };
+                      const color = ks && cfg[ks] ? cfg[ks] : "";
+                      const label = labelMap[ks] || ks;
                       return (
                         <div key={k.id} className="flex items-center gap-1.5">
                           <span className="text-[0.8125rem] font-medium text-foreground">{navn}</span>
-                          {color && (
-                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold ${color}`}>
-                              {ks}
-                            </span>
+                          {color ? (
+                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold ${color}`}>{label}</span>
+                          ) : (
+                            <span className="text-[0.625rem] text-muted-foreground border border-dashed border-border rounded-full px-2 py-0.5">Ny</span>
                           )}
                         </div>
                       );
