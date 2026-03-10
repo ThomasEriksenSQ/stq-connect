@@ -131,45 +131,40 @@ const Companies = () => {
       const taskCountMap: Record<string, number> = {};
       const overdueTaskMap: Record<string, boolean> = {};
 
-      // Collect activities and tasks per company for signal calculation
+      // Signal maps: ONLY contact-sourced activities/tasks (not company-level)
       const companyActsMap: Record<string, any[]> = {};
       const companyTasksMap: Record<string, any[]> = {};
 
-      function addAct(companyId: string, a: any) {
-        if (!companyActsMap[companyId]) companyActsMap[companyId] = [];
-        companyActsMap[companyId].push(a);
-      }
-      function addTask(companyId: string, t: any) {
-        if (!companyTasksMap[companyId]) companyTasksMap[companyId] = [];
-        companyTasksMap[companyId].push(t);
-      }
-
+      // Company-level activities: only for lastActivityMap (not signal)
       (actRes.data || []).forEach(a => {
         if (!a.company_id || !companyIdSet.has(a.company_id)) return;
         if (isPast(a.created_at) && !lastActivityMap[a.company_id]) lastActivityMap[a.company_id] = a.created_at;
-        addAct(a.company_id, a);
       });
 
+      // Contact-level activities: for lastActivityMap AND signal
       ((contactActRes as any).data || []).forEach((a: any) => {
         const cid = contactToCompany[a.contact_id];
         if (!cid) return;
         if (isPast(a.created_at) && (!lastActivityMap[cid] || a.created_at > lastActivityMap[cid])) lastActivityMap[cid] = a.created_at;
-        addAct(cid, a);
+        if (!companyActsMap[cid]) companyActsMap[cid] = [];
+        companyActsMap[cid].push(a);
       });
 
+      // Company-level tasks: only for taskCount/overdue (not signal)
       (taskRes.data || []).forEach(t => {
         if (!t.company_id || !companyIdSet.has(t.company_id)) return;
         taskCountMap[t.company_id] = (taskCountMap[t.company_id] || 0) + 1;
         if (t.due_date && new Date(t.due_date) < new Date()) overdueTaskMap[t.company_id] = true;
-        addTask(t.company_id, t);
       });
 
+      // Contact-level tasks: for taskCount/overdue AND signal
       ((contactTaskRes as any).data || []).forEach((t: any) => {
         const cid = contactToCompany[t.contact_id];
         if (!cid) return;
         taskCountMap[cid] = (taskCountMap[cid] || 0) + 1;
         if (t.due_date && new Date(t.due_date) < new Date()) overdueTaskMap[cid] = true;
-        addTask(cid, t);
+        if (!companyTasksMap[cid]) companyTasksMap[cid] = [];
+        companyTasksMap[cid].push(t);
       });
 
       // Use companies.category as primary source of truth for signal.
