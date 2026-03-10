@@ -1061,7 +1061,7 @@ function CompanyActivityRow({ activity, profileMap, companyId, navigate }: {
                 </TooltipTrigger>
                 <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
               </Tooltip>
-              {displayCategory && displayCategory !== displayTitle && <CategoryBadge label={displayCategory} />}
+              {displayCategory && <CategoryBadge label={displayCategory} />}
             </div>
           </div>
         )}
