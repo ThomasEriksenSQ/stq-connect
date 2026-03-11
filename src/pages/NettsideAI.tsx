@@ -474,6 +474,13 @@ function KnowledgeTab() {
   const [newVisibility, setNewVisibility] = useState("");
   const [newContent, setNewContent] = useState("");
 
+  // Upload state
+  const docInputRef = useRef<HTMLInputElement>(null);
+  const [uploadCategory, setUploadCategory] = useState("");
+  const [uploadVisibility, setUploadVisibility] = useState("");
+  const [uploadStatus, setUploadStatus] = useState<"idle" | "reading" | "analyzing" | "preview">("idle");
+  const [extractedRows, setExtractedRows] = useState<Array<{ category: string; content: string }>>([]);
+
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["knowledge-base"],
     queryFn: async () => {
@@ -517,6 +524,95 @@ function KnowledgeTab() {
     },
     onError: () => toast.error("Kunne ikke slette"),
   });
+
+  const handleFileUpload = async (file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Filen kan ikke være større enn 10MB");
+      return;
+    }
+
+    let text = "";
+
+    try {
+      setUploadStatus("reading");
+
+      if (file.name.endsWith(".txt")) {
+        text = await file.text();
+      } else if (file.name.endsWith(".pdf")) {
+        const pdfjsLib = await import("pdfjs-dist");
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const pages: string[] = [];
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          pages.push(content.items.map((item: any) => item.str).join(" "));
+        }
+        text = pages.join("\n\n");
+      } else {
+        toast.error("Kun PDF og .txt-filer støttes");
+        setUploadStatus("idle");
+        return;
+      }
+
+      if (!text.trim()) {
+        toast.error("Filen er tom eller inneholder ingen tekst");
+        setUploadStatus("idle");
+        return;
+      }
+
+      setUploadStatus("analyzing");
+
+      const { data, error } = await supabase.functions.invoke("extract-knowledge", {
+        body: { documentText: text },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const extracted = data?.rows;
+      if (!Array.isArray(extracted) || extracted.length === 0) {
+        toast.error("AI fant ingen relevant kunnskap i dokumentet");
+        setUploadStatus("idle");
+        return;
+      }
+
+      setExtractedRows(extracted);
+      setUploadStatus("preview");
+    } catch (e) {
+      console.error("Document extraction error:", e);
+      toast.error(e instanceof Error ? e.message : "Kunne ikke analysere dokument");
+      setUploadStatus("idle");
+    }
+  };
+
+  const saveExtractedRows = async () => {
+    if (extractedRows.length === 0) return;
+    const vis = uploadVisibility || "ai_only";
+    try {
+      const inserts = extractedRows.map((r) => ({
+        category: r.category,
+        title: r.category,
+        content: r.content,
+        active: vis === "public",
+      }));
+      const { error } = await supabase.from("knowledge_base").insert(inserts);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["knowledge-base"] });
+      toast.success(`${extractedRows.length} rader lagt til fra dokument`);
+      setExtractedRows([]);
+      setUploadStatus("idle");
+      setUploadCategory("");
+      setUploadVisibility("");
+    } catch {
+      toast.error("Kunne ikke lagre rader");
+    }
+  };
+
+  const removeExtractedRow = (idx: number) => {
+    setExtractedRows((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   const filtered = rows.filter((r) => {
     if (visFilter === "public" && !r.active) return false;
