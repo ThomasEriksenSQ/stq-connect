@@ -16,7 +16,7 @@ const navItems = [
 ];
 
 const siteNavItems = [
-  { title: "Nettside AI", url: "/nettside-ai", icon: Globe },
+  { title: "Nettside", url: "/nettside-ai", icon: Globe },
 ];
 
 export function AppLayout() {

@@ -2,11 +2,15 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil, X } from "lucide-react";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
   Select,
   SelectContent,
@@ -14,6 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1 block";
+
+/* ─── Knowledge base constants ─── */
 
 const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer select-none";
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
@@ -40,6 +48,8 @@ const CAT_CHIPS: { value: CatFilter; label: string }[] = [
 
 const CATEGORIES_LIST = ["skills", "domain", "services", "availability", "education", "languages"];
 
+/* ─── Shared components ─── */
+
 function DeleteButton({ onConfirm }: { onConfirm: () => void }) {
   const [confirming, setConfirming] = useState(false);
   if (confirming) {
@@ -57,12 +67,271 @@ function DeleteButton({ onConfirm }: { onConfirm: () => void }) {
   );
 }
 
-const NettsideAI = () => {
+function TagInput({ value, onChange, placeholder }: { value: string[]; onChange: (v: string[]) => void; placeholder?: string }) {
+  const [input, setInput] = useState("");
+  const add = () => {
+    const tag = input.trim();
+    if (tag && !value.includes(tag)) {
+      onChange([...value, tag]);
+    }
+    setInput("");
+  };
+  return (
+    <div>
+      <div className="flex flex-wrap gap-1.5 mb-1.5">
+        {value.map((t) => (
+          <span key={t} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[0.75rem] font-medium text-foreground">
+            {t}
+            <button onClick={() => onChange(value.filter((v) => v !== t))} className="text-muted-foreground hover:text-foreground">
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        ))}
+      </div>
+      <Input
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+        onBlur={add}
+        placeholder={placeholder}
+        className="h-8 text-[0.8125rem]"
+      />
+    </div>
+  );
+}
+
+/* ─── Consultants Tab ─── */
+
+interface Consultant {
+  id: string;
+  name: string;
+  title: string | null;
+  description: string | null;
+  experience_years: number | null;
+  location: string | null;
+  image_url: string | null;
+  competences: string[] | null;
+  industries: string[] | null;
+  sort_order: number | null;
+  active: boolean | null;
+}
+
+function ConsultantsTab() {
+  const queryClient = useQueryClient();
+  const [editId, setEditId] = useState<string | null>(null);
+
+  const { data: consultants = [], isLoading } = useQuery({
+    queryKey: ["consultants-admin"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("consultants")
+        .select("*")
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return data as Consultant[];
+    },
+  });
+
+  const editing = consultants.find((c) => c.id === editId) ?? null;
+
+  return (
+    <>
+      {isLoading ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="rounded-lg border border-border bg-card p-3 space-y-2">
+              <div className="aspect-square bg-muted rounded animate-pulse" />
+              <div className="h-4 bg-muted rounded animate-pulse w-2/3" />
+              <div className="h-3 bg-muted rounded animate-pulse w-1/2" />
+            </div>
+          ))}
+        </div>
+      ) : consultants.length === 0 ? (
+        <div className="py-12 text-center text-muted-foreground text-[0.8125rem]">Ingen konsulenter funnet</div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {consultants.map((c) => (
+            <div key={c.id} className="rounded-lg border border-border bg-card p-3 relative group">
+              {/* sort_order */}
+              <span className="absolute top-2 right-2 text-[0.6875rem] text-muted-foreground">#{c.sort_order ?? 0}</span>
+
+              {/* Image */}
+              {c.image_url ? (
+                <img src={c.image_url} alt={c.name} className="aspect-square w-full object-cover rounded border border-border mb-2" />
+              ) : (
+                <div className="aspect-square w-full rounded border border-border mb-2 bg-muted flex items-center justify-center">
+                  <span className="text-lg font-bold text-muted-foreground">
+                    {c.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                  </span>
+                </div>
+              )}
+
+              <p className="font-medium text-[0.875rem] text-foreground truncate">{c.name}</p>
+              {c.title && <p className="text-[0.75rem] text-muted-foreground truncate">{c.title}</p>}
+              <div className="flex items-center gap-2 mt-1">
+                {c.experience_years != null && (
+                  <span className="text-[0.75rem] text-muted-foreground">{c.experience_years} år</span>
+                )}
+                {c.location && (
+                  <span className="text-[0.75rem] text-muted-foreground">{c.location}</span>
+                )}
+              </div>
+              <div className="flex items-center justify-between mt-2">
+                {c.active ? (
+                  <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold bg-green-100 text-green-800 border-green-200">Aktiv</span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold bg-gray-100 text-gray-600 border-gray-200">Inaktiv</span>
+                )}
+                <button
+                  onClick={() => setEditId(c.id)}
+                  className="text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {editing && (
+        <ConsultantEditSheet
+          consultant={editing}
+          open={!!editId}
+          onClose={() => setEditId(null)}
+          onSaved={() => {
+            queryClient.invalidateQueries({ queryKey: ["consultants-admin"] });
+            setEditId(null);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+function ConsultantEditSheet({
+  consultant,
+  open,
+  onClose,
+  onSaved,
+}: {
+  consultant: Consultant;
+  open: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [title, setTitle] = useState(consultant.title ?? "");
+  const [description, setDescription] = useState(consultant.description ?? "");
+  const [experienceYears, setExperienceYears] = useState(consultant.experience_years ?? 0);
+  const [location, setLocation] = useState(consultant.location ?? "");
+  const [imageUrl, setImageUrl] = useState(consultant.image_url ?? "");
+  const [competences, setCompetences] = useState<string[]>(consultant.competences ?? []);
+  const [industries, setIndustries] = useState<string[]>(consultant.industries ?? []);
+  const [sortOrder, setSortOrder] = useState(consultant.sort_order ?? 0);
+  const [active, setActive] = useState(consultant.active ?? true);
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("consultants")
+        .update({
+          title: title || null,
+          description: description || null,
+          experience_years: experienceYears,
+          location: location || null,
+          image_url: imageUrl || null,
+          competences,
+          industries,
+          sort_order: sortOrder,
+          active,
+        })
+        .eq("id", consultant.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Konsulent oppdatert");
+      onSaved();
+    },
+    onError: () => toast.error("Kunne ikke oppdatere"),
+  });
+
+  return (
+    <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <SheetContent side="right" className="w-[420px] p-0 overflow-y-auto" hideCloseButton>
+        <div className="p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[1.0625rem] font-bold text-foreground">{consultant.name}</h2>
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div>
+            <label className={LABEL}>Navn</label>
+            <Input value={consultant.name} readOnly className="h-9 text-[0.8125rem] bg-muted/50" />
+          </div>
+          <div>
+            <label className={LABEL}>Tittel</label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-9 text-[0.8125rem]" />
+          </div>
+          <div>
+            <label className={LABEL}>Beskrivelse</label>
+            <Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} className="text-[0.8125rem]" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={LABEL}>Erfaring (år)</label>
+              <Input type="number" value={experienceYears} onChange={(e) => setExperienceYears(Number(e.target.value))} className="h-9 text-[0.8125rem]" />
+            </div>
+            <div>
+              <label className={LABEL}>Lokasjon</label>
+              <Input value={location} onChange={(e) => setLocation(e.target.value)} className="h-9 text-[0.8125rem]" />
+            </div>
+          </div>
+          <div>
+            <label className={LABEL}>Bilde-URL</label>
+            <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." className="h-9 text-[0.8125rem]" />
+          </div>
+          <div>
+            <label className={LABEL}>Kompetanser</label>
+            <TagInput value={competences} onChange={setCompetences} placeholder="Legg til kompetanse..." />
+          </div>
+          <div>
+            <label className={LABEL}>Industrier</label>
+            <TagInput value={industries} onChange={setIndustries} placeholder="Legg til industri..." />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={LABEL}>Sorteringsrekkefølge</label>
+              <Input type="number" value={sortOrder} onChange={(e) => setSortOrder(Number(e.target.value))} className="h-9 text-[0.8125rem]" />
+            </div>
+            <div className="flex items-end pb-1">
+              <div className="flex items-center gap-2">
+                <Switch checked={active} onCheckedChange={setActive} />
+                <span className="text-[0.8125rem] text-foreground">Vis på stacq.no</span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            disabled={mutation.isPending}
+            onClick={() => mutation.mutate()}
+            className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-[#C4703A] text-white hover:opacity-90 disabled:opacity-50 transition-opacity w-full justify-center"
+          >
+            {mutation.isPending ? "Lagrer..." : "Lagre endringer"}
+          </button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+/* ─── Knowledge Tab ─── */
+
+function KnowledgeTab() {
   const queryClient = useQueryClient();
   const [visFilter, setVisFilter] = useState<VisFilter>("alle");
   const [catFilter, setCatFilter] = useState<CatFilter>("alle");
-
-  // Form state
   const [newCategory, setNewCategory] = useState("");
   const [newVisibility, setNewVisibility] = useState("");
   const [newContent, setNewContent] = useState("");
@@ -122,18 +391,11 @@ const NettsideAI = () => {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-[1.375rem] font-bold text-foreground">Nettside AI</h1>
-        <p className="text-[0.8125rem] text-muted-foreground mt-1">
-          Kunnskapsbase for STACQ-AI boten på stacq.no. Innhold merket som AI-only brukes kun til resonnering — vises aldri direkte til besøkende.
-        </p>
-      </div>
-
       {/* Add form */}
       <div className="rounded-lg border border-border bg-card p-4 space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1 block">Kategori</label>
+            <label className={LABEL}>Kategori</label>
             <Select value={newCategory} onValueChange={setNewCategory}>
               <SelectTrigger className="h-9 text-[0.8125rem]">
                 <SelectValue placeholder="Velg kategori" />
@@ -146,7 +408,7 @@ const NettsideAI = () => {
             </Select>
           </div>
           <div>
-            <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1 block">Synlighet</label>
+            <label className={LABEL}>Synlighet</label>
             <Select value={newVisibility} onValueChange={setNewVisibility}>
               <SelectTrigger className="h-9 text-[0.8125rem]">
                 <SelectValue placeholder="Velg synlighet" />
@@ -169,7 +431,7 @@ const NettsideAI = () => {
           </div>
         </div>
         <div>
-          <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1 block">Innhold</label>
+          <label className={LABEL}>Innhold</label>
           <Textarea
             rows={3}
             value={newContent}
@@ -225,7 +487,6 @@ const NettsideAI = () => {
           </div>
         ) : (
           <div className="divide-y divide-border">
-            {/* Header */}
             <div className="grid grid-cols-[100px_90px_1fr_100px_40px] gap-4 items-center min-h-[44px] px-4 py-2 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
               <span>Kategori</span>
               <span>Synlighet</span>
@@ -256,6 +517,34 @@ const NettsideAI = () => {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ─── Main Page ─── */
+
+const NettsideAI = () => {
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-[1.375rem] font-bold text-foreground">Nettside</h1>
+        <p className="text-[0.8125rem] text-muted-foreground mt-1">
+          Administrer konsulentprofiler og AI-kunnskapsbase for stacq.no.
+        </p>
+      </div>
+
+      <Tabs defaultValue="consultants">
+        <TabsList>
+          <TabsTrigger value="consultants">Konsulenter</TabsTrigger>
+          <TabsTrigger value="knowledge">AI-kunnskap</TabsTrigger>
+        </TabsList>
+        <TabsContent value="consultants" className="mt-5">
+          <ConsultantsTab />
+        </TabsContent>
+        <TabsContent value="knowledge" className="mt-5">
+          <KnowledgeTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
