@@ -799,6 +799,30 @@ export type Database = {
         }
         Relationships: []
       }
+      website_leads: {
+        Row: {
+          consultant_name: string | null
+          created_at: string | null
+          email: string
+          id: string
+          message: string | null
+        }
+        Insert: {
+          consultant_name?: string | null
+          created_at?: string | null
+          email: string
+          id?: string
+          message?: string | null
+        }
+        Update: {
+          consultant_name?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          message?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
