@@ -446,7 +446,7 @@ function ConsultantSheet({
           </div>
 
           <button
-            disabled={!canSave || saveMutation.isPending}
+            disabled={!canSave || saveMutation.isPending || uploading}
             onClick={() => saveMutation.mutate()}
             className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-[#C4703A] text-white hover:opacity-90 disabled:opacity-50 transition-opacity w-full justify-center"
           >
