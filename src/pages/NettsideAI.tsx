@@ -119,6 +119,7 @@ interface Consultant {
 function ConsultantsTab() {
   const queryClient = useQueryClient();
   const [editId, setEditId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const { data: consultants = [], isLoading } = useQuery({
     queryKey: ["consultants-admin"],
@@ -136,6 +137,16 @@ function ConsultantsTab() {
 
   return (
     <>
+      <div className="flex items-center justify-end mb-4">
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-[#C4703A] text-white hover:opacity-90"
+        >
+          <Plus className="h-4 w-4" />
+          Ny konsulent
+        </button>
+      </div>
+
       {isLoading ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -152,10 +163,7 @@ function ConsultantsTab() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {consultants.map((c) => (
             <div key={c.id} className="rounded-lg border border-border bg-card p-3 relative group">
-              {/* sort_order */}
               <span className="absolute top-2 right-2 text-[0.6875rem] text-muted-foreground">#{c.sort_order ?? 0}</span>
-
-              {/* Image */}
               {c.image_url ? (
                 <img src={c.image_url} alt={c.name} className="aspect-square w-full object-cover rounded border border-border mb-2" />
               ) : (
@@ -165,7 +173,6 @@ function ConsultantsTab() {
                   </span>
                 </div>
               )}
-
               <p className="font-medium text-[0.875rem] text-foreground truncate">{c.name}</p>
               {c.title && <p className="text-[0.75rem] text-muted-foreground truncate">{c.title}</p>}
               <div className="flex items-center gap-2 mt-1">
@@ -195,7 +202,8 @@ function ConsultantsTab() {
       )}
 
       {editing && (
-        <ConsultantEditSheet
+        <ConsultantSheet
+          mode="edit"
           consultant={editing}
           open={!!editId}
           onClose={() => setEditId(null)}
@@ -205,6 +213,16 @@ function ConsultantsTab() {
           }}
         />
       )}
+
+      <ConsultantSheet
+        mode="create"
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ["consultants-admin"] });
+          setCreateOpen(false);
+        }}
+      />
     </>
   );
 }
