@@ -77,7 +77,12 @@ const DailyBrief = () => {
           }],
         },
       });
-      if (data?.text) setAiMarket(data.text as string);
+      if (data?.text && typeof data.text === "string") {
+        setAiMarket(data.text);
+      } else if (data && typeof data === "object" && "text" in data) {
+        const val = data.text;
+        setAiMarket(typeof val === "string" ? val : String(val ?? ""));
+      }
     } catch {
       // AI failure is fine
     } finally {
