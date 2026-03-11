@@ -18,6 +18,7 @@ import NotFound from "./pages/NotFound";
 import Import from "./pages/Import";
 import AdminBrregSync from "./pages/AdminBrregSync";
 import Foresporsler from "./pages/Foresporsler";
+import NettsideAI from "./pages/NettsideAI";
 
 const KonsulenterAnsatte = lazy(() => import("./pages/KonsulenterAnsatte"));
 const KonsulenterOppdrag = lazy(() => import("./pages/KonsulenterOppdrag"));
@@ -74,6 +75,7 @@ const App = () => (
                 <Route path="kontakter/:id" element={<ContactDetail />} />
                 <Route path="oppfolginger" element={<Tasks />} />
                 <Route path="foresporsler" element={<Foresporsler />} />
+                <Route path="nettside-ai" element={<NettsideAI />} />
                 <Route path="import" element={<Import />} />
                 <Route path="admin/brreg-sync" element={<AdminBrregSync />} />
                 <Route
