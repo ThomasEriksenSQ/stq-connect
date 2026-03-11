@@ -227,32 +227,54 @@ function ConsultantsTab() {
   );
 }
 
-function ConsultantEditSheet({
+function SheetDeleteButton({ onConfirm }: { onConfirm: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+  if (confirming) {
+    return (
+      <div className="flex items-center gap-2 text-[0.8125rem]">
+        <span className="text-muted-foreground">Er du sikker?</span>
+        <button onClick={onConfirm} className="text-destructive font-medium hover:underline">Ja, slett</button>
+        <button onClick={() => setConfirming(false)} className="text-muted-foreground hover:underline">Avbryt</button>
+      </div>
+    );
+  }
+  return (
+    <button onClick={() => setConfirming(true)} className="inline-flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground hover:text-destructive transition-colors">
+      <Trash2 className="h-3.5 w-3.5" />
+      Slett konsulent
+    </button>
+  );
+}
+
+function ConsultantSheet({
+  mode,
   consultant,
   open,
   onClose,
   onSaved,
 }: {
-  consultant: Consultant;
+  mode: "edit" | "create";
+  consultant?: Consultant;
   open: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [title, setTitle] = useState(consultant.title ?? "");
-  const [description, setDescription] = useState(consultant.description ?? "");
-  const [experienceYears, setExperienceYears] = useState(consultant.experience_years ?? 0);
-  const [location, setLocation] = useState(consultant.location ?? "");
-  const [imageUrl, setImageUrl] = useState(consultant.image_url ?? "");
-  const [competences, setCompetences] = useState<string[]>(consultant.competences ?? []);
-  const [industries, setIndustries] = useState<string[]>(consultant.industries ?? []);
-  const [sortOrder, setSortOrder] = useState(consultant.sort_order ?? 0);
-  const [active, setActive] = useState(consultant.active ?? true);
+  const [name, setName] = useState(consultant?.name ?? "");
+  const [title, setTitle] = useState(consultant?.title ?? "");
+  const [description, setDescription] = useState(consultant?.description ?? "");
+  const [experienceYears, setExperienceYears] = useState(consultant?.experience_years ?? 0);
+  const [location, setLocation] = useState(consultant?.location ?? "");
+  const [imageUrl, setImageUrl] = useState(consultant?.image_url ?? "");
+  const [competences, setCompetences] = useState<string[]>(consultant?.competences ?? []);
+  const [industries, setIndustries] = useState<string[]>(consultant?.industries ?? []);
+  const [sortOrder, setSortOrder] = useState(consultant?.sort_order ?? 0);
+  const [active, setActive] = useState(mode === "edit" ? (consultant?.active ?? true) : false);
 
-  const mutation = useMutation({
+  const saveMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from("consultants")
-        .update({
+      if (mode === "create") {
+        const { error } = await supabase.from("consultants").insert({
+          name,
           title: title || null,
           description: description || null,
           experience_years: experienceYears,
@@ -262,23 +284,55 @@ function ConsultantEditSheet({
           industries,
           sort_order: sortOrder,
           active,
-        })
-        .eq("id", consultant.id);
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("consultants")
+          .update({
+            title: title || null,
+            description: description || null,
+            experience_years: experienceYears,
+            location: location || null,
+            image_url: imageUrl || null,
+            competences,
+            industries,
+            sort_order: sortOrder,
+            active,
+          })
+          .eq("id", consultant!.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success(mode === "create" ? "Konsulent opprettet" : "Konsulent oppdatert");
+      onSaved();
+    },
+    onError: () => toast.error(mode === "create" ? "Kunne ikke opprette" : "Kunne ikke oppdatere"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("consultants").delete().eq("id", consultant!.id);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Konsulent oppdatert");
+      toast.success("Konsulent slettet");
       onSaved();
     },
-    onError: () => toast.error("Kunne ikke oppdatere"),
+    onError: () => toast.error("Kunne ikke slette"),
   });
+
+  const canSave = mode === "create" ? name.trim().length > 0 : true;
 
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <SheetContent side="right" className="w-[420px] p-0 overflow-y-auto" hideCloseButton>
         <div className="p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-[1.0625rem] font-bold text-foreground">{consultant.name}</h2>
+            <h2 className="text-[1.0625rem] font-bold text-foreground">
+              {mode === "create" ? "Ny konsulent" : consultant!.name}
+            </h2>
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
               <X className="h-4 w-4" />
             </button>
@@ -286,7 +340,11 @@ function ConsultantEditSheet({
 
           <div>
             <label className={LABEL}>Navn</label>
-            <Input value={consultant.name} readOnly className="h-9 text-[0.8125rem] bg-muted/50" />
+            {mode === "create" ? (
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Fullt navn" className="h-9 text-[0.8125rem]" />
+            ) : (
+              <Input value={consultant!.name} readOnly className="h-9 text-[0.8125rem] bg-muted/50" />
+            )}
           </div>
           <div>
             <label className={LABEL}>Tittel</label>
@@ -332,12 +390,18 @@ function ConsultantEditSheet({
           </div>
 
           <button
-            disabled={mutation.isPending}
-            onClick={() => mutation.mutate()}
+            disabled={!canSave || saveMutation.isPending}
+            onClick={() => saveMutation.mutate()}
             className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-[#C4703A] text-white hover:opacity-90 disabled:opacity-50 transition-opacity w-full justify-center"
           >
-            {mutation.isPending ? "Lagrer..." : "Lagre endringer"}
+            {saveMutation.isPending ? "Lagrer..." : mode === "create" ? "Opprett konsulent" : "Lagre endringer"}
           </button>
+
+          {mode === "edit" && (
+            <div className="pt-2 border-t border-border">
+              <SheetDeleteButton onConfirm={() => deleteMutation.mutate()} />
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>
