@@ -194,6 +194,31 @@ export function AppLayout() {
                 </div>
               )}
             </div>
+
+            {/* stacq.no section */}
+            <div className="w-px h-5 bg-border mx-1" />
+            <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground px-1 select-none hidden sm:inline">stacq.no</span>
+            {siteNavItems.map((item) => {
+              const isActive = location.pathname.startsWith(item.url);
+              return (
+                <RouterNavLink
+                  key={item.url}
+                  to={item.url}
+                  className={cn(
+                    "relative flex items-center gap-2 px-3 py-1.5 text-[0.8125rem] font-medium transition-colors",
+                    isActive
+                      ? "text-[#C4703A]"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <item.icon className={cn("h-4 w-4 stroke-[1.5]", isActive && "text-[#C4703A]")} />
+                  <span className="hidden sm:inline">{item.title}</span>
+                  {isActive && (
+                    <span className="absolute bottom-[-13px] left-3 right-3 h-[2px] bg-[#C4703A] rounded-full" />
+                  )}
+                </RouterNavLink>
+              );
+            })}
           </nav>
 
           <div className="flex items-center gap-2">
