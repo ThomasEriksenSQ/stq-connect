@@ -625,6 +625,108 @@ function KnowledgeTab() {
 
   return (
     <div className="space-y-5">
+      {/* Document upload section */}
+      <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+        <label className={LABEL}>Last opp dokument — AI trekker ut relevant kunnskap automatisk</label>
+
+        <input
+          ref={docInputRef}
+          type="file"
+          accept=".pdf,.txt"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleFileUpload(file);
+            e.target.value = "";
+          }}
+        />
+
+        {uploadStatus === "idle" && extractedRows.length === 0 && (
+          <>
+            <button
+              type="button"
+              onClick={() => docInputRef.current?.click()}
+              className="w-full border-2 border-dashed border-border rounded-lg p-6 flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:border-foreground/30 hover:text-foreground transition-colors"
+            >
+              <FileText className="h-6 w-6" />
+              <span className="text-[0.8125rem] font-medium">Klikk for å laste opp PDF eller tekstfil</span>
+              <span className="text-[0.75rem] text-muted-foreground">Støtter PDF og .txt — maks 10MB. Fungerer med håndbøker, brosjyrer og anonymiserte CVer.</span>
+            </button>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={LABEL}>Kategori (valgfritt overstyring)</label>
+                <Select value={uploadCategory} onValueChange={setUploadCategory}>
+                  <SelectTrigger className="h-9 text-[0.8125rem]">
+                    <SelectValue placeholder="AI velger automatisk" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES_LIST.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className={LABEL}>Synlighet</label>
+                <Select value={uploadVisibility} onValueChange={setUploadVisibility}>
+                  <SelectTrigger className="h-9 text-[0.8125rem]">
+                    <SelectValue placeholder="AI-only (standard)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="public">Public — vises på nettside</SelectItem>
+                    <SelectItem value="ai_only">AI-only — kun kontekst</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </>
+        )}
+
+        {(uploadStatus === "reading" || uploadStatus === "analyzing") && (
+          <div className="w-full border-2 border-dashed border-border rounded-lg p-6 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span className="text-[0.8125rem] font-medium">
+              {uploadStatus === "reading" ? "Leser dokument..." : "AI analyserer innhold..."}
+            </span>
+          </div>
+        )}
+
+        {uploadStatus === "preview" && extractedRows.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-[0.8125rem] font-medium text-foreground">AI fant {extractedRows.length} kunnskapsrader:</p>
+            <div className="divide-y divide-border rounded-lg border border-border overflow-hidden">
+              {extractedRows.map((row, idx) => (
+                <div key={idx} className="flex items-start gap-2 px-3 py-2 text-[0.8125rem]">
+                  <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold bg-muted text-foreground border-border shrink-0 mt-0.5">
+                    {row.category}
+                  </span>
+                  <span className="text-foreground/70 flex-1">{row.content}</span>
+                  <button onClick={() => removeExtractedRow(idx)} className="text-muted-foreground hover:text-destructive shrink-0 mt-0.5">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={saveExtractedRows}
+                className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-[#C4703A] text-white hover:opacity-90"
+              >
+                Lagre {extractedRows.length} rader til kunnskapsbase
+              </button>
+              <button
+                onClick={() => { setExtractedRows([]); setUploadStatus("idle"); }}
+                className="h-9 px-3 text-[0.8125rem] text-muted-foreground hover:text-foreground"
+              >
+                Avbryt
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="border-b border-border" />
+
       {/* Add form */}
       <div className="rounded-lg border border-border bg-card p-4 space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
