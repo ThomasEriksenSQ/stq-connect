@@ -367,8 +367,62 @@ function ConsultantSheet({
             </div>
           </div>
           <div>
-            <label className={LABEL}>Bilde-URL</label>
-            <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." className="h-9 text-[0.8125rem]" />
+            <label className={LABEL}>Bilde</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                if (!file.type.startsWith("image/")) {
+                  toast.error("Filen må være et bilde");
+                  return;
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                  toast.error("Bildet kan ikke være større enn 5MB");
+                  return;
+                }
+                setUploading(true);
+                try {
+                  const fileName = `${Date.now()}-${file.name.replace(/\s/g, "-")}`;
+                  const { error } = await supabase.storage.from("consultant-images").upload(fileName, file, { upsert: true });
+                  if (error) throw error;
+                  const { data: urlData } = supabase.storage.from("consultant-images").getPublicUrl(fileName);
+                  setImageUrl(urlData.publicUrl);
+                  toast.success("Bilde lastet opp");
+                } catch {
+                  toast.error("Kunne ikke laste opp bilde");
+                } finally {
+                  setUploading(false);
+                }
+              }}
+            />
+            {imageUrl ? (
+              <div className="flex items-center gap-3">
+                <img src={imageUrl} alt="Forhåndsvisning" className="w-[80px] h-[80px] object-cover rounded-sm border border-border" />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.8125rem] font-medium rounded-lg border border-border text-foreground hover:bg-secondary disabled:opacity-50"
+                >
+                  {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+                  Bytt bilde
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="w-full h-24 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-foreground/30 hover:text-foreground transition-colors disabled:opacity-50"
+              >
+                {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
+                <span className="text-[0.75rem]">{uploading ? "Laster opp..." : "Last opp bilde"}</span>
+              </button>
+            )}
           </div>
           <div>
             <label className={LABEL}>Kompetanser</label>
