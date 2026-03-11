@@ -265,6 +265,8 @@ function ConsultantSheet({
   const [experienceYears, setExperienceYears] = useState(consultant?.experience_years ?? 0);
   const [location, setLocation] = useState(consultant?.location ?? "");
   const [imageUrl, setImageUrl] = useState(consultant?.image_url ?? "");
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [competences, setCompetences] = useState<string[]>(consultant?.competences ?? []);
   const [industries, setIndustries] = useState<string[]>(consultant?.industries ?? []);
   const [sortOrder, setSortOrder] = useState(consultant?.sort_order ?? 0);
