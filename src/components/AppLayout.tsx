@@ -15,6 +15,10 @@ const navItems = [
   { title: "Forespørsler", url: "/foresporsler", icon: Briefcase },
 ];
 
+const siteNavItems = [
+  { title: "Nettside AI", url: "/nettside-ai", icon: Globe },
+];
+
 export function AppLayout() {
   const { theme, setTheme } = useTheme();
   const { signOut, user } = useAuth();

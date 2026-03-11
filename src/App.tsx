@@ -75,6 +75,7 @@ const App = () => (
                 <Route path="kontakter/:id" element={<ContactDetail />} />
                 <Route path="oppfolginger" element={<Tasks />} />
                 <Route path="foresporsler" element={<Foresporsler />} />
+                <Route path="nettside-ai" element={<NettsideAI />} />
                 <Route path="import" element={<Import />} />
                 <Route path="admin/brreg-sync" element={<AdminBrregSync />} />
                 <Route
