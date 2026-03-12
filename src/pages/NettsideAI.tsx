@@ -167,7 +167,6 @@ function ConsultantsTab() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {consultants.map((c) => (
             <div key={c.id} className="rounded-lg border border-border bg-card p-3 relative group">
-              <span className="absolute top-2 right-2 text-[0.6875rem] text-muted-foreground">#{c.sort_order ?? 0}</span>
               {c.image_url ? (
                 <img src={c.image_url} alt={c.name} className="aspect-square w-full object-cover rounded border border-border mb-2" />
               ) : (
@@ -178,7 +177,6 @@ function ConsultantsTab() {
                 </div>
               )}
               <p className="font-medium text-[0.875rem] text-foreground truncate">{c.name}</p>
-              {c.title && <p className="text-[0.75rem] text-muted-foreground truncate">{c.title}</p>}
               <div className="flex items-center gap-2 mt-1">
                 {c.experience_years != null && (
                   <span className="text-[0.75rem] text-muted-foreground">{c.experience_years} år</span>
