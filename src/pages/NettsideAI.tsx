@@ -131,7 +131,7 @@ function ConsultantsTab() {
       const { data, error } = await supabase
         .from("consultants")
         .select("*")
-        .order("sort_order", { ascending: true });
+        .order("name", { ascending: true });
       if (error) throw error;
       return data as Consultant[];
     },
