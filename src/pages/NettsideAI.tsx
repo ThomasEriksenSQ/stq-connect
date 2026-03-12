@@ -2,8 +2,12 @@ import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, X, Camera, Loader2, FileText } from "lucide-react";
+import { Plus, Trash2, Pencil, X, Camera, Loader2, FileText, Upload } from "lucide-react";
 import { format } from "date-fns";
+import * as pdfjsLib from "pdfjs-dist";
+import mammoth from "mammoth";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 import { nb } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
