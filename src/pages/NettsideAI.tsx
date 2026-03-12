@@ -262,31 +262,89 @@ function ConsultantSheet({
   onSaved: () => void;
 }) {
   const [name, setName] = useState(consultant?.name ?? "");
-  const [title, setTitle] = useState(consultant?.title ?? "");
   const [description, setDescription] = useState(consultant?.description ?? "");
   const [experienceYears, setExperienceYears] = useState(consultant?.experience_years ?? 0);
   const [location, setLocation] = useState(consultant?.location ?? "");
   const [imageUrl, setImageUrl] = useState(consultant?.image_url ?? "");
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cvInputRef = useRef<HTMLInputElement>(null);
   const [competences, setCompetences] = useState<string[]>(consultant?.competences ?? []);
   const [industries, setIndustries] = useState<string[]>(consultant?.industries ?? []);
-  const [sortOrder, setSortOrder] = useState(consultant?.sort_order ?? 0);
   const [active, setActive] = useState(mode === "edit" ? (consultant?.active ?? true) : false);
+  const [cvAnalyzing, setCvAnalyzing] = useState(false);
+
+  const handleCvUpload = async (file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Filen kan ikke være større enn 10MB");
+      return;
+    }
+
+    setCvAnalyzing(true);
+    let text = "";
+
+    try {
+      if (file.name.endsWith(".pdf")) {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const pages: string[] = [];
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          pages.push(content.items.map((item: any) => item.str).join(" "));
+        }
+        text = pages.join("\n\n");
+      } else if (file.name.endsWith(".docx")) {
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        text = result.value;
+      } else {
+        toast.error("Støtter kun PDF og DOCX");
+        setCvAnalyzing(false);
+        return;
+      }
+
+      if (!text.trim()) {
+        toast.error("Ingen tekst funnet i dokumentet");
+        setCvAnalyzing(false);
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("analyze-cv-consultant", {
+        body: { text },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      let filledCount = 0;
+      if (data.navn && mode === "create") { setName(data.navn); filledCount++; }
+      if (data.beskrivelse) { setDescription(data.beskrivelse); filledCount++; }
+      if (data.erfaring_ar != null) { setExperienceYears(data.erfaring_ar); filledCount++; }
+      if (data.lokasjon) { setLocation(data.lokasjon); filledCount++; }
+      if (data.kompetanser?.length) { setCompetences(data.kompetanser); filledCount++; }
+      if (data.industrier?.length) { setIndustries(data.industrier); filledCount++; }
+
+      toast.success(`✓ AI fylte ut ${filledCount} felter fra CV`);
+    } catch (e) {
+      console.error("CV analysis error:", e);
+      toast.error("Kunne ikke analysere CV");
+    } finally {
+      setCvAnalyzing(false);
+    }
+  };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (mode === "create") {
         const { error } = await supabase.from("consultants").insert({
           name,
-          title: title || null,
           description: description || null,
           experience_years: experienceYears,
           location: location || null,
           image_url: imageUrl || null,
           competences,
           industries,
-          sort_order: sortOrder,
           active,
         });
         if (error) throw error;
@@ -294,14 +352,12 @@ function ConsultantSheet({
         const { error } = await supabase
           .from("consultants")
           .update({
-            title: title || null,
             description: description || null,
             experience_years: experienceYears,
             location: location || null,
             image_url: imageUrl || null,
             competences,
             industries,
-            sort_order: sortOrder,
             active,
           })
           .eq("id", consultant!.id);
@@ -342,6 +398,47 @@ function ConsultantSheet({
             </button>
           </div>
 
+          {/* CV upload zone */}
+          <div className="border-b border-border pb-4">
+            <input
+              ref={cvInputRef}
+              type="file"
+              accept=".pdf,.docx"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleCvUpload(file);
+                e.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => cvInputRef.current?.click()}
+              disabled={cvAnalyzing}
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const file = e.dataTransfer.files?.[0];
+                if (file) handleCvUpload(file);
+              }}
+              className="w-full rounded-lg border-2 border-dashed border-border p-5 flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:border-foreground/30 hover:text-foreground transition-colors disabled:opacity-50"
+            >
+              {cvAnalyzing ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span className="text-[0.8125rem] font-medium">AI analyserer CV...</span>
+                </>
+              ) : (
+                <>
+                  <Upload className="h-5 w-5" />
+                  <span className="text-[0.8125rem] font-medium">Dra og slipp CV her, eller klikk for å velge fil</span>
+                  <span className="text-[0.6875rem]">Støtter PDF og DOCX</span>
+                </>
+              )}
+            </button>
+          </div>
+
           <div>
             <label className={LABEL}>Navn</label>
             {mode === "create" ? (
@@ -349,10 +446,6 @@ function ConsultantSheet({
             ) : (
               <Input value={consultant!.name} readOnly className="h-9 text-[0.8125rem] bg-muted/50" />
             )}
-          </div>
-          <div>
-            <label className={LABEL}>Tittel</label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-9 text-[0.8125rem]" />
           </div>
           <div>
             <label className={LABEL}>Beskrivelse</label>
@@ -440,7 +533,7 @@ function ConsultantSheet({
           </div>
 
           <button
-            disabled={!canSave || saveMutation.isPending || uploading}
+            disabled={!canSave || saveMutation.isPending || uploading || cvAnalyzing}
             onClick={() => saveMutation.mutate()}
             className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-[#C4703A] text-white hover:opacity-90 disabled:opacity-50 transition-opacity w-full justify-center"
           >
