@@ -432,17 +432,9 @@ function ConsultantSheet({
             <label className={LABEL}>Industrier</label>
             <TagInput value={industries} onChange={setIndustries} placeholder="Legg til industri..." />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={LABEL}>Sorteringsrekkefølge</label>
-              <Input type="number" value={sortOrder} onChange={(e) => setSortOrder(Number(e.target.value))} className="h-9 text-[0.8125rem]" />
-            </div>
-            <div className="flex items-end pb-1">
-              <div className="flex items-center gap-2">
-                <Switch checked={active} onCheckedChange={setActive} />
-                <span className="text-[0.8125rem] text-foreground">Vis på stacq.no</span>
-              </div>
-            </div>
+          <div className="flex items-center gap-2">
+            <Switch checked={active} onCheckedChange={setActive} />
+            <span className="text-[0.8125rem] text-foreground">Vis på stacq.no</span>
           </div>
 
           <button
