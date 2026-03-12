@@ -345,6 +345,20 @@ const DailyBrief = () => {
                   <Link to="/markedsradar" className="text-[0.75rem] text-primary hover:underline">Se mer →</Link>
                 </div>
               </div>
+              {(() => {
+                const sorted = [...market.techPulse].sort((a, b) => b.count - a.count);
+                if (sorted.length >= 2) {
+                  const top1 = sorted[0];
+                  const top2 = sorted[1];
+                  const total = top1.count + top2.count;
+                  return (
+                    <p className="text-[0.8125rem] text-muted-foreground mt-1.5">
+                      {top1.name} og {top2.name} er mest etterspurt med {total} annonser til sammen de siste 2 ukene.
+                    </p>
+                  );
+                }
+                return null;
+              })()}
               {/* AI market summary */}
               {aiMarketLoading ? (
                 <Skeleton className="h-4 w-3/4 mb-3" />
