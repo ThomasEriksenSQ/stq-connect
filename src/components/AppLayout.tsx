@@ -23,7 +23,7 @@ export function AppLayout() {
   const [aiOpen, setAiOpen] = useState(false);
   const [konsDropOpen, setKonsDropOpen] = useState(false);
   const konsRef = useRef<HTMLDivElement>(null);
-  const isKonsActive = location.pathname.startsWith("/konsulenter") || location.pathname.startsWith("/stacq") || location.pathname.startsWith("/markedsradar");
+  const isKonsActive = location.pathname.startsWith("/konsulenter") || location.pathname.startsWith("/stacq") || location.pathname.startsWith("/markedsradar") || location.pathname.startsWith("/nettside-ai");
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
