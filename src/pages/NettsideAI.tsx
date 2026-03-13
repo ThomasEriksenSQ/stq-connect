@@ -118,6 +118,7 @@ interface Consultant {
   industries: string[] | null;
   sort_order: number | null;
   active: boolean | null;
+  ikke_startet: boolean | null;
 }
 
 function ConsultantsTab() {
@@ -133,11 +134,18 @@ function ConsultantsTab() {
         .select("*")
         .order("name", { ascending: true });
       if (error) throw error;
-      return data as Consultant[];
+      return (data as any[]) as Consultant[];
     },
   });
 
   const editing = consultants.find((c) => c.id === editId) ?? null;
+
+  const sorted = [...consultants].sort((a, b) => {
+    const aLast = a.ikke_startet ?? false;
+    const bLast = b.ikke_startet ?? false;
+    if (aLast === bLast) return 0;
+    return aLast ? 1 : -1;
+  });
 
   return (
     <>
@@ -165,7 +173,7 @@ function ConsultantsTab() {
         <div className="py-12 text-center text-muted-foreground text-[0.8125rem]">Ingen konsulenter funnet</div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {consultants.map((c) => (
+          {sorted.map((c) => (
             <div key={c.id} className="rounded-lg border border-border bg-card p-3 relative group">
               {c.image_url ? (
                 <img src={c.image_url} alt={c.name} className="aspect-square w-full object-cover rounded border border-border mb-2" />
@@ -272,6 +280,7 @@ function ConsultantSheet({
   const [competences, setCompetences] = useState<string[]>(consultant?.competences ?? []);
   const [industries, setIndustries] = useState<string[]>(consultant?.industries ?? []);
   const [active, setActive] = useState(mode === "edit" ? (consultant?.active ?? true) : false);
+  const [notStarted, setNotStarted] = useState(mode === "edit" ? (consultant?.ikke_startet ?? false) : false);
   const [cvAnalyzing, setCvAnalyzing] = useState(false);
 
   const handleCvUpload = async (file: File) => {
@@ -339,6 +348,7 @@ function ConsultantSheet({
       if (mode === "create") {
         const { error } = await supabase.from("consultants").insert({
           name,
+          ikke_startet: notStarted,
           description: description || null,
           experience_years: experienceYears,
           location: location || null,
@@ -353,6 +363,7 @@ function ConsultantSheet({
           .from("consultants")
            .update({
             name,
+            ikke_startet: notStarted,
             description: description || null,
             experience_years: experienceYears,
             location: location || null,
@@ -523,6 +534,10 @@ function ConsultantSheet({
           <div>
             <label className={LABEL}>Industrier</label>
             <TagInput value={industries} onChange={setIndustries} placeholder="Legg til industri..." />
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch checked={notStarted} onCheckedChange={setNotStarted} />
+            <span className="text-[0.8125rem] text-foreground">Ikke startet ennå</span>
           </div>
           <div className="flex items-center gap-2">
             <Switch checked={active} onCheckedChange={setActive} />
