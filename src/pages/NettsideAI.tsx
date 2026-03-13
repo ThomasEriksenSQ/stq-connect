@@ -351,7 +351,8 @@ function ConsultantSheet({
       } else {
         const { error } = await supabase
           .from("consultants")
-          .update({
+           .update({
+            name,
             description: description || null,
             experience_years: experienceYears,
             location: location || null,
@@ -391,7 +392,7 @@ function ConsultantSheet({
         <div className="p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-[1.0625rem] font-bold text-foreground">
-              {mode === "create" ? "Ny konsulent" : consultant!.name}
+              {mode === "create" ? "Ny konsulent" : (name || consultant!.name)}
             </h2>
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
               <X className="h-4 w-4" />
@@ -441,11 +442,7 @@ function ConsultantSheet({
 
           <div>
             <label className={LABEL}>Navn</label>
-            {mode === "create" ? (
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Fullt navn" className="h-9 text-[0.8125rem]" />
-            ) : (
-              <Input value={consultant!.name} readOnly className="h-9 text-[0.8125rem] bg-muted/50" />
-            )}
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Fullt navn" className="h-9 text-[0.8125rem]" />
           </div>
           <div>
             <label className={LABEL}>Beskrivelse</label>
