@@ -529,6 +529,10 @@ function ConsultantSheet({
             <TagInput value={industries} onChange={setIndustries} placeholder="Legg til industri..." />
           </div>
           <div className="flex items-center gap-2">
+            <Switch checked={notStarted} onCheckedChange={setNotStarted} />
+            <span className="text-[0.8125rem] text-foreground">Ikke startet ennå</span>
+          </div>
+          <div className="flex items-center gap-2">
             <Switch checked={active} onCheckedChange={setActive} />
             <span className="text-[0.8125rem] text-foreground">Vis på stacq.no</span>
           </div>
