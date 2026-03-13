@@ -1,0 +1,1 @@
+ALTER TABLE public.consultants ADD COLUMN IF NOT EXISTS ikke_startet boolean DEFAULT false;
