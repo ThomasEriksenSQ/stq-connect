@@ -356,6 +356,7 @@ function ConsultantSheet({
           .from("consultants")
            .update({
             name,
+            ikke_startet: notStarted,
             description: description || null,
             experience_years: experienceYears,
             location: location || null,
