@@ -341,6 +341,7 @@ function ConsultantSheet({
       if (mode === "create") {
         const { error } = await supabase.from("consultants").insert({
           name,
+          ikke_startet: notStarted,
           description: description || null,
           experience_years: experienceYears,
           location: location || null,
