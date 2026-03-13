@@ -134,7 +134,7 @@ function ConsultantsTab() {
         .select("*")
         .order("name", { ascending: true });
       if (error) throw error;
-      return data as Consultant[];
+      return (data as any[]) as Consultant[];
     },
   });
 
