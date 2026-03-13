@@ -173,7 +173,7 @@ function ConsultantsTab() {
         <div className="py-12 text-center text-muted-foreground text-[0.8125rem]">Ingen konsulenter funnet</div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {consultants.map((c) => (
+          {sorted.map((c) => (
             <div key={c.id} className="rounded-lg border border-border bg-card p-3 relative group">
               {c.image_url ? (
                 <img src={c.image_url} alt={c.name} className="aspect-square w-full object-cover rounded border border-border mb-2" />
