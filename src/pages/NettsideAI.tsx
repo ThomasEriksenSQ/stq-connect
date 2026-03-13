@@ -118,6 +118,7 @@ interface Consultant {
   industries: string[] | null;
   sort_order: number | null;
   active: boolean | null;
+  ikke_startet: boolean | null;
 }
 
 function ConsultantsTab() {
