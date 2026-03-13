@@ -140,6 +140,13 @@ function ConsultantsTab() {
 
   const editing = consultants.find((c) => c.id === editId) ?? null;
 
+  const sorted = [...consultants].sort((a, b) => {
+    const aLast = a.ikke_startet ?? false;
+    const bLast = b.ikke_startet ?? false;
+    if (aLast === bLast) return 0;
+    return aLast ? 1 : -1;
+  });
+
   return (
     <>
       <div className="flex items-center justify-end mb-4">
