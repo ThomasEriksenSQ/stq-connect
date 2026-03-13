@@ -441,11 +441,7 @@ function ConsultantSheet({
 
           <div>
             <label className={LABEL}>Navn</label>
-            {mode === "create" ? (
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Fullt navn" className="h-9 text-[0.8125rem]" />
-            ) : (
-              <Input value={consultant!.name} readOnly className="h-9 text-[0.8125rem] bg-muted/50" />
-            )}
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Fullt navn" className="h-9 text-[0.8125rem]" />
           </div>
           <div>
             <label className={LABEL}>Beskrivelse</label>
