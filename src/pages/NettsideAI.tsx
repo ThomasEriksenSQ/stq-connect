@@ -391,7 +391,7 @@ function ConsultantSheet({
         <div className="p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-[1.0625rem] font-bold text-foreground">
-              {mode === "create" ? "Ny konsulent" : consultant!.name}
+              {mode === "create" ? "Ny konsulent" : (name || consultant!.name)}
             </h2>
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
               <X className="h-4 w-4" />
