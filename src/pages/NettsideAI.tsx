@@ -351,7 +351,8 @@ function ConsultantSheet({
       } else {
         const { error } = await supabase
           .from("consultants")
-          .update({
+           .update({
+            name,
             description: description || null,
             experience_years: experienceYears,
             location: location || null,
