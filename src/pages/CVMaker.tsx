@@ -80,79 +80,89 @@ export default function CVMaker() {
             boxShadow: "0 2px 24px rgba(0,0,0,0.10)",
           } as React.CSSProperties}
         >
-          {/* ROW 1: LOGO + KONTAKTPERSON */}
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-            {/* LOGO */}
-            <div style={{ width: SIDEBAR_W, flexShrink: 0, padding: "9mm 4mm 0 4mm", display: "flex", justifyContent: "center" }}>
-              <img
-                src="/STACQ_logo.png"
-                alt="STACQ logo"
-                style={{ height: "9mm", objectFit: "contain", filter: "brightness(0) invert(1)" }}
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                  const parent = e.currentTarget.parentElement;
-                  if (parent && !parent.querySelector("svg")) {
-                    const ns = "http://www.w3.org/2000/svg";
-                    const svg = document.createElementNS(ns, "svg");
-                    svg.setAttribute("width", "110"); svg.setAttribute("height", "30"); svg.setAttribute("viewBox", "0 0 110 30");
-                    svg.innerHTML = `<text x="0" y="24" fill="white" font-size="28" font-weight="bold" font-family="Calibri,sans-serif">STACQ</text>`;
-                    parent.appendChild(svg);
-                  }
-                }}
-              />
-            </div>
+          {/* HEADER — ett samlet område med position:relative */}
+          <div style={{ position: "relative", height: "71.5mm" }}>
 
-            {/* KONTAKTPERSON */}
-            <div style={{ flex: 1, display: "flex", justifyContent: "flex-end", padding: "9mm 10mm 0 0" }}>
-              <div style={{ textAlign: "right", fontSize: "9pt", color: "#444", lineHeight: 1.7, borderLeft: "2px solid #8e8e8e", paddingLeft: "3mm" }}>
-                <div style={{ fontWeight: 600, fontSize: "9.5pt", color: "#222" }}>Kontaktperson</div>
-                <div>Jon Richard Nygaard</div>
-                <div style={{ fontSize: "8pt", color: "#888" }}>932 87 267 / jr@stacq.no</div>
+            {/* SIDEBAR KOLONNE — sort bakgrunn, logo + foto */}
+            <div style={{ position: "absolute", top: 0, left: 0, width: SIDEBAR_W, height: "100%" }}>
+
+              {/* LOGO — paddingTop 9.1mm */}
+              <div style={{ padding: "9.1mm 4mm 0 4mm", display: "flex", justifyContent: "center" }}>
+                <img
+                  src="/STACQ_logo.png"
+                  alt="STACQ logo"
+                  style={{ height: "9mm", objectFit: "contain", filter: "brightness(0) invert(1)" }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                    const parent = e.currentTarget.parentElement;
+                    if (parent && !parent.querySelector("svg")) {
+                      const ns = "http://www.w3.org/2000/svg";
+                      const svg = document.createElementNS(ns, "svg");
+                      svg.setAttribute("width", "120"); svg.setAttribute("height", "34"); svg.setAttribute("viewBox", "0 0 120 34");
+                      svg.innerHTML = `<text x="0" y="28" fill="white" font-size="30" font-weight="bold" font-family="Calibri,sans-serif">STACQ</text>`;
+                      parent.appendChild(svg);
+                    }
+                  }}
+                />
               </div>
-            </div>
-          </div>
 
-          {/* ROW 2: PHOTO + NAME BAND */}
-          <div style={{ display: "flex", alignItems: "flex-start" }}>
-            {/* SIDEBAR PHOTO */}
-            <div style={{ width: SIDEBAR_W, flexShrink: 0, display: "flex", justifyContent: "center", padding: "4mm 3mm 0 3mm" }}>
-              <img
-                src="/cv-photos/mattis.png"
-                alt="Mattis Spieler Asp"
-                style={{
-                  width: "48mm",
-                  height: "54mm",
-                  borderRadius: "2mm",
-                  objectFit: "cover",
-                  objectPosition: "center top",
-                  background: "#919ca1",
-                }}
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                  const d = document.createElement("div");
-                  d.style.cssText = `width:100%;height:54mm;background:#919ca1;display:block;border-radius:2mm;`;
-                  e.currentTarget.parentElement?.appendChild(d);
-                }}
-              />
+              {/* FOTO — edge-to-edge, no padding, no border-radius, starts at 24.9mm */}
+              <div style={{ position: "absolute", top: "24.9mm", left: 0, width: "100%", height: "46.6mm" }}>
+                <img
+                  src="/cv-photos/mattis.png"
+                  alt="Mattis Spieler Asp"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    objectPosition: "center top",
+                    background: "#919ca1",
+                    display: "block",
+                  }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                    const d = document.createElement("div");
+                    d.style.cssText = "width:100%;height:100%;background:#919ca1;";
+                    e.currentTarget.parentElement?.appendChild(d);
+                  }}
+                />
+              </div>
+
             </div>
 
-            {/* MAIN: white spacer + gray name band */}
-            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-              {/* WHITE SPACER: 13.5mm pushes gray band to y=31.5mm */}
-              <div style={{ height: "13.5mm" }} />
+            {/* MAIN KOLONNE — kontaktperson + grått bånd */}
+            <div style={{ position: "absolute", top: 0, left: SIDEBAR_W, right: 0, height: "100%" }}>
 
-              {/* GRAY NAME BAND: 34mm total */}
-              <div style={{ background: "#f2f2f2", minHeight: "34mm", padding: "1.5mm 10mm 6.5mm 6mm", display: "flex", flexDirection: "column", justifyContent: "flex-start" }}>
+              {/* KONTAKTPERSON — starts at 8.8mm, right-aligned */}
+              <div style={{ padding: "8.8mm 10mm 0 0", display: "flex", justifyContent: "flex-end" }}>
+                <div style={{ textAlign: "right", fontSize: "9pt", color: "#444", lineHeight: 1.7, borderLeft: "2px solid #8e8e8e", paddingLeft: "3mm" }}>
+                  <div style={{ fontWeight: 600, fontSize: "9.5pt", color: "#222" }}>Kontaktperson</div>
+                  <div>Jon Richard Nygaard</div>
+                  <div style={{ fontSize: "8pt", color: "#888" }}>932 87 267 / jr@stacq.no</div>
+                </div>
+              </div>
+
+              {/* GRÅTT BÅND — starts at 31.2mm, height 34.5mm */}
+              <div style={{
+                position: "absolute",
+                top: "31.2mm",
+                left: 0,
+                right: 0,
+                height: "34.5mm",
+                background: "#f2f2f2",
+                padding: "1.5mm 10mm 6.5mm 6mm",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "flex-start",
+              }}>
                 <div style={{ fontSize: "43pt", fontWeight: 700, color: "#1a1a1a", letterSpacing: "-0.01em", lineHeight: 1.1 }}>
                   Mattis Spieler Asp
                 </div>
-                <div style={{ marginTop: "10mm", fontSize: "12pt", color: "#444", fontWeight: 400, letterSpacing: "0.02em" }}>
+                <div style={{ marginTop: "4mm", fontSize: "12pt", color: "#444", fontWeight: 400, letterSpacing: "0.02em" }}>
                   Senior Embedded-ingeniør med 8 års erfaring
                 </div>
               </div>
 
-              {/* Fill remaining white space */}
-              <div style={{ height: "4mm" }} />
             </div>
           </div>
 
