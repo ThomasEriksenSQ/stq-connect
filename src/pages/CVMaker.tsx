@@ -182,7 +182,7 @@ export default function CVMaker() {
               </div>
             ))}
 
-            <div style={{ fontWeight: 700, fontSize: 14, marginTop: 24, marginBottom: 8 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, marginTop: 24, marginBottom: 8, textTransform: "uppercase" }}>
               Utdannelse
             </div>
             <div style={{ fontSize: 11, marginBottom: 16 }}>
