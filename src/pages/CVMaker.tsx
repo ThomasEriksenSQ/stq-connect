@@ -132,7 +132,7 @@ export default function CVMaker() {
               </div>
             ))}
 
-            <div style={{ fontWeight: 700, fontSize: 16, marginTop: 28, marginBottom: 12, letterSpacing: "-0.01em" }}>
+            <div style={{ fontWeight: 700, fontSize: 16, marginTop: 28, marginBottom: 12, letterSpacing: "-0.01em", textTransform: "uppercase" }}>
               Prosjekter
             </div>
 
