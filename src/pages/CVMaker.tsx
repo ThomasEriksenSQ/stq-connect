@@ -41,8 +41,8 @@ export default function CVMaker() {
             width: "210mm",
             minHeight: "297mm",
             margin: "0 auto",
+            padding: 0,
             fontFamily: "Calibri, Carlito, Arial, sans-serif",
-            fontSize: "10pt",
             color: "#1a1a1a",
             position: "relative",
             background: "#ffffff",
@@ -50,15 +50,15 @@ export default function CVMaker() {
             WebkitPrintColorAdjust: "exact",
             printColorAdjust: "exact",
             colorAdjust: "exact",
+            overflow: "hidden",
           } as React.CSSProperties}
         >
+
           {/* BLACK SIDEBAR — full document height */}
           <div style={{
             position: "absolute",
-            top: 0,
-            left: 0,
-            width: "55mm",
-            bottom: 0,
+            top: 0, left: 0,
+            width: "55mm", bottom: 0,
             background: "#000000",
             WebkitPrintColorAdjust: "exact",
             printColorAdjust: "exact",
@@ -69,7 +69,7 @@ export default function CVMaker() {
           <div style={{ position: "relative", height: "71.4mm" }}>
 
             {/* LOGO */}
-            <div style={{ position: "absolute", top: "9mm", left: "4mm", zIndex: 10 }}>
+            <div style={{ position: "absolute", top: "9.3mm", left: "4mm", zIndex: 10 }}>
               <img
                 src="/STACQ_logo.png"
                 alt="STACQ"
@@ -90,20 +90,18 @@ export default function CVMaker() {
             </div>
 
             {/* KONTAKTPERSON */}
-            <div style={{ position: "absolute", top: "9mm", right: "9mm", zIndex: 10 }}>
-              <div style={{ borderLeft: "2px solid #999", paddingLeft: "3.5mm", fontSize: "9pt", lineHeight: 1.6, color: "#444" }}>
-                <div style={{ fontWeight: 700, color: "#111", fontSize: "9.5pt" }}>Kontaktperson</div>
-                <div>Jon Richard Nygaard</div>
-                <div style={{ color: "#888", fontSize: "8.5pt" }}>932 87 267 / jr@stacq.no</div>
+            <div style={{ position: "absolute", top: "9.3mm", right: "8mm", zIndex: 10 }}>
+              <div style={{ borderLeft: "2px solid #cccccc", paddingLeft: "3mm", fontSize: "9pt", lineHeight: 1.6 }}>
+                <div style={{ fontWeight: 700, color: "#111111", fontSize: "9.5pt" }}>Kontaktperson</div>
+                <div style={{ color: "#444444" }}>Jon Richard Nygaard</div>
+                <div style={{ color: "#888888", fontSize: "8.5pt" }}>932 87 267 / jr@stacq.no</div>
               </div>
             </div>
 
-            {/* GRAY BAND — full width, sits behind photo */}
+            {/* GRAY BAND — full width, top=31.2mm, height=34.3mm, zIndex=2 */}
             <div style={{
               position: "absolute",
-              top: "31.2mm",
-              left: 0,
-              right: 0,
+              top: "31.2mm", left: 0, right: 0,
               height: "34.3mm",
               background: "#f2f2f2",
               zIndex: 2,
@@ -111,26 +109,33 @@ export default function CVMaker() {
               printColorAdjust: "exact",
               colorAdjust: "exact",
             } as React.CSSProperties}>
-              <div style={{ marginLeft: "55mm", paddingLeft: "6mm", paddingRight: "8mm", paddingTop: "9.4mm", paddingBottom: "6.8mm", boxSizing: "border-box" }}>
-                <div style={{ fontSize: "46pt", fontWeight: 800, color: "#1a1a1a", letterSpacing: "-0.02em", lineHeight: 1.0, marginBottom: "3.1mm" }}>
+              <div style={{
+                marginLeft: "55mm",
+                paddingLeft: "12.8mm",
+                paddingRight: "8.2mm",
+                paddingTop: "9.6mm",
+                paddingBottom: "5.8mm",
+                boxSizing: "border-box" as const,
+              }}>
+                <div style={{ fontSize: "46pt", fontWeight: 800, color: "#1a1a1a", letterSpacing: "-0.02em", lineHeight: 1.0, marginBottom: "3mm" }}>
                   Mattis Spieler Asp
                 </div>
-                <div style={{ fontSize: "14pt", fontWeight: 400, color: "#1a1a1a", letterSpacing: "0.14em", lineHeight: 1.0 }}>
+                <div style={{ fontSize: "19pt", fontWeight: 400, color: "#1a1a1a", letterSpacing: "0.12em", lineHeight: 1.0 }}>
                   Senior Embedded-ingeniør med 8 års erfaring
                 </div>
               </div>
             </div>
 
-            {/* PHOTO — above gray band, zIndex 3 */}
+            {/* PHOTO — top=25.4mm, full sidebar width, zIndex=3 (above gray band) */}
             <div style={{ position: "absolute", top: "25.4mm", left: 0, width: "55mm", height: "46mm", zIndex: 3, overflow: "hidden" }}>
               <img
                 src="/Mattis_CV.png"
                 alt="Mattis Spieler Asp"
-                style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block" }}
+                style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block", borderRadius: 0 }}
                 onError={(e) => {
                   e.currentTarget.style.display = "none";
                   const d = document.createElement("div");
-                  d.style.cssText = "width:100%;height:100%;background:#919ca1;";
+                  d.style.cssText = "width:100%;height:100%;background:#919ca1;display:block;";
                   e.currentTarget.parentElement?.appendChild(d);
                 }}
               />
@@ -146,7 +151,10 @@ export default function CVMaker() {
               width: "55mm",
               minWidth: "55mm",
               flexShrink: 0,
-              padding: "5mm 4.5mm 10mm 4.5mm",
+              paddingTop: "12.6mm",
+              paddingLeft: "5.8mm",
+              paddingRight: "4mm",
+              paddingBottom: "10mm",
               color: "rgba(255,255,255,0.90)",
               fontSize: "8.5pt",
               lineHeight: 1.55,
@@ -167,12 +175,12 @@ export default function CVMaker() {
                   items: ["MSc. Innvevde Systemer, NTNU"],
                 },
               ] as { heading: string; items: string[] }[]).map((section) => (
-                <div key={section.heading} style={{ marginBottom: "4.5mm" }}>
+                <div key={section.heading} style={{ marginBottom: "5mm" }}>
                   <div style={{ fontWeight: 800, fontSize: "8.5pt", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: "2mm", color: "#ffffff" }}>
                     {section.heading}
                   </div>
                   {section.items.map((item) => (
-                    <div key={item} style={{ display: "flex", gap: "1.5mm", marginBottom: "0.8mm", alignItems: "flex-start" }}>
+                    <div key={item} style={{ display: "flex", gap: "3.2mm", marginBottom: "0.8mm", alignItems: "flex-start" }}>
                       <span style={{ flexShrink: 0, color: "rgba(255,255,255,0.5)", lineHeight: 1.55 }}>•</span>
                       <span>{item}</span>
                     </div>
@@ -182,33 +190,41 @@ export default function CVMaker() {
             </div>
 
             {/* MAIN CONTENT */}
-            <div style={{ flex: 1, padding: "5mm 9mm 10mm 7mm", background: "#ffffff", fontSize: "10pt", lineHeight: 1.75, color: "#1a1a1a" }}>
+            <div style={{
+              flex: 1,
+              paddingTop: "12.6mm",
+              paddingLeft: "12.8mm",
+              paddingRight: "8.2mm",
+              paddingBottom: "10mm",
+              background: "#ffffff",
+              fontSize: "12pt",
+              lineHeight: 1.46,
+              color: "#1a1a1a",
+            }}>
 
-              {["Mattis har solid og bred erfaring med utvikling av sikkerhetskritiske embedded-løsninger, inkludert design av kretskort, systemarkitektur, firmware og GUI-applikasjoner. Han har jobbet både som tech lead, senior utvikler, og CTO og kombinert teknisk ledelse med dyp utviklingskompetanse i komplekse og regulatoriske prosjekter.",
+              {[
+                "Mattis har solid og bred erfaring med utvikling av sikkerhetskritiske embedded-løsninger, inkludert design av kretskort, systemarkitektur, firmware og GUI-applikasjoner. Han har jobbet både som tech lead, senior utvikler, og CTO og kombinert teknisk ledelse med dyp utviklingskompetanse i komplekse og regulatoriske prosjekter.",
                 "Hans kjernekompetanse inkluderer kretskortdesign, C/C++, Qt, Python, elektronikk og kommunikasjonsprotokoller som BLE, LoRa, RFID og NFC. Han har også solid erfaring med kvalitetssikring i produksjon – fra testoppsett til ferdig sammenstilling – og med regulatorisk dokumentasjon for CE-godkjenning i Europa og FDA i USA.",
                 "Mattis har arbeidet med sensorteknologier som akselerometer, gyro, ultralyd, kjemiske målere og optikk, og samarbeidet med en rekke selskaper i både Norge og internasjonalt. Han har presentert for og oppnådd støtte fra European Innovation Council (Seal of Excellence) og vunnet Venture Cup for innovativ Bluetooth-teknologi.",
                 "Han er kjent for å være en løsningsorientert, kunnskapsrik og samarbeidsvillig kollega med høy teknologisk integritet og sterk gjennomføringsevne. Mattis er lett å jobbe med i team, og bidrar aktivt til godt samarbeid og teknisk kvalitet.",
               ].map((text, i) => (
-                <p key={i} style={{ margin: "0 0 3.5mm 0" }}>{text}</p>
+                <p key={i} style={{ margin: "0 0 4mm 0" }}>{text}</p>
               ))}
 
-              <div style={{ marginTop: "1mm" }}>
-                {[
-                  ["Programmeringsspråk og verktøy", "C, C++, Python, Qt, Matlab, Bash, Go, VHDL, Assembly, (Perl, JavaScript, HTML, PHP)"],
-                  ["Embedded-teknologier", "Embedded Linux, Yocto, U-Boot, RTOS, bootloader, core split, mikrokontrollere"],
-                  ["Hardware og utviklingsverktøy", "PCB-design (Altium, KiCAD, Eagle), FPGA, layout og skjematikk, debugging, oscilloskop, logikkanalysator, spektrumanalysator"],
-                  ["Kommunikasjon og protokoller", "BLE, LoRa, RFID, NFC, I²C/TWI, SPI, RS232, RS485, HDMI, TCP, UDP, SSH, SCP, UART, USART"],
-                  ["DevOps og testing", "CI/CD, Jenkins, Docker, GTest, PyTest, testdrevet utvikling, crosskompilering, board bringup, funksjonell testing"],
-                  ["Regulatorisk og ledelse", "ISO/IEC 60601, 13485, 62304, 14971, CE/FDA-godkjenning, medisinteknisk utvikling, prosjektledelse, risikohåndtering"],
-                ].map(([label, content]) => (
-                  <p key={label} style={{ margin: "0 0 2.5mm 0", lineHeight: 1.6 }}>
-                    <strong>{label}:</strong> {content}
-                  </p>
-                ))}
-              </div>
+              {[
+                ["Programmeringsspråk og verktøy", "C, C++, Python, Qt, Matlab, Bash, Go, VHDL, Assembly, (Perl, JavaScript, HTML, PHP)"],
+                ["Embedded-teknologier", "Embedded Linux, Yocto, U-Boot, RTOS, bootloader, core split, mikrokontrollere"],
+                ["Hardware og utviklingsverktøy", "PCB-design (Altium, KiCAD, Eagle), FPGA, layout og skjematikk, debugging, oscilloskop, logikkanalysator, spektrumanalysator"],
+                ["Kommunikasjon og protokoller", "BLE, LoRa, RFID, NFC, I²C/TWI, SPI, RS232, RS485, HDMI, TCP, UDP, SSH, SCP, UART, USART"],
+                ["DevOps og testing", "CI/CD, Jenkins, Docker, GTest, PyTest, testdrevet utvikling, crosskompilering, board bringup, funksjonell testing"],
+                ["Regulatorisk og ledelse", "ISO/IEC 60601, 13485, 62304, 14971, CE/FDA-godkjenning, medisinteknisk utvikling, prosjektledelse, risikohåndtering"],
+              ].map(([label, content]) => (
+                <p key={label} style={{ margin: "0 0 3mm 0" }}>
+                  <strong>{label}:</strong> {content}
+                </p>
+              ))}
 
-              {/* PROSJEKTER */}
-              <div style={{ fontWeight: 800, fontSize: "13pt", textTransform: "uppercase" as const, color: "#000", marginTop: "7mm", marginBottom: "2mm", paddingBottom: "1.5mm", borderBottom: "1px solid #aaa", letterSpacing: "0.03em", lineHeight: 1.1 }}>Prosjekter</div>
+              <div style={{ fontWeight: 800, fontSize: "13pt", textTransform: "uppercase" as const, color: "#000000", marginTop: "8mm", marginBottom: "3mm", paddingBottom: "1.5mm", borderBottom: "1px solid #aaaaaa", letterSpacing: "0.03em", lineHeight: 1.1 }}>Prosjekter</div>
 
               {([
                 {
@@ -236,33 +252,36 @@ export default function CVMaker() {
                   tech: "C++, Python, Yocto, Qt, CMake, GTest, sanntidsdatabehandling, signalbehandling.",
                 },
               ] as { company: string; subtitle: string; role: string; periode: string; desc: string[]; tech: string }[]).map((p) => (
-                <div key={p.company + p.periode} className="cv-project-block" style={{ marginBottom: "5mm" }}>
-                  <div style={{ fontWeight: 800, fontSize: "11pt", color: "#000", marginBottom: "0.5mm", lineHeight: 1.1 }}>{p.company}</div>
-                  <div style={{ fontWeight: 700, fontSize: "10pt", marginBottom: "1.5mm", lineHeight: 1.2 }}>{p.subtitle}</div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9pt", color: "#555", marginBottom: "2.5mm" }}>
+                <div key={p.company + p.periode} className="cv-project-block" style={{ marginBottom: "6mm" }}>
+                  <div style={{ fontWeight: 800, fontSize: "11pt", color: "#000000", marginBottom: "0.5mm", lineHeight: 1.1 }}>{p.company}</div>
+                  <div style={{ fontWeight: 700, fontSize: "11pt", color: "#1a1a1a", marginBottom: "1.5mm", lineHeight: 1.2 }}>{p.subtitle}</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10pt", color: "#555555", marginBottom: "3mm" }}>
                     <span><strong style={{ color: "#1a1a1a" }}>Rolle:</strong> {p.role}</span>
                     <span style={{ flexShrink: 0, marginLeft: "4mm" }}><strong style={{ color: "#1a1a1a" }}>Periode</strong>: {p.periode}</span>
                   </div>
                   {p.desc.map((d, i) => (
-                    <p key={i} style={{ margin: "0 0 2.5mm 0", fontSize: "10pt", lineHeight: 1.65 }}>{d}</p>
+                    <p key={i} style={{ margin: "0 0 3mm 0", lineHeight: 1.46 }}>{d}</p>
                   ))}
-                  <p style={{ margin: 0, fontSize: "9.5pt", lineHeight: 1.5, color: "#333" }}>
+                  <p style={{ margin: 0, lineHeight: 1.46 }}>
                     <strong>Teknologier:</strong> {p.tech}
                   </p>
                 </div>
               ))}
 
-              {/* UTDANNELSE */}
-              <div style={{ fontWeight: 800, fontSize: "13pt", textTransform: "uppercase" as const, color: "#000", marginTop: "7mm", marginBottom: "2mm", paddingBottom: "1.5mm", borderBottom: "1px solid #aaa", letterSpacing: "0.03em", lineHeight: 1.1 }}>Utdannelse</div>
-              <div style={{ display: "flex", gap: "8mm", fontSize: "10pt", lineHeight: 1.7, marginBottom: "2mm" }}>
+              <div style={{ fontWeight: 800, fontSize: "13pt", textTransform: "uppercase" as const, color: "#000000", marginTop: "8mm", marginBottom: "3mm", paddingBottom: "1.5mm", borderBottom: "1px solid #aaaaaa", letterSpacing: "0.03em", lineHeight: 1.1 }}>Utdannelse</div>
+              <div style={{ display: "flex", gap: "8mm", marginBottom: "3mm" }}>
                 <span style={{ minWidth: "22mm", flexShrink: 0 }}>2011 – 2017</span>
                 <span>Master i elektronikk fra NTNU, med spesialisering i innvevde systemer</span>
               </div>
 
-              {/* ARBEIDSERFARING */}
-              <div style={{ fontWeight: 800, fontSize: "13pt", textTransform: "uppercase" as const, color: "#000", marginTop: "7mm", marginBottom: "2mm", paddingBottom: "1.5mm", borderBottom: "1px solid #aaa", letterSpacing: "0.03em", lineHeight: 1.1 }}>Arbeidserfaring</div>
-              {([["2025 –", "STACQ AS"], ["2024 – 2025", "RESPINOR AS"], ["2022 – 2024", "Cardiaccs AS"], ["2017 – 2022", "Glucoset AS"]] as [string, string][]).map(([year, company]) => (
-                <div key={year} style={{ display: "flex", gap: "8mm", fontSize: "10pt", lineHeight: 1.7, marginBottom: "1mm" }}>
+              <div style={{ fontWeight: 800, fontSize: "13pt", textTransform: "uppercase" as const, color: "#000000", marginTop: "8mm", marginBottom: "3mm", paddingBottom: "1.5mm", borderBottom: "1px solid #aaaaaa", letterSpacing: "0.03em", lineHeight: 1.1 }}>Arbeidserfaring</div>
+              {([
+                ["2025 –", "STACQ AS"],
+                ["2024 – 2025", "RESPINOR AS"],
+                ["2022 – 2024", "Cardiaccs AS"],
+                ["2017 – 2022", "Glucoset AS"],
+              ] as [string, string][]).map(([year, company]) => (
+                <div key={year} style={{ display: "flex", gap: "8mm", marginBottom: "2mm" }}>
                   <span style={{ minWidth: "22mm", flexShrink: 0 }}>{year}</span>
                   <span>{company}</span>
                 </div>
@@ -270,6 +289,7 @@ export default function CVMaker() {
 
             </div>
           </div>
+
         </div>
       </div>
     </div>
