@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import { lazy, Suspense } from "react";
 import Login from "./pages/Login";
+import CVMaker from "./pages/CVMaker";
 import Dashboard from "./pages/Dashboard";
 import Companies from "./pages/Companies";
 import CompanyDetail from "./pages/CompanyDetail";
@@ -76,6 +77,7 @@ const App = () => (
                 <Route path="oppfolginger" element={<Tasks />} />
                 <Route path="foresporsler" element={<Foresporsler />} />
                 <Route path="nettside-ai" element={<NettsideAI />} />
+                <Route path="cv-maker" element={<CVMaker />} />
                 <Route path="import" element={<Import />} />
                 <Route path="admin/brreg-sync" element={<AdminBrregSync />} />
                 <Route
