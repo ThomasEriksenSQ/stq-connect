@@ -190,7 +190,7 @@ export default function CVMaker() {
               <span style={{ marginLeft: 12 }}>Master i elektronikk fra NTNU, med spesialisering i innvevde systemer</span>
             </div>
 
-            <div style={{ fontWeight: 700, fontSize: 14, marginTop: 16, marginBottom: 8 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, marginTop: 16, marginBottom: 8, textTransform: "uppercase" }}>
               Arbeidserfaring
             </div>
             {[["2025 –", "STACQ AS"], ["2024 – 2025", "RESPINOR AS"], ["2022 – 2024", "Cardiaccs AS"], ["2017 – 2022", "Glucoset AS"]].map(([year, company]) => (
