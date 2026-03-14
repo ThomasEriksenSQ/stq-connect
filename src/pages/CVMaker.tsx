@@ -38,8 +38,9 @@ export default function CVMaker() {
         className="cv-document"
         style={{
           width: "210mm",
-          minHeight: "297mm",
+          minHeight: "100%",
           background: "linear-gradient(to right, #111 165px, #fff 165px)",
+          overflow: "hidden",
           fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif",
           color: "#1a1a1a",
           printColorAdjust: "exact",
@@ -68,11 +69,11 @@ export default function CVMaker() {
         </div>
 
         {/* NAME BAND */}
-        <div style={{ background: "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)", padding: "28px 40px 24px 28px", display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
-          <div style={{ color: "#fff", fontSize: 28, fontWeight: 700, letterSpacing: "-0.01em" }}>
+        <div style={{ background: "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)", padding: "28px 40px 24px 28px", marginLeft: 165, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+          <div style={{ color: "#fff", fontSize: "40pt", fontWeight: 700, letterSpacing: "-0.01em", lineHeight: 1.1 }}>
             Mattis Spieler Asp
           </div>
-          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: 400, maxWidth: 320, textAlign: "right" }}>
+          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "14pt", fontWeight: 400, flexShrink: 0, marginLeft: "8mm", marginBottom: "2mm" }}>
             Senior Embedded-ingeniør med 8 års erfaring
           </div>
         </div>
@@ -131,7 +132,7 @@ export default function CVMaker() {
               </div>
             ))}
 
-            <div style={{ fontWeight: 700, fontSize: 16, marginTop: 28, marginBottom: 12, letterSpacing: "-0.01em" }}>
+            <div style={{ fontWeight: 700, fontSize: 16, marginTop: 28, marginBottom: 12, letterSpacing: "-0.01em", textTransform: "uppercase" }}>
               Prosjekter
             </div>
 
@@ -181,7 +182,7 @@ export default function CVMaker() {
               </div>
             ))}
 
-            <div style={{ fontWeight: 700, fontSize: 14, marginTop: 24, marginBottom: 8 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, marginTop: 24, marginBottom: 8, textTransform: "uppercase" }}>
               Utdannelse
             </div>
             <div style={{ fontSize: 11, marginBottom: 16 }}>
@@ -189,7 +190,7 @@ export default function CVMaker() {
               <span style={{ marginLeft: 12 }}>Master i elektronikk fra NTNU, med spesialisering i innvevde systemer</span>
             </div>
 
-            <div style={{ fontWeight: 700, fontSize: 14, marginTop: 16, marginBottom: 8 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, marginTop: 16, marginBottom: 8, textTransform: "uppercase" }}>
               Arbeidserfaring
             </div>
             {[["2025 –", "STACQ AS"], ["2024 – 2025", "RESPINOR AS"], ["2022 – 2024", "Cardiaccs AS"], ["2017 – 2022", "Glucoset AS"]].map(([year, company]) => (
