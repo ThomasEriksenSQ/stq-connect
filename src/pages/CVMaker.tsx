@@ -38,8 +38,9 @@ export default function CVMaker() {
         className="cv-document"
         style={{
           width: "210mm",
-          minHeight: "297mm",
+          minHeight: "100%",
           background: "linear-gradient(to right, #111 165px, #fff 165px)",
+          overflow: "hidden",
           fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif",
           color: "#1a1a1a",
           printColorAdjust: "exact",
