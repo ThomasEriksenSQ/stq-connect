@@ -1,4 +1,7 @@
 import { useEffect } from "react";
+import html2pdf from 'html2pdf.js';
+
+declare module 'html2pdf.js';
 
 export default function CVMaker() {
   useEffect(() => {
@@ -26,12 +29,31 @@ export default function CVMaker() {
     <div style={{ background: "#d0d0d0", minHeight: "100vh", padding: "24px 0" }}>
       <div className="no-print" style={{ maxWidth: "210mm", margin: "0 auto 20px auto", display: "flex", alignItems: "center", gap: 12 }}>
         <button
-          onClick={() => window.print()}
+          onClick={() => {
+            const element = document.querySelector('.cv-document') as HTMLElement;
+            if (!element) return;
+            const opt = {
+              margin: 0,
+              filename: 'Mattis_Spieler_Asp_CV.pdf',
+              image: { type: 'jpeg' as const, quality: 0.98 },
+              html2canvas: { 
+                scale: 2, 
+                useCORS: true,
+                letterRendering: true,
+                width: 794
+              },
+              jsPDF: { 
+                unit: 'mm' as const, 
+                format: 'a4' as const, 
+                orientation: 'portrait' as const
+              }
+            };
+            html2pdf().set(opt).from(element).save();
+          }}
           style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 6, padding: "10px 24px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
         >
-          Last ned / Skriv ut PDF
+          Last ned PDF
         </button>
-        <span style={{ color: "#666", fontSize: 13 }}>Velg «Lagre som PDF» — skru av topp/bunntekst i utskriftsinnstillinger</span>
       </div>
 
       <div className="cv-print-root">
