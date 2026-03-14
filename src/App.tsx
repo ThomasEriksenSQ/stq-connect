@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import { lazy, Suspense } from "react";
 import Login from "./pages/Login";
+import CVMaker from "./pages/CVMaker";
 import Dashboard from "./pages/Dashboard";
 import Companies from "./pages/Companies";
 import CompanyDetail from "./pages/CompanyDetail";
