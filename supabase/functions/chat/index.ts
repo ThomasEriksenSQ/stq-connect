@@ -47,7 +47,7 @@ serve(async (req) => {
       }
       const t = await response.text();
       console.error("AI gateway error:", response.status, t);
-      return new Response(JSON.stringify({ error: "AI-feil, prøv igjen" }), {
+      return new Response(JSON.stringify({ error: "AI-feil. Prøv igjen." }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
