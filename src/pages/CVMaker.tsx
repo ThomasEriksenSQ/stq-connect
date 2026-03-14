@@ -120,7 +120,7 @@ export default function CVMaker() {
             }}
           >
             <img
-              src="/logo.png"
+              src="/STACQ_logo.png"
               alt="STACQ logo"
               style={{ height: "8mm", objectFit: "contain", filter: "brightness(0) invert(1)" }}
               onError={(e) => {
