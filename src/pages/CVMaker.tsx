@@ -1,6 +1,5 @@
+```tsx
 import { useEffect } from "react";
-
-const SIDEBAR_W = "55mm";
 
 export default function CVMaker() {
   useEffect(() => {
@@ -8,33 +7,13 @@ export default function CVMaker() {
     style.id = "cv-print-styles";
     style.textContent = `
       @media print {
-        @page {
-          size: A4;
-          margin: 0;
-        }
-        body {
-          margin: 0 !important;
-          padding: 0 !important;
-        }
-        body > * {
-          display: none !important;
-        }
-        .cv-print-root {
-          display: block !important;
-        }
-        .no-print {
-          display: none !important;
-        }
-        .cv-document {
-          width: 210mm !important;
-          margin: 0 !important;
-          box-shadow: none !important;
-          page-break-inside: auto;
-        }
-        .cv-project-block {
-          page-break-inside: avoid;
-          break-inside: avoid;
-        }
+        @page { size: A4; margin: 0; }
+        body { margin: 0 !important; padding: 0 !important; }
+        body > * { display: none !important; }
+        .cv-print-root { display: block !important; }
+        .no-print { display: none !important; }
+        .cv-document { width: 210mm !important; margin: 0 !important; box-shadow: none !important; }
+        .cv-project-block { page-break-inside: avoid; break-inside: avoid; }
       }
     `;
     document.head.appendChild(style);
@@ -45,131 +24,136 @@ export default function CVMaker() {
   }, []);
 
   return (
-    <div>
-      {/* PRINT BUTTON */}
-      <div
-        className="no-print"
-        style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}
-      >
+    <div style={{ background: "#d0d0d0", minHeight: "100vh", padding: "24px 0" }}>
+      <div className="no-print" style={{ maxWidth: "210mm", margin: "0 auto 20px auto", display: "flex", alignItems: "center", gap: 12 }}>
         <button
           onClick={() => window.print()}
-          style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 6, padding: "10px 24px", fontSize: 14, fontWeight: 600, cursor: "pointer", letterSpacing: "0.02em" }}
+          style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 6, padding: "10px 24px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
         >
           Last ned / Skriv ut PDF
         </button>
-        <span style={{ fontSize: 13, color: "#888" }}>
-          Velg «Lagre som PDF» i utskriftsdialogen. Skru av topp-/bunntekst i utskriftsinnstillinger.
-        </span>
+        <span style={{ color: "#666", fontSize: 13 }}>Velg «Lagre som PDF» — skru av topp/bunntekst i utskriftsinnstillinger</span>
       </div>
 
-      {/* cv-print-root for print isolation */}
       <div className="cv-print-root">
         <div
           className="cv-document"
           style={{
             width: "210mm",
             minHeight: "297mm",
-            background: `linear-gradient(to right, #000000 ${SIDEBAR_W}, #ffffff ${SIDEBAR_W})`,
-            fontFamily: "Calibri, Carlito, 'Segoe UI', sans-serif",
-            color: "#1a1a1a",
-            printColorAdjust: "exact",
-            WebkitPrintColorAdjust: "exact",
-            colorAdjust: "exact",
-            position: "relative",
             margin: "0 auto",
-            boxShadow: "0 2px 24px rgba(0,0,0,0.10)",
+            fontFamily: "Calibri, Carlito, Arial, sans-serif",
+            fontSize: "10pt",
+            color: "#1a1a1a",
+            position: "relative",
+            background: "#ffffff",
+            boxShadow: "0 4px 32px rgba(0,0,0,0.20)",
+            WebkitPrintColorAdjust: "exact",
+            printColorAdjust: "exact",
+            colorAdjust: "exact",
           } as React.CSSProperties}
         >
-          {/* HEADER — ett samlet område med position:relative */}
-          <div style={{ position: "relative", height: "71.5mm" }}>
+          {/* BLACK SIDEBAR — full document height */}
+          <div style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "55mm",
+            bottom: 0,
+            background: "#000000",
+            WebkitPrintColorAdjust: "exact",
+            printColorAdjust: "exact",
+            colorAdjust: "exact",
+          } as React.CSSProperties} />
 
-            {/* SIDEBAR KOLONNE — sort bakgrunn, logo + foto */}
-            <div style={{ position: "absolute", top: 0, left: 0, width: SIDEBAR_W, height: "100%" }}>
+          {/* HEADER ZONE — 71.4mm tall */}
+          <div style={{ position: "relative", height: "71.4mm" }}>
 
-              {/* LOGO — paddingTop 9.1mm */}
-              <div style={{ padding: "9.1mm 4mm 0 4mm", display: "flex", justifyContent: "center" }}>
-                <img
-                  src="/STACQ_logo.png"
-                  alt="STACQ logo"
-                  style={{ height: "9mm", objectFit: "contain", filter: "brightness(0) invert(1)" }}
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                    const parent = e.currentTarget.parentElement;
-                    if (parent && !parent.querySelector("svg")) {
-                      const ns = "http://www.w3.org/2000/svg";
-                      const svg = document.createElementNS(ns, "svg");
-                      svg.setAttribute("width", "120"); svg.setAttribute("height", "34"); svg.setAttribute("viewBox", "0 0 120 34");
-                      svg.innerHTML = `<text x="0" y="28" fill="white" font-size="30" font-weight="bold" font-family="Calibri,sans-serif">STACQ</text>`;
-                      parent.appendChild(svg);
-                    }
-                  }}
-                />
-              </div>
-
-              {/* FOTO — edge-to-edge, no padding, no border-radius, starts at 24.9mm */}
-              <div style={{ position: "absolute", top: "24.9mm", left: 0, width: "100%", height: "46.6mm" }}>
-                <img
-                  src="/cv-photos/mattis.png"
-                  alt="Mattis Spieler Asp"
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    objectPosition: "center top",
-                    background: "#919ca1",
-                    display: "block",
-                  }}
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                    const d = document.createElement("div");
-                    d.style.cssText = "width:100%;height:100%;background:#919ca1;";
-                    e.currentTarget.parentElement?.appendChild(d);
-                  }}
-                />
-              </div>
-
+            {/* LOGO */}
+            <div style={{ position: "absolute", top: "9mm", left: "4mm", zIndex: 10 }}>
+              <img
+                src="/STACQ_logo.png"
+                alt="STACQ"
+                style={{ height: "9mm", width: "auto", display: "block", filter: "brightness(0) invert(1)" }}
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                  const parent = e.currentTarget.parentElement;
+                  if (parent && !parent.querySelector("svg")) {
+                    const ns = "http://www.w3.org/2000/svg";
+                    const svg = document.createElementNS(ns, "svg");
+                    svg.setAttribute("viewBox", "0 0 111 28");
+                    svg.style.cssText = "height:9mm;width:auto;display:block;";
+                    svg.innerHTML = `<polygon points="14,2 24,8 14,14" fill="white"/><polygon points="4,8 14,14 4,20" fill="white"/><polygon points="14,14 24,20 14,26" fill="white"/><text x="30" y="20" font-family="Calibri,Arial,sans-serif" font-size="16" font-weight="bold" fill="white">STACQ</text>`;
+                    parent.appendChild(svg);
+                  }
+                }}
+              />
             </div>
 
-            {/* MAIN KOLONNE — kontaktperson + grått bånd */}
-            <div style={{ position: "absolute", top: 0, left: SIDEBAR_W, right: 0, height: "100%" }}>
-
-              {/* KONTAKTPERSON — starts at 8.8mm, right-aligned */}
-              <div style={{ padding: "8.8mm 10mm 0 0", display: "flex", justifyContent: "flex-end" }}>
-                <div style={{ textAlign: "right", fontSize: "9pt", color: "#444", lineHeight: 1.7, borderLeft: "2px solid #8e8e8e", paddingLeft: "3mm" }}>
-                  <div style={{ fontWeight: 600, fontSize: "9.5pt", color: "#222" }}>Kontaktperson</div>
-                  <div>Jon Richard Nygaard</div>
-                  <div style={{ fontSize: "8pt", color: "#888" }}>932 87 267 / jr@stacq.no</div>
-                </div>
+            {/* KONTAKTPERSON */}
+            <div style={{ position: "absolute", top: "9mm", right: "9mm", zIndex: 10 }}>
+              <div style={{ borderLeft: "2px solid #999", paddingLeft: "3.5mm", fontSize: "9pt", lineHeight: 1.6, color: "#444" }}>
+                <div style={{ fontWeight: 700, color: "#111", fontSize: "9.5pt" }}>Kontaktperson</div>
+                <div>Jon Richard Nygaard</div>
+                <div style={{ color: "#888", fontSize: "8.5pt" }}>932 87 267 / jr@stacq.no</div>
               </div>
+            </div>
 
-              {/* GRÅTT BÅND — starts at 31.2mm, height 34.5mm */}
-              <div style={{
-                position: "absolute",
-                top: "31.2mm",
-                left: 0,
-                right: 0,
-                height: "34.5mm",
-                background: "#f2f2f2",
-                padding: "1.5mm 10mm 6.5mm 6mm",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "flex-start",
-              }}>
-                <div style={{ fontSize: "43pt", fontWeight: 700, color: "#1a1a1a", letterSpacing: "-0.01em", lineHeight: 1.1 }}>
+            {/* GRAY BAND — full width, sits behind photo */}
+            <div style={{
+              position: "absolute",
+              top: "31.2mm",
+              left: 0,
+              right: 0,
+              height: "34.3mm",
+              background: "#f2f2f2",
+              zIndex: 2,
+              WebkitPrintColorAdjust: "exact",
+              printColorAdjust: "exact",
+              colorAdjust: "exact",
+            } as React.CSSProperties}>
+              <div style={{ marginLeft: "55mm", paddingLeft: "6mm", paddingRight: "8mm", paddingTop: "9.4mm", paddingBottom: "6.8mm", boxSizing: "border-box" }}>
+                <div style={{ fontSize: "46pt", fontWeight: 800, color: "#1a1a1a", letterSpacing: "-0.02em", lineHeight: 1.0, marginBottom: "3.1mm" }}>
                   Mattis Spieler Asp
                 </div>
-                <div style={{ marginTop: "4mm", fontSize: "12pt", color: "#444", fontWeight: 400, letterSpacing: "0.02em" }}>
+                <div style={{ fontSize: "14pt", fontWeight: 400, color: "#1a1a1a", letterSpacing: "0.14em", lineHeight: 1.0 }}>
                   Senior Embedded-ingeniør med 8 års erfaring
                 </div>
               </div>
-
             </div>
+
+            {/* PHOTO — above gray band, zIndex 3 */}
+            <div style={{ position: "absolute", top: "25.4mm", left: 0, width: "55mm", height: "46mm", zIndex: 3, overflow: "hidden" }}>
+              <img
+                src="/Mattis_CV.png"
+                alt="Mattis Spieler Asp"
+                style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block" }}
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                  const d = document.createElement("div");
+                  d.style.cssText = "width:100%;height:100%;background:#919ca1;";
+                  e.currentTarget.parentElement?.appendChild(d);
+                }}
+              />
+            </div>
+
           </div>
 
-          {/* ROW 3: BODY — sidebar text + main content */}
-          <div style={{ display: "flex", alignItems: "stretch" }}>
+          {/* BODY */}
+          <div style={{ display: "flex", position: "relative" }}>
+
             {/* SIDEBAR TEXT */}
-            <div style={{ width: SIDEBAR_W, flexShrink: 0, padding: "5mm 4mm 10mm 4mm", color: "rgba(255,255,255,0.85)", fontSize: "8pt", lineHeight: 1.6 }}>
+            <div style={{
+              width: "55mm",
+              minWidth: "55mm",
+              flexShrink: 0,
+              padding: "5mm 4.5mm 10mm 4.5mm",
+              color: "rgba(255,255,255,0.90)",
+              fontSize: "8.5pt",
+              lineHeight: 1.55,
+              position: "relative",
+              zIndex: 1,
+            }}>
               {([
                 {
                   heading: "Personalia",
@@ -177,34 +161,20 @@ export default function CVMaker() {
                 },
                 {
                   heading: "Nøkkelpunkter",
-                  items: [
-                    "C,C++, Python, QT",
-                    "Embedded Linux, Yocto, U-Boot, core split",
-                    "Mikrokontrollere",
-                    "Sanntidssystemer",
-                    "BLE, LoRa, RFID, NFC",
-                    "CI/CD, funksjonell testing",
-                    "Layout og skjematikk",
-                    "Altium, KiCAD, Eagle",
-                    "Project management",
-                    "Design control, Quality in production",
-                    "Patent experience",
-                    "Soft funding applications",
-                    "Medical Device regulations, ISO/IEC 9001",
-                  ],
+                  items: ["C,C++, Python, QT", "Embedded Linux, Yocto, U-Boot, core split", "Mikrokontrollere", "Sanntidssystemer", "BLE, LoRa, RFID, NFC", "CI/CD, funksjonell testing", "Layout og skjematikk", "Altium, KiCAD, Eagle", "Project management", "Design control, Quality in production", "Patent experience", "Soft funding applications", "Medical Device regulations, ISO/IEC 9001"],
                 },
                 {
                   heading: "Utdannelse",
                   items: ["MSc. Innvevde Systemer, NTNU"],
                 },
               ] as { heading: string; items: string[] }[]).map((section) => (
-                <div key={section.heading} style={{ marginBottom: "4mm" }}>
-                  <div style={{ fontWeight: 700, fontSize: "8pt", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "1.5mm", color: "#fff" }}>
+                <div key={section.heading} style={{ marginBottom: "4.5mm" }}>
+                  <div style={{ fontWeight: 800, fontSize: "8.5pt", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: "2mm", color: "#ffffff" }}>
                     {section.heading}
                   </div>
                   {section.items.map((item) => (
-                    <div key={item} style={{ display: "flex", gap: "1.5mm", marginBottom: "0.5mm" }}>
-                      <span style={{ color: "rgba(255,255,255,0.4)" }}>•</span>
+                    <div key={item} style={{ display: "flex", gap: "1.5mm", marginBottom: "0.8mm", alignItems: "flex-start" }}>
+                      <span style={{ flexShrink: 0, color: "rgba(255,255,255,0.5)", lineHeight: 1.55 }}>•</span>
                       <span>{item}</span>
                     </div>
                   ))}
@@ -213,19 +183,17 @@ export default function CVMaker() {
             </div>
 
             {/* MAIN CONTENT */}
-            <div style={{ flex: 1, padding: "5mm 9mm 10mm 7mm", fontSize: "10pt", lineHeight: 1.9, color: "#222" }}>
-              {/* Bio */}
-              {[
-                "Mattis har solid og bred erfaring med utvikling av sikkerhetskritiske embedded-løsninger, inkludert design av kretskort, systemarkitektur, firmware og GUI-applikasjoner. Han har jobbet både som tech lead, senior utvikler, og CTO og kombinert teknisk ledelse med dyp utviklingskompetanse i komplekse og regulatoriske prosjekter.",
+            <div style={{ flex: 1, padding: "5mm 9mm 10mm 7mm", background: "#ffffff", fontSize: "10pt", lineHeight: 1.75, color: "#1a1a1a" }}>
+
+              {["Mattis har solid og bred erfaring med utvikling av sikkerhetskritiske embedded-løsninger, inkludert design av kretskort, systemarkitektur, firmware og GUI-applikasjoner. Han har jobbet både som tech lead, senior utvikler, og CTO og kombinert teknisk ledelse med dyp utviklingskompetanse i komplekse og regulatoriske prosjekter.",
                 "Hans kjernekompetanse inkluderer kretskortdesign, C/C++, Qt, Python, elektronikk og kommunikasjonsprotokoller som BLE, LoRa, RFID og NFC. Han har også solid erfaring med kvalitetssikring i produksjon – fra testoppsett til ferdig sammenstilling – og med regulatorisk dokumentasjon for CE-godkjenning i Europa og FDA i USA.",
                 "Mattis har arbeidet med sensorteknologier som akselerometer, gyro, ultralyd, kjemiske målere og optikk, og samarbeidet med en rekke selskaper i både Norge og internasjonalt. Han har presentert for og oppnådd støtte fra European Innovation Council (Seal of Excellence) og vunnet Venture Cup for innovativ Bluetooth-teknologi.",
                 "Han er kjent for å være en løsningsorientert, kunnskapsrik og samarbeidsvillig kollega med høy teknologisk integritet og sterk gjennomføringsevne. Mattis er lett å jobbe med i team, og bidrar aktivt til godt samarbeid og teknisk kvalitet.",
               ].map((text, i) => (
-                <p key={i} style={{ marginBottom: "3.5mm" }}>{text}</p>
+                <p key={i} style={{ margin: "0 0 3.5mm 0" }}>{text}</p>
               ))}
 
-              {/* Competence lines */}
-              <div style={{ marginTop: "2mm", marginBottom: "2mm" }}>
+              <div style={{ marginTop: "1mm" }}>
                 {[
                   ["Programmeringsspråk og verktøy", "C, C++, Python, Qt, Matlab, Bash, Go, VHDL, Assembly, (Perl, JavaScript, HTML, PHP)"],
                   ["Embedded-teknologier", "Embedded Linux, Yocto, U-Boot, RTOS, bootloader, core split, mikrokontrollere"],
@@ -234,16 +202,14 @@ export default function CVMaker() {
                   ["DevOps og testing", "CI/CD, Jenkins, Docker, GTest, PyTest, testdrevet utvikling, crosskompilering, board bringup, funksjonell testing"],
                   ["Regulatorisk og ledelse", "ISO/IEC 60601, 13485, 62304, 14971, CE/FDA-godkjenning, medisinteknisk utvikling, prosjektledelse, risikohåndtering"],
                 ].map(([label, content]) => (
-                  <div key={label} style={{ marginBottom: "1mm", fontSize: "9pt" }}>
+                  <p key={label} style={{ margin: "0 0 2.5mm 0", lineHeight: 1.6 }}>
                     <strong>{label}:</strong> {content}
-                  </div>
+                  </p>
                 ))}
               </div>
 
               {/* PROSJEKTER */}
-              <div style={{ fontWeight: 700, fontSize: "11pt", textTransform: "uppercase", letterSpacing: "0.04em", color: "#1a1a1a", marginTop: "6mm", marginBottom: "1mm", paddingBottom: "1mm", borderBottom: "1px solid #9c9c9c" }}>
-                Prosjekter
-              </div>
+              <div style={{ fontWeight: 800, fontSize: "13pt", textTransform: "uppercase" as const, color: "#000", marginTop: "7mm", marginBottom: "2mm", paddingBottom: "1.5mm", borderBottom: "1px solid #aaa", letterSpacing: "0.03em", lineHeight: 1.1 }}>Prosjekter</div>
 
               {([
                 {
@@ -251,10 +217,7 @@ export default function CVMaker() {
                   subtitle: "Utvikling av ultralydsensor for respiratorpasienter",
                   role: "Tech Lead, Senior Software Engineer og CTO",
                   periode: "6/24-6/25",
-                  desc: [
-                    "RESPINOR AS er et norsk medisinsk selskap som revolusjonerer overvåkning av pasienter på respirator.",
-                    "Hos RESPINOR jobbet Mattis som senior utvikler og CTO i en avgjørende regulatorisk og teknisk fase av prosjektet. Der han satte opp prosjektplan for arbeidet, analyserte svakheter og mangler i produktet, f.eks regulatorisk, verifikasjon og teknisk, cost analyse, ytterligere funksjoner i produkt, og plan for produksjon.",
-                  ],
+                  desc: ["RESPINOR AS er et norsk medisinsk selskap som revolusjonerer overvåkning av pasienter på respirator.", "Hos RESPINOR jobbet Mattis som senior utvikler og CTO i en avgjørende regulatorisk og teknisk fase av prosjektet. Der han satte opp prosjektplan for arbeidet, analyserte svakheter og mangler i produktet, f.eks regulatorisk, verifikasjon og teknisk, cost analyse, ytterligere funksjoner i produkt, og plan for produksjon."],
                   tech: "Ultralyd, accelerometer, gyroskop, RS485, I2C, Yocto, embedded C, C++, Altium, BOM management, produksjonsteknikkk.",
                 },
                 {
@@ -270,57 +233,42 @@ export default function CVMaker() {
                   subtitle: "Utvikling av smart pacemakertråd",
                   role: "Tech Lead, Senior Software Engineer og CTO",
                   periode: "1/22-5/24",
-                  desc: [
-                    "Cardiaccs er et unikt norsk medisinsk selskap som utvikler den første smarte pacemakertråden for implantering på hjerte under hjertekirurgi og gir kontinuerlig overvåkning av pasienten etter operasjon.",
-                    "Mattis startet i Cardiaccs som software utvikler med formål om å utvikle drivere og jobbe med Yocto + QT.",
-                  ],
+                  desc: ["Cardiaccs er et unikt norsk medisinsk selskap som utvikler den første smarte pacemakertråden for implantering på hjerte under hjertekirurgi og gir kontinuerlig overvåkning av pasienten etter operasjon.", "Mattis startet i Cardiaccs som software utvikler med formål om å utvikle drivere og jobbe med Yocto + QT."],
                   tech: "C++, Python, Yocto, Qt, CMake, GTest, sanntidsdatabehandling, signalbehandling.",
                 },
-              ] as { company: string; subtitle: string; role: string; periode: string; desc: string[]; tech: string }[]).map((project) => (
-                <div key={project.company + project.periode} className="cv-project-block" style={{ marginBottom: "4mm" }}>
-                  <div style={{ fontWeight: 700, fontSize: "10pt", color: "#111", letterSpacing: "0.02em" }}>
-                    {project.company}
+              ] as { company: string; subtitle: string; role: string; periode: string; desc: string[]; tech: string }[]).map((p) => (
+                <div key={p.company + p.periode} className="cv-project-block" style={{ marginBottom: "5mm" }}>
+                  <div style={{ fontWeight: 800, fontSize: "11pt", color: "#000", marginBottom: "0.5mm", lineHeight: 1.1 }}>{p.company}</div>
+                  <div style={{ fontWeight: 700, fontSize: "10pt", marginBottom: "1.5mm", lineHeight: 1.2 }}>{p.subtitle}</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9pt", color: "#555", marginBottom: "2.5mm" }}>
+                    <span><strong style={{ color: "#1a1a1a" }}>Rolle:</strong> {p.role}</span>
+                    <span style={{ flexShrink: 0, marginLeft: "4mm" }}><strong style={{ color: "#1a1a1a" }}>Periode</strong>: {p.periode}</span>
                   </div>
-                  <div style={{ fontSize: "9pt", fontWeight: 600, color: "#333", marginBottom: "0.5mm" }}>
-                    {project.subtitle}
-                  </div>
-                  <div style={{ fontSize: "8pt", color: "#888", marginBottom: "1.5mm" }}>
-                    <span>Rolle: {project.role}</span>
-                    <span style={{ marginLeft: "4mm" }}>Periode: {project.periode}</span>
-                  </div>
-                  {project.desc.map((d, i) => (
-                    <p key={i} style={{ marginBottom: "1.5mm", fontSize: "9pt", lineHeight: 1.65 }}>{d}</p>
+                  {p.desc.map((d, i) => (
+                    <p key={i} style={{ margin: "0 0 2.5mm 0", fontSize: "10pt", lineHeight: 1.65 }}>{d}</p>
                   ))}
-                  <div style={{ fontSize: "8pt", color: "#666", marginTop: "1mm" }}>
-                    <strong>Teknologier:</strong> {project.tech}
-                  </div>
+                  <p style={{ margin: 0, fontSize: "9.5pt", lineHeight: 1.5, color: "#333" }}>
+                    <strong>Teknologier:</strong> {p.tech}
+                  </p>
                 </div>
               ))}
 
               {/* UTDANNELSE */}
-              <div style={{ fontWeight: 700, fontSize: "11pt", textTransform: "uppercase", letterSpacing: "0.04em", color: "#1a1a1a", marginTop: "6mm", marginBottom: "1mm", paddingBottom: "1mm", borderBottom: "1px solid #9c9c9c" }}>
-                Utdannelse
-              </div>
-              <div style={{ fontSize: "9pt", marginBottom: "4mm" }}>
-                <span style={{ fontWeight: 600 }}>2011 – 2017</span>
-                <span style={{ marginLeft: "3mm" }}>Master i elektronikk fra NTNU, med spesialisering i innvevde systemer</span>
+              <div style={{ fontWeight: 800, fontSize: "13pt", textTransform: "uppercase" as const, color: "#000", marginTop: "7mm", marginBottom: "2mm", paddingBottom: "1.5mm", borderBottom: "1px solid #aaa", letterSpacing: "0.03em", lineHeight: 1.1 }}>Utdannelse</div>
+              <div style={{ display: "flex", gap: "8mm", fontSize: "10pt", lineHeight: 1.7, marginBottom: "2mm" }}>
+                <span style={{ minWidth: "22mm", flexShrink: 0 }}>2011 – 2017</span>
+                <span>Master i elektronikk fra NTNU, med spesialisering i innvevde systemer</span>
               </div>
 
               {/* ARBEIDSERFARING */}
-              <div style={{ fontWeight: 700, fontSize: "11pt", textTransform: "uppercase", letterSpacing: "0.04em", color: "#1a1a1a", marginTop: "6mm", marginBottom: "1mm", paddingBottom: "1mm", borderBottom: "1px solid #9c9c9c" }}>
-                Arbeidserfaring
-              </div>
-              {([
-                ["2025 –", "STACQ AS"],
-                ["2024 – 2025", "RESPINOR AS"],
-                ["2022 – 2024", "Cardiaccs AS"],
-                ["2017 – 2022", "Glucoset AS"],
-              ] as [string, string][]).map(([year, company]) => (
-                <div key={year} style={{ fontSize: "9pt", marginBottom: "1mm", display: "flex", gap: "3mm" }}>
-                  <span style={{ fontWeight: 600, minWidth: "25mm" }}>{year}</span>
+              <div style={{ fontWeight: 800, fontSize: "13pt", textTransform: "uppercase" as const, color: "#000", marginTop: "7mm", marginBottom: "2mm", paddingBottom: "1.5mm", borderBottom: "1px solid #aaa", letterSpacing: "0.03em", lineHeight: 1.1 }}>Arbeidserfaring</div>
+              {([["2025 –", "STACQ AS"], ["2024 – 2025", "RESPINOR AS"], ["2022 – 2024", "Cardiaccs AS"], ["2017 – 2022", "Glucoset AS"]] as [string, string][]).map(([year, company]) => (
+                <div key={year} style={{ display: "flex", gap: "8mm", fontSize: "10pt", lineHeight: 1.7, marginBottom: "1mm" }}>
+                  <span style={{ minWidth: "22mm", flexShrink: 0 }}>{year}</span>
                   <span>{company}</span>
                 </div>
               ))}
+
             </div>
           </div>
         </div>
@@ -328,3 +276,4 @@ export default function CVMaker() {
     </div>
   );
 }
+```
