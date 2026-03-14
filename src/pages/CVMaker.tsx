@@ -69,11 +69,11 @@ export default function CVMaker() {
         </div>
 
         {/* NAME BAND */}
-        <div style={{ background: "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)", padding: "28px 40px 24px 28px", display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
-          <div style={{ color: "#fff", fontSize: 28, fontWeight: 700, letterSpacing: "-0.01em" }}>
+        <div style={{ background: "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)", padding: "28px 40px 24px 28px", marginLeft: 165, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+          <div style={{ color: "#fff", fontSize: "40pt", fontWeight: 700, letterSpacing: "-0.01em", lineHeight: 1.1 }}>
             Mattis Spieler Asp
           </div>
-          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: 400, maxWidth: 320, textAlign: "right" }}>
+          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "14pt", fontWeight: 400, flexShrink: 0, marginLeft: "8mm", marginBottom: "2mm" }}>
             Senior Embedded-ingeniør med 8 års erfaring
           </div>
         </div>
