@@ -1,4 +1,7 @@
 import { useEffect } from "react";
+import html2pdf from 'html2pdf.js';
+
+declare module 'html2pdf.js';
 
 export default function CVMaker() {
   useEffect(() => {
