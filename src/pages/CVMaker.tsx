@@ -120,7 +120,7 @@ export default function CVMaker() {
             }}
           >
             <img
-              src="/logo.png"
+              src="/STACQ_logo.png"
               alt="STACQ logo"
               style={{ height: "8mm", objectFit: "contain", filter: "brightness(0) invert(1)" }}
               onError={(e) => {
@@ -171,19 +171,18 @@ export default function CVMaker() {
               padding: "4mm 3mm 0 3mm",
             }}
           >
-            <div
+            <img
+              src="/cv-photos/mattis.png"
+              alt="Mattis Spieler Asp"
               style={{
                 width: "48mm",
                 height: "48mm",
                 borderRadius: "2mm",
+                objectFit: "cover",
+                objectPosition: "center top",
                 background: PHOTO_PLACEHOLDER_COLOR,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
               }}
-            >
-              {/* Photo placeholder */}
-            </div>
+            />
           </div>
 
           {/* Name + tagline */}
