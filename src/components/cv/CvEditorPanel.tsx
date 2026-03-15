@@ -171,42 +171,47 @@ export function CvEditorPanel({
   };
 
   return (
-    <div className="flex h-full bg-background">
-      {/* LEFT PANEL — Live Preview */}
-      <div ref={previewContainerRef} className="flex-1 min-w-0 overflow-y-auto bg-[#d7d7d7] p-4">
-        <CvRendererPreview doc={doc} imageUrl={imageUrl} scale={previewScale} />
-      </div>
+    <div className="flex flex-col h-full bg-background">
+      {/* External toolbar if provided */}
+      {renderToolbar
+        ? renderToolbar({ saveStatus, onDownload: handleDownloadClick })
+        : (
+          <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2 text-[0.8125rem]">
+              {toolbarStart}
+              {saveStatus === "saving" && (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                  <span className="text-muted-foreground">Lagrer...</span>
+                </>
+              )}
+              {saveStatus === "saved" && (
+                <>
+                  <Check className="h-3.5 w-3.5 text-emerald-600" />
+                  <span className="text-emerald-600">Lagret</span>
+                </>
+              )}
+              {saveStatus === "idle" && <span className="text-muted-foreground">{headerLabel || "CV Editor"}</span>}
+            </div>
+            <div className="flex items-center gap-2">
+              {toolbarEnd}
+              <Button size="sm" variant="outline" onClick={handleDownloadClick}>
+                <Download className="h-3.5 w-3.5 mr-1" /> Last ned PDF
+              </Button>
+            </div>
+          </div>
+        )}
 
-      {/* RIGHT PANEL — Editor */}
-      <div className="w-[480px] shrink-0 border-l border-border overflow-y-auto bg-background">
-        {/* Save status bar */}
-        <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-[0.8125rem]">
-            {toolbarStart}
-            {saveStatus === "saving" && (
-              <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                <span className="text-muted-foreground">Lagrer...</span>
-              </>
-            )}
-            {saveStatus === "saved" && (
-              <>
-                <Check className="h-3.5 w-3.5 text-emerald-600" />
-                <span className="text-emerald-600">Lagret</span>
-              </>
-            )}
-            {saveStatus === "idle" && <span className="text-muted-foreground">{headerLabel || "CV Editor"}</span>}
-          </div>
-          <div className="flex items-center gap-2">
-            {toolbarEnd}
-            <Button size="sm" variant="outline" onClick={handleDownloadClick}>
-              <Download className="h-3.5 w-3.5 mr-1" /> Last ned PDF
-            </Button>
-          </div>
+      <div className="flex flex-1 min-h-0">
+        {/* LEFT PANEL — Live Preview */}
+        <div ref={previewContainerRef} className="flex-1 min-w-0 overflow-y-auto bg-[#d7d7d7] p-4">
+          <CvRendererPreview doc={doc} imageUrl={imageUrl} scale={previewScale} />
         </div>
 
-        <div className="p-4 space-y-1">
-          <Accordion type="multiple" defaultValue={["profil", "prosjekter"]} className="space-y-0">
+        {/* RIGHT PANEL — Editor */}
+        <div className="w-[480px] shrink-0 border-l border-border overflow-y-auto bg-background">
+          <div className="p-4 space-y-1">
+            <Accordion type="multiple" defaultValue={["profil", "prosjekter"]} className="space-y-0">
             {/* PROFIL */}
             <AccordionItem value="profil">
               <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">Profil</AccordionTrigger>
