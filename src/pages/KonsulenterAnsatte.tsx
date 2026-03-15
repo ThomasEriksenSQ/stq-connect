@@ -719,7 +719,7 @@ export default function KonsulenterAnsatte() {
       </div>
 
       <AnsattModal open={modalOpen} onClose={() => setModalOpen(false)} ansatt={editAnsatt} />
-      <AnsattDetailSheet open={detailOpen} onClose={() => setDetailOpen(false)} ansatt={detailAnsatt} />
+      <AnsattDetailSheet open={detailOpen} onClose={() => setDetailOpen(false)} ansatt={detailAnsatt} onEdit={() => { setDetailOpen(false); setEditAnsatt(detailAnsatt); setModalOpen(true); }} />
     </div>
   );
 }
