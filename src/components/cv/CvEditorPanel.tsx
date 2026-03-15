@@ -40,6 +40,8 @@ interface CvEditorPanelProps {
   toolbarStart?: ReactNode;
   toolbarEnd?: ReactNode;
   onDownloadPdf?: (doc: CVDocument) => Promise<void> | void;
+  /** When provided, the internal toolbar is hidden and this render prop is called instead */
+  renderToolbar?: (opts: { saveStatus: SaveStatus; onDownload: () => Promise<void> }) => ReactNode;
 }
 
 type SaveStatus = "idle" | "saving" | "saved";
