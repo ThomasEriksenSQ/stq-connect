@@ -243,25 +243,6 @@ export default function KonsulenterAnsatte() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-              {/* ANSATT */}
-              <div className="flex items-center gap-1">
-                <span
-                  className={cn(
-                    "rounded-full px-2.5 py-0.5 text-xs font-medium",
-                    status === "Aktiv" && "bg-emerald-100 text-emerald-700",
-                    status === "Kommende" && "bg-amber-100 text-amber-700",
-                    status === "Sluttet" && "bg-muted text-muted-foreground"
-                  )}
-                >
-                  {status}
-                </span>
-                {a.synlig_web && <Globe className="h-3 w-3 text-primary flex-shrink-0" />}
-              </div>
-              {/* KONTAKT */}
-              <div className="flex flex-col min-w-0">
-                <span className="text-[0.8125rem] text-muted-foreground truncate">{a.tlf}</span>
-                <span className="text-[0.6875rem] text-muted-foreground/70 mt-0.5 truncate">{a.epost}</span>
-              </div>
               {/* EDIT */}
               <button
                 onClick={(e) => { e.stopPropagation(); setDetailAnsatt(a); setDetailOpen(true); }}
