@@ -62,12 +62,6 @@ export default function ImporterCver() {
   const [dragOver, setDragOver] = useState(false);
 
   // Fetch existing records for matching
-  const { data: ansatte = [] } = useQuery({
-    queryKey: ["stacq-ansatte"],
-    queryFn: async () => {
-      const { data } = await supabase.from("stacq_ansatte").select("id, navn, kompetanse");
-      return data || [];
-    },
   });
 
   const { data: eksterne = [] } = useQuery({
