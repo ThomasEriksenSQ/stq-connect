@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sparkles, Loader2, Target, RefreshCw, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -46,16 +46,24 @@ function FristBadge({ fristDato }: { fristDato: string | null }) {
 export function OppdragsMatchPanel({
   konsulent,
   foresporslerData,
+  autoRunMatch,
 }: {
   konsulent: Konsulent;
   /** Pre-fetched forespørsler to avoid duplicate queries */
   foresporslerData?: any[] | null;
+  autoRunMatch?: boolean;
 }) {
   const navigate = useNavigate();
   const [matching, setMatching] = useState(false);
   const [results, setResults] = useState<ForespørselMatch[] | null>(null);
   const [filter, setFilter] = useState<MatchFilter>("Alle");
   const [foresporsler, setForesporsler] = useState<any[]>(foresporslerData || []);
+
+  useEffect(() => {
+    if (autoRunMatch && konsulent.navn) {
+      runMatch();
+    }
+  }, [autoRunMatch, konsulent.navn]);
 
   const runMatch = async () => {
     setMatching(true);

@@ -20,6 +20,7 @@ export default function KonsulenterAnsatte() {
   const [detailAnsatt, setDetailAnsatt] = useState<any | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [openEditMode, setOpenEditMode] = useState(false);
+  const [autoRunMatch, setAutoRunMatch] = useState(false);
   const today = new Date();
 
   const { data: ansatte = [], isLoading } = useQuery({
@@ -247,7 +248,7 @@ export default function KonsulenterAnsatte() {
               {/* HANDLINGER */}
               <div className="flex items-center gap-1.5">
                 <button
-                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); setDetailAnsatt(a); setOpenEditMode(false); setDetailOpen(true); }}
+                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); setDetailAnsatt(a); setOpenEditMode(false); setAutoRunMatch(true); setDetailOpen(true); }}
                   className="inline-flex items-center gap-1 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
                 >
                   <Sparkles className="h-3.5 w-3.5" />
@@ -269,7 +270,7 @@ export default function KonsulenterAnsatte() {
         )}
       </div>
 
-      <AnsattDetailSheet open={detailOpen} onClose={() => setDetailOpen(false)} ansatt={detailAnsatt} openInEditMode={openEditMode} />
+      <AnsattDetailSheet open={detailOpen} onClose={() => { setDetailOpen(false); setAutoRunMatch(false); }} ansatt={detailAnsatt} openInEditMode={openEditMode} autoRunMatch={autoRunMatch} />
     </div>
   );
 }
