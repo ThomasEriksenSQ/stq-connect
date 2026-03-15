@@ -89,13 +89,12 @@ export default function ImporterCver() {
   };
 
   const matchToExisting = useCallback(
-    (navn: string | undefined, currentTab: Tab) => {
+    (navn: string | undefined) => {
       if (!navn) return { id: null, name: null, score: 0 };
-      const list = currentTab === "ansatte" ? ansatte : eksterne;
       let bestId: number | string | null = null;
       let bestName: string | null = null;
       let bestScore = 0;
-      for (const item of list) {
+      for (const item of eksterne) {
         const itemName = item.navn || "";
         const score = fuzzyScore(navn, itemName);
         if (score > bestScore) {
@@ -106,7 +105,7 @@ export default function ImporterCver() {
       }
       return bestScore >= 0.5 ? { id: bestId, name: bestName, score: bestScore } : { id: null, name: null, score: 0 };
     },
-    [ansatte, eksterne]
+    [eksterne]
   );
 
   const handleFiles = async (files: FileList | File[]) => {
