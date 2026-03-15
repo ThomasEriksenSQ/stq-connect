@@ -204,6 +204,7 @@ export default function KonsulenterAnsatte() {
                   </div>
                 )}
                 <span className="font-medium text-[0.8125rem] truncate">{a.navn}</span>
+              </div>
               {/* START */}
               <div className="text-[0.8125rem]">
                 {isKommende ? (
