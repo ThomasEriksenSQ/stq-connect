@@ -165,31 +165,6 @@ export default function ImporterCver() {
 
   // ── Save handlers ──
 
-  const saveAnsattUpdate = async (cv: ParsedCV) => {
-    if (!cv.matchedId || !cv.data) return;
-    const { error } = await supabase.from("stacq_ansatte").update({
-      kompetanse: cv.data.kompetanse || [],
-      bio: cv.data.bio || null,
-      erfaring_aar: cv.data.erfaring_aar || null,
-      geografi: cv.data.geografi || null,
-      updated_at: new Date().toISOString(),
-    }).eq("id", cv.matchedId as number);
-    if (error) throw error;
-  };
-
-  const saveAnsattNew = async (cv: ParsedCV) => {
-    if (!cv.data) return;
-    const { error } = await supabase.from("stacq_ansatte").insert({
-      navn: cv.data.navn || cv.file.name.replace(".pdf", ""),
-      kompetanse: cv.data.kompetanse || [],
-      bio: cv.data.bio || null,
-      erfaring_aar: cv.data.erfaring_aar || null,
-      geografi: cv.data.geografi || null,
-      status: "AKTIV/SIGNERT",
-    });
-    if (error) throw error;
-  };
-
   const saveEksternUpdate = async (cv: ParsedCV) => {
     if (!cv.matchedId || !cv.data) return;
     const { error } = await supabase.from("external_consultants").update({
