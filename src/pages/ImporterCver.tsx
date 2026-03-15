@@ -226,7 +226,7 @@ export default function ImporterCver() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-[1.5rem] font-bold text-foreground">Importer CVer</h1>
+        <h1 className="text-[1.5rem] font-bold text-foreground">Importer CVer til eksterne</h1>
       </div>
 
 
