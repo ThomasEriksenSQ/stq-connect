@@ -79,7 +79,7 @@ export default function CvAdmin() {
   const [versions, setVersions] = useState<any[]>([]);
   const [cvUploadParsing, setCvUploadParsing] = useState(false);
   const cvUploadRef = useRef<HTMLInputElement>(null);
-  const [fullscreen, setFullscreen] = useState(false);
+  const [fullscreen, setFullscreen] = useState(true);
 
   useEffect(() => {
     if (!ansattId || !user) return;
