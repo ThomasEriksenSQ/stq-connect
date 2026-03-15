@@ -287,7 +287,7 @@ export default function KonsulenterAnsatte() {
                 </button>
               </div>
               {/* HANDLINGER */}
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 justify-end">
                 <button
                   onClick={(e) => { e.stopPropagation(); e.preventDefault(); setDetailAnsatt(a); setOpenEditMode(false); setAutoRunMatch(true); setDetailOpen(true); }}
                   className="inline-flex items-center gap-1 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
