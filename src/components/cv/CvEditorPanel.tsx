@@ -8,11 +8,14 @@ import {
   type TimelineEntry,
   type SidebarSection,
 } from "./CvRenderer";
+import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Plus, Trash2, GripVertical, Download, Check, Loader2 } from "lucide-react";
+import { Plus, Trash2, GripVertical, Download, Check, Loader2, Upload } from "lucide-react";
+import { toast } from "sonner";
+import { getInitials } from "@/lib/utils";
 import {
   DndContext,
   closestCenter,
