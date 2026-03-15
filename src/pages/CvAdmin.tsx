@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CvEditorPanel } from "@/components/cv/CvEditorPanel";
 import { openCvPrintDialog, type CVDocument } from "@/components/cv/CvRenderer";
 import { toast } from "sonner";
