@@ -230,7 +230,7 @@ export function CvEditorPanel({
       <div className="flex flex-1 min-h-0">
         {/* LEFT PANEL — Live Preview */}
         <div ref={previewContainerRef} className="flex-1 min-w-0 overflow-y-auto bg-[#d7d7d7] p-4">
-          <CvRendererPreview doc={doc} imageUrl={imageUrl} scale={previewScale} />
+          <CvRendererPreview doc={doc} imageUrl={doc.hero.portrait_url || imageUrl} scale={previewScale} />
         </div>
 
         {/* RIGHT PANEL — Editor */}
