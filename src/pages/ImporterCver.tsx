@@ -56,7 +56,7 @@ const TYPE_CHIP_OFF = `${TYPE_CHIP_BASE} border-border text-muted-foreground hov
 
 export default function ImporterCver() {
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<Tab>("ansatte");
+  const tab: Tab = "eksterne";
   const [cvs, setCvs] = useState<ParsedCV[]>([]);
   const [processing, setProcessing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
