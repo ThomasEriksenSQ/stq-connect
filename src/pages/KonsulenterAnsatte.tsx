@@ -160,8 +160,8 @@ export default function KonsulenterAnsatte() {
       {/* Table */}
       <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
         {/* Header */}
-        <div className="grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_40px] gap-3 px-4 py-2.5 border-b border-border bg-background">
-          {["NAVN", "START", "ANSETTELSE", "OPPDRAG", ""].map((h) => (
+        <div className="grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_160px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          {["NAVN", "START", "ANSETTELSE", "OPPDRAG", "HANDLINGER"].map((h) => (
             <span key={h} className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">{h}</span>
           ))}
         </div>
