@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
-import { ArrowLeft, Check, Download, History, Loader2, Maximize2, Minimize2, RotateCcw, Upload } from "lucide-react";
+import { ArrowLeft, Check, Download, History, Loader2, Maximize2, Minimize2, RotateCcw, Sparkles } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -213,23 +213,29 @@ export default function CvAdmin() {
           return;
         }
 
-        setCvData((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            hero: {
-              ...prev.hero,
-              name: data.navn || prev.hero.name,
-              title: data.tittel || prev.hero.title,
-            },
-            introParagraphs: data.introParagraphs?.length ? data.introParagraphs : prev.introParagraphs,
-            competenceGroups: data.competenceGroups?.length ? data.competenceGroups : prev.competenceGroups,
-            projects: data.projects?.length ? data.projects : prev.projects,
-            education: data.education?.length ? data.education : prev.education,
-            workExperience: data.workExperience?.length ? data.workExperience : prev.workExperience,
-            sidebarSections: data.sidebarSections?.length ? data.sidebarSections : prev.sidebarSections,
-          };
-        });
+        const newDoc: CVDocument = {
+          ...(cvData || EMPTY_CV),
+          hero: {
+            ...(cvData || EMPTY_CV).hero,
+            name: data.navn || (cvData || EMPTY_CV).hero.name,
+            title: data.tittel || (cvData || EMPTY_CV).hero.title,
+          },
+          introParagraphs: data.introParagraphs?.length ? data.introParagraphs : (cvData || EMPTY_CV).introParagraphs,
+          competenceGroups: data.competenceGroups?.length ? data.competenceGroups : (cvData || EMPTY_CV).competenceGroups,
+          projects: data.projects?.length ? data.projects : (cvData || EMPTY_CV).projects,
+          education: data.education?.length ? data.education : (cvData || EMPTY_CV).education,
+          workExperience: data.workExperience?.length ? data.workExperience : (cvData || EMPTY_CV).workExperience,
+          sidebarSections: data.sidebarSections?.length ? data.sidebarSections : (cvData || EMPTY_CV).sidebarSections,
+        };
+
+        setCvData(newDoc);
+
+        if (cvId) {
+          await supabase
+            .from("cv_documents")
+            .update(cvDocToDbRow(newDoc) as any)
+            .eq("id", cvId);
+        }
 
         toast.success("CV fullstendig analysert — alle seksjoner er fylt inn");
       } catch {
@@ -313,10 +319,15 @@ export default function CvAdmin() {
                     Analyserer CV med AI...
                   </span>
                 ) : (
-                  <Button size="sm" variant="ghost" className="border border-border" onClick={() => cvUploadRef.current?.click()}>
-                    <Upload className="h-3.5 w-3.5 mr-1" />
-                    Last opp CV
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button size="sm" variant="ghost" className="border border-border" onClick={() => cvUploadRef.current?.click()}>
+                        <Sparkles className="h-3.5 w-3.5 mr-1" />
+                        AI-analyse av CV
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Last opp eksisterende CV — AI fyller inn feltene automatisk</TooltipContent>
+                  </Tooltip>
                 )}
                 <input ref={cvUploadRef} type="file" accept=".pdf" className="hidden" onChange={handleCvUpload} />
                 <Button size="sm" onClick={onDownload}>
