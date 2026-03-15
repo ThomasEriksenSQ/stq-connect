@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState } from "react";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
 import { format, differenceInMonths, isAfter } from "date-fns";
-import { Pencil, Plus, Sparkles } from "lucide-react";
+import { FileText, Pencil, Plus, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
 import {
   DropdownMenu,
@@ -21,6 +22,7 @@ export default function KonsulenterAnsatte() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [openEditMode, setOpenEditMode] = useState(false);
   const [autoRunMatch, setAutoRunMatch] = useState(false);
+  const navigate = useNavigate();
   const today = new Date();
 
   const { data: ansatte = [], isLoading } = useQuery({
@@ -161,8 +163,8 @@ export default function KonsulenterAnsatte() {
       {/* Table */}
       <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
         {/* Header */}
-        <div className="grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_160px] gap-3 px-4 py-2.5 border-b border-border bg-background">
-          {["NAVN", "START", "ANSETTELSE", "OPPDRAG", "HANDLINGER"].map((h) => (
+        <div className="grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_80px_160px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          {["NAVN", "START", "ANSETTELSE", "OPPDRAG", "CV", "HANDLINGER"].map((h) => (
             <span key={h} className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">{h}</span>
           ))}
         </div>
@@ -190,7 +192,7 @@ export default function KonsulenterAnsatte() {
             <div
               key={a.id}
               className={cn(
-                "group grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_160px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75",
+                "group grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_80px_160px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75",
                 isKommende && "opacity-80",
                 isSluttet && "opacity-50"
               )}
@@ -244,6 +246,16 @@ export default function KonsulenterAnsatte() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+              </div>
+              {/* CV */}
+              <div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); navigate(`/cv-admin/${a.id}`); }}
+                  className="inline-flex items-center gap-1 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  CV
+                </button>
               </div>
               {/* HANDLINGER */}
               <div className="flex items-center gap-1.5">
