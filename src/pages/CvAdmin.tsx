@@ -319,10 +319,15 @@ export default function CvAdmin() {
                     Analyserer CV med AI...
                   </span>
                 ) : (
-                  <Button size="sm" variant="ghost" className="border border-border" onClick={() => cvUploadRef.current?.click()}>
-                    <Upload className="h-3.5 w-3.5 mr-1" />
-                    Last opp CV
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button size="sm" variant="ghost" className="border border-border" onClick={() => cvUploadRef.current?.click()}>
+                        <Sparkles className="h-3.5 w-3.5 mr-1" />
+                        AI-analyse av CV
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Last opp eksisterende CV — AI fyller inn feltene automatisk</TooltipContent>
+                  </Tooltip>
                 )}
                 <input ref={cvUploadRef} type="file" accept=".pdf" className="hidden" onChange={handleCvUpload} />
                 <Button size="sm" onClick={onDownload}>
