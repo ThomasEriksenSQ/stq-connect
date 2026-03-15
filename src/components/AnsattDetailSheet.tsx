@@ -136,7 +136,6 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
       if (data.erfaring_aar) set("erfaring_aar", String(data.erfaring_aar));
       if (data.kompetanse?.length) set("kompetanse", data.kompetanse);
       if (data.geografi) set("geografi", data.geografi);
-      if (data.bio) set("bio", data.bio);
       setCvParsed(true);
       toast.success("CV analysert — feltene er fylt inn");
     } catch (err) {
