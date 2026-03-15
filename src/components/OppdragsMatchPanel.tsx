@@ -46,10 +46,12 @@ function FristBadge({ fristDato }: { fristDato: string | null }) {
 export function OppdragsMatchPanel({
   konsulent,
   foresporslerData,
+  autoRunMatch,
 }: {
   konsulent: Konsulent;
   /** Pre-fetched forespørsler to avoid duplicate queries */
   foresporslerData?: any[] | null;
+  autoRunMatch?: boolean;
 }) {
   const navigate = useNavigate();
   const [matching, setMatching] = useState(false);
