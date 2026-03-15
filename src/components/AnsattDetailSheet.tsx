@@ -1,6 +1,6 @@
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { getInitials, cn } from "@/lib/utils";
-import { Globe, FileText, Pencil, X, Loader2, Upload, Sparkles, Mail, Phone, MapPin, Calendar, Briefcase } from "lucide-react";
+import { FileText, Pencil, X, Loader2, Upload, Sparkles } from "lucide-react";
 import { format, differenceInMonths } from "date-fns";
 import { formatMonths } from "@/lib/utils";
 import { OppdragsMatchPanel } from "@/components/OppdragsMatchPanel";
@@ -448,84 +448,10 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                 autoRunMatch={autoRunMatch}
               />
               </div>
-
             </div>
           </>
         )}
       </SheetContent>
     </Sheet>
-  );
-}
-      const pinHashValue = await hashPin(pin);
-
-      // Upsert token for this ansatt
-      const { data: existing } = await supabase
-        .from("cv_access_tokens")
-        .select("id")
-        .eq("ansatt_id", ansattId)
-        .maybeSingle();
-
-      const expires = new Date();
-      expires.setFullYear(expires.getFullYear() + 1);
-
-      if (existing) {
-        await supabase.from("cv_access_tokens").update({
-          pin_hash: pinHashValue,
-          expires_at: expires.toISOString(),
-        }).eq("id", existing.id);
-      }
-
-      let tokenValue: string;
-      if (existing) {
-        const { data: row } = await supabase.from("cv_access_tokens").select("token").eq("id", existing.id).single();
-        tokenValue = row?.token || "";
-      } else {
-        const { data: inserted } = await supabase.from("cv_access_tokens").insert({
-          ansatt_id: ansattId,
-          pin_hash: pinHashValue,
-          expires_at: expires.toISOString(),
-        }).select("token").single();
-        tokenValue = inserted?.token || "";
-      }
-
-      // Also ensure cv_documents exists
-      const { data: cvDoc } = await supabase.from("cv_documents").select("id").eq("ansatt_id", ansattId).maybeSingle();
-      if (!cvDoc) {
-        await supabase.from("cv_documents").insert({
-          ansatt_id: ansattId,
-          hero_name: ansattNavn || "",
-        });
-      }
-
-      const url = `https://stq-connect.lovable.app/cv/${tokenValue}`;
-      await navigator.clipboard.writeText(url);
-      toast.success(`Link kopiert! PIN: ${pin} — del dette med ${ansattNavn || "ansatt"}`);
-    } catch (err) {
-      console.error(err);
-      toast.error("Kunne ikke generere lenke");
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  return (
-    <div className="mt-5 pt-5 border-t border-border">
-      <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-3">CV</p>
-      <div className="flex gap-2">
-        <button
-          onClick={() => navigate(`/cv-admin/${ansattId}`)}
-          className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-        >
-          <ExternalLink className="h-3.5 w-3.5" /> Åpne CV-editor
-        </button>
-        <button
-          onClick={generateLink}
-          disabled={generating}
-          className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
-        >
-          <Link2 className="h-3.5 w-3.5" /> {generating ? "Genererer..." : "Generer ansatt-link"}
-        </button>
-      </div>
-    </div>
   );
 }
