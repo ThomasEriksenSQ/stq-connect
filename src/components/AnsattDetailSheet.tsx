@@ -237,11 +237,6 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
               </div>
 
               <div>
-                <label className={LABEL}>Sted</label>
-                <Input value={form.geografi} onChange={(e) => set("geografi", e.target.value)} className="mt-1 text-[0.875rem]" placeholder="Oslo" />
-              </div>
-
-              <div>
                 <label className={cn(LABEL, "mb-1.5 block")}>Status</label>
                 <div className="flex gap-2">
                   {STATUS_OPTIONS.map((s) => (
@@ -262,7 +257,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
               </div>
 
               {/* ── PROFIL ── */}
-              <div className="space-y-3">
+              <div className="space-y-3 mt-6">
                 <label className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">
                   Profil — vises på nettsiden
                 </label>
