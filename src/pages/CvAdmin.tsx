@@ -72,6 +72,8 @@ export default function CvAdmin() {
   const [imageUrl, setImageUrl] = useState<string | undefined>();
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [versions, setVersions] = useState<any[]>([]);
+  const [cvUploadParsing, setCvUploadParsing] = useState(false);
+  const cvUploadRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!ansattId || !user) return;
