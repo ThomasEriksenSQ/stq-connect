@@ -261,7 +261,7 @@ export default function CvAdmin() {
 
   return (
     <>
-      <div className="h-screen flex flex-col">
+      <div className={fullscreen ? "fixed inset-0 z-50 bg-background flex flex-col" : "h-screen flex flex-col"}>
         <CvEditorPanel
           cvData={cvData}
           onSave={handleSave}
