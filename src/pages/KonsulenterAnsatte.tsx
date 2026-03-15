@@ -188,9 +188,8 @@ export default function KonsulenterAnsatte() {
           return (
             <div
               key={a.id}
-              onClick={() => { setDetailAnsatt(a); setDetailOpen(true); }}
               className={cn(
-                "group grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_40px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 cursor-pointer",
+                "group grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_160px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75",
                 isKommende && "opacity-80",
                 isSluttet && "opacity-50"
               )}
@@ -245,13 +244,22 @@ export default function KonsulenterAnsatte() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-              {/* EDIT */}
-              <button
-                onClick={(e) => { e.stopPropagation(); setDetailAnsatt(a); setDetailOpen(true); }}
-                className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
+              {/* HANDLINGER */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); setDetailAnsatt(a); setOpenEditMode(false); setDetailOpen(true); }}
+                  className="inline-flex items-center gap-1 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Finn oppdrag
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); setDetailAnsatt(a); setOpenEditMode(true); setDetailOpen(true); }}
+                  className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground border border-border"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
           );
         })}
