@@ -1,13 +1,10 @@
-cd ~/Documents/GitHub/stq-connect && node << 'EOF'
-const fs = require('fs');
-
-const content = `import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function CVMaker() {
   useEffect(() => {
     const style = document.createElement("style");
     style.id = "cv-print-styles";
-    style.textContent = \`
+    style.textContent = `
       @media print {
         @page { size: A4; margin: 0; }
         * { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
@@ -19,7 +16,7 @@ export default function CVMaker() {
         .cv-project-block { page-break-inside: avoid; break-inside: avoid; }
         p { orphans: 3; widows: 3; }
       }
-    \`;
+    `;
     document.head.appendChild(style);
     return () => { document.getElementById("cv-print-styles")?.remove(); };
   }, []);
@@ -30,7 +27,7 @@ export default function CVMaker() {
     const timer = setTimeout(() => {
       const cvDoc = document.querySelector('.cv-document');
       const prosjekter = Array.from(document.querySelectorAll('.cv-document div')).find((d) =>
-        d.textContent.trim() === 'Prosjekter'
+        d.textContent?.trim() === 'Prosjekter'
       );
       if (cvDoc && prosjekter) {
         const cvTop = cvDoc.getBoundingClientRect().top;
@@ -157,8 +154,4 @@ export default function CVMaker() {
       </div>
     </div>
   );
-}`;
-
-fs.writeFileSync('src/pages/CVMaker.tsx', content);
-console.log('done, lines:', content.split('\n').length);
-EOF
+}
