@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 import { Plus, X, Search, CalendarIcon, Upload, CheckCircle2, Loader2, Users, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { relativeFutureDate } from "@/lib/relativeDate";
 import { OppdragsMatchPanel } from "@/components/OppdragsMatchPanel";
 import { Calendar } from "@/components/ui/calendar";
