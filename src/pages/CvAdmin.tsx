@@ -206,23 +206,43 @@ export default function CvAdmin() {
           onSave={handleSave}
           savedBy={user.email || "crm"}
           imageUrl={imageUrl}
-          headerLabel={ansattName ? `${ansattName} — CV` : "CV"}
-          toolbarStart={
-            <button
-              onClick={() => navigate("/konsulenter/ansatte")}
-              className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-[0.8125rem]"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Tilbake
-            </button>
-          }
-          toolbarEnd={
-            <Button size="sm" variant="ghost" onClick={loadVersions}>
-              <History className="h-3.5 w-3.5 mr-1" />
-              Versjonshistorikk
-            </Button>
-          }
           onDownloadPdf={handleDownloadPdf}
+          renderToolbar={({ saveStatus, onDownload }) => (
+            <div className="sticky top-0 z-10 bg-background border-b border-border px-6 py-3 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3 text-[0.8125rem]">
+                <button
+                  onClick={() => navigate("/konsulenter/ansatte")}
+                  className="text-muted-foreground hover:text-foreground flex items-center gap-1"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  Tilbake
+                </button>
+                <span className="text-foreground font-medium">{ansattName ? `${ansattName} — CV` : "CV"}</span>
+                {saveStatus === "saving" && (
+                  <span className="flex items-center gap-1 text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Lagrer...
+                  </span>
+                )}
+                {saveStatus === "saved" && (
+                  <span className="flex items-center gap-1 text-emerald-600">
+                    <Check className="h-3.5 w-3.5" />
+                    Lagret
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="ghost" onClick={loadVersions}>
+                  <History className="h-3.5 w-3.5 mr-1" />
+                  Versjonshistorikk
+                </Button>
+                <Button size="sm" onClick={onDownload}>
+                  <Download className="h-3.5 w-3.5 mr-1" />
+                  Last ned PDF
+                </Button>
+              </div>
+            </div>
+          )}
         />
       </div>
 
