@@ -20,6 +20,7 @@ export default function KonsulenterAnsatte() {
   const [detailAnsatt, setDetailAnsatt] = useState<any | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [openEditMode, setOpenEditMode] = useState(false);
+  const [autoRunMatch, setAutoRunMatch] = useState(false);
   const today = new Date();
 
   const { data: ansatte = [], isLoading } = useQuery({
