@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 // ═══════════════════════════════════════
 // Types
@@ -19,8 +19,14 @@ export type ProjectEntry = {
   subtitle: string;
   role: string;
   period: string;
+  startMonth?: number | null;
+  startYear?: number | null;
+  endMonth?: number | null;
+  endYear?: number | null;
+  isCurrent?: boolean;
   paragraphs: string[];
   technologies: string;
+  pageBreakBefore?: boolean;
 };
 
 export type TimelineEntry = {
@@ -102,6 +108,8 @@ export const CV_PRINT = {
 const CONTINUATION_BOTTOM_PADDING_MM = 10.2;
 const CONTINUATION_TARGET_BOTTOM_MARGIN_MM = 14.5;
 const CONTINUATION_BOTTOM_BUFFER_MM = CONTINUATION_TARGET_BOTTOM_MARGIN_MM - CONTINUATION_BOTTOM_PADDING_MM;
+const PROJECT_BLOCK_MARGIN_BOTTOM_MM = 6.4;
+const PROJECT_FRAGMENT_FIT_SAFETY_MM = 0.8;
 
 // ═══════════════════════════════════════
 // Print CSS
@@ -243,8 +251,181 @@ function measureOuterHeight(element: HTMLElement | null) {
   return element.getBoundingClientRect().height + parseFloat(computed.marginTop) + parseFloat(computed.marginBottom);
 }
 
+export const PROJECT_MONTH_OPTIONS = [
+  { value: 1, label: "jan." },
+  { value: 2, label: "feb." },
+  { value: 3, label: "mar." },
+  { value: 4, label: "apr." },
+  { value: 5, label: "mai" },
+  { value: 6, label: "jun." },
+  { value: 7, label: "jul." },
+  { value: 8, label: "aug." },
+  { value: 9, label: "sep." },
+  { value: 10, label: "okt." },
+  { value: 11, label: "nov." },
+  { value: 12, label: "des." },
+] as const;
+
+const PROJECT_MONTH_LABELS = new Map(PROJECT_MONTH_OPTIONS.map((entry) => [entry.value, entry.label]));
+
+function normalizeProjectMonth(value: number | null | undefined) {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 12 ? value : null;
+}
+
+function normalizeProjectYear(value: number | null | undefined) {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : null;
+}
+
+function formatProjectMonthYear(month: number | null | undefined, year: number | null | undefined) {
+  const safeMonth = normalizeProjectMonth(month);
+  const safeYear = normalizeProjectYear(year);
+  if (!safeMonth || !safeYear) return "";
+  const monthLabel = PROJECT_MONTH_LABELS.get(safeMonth);
+  return monthLabel ? `${monthLabel} ${safeYear}` : "";
+}
+
+export function formatProjectPeriod(
+  project: Pick<ProjectEntry, "period" | "startMonth" | "startYear" | "endMonth" | "endYear" | "isCurrent">,
+) {
+  const startLabel = formatProjectMonthYear(project.startMonth, project.startYear);
+  const endLabel = formatProjectMonthYear(project.endMonth, project.endYear);
+  const fallback = (project.period || "").trim();
+
+  if (!startLabel) return fallback;
+  if (project.isCurrent) return `${startLabel} - nåværende`;
+  if (endLabel) return `${startLabel} - ${endLabel}`;
+  return startLabel;
+}
+
 function getProjectKey(project: ProjectEntry) {
-  return `${project.company}-${project.subtitle}`;
+  const formattedPeriod = formatProjectPeriod(project);
+  return [
+    project.company,
+    project.subtitle,
+    formattedPeriod,
+    project.role,
+    project.paragraphs.length.toString(),
+    project.technologies,
+  ]
+    .map((part) => (part || "").trim())
+    .join("::");
+}
+
+function splitParagraphForFlow(text: string, targetChars = 220) {
+  const trimmed = text.trim();
+  void targetChars;
+  // Keep original paragraphs atomic in the paginator. This matches the editor
+  // model better and avoids false whitespace caused by measuring synthetic chunks.
+  return [trimmed];
+}
+
+function buildProjectFragments(project: ProjectEntry): ProjectFragment[] {
+  const fragments: ProjectFragment[] = [];
+  const projectKey = getProjectKey(project);
+  const formattedPeriod = formatProjectPeriod(project);
+  const baseMeta = {
+    projectKey,
+    company: project.company,
+    subtitle: project.subtitle,
+    role: project.role,
+    period: formattedPeriod,
+  };
+
+  if (project.paragraphs.length === 0) {
+    fragments.push({
+      key: `${projectKey}-chunk-header`,
+      showHeader: true,
+      forcePageBreakBefore: Boolean(project.pageBreakBefore),
+      ...baseMeta,
+      paragraphs: [],
+      spacingAfterMm: project.technologies ? 0 : PROJECT_BLOCK_MARGIN_BOTTOM_MM,
+    });
+
+    if (project.technologies) {
+      fragments.push({
+        key: `${projectKey}-chunk-technologies`,
+        showHeader: false,
+        ...baseMeta,
+        paragraphs: [],
+        technologies: project.technologies,
+        spacingAfterMm: PROJECT_BLOCK_MARGIN_BOTTOM_MM,
+      });
+    }
+
+    return fragments;
+  }
+
+  project.paragraphs.forEach((paragraph, paragraphIndex) => {
+    const segments = splitParagraphForFlow(paragraph);
+    segments.forEach((segment, segmentIndex) => {
+      const isFirstChunk = paragraphIndex === 0 && segmentIndex === 0;
+      const isLastSegmentOfParagraph = segmentIndex === segments.length - 1;
+      const isLastParagraph = paragraphIndex === project.paragraphs.length - 1;
+      const isLastChunkOfProject = isLastParagraph && isLastSegmentOfParagraph;
+
+      fragments.push({
+        key: `${projectKey}-chunk-${paragraphIndex + 1}-${segmentIndex + 1}`,
+        showHeader: isFirstChunk,
+        forcePageBreakBefore: isFirstChunk ? Boolean(project.pageBreakBefore) : false,
+        ...baseMeta,
+        paragraphs: [{ text: segment, endsParagraph: isLastSegmentOfParagraph }],
+        spacingAfterMm: isLastChunkOfProject && !project.technologies ? PROJECT_BLOCK_MARGIN_BOTTOM_MM : 0,
+      });
+    });
+  });
+
+  if (project.technologies) {
+    fragments.push({
+      key: `${projectKey}-chunk-technologies`,
+      showHeader: false,
+      ...baseMeta,
+      paragraphs: [],
+      technologies: project.technologies,
+      spacingAfterMm: PROJECT_BLOCK_MARGIN_BOTTOM_MM,
+    });
+  }
+
+  return fragments;
+}
+
+function mergeProjectFragmentsForPage(fragments: ProjectFragment[]) {
+  const merged: ProjectFragment[] = [];
+
+  for (const fragment of fragments) {
+    const previous = merged[merged.length - 1];
+    const canMerge =
+      previous && previous.projectKey === fragment.projectKey && !fragment.showHeader && !previous.technologies;
+
+    if (!canMerge) {
+      merged.push({
+        ...fragment,
+        paragraphs: [...fragment.paragraphs],
+      });
+      continue;
+    }
+
+    previous.paragraphs = [...previous.paragraphs, ...fragment.paragraphs];
+    previous.technologies = fragment.technologies ?? previous.technologies;
+    previous.spacingAfterMm = fragment.spacingAfterMm ?? previous.spacingAfterMm;
+  }
+
+  return merged;
+}
+
+function reconstructParagraphs(chunks: ProjectParagraphChunk[]) {
+  const paragraphs: string[] = [];
+  let current = "";
+
+  for (const chunk of chunks) {
+    current = current ? `${current} ${chunk.text}` : chunk.text;
+    if (chunk.endsParagraph) {
+      paragraphs.push(current);
+      current = "";
+    }
+  }
+
+  if (current) paragraphs.push(current);
+  return paragraphs;
 }
 
 // ═══════════════════════════════════════
@@ -253,120 +434,184 @@ function getProjectKey(project: ProjectEntry) {
 
 type ContinuationSectionId = "education" | "work";
 
+type FlowBlock =
+  | {
+      key: string;
+      kind: "intro";
+      text: string;
+    }
+  | {
+      key: string;
+      kind: "competence";
+      label: string;
+      content: string;
+    };
+
+type ProjectParagraphChunk = {
+  text: string;
+  endsParagraph: boolean;
+};
+
+type ProjectFragment = {
+  key: string;
+  projectKey: string;
+  showHeader: boolean;
+  forcePageBreakBefore?: boolean;
+  company: string;
+  subtitle: string;
+  role: string;
+  period: string;
+  paragraphs: ProjectParagraphChunk[];
+  technologies?: string;
+  spacingAfterMm?: number;
+};
+
 type ContinuationPageModel = {
   key: string;
-  projects: ProjectEntry[];
+  projects: ProjectFragment[];
   sections: ContinuationSectionId[];
 };
 
 function buildContinuationPages({
-  allProjects,
-  projectHeights,
-  projectsTitleHeight,
+  flowBlocks,
+  flowHeights,
+  firstPageAvailableHeight,
+  projectFragments,
+  projectFragmentHeights,
+  projectFitSafety,
+  projectsTitleTopHeight,
+  projectsTitleAfterHeight,
   educationTopHeight,
   educationAfterHeight,
   workTopHeight,
   workAfterHeight,
-  availableHeight,
+  continuationAvailableHeight,
   bottomBuffer,
 }: {
-  allProjects: ProjectEntry[];
-  projectHeights: number[];
-  projectsTitleHeight: number;
+  flowBlocks: FlowBlock[];
+  flowHeights: number[];
+  firstPageAvailableHeight: number;
+  projectFragments: ProjectFragment[][];
+  projectFragmentHeights: number[][];
+  projectFitSafety: number;
+  projectsTitleTopHeight: number;
+  projectsTitleAfterHeight: number;
   educationTopHeight: number;
   educationAfterHeight: number;
   workTopHeight: number;
   workAfterHeight: number;
-  availableHeight: number;
+  continuationAvailableHeight: number;
   bottomBuffer: number;
-}): ContinuationPageModel[] {
-  const capacity = Math.max(availableHeight - bottomBuffer, 0);
+}): { firstPageFlowBlocks: FlowBlock[]; continuationPages: ContinuationPageModel[] } {
+  const firstPageCapacity = Math.max(firstPageAvailableHeight - bottomBuffer, 0);
+  const continuationCapacity = Math.max(continuationAvailableHeight - bottomBuffer, 0);
 
-  const getProjectsUsedHeight = (indices: number[]) => {
-    if (indices.length === 0) return 0;
-    return projectsTitleHeight + indices.reduce((sum, index) => sum + projectHeights[index], 0);
+  const firstPageFlowBlocks: FlowBlock[] = [];
+  let firstPageUsed = 0;
+
+  for (let index = 0; index < flowBlocks.length; index += 1) {
+    const blockHeight = flowHeights[index];
+    const canFit = firstPageUsed + blockHeight <= firstPageCapacity;
+    if (index > 0 && !canFit) {
+      break;
+    }
+    firstPageFlowBlocks.push(flowBlocks[index]);
+    firstPageUsed += blockHeight;
+  }
+
+  type MutablePageModel = {
+    key: string;
+    projects: ProjectFragment[];
+    sections: ContinuationSectionId[];
+    usedHeight: number;
   };
 
-  const projectPages: number[][] = [];
-  let currentPage: number[] = [];
-  let currentUsed = 0;
+  const models: MutablePageModel[] = [];
+  let projectsTitlePlaced = false;
 
-  for (let index = 0; index < allProjects.length; index += 1) {
-    const nextUsed =
-      currentPage.length === 0 ? projectsTitleHeight + projectHeights[index] : currentUsed + projectHeights[index];
-
-    if (currentPage.length > 0 && nextUsed > capacity) {
-      projectPages.push(currentPage);
-      currentPage = [index];
-      currentUsed = projectsTitleHeight + projectHeights[index];
-    } else {
-      currentPage.push(index);
-      currentUsed = nextUsed;
-    }
-  }
-
-  if (currentPage.length > 0) projectPages.push(currentPage);
-  if (projectPages.length === 0) projectPages.push([]);
-
-  for (let pageIndex = projectPages.length - 1; pageIndex > 0; pageIndex -= 1) {
-    let canRebalance = true;
-    while (canRebalance) {
-      canRebalance = false;
-      const previousPage = projectPages[pageIndex - 1];
-      const currentPageProjects = projectPages[pageIndex];
-      if (previousPage.length <= 1) break;
-      const candidateIndex = previousPage[previousPage.length - 1];
-      const previousBefore = getProjectsUsedHeight(previousPage);
-      const currentBefore = getProjectsUsedHeight(currentPageProjects);
-      const previousAfterProjects = previousPage.slice(0, -1);
-      const currentAfterProjects = [candidateIndex, ...currentPageProjects];
-      const previousAfter = getProjectsUsedHeight(previousAfterProjects);
-      const currentAfter = getProjectsUsedHeight(currentAfterProjects);
-      if (currentAfter > capacity) break;
-      const beforeSpread = Math.abs(capacity - previousBefore - (capacity - currentBefore));
-      const afterSpread = Math.abs(capacity - previousAfter - (capacity - currentAfter));
-      const beforeWorstGap = Math.max(capacity - previousBefore, capacity - currentBefore);
-      const afterWorstGap = Math.max(capacity - previousAfter, capacity - currentAfter);
-      if (afterSpread < beforeSpread && afterWorstGap <= beforeWorstGap + 12) {
-        previousPage.pop();
-        currentPageProjects.unshift(candidateIndex);
-        canRebalance = true;
-      }
-    }
-  }
-
-  const models = projectPages.map((pageProjects, index) => ({
-    key: `continuation-${index + 1}`,
-    projectIndices: [...pageProjects],
-    sections: [] as ContinuationSectionId[],
-    usedHeight: getProjectsUsedHeight(pageProjects),
-  }));
-
-  const appendSection = (sectionId: ContinuationSectionId, topHeight: number, afterHeight: number) => {
-    const lastPage = models[models.length - 1];
-    const isAtTop = lastPage.usedHeight === 0;
-    const sectionHeight = isAtTop ? topHeight : afterHeight;
-    if (!isAtTop && lastPage.usedHeight + sectionHeight > capacity) {
-      models.push({
+  const ensurePage = () => {
+    let current = models[models.length - 1];
+    if (!current) {
+      current = {
         key: `continuation-${models.length + 1}`,
-        projectIndices: [],
-        sections: [sectionId],
-        usedHeight: topHeight,
-      });
-      return;
+        projects: [],
+        sections: [],
+        usedHeight: 0,
+      };
+      models.push(current);
     }
-    lastPage.sections.push(sectionId);
-    lastPage.usedHeight += sectionHeight;
+    return current;
   };
 
-  appendSection("education", educationTopHeight, educationAfterHeight);
-  appendSection("work", workTopHeight, workAfterHeight);
+  const startNewPage = () => {
+    const next: MutablePageModel = {
+      key: `continuation-${models.length + 1}`,
+      projects: [],
+      sections: [],
+      usedHeight: 0,
+    };
+    models.push(next);
+    return next;
+  };
 
-  return models.map((page) => ({
-    key: page.key,
-    projects: page.projectIndices.map((index) => allProjects[index]),
-    sections: page.sections,
-  }));
+  const addProjectFragment = (fragment: ProjectFragment, height: number) => {
+    let page = ensurePage();
+    const titleHeight =
+      !projectsTitlePlaced && page.projects.length === 0 && page.usedHeight === 0 ? projectsTitleTopHeight : 0;
+    if (page.usedHeight > 0 && page.usedHeight + titleHeight + height + projectFitSafety > continuationCapacity) {
+      page = startNewPage();
+    }
+    const appliedTitleHeight =
+      !projectsTitlePlaced && page.projects.length === 0 && page.usedHeight === 0 ? projectsTitleTopHeight : 0;
+    page.projects.push(fragment);
+    page.usedHeight += appliedTitleHeight + height;
+    if (appliedTitleHeight > 0) projectsTitlePlaced = true;
+  };
+
+  const addSection = (sectionId: ContinuationSectionId, topHeight: number, afterHeight: number) => {
+    let page = ensurePage();
+    const sectionHeight = page.usedHeight === 0 ? topHeight : afterHeight;
+    if (page.usedHeight > 0 && page.usedHeight + sectionHeight > continuationCapacity) {
+      page = startNewPage();
+    }
+    const appliedHeight = page.usedHeight === 0 ? topHeight : afterHeight;
+    page.sections.push(sectionId);
+    page.usedHeight += appliedHeight;
+  };
+
+  const projectChunks = projectFragments.flatMap((fragments, projectIndex) =>
+    fragments.map((fragment, fragmentIndex) => ({
+      fragment,
+      height: projectFragmentHeights[projectIndex]?.[fragmentIndex] ?? 0,
+    })),
+  );
+
+  for (const chunk of projectChunks) {
+    let page = ensurePage();
+    if (chunk.fragment.forcePageBreakBefore && page.usedHeight > 0) {
+      page = startNewPage();
+    }
+    const titleHeight =
+      !projectsTitlePlaced && page.projects.length === 0 && page.usedHeight === 0 ? projectsTitleTopHeight : 0;
+
+    if (page.usedHeight > 0 && page.usedHeight + titleHeight + chunk.height + projectFitSafety > continuationCapacity) {
+      page = startNewPage();
+    }
+
+    addProjectFragment(chunk.fragment, chunk.height);
+  }
+
+  addSection("education", educationTopHeight, educationAfterHeight);
+  addSection("work", workTopHeight, workAfterHeight);
+
+  return {
+    firstPageFlowBlocks,
+    continuationPages: models.map((page) => ({
+      key: page.key,
+      projects: page.projects,
+      sections: page.sections,
+    })),
+  };
 }
 
 // ═══════════════════════════════════════
@@ -491,6 +736,9 @@ function Portrait({ topMm, imageUrl }: { topMm: number; imageUrl?: string }) {
 }
 
 function ContactBlock({ contact }: { contact: HeroContact }) {
+  const hasVisibleContent = [contact.title, contact.name, contact.phone, contact.email].some((value) => value.trim());
+  if (!hasVisibleContent) return null;
+
   return (
     <div
       style={{
@@ -528,9 +776,14 @@ function ContactBlock({ contact }: { contact: HeroContact }) {
   );
 }
 
-export function ProjectBlock({ company, subtitle, role, period, paragraphs, technologies }: ProjectEntry) {
+function ProjectBlockHeader({
+  company,
+  subtitle,
+  role,
+  period,
+}: Pick<ProjectEntry, "company" | "subtitle" | "role" | "period">) {
   return (
-    <div className="cv-project-block" style={{ marginBottom: "6.4mm" }}>
+    <>
       <div
         style={{ fontWeight: 700, fontSize: "9.9pt", color: "#111", letterSpacing: "0.006em", marginBottom: "1.8mm" }}
       >
@@ -553,14 +806,44 @@ export function ProjectBlock({ company, subtitle, role, period, paragraphs, tech
         <span style={{ color: "#4f4f4f" }}>{role}</span>
         <span style={{ flexShrink: 0, color: "#4f4f4f" }}>{period}</span>
       </div>
-      {paragraphs.map((paragraph, i) => (
+    </>
+  );
+}
+
+function TechnologiesLine({ technologies }: { technologies: string }) {
+  return (
+    <p style={{ margin: "1.2mm 0 0 0", lineHeight: 1.42, color: "#1f1f1f" }}>
+      <strong>Teknologier:</strong> {technologies}
+    </p>
+  );
+}
+
+export function ProjectBlock({
+  showHeader = true,
+  company,
+  subtitle,
+  role,
+  period,
+  paragraphs,
+  technologies,
+  spacingAfterMm = PROJECT_BLOCK_MARGIN_BOTTOM_MM,
+}: Omit<ProjectEntry, "paragraphs" | "technologies"> & {
+  paragraphs: ProjectParagraphChunk[];
+  technologies?: string;
+  showHeader?: boolean;
+  spacingAfterMm?: number;
+}) {
+  const reconstructedParagraphs = reconstructParagraphs(paragraphs);
+
+  return (
+    <div className="cv-project-block" style={{ marginBottom: mm(spacingAfterMm) }}>
+      {showHeader ? <ProjectBlockHeader company={company} subtitle={subtitle} role={role} period={period} /> : null}
+      {reconstructedParagraphs.map((paragraph, i) => (
         <p key={i} style={{ margin: "0 0 2.35mm 0", lineHeight: 1.36 }}>
           {paragraph}
         </p>
       ))}
-      <p style={{ margin: "1.2mm 0 0 0", lineHeight: 1.42, color: "#1f1f1f" }}>
-        <strong>Teknologier:</strong> {technologies}
-      </p>
+      {technologies ? <TechnologiesLine technologies={technologies} /> : null}
     </div>
   );
 }
@@ -633,32 +916,49 @@ function WorkExperienceSection({
   );
 }
 
+function FlowBlockView({ block }: { block: FlowBlock }) {
+  if (block.kind === "intro") {
+    return <p style={{ margin: "0 0 3mm 0" }}>{block.text}</p>;
+  }
+
+  return (
+    <p style={{ margin: "0 0 2.5mm 0" }}>
+      <strong>{block.label}:</strong> {block.content}
+    </p>
+  );
+}
+
 function ContinuationPage({
+  showProjectsTitle,
   pageProjects,
   sections,
   doc,
   imageUrl,
 }: {
-  pageProjects: ProjectEntry[];
+  showProjectsTitle: boolean;
+  pageProjects: ProjectFragment[];
   sections: ContinuationSectionId[];
   doc: CVDocument;
   imageUrl?: string;
 }) {
+  const mergedProjects = mergeProjectFragmentsForPage(pageProjects);
+
   return (
     <div className="cv-page" style={pageStyle}>
       <div style={gridStyle}>
         <EmptySidebar imageUrl={imageUrl} />
         <div style={continuationMainStyle}>
-          {pageProjects.length > 0 && (
+          {mergedProjects.length > 0 && (
             <>
-              <SectionTitle marginTop="0">Prosjekter</SectionTitle>
-              {pageProjects.map((project) => (
-                <ProjectBlock key={getProjectKey(project)} {...project} />
+              {showProjectsTitle ? <SectionTitle marginTop="0">Prosjekter</SectionTitle> : null}
+              {mergedProjects.map((project) => (
+                <ProjectBlock key={project.key} {...project} />
               ))}
             </>
           )}
           {sections.map((section, index) => {
-            const mt = pageProjects.length > 0 || index > 0 ? "6mm" : "0";
+            const hasPreviousContent = mergedProjects.length > 0 || index > 0;
+            const mt = hasPreviousContent ? "6mm" : "0";
             if (section === "education")
               return <EducationSection key={section} education={doc.education} marginTop={mt} />;
             return <WorkExperienceSection key={section} workExperience={doc.workExperience} marginTop={mt} />;
@@ -680,14 +980,34 @@ interface CvRendererProps {
 }
 
 export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps) {
+  const [firstPageFlowBlocks, setFirstPageFlowBlocks] = useState<FlowBlock[]>([]);
   const [continuationPages, setContinuationPages] = useState<ContinuationPageModel[]>([]);
+  const firstPageCapacityRef = useRef<HTMLDivElement | null>(null);
   const measureCapacityRef = useRef<HTMLDivElement | null>(null);
-  const projectsTitleMeasureRef = useRef<HTMLDivElement | null>(null);
+  const projectsTitleTopMeasureRef = useRef<HTMLDivElement | null>(null);
+  const projectsTitleAfterMeasureRef = useRef<HTMLDivElement | null>(null);
   const educationTopMeasureRef = useRef<HTMLDivElement | null>(null);
   const educationAfterMeasureRef = useRef<HTMLDivElement | null>(null);
   const workTopMeasureRef = useRef<HTMLDivElement | null>(null);
   const workAfterMeasureRef = useRef<HTMLDivElement | null>(null);
-  const projectMeasureRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const projectFragmentMeasureRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const flowMeasureRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const flowBlocks: FlowBlock[] = [
+    ...doc.introParagraphs.map((text, index) => ({
+      key: `intro-${index}`,
+      kind: "intro" as const,
+      text,
+    })),
+    ...doc.competenceGroups.map((group, index) => ({
+      key: `competence-${index}`,
+      kind: "competence" as const,
+      label: group.label,
+      content: group.content,
+    })),
+  ];
+
+  const projectFragments = useMemo(() => doc.projects.map((project) => buildProjectFragments(project)), [doc.projects]);
 
   useEffect(() => {
     let cancelled = false;
@@ -695,32 +1015,65 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
       await waitForFontsReady(document);
       await waitForDoubleFrame(window);
       if (cancelled) return;
+      const firstPageCapacity = firstPageCapacityRef.current;
       const measureCapacity = measureCapacityRef.current;
-      const projectsTitle = projectsTitleMeasureRef.current;
+      const projectsTitleTop = projectsTitleTopMeasureRef.current;
+      const projectsTitleAfter = projectsTitleAfterMeasureRef.current;
       const educationTop = educationTopMeasureRef.current;
       const educationAfter = educationAfterMeasureRef.current;
       const workTop = workTopMeasureRef.current;
       const workAfter = workAfterMeasureRef.current;
-      if (!measureCapacity || !projectsTitle || !educationTop || !educationAfter || !workTop || !workAfter) return;
+      if (
+        !firstPageCapacity ||
+        !measureCapacity ||
+        !projectsTitleTop ||
+        !projectsTitleAfter ||
+        !educationTop ||
+        !educationAfter ||
+        !workTop ||
+        !workAfter
+      ) {
+        return;
+      }
       const pageHeightPx = measureCapacity.getBoundingClientRect().height;
       const mmToPx = pageHeightPx / 297;
       const bottomBuffer = Math.max(CONTINUATION_BOTTOM_BUFFER_MM, 0) * mmToPx;
-      const projectHeights = doc.projects.map((project) =>
-        measureOuterHeight(projectMeasureRefs.current[getProjectKey(project)]),
+      const projectFitSafety = PROJECT_FRAGMENT_FIT_SAFETY_MM * mmToPx;
+      const firstPageAvailableHeight =
+        firstPageCapacity.clientHeight - (CV_LAYOUT.mainPadding.topMm + CV_LAYOUT.mainPadding.bottomMm) * mmToPx;
+      const continuationAvailableHeight =
+        measureCapacity.clientHeight - (CV_LAYOUT.continuationTopPaddingMm + CV_LAYOUT.mainPadding.bottomMm) * mmToPx;
+      const flowHeights = flowBlocks.map((block) => measureOuterHeight(flowMeasureRefs.current[block.key]));
+      const projectFragmentHeights = projectFragments.map((fragments) =>
+        fragments.map((fragment) => measureOuterHeight(projectFragmentMeasureRefs.current[fragment.key])),
       );
-      const nextPages = buildContinuationPages({
-        allProjects: doc.projects,
-        projectHeights,
-        projectsTitleHeight: measureOuterHeight(projectsTitle),
+      const nextPagination = buildContinuationPages({
+        flowBlocks,
+        flowHeights,
+        firstPageAvailableHeight,
+        projectFragments,
+        projectFragmentHeights,
+        projectFitSafety,
+        projectsTitleTopHeight: measureOuterHeight(projectsTitleTop),
+        projectsTitleAfterHeight: measureOuterHeight(projectsTitleAfter),
         educationTopHeight: measureOuterHeight(educationTop),
         educationAfterHeight: measureOuterHeight(educationAfter),
         workTopHeight: measureOuterHeight(workTop),
         workAfterHeight: measureOuterHeight(workAfter),
-        availableHeight: measureCapacity.clientHeight,
+        continuationAvailableHeight,
         bottomBuffer,
       });
       if (cancelled) return;
-      setContinuationPages((current) => (JSON.stringify(current) === JSON.stringify(nextPages) ? current : nextPages));
+      setFirstPageFlowBlocks((current) =>
+        JSON.stringify(current) === JSON.stringify(nextPagination.firstPageFlowBlocks)
+          ? current
+          : nextPagination.firstPageFlowBlocks,
+      );
+      setContinuationPages((current) =>
+        JSON.stringify(current) === JSON.stringify(nextPagination.continuationPages)
+          ? current
+          : nextPagination.continuationPages,
+      );
     };
     updatePagination();
     window.addEventListener("resize", updatePagination);
@@ -728,14 +1081,25 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
       cancelled = true;
       window.removeEventListener("resize", updatePagination);
     };
-  }, [doc]);
-
-  const { hero, sidebarSections, introParagraphs, competenceGroups, projects, education, workExperience } = doc;
+  }, [doc, flowBlocks, projectFragments]);
+  const { hero, sidebarSections, projects, education, workExperience } = doc;
 
   return (
     <div style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: `${100 / scale}%` }}>
       {/* Hidden measure elements */}
       <div aria-hidden="true" className="no-print" style={hiddenMeasureRootStyle}>
+        <div
+          style={{
+            width: mm(CV_LAYOUT.pageWidthMm),
+            display: "grid",
+            gridTemplateColumns: `${mm(CV_LAYOUT.sidebarWidthMm)} 1fr`,
+            gridTemplateRows: `${mm(CV_LAYOUT.firstPageHeroHeightMm)} 1fr`,
+            height: mm(CV_LAYOUT.pageHeightMm),
+          }}
+        >
+          <div />
+          <div ref={firstPageCapacityRef} style={{ ...mainStyle, gridColumn: 2, gridRow: 2 }} />
+        </div>
         <div
           style={{
             width: mm(CV_LAYOUT.pageWidthMm),
@@ -748,18 +1112,32 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
           <div ref={measureCapacityRef} style={continuationMainStyle} />
         </div>
         <div style={continuationMeasureContentStyle}>
-          <div ref={projectsTitleMeasureRef} style={{ display: "flow-root" }}>
-            <SectionTitle marginTop="0">Prosjekter</SectionTitle>
-          </div>
-          {projects.map((project) => (
+          {flowBlocks.map((block) => (
             <div
-              key={`measure-${getProjectKey(project)}`}
+              key={`measure-flow-${block.key}`}
               style={{ display: "flow-root" }}
               ref={(el) => {
-                projectMeasureRefs.current[getProjectKey(project)] = el;
+                flowMeasureRefs.current[block.key] = el;
               }}
             >
-              <ProjectBlock {...project} />
+              <FlowBlockView block={block} />
+            </div>
+          ))}
+          <div ref={projectsTitleTopMeasureRef} style={{ display: "flow-root" }}>
+            <SectionTitle marginTop="0">Prosjekter</SectionTitle>
+          </div>
+          <div ref={projectsTitleAfterMeasureRef} style={{ display: "flow-root" }}>
+            <SectionTitle marginTop="6mm">Prosjekter</SectionTitle>
+          </div>
+          {projectFragments.flat().map((fragment) => (
+            <div
+              key={`measure-${fragment.key}`}
+              style={{ display: "flow-root" }}
+              ref={(el) => {
+                projectFragmentMeasureRefs.current[fragment.key] = el;
+              }}
+            >
+              <ProjectBlock {...fragment} />
             </div>
           ))}
           <div ref={educationTopMeasureRef} style={{ display: "flow-root" }}>
@@ -861,6 +1239,7 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
                       fontFamily: '"Carlito", "Calibri", Arial, sans-serif',
                       fontSize: "32.3pt",
                       fontWeight: 700,
+                      marginLeft: "-1mm",
                       letterSpacing: "-0.014em",
                       lineHeight: 0.99,
                       color: "#000",
@@ -887,23 +1266,17 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
                 <Sidebar sections={sidebarSections} transparentBackground />
               </div>
               <div style={{ ...mainStyle, gridColumn: 2, gridRow: 2 }}>
-                {introParagraphs.map((paragraph, i) => (
-                  <p key={i} style={{ margin: "0 0 3mm 0" }}>
-                    {paragraph}
-                  </p>
-                ))}
-                {competenceGroups.map((group, i) => (
-                  <p key={i} style={{ margin: "0 0 2.5mm 0" }}>
-                    <strong>{group.label}:</strong> {group.content}
-                  </p>
+                {firstPageFlowBlocks.map((block) => (
+                  <FlowBlockView key={block.key} block={block} />
                 ))}
               </div>
             </div>
           </div>
 
-          {continuationPages.map((page) => (
+          {continuationPages.map((page, index) => (
             <ContinuationPage
               key={page.key}
+              showProjectsTitle={index === 0 && page.projects.length > 0}
               pageProjects={page.projects}
               sections={page.sections}
               doc={doc}
