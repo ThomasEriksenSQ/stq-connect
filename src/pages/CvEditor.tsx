@@ -227,7 +227,7 @@ export default function CvEditor() {
           </div>
           {error && <p className="text-sm text-destructive font-medium">{error}</p>}
           <button
-            onClick={verifyPin}
+            onClick={() => verifyPin()}
             disabled={pin.some((d) => !d) || verifying}
             className="w-full h-11 rounded-lg bg-primary text-primary-foreground font-medium text-sm disabled:opacity-50 hover:opacity-90 transition-opacity"
           >
