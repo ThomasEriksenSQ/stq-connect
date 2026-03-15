@@ -350,7 +350,7 @@ export default function ImporterCver() {
                 )}
 
                 {/* TYPE selector for eksterne */}
-                {tab === "eksterne" && !cv.matchedId && (
+                {!cv.matchedId && (
                   <div className="space-y-2">
                     <p className={LABEL}>Type</p>
                     <div className="flex gap-2">
