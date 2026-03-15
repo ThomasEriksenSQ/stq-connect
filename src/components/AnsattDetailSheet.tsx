@@ -16,6 +16,7 @@ interface AnsattDetailSheetProps {
   open: boolean;
   onClose: () => void;
   ansatt: any | null;
+  openInEditMode?: boolean;
 }
 
 const SUGGESTED_TAGS = [
