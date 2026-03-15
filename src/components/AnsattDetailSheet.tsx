@@ -457,13 +457,6 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
   );
 }
 
-function CvSection({ ansattId, ansattNavn }: { ansattId?: number; ansattNavn?: string }) {
-  const navigate = useNavigate();
-  const [generating, setGenerating] = useState(false);
-
-  if (!ansattId) return null;
-
-  const generateLink = async () => {
     setGenerating(true);
     try {
       const pin = String(Math.floor(1000 + Math.random() * 9000));
