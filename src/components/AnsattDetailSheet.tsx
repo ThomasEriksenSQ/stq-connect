@@ -456,8 +456,6 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
     </Sheet>
   );
 }
-
-      const pin = String(Math.floor(1000 + Math.random() * 9000));
       const pinHashValue = await hashPin(pin);
 
       // Upsert token for this ansatt
