@@ -290,6 +290,12 @@ export default function KonsulenterAnsatte() {
                   Finn oppdrag
                 </button>
                 <button
+                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); generateLink(a); }}
+                  className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground border border-border"
+                >
+                  <Link className="h-3.5 w-3.5" />
+                </button>
+                <button
                   onClick={(e) => { e.stopPropagation(); e.preventDefault(); setDetailAnsatt(a); setOpenEditMode(true); setDetailOpen(true); }}
                   className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground border border-border"
                 >
