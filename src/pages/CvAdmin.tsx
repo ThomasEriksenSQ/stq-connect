@@ -213,23 +213,23 @@ export default function CvAdmin() {
 
         setCvData((prev) => {
           if (!prev) return prev;
-          const updated = { ...prev };
-          updated.hero = { ...updated.hero };
-          if (data.navn) updated.hero.name = data.navn;
-          if (data.rolle) updated.hero.title = data.rolle;
-          if (data.bio) {
-            updated.introParagraphs = [...updated.introParagraphs, data.bio];
-          }
-          if (data.kompetanse?.length) {
-            updated.competenceGroups = [
-              ...updated.competenceGroups,
-              { label: "Teknisk kompetanse", content: data.kompetanse.join(", ") },
-            ];
-          }
-          return updated;
+          return {
+            ...prev,
+            hero: {
+              ...prev.hero,
+              name: data.navn || prev.hero.name,
+              title: data.tittel || prev.hero.title,
+            },
+            introParagraphs: data.introParagraphs?.length ? data.introParagraphs : prev.introParagraphs,
+            competenceGroups: data.competenceGroups?.length ? data.competenceGroups : prev.competenceGroups,
+            projects: data.projects?.length ? data.projects : prev.projects,
+            education: data.education?.length ? data.education : prev.education,
+            workExperience: data.workExperience?.length ? data.workExperience : prev.workExperience,
+            sidebarSections: data.sidebarSections?.length ? data.sidebarSections : prev.sidebarSections,
+          };
         });
 
-        toast.success("CV analysert — feltene er oppdatert. Sjekk og juster innholdet.");
+        toast.success("CV fullstendig analysert — alle seksjoner er fylt inn");
       } catch {
         toast.error("Kunne ikke analysere CV — fyll inn manuelt");
       } finally {

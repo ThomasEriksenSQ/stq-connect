@@ -18,18 +18,45 @@ serve(async (req) => {
     if (!base64) throw new Error("Missing base64 PDF data");
 
     const systemPrompt = `Du er en CV-analysator for et norsk konsulentselskap (STACQ) som matcher ingeniører/teknologer med oppdrag.
-Analyser CV-en og returner KUN gyldig JSON, ingen tekst rundt:
+Analyser CV-en og returner KUN et JSON-objekt uten noe annet tekst eller markdown. JSON-strukturen skal være eksakt:
 {
-  "navn": <string, personens fulle navn fra CV-en>,
-  "epost": <string | null, e-postadresse hvis funnet>,
-  "telefon": <string | null, telefonnummer hvis funnet>,
-  "erfaring_aar": <number, totale år med relevant arbeidserfaring>,
-  "kompetanse": <string[], topp 6-8 tekniske nøkkelord, kort og presist>,
-  "rolle": <string | null, f.eks. "Senior Embedded Engineer">,
-  "geografi": <string, primær by der personen jobber/bor>,
-  "bio": <string, 2-3 setninger om hvem konsulenten er, hva de er best på og hva slags oppdrag de passer til. Skriv i tredjeperson. Profesjonell men menneskelig tone. Maks 60 ord.>
+  "navn": "string",
+  "tittel": "string (kort profesjonell tittel, maks 8 ord)",
+  "introParagraphs": ["string", "string"],
+  "competenceGroups": [
+    { "label": "string", "content": "string" }
+  ],
+  "projects": [
+    {
+      "company": "string",
+      "subtitle": "string (kort prosjektbeskrivelse)",
+      "role": "string",
+      "period": "string (f.eks. jan. 2022 - mai 2024)",
+      "paragraphs": ["string", "string"],
+      "technologies": "string (kommaseparert liste)"
+    }
+  ],
+  "education": [
+    { "period": "string", "primary": "string", "secondary": "string" }
+  ],
+  "workExperience": [
+    { "period": "string", "primary": "string" }
+  ],
+  "sidebarSections": [
+    {
+      "heading": "string",
+      "items": ["string"]
+    }
+  ]
 }
-Kompetanse: bruk tekniske nøkkelord som C++, Embedded, Python, Linux, Yocto, FPGA, osv. Ikke skriv "erfaren" eller adjektiver.`;
+
+Regler:
+- Trekk ut ALLE prosjekter med rolle, periode, beskrivelse og teknologier
+- Lag 2-4 kompetansegrupper basert på CV-innhold (f.eks. Programmeringsspråk, Embedded-teknologier, Hardware, Kommunikasjonsprotokoller)
+- introParagraphs: 2-3 avsnitt som oppsummerer kandidaten profesjonelt, skriv i tredjeperson
+- sidebarSections: inkluder Personalia (fødselsår, språk, statsborgerskap), Nøkkelpunkter (tekniske nøkkelord), og Utdannelse
+- workExperience: liste alle arbeidsgivere med periode
+- Returner BARE JSON, ingen forklaring, ingen markdown-blokker`;
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
