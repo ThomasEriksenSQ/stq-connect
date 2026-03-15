@@ -117,6 +117,28 @@ export default function KonsulenterAnsatte() {
     queryClient.invalidateQueries({ queryKey: ["stacq-oppdrag-active-names"] });
   };
 
+  const generateLink = async (ansatt: any) => {
+    try {
+      const pin = Math.floor(1000 + Math.random() * 9000).toString();
+      const encoder = new TextEncoder();
+      const data = encoder.encode(pin);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const pinHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      const token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
+      const expires_at = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+      const { error } = await supabase.from('cv_access_tokens').upsert(
+        { ansatt_id: ansatt.id, token, pin_hash: pinHash, expires_at },
+        { onConflict: 'ansatt_id' }
+      );
+      if (error) throw error;
+      await navigator.clipboard.writeText('https://crm.stacq.no/cv/' + token);
+      toast.success(`Link kopiert! PIN: ${pin} — del med ${ansatt.navn}`, { duration: 10000 });
+    } catch (err: any) {
+      toast.error('Kunne ikke generere link: ' + (err.message || 'Ukjent feil'));
+    }
+  };
+
   const chips: Filter[] = ["Alle", "Aktiv", "Kommende", "Sluttet"];
 
   if (isLoading) {
