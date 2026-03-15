@@ -59,6 +59,12 @@ export function OppdragsMatchPanel({
   const [filter, setFilter] = useState<MatchFilter>("Alle");
   const [foresporsler, setForesporsler] = useState<any[]>(foresporslerData || []);
 
+  useEffect(() => {
+    if (autoRunMatch && konsulent.navn) {
+      runMatch();
+    }
+  }, [autoRunMatch, konsulent.navn]);
+
   const runMatch = async () => {
     setMatching(true);
     setResults(null);
