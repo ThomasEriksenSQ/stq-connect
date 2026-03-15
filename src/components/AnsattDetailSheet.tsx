@@ -45,8 +45,8 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
 
   const [form, setForm] = useState({
     navn: "", epost: "", tlf: "", geografi: "", status: "AKTIV/SIGNERT",
-    start_dato: "", slutt_dato: "", kompetanse: [] as string[], bio: "",
-    bilde_url: "", erfaring_aar: "", synlig_web: false,
+    start_dato: "", slutt_dato: "", kompetanse: [] as string[],
+    bilde_url: "", erfaring_aar: "",
   });
 
   // Reset form when panel opens/closes or ansatt changes
