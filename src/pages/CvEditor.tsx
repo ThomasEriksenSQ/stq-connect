@@ -93,9 +93,9 @@ export default function CvEditor() {
     })();
   }, [session]);
 
-  const verifyPin = async () => {
+  const verifyPin = async (pinOverride?: string) => {
     if (!token) return;
-    const pinStr = pin.join("");
+    const pinStr = pinOverride || pin.join("");
     if (pinStr.length !== 4) return;
 
     setVerifying(true);
@@ -175,8 +175,7 @@ export default function CvEditor() {
     // Auto-submit when all 4 digits entered
     if (value && index === 3 && newPin.every((d) => d)) {
       setTimeout(() => {
-        setPin(newPin);
-        // trigger verify
+        verifyPin(newPin.join(""));
       }, 50);
     }
   };
@@ -228,7 +227,7 @@ export default function CvEditor() {
           </div>
           {error && <p className="text-sm text-destructive font-medium">{error}</p>}
           <button
-            onClick={verifyPin}
+            onClick={() => verifyPin()}
             disabled={pin.some((d) => !d) || verifying}
             className="w-full h-11 rounded-lg bg-primary text-primary-foreground font-medium text-sm disabled:opacity-50 hover:opacity-90 transition-opacity"
           >
