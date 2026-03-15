@@ -192,16 +192,11 @@ export default function ImporterCver() {
   const handleSave = async (idx: number, mode: "update" | "new") => {
     const cv = cvs[idx];
     try {
-      if (tab === "ansatte") {
-        if (mode === "update") await saveAnsattUpdate(cv);
-        else await saveAnsattNew(cv);
-      } else {
-        if (mode === "update") await saveEksternUpdate(cv);
-        else await saveEksternNew(cv);
-      }
+      if (mode === "update") await saveEksternUpdate(cv);
+      else await saveEksternNew(cv);
       toast.success(mode === "update" ? `✓ Lagret — teknologier og CV oppdatert for ${cv.matchedName || cv.data?.navn || "konsulent"}` : `${cv.data?.navn || "Konsulent"} opprettet`);
       removeCv(idx);
-      queryClient.invalidateQueries({ queryKey: tab === "ansatte" ? ["stacq-ansatte"] : ["external-consultants-all"] });
+      queryClient.invalidateQueries({ queryKey: ["external-consultants-all"] });
     } catch (err: any) {
       toast.error("Kunne ikke lagre: " + (err.message || "Ukjent feil"));
     }
