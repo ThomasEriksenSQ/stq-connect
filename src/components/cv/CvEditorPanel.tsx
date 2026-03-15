@@ -764,6 +764,7 @@ export function CvEditorPanel({
           </Accordion>
         </div>
       </div>
+      </div>
     </div>
   );
 }
