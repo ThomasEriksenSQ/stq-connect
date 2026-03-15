@@ -125,7 +125,7 @@ export default function KonsulenterAnsatte() {
       <div className="flex items-center justify-between">
         <h1 className="text-[1.375rem] font-bold">Ansatte</h1>
         <button
-          onClick={() => { setDetailAnsatt(null); setDetailOpen(true); }}
+          onClick={() => { setDetailAnsatt(null); setOpenEditMode(false); setDetailOpen(true); }}
           className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
         >
           <Plus className="h-4 w-4" />
