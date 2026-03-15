@@ -262,6 +262,129 @@ export type Database = {
           },
         ]
       }
+      cv_access_tokens: {
+        Row: {
+          ansatt_id: number
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          pin_hash: string
+          token: string
+        }
+        Insert: {
+          ansatt_id: number
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          pin_hash: string
+          token?: string
+        }
+        Update: {
+          ansatt_id?: number
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          pin_hash?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cv_access_tokens_ansatt_id_fkey"
+            columns: ["ansatt_id"]
+            isOneToOne: false
+            referencedRelation: "stacq_ansatte"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cv_documents: {
+        Row: {
+          ansatt_id: number
+          competence_groups: Json | null
+          created_at: string | null
+          education: Json | null
+          hero_name: string | null
+          hero_title: string | null
+          id: string
+          intro_paragraphs: Json | null
+          projects: Json | null
+          sidebar_sections: Json | null
+          title: string | null
+          updated_at: string | null
+          work_experience: Json | null
+        }
+        Insert: {
+          ansatt_id: number
+          competence_groups?: Json | null
+          created_at?: string | null
+          education?: Json | null
+          hero_name?: string | null
+          hero_title?: string | null
+          id?: string
+          intro_paragraphs?: Json | null
+          projects?: Json | null
+          sidebar_sections?: Json | null
+          title?: string | null
+          updated_at?: string | null
+          work_experience?: Json | null
+        }
+        Update: {
+          ansatt_id?: number
+          competence_groups?: Json | null
+          created_at?: string | null
+          education?: Json | null
+          hero_name?: string | null
+          hero_title?: string | null
+          id?: string
+          intro_paragraphs?: Json | null
+          projects?: Json | null
+          sidebar_sections?: Json | null
+          title?: string | null
+          updated_at?: string | null
+          work_experience?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cv_documents_ansatt_id_fkey"
+            columns: ["ansatt_id"]
+            isOneToOne: false
+            referencedRelation: "stacq_ansatte"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cv_versions: {
+        Row: {
+          created_at: string | null
+          cv_id: string
+          id: string
+          saved_by: string | null
+          snapshot: Json
+        }
+        Insert: {
+          created_at?: string | null
+          cv_id: string
+          id?: string
+          saved_by?: string | null
+          snapshot: Json
+        }
+        Update: {
+          created_at?: string | null
+          cv_id?: string
+          id?: string
+          saved_by?: string | null
+          snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cv_versions_cv_id_fkey"
+            columns: ["cv_id"]
+            isOneToOne: false
+            referencedRelation: "cv_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       external_consultants: {
         Row: {
           company_id: string | null
