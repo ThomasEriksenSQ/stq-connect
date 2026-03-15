@@ -188,7 +188,7 @@ export default function KonsulenterAnsatte() {
         {/* Header */}
         <div className="grid grid-cols-[minmax(0,1.8fr)_90px_100px_120px_110px_minmax(0,1.2fr)] gap-3 px-4 py-2.5 border-b border-border bg-background">
           {["NAVN", "START", "ANSETTELSE", "OPPDRAG", "CV", "HANDLINGER"].map((h) => (
-            <span key={h} className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">{h}</span>
+            <span key={h} className={cn("text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground", h === "HANDLINGER" && "text-right")}>{h}</span>
           ))}
         </div>
         <div className="divide-y divide-border">
@@ -287,7 +287,7 @@ export default function KonsulenterAnsatte() {
                 </button>
               </div>
               {/* HANDLINGER */}
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 justify-end">
                 <button
                   onClick={(e) => { e.stopPropagation(); e.preventDefault(); setDetailAnsatt(a); setOpenEditMode(false); setAutoRunMatch(true); setDetailOpen(true); }}
                   className="inline-flex items-center gap-1 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
