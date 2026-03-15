@@ -158,10 +158,8 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
       start_dato: form.start_dato || null,
       slutt_dato: form.slutt_dato || null,
       kompetanse: form.kompetanse,
-      bio: form.bio.trim() || null,
       bilde_url: form.bilde_url || null,
       erfaring_aar: form.erfaring_aar ? parseInt(form.erfaring_aar) : null,
-      synlig_web: form.synlig_web,
       updated_at: new Date().toISOString(),
     };
 
