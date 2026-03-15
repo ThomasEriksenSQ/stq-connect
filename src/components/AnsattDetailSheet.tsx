@@ -450,6 +450,9 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                 autoRunMatch={autoRunMatch}
               />
               </div>
+
+              {/* CV Section */}
+              <CvSection ansattId={ansatt?.id} ansattNavn={ansatt?.navn} />
             </div>
           </>
         )}
