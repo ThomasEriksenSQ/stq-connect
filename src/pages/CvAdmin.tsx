@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
-import { ArrowLeft, Check, Download, History, Loader2, RotateCcw } from "lucide-react";
+import { ArrowLeft, Check, Download, History, Loader2, RotateCcw, Upload } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
