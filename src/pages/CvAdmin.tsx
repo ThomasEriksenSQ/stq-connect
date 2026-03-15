@@ -213,23 +213,29 @@ export default function CvAdmin() {
           return;
         }
 
-        setCvData((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            hero: {
-              ...prev.hero,
-              name: data.navn || prev.hero.name,
-              title: data.tittel || prev.hero.title,
-            },
-            introParagraphs: data.introParagraphs?.length ? data.introParagraphs : prev.introParagraphs,
-            competenceGroups: data.competenceGroups?.length ? data.competenceGroups : prev.competenceGroups,
-            projects: data.projects?.length ? data.projects : prev.projects,
-            education: data.education?.length ? data.education : prev.education,
-            workExperience: data.workExperience?.length ? data.workExperience : prev.workExperience,
-            sidebarSections: data.sidebarSections?.length ? data.sidebarSections : prev.sidebarSections,
-          };
-        });
+        const newDoc: CVDocument = {
+          ...(cvData || EMPTY_CV),
+          hero: {
+            ...(cvData || EMPTY_CV).hero,
+            name: data.navn || (cvData || EMPTY_CV).hero.name,
+            title: data.tittel || (cvData || EMPTY_CV).hero.title,
+          },
+          introParagraphs: data.introParagraphs?.length ? data.introParagraphs : (cvData || EMPTY_CV).introParagraphs,
+          competenceGroups: data.competenceGroups?.length ? data.competenceGroups : (cvData || EMPTY_CV).competenceGroups,
+          projects: data.projects?.length ? data.projects : (cvData || EMPTY_CV).projects,
+          education: data.education?.length ? data.education : (cvData || EMPTY_CV).education,
+          workExperience: data.workExperience?.length ? data.workExperience : (cvData || EMPTY_CV).workExperience,
+          sidebarSections: data.sidebarSections?.length ? data.sidebarSections : (cvData || EMPTY_CV).sidebarSections,
+        };
+
+        setCvData(newDoc);
+
+        if (cvId) {
+          await supabase
+            .from("cv_documents")
+            .update(cvDocToDbRow(newDoc) as any)
+            .eq("id", cvId);
+        }
 
         toast.success("CV fullstendig analysert — alle seksjoner er fylt inn");
       } catch {
