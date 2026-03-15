@@ -197,7 +197,7 @@ export default function CvEditor() {
           <img src="/STACQ_logo_black.png" alt="STACQ" className="h-8 mx-auto dark:invert" />
           <div className="space-y-3">
             <h1 className="text-xl font-bold text-foreground">Skriv inn din PIN-kode</h1>
-            <p className="text-sm text-muted-foreground">Bruk den 4-sifrede PIN-koden du har mottatt</p>
+            
           </div>
           <div className={`flex justify-center gap-3 ${shake ? "animate-shake" : ""}`}>
             {pin.map((digit, i) => (
