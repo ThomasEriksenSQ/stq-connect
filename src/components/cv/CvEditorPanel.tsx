@@ -81,8 +81,10 @@ export function CvEditorPanel({
 }: CvEditorPanelProps) {
   const [doc, setDoc] = useState<CVDocument>(initialData);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [portraitUploading, setPortraitUploading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const previewContainerRef = useRef<HTMLDivElement>(null);
+  const portraitInputRef = useRef<HTMLInputElement>(null);
   const [previewScale, setPreviewScale] = useState(0.5);
 
   // Sync if initialData changes externally (e.g. version restore)
