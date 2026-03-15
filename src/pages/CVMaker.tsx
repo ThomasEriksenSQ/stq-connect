@@ -640,7 +640,7 @@ function EmptySidebar() {
 function LogoMark() {
   return (
     <img
-      src="/STACQ_logo.png"
+      src="/STACQ_logo_black.png"
       alt="STACQ"
       style={{ width: mm(39.3), display: "block", filter: "brightness(0) invert(1)" }}
     />
