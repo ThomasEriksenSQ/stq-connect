@@ -20,6 +20,7 @@ import Import from "./pages/Import";
 import AdminBrregSync from "./pages/AdminBrregSync";
 import Foresporsler from "./pages/Foresporsler";
 import NettsideAI from "./pages/NettsideAI";
+import CvEditor from "./pages/CvEditor";
 
 const KonsulenterAnsatte = lazy(() => import("./pages/KonsulenterAnsatte"));
 const KonsulenterOppdrag = lazy(() => import("./pages/KonsulenterOppdrag"));
