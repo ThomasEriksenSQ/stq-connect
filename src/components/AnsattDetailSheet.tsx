@@ -17,6 +17,7 @@ interface AnsattDetailSheetProps {
   onClose: () => void;
   ansatt: any | null;
   openInEditMode?: boolean;
+  autoRunMatch?: boolean;
 }
 
 const SUGGESTED_TAGS = [
