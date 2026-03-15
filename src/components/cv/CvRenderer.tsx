@@ -82,7 +82,7 @@ export const CV_LAYOUT = {
     continuationPortraitTopMm: 26.5,
     textTopMm: 39.9,
     textLeftMm: 63.9,
-    textWidthMm: 124,
+    textWidthMm: 136,
     contactRightMm: 7.8,
     contactHeightMm: 31.25,
     contactWidthMm: 41.5,
@@ -167,8 +167,10 @@ const leftRailStyle = {
   background: "#000",
   color: "rgba(255,255,255,0.92)",
   padding: paddingMm(
-    CV_LAYOUT.sidebarPadding.topMm, CV_LAYOUT.sidebarPadding.rightMm,
-    CV_LAYOUT.sidebarPadding.bottomMm, CV_LAYOUT.sidebarPadding.leftMm
+    CV_LAYOUT.sidebarPadding.topMm,
+    CV_LAYOUT.sidebarPadding.rightMm,
+    CV_LAYOUT.sidebarPadding.bottomMm,
+    CV_LAYOUT.sidebarPadding.leftMm,
   ),
   fontSize: pt(9.1),
   lineHeight: 1.46,
@@ -176,8 +178,10 @@ const leftRailStyle = {
 
 const mainStyle = {
   padding: paddingMm(
-    CV_LAYOUT.mainPadding.topMm, CV_LAYOUT.mainPadding.rightMm,
-    CV_LAYOUT.mainPadding.bottomMm, CV_LAYOUT.mainPadding.leftMm
+    CV_LAYOUT.mainPadding.topMm,
+    CV_LAYOUT.mainPadding.rightMm,
+    CV_LAYOUT.mainPadding.bottomMm,
+    CV_LAYOUT.mainPadding.leftMm,
   ),
   fontSize: pt(10.3),
   lineHeight: 1.42,
@@ -188,8 +192,10 @@ const mainStyle = {
 const continuationMainStyle = {
   ...mainStyle,
   padding: paddingMm(
-    CV_LAYOUT.continuationTopPaddingMm, CV_LAYOUT.mainPadding.rightMm,
-    CV_LAYOUT.mainPadding.bottomMm, CV_LAYOUT.mainPadding.leftMm
+    CV_LAYOUT.continuationTopPaddingMm,
+    CV_LAYOUT.mainPadding.rightMm,
+    CV_LAYOUT.mainPadding.bottomMm,
+    CV_LAYOUT.mainPadding.leftMm,
   ),
 } satisfies React.CSSProperties;
 
@@ -369,11 +375,18 @@ function buildContinuationPages({
 export function SectionTitle({ children, marginTop = "6mm" }: { children: string; marginTop?: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "3mm", marginTop, marginBottom: "3mm" }}>
-      <div style={{
-        fontFamily: '"Myriad Pro Light", "Arial Narrow", "Avenir Next Condensed", "Helvetica Neue", Arial, sans-serif',
-        fontSize: "13.1pt", fontWeight: 700, letterSpacing: "0.012em",
-        textTransform: "uppercase", color: "#101010", whiteSpace: "nowrap",
-      }}>
+      <div
+        style={{
+          fontFamily:
+            '"Myriad Pro Light", "Arial Narrow", "Avenir Next Condensed", "Helvetica Neue", Arial, sans-serif',
+          fontSize: "13.1pt",
+          fontWeight: 700,
+          letterSpacing: "0.012em",
+          textTransform: "uppercase",
+          color: "#101010",
+          whiteSpace: "nowrap",
+        }}
+      >
         {children}
       </div>
       <div style={{ flex: 1, height: "1px", background: "#bfc2c5" }} />
@@ -381,16 +394,28 @@ export function SectionTitle({ children, marginTop = "6mm" }: { children: string
   );
 }
 
-function Sidebar({ sections, transparentBackground = false }: { sections: SidebarSection[]; transparentBackground?: boolean }) {
+function Sidebar({
+  sections,
+  transparentBackground = false,
+}: {
+  sections: SidebarSection[];
+  transparentBackground?: boolean;
+}) {
   return (
     <div style={{ ...leftRailStyle, background: transparentBackground ? "transparent" : leftRailStyle.background }}>
       {sections.map((section) => (
         <div key={section.heading} style={{ marginBottom: "5.8mm" }}>
-          <div style={{
-            fontWeight: 800, fontSize: "11.3pt", textTransform: "uppercase",
-            letterSpacing: "0.04em", marginBottom: "2.2mm", color: "#fff",
-            fontFamily: '"Myriad Pro Light", "Avenir Next Condensed", "Helvetica Neue", Arial, sans-serif',
-          }}>
+          <div
+            style={{
+              fontWeight: 800,
+              fontSize: "11.3pt",
+              textTransform: "uppercase",
+              letterSpacing: "0.04em",
+              marginBottom: "2.2mm",
+              color: "#fff",
+              fontFamily: '"Myriad Pro Light", "Avenir Next Condensed", "Helvetica Neue", Arial, sans-serif',
+            }}
+          >
             {section.heading}
           </div>
           {section.items.map((item) => (
@@ -408,11 +433,16 @@ function Sidebar({ sections, transparentBackground = false }: { sections: Sideba
 function EmptySidebar({ imageUrl }: { imageUrl?: string }) {
   return (
     <div style={{ background: "#000", position: "relative" }}>
-      <div style={{
-        position: "absolute", top: mm(CV_LAYOUT.hero.topRowHeightMm), left: 0,
-        width: mm(CV_LAYOUT.sidebarWidthMm), height: mm(CV_LAYOUT.hero.grayBandHeightMm),
-        background: "#f2f2f2",
-      }} />
+      <div
+        style={{
+          position: "absolute",
+          top: mm(CV_LAYOUT.hero.topRowHeightMm),
+          left: 0,
+          width: mm(CV_LAYOUT.sidebarWidthMm),
+          height: mm(CV_LAYOUT.hero.grayBandHeightMm),
+          background: "#f2f2f2",
+        }}
+      />
       <Portrait topMm={CV_LAYOUT.hero.continuationPortraitTopMm} imageUrl={imageUrl} />
     </div>
   );
@@ -420,22 +450,40 @@ function EmptySidebar({ imageUrl }: { imageUrl?: string }) {
 
 function LogoMark() {
   return (
-    <img src="/STACQ_logo.png" alt="STACQ" style={{ width: mm(39.3), display: "block", filter: "brightness(0) invert(1)" }} />
+    <img
+      src="/STACQ_logo.png"
+      alt="STACQ"
+      style={{ width: mm(39.3), display: "block", filter: "brightness(0) invert(1)" }}
+    />
   );
 }
 
 function Portrait({ topMm, imageUrl }: { topMm: number; imageUrl?: string }) {
   return (
-    <div style={{
-      position: "absolute", top: mm(topMm), left: mm(CV_LAYOUT.hero.portraitLeftMm),
-      width: mm(CV_LAYOUT.hero.portraitWidthMm), height: mm(CV_LAYOUT.hero.portraitHeightMm),
-      overflow: "hidden", background: "#000", zIndex: 2,
-    }}>
+    <div
+      style={{
+        position: "absolute",
+        top: mm(topMm),
+        left: mm(CV_LAYOUT.hero.portraitLeftMm),
+        width: mm(CV_LAYOUT.hero.portraitWidthMm),
+        height: mm(CV_LAYOUT.hero.portraitHeightMm),
+        overflow: "hidden",
+        background: "#000",
+        zIndex: 2,
+      }}
+    >
       {imageUrl && (
-        <img src={imageUrl} alt="" style={{
-          width: "100%", height: "100%", objectFit: "cover",
-          objectPosition: "center 11%", display: "block",
-        }} />
+        <img
+          src={imageUrl}
+          alt=""
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center 11%",
+            display: "block",
+          }}
+        />
       )}
     </div>
   );
@@ -443,17 +491,33 @@ function Portrait({ topMm, imageUrl }: { topMm: number; imageUrl?: string }) {
 
 function ContactBlock({ contact }: { contact: HeroContact }) {
   return (
-    <div style={{
-      position: "absolute", top: 0, right: mm(CV_LAYOUT.hero.contactRightMm),
-      height: mm(CV_LAYOUT.hero.contactHeightMm), display: "flex", alignItems: "center", zIndex: 2,
-    }}>
+    <div
+      style={{
+        position: "absolute",
+        top: 0,
+        right: mm(CV_LAYOUT.hero.contactRightMm),
+        height: mm(CV_LAYOUT.hero.contactHeightMm),
+        display: "flex",
+        alignItems: "center",
+        zIndex: 2,
+      }}
+    >
       <div style={{ display: "flex", alignItems: "center", gap: px(12), fontFamily: '"Verdana", Arial, sans-serif' }}>
-        <div style={{
-          width: "1.15px", height: mm(CV_LAYOUT.hero.contactSeparatorHeightMm),
-          marginTop: mm(CV_LAYOUT.hero.contactSeparatorOffsetMm), background: "#d5d5d5", flexShrink: 0,
-        }} />
-        <div style={{ width: mm(CV_LAYOUT.hero.contactWidthMm), fontSize: pt(9.3), lineHeight: 1.28, color: "#848484" }}>
-          <div style={{ fontWeight: 700, fontSize: pt(9.4), color: "#767676", marginBottom: "0.7mm" }}>{contact.title}</div>
+        <div
+          style={{
+            width: "1.15px",
+            height: mm(CV_LAYOUT.hero.contactSeparatorHeightMm),
+            marginTop: mm(CV_LAYOUT.hero.contactSeparatorOffsetMm),
+            background: "#d5d5d5",
+            flexShrink: 0,
+          }}
+        />
+        <div
+          style={{ width: mm(CV_LAYOUT.hero.contactWidthMm), fontSize: pt(9.3), lineHeight: 1.28, color: "#848484" }}
+        >
+          <div style={{ fontWeight: 700, fontSize: pt(9.4), color: "#767676", marginBottom: "0.7mm" }}>
+            {contact.title}
+          </div>
           <div style={{ color: "#7e7e7e" }}>{contact.name}</div>
           <div style={{ whiteSpace: "nowrap" }}>{contact.phone}</div>
           <div style={{ whiteSpace: "nowrap" }}>{contact.email}</div>
@@ -466,21 +530,32 @@ function ContactBlock({ contact }: { contact: HeroContact }) {
 export function ProjectBlock({ company, subtitle, role, period, paragraphs, technologies }: ProjectEntry) {
   return (
     <div className="cv-project-block" style={{ marginBottom: "6.4mm" }}>
-      <div style={{ fontWeight: 700, fontSize: "9.9pt", color: "#111", letterSpacing: "0.006em", marginBottom: "1.8mm" }}>
+      <div
+        style={{ fontWeight: 700, fontSize: "9.9pt", color: "#111", letterSpacing: "0.006em", marginBottom: "1.8mm" }}
+      >
         {company}
       </div>
       <div style={{ fontWeight: 600, fontSize: "9.6pt", marginBottom: "2.9mm", color: "#242424", lineHeight: 1.28 }}>
         {subtitle}
       </div>
-      <div style={{
-        display: "flex", justifyContent: "space-between", alignItems: "baseline",
-        gap: "6mm", fontSize: "8.8pt", color: "#666", marginBottom: "3.1mm",
-      }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "baseline",
+          gap: "6mm",
+          fontSize: "8.8pt",
+          color: "#666",
+          marginBottom: "3.1mm",
+        }}
+      >
         <span style={{ color: "#4f4f4f" }}>{role}</span>
         <span style={{ flexShrink: 0, color: "#4f4f4f" }}>{period}</span>
       </div>
       {paragraphs.map((paragraph, i) => (
-        <p key={i} style={{ margin: "0 0 2.35mm 0", lineHeight: 1.36 }}>{paragraph}</p>
+        <p key={i} style={{ margin: "0 0 2.35mm 0", lineHeight: 1.36 }}>
+          {paragraph}
+        </p>
       ))}
       <p style={{ margin: "1.2mm 0 0 0", lineHeight: 1.42, color: "#1f1f1f" }}>
         <strong>Teknologier:</strong> {technologies}
@@ -489,15 +564,30 @@ export function ProjectBlock({ company, subtitle, role, period, paragraphs, tech
   );
 }
 
-function TimelineRow({ period, primary, secondary, marginBottom = "2.5mm" }: {
-  period: string; primary: string; secondary?: string; marginBottom?: string;
+function TimelineRow({
+  period,
+  primary,
+  secondary,
+  marginBottom = "2.5mm",
+}: {
+  period: string;
+  primary: string;
+  secondary?: string;
+  marginBottom?: string;
 }) {
   return (
     <div style={{ display: "flex", gap: "7mm", marginBottom, alignItems: "flex-start" }}>
-      <span style={{
-        minWidth: "29mm", flexShrink: 0, color: "#3d3d3d", fontSize: "9.4pt",
-        lineHeight: 1.3, fontVariantNumeric: "tabular-nums", letterSpacing: "0.01em",
-      }}>
+      <span
+        style={{
+          minWidth: "29mm",
+          flexShrink: 0,
+          color: "#3d3d3d",
+          fontSize: "9.4pt",
+          lineHeight: 1.3,
+          fontVariantNumeric: "tabular-nums",
+          letterSpacing: "0.01em",
+        }}
+      >
         {period}
       </span>
       <span style={{ display: "flex", flexDirection: "column", gap: "0.55mm" }}>
@@ -513,13 +603,25 @@ function EducationSection({ education, marginTop = "6mm" }: { education: Timelin
     <>
       <SectionTitle marginTop={marginTop}>Utdannelse</SectionTitle>
       {education.map((entry, i) => (
-        <TimelineRow key={i} period={entry.period} primary={entry.primary} secondary={entry.secondary} marginBottom="3.4mm" />
+        <TimelineRow
+          key={i}
+          period={entry.period}
+          primary={entry.primary}
+          secondary={entry.secondary}
+          marginBottom="3.4mm"
+        />
       ))}
     </>
   );
 }
 
-function WorkExperienceSection({ workExperience, marginTop = "6mm" }: { workExperience: TimelineEntry[]; marginTop?: string }) {
+function WorkExperienceSection({
+  workExperience,
+  marginTop = "6mm",
+}: {
+  workExperience: TimelineEntry[];
+  marginTop?: string;
+}) {
   return (
     <>
       <SectionTitle marginTop={marginTop}>Arbeidserfaring</SectionTitle>
@@ -531,7 +633,10 @@ function WorkExperienceSection({ workExperience, marginTop = "6mm" }: { workExpe
 }
 
 function ContinuationPage({
-  pageProjects, sections, doc, imageUrl,
+  pageProjects,
+  sections,
+  doc,
+  imageUrl,
 }: {
   pageProjects: ProjectEntry[];
   sections: ContinuationSectionId[];
@@ -553,7 +658,8 @@ function ContinuationPage({
           )}
           {sections.map((section, index) => {
             const mt = pageProjects.length > 0 || index > 0 ? "6mm" : "0";
-            if (section === "education") return <EducationSection key={section} education={doc.education} marginTop={mt} />;
+            if (section === "education")
+              return <EducationSection key={section} education={doc.education} marginTop={mt} />;
             return <WorkExperienceSection key={section} workExperience={doc.workExperience} marginTop={mt} />;
           })}
         </div>
@@ -599,7 +705,7 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
       const mmToPx = pageHeightPx / 297;
       const bottomBuffer = Math.max(CONTINUATION_BOTTOM_BUFFER_MM, 0) * mmToPx;
       const projectHeights = doc.projects.map((project) =>
-        measureOuterHeight(projectMeasureRefs.current[getProjectKey(project)])
+        measureOuterHeight(projectMeasureRefs.current[getProjectKey(project)]),
       );
       const nextPages = buildContinuationPages({
         allProjects: doc.projects,
@@ -617,7 +723,10 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
     };
     updatePagination();
     window.addEventListener("resize", updatePagination);
-    return () => { cancelled = true; window.removeEventListener("resize", updatePagination); };
+    return () => {
+      cancelled = true;
+      window.removeEventListener("resize", updatePagination);
+    };
   }, [doc]);
 
   const { hero, sidebarSections, introParagraphs, competenceGroups, projects, education, workExperience } = doc;
@@ -626,10 +735,14 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
     <div style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: `${100 / scale}%` }}>
       {/* Hidden measure elements */}
       <div aria-hidden="true" className="no-print" style={hiddenMeasureRootStyle}>
-        <div style={{
-          width: mm(CV_LAYOUT.pageWidthMm), display: "grid",
-          gridTemplateColumns: `${mm(CV_LAYOUT.sidebarWidthMm)} 1fr`, height: mm(CV_LAYOUT.pageHeightMm),
-        }}>
+        <div
+          style={{
+            width: mm(CV_LAYOUT.pageWidthMm),
+            display: "grid",
+            gridTemplateColumns: `${mm(CV_LAYOUT.sidebarWidthMm)} 1fr`,
+            height: mm(CV_LAYOUT.pageHeightMm),
+          }}
+        >
           <div />
           <div ref={measureCapacityRef} style={continuationMainStyle} />
         </div>
@@ -638,8 +751,13 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
             <SectionTitle marginTop="0">Prosjekter</SectionTitle>
           </div>
           {projects.map((project) => (
-            <div key={`measure-${getProjectKey(project)}`} style={{ display: "flow-root" }}
-              ref={(el) => { projectMeasureRefs.current[getProjectKey(project)] = el; }}>
+            <div
+              key={`measure-${getProjectKey(project)}`}
+              style={{ display: "flow-root" }}
+              ref={(el) => {
+                projectMeasureRefs.current[getProjectKey(project)] = el;
+              }}
+            >
               <ProjectBlock {...project} />
             </div>
           ))}
@@ -660,54 +778,105 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
 
       {/* Pages */}
       <div className="cv-print-root">
-        <div className="cv-pages" style={{
-          fontFamily: '"Calibri", "Carlito", Arial, sans-serif',
-          display: "flex", flexDirection: "column", gap: px(CV_LAYOUT.screen.pageGapPx),
-        }}>
+        <div
+          className="cv-pages"
+          style={{
+            fontFamily: '"Calibri", "Carlito", Arial, sans-serif',
+            display: "flex",
+            flexDirection: "column",
+            gap: px(CV_LAYOUT.screen.pageGapPx),
+          }}
+        >
           {/* First page */}
           <div className="cv-page cv-document" style={pageStyle}>
             <div style={firstPageGridStyle}>
-              <div style={{
-                gridColumn: "1 / -1", gridRow: 1, position: "relative",
-                overflow: "hidden", background: "transparent", zIndex: 1,
-              }}>
-                <div style={{
-                  position: "absolute", top: 0, left: mm(CV_LAYOUT.sidebarWidthMm), right: 0,
-                  height: mm(CV_LAYOUT.hero.topRowHeightMm), background: "#fff",
-                }} />
-                <div style={{
-                  position: "absolute", top: mm(CV_LAYOUT.hero.topRowHeightMm), left: 0, right: 0,
-                  height: mm(CV_LAYOUT.hero.grayBandHeightMm), background: "#f2f2f2",
-                }} />
-                <div style={{
-                  position: "absolute", top: 0, left: 0,
-                  width: mm(CV_LAYOUT.sidebarWidthMm), height: mm(CV_LAYOUT.hero.logoBoxHeightMm),
-                }}>
-                  <div style={{
-                    width: mm(CV_LAYOUT.sidebarWidthMm), height: mm(CV_LAYOUT.hero.logoBoxHeightMm),
-                    display: "flex", justifyContent: "center", alignItems: "center",
-                  }}>
+              <div
+                style={{
+                  gridColumn: "1 / -1",
+                  gridRow: 1,
+                  position: "relative",
+                  overflow: "hidden",
+                  background: "transparent",
+                  zIndex: 1,
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: mm(CV_LAYOUT.sidebarWidthMm),
+                    right: 0,
+                    height: mm(CV_LAYOUT.hero.topRowHeightMm),
+                    background: "#fff",
+                  }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    top: mm(CV_LAYOUT.hero.topRowHeightMm),
+                    left: 0,
+                    right: 0,
+                    height: mm(CV_LAYOUT.hero.grayBandHeightMm),
+                    background: "#f2f2f2",
+                  }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: mm(CV_LAYOUT.sidebarWidthMm),
+                    height: mm(CV_LAYOUT.hero.logoBoxHeightMm),
+                  }}
+                >
+                  <div
+                    style={{
+                      width: mm(CV_LAYOUT.sidebarWidthMm),
+                      height: mm(CV_LAYOUT.hero.logoBoxHeightMm),
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
                     <LogoMark />
                   </div>
                 </div>
                 <Portrait topMm={CV_LAYOUT.hero.firstPagePortraitTopMm} imageUrl={imageUrl} />
                 <ContactBlock contact={hero.contact} />
-                <div style={{
-                  position: "absolute", top: mm(CV_LAYOUT.hero.textTopMm), left: mm(CV_LAYOUT.hero.textLeftMm),
-                  width: mm(CV_LAYOUT.hero.textWidthMm), display: "flex", flexDirection: "column",
-                  justifyContent: "flex-start", zIndex: 2,
-                }}>
-                  <div style={{
-                    fontFamily: '"Carlito", "Calibri", Arial, sans-serif',
-                    fontSize: "32.3pt", fontWeight: 700, letterSpacing: "-0.014em", lineHeight: 0.99, color: "#000",
-                  }}>
+                <div
+                  style={{
+                    position: "absolute",
+                    top: mm(CV_LAYOUT.hero.textTopMm),
+                    left: mm(CV_LAYOUT.hero.textLeftMm),
+                    width: mm(CV_LAYOUT.hero.textWidthMm),
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "flex-start",
+                    zIndex: 2,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: '"Carlito", "Calibri", Arial, sans-serif',
+                      fontSize: "32.3pt",
+                      fontWeight: 700,
+                      letterSpacing: "-0.014em",
+                      lineHeight: 0.99,
+                      color: "#000",
+                    }}
+                  >
                     {hero.name}
                   </div>
-                  <div style={{
-                    fontFamily: '"Raleway", "Helvetica Neue", Arial, sans-serif',
-                    fontSize: "11.2pt", fontWeight: 500, marginTop: "3.3mm",
-                    letterSpacing: "0.05em", color: "#383838",
-                  }}>
+                  <div
+                    style={{
+                      fontFamily: '"Raleway", "Helvetica Neue", Arial, sans-serif',
+                      fontSize: "11.2pt",
+                      fontWeight: 500,
+                      marginTop: "3.3mm",
+                      letterSpacing: "0.05em",
+                      color: "#383838",
+                    }}
+                  >
                     {hero.title}
                   </div>
                 </div>
@@ -718,7 +887,9 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
               </div>
               <div style={{ ...mainStyle, gridColumn: 2, gridRow: 2 }}>
                 {introParagraphs.map((paragraph, i) => (
-                  <p key={i} style={{ margin: "0 0 3mm 0" }}>{paragraph}</p>
+                  <p key={i} style={{ margin: "0 0 3mm 0" }}>
+                    {paragraph}
+                  </p>
                 ))}
                 {competenceGroups.map((group, i) => (
                   <p key={i} style={{ margin: "0 0 2.5mm 0" }}>
@@ -761,14 +932,23 @@ export async function openCvPrintDialog(documentTitle?: string) {
   const printFrame = document.createElement("iframe");
   printFrame.setAttribute("aria-hidden", "true");
   Object.assign(printFrame.style, {
-    position: "fixed", right: "0", bottom: "0", width: "0", height: "0",
-    border: "0", opacity: "0", pointerEvents: "none",
+    position: "fixed",
+    right: "0",
+    bottom: "0",
+    width: "0",
+    height: "0",
+    border: "0",
+    opacity: "0",
+    pointerEvents: "none",
   });
   document.body.appendChild(printFrame);
 
   const printWindow = printFrame.contentWindow;
   const printDocument = printFrame.contentDocument;
-  if (!printWindow || !printDocument) { printFrame.remove(); return; }
+  if (!printWindow || !printDocument) {
+    printFrame.remove();
+    return;
+  }
 
   printDocument.open();
   printDocument.write(`<!doctype html>
@@ -783,19 +963,30 @@ export async function openCvPrintDialog(documentTitle?: string) {
   printDocument.close();
 
   const readyImages = Array.from(printDocument.querySelectorAll<HTMLImageElement>("img"));
-  const imagePromises = readyImages.map((image) =>
-    new Promise<void>((resolve) => {
-      if (image.complete) { resolve(); return; }
-      const done = () => { image.removeEventListener("load", done); image.removeEventListener("error", done); resolve(); };
-      image.addEventListener("load", done);
-      image.addEventListener("error", done);
-    })
+  const imagePromises = readyImages.map(
+    (image) =>
+      new Promise<void>((resolve) => {
+        if (image.complete) {
+          resolve();
+          return;
+        }
+        const done = () => {
+          image.removeEventListener("load", done);
+          image.removeEventListener("error", done);
+          resolve();
+        };
+        image.addEventListener("load", done);
+        image.addEventListener("error", done);
+      }),
   );
 
   await Promise.all([waitForFontsReady(printDocument), ...imagePromises]);
   await waitForDoubleFrame(printWindow);
 
-  const cleanupPrintFrame = () => { printWindow.removeEventListener("afterprint", cleanupPrintFrame); printFrame.remove(); };
+  const cleanupPrintFrame = () => {
+    printWindow.removeEventListener("afterprint", cleanupPrintFrame);
+    printFrame.remove();
+  };
   printWindow.focus();
   printWindow.addEventListener("afterprint", cleanupPrintFrame, { once: true });
   window.setTimeout(cleanupPrintFrame, 60000);
