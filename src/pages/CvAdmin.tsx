@@ -293,6 +293,16 @@ export default function CvAdmin() {
                 )}
               </div>
               <div className="flex items-center gap-2">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button size="icon" variant="ghost" className="border border-border h-9 w-9" onClick={() => setFullscreen(prev => !prev)}>
+                        {fullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{fullscreen ? "Avslutt fullskjerm" : "Fullskjerm"}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <Button size="sm" variant="ghost" onClick={loadVersions}>
                   <History className="h-3.5 w-3.5 mr-1" />
                   Versjonshistorikk
