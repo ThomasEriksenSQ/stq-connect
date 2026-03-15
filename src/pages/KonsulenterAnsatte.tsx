@@ -271,13 +271,19 @@ export default function KonsulenterAnsatte() {
                 </DropdownMenu>
               </div>
               {/* CV */}
-              <div>
+              <div className="flex items-center gap-1.5">
                 <button
                   onClick={(e) => { e.stopPropagation(); navigate(`/cv-admin/${a.id}`); }}
                   className="inline-flex items-center gap-1 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                 >
                   <FileText className="h-3.5 w-3.5" />
                   CV
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); generateLink(a); }}
+                  className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground border border-border"
+                >
+                  <Link className="h-3.5 w-3.5" />
                 </button>
               </div>
               {/* HANDLINGER */}
@@ -288,12 +294,6 @@ export default function KonsulenterAnsatte() {
                 >
                   <Sparkles className="h-3.5 w-3.5" />
                   Finn oppdrag
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); generateLink(a); }}
-                  className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground border border-border"
-                >
-                  <Link className="h-3.5 w-3.5" />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); e.preventDefault(); setDetailAnsatt(a); setOpenEditMode(true); setDetailOpen(true); }}
