@@ -185,7 +185,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
 
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <SheetContent side="right" className="w-[700px] sm:w-[700px] max-w-full p-0 flex flex-col [&>button]:hidden">
+      <SheetContent side="right" className="w-full sm:w-[700px] max-w-[700px] p-0 flex flex-col [&>button]:hidden">
 
         {/* ─── EDIT MODE ─── */}
         {editing ? (
