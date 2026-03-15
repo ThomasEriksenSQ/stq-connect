@@ -70,6 +70,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<AuthRoute />} />
+              <Route path="/cv/:token" element={<CvEditor />} />
               <Route path="/" element={<ProtectedRoutes />}>
                 <Route index element={<Dashboard />} />
                 <Route path="selskaper" element={<Companies />} />
@@ -82,6 +83,14 @@ const App = () => (
                 <Route path="cv-maker" element={<CVMaker />} />
                 <Route path="import" element={<Import />} />
                 <Route path="admin/brreg-sync" element={<AdminBrregSync />} />
+                <Route
+                  path="cv-admin/:ansattId"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <CvAdmin />
+                    </Suspense>
+                  }
+                />
                 <Route
                   path="konsulenter/ansatte"
                   element={
