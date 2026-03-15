@@ -289,7 +289,7 @@ export function CvEditorPanel({
       return;
     }
 
-    await openCvPrintDialog(doc.hero.name ? `${doc.hero.name}_CV` : "CV");
+    await openCvPrintDialog(doc.hero.name ? `CV - ${doc.hero.name} - STACQ` : "CV - STACQ");
   };
 
   const handleResizeStart = (event: React.PointerEvent<HTMLDivElement>) => {
