@@ -268,8 +268,10 @@ export const PROJECT_MONTH_OPTIONS = [
 
 const PROJECT_MONTH_LABELS = new Map(PROJECT_MONTH_OPTIONS.map((entry) => [entry.value, entry.label]));
 
-function normalizeProjectMonth(value: number | null | undefined) {
-  return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 12 ? value : null;
+type MonthNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
+
+function normalizeProjectMonth(value: number | null | undefined): MonthNumber | null {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 12 ? (value as MonthNumber) : null;
 }
 
 function normalizeProjectYear(value: number | null | undefined) {
