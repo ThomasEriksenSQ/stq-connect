@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState } from "react";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
 import { format, differenceInMonths, isAfter } from "date-fns";
-import { FileText, Link, Pencil, Plus, Sparkles } from "lucide-react";
+import { ExternalLink, Link2, Pencil, Plus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
@@ -187,7 +187,7 @@ export default function KonsulenterAnsatte() {
       <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
         {/* Header */}
         <div className="grid grid-cols-[minmax(0,1.8fr)_90px_100px_120px_110px_minmax(0,1.2fr)] gap-3 px-4 py-2.5 border-b border-border bg-background">
-          {["NAVN", "START", "ANSETTELSE", "OPPDRAG", "CV", "HANDLINGER"].map((h) => (
+          {["NAVN", "START", "ANSETTELSE", "OPPDRAG", "CV / LINK", "HANDLINGER"].map((h) => (
             <span key={h} className={cn("text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground", h === "HANDLINGER" && "text-right")}>{h}</span>
           ))}
         </div>
@@ -270,20 +270,21 @@ export default function KonsulenterAnsatte() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-              {/* CV */}
+              {/* CV / LINK */}
               <div className="flex items-center gap-1.5">
                 <button
                   onClick={(e) => { e.stopPropagation(); navigate(`/cv-admin/${a.id}`); }}
-                  className="inline-flex items-center gap-1 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  className="inline-flex items-center gap-1 h-7 px-2 text-[0.75rem] rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                 >
-                  <FileText className="h-3.5 w-3.5" />
-                  CV
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  CV-editor
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); e.preventDefault(); generateLink(a); }}
-                  className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground border border-border"
+                  className="inline-flex items-center gap-1 h-7 px-2 text-[0.75rem] rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                 >
-                  <Link className="h-3.5 w-3.5" />
+                  <Link2 className="h-3.5 w-3.5" />
+                  Del link
                 </button>
               </div>
               {/* HANDLINGER */}
