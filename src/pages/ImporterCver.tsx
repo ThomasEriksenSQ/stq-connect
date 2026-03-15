@@ -62,7 +62,6 @@ export default function ImporterCver() {
   const [dragOver, setDragOver] = useState(false);
 
   // Fetch existing records for matching
-  });
 
   const { data: eksterne = [] } = useQuery({
     queryKey: ["external-consultants-all"],
