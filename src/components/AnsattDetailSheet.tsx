@@ -189,7 +189,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
 
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <SheetContent side="right" className="w-[640px] max-w-full p-0 flex flex-col [&>button]:hidden">
+      <SheetContent side="right" className="w-[700px] max-w-full p-0 flex flex-col [&>button]:hidden">
 
         {/* ─── EDIT MODE ─── */}
         {editing ? (
@@ -237,11 +237,6 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
               </div>
 
               <div>
-                <label className={LABEL}>Sted</label>
-                <Input value={form.geografi} onChange={(e) => set("geografi", e.target.value)} className="mt-1 text-[0.875rem]" placeholder="Oslo" />
-              </div>
-
-              <div>
                 <label className={cn(LABEL, "mb-1.5 block")}>Status</label>
                 <div className="flex gap-2">
                   {STATUS_OPTIONS.map((s) => (
@@ -262,7 +257,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
               </div>
 
               {/* ── PROFIL ── */}
-              <div className="space-y-3">
+              <div className="space-y-3 mt-6">
                 <label className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">
                   Profil — vises på nettsiden
                 </label>
@@ -383,6 +378,25 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
                 </div>
               </div>
 
+              <div>
+                <label className={LABEL}>Kort bio</label>
+                <textarea
+                  value={form.bio}
+                  onChange={(e) => set("bio", e.target.value)}
+                  placeholder="2-3 setninger om bakgrunn og spesialitet..."
+                  rows={4}
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-[0.875rem] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                />
+              </div>
+
+              {/* Synlig på web */}
+              <div className="flex items-center justify-between py-2">
+                <div>
+                  <p className="text-[0.875rem] font-medium">Vis på stacq.no</p>
+                  <p className="text-xs text-muted-foreground">Profilen vises på nettsidens konsulentside</p>
+                </div>
+                <Switch checked={form.synlig_web} onCheckedChange={(v) => set("synlig_web", v)} />
+              </div>
             </div>
 
             {/* Save / Cancel footer */}
