@@ -1,8 +1,6 @@
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { getInitials, cn } from "@/lib/utils";
-import { Globe, FileText, Pencil, X, Loader2, Upload, Sparkles, Mail, Phone, MapPin, Calendar, Briefcase, ExternalLink, Link2, Copy } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { hashPin } from "@/lib/pinHash";
+import { Globe, FileText, Pencil, X, Loader2, Upload, Sparkles, Mail, Phone, MapPin, Calendar, Briefcase } from "lucide-react";
 import { format, differenceInMonths } from "date-fns";
 import { formatMonths } from "@/lib/utils";
 import { OppdragsMatchPanel } from "@/components/OppdragsMatchPanel";
