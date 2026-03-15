@@ -204,12 +204,6 @@ export default function KonsulenterAnsatte() {
                   </div>
                 )}
                 <span className="font-medium text-[0.8125rem] truncate">{a.navn}</span>
-                {inOppdrag && (
-                  <span className="bg-emerald-100 text-emerald-700 text-[0.625rem] font-semibold uppercase rounded px-1.5 py-0.5 flex-shrink-0">
-                    I OPPDRAG
-                  </span>
-                )}
-              </div>
               {/* START */}
               <div className="text-[0.8125rem]">
                 {isKommende ? (
