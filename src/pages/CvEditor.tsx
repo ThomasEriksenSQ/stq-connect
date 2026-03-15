@@ -175,8 +175,7 @@ export default function CvEditor() {
     // Auto-submit when all 4 digits entered
     if (value && index === 3 && newPin.every((d) => d)) {
       setTimeout(() => {
-        setPin(newPin);
-        // trigger verify
+        verifyPin(newPin.join(""));
       }, 50);
     }
   };
