@@ -29,6 +29,7 @@ const StacqPrisen = lazy(() => import("./pages/StacqPrisen"));
 const ImporterCver = lazy(() => import("./pages/ImporterCver"));
 const ImporterSelskaper = lazy(() => import("./pages/ImporterSelskaper"));
 const Markedsradar = lazy(() => import("./pages/Markedsradar"));
+const CvAdmin = lazy(() => import("./pages/CvAdmin"));
 
 const queryClient = new QueryClient();
 
