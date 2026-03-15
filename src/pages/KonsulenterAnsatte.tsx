@@ -13,13 +13,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-type Filter = "Alle" | "Aktiv" | "Kommende" | "Sluttet";
 
-const SUGGESTED_KOMPETANSE = [
-  "Embedded Linux", "RTOS", "C", "C++", "Python", "Yocto",
-  "FreeRTOS", "CANopen", "STM32", "Security", "Autonomi",
-  "Regulering", "Defence", "Java", "Rust",
-];
+type Filter = "Alle" | "Aktiv" | "Kommende" | "Sluttet";
 
 const SUPABASE_URL = "https://kbvzpcebfopqqrvmbiap.supabase.co";
 
