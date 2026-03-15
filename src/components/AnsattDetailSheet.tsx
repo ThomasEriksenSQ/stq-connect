@@ -6,7 +6,6 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 const SUPABASE_URL = "https://kbvzpcebfopqqrvmbiap.supabase.co";
@@ -45,8 +44,8 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
 
   const [form, setForm] = useState({
     navn: "", epost: "", tlf: "", geografi: "", status: "AKTIV/SIGNERT",
-    start_dato: "", slutt_dato: "", kompetanse: [] as string[], bio: "",
-    bilde_url: "", erfaring_aar: "", synlig_web: false,
+    start_dato: "", slutt_dato: "", kompetanse: [] as string[],
+    bilde_url: "", erfaring_aar: "",
   });
 
   // Reset form when panel opens/closes or ansatt changes
@@ -55,8 +54,8 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
       setEditing(true);
       setForm({
         navn: "", epost: "", tlf: "", geografi: "", status: "AKTIV/SIGNERT",
-        start_dato: "", slutt_dato: "", kompetanse: [], bio: "",
-        bilde_url: "", erfaring_aar: "", synlig_web: false,
+        start_dato: "", slutt_dato: "", kompetanse: [],
+        bilde_url: "", erfaring_aar: "",
       });
     } else if (ansatt) {
       setEditing(false);
@@ -69,10 +68,8 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
         start_dato: ansatt.start_dato || "",
         slutt_dato: ansatt.slutt_dato || "",
         kompetanse: ansatt.kompetanse || [],
-        bio: ansatt.bio || "",
         bilde_url: ansatt.bilde_url || "",
         erfaring_aar: ansatt.erfaring_aar?.toString() || "",
-        synlig_web: ansatt.synlig_web || false,
       });
     }
     setTagInput("");
@@ -138,7 +135,6 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
       if (data.erfaring_aar) set("erfaring_aar", String(data.erfaring_aar));
       if (data.kompetanse?.length) set("kompetanse", data.kompetanse);
       if (data.geografi) set("geografi", data.geografi);
-      if (data.bio) set("bio", data.bio);
       setCvParsed(true);
       toast.success("CV analysert — feltene er fylt inn");
     } catch (err) {
@@ -161,10 +157,8 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
       start_dato: form.start_dato || null,
       slutt_dato: form.slutt_dato || null,
       kompetanse: form.kompetanse,
-      bio: form.bio.trim() || null,
       bilde_url: form.bilde_url || null,
       erfaring_aar: form.erfaring_aar ? parseInt(form.erfaring_aar) : null,
-      synlig_web: form.synlig_web,
       updated_at: new Date().toISOString(),
     };
 
@@ -189,7 +183,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
 
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <SheetContent side="right" className="w-[700px] max-w-full p-0 flex flex-col [&>button]:hidden">
+      <SheetContent side="right" className="w-[700px] sm:w-[700px] max-w-full p-0 flex flex-col [&>button]:hidden">
 
         {/* ─── EDIT MODE ─── */}
         {editing ? (
@@ -378,25 +372,6 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
                 </div>
               </div>
 
-              <div>
-                <label className={LABEL}>Kort bio</label>
-                <textarea
-                  value={form.bio}
-                  onChange={(e) => set("bio", e.target.value)}
-                  placeholder="2-3 setninger om bakgrunn og spesialitet..."
-                  rows={4}
-                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-[0.875rem] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                />
-              </div>
-
-              {/* Synlig på web */}
-              <div className="flex items-center justify-between py-2">
-                <div>
-                  <p className="text-[0.875rem] font-medium">Vis på stacq.no</p>
-                  <p className="text-xs text-muted-foreground">Profilen vises på nettsidens konsulentside</p>
-                </div>
-                <Switch checked={form.synlig_web} onCheckedChange={(v) => set("synlig_web", v)} />
-              </div>
             </div>
 
             {/* Save / Cancel footer */}
