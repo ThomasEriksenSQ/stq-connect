@@ -208,13 +208,12 @@ export default function ImporterCver() {
     let success = 0;
     for (const cv of matched) {
       try {
-        if (tab === "ansatte") await saveAnsattUpdate(cv);
-        else await saveEksternUpdate(cv);
+        await saveEksternUpdate(cv);
         success++;
       } catch { /* skip */ }
     }
     setCvs(prev => prev.filter(c => !(c.status === "done" && c.matchedId)));
-    queryClient.invalidateQueries({ queryKey: tab === "ansatte" ? ["stacq-ansatte"] : ["external-consultants-all"] });
+    queryClient.invalidateQueries({ queryKey: ["external-consultants-all"] });
     toast.success(`${success} av ${matched.length} oppdatert`);
   };
 
