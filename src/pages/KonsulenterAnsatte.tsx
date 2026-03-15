@@ -22,6 +22,7 @@ export default function KonsulenterAnsatte() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [openEditMode, setOpenEditMode] = useState(false);
   const [autoRunMatch, setAutoRunMatch] = useState(false);
+  const navigate = useNavigate();
   const today = new Date();
 
   const { data: ansatte = [], isLoading } = useQuery({
