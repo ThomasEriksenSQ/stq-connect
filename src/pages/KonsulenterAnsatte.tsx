@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState } from "react";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
 import { format, differenceInMonths, isAfter } from "date-fns";
-import { Pencil, Plus, Globe } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
 import {
   DropdownMenu,
