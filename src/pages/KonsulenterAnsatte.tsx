@@ -248,7 +248,7 @@ export default function KonsulenterAnsatte() {
               {/* HANDLINGER */}
               <div className="flex items-center gap-1.5">
                 <button
-                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); setDetailAnsatt(a); setOpenEditMode(false); setDetailOpen(true); }}
+                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); setDetailAnsatt(a); setOpenEditMode(false); setAutoRunMatch(true); setDetailOpen(true); }}
                   className="inline-flex items-center gap-1 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
                 >
                   <Sparkles className="h-3.5 w-3.5" />
