@@ -436,7 +436,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto px-6 py-5">
-              <div className="border-t border-border pt-5">
+              <div>
               <OppdragsMatchPanel
                 konsulent={{
                   navn: ansatt?.navn || "",
