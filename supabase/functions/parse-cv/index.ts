@@ -68,6 +68,7 @@ Regler:
         },
         body: JSON.stringify({
           model: "google/gemini-2.5-flash",
+          max_tokens: 16000,
           messages: [
             { role: "system", content: systemPrompt },
             {
@@ -75,7 +76,7 @@ Regler:
               content: [
                 {
                   type: "text",
-                  text: `Analyser denne CV-en (${filename || "cv.pdf"}) og returner JSON som beskrevet.`,
+                  text: `Analyser denne CV-en (${filename || "cv.pdf"}) og returner JSON som beskrevet. VIKTIG: Returner KUN gyldig JSON, ingen markdown, ingen forklaring.`,
                 },
                 {
                   type: "image_url",
