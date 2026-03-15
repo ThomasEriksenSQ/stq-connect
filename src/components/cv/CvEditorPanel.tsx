@@ -74,6 +74,7 @@ export function CvEditorPanel({
   toolbarStart,
   toolbarEnd,
   onDownloadPdf,
+  renderToolbar,
 }: CvEditorPanelProps) {
   const [doc, setDoc] = useState<CVDocument>(initialData);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
