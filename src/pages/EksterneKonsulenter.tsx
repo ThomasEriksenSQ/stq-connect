@@ -48,6 +48,7 @@ const SUGGESTED_TECH = [
 
 export default function EksterneKonsulenter() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("Alle");
