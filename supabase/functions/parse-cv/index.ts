@@ -115,21 +115,34 @@ Regler:
     }
 
     const data = await response.json();
+    const finishReason = data.choices?.[0]?.finish_reason;
     const text = data.choices?.[0]?.message?.content ?? "";
-    let clean = text.replace(/```json|```/g, "").trim();
+    
+    if (!text) {
+      console.error("Empty AI response, finish_reason:", finishReason);
+      return new Response(
+        JSON.stringify({ error: "AI returnerte tomt svar. Prøv igjen." }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    let clean = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
     const firstBrace = clean.indexOf("{");
     const lastBrace = clean.lastIndexOf("}");
     if (firstBrace !== -1 && lastBrace > firstBrace) {
       clean = clean.slice(firstBrace, lastBrace + 1);
     }
 
+    // Fix common JSON issues: trailing commas before } or ]
+    clean = clean.replace(/,\s*([}\]])/g, "$1");
+
     let parsed;
     try {
       parsed = JSON.parse(clean);
-    } catch {
-      console.error("Failed to parse AI response:", text);
+    } catch (parseErr) {
+      console.error("Failed to parse AI response (length:", text.length, "finish_reason:", finishReason, "). First 500 chars:", text.substring(0, 500));
       return new Response(
-        JSON.stringify({ error: "Dokumentet ser ikke ut til å være en CV. Last opp en CV i PDF-format." }),
+        JSON.stringify({ error: "Kunne ikke tolke AI-svaret. Prøv å laste opp CVen på nytt." }),
         { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
