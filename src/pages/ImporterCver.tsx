@@ -404,7 +404,7 @@ export default function ImporterCver() {
                     onClick={() => handleSave(idx, "new")}
                     className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
                   >
-                    {tab === "ansatte" ? "Opprett ny ansatt" : "Opprett ny ekstern"}
+                    Opprett ny ekstern
                   </button>
                 </div>
               </div>
