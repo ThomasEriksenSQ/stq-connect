@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
-import { ArrowLeft, Check, Download, History, Loader2, RotateCcw } from "lucide-react";
+import { ArrowLeft, Check, Download, History, Loader2, RotateCcw, Upload } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -72,6 +72,8 @@ export default function CvAdmin() {
   const [imageUrl, setImageUrl] = useState<string | undefined>();
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [versions, setVersions] = useState<any[]>([]);
+  const [cvUploadParsing, setCvUploadParsing] = useState(false);
+  const cvUploadRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!ansattId || !user) return;
@@ -182,6 +184,61 @@ export default function CvAdmin() {
     [cvId, user?.email],
   );
 
+  const handleCvUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      e.target.value = "";
+
+      setCvUploadParsing(true);
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(",")[1]);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        const { data, error } = await supabase.functions.invoke("parse-cv", {
+          body: { base64, filename: file.name },
+        });
+
+        if (error || !data) {
+          toast.error(data?.error || "Kunne ikke analysere CV — fyll inn manuelt");
+          return;
+        }
+
+        setCvData((prev) => {
+          if (!prev) return prev;
+          const updated = { ...prev };
+          updated.hero = { ...updated.hero };
+          if (data.navn) updated.hero.name = data.navn;
+          if (data.rolle) updated.hero.title = data.rolle;
+          if (data.bio) {
+            updated.introParagraphs = [...updated.introParagraphs, data.bio];
+          }
+          if (data.kompetanse?.length) {
+            updated.competenceGroups = [
+              ...updated.competenceGroups,
+              { label: "Teknisk kompetanse", content: data.kompetanse.join(", ") },
+            ];
+          }
+          return updated;
+        });
+
+        toast.success("CV analysert — feltene er oppdatert. Sjekk og juster innholdet.");
+      } catch {
+        toast.error("Kunne ikke analysere CV — fyll inn manuelt");
+      } finally {
+        setCvUploadParsing(false);
+      }
+    },
+    [],
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -238,6 +295,18 @@ export default function CvAdmin() {
                   <History className="h-3.5 w-3.5 mr-1" />
                   Versjonshistorikk
                 </Button>
+                {cvUploadParsing ? (
+                  <span className="flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Analyserer CV med AI...
+                  </span>
+                ) : (
+                  <Button size="sm" variant="ghost" className="border border-border" onClick={() => cvUploadRef.current?.click()}>
+                    <Upload className="h-3.5 w-3.5 mr-1" />
+                    Last opp CV
+                  </Button>
+                )}
+                <input ref={cvUploadRef} type="file" accept=".pdf" className="hidden" onChange={handleCvUpload} />
                 <Button size="sm" onClick={onDownload}>
                   <Download className="h-3.5 w-3.5 mr-1" />
                   Last ned PDF
