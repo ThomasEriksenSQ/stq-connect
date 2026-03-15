@@ -81,6 +81,13 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode }: Ans
     setCvParsed(false);
   }, [ansatt, open]);
 
+  // Open directly in edit mode when requested
+  useEffect(() => {
+    if (open && ansatt && openInEditMode) {
+      setEditing(true);
+    }
+  }, [open, ansatt, openInEditMode]);
+
   const set = (key: string, val: any) => setForm((prev) => ({ ...prev, [key]: val }));
 
   const addTag = (tag: string) => {

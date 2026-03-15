@@ -19,6 +19,7 @@ export default function KonsulenterAnsatte() {
   const [filter, setFilter] = useState<Filter>("Aktiv");
   const [detailAnsatt, setDetailAnsatt] = useState<any | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [openEditMode, setOpenEditMode] = useState(false);
   const today = new Date();
 
   const { data: ansatte = [], isLoading } = useQuery({
