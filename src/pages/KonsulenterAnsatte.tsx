@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState } from "react";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
 import { format, differenceInMonths, isAfter } from "date-fns";
-import { Pencil, Plus, Globe } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
 import {
   DropdownMenu,
@@ -159,8 +159,8 @@ export default function KonsulenterAnsatte() {
       {/* Table */}
       <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
         {/* Header */}
-        <div className="grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_100px_180px_40px] gap-3 px-4 py-2.5 border-b border-border bg-background">
-          {["NAVN", "START", "ANSETTELSE", "OPPDRAG", "ANSATT", "KONTAKT", ""].map((h) => (
+        <div className="grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_40px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          {["NAVN", "START", "ANSETTELSE", "OPPDRAG", ""].map((h) => (
             <span key={h} className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">{h}</span>
           ))}
         </div>
@@ -189,7 +189,7 @@ export default function KonsulenterAnsatte() {
               key={a.id}
               onClick={() => { setDetailAnsatt(a); setDetailOpen(true); }}
               className={cn(
-                "group grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_100px_180px_40px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 cursor-pointer",
+                "group grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_40px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 cursor-pointer",
                 isKommende && "opacity-80",
                 isSluttet && "opacity-50"
               )}
@@ -204,11 +204,6 @@ export default function KonsulenterAnsatte() {
                   </div>
                 )}
                 <span className="font-medium text-[0.8125rem] truncate">{a.navn}</span>
-                {inOppdrag && (
-                  <span className="bg-emerald-100 text-emerald-700 text-[0.625rem] font-semibold uppercase rounded px-1.5 py-0.5 flex-shrink-0">
-                    I OPPDRAG
-                  </span>
-                )}
               </div>
               {/* START */}
               <div className="text-[0.8125rem]">
@@ -248,25 +243,6 @@ export default function KonsulenterAnsatte() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              </div>
-              {/* ANSATT */}
-              <div className="flex items-center gap-1">
-                <span
-                  className={cn(
-                    "rounded-full px-2.5 py-0.5 text-xs font-medium",
-                    status === "Aktiv" && "bg-emerald-100 text-emerald-700",
-                    status === "Kommende" && "bg-amber-100 text-amber-700",
-                    status === "Sluttet" && "bg-muted text-muted-foreground"
-                  )}
-                >
-                  {status}
-                </span>
-                {a.synlig_web && <Globe className="h-3 w-3 text-primary flex-shrink-0" />}
-              </div>
-              {/* KONTAKT */}
-              <div className="flex flex-col min-w-0">
-                <span className="text-[0.8125rem] text-muted-foreground truncate">{a.tlf}</span>
-                <span className="text-[0.6875rem] text-muted-foreground/70 mt-0.5 truncate">{a.epost}</span>
               </div>
               {/* EDIT */}
               <button
