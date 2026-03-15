@@ -20,6 +20,7 @@ import Import from "./pages/Import";
 import AdminBrregSync from "./pages/AdminBrregSync";
 import Foresporsler from "./pages/Foresporsler";
 import NettsideAI from "./pages/NettsideAI";
+import CvEditor from "./pages/CvEditor";
 
 const KonsulenterAnsatte = lazy(() => import("./pages/KonsulenterAnsatte"));
 const KonsulenterOppdrag = lazy(() => import("./pages/KonsulenterOppdrag"));
@@ -28,6 +29,7 @@ const StacqPrisen = lazy(() => import("./pages/StacqPrisen"));
 const ImporterCver = lazy(() => import("./pages/ImporterCver"));
 const ImporterSelskaper = lazy(() => import("./pages/ImporterSelskaper"));
 const Markedsradar = lazy(() => import("./pages/Markedsradar"));
+const CvAdmin = lazy(() => import("./pages/CvAdmin"));
 
 const queryClient = new QueryClient();
 
@@ -68,6 +70,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<AuthRoute />} />
+              <Route path="/cv/:token" element={<CvEditor />} />
               <Route path="/" element={<ProtectedRoutes />}>
                 <Route index element={<Dashboard />} />
                 <Route path="selskaper" element={<Companies />} />
@@ -80,6 +83,14 @@ const App = () => (
                 <Route path="cv-maker" element={<CVMaker />} />
                 <Route path="import" element={<Import />} />
                 <Route path="admin/brreg-sync" element={<AdminBrregSync />} />
+                <Route
+                  path="cv-admin/:ansattId"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <CvAdmin />
+                    </Suspense>
+                  }
+                />
                 <Route
                   path="konsulenter/ansatte"
                   element={
