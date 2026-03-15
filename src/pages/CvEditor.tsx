@@ -105,7 +105,7 @@ export default function CvEditor() {
       const { data: tokenRow } = await anonClient.from("cv_access_tokens").select("*").eq("token", token).single();
 
       if (!tokenRow) {
-        showError("Ugyldig lenke");
+        showError("Ugyldig PIN");
         return;
       }
       if (tokenRow.expires_at && new Date(tokenRow.expires_at) < new Date()) {
