@@ -166,6 +166,26 @@ export function CvEditorPanel({
       hero: { ...p.hero, contact: { ...p.hero.contact, [key]: val } },
     }));
 
+  const handlePortraitUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPortraitUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `cv-portraits/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("ansatte-bilder").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("ansatte-bilder").getPublicUrl(path);
+      update((p) => ({ ...p, hero: { ...p.hero, portrait_url: urlData.publicUrl } }));
+      toast.success("Bilde lastet opp");
+    } catch (err: any) {
+      toast.error("Kunne ikke laste opp bilde: " + (err.message || "Ukjent feil"));
+    } finally {
+      setPortraitUploading(false);
+      if (portraitInputRef.current) portraitInputRef.current.value = "";
+    }
+  };
+
   const handleDownloadClick = async () => {
     if (onDownloadPdf) {
       await onDownloadPdf(doc);
