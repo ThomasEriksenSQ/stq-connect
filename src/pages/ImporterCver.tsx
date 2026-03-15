@@ -393,7 +393,7 @@ export default function ImporterCver() {
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Lagrer: teknologier[], cv_tekst til {tab === "ansatte" ? "stacq_ansatte" : "external_consultants"}</p>
+                            <p>Lagrer: teknologier[], cv_tekst til external_consultants</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
