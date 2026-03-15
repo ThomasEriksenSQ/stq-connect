@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState } from "react";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
 import { format, differenceInMonths, isAfter } from "date-fns";
-import { FileText, Pencil, Plus, Sparkles } from "lucide-react";
+import { FileText, Link, Pencil, Plus, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
 import {
@@ -116,6 +117,28 @@ export default function KonsulenterAnsatte() {
     queryClient.invalidateQueries({ queryKey: ["stacq-oppdrag-active-names"] });
   };
 
+  const generateLink = async (ansatt: any) => {
+    try {
+      const pin = Math.floor(1000 + Math.random() * 9000).toString();
+      const encoder = new TextEncoder();
+      const data = encoder.encode(pin);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const pinHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      const token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
+      const expires_at = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+      const { error } = await supabase.from('cv_access_tokens').upsert(
+        { ansatt_id: ansatt.id, token, pin_hash: pinHash, expires_at },
+        { onConflict: 'ansatt_id' }
+      );
+      if (error) throw error;
+      await navigator.clipboard.writeText('https://crm.stacq.no/cv/' + token);
+      toast.success(`Link kopiert! PIN: ${pin} — del med ${ansatt.navn}`, { duration: 10000 });
+    } catch (err: any) {
+      toast.error('Kunne ikke generere link: ' + (err.message || 'Ukjent feil'));
+    }
+  };
+
   const chips: Filter[] = ["Alle", "Aktiv", "Kommende", "Sluttet"];
 
   if (isLoading) {
@@ -163,7 +186,7 @@ export default function KonsulenterAnsatte() {
       {/* Table */}
       <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
         {/* Header */}
-        <div className="grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_80px_160px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+        <div className="grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_80px_200px] gap-3 px-4 py-2.5 border-b border-border bg-background">
           {["NAVN", "START", "ANSETTELSE", "OPPDRAG", "CV", "HANDLINGER"].map((h) => (
             <span key={h} className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">{h}</span>
           ))}
@@ -192,7 +215,7 @@ export default function KonsulenterAnsatte() {
             <div
               key={a.id}
               className={cn(
-                "group grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_80px_160px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75",
+                "group grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_80px_200px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75",
                 isKommende && "opacity-80",
                 isSluttet && "opacity-50"
               )}
@@ -265,6 +288,12 @@ export default function KonsulenterAnsatte() {
                 >
                   <Sparkles className="h-3.5 w-3.5" />
                   Finn oppdrag
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); generateLink(a); }}
+                  className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground border border-border"
+                >
+                  <Link className="h-3.5 w-3.5" />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); e.preventDefault(); setDetailAnsatt(a); setOpenEditMode(true); setDetailOpen(true); }}

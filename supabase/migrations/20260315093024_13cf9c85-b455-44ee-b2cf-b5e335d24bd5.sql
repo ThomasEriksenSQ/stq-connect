@@ -1,0 +1,1 @@
+ALTER TABLE public.cv_access_tokens ADD CONSTRAINT cv_access_tokens_ansatt_id_unique UNIQUE (ansatt_id);
