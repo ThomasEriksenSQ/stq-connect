@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
-import { ArrowLeft, Check, Download, History, Loader2, Maximize2, Minimize2, RotateCcw, Sparkles } from "lucide-react";
+import { ArrowLeft, Check, Download, History, Link2, Loader2, Maximize2, Minimize2, RotateCcw, Sparkles } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -326,6 +326,34 @@ export default function CvAdmin() {
                   <History className="h-3.5 w-3.5 mr-1" />
                   Versjonshistorikk
                 </Button>
+                <button
+                  onClick={async () => {
+                    const id = Number(ansattId);
+                    if (Number.isNaN(id)) return;
+                    try {
+                      const pin = Math.floor(1000 + Math.random() * 9000).toString();
+                      const encoder = new TextEncoder();
+                      const d = encoder.encode(pin);
+                      const hashBuffer = await crypto.subtle.digest("SHA-256", d);
+                      const hashArray = Array.from(new Uint8Array(hashBuffer));
+                      const pinHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+                      const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+                      const expires_at = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+                      const { error } = await supabase
+                        .from("cv_access_tokens")
+                        .upsert({ ansatt_id: id, token, pin_hash: pinHash, expires_at }, { onConflict: "ansatt_id" });
+                      if (error) throw error;
+                      await navigator.clipboard.writeText("https://crm.stacq.no/cv/" + token);
+                      toast.success(`Link kopiert! PIN: ${pin} — del med ${cvData.hero.name || "konsulenten"}`, { duration: 10000 });
+                    } catch (err: any) {
+                      toast.error("Kunne ikke generere link: " + (err.message || "Ukjent feil"));
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 h-9 px-3 text-[0.8125rem] font-medium rounded-lg border border-border text-foreground hover:bg-muted transition-colors"
+                >
+                  <Link2 className="h-3.5 w-3.5" />
+                  Del link
+                </button>
                 {cvUploadParsing ? (
                   <span className="flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
