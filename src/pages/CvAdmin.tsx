@@ -35,6 +35,7 @@ function dbRowToCvDoc(row: any): CVDocument {
       name: row.hero_name || "",
       title: row.hero_title || "",
       contact: DEFAULT_CONTACT,
+      portrait_url: row.portrait_url || undefined,
     },
     sidebarSections: row.sidebar_sections || [],
     introParagraphs: row.intro_paragraphs || [],
