@@ -531,6 +531,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
                   ansatt_id: ansatt?.id,
                 }}
               />
+              </div>
             </div>
           </>
         )}
