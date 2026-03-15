@@ -269,7 +269,7 @@ export default function KonsulenterAnsatte() {
         )}
       </div>
 
-      <AnsattDetailSheet open={detailOpen} onClose={() => setDetailOpen(false)} ansatt={detailAnsatt} />
+      <AnsattDetailSheet open={detailOpen} onClose={() => setDetailOpen(false)} ansatt={detailAnsatt} openInEditMode={openEditMode} />
     </div>
   );
 }
