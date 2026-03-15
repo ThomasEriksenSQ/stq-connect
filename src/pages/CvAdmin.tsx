@@ -2,12 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
-import { ArrowLeft, Check, Download, History, Loader2, RotateCcw, Upload } from "lucide-react";
+import { ArrowLeft, Check, Download, History, Loader2, Maximize2, Minimize2, RotateCcw, Upload } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CvEditorPanel } from "@/components/cv/CvEditorPanel";
 import { openCvPrintDialog, type CVDocument } from "@/components/cv/CvRenderer";
 import { toast } from "sonner";
@@ -74,6 +75,7 @@ export default function CvAdmin() {
   const [versions, setVersions] = useState<any[]>([]);
   const [cvUploadParsing, setCvUploadParsing] = useState(false);
   const cvUploadRef = useRef<HTMLInputElement>(null);
+  const [fullscreen, setFullscreen] = useState(false);
 
   useEffect(() => {
     if (!ansattId || !user) return;
@@ -259,7 +261,7 @@ export default function CvAdmin() {
 
   return (
     <>
-      <div className="h-screen flex flex-col">
+      <div className={fullscreen ? "fixed inset-0 z-50 bg-background flex flex-col" : "h-screen flex flex-col"}>
         <CvEditorPanel
           cvData={cvData}
           onSave={handleSave}
@@ -291,6 +293,16 @@ export default function CvAdmin() {
                 )}
               </div>
               <div className="flex items-center gap-2">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button size="icon" variant="ghost" className="border border-border h-9 w-9" onClick={() => setFullscreen(prev => !prev)}>
+                        {fullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{fullscreen ? "Avslutt fullskjerm" : "Fullskjerm"}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <Button size="sm" variant="ghost" onClick={loadVersions}>
                   <History className="h-3.5 w-3.5 mr-1" />
                   Versjonshistorikk
