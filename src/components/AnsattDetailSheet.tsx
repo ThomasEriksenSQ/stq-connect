@@ -1,6 +1,8 @@
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { getInitials, cn } from "@/lib/utils";
-import { Globe, FileText, Pencil, X, Loader2, Upload, Sparkles } from "lucide-react";
+import { Globe, FileText, Pencil, X, Loader2, Upload, Sparkles, Mail, Phone, MapPin, Calendar, Briefcase } from "lucide-react";
+import { format, differenceInMonths } from "date-fns";
+import { formatMonths } from "@/lib/utils";
 import { OppdragsMatchPanel } from "@/components/OppdragsMatchPanel";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -183,7 +185,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
 
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <SheetContent side="right" className="w-[700px] sm:w-[700px] max-w-full p-0 flex flex-col [&>button]:hidden">
+      <SheetContent side="right" className="w-full sm:w-[700px] max-w-[700px] p-0 flex flex-col [&>button]:hidden">
 
         {/* ─── EDIT MODE ─── */}
         {editing ? (
@@ -423,10 +425,9 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
                 {/* Edit button */}
                 <button
                   onClick={() => setEditing(true)}
-                  className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.8125rem] text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors shrink-0"
+                  className="inline-flex items-center justify-center h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors shrink-0"
                 >
                   <Pencil className="h-3.5 w-3.5" />
-                  Rediger
                 </button>
               </div>
 
@@ -459,6 +460,68 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto px-6 py-5">
+              {/* Ansatt details grid */}
+              <div className="grid grid-cols-2 gap-x-6 gap-y-3 mb-5">
+                {ansatt?.epost && (
+                  <div>
+                    <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-0.5">Epost</p>
+                    <p className="text-[0.8125rem] text-foreground flex items-center gap-1.5">
+                      <Mail className="h-3 w-3 text-muted-foreground" />
+                      {ansatt.epost}
+                    </p>
+                  </div>
+                )}
+                {ansatt?.tlf && (
+                  <div>
+                    <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-0.5">Telefon</p>
+                    <p className="text-[0.8125rem] text-foreground flex items-center gap-1.5">
+                      <Phone className="h-3 w-3 text-muted-foreground" />
+                      {ansatt.tlf}
+                    </p>
+                  </div>
+                )}
+                {ansatt?.start_dato && (
+                  <div>
+                    <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-0.5">Startdato</p>
+                    <p className="text-[0.8125rem] text-foreground flex items-center gap-1.5">
+                      <Calendar className="h-3 w-3 text-muted-foreground" />
+                      {format(new Date(ansatt.start_dato), "dd.MM.yyyy")}
+                    </p>
+                  </div>
+                )}
+                {ansatt?.start_dato && (
+                  <div>
+                    <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-0.5">Ansettelseslengde</p>
+                    <p className="text-[0.8125rem] text-foreground">
+                      {formatMonths(differenceInMonths(new Date(), new Date(ansatt.start_dato)))}
+                    </p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-0.5">Oppdragsstatus</p>
+                  <p className="text-[0.8125rem] text-foreground flex items-center gap-1.5">
+                    <Briefcase className="h-3 w-3 text-muted-foreground" />
+                    {ansatt?.status?.includes("AKTIV") ? "I oppdrag" : "—"}
+                  </p>
+                </div>
+                {ansatt?.erfaring_aar && (
+                  <div>
+                    <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-0.5">Erfaring</p>
+                    <p className="text-[0.8125rem] text-foreground">{ansatt.erfaring_aar} år</p>
+                  </div>
+                )}
+                {ansatt?.geografi && (
+                  <div>
+                    <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-0.5">By / Geografi</p>
+                    <p className="text-[0.8125rem] text-foreground flex items-center gap-1.5">
+                      <MapPin className="h-3 w-3 text-muted-foreground" />
+                      {ansatt.geografi}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-border pt-5">
               <OppdragsMatchPanel
                 konsulent={{
                   navn: ansatt?.navn || "",
@@ -468,6 +531,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
                   ansatt_id: ansatt?.id,
                 }}
               />
+              </div>
             </div>
           </>
         )}
