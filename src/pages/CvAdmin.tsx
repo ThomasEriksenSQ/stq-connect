@@ -352,7 +352,7 @@ export default function CvAdmin() {
                   className="inline-flex items-center gap-1.5 h-9 px-3 text-[0.8125rem] font-medium rounded-lg border border-border text-foreground hover:bg-muted transition-colors"
                 >
                   <Link2 className="h-3.5 w-3.5" />
-                  Del link
+                  Del link med ansatt
                 </button>
                 {cvUploadParsing ? (
                   <span className="flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground">
