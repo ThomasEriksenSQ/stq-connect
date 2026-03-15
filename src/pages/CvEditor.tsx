@@ -250,7 +250,7 @@ export default function CvEditor() {
 
   return (
     <div className="h-screen flex flex-col">
-      <CvEditorPanel cvData={cvData} onSave={handleSave} savedBy={session.ansatt_name} imageUrl={imageUrl} />
+      <CvEditorPanel cvData={cvData} onSave={handleSave} savedBy={session.ansatt_name} imageUrl={imageUrl} headerLabel={`${cvData.hero.name || session.ansatt_name} — CV`} />
     </div>
   );
 }
