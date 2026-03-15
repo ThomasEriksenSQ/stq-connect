@@ -270,20 +270,21 @@ export default function KonsulenterAnsatte() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-              {/* CV */}
+              {/* CV / LINK */}
               <div className="flex items-center gap-1.5">
                 <button
                   onClick={(e) => { e.stopPropagation(); navigate(`/cv-admin/${a.id}`); }}
-                  className="inline-flex items-center gap-1 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  className="inline-flex items-center gap-1 h-7 px-2 text-[0.75rem] rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                 >
-                  <FileText className="h-3.5 w-3.5" />
-                  CV
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  CV-editor
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); e.preventDefault(); generateLink(a); }}
-                  className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground border border-border"
+                  className="inline-flex items-center gap-1 h-7 px-2 text-[0.75rem] rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                 >
-                  <Link className="h-3.5 w-3.5" />
+                  <Link2 className="h-3.5 w-3.5" />
+                  Del link
                 </button>
               </div>
               {/* HANDLINGER */}

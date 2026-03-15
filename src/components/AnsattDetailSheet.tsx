@@ -451,8 +451,6 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
               />
               </div>
 
-              {/* CV Section */}
-              <CvSection ansattId={ansatt?.id} ansattNavn={ansatt?.navn} />
             </div>
           </>
         )}
