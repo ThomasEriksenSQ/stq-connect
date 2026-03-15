@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 /* ─── Types ─── */
-type Tab = "ansatte" | "eksterne";
 type ConsultantType = "freelance" | "via_partner";
 
 interface ParsedCV {
@@ -56,20 +55,12 @@ const TYPE_CHIP_OFF = `${TYPE_CHIP_BASE} border-border text-muted-foreground hov
 
 export default function ImporterCver() {
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<Tab>("ansatte");
   const [cvs, setCvs] = useState<ParsedCV[]>([]);
   const [processing, setProcessing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
   // Fetch existing records for matching
-  const { data: ansatte = [] } = useQuery({
-    queryKey: ["stacq-ansatte"],
-    queryFn: async () => {
-      const { data } = await supabase.from("stacq_ansatte").select("id, navn, kompetanse");
-      return data || [];
-    },
-  });
 
   const { data: eksterne = [] } = useQuery({
     queryKey: ["external-consultants-all"],
@@ -96,13 +87,12 @@ export default function ImporterCver() {
   };
 
   const matchToExisting = useCallback(
-    (navn: string | undefined, currentTab: Tab) => {
+    (navn: string | undefined) => {
       if (!navn) return { id: null, name: null, score: 0 };
-      const list = currentTab === "ansatte" ? ansatte : eksterne;
       let bestId: number | string | null = null;
       let bestName: string | null = null;
       let bestScore = 0;
-      for (const item of list) {
+      for (const item of eksterne) {
         const itemName = item.navn || "";
         const score = fuzzyScore(navn, itemName);
         if (score > bestScore) {
@@ -113,7 +103,7 @@ export default function ImporterCver() {
       }
       return bestScore >= 0.5 ? { id: bestId, name: bestName, score: bestScore } : { id: null, name: null, score: 0 };
     },
-    [ansatte, eksterne]
+    [eksterne]
   );
 
   const handleFiles = async (files: FileList | File[]) => {
@@ -142,7 +132,7 @@ export default function ImporterCver() {
 
       try {
         const data = await parseSingleCv(pdfFiles[i]);
-        const match = matchToExisting(data?.navn, tab);
+        const match = matchToExisting(data?.navn);
         setCvs(prev => prev.map((c, j) =>
           j === idx ? { ...c, status: "done", data, matchedId: match.id, matchedName: match.name, matchScore: match.score } : c
         ));
@@ -175,31 +165,6 @@ export default function ImporterCver() {
 
   // ── Save handlers ──
 
-  const saveAnsattUpdate = async (cv: ParsedCV) => {
-    if (!cv.matchedId || !cv.data) return;
-    const { error } = await supabase.from("stacq_ansatte").update({
-      kompetanse: cv.data.kompetanse || [],
-      bio: cv.data.bio || null,
-      erfaring_aar: cv.data.erfaring_aar || null,
-      geografi: cv.data.geografi || null,
-      updated_at: new Date().toISOString(),
-    }).eq("id", cv.matchedId as number);
-    if (error) throw error;
-  };
-
-  const saveAnsattNew = async (cv: ParsedCV) => {
-    if (!cv.data) return;
-    const { error } = await supabase.from("stacq_ansatte").insert({
-      navn: cv.data.navn || cv.file.name.replace(".pdf", ""),
-      kompetanse: cv.data.kompetanse || [],
-      bio: cv.data.bio || null,
-      erfaring_aar: cv.data.erfaring_aar || null,
-      geografi: cv.data.geografi || null,
-      status: "AKTIV/SIGNERT",
-    });
-    if (error) throw error;
-  };
-
   const saveEksternUpdate = async (cv: ParsedCV) => {
     if (!cv.matchedId || !cv.data) return;
     const { error } = await supabase.from("external_consultants").update({
@@ -227,16 +192,11 @@ export default function ImporterCver() {
   const handleSave = async (idx: number, mode: "update" | "new") => {
     const cv = cvs[idx];
     try {
-      if (tab === "ansatte") {
-        if (mode === "update") await saveAnsattUpdate(cv);
-        else await saveAnsattNew(cv);
-      } else {
-        if (mode === "update") await saveEksternUpdate(cv);
-        else await saveEksternNew(cv);
-      }
+      if (mode === "update") await saveEksternUpdate(cv);
+      else await saveEksternNew(cv);
       toast.success(mode === "update" ? `✓ Lagret — teknologier og CV oppdatert for ${cv.matchedName || cv.data?.navn || "konsulent"}` : `${cv.data?.navn || "Konsulent"} opprettet`);
       removeCv(idx);
-      queryClient.invalidateQueries({ queryKey: tab === "ansatte" ? ["stacq-ansatte"] : ["external-consultants-all"] });
+      queryClient.invalidateQueries({ queryKey: ["external-consultants-all"] });
     } catch (err: any) {
       toast.error("Kunne ikke lagre: " + (err.message || "Ukjent feil"));
     }
@@ -248,13 +208,12 @@ export default function ImporterCver() {
     let success = 0;
     for (const cv of matched) {
       try {
-        if (tab === "ansatte") await saveAnsattUpdate(cv);
-        else await saveEksternUpdate(cv);
+        await saveEksternUpdate(cv);
         success++;
       } catch { /* skip */ }
     }
     setCvs(prev => prev.filter(c => !(c.status === "done" && c.matchedId)));
-    queryClient.invalidateQueries({ queryKey: tab === "ansatte" ? ["stacq-ansatte"] : ["external-consultants-all"] });
+    queryClient.invalidateQueries({ queryKey: ["external-consultants-all"] });
     toast.success(`${success} av ${matched.length} oppdatert`);
   };
 
@@ -270,15 +229,6 @@ export default function ImporterCver() {
         <h1 className="text-[1.5rem] font-bold text-foreground">Importer CVer</h1>
       </div>
 
-      {/* Tab switcher */}
-      <div className="flex gap-2">
-        <button className={tab === "ansatte" ? CHIP_ON : CHIP_OFF} onClick={() => { setTab("ansatte"); setCvs([]); }}>
-          Ansatte
-        </button>
-        <button className={tab === "eksterne" ? CHIP_ON : CHIP_OFF} onClick={() => { setTab("eksterne"); setCvs([]); }}>
-          Eksterne konsulenter
-        </button>
-      </div>
 
       {/* Drop zone */}
       <div
@@ -400,7 +350,7 @@ export default function ImporterCver() {
                 )}
 
                 {/* TYPE selector for eksterne */}
-                {tab === "eksterne" && !cv.matchedId && (
+                {!cv.matchedId && (
                   <div className="space-y-2">
                     <p className={LABEL}>Type</p>
                     <div className="flex gap-2">
@@ -443,7 +393,7 @@ export default function ImporterCver() {
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Lagrer: teknologier[], cv_tekst til {tab === "ansatte" ? "stacq_ansatte" : "external_consultants"}</p>
+                            <p>Lagrer: teknologier[], cv_tekst til external_consultants</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -454,7 +404,7 @@ export default function ImporterCver() {
                     onClick={() => handleSave(idx, "new")}
                     className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
                   >
-                    {tab === "ansatte" ? "Opprett ny ansatt" : "Opprett ny ekstern"}
+                    Opprett ny ekstern
                   </button>
                 </div>
               </div>

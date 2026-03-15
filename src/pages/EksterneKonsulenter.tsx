@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 import { Plus, X, Search, CalendarIcon, Upload, CheckCircle2, Loader2, Users, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { relativeFutureDate } from "@/lib/relativeDate";
 import { OppdragsMatchPanel } from "@/components/OppdragsMatchPanel";
 import { Calendar } from "@/components/ui/calendar";
@@ -47,6 +48,7 @@ const SUGGESTED_TECH = [
 
 export default function EksterneKonsulenter() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("Alle");
@@ -123,6 +125,13 @@ export default function EksterneKonsulenter() {
         <span className="text-[0.75rem] text-muted-foreground ml-auto">
           {filtered.length} konsulenter
         </span>
+        <button
+          onClick={() => navigate("/stacq/importer-cver")}
+          className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
+        >
+          <Upload className="h-4 w-4" />
+          Importer CVer
+        </button>
         <button
           onClick={openCreate}
           className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"

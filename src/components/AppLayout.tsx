@@ -1,6 +1,6 @@
 import { Outlet, NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
-import { Moon, Sun, LogOut, Building2, Users, LayoutDashboard, Sparkles, Briefcase, ChevronDown, Users2, TrendingUp, UserPlus, Upload, Radar, Globe, FileText } from "lucide-react";
+import { Moon, Sun, LogOut, Building2, Users, LayoutDashboard, Sparkles, Briefcase, ChevronDown, Users2, TrendingUp, UserPlus, Radar, Globe, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -172,21 +172,6 @@ export function AppLayout() {
                   >
                     <UserPlus className="h-4 w-4 stroke-[1.5]" />
                     Eksterne
-                  </RouterNavLink>
-                  <RouterNavLink
-                    to="/stacq/importer-cver"
-                    onClick={() => setKonsDropOpen(false)}
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center gap-3 px-4 py-2.5 text-[0.8125rem] font-medium transition-colors",
-                        isActive
-                          ? "bg-muted text-foreground"
-                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                      )
-                    }
-                  >
-                    <Upload className="h-4 w-4 stroke-[1.5]" />
-                    Importer CVer
                   </RouterNavLink>
                   <RouterNavLink
                     to="/nettside-ai"
