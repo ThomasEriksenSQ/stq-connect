@@ -1,0 +1,1 @@
+ALTER TABLE cv_documents ADD COLUMN IF NOT EXISTS portrait_url text;
