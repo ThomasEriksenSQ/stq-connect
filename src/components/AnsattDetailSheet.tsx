@@ -16,6 +16,7 @@ interface AnsattDetailSheetProps {
   open: boolean;
   onClose: () => void;
   ansatt: any | null;
+  openInEditMode?: boolean;
 }
 
 const SUGGESTED_TAGS = [
@@ -29,7 +30,7 @@ const STATUS_OPTIONS = [
   { value: "SLUTTET", label: "Sluttet" },
 ];
 
-export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetProps) {
+export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode }: AnsattDetailSheetProps) {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const cvInputRef = useRef<HTMLInputElement>(null);
@@ -79,6 +80,13 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
     setCvParsing(false);
     setCvParsed(false);
   }, [ansatt, open]);
+
+  // Open directly in edit mode when requested
+  useEffect(() => {
+    if (open && ansatt && openInEditMode) {
+      setEditing(true);
+    }
+  }, [open, ansatt, openInEditMode]);
 
   const set = (key: string, val: any) => setForm((prev) => ({ ...prev, [key]: val }));
 

@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState } from "react";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
 import { format, differenceInMonths, isAfter } from "date-fns";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, Plus, Sparkles } from "lucide-react";
 import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
 import {
   DropdownMenu,
@@ -19,6 +19,7 @@ export default function KonsulenterAnsatte() {
   const [filter, setFilter] = useState<Filter>("Aktiv");
   const [detailAnsatt, setDetailAnsatt] = useState<any | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [openEditMode, setOpenEditMode] = useState(false);
   const today = new Date();
 
   const { data: ansatte = [], isLoading } = useQuery({
@@ -124,7 +125,7 @@ export default function KonsulenterAnsatte() {
       <div className="flex items-center justify-between">
         <h1 className="text-[1.375rem] font-bold">Ansatte</h1>
         <button
-          onClick={() => { setDetailAnsatt(null); setDetailOpen(true); }}
+          onClick={() => { setDetailAnsatt(null); setOpenEditMode(false); setDetailOpen(true); }}
           className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
         >
           <Plus className="h-4 w-4" />
@@ -159,8 +160,8 @@ export default function KonsulenterAnsatte() {
       {/* Table */}
       <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
         {/* Header */}
-        <div className="grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_40px] gap-3 px-4 py-2.5 border-b border-border bg-background">
-          {["NAVN", "START", "ANSETTELSE", "OPPDRAG", ""].map((h) => (
+        <div className="grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_160px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          {["NAVN", "START", "ANSETTELSE", "OPPDRAG", "HANDLINGER"].map((h) => (
             <span key={h} className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">{h}</span>
           ))}
         </div>
@@ -187,9 +188,8 @@ export default function KonsulenterAnsatte() {
           return (
             <div
               key={a.id}
-              onClick={() => { setDetailAnsatt(a); setDetailOpen(true); }}
               className={cn(
-                "group grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_40px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 cursor-pointer",
+                "group grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_160px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75",
                 isKommende && "opacity-80",
                 isSluttet && "opacity-50"
               )}
@@ -244,13 +244,22 @@ export default function KonsulenterAnsatte() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-              {/* EDIT */}
-              <button
-                onClick={(e) => { e.stopPropagation(); setDetailAnsatt(a); setDetailOpen(true); }}
-                className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
+              {/* HANDLINGER */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); setDetailAnsatt(a); setOpenEditMode(false); setDetailOpen(true); }}
+                  className="inline-flex items-center gap-1 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Finn oppdrag
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); setDetailAnsatt(a); setOpenEditMode(true); setDetailOpen(true); }}
+                  className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground border border-border"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
           );
         })}
@@ -260,7 +269,7 @@ export default function KonsulenterAnsatte() {
         )}
       </div>
 
-      <AnsattDetailSheet open={detailOpen} onClose={() => setDetailOpen(false)} ansatt={detailAnsatt} />
+      <AnsattDetailSheet open={detailOpen} onClose={() => setDetailOpen(false)} ansatt={detailAnsatt} openInEditMode={openEditMode} />
     </div>
   );
 }
