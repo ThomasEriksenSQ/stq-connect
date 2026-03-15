@@ -22,9 +22,13 @@ const DEFAULT_CONTACT = {
 
 const EMPTY_CV: CVDocument = {
   hero: { name: "", title: "", contact: DEFAULT_CONTACT },
-  sidebarSections: [],
+  sidebarSections: [
+    { heading: "PERSONALIA", items: [] },
+    { heading: "NØKKELPUNKTER", items: [] },
+    { heading: "UTDANNELSE", items: [] },
+  ],
   introParagraphs: [],
-  competenceGroups: [],
+  competenceGroups: [{ label: "Programmeringsspråk", content: "" }],
   projects: [],
   education: [],
   workExperience: [],
@@ -186,66 +190,63 @@ export default function CvAdmin() {
     [cvId, user?.email],
   );
 
-  const handleCvUpload = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      e.target.value = "";
+  const handleCvUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
 
-      setCvUploadParsing(true);
-      try {
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const result = reader.result as string;
-            resolve(result.split(",")[1]);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-
-        const { data, error } = await supabase.functions.invoke("parse-cv", {
-          body: { base64, filename: file.name },
-        });
-
-        if (error || !data) {
-          toast.error(data?.error || "Kunne ikke analysere CV — fyll inn manuelt");
-          return;
-        }
-
-        const newDoc: CVDocument = {
-          ...(cvData || EMPTY_CV),
-          hero: {
-            ...(cvData || EMPTY_CV).hero,
-            name: data.navn || (cvData || EMPTY_CV).hero.name,
-            title: data.tittel || (cvData || EMPTY_CV).hero.title,
-          },
-          introParagraphs: data.introParagraphs?.length ? data.introParagraphs : (cvData || EMPTY_CV).introParagraphs,
-          competenceGroups: data.competenceGroups?.length ? data.competenceGroups : (cvData || EMPTY_CV).competenceGroups,
-          projects: data.projects?.length ? data.projects : (cvData || EMPTY_CV).projects,
-          education: data.education?.length ? data.education : (cvData || EMPTY_CV).education,
-          workExperience: data.workExperience?.length ? data.workExperience : (cvData || EMPTY_CV).workExperience,
-          sidebarSections: data.sidebarSections?.length ? data.sidebarSections : (cvData || EMPTY_CV).sidebarSections,
+    setCvUploadParsing(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(",")[1]);
         };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
 
-        setCvData(newDoc);
+      const { data, error } = await supabase.functions.invoke("parse-cv", {
+        body: { base64, filename: file.name },
+      });
 
-        if (cvId) {
-          await supabase
-            .from("cv_documents")
-            .update(cvDocToDbRow(newDoc) as any)
-            .eq("id", cvId);
-        }
-
-        toast.success("CV fullstendig analysert — alle seksjoner er fylt inn");
-      } catch {
-        toast.error("Kunne ikke analysere CV — fyll inn manuelt");
-      } finally {
-        setCvUploadParsing(false);
+      if (error || !data) {
+        toast.error(data?.error || "Kunne ikke analysere CV — fyll inn manuelt");
+        return;
       }
-    },
-    [],
-  );
+
+      const newDoc: CVDocument = {
+        ...(cvData || EMPTY_CV),
+        hero: {
+          ...(cvData || EMPTY_CV).hero,
+          name: data.navn || (cvData || EMPTY_CV).hero.name,
+          title: data.tittel || (cvData || EMPTY_CV).hero.title,
+        },
+        introParagraphs: data.introParagraphs?.length ? data.introParagraphs : (cvData || EMPTY_CV).introParagraphs,
+        competenceGroups: data.competenceGroups?.length ? data.competenceGroups : (cvData || EMPTY_CV).competenceGroups,
+        projects: data.projects?.length ? data.projects : (cvData || EMPTY_CV).projects,
+        education: data.education?.length ? data.education : (cvData || EMPTY_CV).education,
+        workExperience: data.workExperience?.length ? data.workExperience : (cvData || EMPTY_CV).workExperience,
+        sidebarSections: data.sidebarSections?.length ? data.sidebarSections : (cvData || EMPTY_CV).sidebarSections,
+      };
+
+      setCvData(newDoc);
+
+      if (cvId) {
+        await supabase
+          .from("cv_documents")
+          .update(cvDocToDbRow(newDoc) as any)
+          .eq("id", cvId);
+      }
+
+      toast.success("CV fullstendig analysert — alle seksjoner er fylt inn");
+    } catch {
+      toast.error("Kunne ikke analysere CV — fyll inn manuelt");
+    } finally {
+      setCvUploadParsing(false);
+    }
+  }, []);
 
   if (loading) {
     return (
@@ -302,7 +303,12 @@ export default function CvAdmin() {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button size="icon" variant="ghost" className="border border-border h-9 w-9" onClick={() => setFullscreen(prev => !prev)}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="border border-border h-9 w-9"
+                        onClick={() => setFullscreen((prev) => !prev)}
+                      >
                         {fullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
                       </Button>
                     </TooltipTrigger>
@@ -321,7 +327,12 @@ export default function CvAdmin() {
                 ) : (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button size="sm" variant="ghost" className="border border-border" onClick={() => cvUploadRef.current?.click()}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="border border-border"
+                        onClick={() => cvUploadRef.current?.click()}
+                      >
                         <Sparkles className="h-3.5 w-3.5 mr-1" />
                         AI-analyse av CV
                       </Button>
