@@ -175,7 +175,7 @@ export default function CvAdmin() {
         });
       }
 
-      await openCvPrintDialog(doc.hero.name ? `${doc.hero.name.replace(/\s+/g, "_")}_CV` : "CV");
+      await openCvPrintDialog(doc.hero.name ? `CV - ${doc.hero.name} - STACQ` : "CV - STACQ");
     },
     [cvId, user?.email],
   );
