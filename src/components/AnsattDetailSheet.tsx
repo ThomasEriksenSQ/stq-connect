@@ -425,10 +425,9 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
                 {/* Edit button */}
                 <button
                   onClick={() => setEditing(true)}
-                  className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.8125rem] text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors shrink-0"
+                  className="inline-flex items-center justify-center h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors shrink-0"
                 >
                   <Pencil className="h-3.5 w-3.5" />
-                  Rediger
                 </button>
               </div>
 
