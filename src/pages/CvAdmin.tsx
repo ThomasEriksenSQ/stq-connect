@@ -216,28 +216,35 @@ export default function CvAdmin() {
         return;
       }
 
-      const newDoc: CVDocument = {
-        ...(cvData || EMPTY_CV),
+      const currentCv = cvData || EMPTY_CV;
+
+      const newCvData: CVDocument = {
+        ...currentCv,
         hero: {
-          ...(cvData || EMPTY_CV).hero,
-          name: data.navn || (cvData || EMPTY_CV).hero.name,
-          title: data.tittel || (cvData || EMPTY_CV).hero.title,
+          ...currentCv.hero,
+          name: data.navn || currentCv.hero.name,
+          title: data.tittel || currentCv.hero.title,
         },
-        introParagraphs: data.introParagraphs?.length ? data.introParagraphs : (cvData || EMPTY_CV).introParagraphs,
-        competenceGroups: data.competenceGroups?.length ? data.competenceGroups : (cvData || EMPTY_CV).competenceGroups,
-        projects: data.projects?.length ? data.projects : (cvData || EMPTY_CV).projects,
-        education: data.education?.length ? data.education : (cvData || EMPTY_CV).education,
-        workExperience: data.workExperience?.length ? data.workExperience : (cvData || EMPTY_CV).workExperience,
-        sidebarSections: data.sidebarSections?.length ? data.sidebarSections : (cvData || EMPTY_CV).sidebarSections,
+        introParagraphs: data.introParagraphs?.length ? data.introParagraphs : currentCv.introParagraphs,
+        competenceGroups: data.competenceGroups?.length ? data.competenceGroups : currentCv.competenceGroups,
+        projects: data.projects?.length ? data.projects : currentCv.projects,
+        education: data.education?.length ? data.education : currentCv.education,
+        workExperience: data.workExperience?.length ? data.workExperience : currentCv.workExperience,
+        sidebarSections: data.sidebarSections?.length ? data.sidebarSections : currentCv.sidebarSections,
       };
 
-      setCvData(newDoc);
+      setCvData(newCvData);
 
       if (cvId) {
-        await supabase
+        const { error: saveError } = await supabase
           .from("cv_documents")
-          .update(cvDocToDbRow(newDoc) as any)
+          .update(cvDocToDbRow(newCvData) as any)
           .eq("id", cvId);
+
+        if (saveError) {
+          toast.error("Kunne ikke lagre CV-data til databasen");
+          return;
+        }
       }
 
       toast.success("CV fullstendig analysert — alle seksjoner er fylt inn");
@@ -246,7 +253,7 @@ export default function CvAdmin() {
     } finally {
       setCvUploadParsing(false);
     }
-  }, []);
+  }, [cvData, cvId]);
 
   if (loading) {
     return (
