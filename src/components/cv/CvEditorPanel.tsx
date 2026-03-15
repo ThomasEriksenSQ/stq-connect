@@ -708,6 +708,51 @@ export function CvEditorPanel({
                 </button>
               </AccordionContent>
             </AccordionItem>
+
+            {/* KONTAKTPERSON */}
+            <AccordionItem value="kontaktperson">
+              <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
+                Kontaktperson
+              </AccordionTrigger>
+              <AccordionContent className="space-y-3 pt-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className={LABEL}>Navn</label>
+                    <Input
+                      value={doc.hero.contact.name}
+                      onChange={(e) => setHeroContact("name", e.target.value)}
+                      className="mt-1 text-[0.875rem]"
+                    />
+                  </div>
+                  <div>
+                    <label className={LABEL}>Tittel</label>
+                    <Input
+                      value={doc.hero.contact.title}
+                      onChange={(e) => setHeroContact("title", e.target.value)}
+                      className="mt-1 text-[0.875rem]"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className={LABEL}>Telefon</label>
+                    <Input
+                      value={doc.hero.contact.phone}
+                      onChange={(e) => setHeroContact("phone", e.target.value)}
+                      className="mt-1 text-[0.875rem]"
+                    />
+                  </div>
+                  <div>
+                    <label className={LABEL}>Epost</label>
+                    <Input
+                      value={doc.hero.contact.email}
+                      onChange={(e) => setHeroContact("email", e.target.value)}
+                      className="mt-1 text-[0.875rem]"
+                    />
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
           </Accordion>
         </div>
       </div>
