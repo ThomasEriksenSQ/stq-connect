@@ -295,6 +295,18 @@ export default function CvAdmin() {
                   <History className="h-3.5 w-3.5 mr-1" />
                   Versjonshistorikk
                 </Button>
+                {cvUploadParsing ? (
+                  <span className="flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Analyserer CV med AI...
+                  </span>
+                ) : (
+                  <Button size="sm" variant="ghost" className="border border-border" onClick={() => cvUploadRef.current?.click()}>
+                    <Upload className="h-3.5 w-3.5 mr-1" />
+                    Last opp CV
+                  </Button>
+                )}
+                <input ref={cvUploadRef} type="file" accept=".pdf" className="hidden" onChange={handleCvUpload} />
                 <Button size="sm" onClick={onDownload}>
                   <Download className="h-3.5 w-3.5 mr-1" />
                   Last ned PDF
