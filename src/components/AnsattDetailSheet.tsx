@@ -69,10 +69,8 @@ export function AnsattDetailSheet({ open, onClose, ansatt }: AnsattDetailSheetPr
         start_dato: ansatt.start_dato || "",
         slutt_dato: ansatt.slutt_dato || "",
         kompetanse: ansatt.kompetanse || [],
-        bio: ansatt.bio || "",
         bilde_url: ansatt.bilde_url || "",
         erfaring_aar: ansatt.erfaring_aar?.toString() || "",
-        synlig_web: ansatt.synlig_web || false,
       });
     }
     setTagInput("");
