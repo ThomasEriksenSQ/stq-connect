@@ -93,9 +93,9 @@ export default function CvEditor() {
     })();
   }, [session]);
 
-  const verifyPin = async () => {
+  const verifyPin = async (pinOverride?: string) => {
     if (!token) return;
-    const pinStr = pin.join("");
+    const pinStr = pinOverride || pin.join("");
     if (pinStr.length !== 4) return;
 
     setVerifying(true);
