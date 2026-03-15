@@ -6,7 +6,8 @@ import { hashPin } from "@/lib/pinHash";
 import type { CVDocument } from "@/components/cv/CvRenderer";
 
 const SUPABASE_URL = "https://kbvzpcebfopqqrvmbiap.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtidnpwY2ViZm9wcXFydm1iaWFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTgyNTEsImV4cCI6MjA4ODI5NDI1MX0.t_bvITh_RxMfYdutsqHD-IkArlcD8I7au5vxBkt0aVY";
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtidnpwY2ViZm9wcXFydm1iaWFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTgyNTEsImV4cCI6MjA4ODI5NDI1MX0.t_bvITh_RxMfYdutsqHD-IkArlcD8I7au5vxBkt0aVY";
 
 // Anon client — no auth session
 const anonClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -21,7 +22,11 @@ type CvSession = {
 };
 
 const EMPTY_CV: CVDocument = {
-  hero: { name: "", title: "", contact: { title: "Kontaktperson", name: "Jon Richard Nygaard", phone: "932 87 267", email: "jr@stacq.no" } },
+  hero: {
+    name: "",
+    title: "",
+    contact: { title: "Kontaktperson", name: "Jon Richard Nygaard", phone: "932 87 267", email: "jr@stacq.no" },
+  },
   sidebarSections: [],
   introParagraphs: [],
   competenceGroups: [],
@@ -97,17 +102,22 @@ export default function CvEditor() {
     setError("");
 
     try {
-      const { data: tokenRow } = await anonClient
-        .from("cv_access_tokens")
-        .select("*")
-        .eq("token", token)
-        .single();
+      const { data: tokenRow } = await anonClient.from("cv_access_tokens").select("*").eq("token", token).single();
 
-      if (!tokenRow) { showError("Ugyldig lenke"); return; }
-      if (tokenRow.expires_at && new Date(tokenRow.expires_at) < new Date()) { showError("Lenken har utløpt"); return; }
+      if (!tokenRow) {
+        showError("Ugyldig lenke");
+        return;
+      }
+      if (tokenRow.expires_at && new Date(tokenRow.expires_at) < new Date()) {
+        showError("Lenken har utløpt");
+        return;
+      }
 
       const hash = await hashPin(pinStr);
-      if (hash !== tokenRow.pin_hash) { showError("Feil PIN-kode"); return; }
+      if (hash !== tokenRow.pin_hash) {
+        showError("Feil PIN-kode");
+        return;
+      }
 
       // Get CV document
       const { data: cvRow } = await anonClient
@@ -123,7 +133,10 @@ export default function CvEditor() {
         .eq("id", tokenRow.ansatt_id)
         .single();
 
-      if (!cvRow) { showError("CV ikke funnet"); return; }
+      if (!cvRow) {
+        showError("CV ikke funnet");
+        return;
+      }
 
       if (ansattRow?.bilde_url) setImageUrl(ansattRow.bilde_url);
 
@@ -196,8 +209,7 @@ export default function CvEditor() {
         <div className="w-full max-w-sm text-center space-y-8 px-6">
           <img src="/STACQ_logo_black.png" alt="STACQ" className="h-8 mx-auto dark:invert" />
           <div className="space-y-3">
-            <h1 className="text-xl font-bold text-foreground">Skriv inn din PIN-kode</h1>
-            
+            <h1 className="text-xl font-bold text-foreground">Tast inn din PIN-kode</h1>
           </div>
           <div className={`flex justify-center gap-3 ${shake ? "animate-shake" : ""}`}>
             {pin.map((digit, i) => (
@@ -238,12 +250,7 @@ export default function CvEditor() {
 
   return (
     <div className="h-screen flex flex-col">
-      <CvEditorPanel
-        cvData={cvData}
-        onSave={handleSave}
-        savedBy={session.ansatt_name}
-        imageUrl={imageUrl}
-      />
+      <CvEditorPanel cvData={cvData} onSave={handleSave} savedBy={session.ansatt_name} imageUrl={imageUrl} />
     </div>
   );
 }
