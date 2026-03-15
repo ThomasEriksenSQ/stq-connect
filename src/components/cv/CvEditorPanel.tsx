@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback, type ReactNode } from "react"
 import {
   CvRendererPreview,
   openCvPrintDialog,
+  formatProjectPeriod,
+  PROJECT_MONTH_OPTIONS,
   type CVDocument,
   type ProjectEntry,
   type CompetenceGroup,
@@ -12,6 +14,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Plus, Trash2, GripVertical, Download, Check, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -67,6 +71,47 @@ function SortableItem({ id, children }: { id: string; children: React.ReactNode 
 }
 
 const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
+const CLEAR_SELECT = "__none__";
+const CURRENT_YEAR = new Date().getFullYear();
+const PROJECT_YEAR_OPTIONS = Array.from({ length: CURRENT_YEAR - 1977 }, (_, index) => CURRENT_YEAR + 2 - index);
+const CONTACT_PERSON_PRESETS = {
+  jon_richard: {
+    title: "Kontaktperson",
+    name: "Jon Richard Nygaard",
+    phone: "932 87 267",
+    email: "jr@stacq.no",
+  },
+  thomas_eriksen: {
+    title: "Kontaktperson",
+    name: "Thomas Eriksen",
+    phone: "97 500 321",
+    email: "thomas@stacq.no",
+  },
+} as const;
+
+function normalizeProjectDateValue(value: string) {
+  if (value === CLEAR_SELECT) return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) ? parsed : null;
+}
+
+function syncProjectPeriod(project: ProjectEntry): ProjectEntry {
+  const formattedPeriod = formatProjectPeriod({ ...project, period: "" });
+  return { ...project, period: formattedPeriod || project.period || "" };
+}
+
+function getSelectedContactPresetId(contact: CVDocument["hero"]["contact"]) {
+  const entry = Object.entries(CONTACT_PERSON_PRESETS).find(([, preset]) => {
+    return (
+      preset.title === contact.title &&
+      preset.name === contact.name &&
+      preset.phone === contact.phone &&
+      preset.email === contact.email
+    );
+  });
+
+  return entry?.[0] ?? CLEAR_SELECT;
+}
 
 export function CvEditorPanel({
   cvData: initialData,
@@ -83,9 +128,17 @@ export function CvEditorPanel({
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [portraitUploading, setPortraitUploading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const splitLayoutRef = useRef<HTMLDivElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const portraitInputRef = useRef<HTMLInputElement>(null);
   const [previewScale, setPreviewScale] = useState(0.5);
+  const [editorWidth, setEditorWidth] = useState(480);
+  const [isResizingEditor, setIsResizingEditor] = useState(false);
+  const resizeBoundsRef = useRef({ right: 0, width: 0 });
+
+  const EDITOR_MIN_WIDTH = 440;
+  const EDITOR_MAX_WIDTH = 860;
+  const PREVIEW_MIN_WIDTH = 420;
 
   // Sync if initialData changes externally (e.g. version restore)
   useEffect(() => {
@@ -104,6 +157,39 @@ export function CvEditorPanel({
     observer.observe(container);
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (!isResizingEditor) return;
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const { right, width } = resizeBoundsRef.current;
+      if (width <= 0) return;
+
+      const maxWidth = Math.min(EDITOR_MAX_WIDTH, Math.max(EDITOR_MIN_WIDTH, width - PREVIEW_MIN_WIDTH));
+      const nextWidth = Math.max(EDITOR_MIN_WIDTH, Math.min(maxWidth, right - event.clientX));
+      setEditorWidth(nextWidth);
+    };
+
+    const stopResize = () => {
+      setIsResizingEditor(false);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", stopResize);
+    window.addEventListener("pointercancel", stopResize);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", stopResize);
+      window.removeEventListener("pointercancel", stopResize);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isResizingEditor]);
 
   // Autosave debounce
   const scheduleAutosave = useCallback(
@@ -132,6 +218,17 @@ export function CvEditorPanel({
       });
     },
     [scheduleAutosave],
+  );
+
+  const updateProjectAt = useCallback(
+    (projectIndex: number, updater: (project: ProjectEntry) => ProjectEntry) => {
+      update((prev) => {
+        const projects = [...prev.projects];
+        projects[projectIndex] = syncProjectPeriod(updater(projects[projectIndex]));
+        return { ...prev, projects };
+      });
+    },
+    [update],
   );
 
   const sensors = useSensors(
@@ -195,541 +292,157 @@ export function CvEditorPanel({
     await openCvPrintDialog(doc.hero.name ? `${doc.hero.name}_CV` : "CV");
   };
 
+  const handleResizeStart = (event: React.PointerEvent<HTMLDivElement>) => {
+    const container = splitLayoutRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    resizeBoundsRef.current = { right: rect.right, width: rect.width };
+    setIsResizingEditor(true);
+    event.preventDefault();
+  };
+
   return (
     <div className="flex flex-col h-full bg-background">
       {/* External toolbar if provided */}
-      {renderToolbar
-        ? renderToolbar({ saveStatus, onDownload: handleDownloadClick })
-        : (
-          <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2 text-[0.8125rem]">
-              {toolbarStart}
-              {saveStatus === "saving" && (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                  <span className="text-muted-foreground">Lagrer...</span>
-                </>
-              )}
-              {saveStatus === "saved" && (
-                <>
-                  <Check className="h-3.5 w-3.5 text-emerald-600" />
-                  <span className="text-emerald-600">Lagret</span>
-                </>
-              )}
-              {saveStatus === "idle" && <span className="text-muted-foreground">{headerLabel || "CV Editor"}</span>}
-            </div>
-            <div className="flex items-center gap-2">
-              {toolbarEnd}
-              <Button size="sm" variant="outline" onClick={handleDownloadClick}>
-                <Download className="h-3.5 w-3.5 mr-1" /> Last ned PDF
-              </Button>
-            </div>
+      {renderToolbar ? (
+        renderToolbar({ saveStatus, onDownload: handleDownloadClick })
+      ) : (
+        <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2 text-[0.8125rem]">
+            {toolbarStart}
+            {saveStatus === "saving" && (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                <span className="text-muted-foreground">Lagrer...</span>
+              </>
+            )}
+            {saveStatus === "saved" && (
+              <>
+                <Check className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="text-emerald-600">Lagret</span>
+              </>
+            )}
+            {saveStatus === "idle" && <span className="text-muted-foreground">{headerLabel || "CV Editor"}</span>}
           </div>
-        )}
+          <div className="flex items-center gap-2">
+            {toolbarEnd}
+            <Button size="sm" variant="outline" onClick={handleDownloadClick}>
+              <Download className="h-3.5 w-3.5 mr-1" /> Last ned PDF
+            </Button>
+          </div>
+        </div>
+      )}
 
-      <div className="flex flex-1 min-h-0">
+      <div ref={splitLayoutRef} className="flex flex-1 min-h-0">
         {/* LEFT PANEL — Live Preview */}
         <div ref={previewContainerRef} className="flex-1 min-w-0 overflow-y-auto bg-[#d7d7d7] p-4">
           <CvRendererPreview doc={doc} imageUrl={doc.hero.portrait_url || imageUrl} scale={previewScale} />
         </div>
 
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Juster bredde på editor"
+          onPointerDown={handleResizeStart}
+          className={`shrink-0 w-2 cursor-col-resize touch-none transition-colors ${
+            isResizingEditor ? "bg-border" : "bg-transparent hover:bg-border/70"
+          }`}
+        />
+
         {/* RIGHT PANEL — Editor */}
-        <div className="w-[480px] shrink-0 border-l border-border overflow-y-auto bg-background">
+        <div
+          style={{ width: `${editorWidth}px` }}
+          className="shrink-0 border-l border-border overflow-y-auto bg-background"
+        >
           <div className="p-4 space-y-1">
             <Accordion type="multiple" defaultValue={["profil", "prosjekter"]} className="space-y-0">
-            {/* PROFIL */}
-            <AccordionItem value="profil">
-              <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">Profil</AccordionTrigger>
-              <AccordionContent className="space-y-3 pt-2">
-                <div>
-                  <label className={LABEL}>Navn</label>
-                  <Input
-                    value={doc.hero.name}
-                    onChange={(e) => setHero("name", e.target.value)}
-                    className="mt-1 text-[0.875rem]"
-                  />
-                </div>
-                <div>
-                  <label className={LABEL}>Profilbilde</label>
-                  <div className="flex items-center gap-3 mt-1">
-                    {doc.hero.portrait_url ? (
-                      <img src={doc.hero.portrait_url} alt="" className="w-20 h-20 rounded-full object-cover border border-border" />
-                    ) : (
-                      <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-lg font-bold border border-border">
-                        {getInitials(doc.hero.name)}
-                      </div>
-                    )}
-                    <div className="flex flex-col gap-1">
-                      <button
-                        onClick={() => portraitInputRef.current?.click()}
-                        disabled={portraitUploading}
-                        className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.75rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50"
-                      >
-                        {portraitUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-                        {portraitUploading ? "Laster opp..." : "Last opp bilde"}
-                      </button>
-                      <input ref={portraitInputRef} type="file" accept="image/*" className="hidden" onChange={handlePortraitUpload} />
-                    </div>
+              {/* PROFIL */}
+              <AccordionItem value="profil">
+                <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
+                  Profil
+                </AccordionTrigger>
+                <AccordionContent className="space-y-3 pt-2">
+                  <div>
+                    <label className={LABEL}>Navn</label>
+                    <Input
+                      value={doc.hero.name}
+                      onChange={(e) => setHero("name", e.target.value)}
+                      className="mt-1 text-[0.875rem]"
+                    />
                   </div>
-                </div>
-                <div>
-                  <label className={LABEL}>Tittel / ingress</label>
-                  <Input
-                    value={doc.hero.title}
-                    onChange={(e) => setHero("title", e.target.value)}
-                    className="mt-1 text-[0.875rem]"
-                  />
-                </div>
-                {/* Intro paragraphs */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className={LABEL}>Intro-avsnitt</label>
-                    <button
-                      onClick={() => update((p) => ({ ...p, introParagraphs: [...p.introParagraphs, ""] }))}
-                      className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
-                    >
-                      <Plus className="h-3 w-3" /> Legg til
-                    </button>
-                  </div>
-                  {doc.introParagraphs.map((para, i) => (
-                    <div key={i} className="flex gap-1 mb-2">
-                      <Textarea
-                        value={para}
-                        rows={3}
-                        onChange={(e) =>
-                          update((p) => {
-                            const arr = [...p.introParagraphs];
-                            arr[i] = e.target.value;
-                            return { ...p, introParagraphs: arr };
-                          })
-                        }
-                        className="text-[0.8125rem]"
-                      />
-                      <button
-                        onClick={() =>
-                          update((p) => ({ ...p, introParagraphs: p.introParagraphs.filter((_, j) => j !== i) }))
-                        }
-                        className="text-muted-foreground hover:text-destructive shrink-0 p-1"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* KOMPETANSEGRUPPER */}
-            <AccordionItem value="kompetanse">
-              <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
-                Kompetansegrupper
-              </AccordionTrigger>
-              <AccordionContent className="space-y-2 pt-2">
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleCompetenceDragEnd}>
-                  <SortableContext
-                    items={doc.competenceGroups.map((_, i) => `comp-${i}`)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {doc.competenceGroups.map((group, i) => (
-                      <SortableItem key={`comp-${i}`} id={`comp-${i}`}>
-                        <div className="border border-border rounded-lg p-3 bg-card space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Input
-                              value={group.label}
-                              placeholder="Label"
-                              onChange={(e) =>
-                                update((p) => {
-                                  const arr = [...p.competenceGroups];
-                                  arr[i] = { ...arr[i], label: e.target.value };
-                                  return { ...p, competenceGroups: arr };
-                                })
-                              }
-                              className="text-[0.8125rem] font-medium"
-                            />
-                            <button
-                              onClick={() =>
-                                update((p) => ({
-                                  ...p,
-                                  competenceGroups: p.competenceGroups.filter((_, j) => j !== i),
-                                }))
-                              }
-                              className="text-muted-foreground hover:text-destructive shrink-0 p-1"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                          <Textarea
-                            value={group.content}
-                            rows={2}
-                            onChange={(e) =>
-                              update((p) => {
-                                const arr = [...p.competenceGroups];
-                                arr[i] = { ...arr[i], content: e.target.value };
-                                return { ...p, competenceGroups: arr };
-                              })
-                            }
-                            className="text-[0.8125rem]"
-                          />
+                  <div>
+                    <label className={LABEL}>Profilbilde</label>
+                    <div className="flex items-center gap-3 mt-1">
+                      {doc.hero.portrait_url ? (
+                        <img
+                          src={doc.hero.portrait_url}
+                          alt=""
+                          className="w-20 h-20 rounded-full object-cover border border-border"
+                        />
+                      ) : (
+                        <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-lg font-bold border border-border">
+                          {getInitials(doc.hero.name)}
                         </div>
-                      </SortableItem>
-                    ))}
-                  </SortableContext>
-                </DndContext>
-                <button
-                  onClick={() =>
-                    update((p) => ({ ...p, competenceGroups: [...p.competenceGroups, { label: "", content: "" }] }))
-                  }
-                  className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
-                >
-                  <Plus className="h-3 w-3" /> Ny gruppe
-                </button>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* PROSJEKTER */}
-            <AccordionItem value="prosjekter">
-              <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
-                Prosjekter
-              </AccordionTrigger>
-              <AccordionContent className="space-y-2 pt-2">
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleProjectDragEnd}>
-                  <SortableContext
-                    items={doc.projects.map((_, i) => `project-${i}`)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {doc.projects.map((project, i) => (
-                      <SortableItem key={`project-${i}`} id={`project-${i}`}>
-                        <Accordion type="single" collapsible>
-                          <AccordionItem value={`proj-${i}`} className="border border-border rounded-lg bg-card">
-                            <AccordionTrigger className="px-3 py-2 text-[0.8125rem] font-medium">
-                              {project.company || "Nytt prosjekt"} {project.period && `(${project.period})`}
-                            </AccordionTrigger>
-                            <AccordionContent className="px-3 pb-3 space-y-2">
-                              <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                  <label className={LABEL}>Selskap</label>
-                                  <Input
-                                    value={project.company}
-                                    onChange={(e) =>
-                                      update((p) => {
-                                        const arr = [...p.projects];
-                                        arr[i] = { ...arr[i], company: e.target.value };
-                                        return { ...p, projects: arr };
-                                      })
-                                    }
-                                    className="mt-1 text-[0.8125rem]"
-                                  />
-                                </div>
-                                <div>
-                                  <label className={LABEL}>Periode</label>
-                                  <Input
-                                    value={project.period}
-                                    onChange={(e) =>
-                                      update((p) => {
-                                        const arr = [...p.projects];
-                                        arr[i] = { ...arr[i], period: e.target.value };
-                                        return { ...p, projects: arr };
-                                      })
-                                    }
-                                    className="mt-1 text-[0.8125rem]"
-                                  />
-                                </div>
-                              </div>
-                              <div>
-                                <label className={LABEL}>Undertittel</label>
-                                <Input
-                                  value={project.subtitle}
-                                  onChange={(e) =>
-                                    update((p) => {
-                                      const arr = [...p.projects];
-                                      arr[i] = { ...arr[i], subtitle: e.target.value };
-                                      return { ...p, projects: arr };
-                                    })
-                                  }
-                                  className="mt-1 text-[0.8125rem]"
-                                />
-                              </div>
-                              <div>
-                                <label className={LABEL}>Rolle</label>
-                                <Input
-                                  value={project.role}
-                                  onChange={(e) =>
-                                    update((p) => {
-                                      const arr = [...p.projects];
-                                      arr[i] = { ...arr[i], role: e.target.value };
-                                      return { ...p, projects: arr };
-                                    })
-                                  }
-                                  className="mt-1 text-[0.8125rem]"
-                                />
-                              </div>
-                              <div>
-                                <div className="flex items-center justify-between mb-1">
-                                  <label className={LABEL}>Avsnitt</label>
-                                  <button
-                                    onClick={() =>
-                                      update((p) => {
-                                        const arr = [...p.projects];
-                                        arr[i] = { ...arr[i], paragraphs: [...arr[i].paragraphs, ""] };
-                                        return { ...p, projects: arr };
-                                      })
-                                    }
-                                    className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
-                                  >
-                                    <Plus className="h-3 w-3" /> Legg til
-                                  </button>
-                                </div>
-                                {project.paragraphs.map((para, pi) => (
-                                  <div key={pi} className="flex gap-1 mb-2">
-                                    <Textarea
-                                      value={para}
-                                      rows={3}
-                                      onChange={(e) =>
-                                        update((p) => {
-                                          const arr = [...p.projects];
-                                          const paras = [...arr[i].paragraphs];
-                                          paras[pi] = e.target.value;
-                                          arr[i] = { ...arr[i], paragraphs: paras };
-                                          return { ...p, projects: arr };
-                                        })
-                                      }
-                                      className="text-[0.8125rem]"
-                                    />
-                                    <button
-                                      onClick={() =>
-                                        update((p) => {
-                                          const arr = [...p.projects];
-                                          arr[i] = {
-                                            ...arr[i],
-                                            paragraphs: arr[i].paragraphs.filter((_, j) => j !== pi),
-                                          };
-                                          return { ...p, projects: arr };
-                                        })
-                                      }
-                                      className="text-muted-foreground hover:text-destructive shrink-0 p-1"
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                              <div>
-                                <label className={LABEL}>Teknologier</label>
-                                <Textarea
-                                  value={project.technologies}
-                                  rows={2}
-                                  onChange={(e) =>
-                                    update((p) => {
-                                      const arr = [...p.projects];
-                                      arr[i] = { ...arr[i], technologies: e.target.value };
-                                      return { ...p, projects: arr };
-                                    })
-                                  }
-                                  className="mt-1 text-[0.8125rem]"
-                                />
-                              </div>
-                              <button
-                                onClick={() =>
-                                  update((p) => ({ ...p, projects: p.projects.filter((_, j) => j !== i) }))
-                                }
-                                className="text-destructive text-[0.75rem] font-medium hover:underline flex items-center gap-0.5 mt-2"
-                              >
-                                <Trash2 className="h-3 w-3" /> Slett prosjekt
-                              </button>
-                            </AccordionContent>
-                          </AccordionItem>
-                        </Accordion>
-                      </SortableItem>
-                    ))}
-                  </SortableContext>
-                </DndContext>
-                <button
-                  onClick={() =>
-                    update((p) => ({
-                      ...p,
-                      projects: [
-                        ...p.projects,
-                        { company: "", subtitle: "", role: "", period: "", paragraphs: [""], technologies: "" },
-                      ],
-                    }))
-                  }
-                  className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
-                >
-                  <Plus className="h-3 w-3" /> Nytt prosjekt
-                </button>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* UTDANNELSE */}
-            <AccordionItem value="utdannelse">
-              <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
-                Utdannelse
-              </AccordionTrigger>
-              <AccordionContent className="space-y-2 pt-2">
-                {doc.education.map((entry, i) => (
-                  <div key={i} className="border border-border rounded-lg p-3 bg-card space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={entry.period}
-                        placeholder="Periode"
-                        onChange={(e) =>
-                          update((p) => {
-                            const arr = [...p.education];
-                            arr[i] = { ...arr[i], period: e.target.value };
-                            return { ...p, education: arr };
-                          })
-                        }
-                        className="text-[0.8125rem] w-32"
-                      />
-                      <Input
-                        value={entry.primary}
-                        placeholder="Grad / tittel"
-                        onChange={(e) =>
-                          update((p) => {
-                            const arr = [...p.education];
-                            arr[i] = { ...arr[i], primary: e.target.value };
-                            return { ...p, education: arr };
-                          })
-                        }
-                        className="text-[0.8125rem] flex-1"
-                      />
-                      <button
-                        onClick={() => update((p) => ({ ...p, education: p.education.filter((_, j) => j !== i) }))}
-                        className="text-muted-foreground hover:text-destructive shrink-0 p-1"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      )}
+                      <div className="flex flex-col gap-1">
+                        <button
+                          onClick={() => portraitInputRef.current?.click()}
+                          disabled={portraitUploading}
+                          className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.75rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50"
+                        >
+                          {portraitUploading ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Upload className="h-3.5 w-3.5" />
+                          )}
+                          {portraitUploading ? "Laster opp..." : "Last opp bilde"}
+                        </button>
+                        <input
+                          ref={portraitInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handlePortraitUpload}
+                        />
+                      </div>
                     </div>
+                  </div>
+                  <div>
+                    <label className={LABEL}>Tittel / ingress</label>
                     <Input
-                      value={entry.secondary || ""}
-                      placeholder="Detaljer (valgfritt)"
-                      onChange={(e) =>
-                        update((p) => {
-                          const arr = [...p.education];
-                          arr[i] = { ...arr[i], secondary: e.target.value };
-                          return { ...p, education: arr };
-                        })
-                      }
-                      className="text-[0.8125rem]"
+                      value={doc.hero.title}
+                      onChange={(e) => setHero("title", e.target.value)}
+                      className="mt-1 text-[0.875rem]"
                     />
                   </div>
-                ))}
-                <button
-                  onClick={() =>
-                    update((p) => ({ ...p, education: [...p.education, { period: "", primary: "", secondary: "" }] }))
-                  }
-                  className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
-                >
-                  <Plus className="h-3 w-3" /> Legg til
-                </button>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* ARBEIDSERFARING */}
-            <AccordionItem value="arbeidserfaring">
-              <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
-                Arbeidserfaring
-              </AccordionTrigger>
-              <AccordionContent className="space-y-2 pt-2">
-                {doc.workExperience.map((entry, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <Input
-                      value={entry.period}
-                      placeholder="Periode"
-                      onChange={(e) =>
-                        update((p) => {
-                          const arr = [...p.workExperience];
-                          arr[i] = { ...arr[i], period: e.target.value };
-                          return { ...p, workExperience: arr };
-                        })
-                      }
-                      className="text-[0.8125rem] w-32"
-                    />
-                    <Input
-                      value={entry.primary}
-                      placeholder="Selskap"
-                      onChange={(e) =>
-                        update((p) => {
-                          const arr = [...p.workExperience];
-                          arr[i] = { ...arr[i], primary: e.target.value };
-                          return { ...p, workExperience: arr };
-                        })
-                      }
-                      className="text-[0.8125rem] flex-1"
-                    />
-                    <button
-                      onClick={() =>
-                        update((p) => ({ ...p, workExperience: p.workExperience.filter((_, j) => j !== i) }))
-                      }
-                      className="text-muted-foreground hover:text-destructive shrink-0 p-1"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
-                <button
-                  onClick={() =>
-                    update((p) => ({ ...p, workExperience: [...p.workExperience, { period: "", primary: "" }] }))
-                  }
-                  className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
-                >
-                  <Plus className="h-3 w-3" /> Legg til
-                </button>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* SIDEBAR */}
-            <AccordionItem value="sidebar">
-              <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
-                Sidebar
-              </AccordionTrigger>
-              <AccordionContent className="space-y-3 pt-2">
-                {doc.sidebarSections.map((section, si) => (
-                  <div key={si} className="border border-border rounded-lg p-3 bg-card space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={section.heading}
-                        placeholder="Overskrift"
-                        onChange={(e) =>
-                          update((p) => {
-                            const arr = [...p.sidebarSections];
-                            arr[si] = { ...arr[si], heading: e.target.value };
-                            return { ...p, sidebarSections: arr };
-                          })
-                        }
-                        className="text-[0.8125rem] font-medium"
-                      />
+                  {/* Intro paragraphs */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className={LABEL}>Intro-avsnitt</label>
                       <button
-                        onClick={() =>
-                          update((p) => ({ ...p, sidebarSections: p.sidebarSections.filter((_, j) => j !== si) }))
-                        }
-                        className="text-muted-foreground hover:text-destructive shrink-0 p-1"
+                        onClick={() => update((p) => ({ ...p, introParagraphs: [...p.introParagraphs, ""] }))}
+                        className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Plus className="h-3 w-3" /> Legg til
                       </button>
                     </div>
-                    {section.items.map((item, ii) => (
-                      <div key={ii} className="flex gap-1">
-                        <Input
-                          value={item}
+                    {doc.introParagraphs.map((para, i) => (
+                      <div key={i} className="flex gap-1 mb-2">
+                        <Textarea
+                          value={para}
+                          rows={3}
                           onChange={(e) =>
                             update((p) => {
-                              const arr = [...p.sidebarSections];
-                              const items = [...arr[si].items];
-                              items[ii] = e.target.value;
-                              arr[si] = { ...arr[si], items };
-                              return { ...p, sidebarSections: arr };
+                              const arr = [...p.introParagraphs];
+                              arr[i] = e.target.value;
+                              return { ...p, introParagraphs: arr };
                             })
                           }
                           className="text-[0.8125rem]"
                         />
                         <button
                           onClick={() =>
-                            update((p) => {
-                              const arr = [...p.sidebarSections];
-                              arr[si] = { ...arr[si], items: arr[si].items.filter((_, j) => j !== ii) };
-                              return { ...p, sidebarSections: arr };
-                            })
+                            update((p) => ({ ...p, introParagraphs: p.introParagraphs.filter((_, j) => j !== i) }))
                           }
                           className="text-muted-foreground hover:text-destructive shrink-0 p-1"
                         >
@@ -737,81 +450,687 @@ export function CvEditorPanel({
                         </button>
                       </div>
                     ))}
-                    <button
-                      onClick={() =>
-                        update((p) => {
-                          const arr = [...p.sidebarSections];
-                          arr[si] = { ...arr[si], items: [...arr[si].items, ""] };
-                          return { ...p, sidebarSections: arr };
-                        })
-                      }
-                      className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
-                    >
-                      <Plus className="h-3 w-3" /> Legg til punkt
-                    </button>
                   </div>
-                ))}
-                <button
-                  onClick={() =>
-                    update((p) => ({
-                      ...p,
-                      sidebarSections: [...p.sidebarSections, { heading: "", items: [""] }],
-                    }))
-                  }
-                  className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
-                >
-                  <Plus className="h-3 w-3" /> Ny seksjon
-                </button>
-              </AccordionContent>
-            </AccordionItem>
+                </AccordionContent>
+              </AccordionItem>
 
-            {/* KONTAKTPERSON */}
-            <AccordionItem value="kontaktperson">
-              <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
-                Kontaktperson
-              </AccordionTrigger>
-              <AccordionContent className="space-y-3 pt-2">
-                <div className="grid grid-cols-2 gap-2">
+              {/* KOMPETANSEGRUPPER */}
+              <AccordionItem value="kompetanse">
+                <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
+                  Kompetansegrupper
+                </AccordionTrigger>
+                <AccordionContent className="space-y-2 pt-2">
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleCompetenceDragEnd}>
+                    <SortableContext
+                      items={doc.competenceGroups.map((_, i) => `comp-${i}`)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {doc.competenceGroups.map((group, i) => (
+                        <SortableItem key={`comp-${i}`} id={`comp-${i}`}>
+                          <div className="border border-border rounded-lg p-3 bg-card space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Input
+                                value={group.label}
+                                placeholder="Label"
+                                onChange={(e) =>
+                                  update((p) => {
+                                    const arr = [...p.competenceGroups];
+                                    arr[i] = { ...arr[i], label: e.target.value };
+                                    return { ...p, competenceGroups: arr };
+                                  })
+                                }
+                                className="text-[0.8125rem] font-medium"
+                              />
+                              <button
+                                onClick={() =>
+                                  update((p) => ({
+                                    ...p,
+                                    competenceGroups: p.competenceGroups.filter((_, j) => j !== i),
+                                  }))
+                                }
+                                className="text-muted-foreground hover:text-destructive shrink-0 p-1"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                            <Textarea
+                              value={group.content}
+                              rows={2}
+                              onChange={(e) =>
+                                update((p) => {
+                                  const arr = [...p.competenceGroups];
+                                  arr[i] = { ...arr[i], content: e.target.value };
+                                  return { ...p, competenceGroups: arr };
+                                })
+                              }
+                              className="text-[0.8125rem]"
+                            />
+                          </div>
+                        </SortableItem>
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                  <button
+                    onClick={() =>
+                      update((p) => ({ ...p, competenceGroups: [...p.competenceGroups, { label: "", content: "" }] }))
+                    }
+                    className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
+                  >
+                    <Plus className="h-3 w-3" /> Ny gruppe
+                  </button>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* PROSJEKTER */}
+              <AccordionItem value="prosjekter">
+                <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
+                  Prosjekter
+                </AccordionTrigger>
+                <AccordionContent className="space-y-2 pt-2">
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleProjectDragEnd}>
+                    <SortableContext
+                      items={doc.projects.map((_, i) => `project-${i}`)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {doc.projects.map((project, i) => {
+                        const projectPeriodLabel = formatProjectPeriod(project);
+
+                        return (
+                          <SortableItem key={`project-${i}`} id={`project-${i}`}>
+                            <Accordion type="single" collapsible>
+                              <AccordionItem value={`proj-${i}`} className="border border-border rounded-lg bg-card">
+                                <AccordionTrigger className="px-3 py-2 text-[0.8125rem] font-medium">
+                                  {project.company || "Nytt prosjekt"} {projectPeriodLabel && `(${projectPeriodLabel})`}
+                                </AccordionTrigger>
+                                <AccordionContent className="px-3 pb-3 space-y-2">
+                                  <div>
+                                    <label className={LABEL}>Selskap</label>
+                                    <Input
+                                      value={project.company}
+                                      onChange={(e) =>
+                                        updateProjectAt(i, (current) => ({ ...current, company: e.target.value }))
+                                      }
+                                      className="mt-1 text-[0.8125rem]"
+                                    />
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                      <label className={LABEL}>Fra</label>
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <Select
+                                          value={project.startMonth ? String(project.startMonth) : undefined}
+                                          onValueChange={(value) =>
+                                            updateProjectAt(i, (current) => ({
+                                              ...current,
+                                              startMonth: normalizeProjectDateValue(value),
+                                            }))
+                                          }
+                                        >
+                                          <SelectTrigger className="h-10 text-[0.8125rem]">
+                                            <SelectValue placeholder="Måned" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value={CLEAR_SELECT}>Ingen</SelectItem>
+                                            {PROJECT_MONTH_OPTIONS.map((month) => (
+                                              <SelectItem key={month.value} value={String(month.value)}>
+                                                {month.label}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                        <Select
+                                          value={project.startYear ? String(project.startYear) : undefined}
+                                          onValueChange={(value) =>
+                                            updateProjectAt(i, (current) => ({
+                                              ...current,
+                                              startYear: normalizeProjectDateValue(value),
+                                            }))
+                                          }
+                                        >
+                                          <SelectTrigger className="h-10 text-[0.8125rem]">
+                                            <SelectValue placeholder="År" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value={CLEAR_SELECT}>Ingen</SelectItem>
+                                            {PROJECT_YEAR_OPTIONS.map((year) => (
+                                              <SelectItem key={year} value={String(year)}>
+                                                {year}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className={LABEL}>Til</label>
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <Select
+                                          value={
+                                            project.isCurrent
+                                              ? CLEAR_SELECT
+                                              : project.endMonth
+                                                ? String(project.endMonth)
+                                                : CLEAR_SELECT
+                                          }
+                                          onValueChange={(value) =>
+                                            updateProjectAt(i, (current) => ({
+                                              ...current,
+                                              isCurrent: false,
+                                              endMonth: normalizeProjectDateValue(value),
+                                            }))
+                                          }
+                                          disabled={Boolean(project.isCurrent)}
+                                        >
+                                          <SelectTrigger className="h-10 text-[0.8125rem]">
+                                            <SelectValue placeholder="Måned" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value={CLEAR_SELECT}>Ingen</SelectItem>
+                                            {PROJECT_MONTH_OPTIONS.map((month) => (
+                                              <SelectItem key={month.value} value={String(month.value)}>
+                                                {month.label}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                        <Select
+                                          value={
+                                            project.isCurrent
+                                              ? CLEAR_SELECT
+                                              : project.endYear
+                                                ? String(project.endYear)
+                                                : CLEAR_SELECT
+                                          }
+                                          onValueChange={(value) =>
+                                            updateProjectAt(i, (current) => ({
+                                              ...current,
+                                              isCurrent: false,
+                                              endYear: normalizeProjectDateValue(value),
+                                            }))
+                                          }
+                                          disabled={Boolean(project.isCurrent)}
+                                        >
+                                          <SelectTrigger className="h-10 text-[0.8125rem]">
+                                            <SelectValue placeholder="År" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value={CLEAR_SELECT}>Ingen</SelectItem>
+                                            {PROJECT_YEAR_OPTIONS.map((year) => (
+                                              <SelectItem key={year} value={String(year)}>
+                                                {year}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      <div className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2">
+                                        <div className="text-[0.75rem] font-medium text-foreground">Nåværende</div>
+                                        <Switch
+                                          checked={Boolean(project.isCurrent)}
+                                          onCheckedChange={(checked) =>
+                                            updateProjectAt(i, (current) => ({
+                                              ...current,
+                                              isCurrent: checked,
+                                              endMonth: checked ? null : current.endMonth,
+                                              endYear: checked ? null : current.endYear,
+                                            }))
+                                          }
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                  {!project.startMonth &&
+                                  !project.startYear &&
+                                  !project.endMonth &&
+                                  !project.endYear &&
+                                  !project.isCurrent &&
+                                  project.period ? (
+                                    <p className="text-[0.6875rem] text-muted-foreground">
+                                      Eksisterende periode: {project.period}. Velg{" "}
+                                      <span className="font-medium">Fra</span> og{" "}
+                                      <span className="font-medium">Til</span> for å strukturere den.
+                                    </p>
+                                  ) : null}
+                                  <div>
+                                    <label className={LABEL}>Undertittel</label>
+                                    <Input
+                                      value={project.subtitle}
+                                      onChange={(e) =>
+                                        updateProjectAt(i, (current) => ({ ...current, subtitle: e.target.value }))
+                                      }
+                                      className="mt-1 text-[0.8125rem]"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className={LABEL}>Rolle</label>
+                                    <Input
+                                      value={project.role}
+                                      onChange={(e) =>
+                                        updateProjectAt(i, (current) => ({ ...current, role: e.target.value }))
+                                      }
+                                      className="mt-1 text-[0.8125rem]"
+                                    />
+                                  </div>
+                                  <div className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2">
+                                    <div>
+                                      <div className="text-[0.75rem] font-medium text-foreground">
+                                        Start prosjekt på ny side
+                                      </div>
+                                      <div className="text-[0.6875rem] text-muted-foreground">
+                                        Valgfri override hvis dette prosjektet skal starte på neste side.
+                                      </div>
+                                    </div>
+                                    <Switch
+                                      checked={Boolean(project.pageBreakBefore)}
+                                      onCheckedChange={(checked) =>
+                                        updateProjectAt(i, (current) => ({ ...current, pageBreakBefore: checked }))
+                                      }
+                                    />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center justify-between mb-1">
+                                      <label className={LABEL}>Avsnitt</label>
+                                      <button
+                                        onClick={() =>
+                                          update((p) => {
+                                            const arr = [...p.projects];
+                                            arr[i] = { ...arr[i], paragraphs: [...arr[i].paragraphs, ""] };
+                                            return { ...p, projects: arr };
+                                          })
+                                        }
+                                        className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
+                                      >
+                                        <Plus className="h-3 w-3" /> Legg til
+                                      </button>
+                                    </div>
+                                    {project.paragraphs.map((para, pi) => (
+                                      <div key={pi} className="flex gap-1 mb-2">
+                                        <Textarea
+                                          value={para}
+                                          rows={3}
+                                          onChange={(e) =>
+                                            update((p) => {
+                                              const arr = [...p.projects];
+                                              const paras = [...arr[i].paragraphs];
+                                              paras[pi] = e.target.value;
+                                              arr[i] = { ...arr[i], paragraphs: paras };
+                                              return { ...p, projects: arr };
+                                            })
+                                          }
+                                          className="text-[0.8125rem]"
+                                        />
+                                        <button
+                                          onClick={() =>
+                                            update((p) => {
+                                              const arr = [...p.projects];
+                                              arr[i] = {
+                                                ...arr[i],
+                                                paragraphs: arr[i].paragraphs.filter((_, j) => j !== pi),
+                                              };
+                                              return { ...p, projects: arr };
+                                            })
+                                          }
+                                          className="text-muted-foreground hover:text-destructive shrink-0 p-1"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <div>
+                                    <label className={LABEL}>Teknologier</label>
+                                    <Textarea
+                                      value={project.technologies}
+                                      rows={2}
+                                      onChange={(e) =>
+                                        updateProjectAt(i, (current) => ({ ...current, technologies: e.target.value }))
+                                      }
+                                      className="mt-1 text-[0.8125rem]"
+                                    />
+                                  </div>
+                                  <button
+                                    onClick={() =>
+                                      update((p) => ({ ...p, projects: p.projects.filter((_, j) => j !== i) }))
+                                    }
+                                    className="text-destructive text-[0.75rem] font-medium hover:underline flex items-center gap-0.5 mt-2"
+                                  >
+                                    <Trash2 className="h-3 w-3" /> Slett prosjekt
+                                  </button>
+                                </AccordionContent>
+                              </AccordionItem>
+                            </Accordion>
+                          </SortableItem>
+                        );
+                      })}
+                    </SortableContext>
+                  </DndContext>
+                  <button
+                    onClick={() =>
+                      update((p) => ({
+                        ...p,
+                        projects: [
+                          ...p.projects,
+                          {
+                            company: "",
+                            subtitle: "",
+                            role: "",
+                            period: "",
+                            startMonth: null,
+                            startYear: null,
+                            endMonth: null,
+                            endYear: null,
+                            isCurrent: false,
+                            paragraphs: [""],
+                            technologies: "",
+                            pageBreakBefore: false,
+                          },
+                        ],
+                      }))
+                    }
+                    className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
+                  >
+                    <Plus className="h-3 w-3" /> Nytt prosjekt
+                  </button>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* UTDANNELSE */}
+              <AccordionItem value="utdannelse">
+                <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
+                  Utdannelse
+                </AccordionTrigger>
+                <AccordionContent className="space-y-2 pt-2">
+                  {doc.education.map((entry, i) => (
+                    <div key={i} className="border border-border rounded-lg p-3 bg-card space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={entry.period}
+                          placeholder="Periode"
+                          onChange={(e) =>
+                            update((p) => {
+                              const arr = [...p.education];
+                              arr[i] = { ...arr[i], period: e.target.value };
+                              return { ...p, education: arr };
+                            })
+                          }
+                          className="text-[0.8125rem] w-32"
+                        />
+                        <Input
+                          value={entry.primary}
+                          placeholder="Grad / tittel"
+                          onChange={(e) =>
+                            update((p) => {
+                              const arr = [...p.education];
+                              arr[i] = { ...arr[i], primary: e.target.value };
+                              return { ...p, education: arr };
+                            })
+                          }
+                          className="text-[0.8125rem] flex-1"
+                        />
+                        <button
+                          onClick={() => update((p) => ({ ...p, education: p.education.filter((_, j) => j !== i) }))}
+                          className="text-muted-foreground hover:text-destructive shrink-0 p-1"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      <Input
+                        value={entry.secondary || ""}
+                        placeholder="Detaljer (valgfritt)"
+                        onChange={(e) =>
+                          update((p) => {
+                            const arr = [...p.education];
+                            arr[i] = { ...arr[i], secondary: e.target.value };
+                            return { ...p, education: arr };
+                          })
+                        }
+                        className="text-[0.8125rem]"
+                      />
+                    </div>
+                  ))}
+                  <button
+                    onClick={() =>
+                      update((p) => ({ ...p, education: [...p.education, { period: "", primary: "", secondary: "" }] }))
+                    }
+                    className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
+                  >
+                    <Plus className="h-3 w-3" /> Legg til
+                  </button>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* ARBEIDSERFARING */}
+              <AccordionItem value="arbeidserfaring">
+                <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
+                  Arbeidserfaring
+                </AccordionTrigger>
+                <AccordionContent className="space-y-2 pt-2">
+                  {doc.workExperience.map((entry, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <Input
+                        value={entry.period}
+                        placeholder="Periode"
+                        onChange={(e) =>
+                          update((p) => {
+                            const arr = [...p.workExperience];
+                            arr[i] = { ...arr[i], period: e.target.value };
+                            return { ...p, workExperience: arr };
+                          })
+                        }
+                        className="text-[0.8125rem] w-32"
+                      />
+                      <Input
+                        value={entry.primary}
+                        placeholder="Selskap"
+                        onChange={(e) =>
+                          update((p) => {
+                            const arr = [...p.workExperience];
+                            arr[i] = { ...arr[i], primary: e.target.value };
+                            return { ...p, workExperience: arr };
+                          })
+                        }
+                        className="text-[0.8125rem] flex-1"
+                      />
+                      <button
+                        onClick={() =>
+                          update((p) => ({ ...p, workExperience: p.workExperience.filter((_, j) => j !== i) }))
+                        }
+                        className="text-muted-foreground hover:text-destructive shrink-0 p-1"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() =>
+                      update((p) => ({ ...p, workExperience: [...p.workExperience, { period: "", primary: "" }] }))
+                    }
+                    className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
+                  >
+                    <Plus className="h-3 w-3" /> Legg til
+                  </button>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* SIDEBAR */}
+              <AccordionItem value="sidebar">
+                <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
+                  Sidebar
+                </AccordionTrigger>
+                <AccordionContent className="space-y-3 pt-2">
+                  {doc.sidebarSections.map((section, si) => (
+                    <div key={si} className="border border-border rounded-lg p-3 bg-card space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={section.heading}
+                          placeholder="Overskrift"
+                          onChange={(e) =>
+                            update((p) => {
+                              const arr = [...p.sidebarSections];
+                              arr[si] = { ...arr[si], heading: e.target.value };
+                              return { ...p, sidebarSections: arr };
+                            })
+                          }
+                          className="text-[0.8125rem] font-medium"
+                        />
+                        <button
+                          onClick={() =>
+                            update((p) => ({ ...p, sidebarSections: p.sidebarSections.filter((_, j) => j !== si) }))
+                          }
+                          className="text-muted-foreground hover:text-destructive shrink-0 p-1"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      {section.items.map((item, ii) => (
+                        <div key={ii} className="flex gap-1">
+                          <Input
+                            value={item}
+                            onChange={(e) =>
+                              update((p) => {
+                                const arr = [...p.sidebarSections];
+                                const items = [...arr[si].items];
+                                items[ii] = e.target.value;
+                                arr[si] = { ...arr[si], items };
+                                return { ...p, sidebarSections: arr };
+                              })
+                            }
+                            className="text-[0.8125rem]"
+                          />
+                          <button
+                            onClick={() =>
+                              update((p) => {
+                                const arr = [...p.sidebarSections];
+                                arr[si] = { ...arr[si], items: arr[si].items.filter((_, j) => j !== ii) };
+                                return { ...p, sidebarSections: arr };
+                              })
+                            }
+                            className="text-muted-foreground hover:text-destructive shrink-0 p-1"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() =>
+                          update((p) => {
+                            const arr = [...p.sidebarSections];
+                            arr[si] = { ...arr[si], items: [...arr[si].items, ""] };
+                            return { ...p, sidebarSections: arr };
+                          })
+                        }
+                        className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
+                      >
+                        <Plus className="h-3 w-3" /> Legg til punkt
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() =>
+                      update((p) => ({
+                        ...p,
+                        sidebarSections: [...p.sidebarSections, { heading: "", items: [""] }],
+                      }))
+                    }
+                    className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
+                  >
+                    <Plus className="h-3 w-3" /> Ny seksjon
+                  </button>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* KONTAKTPERSON */}
+              <AccordionItem value="kontaktperson">
+                <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
+                  Kontaktperson
+                </AccordionTrigger>
+                <AccordionContent className="space-y-3 pt-2">
                   <div>
-                    <label className={LABEL}>Navn</label>
-                    <Input
-                      value={doc.hero.contact.name}
-                      onChange={(e) => setHeroContact("name", e.target.value)}
-                      className="mt-1 text-[0.875rem]"
-                    />
+                    <label className={LABEL}>Velg ferdig kontaktperson</label>
+                    <Select
+                      value={getSelectedContactPresetId(doc.hero.contact)}
+                      onValueChange={(value) => {
+                        if (value === CLEAR_SELECT) {
+                          update((p) => ({
+                            ...p,
+                            hero: {
+                              ...p.hero,
+                              contact: {
+                                ...p.hero.contact,
+                                title: "",
+                                name: "",
+                                phone: "",
+                                email: "",
+                              },
+                            },
+                          }));
+                          return;
+                        }
+
+                        const preset = CONTACT_PERSON_PRESETS[value as keyof typeof CONTACT_PERSON_PRESETS];
+                        update((p) => ({
+                          ...p,
+                          hero: {
+                            ...p.hero,
+                            contact: {
+                              ...p.hero.contact,
+                              ...preset,
+                            },
+                          },
+                        }));
+                      }}
+                    >
+                      <SelectTrigger className="mt-1 h-10 text-[0.875rem]">
+                        <SelectValue placeholder="Velg kontaktperson" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={CLEAR_SELECT}>Ingen valgt</SelectItem>
+                        <SelectItem value="jon_richard">Jon Richard Nygaard</SelectItem>
+                        <SelectItem value="thomas_eriksen">Thomas Eriksen</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div>
-                    <label className={LABEL}>Tittel</label>
-                    <Input
-                      value={doc.hero.contact.title}
-                      onChange={(e) => setHeroContact("title", e.target.value)}
-                      className="mt-1 text-[0.875rem]"
-                    />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className={LABEL}>Navn</label>
+                      <Input
+                        value={doc.hero.contact.name}
+                        onChange={(e) => setHeroContact("name", e.target.value)}
+                        className="mt-1 text-[0.875rem]"
+                      />
+                    </div>
+                    <div>
+                      <label className={LABEL}>Tittel</label>
+                      <Input
+                        value={doc.hero.contact.title}
+                        onChange={(e) => setHeroContact("title", e.target.value)}
+                        className="mt-1 text-[0.875rem]"
+                      />
+                    </div>
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className={LABEL}>Telefon</label>
-                    <Input
-                      value={doc.hero.contact.phone}
-                      onChange={(e) => setHeroContact("phone", e.target.value)}
-                      className="mt-1 text-[0.875rem]"
-                    />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className={LABEL}>Telefon</label>
+                      <Input
+                        value={doc.hero.contact.phone}
+                        onChange={(e) => setHeroContact("phone", e.target.value)}
+                        className="mt-1 text-[0.875rem]"
+                      />
+                    </div>
+                    <div>
+                      <label className={LABEL}>Epost</label>
+                      <Input
+                        value={doc.hero.contact.email}
+                        onChange={(e) => setHeroContact("email", e.target.value)}
+                        className="mt-1 text-[0.875rem]"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className={LABEL}>Epost</label>
-                    <Input
-                      value={doc.hero.contact.email}
-                      onChange={(e) => setHeroContact("email", e.target.value)}
-                      className="mt-1 text-[0.875rem]"
-                    />
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
         </div>
-      </div>
       </div>
     </div>
   );
