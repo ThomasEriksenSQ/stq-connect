@@ -132,7 +132,7 @@ export default function ImporterCver() {
 
       try {
         const data = await parseSingleCv(pdfFiles[i]);
-        const match = matchToExisting(data?.navn, tab);
+        const match = matchToExisting(data?.navn);
         setCvs(prev => prev.map((c, j) =>
           j === idx ? { ...c, status: "done", data, matchedId: match.id, matchedName: match.name, matchScore: match.score } : c
         ));
