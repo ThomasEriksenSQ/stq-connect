@@ -174,21 +174,6 @@ export function AppLayout() {
                     Eksterne
                   </RouterNavLink>
                   <RouterNavLink
-                    to="/stacq/importer-cver"
-                    onClick={() => setKonsDropOpen(false)}
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center gap-3 px-4 py-2.5 text-[0.8125rem] font-medium transition-colors",
-                        isActive
-                          ? "bg-muted text-foreground"
-                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                      )
-                    }
-                  >
-                    <Upload className="h-4 w-4 stroke-[1.5]" />
-                    Importer CVer
-                  </RouterNavLink>
-                  <RouterNavLink
                     to="/nettside-ai"
                     onClick={() => setKonsDropOpen(false)}
                     className={({ isActive }) =>

@@ -270,15 +270,6 @@ export default function ImporterCver() {
         <h1 className="text-[1.5rem] font-bold text-foreground">Importer CVer</h1>
       </div>
 
-      {/* Tab switcher */}
-      <div className="flex gap-2">
-        <button className={tab === "ansatte" ? CHIP_ON : CHIP_OFF} onClick={() => { setTab("ansatte"); setCvs([]); }}>
-          Ansatte
-        </button>
-        <button className={tab === "eksterne" ? CHIP_ON : CHIP_OFF} onClick={() => { setTab("eksterne"); setCvs([]); }}>
-          Eksterne konsulenter
-        </button>
-      </div>
 
       {/* Drop zone */}
       <div
