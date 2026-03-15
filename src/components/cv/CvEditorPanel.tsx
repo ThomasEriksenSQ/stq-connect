@@ -8,11 +8,14 @@ import {
   type TimelineEntry,
   type SidebarSection,
 } from "./CvRenderer";
+import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Plus, Trash2, GripVertical, Download, Check, Loader2 } from "lucide-react";
+import { Plus, Trash2, GripVertical, Download, Check, Loader2, Upload } from "lucide-react";
+import { toast } from "sonner";
+import { getInitials } from "@/lib/utils";
 import {
   DndContext,
   closestCenter,
@@ -78,8 +81,10 @@ export function CvEditorPanel({
 }: CvEditorPanelProps) {
   const [doc, setDoc] = useState<CVDocument>(initialData);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [portraitUploading, setPortraitUploading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const previewContainerRef = useRef<HTMLDivElement>(null);
+  const portraitInputRef = useRef<HTMLInputElement>(null);
   const [previewScale, setPreviewScale] = useState(0.5);
 
   // Sync if initialData changes externally (e.g. version restore)
@@ -161,6 +166,26 @@ export function CvEditorPanel({
       hero: { ...p.hero, contact: { ...p.hero.contact, [key]: val } },
     }));
 
+  const handlePortraitUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPortraitUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `cv-portraits/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("ansatte-bilder").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("ansatte-bilder").getPublicUrl(path);
+      update((p) => ({ ...p, hero: { ...p.hero, portrait_url: urlData.publicUrl } }));
+      toast.success("Bilde lastet opp");
+    } catch (err: any) {
+      toast.error("Kunne ikke laste opp bilde: " + (err.message || "Ukjent feil"));
+    } finally {
+      setPortraitUploading(false);
+      if (portraitInputRef.current) portraitInputRef.current.value = "";
+    }
+  };
+
   const handleDownloadClick = async () => {
     if (onDownloadPdf) {
       await onDownloadPdf(doc);
@@ -205,7 +230,7 @@ export function CvEditorPanel({
       <div className="flex flex-1 min-h-0">
         {/* LEFT PANEL — Live Preview */}
         <div ref={previewContainerRef} className="flex-1 min-w-0 overflow-y-auto bg-[#d7d7d7] p-4">
-          <CvRendererPreview doc={doc} imageUrl={imageUrl} scale={previewScale} />
+          <CvRendererPreview doc={doc} imageUrl={doc.hero.portrait_url || imageUrl} scale={previewScale} />
         </div>
 
         {/* RIGHT PANEL — Editor */}
@@ -223,6 +248,29 @@ export function CvEditorPanel({
                     onChange={(e) => setHero("name", e.target.value)}
                     className="mt-1 text-[0.875rem]"
                   />
+                </div>
+                <div>
+                  <label className={LABEL}>Profilbilde</label>
+                  <div className="flex items-center gap-3 mt-1">
+                    {doc.hero.portrait_url ? (
+                      <img src={doc.hero.portrait_url} alt="" className="w-20 h-20 rounded-full object-cover border border-border" />
+                    ) : (
+                      <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-lg font-bold border border-border">
+                        {getInitials(doc.hero.name)}
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-1">
+                      <button
+                        onClick={() => portraitInputRef.current?.click()}
+                        disabled={portraitUploading}
+                        className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.75rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50"
+                      >
+                        {portraitUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                        {portraitUploading ? "Laster opp..." : "Last opp bilde"}
+                      </button>
+                      <input ref={portraitInputRef} type="file" accept="image/*" className="hidden" onChange={handlePortraitUpload} />
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <label className={LABEL}>Tittel / ingress</label>

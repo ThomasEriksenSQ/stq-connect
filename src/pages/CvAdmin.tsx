@@ -35,6 +35,7 @@ function dbRowToCvDoc(row: any): CVDocument {
       name: row.hero_name || "",
       title: row.hero_title || "",
       contact: DEFAULT_CONTACT,
+      portrait_url: row.portrait_url || undefined,
     },
     sidebarSections: row.sidebar_sections || [],
     introParagraphs: row.intro_paragraphs || [],
@@ -49,6 +50,7 @@ function cvDocToDbRow(doc: CVDocument) {
   return {
     hero_name: doc.hero.name,
     hero_title: doc.hero.title,
+    portrait_url: doc.hero.portrait_url || null,
     intro_paragraphs: doc.introParagraphs,
     competence_groups: doc.competenceGroups,
     projects: doc.projects,

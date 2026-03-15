@@ -307,6 +307,7 @@ export type Database = {
           hero_title: string | null
           id: string
           intro_paragraphs: Json | null
+          portrait_url: string | null
           projects: Json | null
           sidebar_sections: Json | null
           title: string | null
@@ -322,6 +323,7 @@ export type Database = {
           hero_title?: string | null
           id?: string
           intro_paragraphs?: Json | null
+          portrait_url?: string | null
           projects?: Json | null
           sidebar_sections?: Json | null
           title?: string | null
@@ -337,6 +339,7 @@ export type Database = {
           hero_title?: string | null
           id?: string
           intro_paragraphs?: Json | null
+          portrait_url?: string | null
           projects?: Json | null
           sidebar_sections?: Json | null
           title?: string | null
