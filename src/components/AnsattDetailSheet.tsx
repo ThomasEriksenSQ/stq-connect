@@ -457,8 +457,6 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
   );
 }
 
-    setGenerating(true);
-    try {
       const pin = String(Math.floor(1000 + Math.random() * 9000));
       const pinHashValue = await hashPin(pin);
 
