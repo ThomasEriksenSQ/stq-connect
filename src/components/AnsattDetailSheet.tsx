@@ -31,7 +31,7 @@ const STATUS_OPTIONS = [
   { value: "SLUTTET", label: "Sluttet" },
 ];
 
-export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode }: AnsattDetailSheetProps) {
+export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoRunMatch }: AnsattDetailSheetProps) {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const cvInputRef = useRef<HTMLInputElement>(null);
