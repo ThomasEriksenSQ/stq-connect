@@ -189,7 +189,7 @@ export default function KonsulenterAnsatte() {
               key={a.id}
               onClick={() => { setDetailAnsatt(a); setDetailOpen(true); }}
               className={cn(
-                "group grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_100px_180px_40px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 cursor-pointer",
+                "group grid grid-cols-[minmax(0,2.5fr)_100px_110px_130px_40px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 cursor-pointer",
                 isKommende && "opacity-80",
                 isSluttet && "opacity-50"
               )}
