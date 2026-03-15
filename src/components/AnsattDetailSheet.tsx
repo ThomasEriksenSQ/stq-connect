@@ -419,25 +419,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                 )}
                 <div className="min-w-0 flex-1">
                   <h2 className="text-[1.25rem] font-bold text-foreground truncate">{ansatt?.navn}</h2>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {ansatt?.synlig_web && (
-                      <span className="inline-flex items-center gap-1 text-[0.6875rem] text-primary">
-                        <Globe className="h-3 w-3" />
-                        Synlig på web
-                      </span>
-                    )}
-                    {ansatt?.geografi && (
-                      <span className="text-[0.8125rem] text-muted-foreground">{ansatt.geografi}</span>
-                    )}
-                  </div>
                 </div>
-                {/* Edit button */}
-                <button
-                  onClick={() => setEditing(true)}
-                  className="inline-flex items-center justify-center h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors shrink-0"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
               </div>
 
               {/* Tech tags */}
@@ -450,21 +432,6 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                   ))}
                 </div>
               )}
-
-              {/* CV status badge */}
-              <div className="mt-3">
-                {ansatt?.bio ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 text-emerald-700 px-2.5 py-0.5 text-[0.75rem] font-medium">
-                    <FileText className="h-3 w-3" />
-                    CV/bio tilgjengelig
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-muted text-muted-foreground px-2.5 py-0.5 text-[0.75rem] font-medium">
-                    <FileText className="h-3 w-3" />
-                    Ingen CV
-                  </span>
-                )}
-              </div>
             </div>
 
             {/* Content */}
