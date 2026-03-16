@@ -793,16 +793,7 @@ export function CvEditorPanel({
                                           className="text-[0.8125rem]"
                                         />
                                         <button
-                                          onClick={() =>
-                                            update((p) => {
-                                              const arr = [...p.projects];
-                                              arr[i] = {
-                                                ...arr[i],
-                                                paragraphs: arr[i].paragraphs.filter((_, j) => j !== pi),
-                                              };
-                                              return { ...p, projects: arr };
-                                            })
-                                          }
+                                          onClick={() => scheduleDelete(`proj-${i}-para-${pi}`, "Avsnitt", (p) => { const arr = [...p.projects]; arr[i] = { ...arr[i], paragraphs: arr[i].paragraphs.filter((_, j) => j !== pi) }; return { ...p, projects: arr }; })}
                                           className="text-muted-foreground hover:text-destructive shrink-0 p-1"
                                         >
                                           <Trash2 className="h-3.5 w-3.5" />
