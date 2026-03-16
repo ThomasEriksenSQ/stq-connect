@@ -297,7 +297,7 @@ export default function CvEditor() {
           cvData={cvData}
           onSave={handleSave}
           savedBy={session.ansatt_name}
-          imageUrl={imageUrl}
+          imageUrl={cvData.hero.portrait_url || imageUrl}
           renderToolbar={({ saveStatus, onDownload }) => (
             <div className="flex items-center justify-between w-full px-4 py-2 border-b border-border bg-background">
               <div className="flex items-center gap-2">
