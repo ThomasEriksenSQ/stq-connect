@@ -813,9 +813,7 @@ export function CvEditorPanel({
                                     />
                                   </div>
                                   <button
-                                    onClick={() =>
-                                      update((p) => ({ ...p, projects: p.projects.filter((_, j) => j !== i) }))
-                                    }
+                                    onClick={() => scheduleDelete(`project-${i}`, `Prosjekt "${doc.projects[i]?.company || "Uten navn"}"`, (p) => ({ ...p, projects: p.projects.filter((_, j) => j !== i) }))}
                                     className="text-destructive text-[0.75rem] font-medium hover:underline flex items-center gap-0.5 mt-2"
                                   >
                                     <Trash2 className="h-3 w-3" /> Slett prosjekt
