@@ -1016,13 +1016,7 @@ export function CvEditorPanel({
                             className="text-[0.8125rem]"
                           />
                           <button
-                            onClick={() =>
-                              update((p) => {
-                                const arr = [...p.sidebarSections];
-                                arr[si] = { ...arr[si], items: arr[si].items.filter((_, j) => j !== ii) };
-                                return { ...p, sidebarSections: arr };
-                              })
-                            }
+                            onClick={() => scheduleDelete(`sidebar-${si}-item-${ii}`, "Sidebar-punkt", (p) => { const arr = [...p.sidebarSections]; arr[si] = { ...arr[si], items: arr[si].items.filter((_, j) => j !== ii) }; return { ...p, sidebarSections: arr }; })}
                             className="text-muted-foreground hover:text-destructive shrink-0 p-1"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
