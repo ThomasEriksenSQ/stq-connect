@@ -994,9 +994,7 @@ export function CvEditorPanel({
                           className="text-[0.8125rem] font-medium"
                         />
                         <button
-                          onClick={() =>
-                            update((p) => ({ ...p, sidebarSections: p.sidebarSections.filter((_, j) => j !== si) }))
-                          }
+                          onClick={() => scheduleDelete(`sidebar-${si}`, `Sidebar-seksjon "${doc.sidebarSections[si]?.heading || si + 1}"`, (p) => ({ ...p, sidebarSections: p.sidebarSections.filter((_, j) => j !== si) }))}
                           className="text-muted-foreground hover:text-destructive shrink-0 p-1"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
