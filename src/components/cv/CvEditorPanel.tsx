@@ -132,6 +132,7 @@ export function CvEditorPanel({
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const portraitInputRef = useRef<HTMLInputElement>(null);
   const [previewScale, setPreviewScale] = useState(0.5);
+  const [pendingDeletes, setPendingDeletes] = useState<Record<string, ReturnType<typeof setTimeout>>>({});
   const [editorWidth, setEditorWidth] = useState(480);
   const [isResizingEditor, setIsResizingEditor] = useState(false);
   const resizeBoundsRef = useRef({ right: 0, width: 0 });
@@ -218,6 +219,45 @@ export function CvEditorPanel({
       });
     },
     [scheduleAutosave],
+  );
+
+  const scheduleDelete = useCallback(
+    (key: string, label: string, applyDelete: (prev: CVDocument) => CVDocument) => {
+      const toastId = `delete-${key}-${Date.now()}`;
+      let undone = false;
+
+      const timerId = setTimeout(() => {
+        if (!undone) {
+          update(applyDelete);
+        }
+        setPendingDeletes((prev) => {
+          const next = { ...prev };
+          delete next[toastId];
+          return next;
+        });
+      }, 10000);
+
+      setPendingDeletes((prev) => ({ ...prev, [toastId]: timerId }));
+
+      toast(`${label} slettes om 10 sekunder`, {
+        id: toastId,
+        duration: 10000,
+        action: {
+          label: "Angre",
+          onClick: () => {
+            undone = true;
+            clearTimeout(timerId);
+            setPendingDeletes((prev) => {
+              const next = { ...prev };
+              delete next[toastId];
+              return next;
+            });
+            toast.dismiss(toastId);
+          },
+        },
+      });
+    },
+    [update],
   );
 
   const updateProjectAt = useCallback(
@@ -441,9 +481,7 @@ export function CvEditorPanel({
                           className="text-[0.8125rem]"
                         />
                         <button
-                          onClick={() =>
-                            update((p) => ({ ...p, introParagraphs: p.introParagraphs.filter((_, j) => j !== i) }))
-                          }
+                          onClick={() => scheduleDelete(`intro-${i}`, "Intro-avsnitt", (p) => ({ ...p, introParagraphs: p.introParagraphs.filter((_, j) => j !== i) }))}
                           className="text-muted-foreground hover:text-destructive shrink-0 p-1"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -482,12 +520,7 @@ export function CvEditorPanel({
                                 className="text-[0.8125rem] font-medium"
                               />
                               <button
-                                onClick={() =>
-                                  update((p) => ({
-                                    ...p,
-                                    competenceGroups: p.competenceGroups.filter((_, j) => j !== i),
-                                  }))
-                                }
+                                onClick={() => scheduleDelete(`comp-${i}`, `Kompetansegruppe "${doc.competenceGroups[i]?.label || i + 1}"`, (p) => ({ ...p, competenceGroups: p.competenceGroups.filter((_, j) => j !== i) }))}
                                 className="text-muted-foreground hover:text-destructive shrink-0 p-1"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -760,16 +793,7 @@ export function CvEditorPanel({
                                           className="text-[0.8125rem]"
                                         />
                                         <button
-                                          onClick={() =>
-                                            update((p) => {
-                                              const arr = [...p.projects];
-                                              arr[i] = {
-                                                ...arr[i],
-                                                paragraphs: arr[i].paragraphs.filter((_, j) => j !== pi),
-                                              };
-                                              return { ...p, projects: arr };
-                                            })
-                                          }
+                                          onClick={() => scheduleDelete(`proj-${i}-para-${pi}`, "Avsnitt", (p) => { const arr = [...p.projects]; arr[i] = { ...arr[i], paragraphs: arr[i].paragraphs.filter((_, j) => j !== pi) }; return { ...p, projects: arr }; })}
                                           className="text-muted-foreground hover:text-destructive shrink-0 p-1"
                                         >
                                           <Trash2 className="h-3.5 w-3.5" />
@@ -789,9 +813,7 @@ export function CvEditorPanel({
                                     />
                                   </div>
                                   <button
-                                    onClick={() =>
-                                      update((p) => ({ ...p, projects: p.projects.filter((_, j) => j !== i) }))
-                                    }
+                                    onClick={() => scheduleDelete(`project-${i}`, `Prosjekt "${doc.projects[i]?.company || "Uten navn"}"`, (p) => ({ ...p, projects: p.projects.filter((_, j) => j !== i) }))}
                                     className="text-destructive text-[0.75rem] font-medium hover:underline flex items-center gap-0.5 mt-2"
                                   >
                                     <Trash2 className="h-3 w-3" /> Slett prosjekt
@@ -868,7 +890,7 @@ export function CvEditorPanel({
                           className="text-[0.8125rem] flex-1"
                         />
                         <button
-                          onClick={() => update((p) => ({ ...p, education: p.education.filter((_, j) => j !== i) }))}
+                          onClick={() => scheduleDelete(`edu-${i}`, `Utdannelse "${doc.education[i]?.primary || i + 1}"`, (p) => ({ ...p, education: p.education.filter((_, j) => j !== i) }))}
                           className="text-muted-foreground hover:text-destructive shrink-0 p-1"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -932,9 +954,7 @@ export function CvEditorPanel({
                         className="text-[0.8125rem] flex-1"
                       />
                       <button
-                        onClick={() =>
-                          update((p) => ({ ...p, workExperience: p.workExperience.filter((_, j) => j !== i) }))
-                        }
+                        onClick={() => scheduleDelete(`work-${i}`, `Arbeidserfaring "${doc.workExperience[i]?.primary || i + 1}"`, (p) => ({ ...p, workExperience: p.workExperience.filter((_, j) => j !== i) }))}
                         className="text-muted-foreground hover:text-destructive shrink-0 p-1"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -974,9 +994,7 @@ export function CvEditorPanel({
                           className="text-[0.8125rem] font-medium"
                         />
                         <button
-                          onClick={() =>
-                            update((p) => ({ ...p, sidebarSections: p.sidebarSections.filter((_, j) => j !== si) }))
-                          }
+                          onClick={() => scheduleDelete(`sidebar-${si}`, `Sidebar-seksjon "${doc.sidebarSections[si]?.heading || si + 1}"`, (p) => ({ ...p, sidebarSections: p.sidebarSections.filter((_, j) => j !== si) }))}
                           className="text-muted-foreground hover:text-destructive shrink-0 p-1"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -998,13 +1016,7 @@ export function CvEditorPanel({
                             className="text-[0.8125rem]"
                           />
                           <button
-                            onClick={() =>
-                              update((p) => {
-                                const arr = [...p.sidebarSections];
-                                arr[si] = { ...arr[si], items: arr[si].items.filter((_, j) => j !== ii) };
-                                return { ...p, sidebarSections: arr };
-                              })
-                            }
+                            onClick={() => scheduleDelete(`sidebar-${si}-item-${ii}`, "Sidebar-punkt", (p) => { const arr = [...p.sidebarSections]; arr[si] = { ...arr[si], items: arr[si].items.filter((_, j) => j !== ii) }; return { ...p, sidebarSections: arr }; })}
                             className="text-muted-foreground hover:text-destructive shrink-0 p-1"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
