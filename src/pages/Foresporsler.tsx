@@ -1053,7 +1053,7 @@ export default function Foresporsler() {
 
       {/* Detail/Edit Sheet */}
       <Sheet open={!!selectedRow} onOpenChange={(o) => { if (!o) { setSelectedRowId(null); setSheetExpanded(false); } }}>
-        <SheetContent side="right" className={cn("p-0 transition-all duration-300 ease-in-out", sheetExpanded ? "w-[860px] sm:max-w-[860px]" : "w-[520px] sm:max-w-[520px]")} hideCloseButton>
+        <SheetContent side="right" className="w-[840px] sm:w-[920px] p-0" hideCloseButton>
           <ForespørselSheet row={selectedRow} onClose={() => { setSelectedRowId(null); setSheetExpanded(false); }} onExpandChange={setSheetExpanded} />
         </SheetContent>
       </Sheet>
