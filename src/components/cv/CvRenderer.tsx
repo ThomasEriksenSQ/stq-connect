@@ -1363,8 +1363,14 @@ export async function openCvPrintDialog(documentTitle?: string) {
     printWindow.removeEventListener("afterprint", cleanupPrintFrame);
     printFrame.remove();
   };
+  const originalTitle = document.title;
+  if (documentTitle) document.title = documentTitle;
   printWindow.focus();
   printWindow.addEventListener("afterprint", cleanupPrintFrame, { once: true });
   window.setTimeout(cleanupPrintFrame, 60000);
   printWindow.print();
+  if (documentTitle) {
+    // Restore after a short delay so the print dialog has time to read the title
+    window.setTimeout(() => { document.title = originalTitle; }, 2000);
+  }
 }
