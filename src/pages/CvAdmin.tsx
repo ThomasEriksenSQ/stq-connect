@@ -135,6 +135,15 @@ export default function CvAdmin() {
     };
   }, [ansattId, user]);
 
+  useEffect(() => {
+    if (!ansattName) return;
+    const title = `CV - ${ansattName} - STACQ`;
+    document.title = title;
+    return () => {
+      document.title = "STACQ Hot & Fast";
+    };
+  }, [ansattName]);
+
   const handleSave = useCallback(
     async (doc: CVDocument) => {
       if (!cvId) return;
