@@ -520,12 +520,7 @@ export function CvEditorPanel({
                                 className="text-[0.8125rem] font-medium"
                               />
                               <button
-                                onClick={() =>
-                                  update((p) => ({
-                                    ...p,
-                                    competenceGroups: p.competenceGroups.filter((_, j) => j !== i),
-                                  }))
-                                }
+                                onClick={() => scheduleDelete(`comp-${i}`, `Kompetansegruppe "${doc.competenceGroups[i]?.label || i + 1}"`, (p) => ({ ...p, competenceGroups: p.competenceGroups.filter((_, j) => j !== i) }))}
                                 className="text-muted-foreground hover:text-destructive shrink-0 p-1"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
