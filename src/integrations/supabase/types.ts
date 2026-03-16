@@ -363,6 +363,7 @@ export type Database = {
           id: string
           saved_by: string | null
           snapshot: Json
+          source: string | null
         }
         Insert: {
           created_at?: string | null
@@ -370,6 +371,7 @@ export type Database = {
           id?: string
           saved_by?: string | null
           snapshot: Json
+          source?: string | null
         }
         Update: {
           created_at?: string | null
@@ -377,6 +379,7 @@ export type Database = {
           id?: string
           saved_by?: string | null
           snapshot?: Json
+          source?: string | null
         }
         Relationships: [
           {
