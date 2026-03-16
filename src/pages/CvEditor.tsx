@@ -63,6 +63,7 @@ function cvDocToDbRow(doc: CVDocument) {
   return {
     hero_name: doc.hero.name,
     hero_title: doc.hero.title,
+    portrait_url: doc.hero.portrait_url || null,
     intro_paragraphs: doc.introParagraphs,
     competence_groups: doc.competenceGroups,
     projects: doc.projects,
