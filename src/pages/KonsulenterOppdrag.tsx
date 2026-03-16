@@ -279,7 +279,7 @@ export default function KonsulenterOppdrag() {
         )}
       </div>
       <Sheet open={selectedRowId !== null} onOpenChange={(o) => { if (!o) setSelectedRowId(null); }}>
-        <SheetContent side="right" className="w-[480px] sm:max-w-[480px] p-0" hideCloseButton>
+        <SheetContent side="right" className="w-[840px] sm:w-[920px] p-0" hideCloseButton>
           <OppdragEditSheet
             row={enriched.find((o: any) => o.id === selectedRowId) || null}
             onClose={() => setSelectedRowId(null)}
