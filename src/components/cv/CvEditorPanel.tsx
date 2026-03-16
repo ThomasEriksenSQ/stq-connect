@@ -221,6 +221,45 @@ export function CvEditorPanel({
     [scheduleAutosave],
   );
 
+  const scheduleDelete = useCallback(
+    (key: string, label: string, applyDelete: (prev: CVDocument) => CVDocument) => {
+      const toastId = `delete-${key}-${Date.now()}`;
+      let undone = false;
+
+      const timerId = setTimeout(() => {
+        if (!undone) {
+          update(applyDelete);
+        }
+        setPendingDeletes((prev) => {
+          const next = { ...prev };
+          delete next[toastId];
+          return next;
+        });
+      }, 10000);
+
+      setPendingDeletes((prev) => ({ ...prev, [toastId]: timerId }));
+
+      toast(`${label} slettes om 10 sekunder`, {
+        id: toastId,
+        duration: 10000,
+        action: {
+          label: "Angre",
+          onClick: () => {
+            undone = true;
+            clearTimeout(timerId);
+            setPendingDeletes((prev) => {
+              const next = { ...prev };
+              delete next[toastId];
+              return next;
+            });
+            toast.dismiss(toastId);
+          },
+        },
+      });
+    },
+    [update],
+  );
+
   const updateProjectAt = useCallback(
     (projectIndex: number, updater: (project: ProjectEntry) => ProjectEntry) => {
       update((prev) => {
