@@ -194,7 +194,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
 
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <SheetContent side="right" className="w-full sm:w-[700px] max-w-[700px] p-0 flex flex-col [&>button]:hidden">
+      <SheetContent side="right" className="w-[840px] sm:w-[920px] p-0 flex flex-col [&>button]:hidden">
 
         {/* ─── EDIT MODE ─── */}
         {editing ? (

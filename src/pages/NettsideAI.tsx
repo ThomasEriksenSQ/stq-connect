@@ -399,7 +399,7 @@ function ConsultantSheet({
 
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <SheetContent side="right" className="w-[420px] p-0 overflow-y-auto" hideCloseButton>
+      <SheetContent side="right" className="w-[840px] p-0 overflow-y-auto" hideCloseButton>
         <div className="p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-[1.0625rem] font-bold text-foreground">
