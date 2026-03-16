@@ -214,7 +214,6 @@ export default function CvEditor() {
       .from("cv_versions")
       .select("*")
       .eq("cv_id", session.cv_id)
-      .eq("source", "ansatt")
       .order("created_at", { ascending: false });
     if (error) {
       toast.error("Kunne ikke laste versjonshistorikk");
