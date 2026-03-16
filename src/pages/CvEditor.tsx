@@ -32,7 +32,7 @@ const EMPTY_CV: CVDocument = {
   hero: {
     name: "",
     title: "",
-    contact: { title: "Kontaktperson", name: "Jon Richard Nygaard", phone: "932 87 267", email: "jr@stacq.no" },
+    contact: { title: "", name: "", phone: "", email: "" },
   },
   sidebarSections: [],
   introParagraphs: [],
