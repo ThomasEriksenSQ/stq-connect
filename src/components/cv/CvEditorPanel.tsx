@@ -890,7 +890,7 @@ export function CvEditorPanel({
                           className="text-[0.8125rem] flex-1"
                         />
                         <button
-                          onClick={() => update((p) => ({ ...p, education: p.education.filter((_, j) => j !== i) }))}
+                          onClick={() => scheduleDelete(`edu-${i}`, `Utdannelse "${doc.education[i]?.primary || i + 1}"`, (p) => ({ ...p, education: p.education.filter((_, j) => j !== i) }))}
                           className="text-muted-foreground hover:text-destructive shrink-0 p-1"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
