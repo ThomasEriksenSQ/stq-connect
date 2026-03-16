@@ -93,6 +93,15 @@ export default function CvEditor() {
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [versions, setVersions] = useState<any[]>([]);
 
+  useEffect(() => {
+    if (!session?.ansatt_name) return;
+    const title = `CV - ${session.ansatt_name} - STACQ`;
+    document.title = title;
+    return () => {
+      document.title = "STACQ Hot & Fast";
+    };
+  }, [session?.ansatt_name]);
+
   // Load CV data after session is set
   useEffect(() => {
     if (!session) return;
