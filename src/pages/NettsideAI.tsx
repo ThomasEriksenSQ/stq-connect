@@ -219,6 +219,8 @@ interface Consultant {
   sort_order: number | null;
   active: boolean | null;
   ikke_startet: boolean | null;
+  education_1: string | null;
+  education_2: string | null;
 }
 
 function ConsultantsTab() {
@@ -384,6 +386,8 @@ function ConsultantSheet({
   const [industries, setIndustries] = useState<string[]>(consultant?.industries ?? []);
   const [active, setActive] = useState(mode === "edit" ? (consultant?.active ?? true) : false);
   const [notStarted, setNotStarted] = useState(mode === "edit" ? (consultant?.ikke_startet ?? false) : false);
+  const [education1, setEducation1] = useState(consultant?.education_1 ?? "");
+  const [education2, setEducation2] = useState(consultant?.education_2 ?? "");
   const [cvAnalyzing, setCvAnalyzing] = useState(false);
 
   const handleCvUpload = async (file: File) => {
@@ -460,6 +464,8 @@ function ConsultantSheet({
           competences,
           industries,
           active,
+          education_1: education1 || null,
+          education_2: education2 || null,
         });
         if (error) throw error;
       } else {
@@ -476,6 +482,8 @@ function ConsultantSheet({
             competences,
             industries,
             active,
+            education_1: education1 || null,
+            education_2: education2 || null,
           })
           .eq("id", consultant!.id);
         if (error) throw error;
@@ -635,6 +643,14 @@ function ConsultantSheet({
                 <span className="text-[0.75rem]">{uploading ? "Laster opp..." : "Last opp bilde"}</span>
               </button>
             )}
+          </div>
+          <div>
+            <label className={LABEL}>Utdanning 1</label>
+            <Input value={education1} onChange={e => setEducation1(e.target.value)} placeholder="F.eks. MSc Computer Science, NTNU" />
+          </div>
+          <div>
+            <label className={LABEL}>Utdanning 2</label>
+            <Input value={education2} onChange={e => setEducation2(e.target.value)} placeholder="F.eks. BSc Informatikk, UiO" />
           </div>
           <div>
             <label className={LABEL}>Kompetanser</label>

@@ -143,6 +143,8 @@ export type Database = {
           competences: string[] | null
           created_at: string | null
           description: string | null
+          education_1: string | null
+          education_2: string | null
           experience_years: number | null
           id: string
           ikke_startet: boolean | null
@@ -160,6 +162,8 @@ export type Database = {
           competences?: string[] | null
           created_at?: string | null
           description?: string | null
+          education_1?: string | null
+          education_2?: string | null
           experience_years?: number | null
           id?: string
           ikke_startet?: boolean | null
@@ -177,6 +181,8 @@ export type Database = {
           competences?: string[] | null
           created_at?: string | null
           description?: string | null
+          education_1?: string | null
+          education_2?: string | null
           experience_years?: number | null
           id?: string
           ikke_startet?: boolean | null
