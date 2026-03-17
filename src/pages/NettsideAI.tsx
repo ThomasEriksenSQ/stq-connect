@@ -582,7 +582,7 @@ function ConsultantSheet({
               }}
             />
             {imageUrl ? (
-              <div className="flex items-start gap-3">
+              <div className="flex flex-col gap-2">
                 <ImageRepositioner
                   src={imageUrl}
                   position={bildePos}
@@ -592,7 +592,7 @@ function ConsultantSheet({
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.8125rem] font-medium rounded-lg border border-border text-foreground hover:bg-secondary disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.8125rem] font-medium rounded-lg border border-border text-foreground hover:bg-secondary disabled:opacity-50 self-start"
                 >
                   {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
                   Bytt bilde
