@@ -49,6 +49,7 @@ function dbRowToCvDoc(row: any): CVDocument {
       title: row.hero_title || "",
       contact: row.hero_contact || { title: "", name: "", phone: "", email: "" },
       portrait_url: row.portrait_url || undefined,
+      portrait_position: row.portrait_position || "50% 50%",
     },
     sidebarSections: row.sidebar_sections || [],
     introParagraphs: row.intro_paragraphs || [],
