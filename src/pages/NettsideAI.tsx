@@ -170,8 +170,8 @@ function ImageRepositioner({
           style={{ objectPosition: position }}
           draggable={false}
         />
-        <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/20 transition-colors">
-          <Move className="h-4 w-4 text-white opacity-0 hover:opacity-70 transition-opacity" style={{ pointerEvents: "none" }} />
+        <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/repo:bg-black/20 transition-colors pointer-events-none">
+          <Move className="h-4 w-4 text-white opacity-0 group-hover/repo:opacity-70 transition-opacity" />
         </div>
       </div>
       <span className="text-[0.6875rem] text-muted-foreground">Dra for å justere</span>
