@@ -679,7 +679,7 @@ function Sidebar({
   );
 }
 
-function EmptySidebar({ imageUrl }: { imageUrl?: string }) {
+function EmptySidebar({ imageUrl, portraitPosition }: { imageUrl?: string; portraitPosition?: string }) {
   return (
     <div style={{ background: "#000", position: "relative" }}>
       <div
@@ -692,7 +692,7 @@ function EmptySidebar({ imageUrl }: { imageUrl?: string }) {
           background: "#f2f2f2",
         }}
       />
-      <Portrait topMm={CV_LAYOUT.hero.continuationPortraitTopMm} imageUrl={imageUrl} />
+      <Portrait topMm={CV_LAYOUT.hero.continuationPortraitTopMm} imageUrl={imageUrl} portraitPosition={portraitPosition} />
     </div>
   );
 }
