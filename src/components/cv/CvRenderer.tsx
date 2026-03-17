@@ -1286,6 +1286,7 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
               sections={page.sections}
               doc={doc}
               imageUrl={imageUrl}
+              portraitPosition={doc.hero.portrait_position}
             />
           ))}
         </div>
