@@ -937,19 +937,21 @@ function ContinuationPage({
   sections,
   doc,
   imageUrl,
+  portraitPosition,
 }: {
   showProjectsTitle: boolean;
   pageProjects: ProjectFragment[];
   sections: ContinuationSectionId[];
   doc: CVDocument;
   imageUrl?: string;
+  portraitPosition?: string;
 }) {
   const mergedProjects = mergeProjectFragmentsForPage(pageProjects);
 
   return (
     <div className="cv-page" style={pageStyle}>
       <div style={gridStyle}>
-        <EmptySidebar imageUrl={imageUrl} />
+        <EmptySidebar imageUrl={imageUrl} portraitPosition={portraitPosition} />
         <div style={continuationMainStyle}>
           {mergedProjects.length > 0 && (
             <>
