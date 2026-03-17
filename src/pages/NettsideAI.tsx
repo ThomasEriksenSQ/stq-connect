@@ -698,6 +698,14 @@ function ConsultantSheet({
 
 /* ─── Knowledge Tab ─── */
 
+function SoknaderTab() {
+  return (
+    <div className="py-12 text-center text-muted-foreground text-[0.8125rem]">
+      Ingen søknader ennå — kommer snart.
+    </div>
+  );
+}
+
 function KnowledgeTab() {
   const queryClient = useQueryClient();
   const [visFilter, setVisFilter] = useState<VisFilter>("alle");
