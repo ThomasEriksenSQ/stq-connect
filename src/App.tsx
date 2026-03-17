@@ -141,6 +141,14 @@ const App = () => (
                   }
                 />
                 <Route
+                  path="soknad"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <Soknad />
+                    </Suspense>
+                  }
+                />
+                <Route
                   path="markedsradar"
                   element={
                     <Suspense fallback={<LazyFallback />}>
