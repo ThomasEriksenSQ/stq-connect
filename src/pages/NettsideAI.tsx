@@ -155,10 +155,10 @@ function ImageRepositioner({
   }, []);
 
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col gap-1">
       <div
         ref={containerRef}
-        className="group/repo w-[80px] h-[80px] rounded-full border border-border overflow-hidden cursor-grab active:cursor-grabbing relative"
+        className="group/repo w-full aspect-square rounded-lg border border-border overflow-hidden cursor-grab active:cursor-grabbing relative"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -171,7 +171,7 @@ function ImageRepositioner({
           draggable={false}
         />
         <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/repo:bg-black/20 transition-colors pointer-events-none">
-          <Move className="h-4 w-4 text-white opacity-0 group-hover/repo:opacity-70 transition-opacity" />
+          <Move className="h-5 w-5 text-white opacity-0 group-hover/repo:opacity-70 transition-opacity" />
         </div>
       </div>
       <span className="text-[0.6875rem] text-muted-foreground">Dra for å justere</span>
