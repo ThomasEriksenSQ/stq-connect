@@ -488,47 +488,33 @@ export function CvEditorPanel({
                   </div>
                   <div>
                     <label className={LABEL}>Profilbilde</label>
-                    <div className="flex items-start gap-3 mt-1">
-                      {doc.hero.portrait_url ? (
-                        <img
-                          src={doc.hero.portrait_url}
-                          alt=""
-                          className="w-20 h-20 rounded-full object-cover border border-border"
-                          style={{ objectPosition: doc.hero.portrait_position || "50% 50%" }}
-                        />
-                      ) : (
-                        <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-lg font-bold border border-border">
-                          {getInitials(doc.hero.name)}
-                        </div>
-                      )}
-                      <div className="flex flex-col gap-2">
-                        <button
-                          onClick={() => portraitInputRef.current?.click()}
-                          disabled={portraitUploading}
-                          className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.75rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50"
-                        >
-                          {portraitUploading ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Upload className="h-3.5 w-3.5" />
-                          )}
-                          {portraitUploading ? "Laster opp..." : "Last opp bilde"}
-                        </button>
-                        <input
-                          ref={portraitInputRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handlePortraitUpload}
-                        />
-                        {doc.hero.portrait_url && (
-                          <PortraitFocalPicker
-                            imageUrl={doc.hero.portrait_url}
-                            position={doc.hero.portrait_position || "50% 50%"}
-                            onChange={(pos) => update((p) => ({ ...p, hero: { ...p.hero, portrait_position: pos } }))}
-                          />
+                    <div className="flex flex-col gap-2 mt-1">
+                      <button
+                        onClick={() => portraitInputRef.current?.click()}
+                        disabled={portraitUploading}
+                        className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.75rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50 self-start"
+                      >
+                        {portraitUploading ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Upload className="h-3.5 w-3.5" />
                         )}
-                      </div>
+                        {portraitUploading ? "Laster opp..." : "Last opp bilde"}
+                      </button>
+                      <input
+                        ref={portraitInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handlePortraitUpload}
+                      />
+                      {doc.hero.portrait_url && (
+                        <PortraitFocalPicker
+                          imageUrl={doc.hero.portrait_url}
+                          position={doc.hero.portrait_position || "50% 50%"}
+                          onChange={(pos) => update((p) => ({ ...p, hero: { ...p.hero, portrait_position: pos } }))}
+                        />
+                      )}
                     </div>
                   </div>
                   <div>
