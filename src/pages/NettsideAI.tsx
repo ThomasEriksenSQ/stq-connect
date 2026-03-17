@@ -10,6 +10,30 @@ import mammoth from "mammoth";
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 import { nb } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+
+const ASCII_ROBOT = `┌────────────┐
+│  ○      ○  │
+│     ──     │
+│  ────────  │
+└────┬──┬────┘
+     │  │
+┌────┘  └────┐
+╱            ╲
+╱ ┌──────────┐╲
+‾‾┴──────────┴‾‾`;
+
+function RobotAvatar({ className }: { className?: string }) {
+  return (
+    <div
+      className={className}
+      style={{ background: "#080808", display: "flex", alignItems: "center", justifyContent: "center" }}
+    >
+      <pre style={{ color: "#c8a050", fontFamily: "'Courier New', monospace", fontSize: "clamp(8px, 2.8vw, 18px)", lineHeight: 1.25, margin: 0, userSelect: "none", whiteSpace: "pre" }}>
+        {ASCII_ROBOT}
+      </pre>
+    </div>
+  );
+}
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -252,9 +276,7 @@ function ConsultantsTab() {
           {sorted.map((c) => (
             <div key={c.id} className="rounded-lg border border-border bg-card p-3 relative group">
               {c.ikke_startet ? (
-                <div className="aspect-square w-full rounded border border-border mb-2 bg-muted flex items-center justify-center">
-                  <span className="text-4xl">🤖</span>
-                </div>
+                <RobotAvatar className="aspect-square w-full rounded border border-border mb-2 overflow-hidden" />
               ) : c.image_url ? (
                 <img src={c.image_url} alt={c.name} className="aspect-square w-full object-cover rounded border border-border mb-2" style={{ objectPosition: c.bilde_posisjon || "50% 50%" }} />
               ) : (
