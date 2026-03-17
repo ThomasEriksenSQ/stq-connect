@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from "react";
 import {
   CvRendererPreview,
   openCvPrintDialog,
