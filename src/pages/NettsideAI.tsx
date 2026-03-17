@@ -700,9 +700,86 @@ function ConsultantSheet({
 /* ─── Knowledge Tab ─── */
 
 function SoknaderTab() {
+  const { data: applications = [], isLoading } = useQuery({
+    queryKey: ["website_applications"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("website_applications")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   return (
-    <div className="py-12 text-center text-muted-foreground text-[0.8125rem]">
-      Ingen søknader ennå — kommer snart.
+    <div>
+      <div className="mb-6">
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm inline-block min-w-[160px]">
+          <div className="flex items-center gap-2 text-muted-foreground mb-1">
+            <ClipboardList className="h-4 w-4" />
+            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em]">Totalt søknader</span>
+          </div>
+          <div className="text-[1.5rem] font-bold text-foreground">
+            {isLoading ? "–" : applications.length}
+          </div>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <p className="py-12 text-center text-muted-foreground text-[0.8125rem]">Laster søknader...</p>
+      ) : applications.length === 0 ? (
+        <p className="py-12 text-center text-muted-foreground text-[0.8125rem]">Ingen søknader ennå.</p>
+      ) : (
+        <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Dato</TableHead>
+                <TableHead>Fullt navn</TableHead>
+                <TableHead>E-post</TableHead>
+                <TableHead>Telefon</TableHead>
+                <TableHead>CV</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {applications.map((app) => (
+                <TableRow key={app.id}>
+                  <TableCell className="text-[0.8125rem] text-muted-foreground">
+                    {format(new Date(app.created_at!), "dd.MM.yyyy HH:mm", { locale: nb })}
+                  </TableCell>
+                  <TableCell className="text-[0.8125rem] font-medium text-foreground">
+                    {app.full_name}
+                  </TableCell>
+                  <TableCell>
+                    <a href={`mailto:${app.email}`} className="text-[0.8125rem] text-primary hover:underline">
+                      {app.email}
+                    </a>
+                  </TableCell>
+                  <TableCell className="text-[0.8125rem] text-muted-foreground">
+                    {app.phone || "–"}
+                  </TableCell>
+                  <TableCell>
+                    {app.cv_url ? (
+                      <a
+                        href={app.cv_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[0.8125rem] text-primary hover:underline"
+                      >
+                        Last ned CV
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : (
+                      <span className="text-[0.8125rem] text-muted-foreground">–</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }

@@ -188,21 +188,6 @@ export function AppLayout() {
                     <Globe className="h-4 w-4 stroke-[1.5]" />
                     stacq.no
                   </RouterNavLink>
-                  <RouterNavLink
-                    to="/soknad"
-                    onClick={() => setKonsDropOpen(false)}
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center gap-3 px-4 py-2.5 text-[0.8125rem] font-medium transition-colors",
-                        isActive
-                          ? "bg-muted text-foreground"
-                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                      )
-                    }
-                  >
-                    <ClipboardList className="h-4 w-4 stroke-[1.5]" />
-                    Søknader
-                  </RouterNavLink>
                 </div>
               )}
             </div>
