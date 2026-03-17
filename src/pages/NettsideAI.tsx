@@ -114,6 +114,7 @@ interface Consultant {
   experience_years: number | null;
   location: string | null;
   image_url: string | null;
+  bilde_posisjon: string | null;
   competences: string[] | null;
   industries: string[] | null;
   sort_order: number | null;
