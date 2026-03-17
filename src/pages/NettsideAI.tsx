@@ -251,7 +251,11 @@ function ConsultantsTab() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {sorted.map((c) => (
             <div key={c.id} className="rounded-lg border border-border bg-card p-3 relative group">
-              {c.image_url ? (
+              {c.ikke_startet ? (
+                <div className="aspect-square w-full rounded border border-border mb-2 bg-muted flex items-center justify-center">
+                  <span className="text-4xl">🤖</span>
+                </div>
+              ) : c.image_url ? (
                 <img src={c.image_url} alt={c.name} className="aspect-square w-full object-cover rounded border border-border mb-2" style={{ objectPosition: c.bilde_posisjon || "50% 50%" }} />
               ) : (
                 <div className="aspect-square w-full rounded border border-border mb-2 bg-muted flex items-center justify-center">
