@@ -183,7 +183,7 @@ export default function ImporterCver() {
       teknologier: cv.data.kompetanse || [],
       cv_tekst: cv.data.bio || null,
       type: cv.type,
-      company_id: cv.type === "via_partner" ? cv.partnerId : null,
+      company_id: cv.type === "partner" ? cv.partnerId : null,
       status: "ledig",
     });
     if (error) throw error;
