@@ -355,6 +355,7 @@ function ConsultantSheet({
           experience_years: experienceYears,
           location: location || null,
           image_url: imageUrl || null,
+          bilde_posisjon: bildePos,
           competences,
           industries,
           active,
