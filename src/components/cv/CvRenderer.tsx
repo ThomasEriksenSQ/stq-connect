@@ -707,7 +707,7 @@ function LogoMark() {
   );
 }
 
-function Portrait({ topMm, imageUrl }: { topMm: number; imageUrl?: string }) {
+function Portrait({ topMm, imageUrl, portraitPosition }: { topMm: number; imageUrl?: string; portraitPosition?: string }) {
   return (
     <div
       style={{
@@ -729,7 +729,7 @@ function Portrait({ topMm, imageUrl }: { topMm: number; imageUrl?: string }) {
             width: "100%",
             height: "100%",
             objectFit: "cover",
-            objectPosition: "center 11%",
+            objectPosition: portraitPosition || "50% 50%",
             display: "block",
           }}
         />
