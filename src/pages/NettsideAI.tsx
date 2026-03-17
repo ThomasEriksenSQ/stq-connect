@@ -657,6 +657,10 @@ function ConsultantSheet({
             </div>
           </div>
           <div>
+            <label className={LABEL}>Beskrivelse</label>
+            <Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} className="text-[0.8125rem]" />
+          </div>
+          <div>
             <label className={LABEL}>Kompetanser</label>
             <TagInput value={competences} onChange={setCompetences} placeholder="Legg til kompetanse..." />
           </div>
