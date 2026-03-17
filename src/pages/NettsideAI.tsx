@@ -564,93 +564,95 @@ function ConsultantSheet({
             </button>
           </div>
 
-          <div>
-            <label className={LABEL}>Bilde</label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                if (!file.type.startsWith("image/")) {
-                  toast.error("Filen må være et bilde");
-                  return;
-                }
-                if (file.size > 5 * 1024 * 1024) {
-                  toast.error("Bildet kan ikke være større enn 5MB");
-                  return;
-                }
-                setUploading(true);
-                try {
-                  const fileName = `${Date.now()}-${file.name.replace(/\s/g, "-")}`;
-                  const { error } = await supabase.storage.from("consultant-images").upload(fileName, file, { upsert: true });
-                  if (error) throw error;
-                  const { data: urlData } = supabase.storage.from("consultant-images").getPublicUrl(fileName);
-                  setImageUrl(urlData.publicUrl);
-                  toast.success("Bilde lastet opp");
-                } catch {
-                  toast.error("Kunne ikke laste opp bilde");
-                } finally {
-                  setUploading(false);
-                }
-              }}
-            />
-            {imageUrl ? (
-              <div className="flex flex-col gap-2">
-                <ImageRepositioner
-                  src={imageUrl}
-                  position={bildePos}
-                  onPositionChange={setBildePos}
-                />
+          <div className="flex gap-4">
+            {/* Bilde venstre */}
+            <div className="flex-shrink-0">
+              <label className={LABEL}>Bilde</label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (!file.type.startsWith("image/")) {
+                    toast.error("Filen må være et bilde");
+                    return;
+                  }
+                  if (file.size > 5 * 1024 * 1024) {
+                    toast.error("Bildet kan ikke være større enn 5MB");
+                    return;
+                  }
+                  setUploading(true);
+                  try {
+                    const fileName = `${Date.now()}-${file.name.replace(/\s/g, "-")}`;
+                    const { error } = await supabase.storage.from("consultant-images").upload(fileName, file, { upsert: true });
+                    if (error) throw error;
+                    const { data: urlData } = supabase.storage.from("consultant-images").getPublicUrl(fileName);
+                    setImageUrl(urlData.publicUrl);
+                    toast.success("Bilde lastet opp");
+                  } catch {
+                    toast.error("Kunne ikke laste opp bilde");
+                  } finally {
+                    setUploading(false);
+                  }
+                }}
+              />
+              {imageUrl ? (
+                <div className="flex flex-col gap-2">
+                  <ImageRepositioner
+                    src={imageUrl}
+                    position={bildePos}
+                    onPositionChange={setBildePos}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.8125rem] font-medium rounded-lg border border-border text-foreground hover:bg-secondary disabled:opacity-50 self-start"
+                  >
+                    {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+                    Bytt bilde
+                  </button>
+                </div>
+              ) : (
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.8125rem] font-medium rounded-lg border border-border text-foreground hover:bg-secondary disabled:opacity-50 self-start"
+                  className="w-48 h-48 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-foreground/30 hover:text-foreground transition-colors disabled:opacity-50"
                 >
-                  {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
-                  Bytt bilde
+                  {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
+                  <span className="text-[0.75rem]">{uploading ? "Laster opp..." : "Last opp bilde"}</span>
                 </button>
+              )}
+            </div>
+            {/* Felter høyre */}
+            <div className="flex-1 flex flex-col gap-3 min-w-0">
+              <div>
+                <label className={LABEL}>Navn</label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Fullt navn" className="h-9 text-[0.8125rem]" />
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="w-full h-24 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-foreground/30 hover:text-foreground transition-colors disabled:opacity-50"
-              >
-                {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
-                <span className="text-[0.75rem]">{uploading ? "Laster opp..." : "Last opp bilde"}</span>
-              </button>
-            )}
-          </div>
-          <div>
-            <label className={LABEL}>Navn</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Fullt navn" className="h-9 text-[0.8125rem]" />
-          </div>
-          <div>
-            <label className={LABEL}>Beskrivelse</label>
-            <Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} className="text-[0.8125rem]" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={LABEL}>Erfaring (år)</label>
-              <Input type="number" value={experienceYears} onChange={(e) => setExperienceYears(Number(e.target.value))} className="h-9 text-[0.8125rem]" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={LABEL}>Erfaring (år)</label>
+                  <Input type="number" value={experienceYears} onChange={(e) => setExperienceYears(Number(e.target.value))} className="h-9 text-[0.8125rem]" />
+                </div>
+                <div>
+                  <label className={LABEL}>Lokasjon</label>
+                  <Input value={location} onChange={(e) => setLocation(e.target.value)} className="h-9 text-[0.8125rem]" />
+                </div>
+              </div>
+              <div>
+                <label className={LABEL}>Utdanning 1</label>
+                <Input value={education1} onChange={e => setEducation1(e.target.value)} placeholder="F.eks. MSc Computer Science, NTNU" className="h-9 text-[0.8125rem]" />
+              </div>
+              <div>
+                <label className={LABEL}>Utdanning 2</label>
+                <Input value={education2} onChange={e => setEducation2(e.target.value)} placeholder="F.eks. BSc Informatikk, UiO" className="h-9 text-[0.8125rem]" />
+              </div>
             </div>
-            <div>
-              <label className={LABEL}>Lokasjon</label>
-              <Input value={location} onChange={(e) => setLocation(e.target.value)} className="h-9 text-[0.8125rem]" />
-            </div>
-          </div>
-          <div>
-            <label className={LABEL}>Utdanning 1</label>
-            <Input value={education1} onChange={e => setEducation1(e.target.value)} placeholder="F.eks. MSc Computer Science, NTNU" />
-          </div>
-          <div>
-            <label className={LABEL}>Utdanning 2</label>
-            <Input value={education2} onChange={e => setEducation2(e.target.value)} placeholder="F.eks. BSc Informatikk, UiO" />
           </div>
           <div>
             <label className={LABEL}>Kompetanser</label>
