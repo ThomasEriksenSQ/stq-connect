@@ -480,6 +480,8 @@ function ConsultantSheet({
             competences,
             industries,
             active,
+            education_1: education1 || null,
+            education_2: education2 || null,
           })
           .eq("id", consultant!.id);
         if (error) throw error;
