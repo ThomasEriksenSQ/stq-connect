@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from "react";
 import {
   CvRendererPreview,
   openCvPrintDialog,
@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Plus, Trash2, GripVertical, Download, Check, Loader2, Upload } from "lucide-react";
+import { Plus, Trash2, GripVertical, Download, Check, Loader2, Upload, Move } from "lucide-react";
 import { toast } from "sonner";
 import { getInitials } from "@/lib/utils";
 import {
@@ -111,6 +111,82 @@ function getSelectedContactPresetId(contact: CVDocument["hero"]["contact"]) {
   });
 
   return entry?.[0] ?? CLEAR_SELECT;
+}
+
+function PortraitFocalPicker({
+  imageUrl,
+  position,
+  onChange,
+}: {
+  imageUrl: string;
+  position: string;
+  onChange: (pos: string) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  const [xPct, yPct] = useMemo(() => {
+    const parts = position.split(/\s+/).map((s) => parseFloat(s));
+    return [isNaN(parts[0]) ? 50 : parts[0], isNaN(parts[1]) ? 50 : parts[1]];
+  }, [position]);
+
+  const handlePointer = useCallback(
+    (e: React.PointerEvent | PointerEvent) => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+      const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+      onChange(`${Math.round(x)}% ${Math.round(y)}%`);
+    },
+    [onChange],
+  );
+
+  useEffect(() => {
+    if (!dragging) return;
+    const move = (e: PointerEvent) => handlePointer(e);
+    const up = () => setDragging(false);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+  }, [dragging, handlePointer]);
+
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <div
+        ref={containerRef}
+        className="relative w-[160px] h-[100px] rounded-md border border-border overflow-hidden cursor-move select-none"
+        onPointerDown={(e) => {
+          setDragging(true);
+          handlePointer(e);
+          e.preventDefault();
+        }}
+      >
+        <img
+          src={imageUrl}
+          alt=""
+          className="w-full h-full object-cover pointer-events-none"
+          draggable={false}
+        />
+        {/* Crosshair */}
+        <div
+          className="absolute w-5 h-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-md pointer-events-none"
+          style={{
+            left: `${xPct}%`,
+            top: `${yPct}%`,
+            background: "rgba(255,255,255,0.3)",
+            boxShadow: "0 0 0 1px rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.3)",
+          }}
+        />
+        <Move className="absolute bottom-1 right-1 h-3 w-3 text-white/70 pointer-events-none" />
+      </div>
+      <span className="text-[0.6875rem] text-muted-foreground">
+        Dra for å justere · {Math.round(xPct)}% {Math.round(yPct)}%
+      </span>
+    </div>
+  );
 }
 
 export function CvEditorPanel({
@@ -412,19 +488,20 @@ export function CvEditorPanel({
                   </div>
                   <div>
                     <label className={LABEL}>Profilbilde</label>
-                    <div className="flex items-center gap-3 mt-1">
+                    <div className="flex items-start gap-3 mt-1">
                       {doc.hero.portrait_url ? (
                         <img
                           src={doc.hero.portrait_url}
                           alt=""
                           className="w-20 h-20 rounded-full object-cover border border-border"
+                          style={{ objectPosition: doc.hero.portrait_position || "50% 50%" }}
                         />
                       ) : (
                         <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-lg font-bold border border-border">
                           {getInitials(doc.hero.name)}
                         </div>
                       )}
-                      <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-2">
                         <button
                           onClick={() => portraitInputRef.current?.click()}
                           disabled={portraitUploading}
@@ -444,6 +521,13 @@ export function CvEditorPanel({
                           className="hidden"
                           onChange={handlePortraitUpload}
                         />
+                        {doc.hero.portrait_url && (
+                          <PortraitFocalPicker
+                            imageUrl={doc.hero.portrait_url}
+                            position={doc.hero.portrait_position || "50% 50%"}
+                            onChange={(pos) => update((p) => ({ ...p, hero: { ...p.hero, portrait_position: pos } }))}
+                          />
+                        )}
                       </div>
                     </div>
                   </div>

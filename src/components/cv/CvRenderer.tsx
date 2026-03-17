@@ -47,6 +47,7 @@ export type HeroContent = {
   title: string;
   contact: HeroContact;
   portrait_url?: string;
+  portrait_position?: string;
 };
 
 export type CVDocument = {
@@ -678,7 +679,7 @@ function Sidebar({
   );
 }
 
-function EmptySidebar({ imageUrl }: { imageUrl?: string }) {
+function EmptySidebar({ imageUrl, portraitPosition }: { imageUrl?: string; portraitPosition?: string }) {
   return (
     <div style={{ background: "#000", position: "relative" }}>
       <div
@@ -691,7 +692,7 @@ function EmptySidebar({ imageUrl }: { imageUrl?: string }) {
           background: "#f2f2f2",
         }}
       />
-      <Portrait topMm={CV_LAYOUT.hero.continuationPortraitTopMm} imageUrl={imageUrl} />
+      <Portrait topMm={CV_LAYOUT.hero.continuationPortraitTopMm} imageUrl={imageUrl} portraitPosition={portraitPosition} />
     </div>
   );
 }
@@ -706,7 +707,7 @@ function LogoMark() {
   );
 }
 
-function Portrait({ topMm, imageUrl }: { topMm: number; imageUrl?: string }) {
+function Portrait({ topMm, imageUrl, portraitPosition }: { topMm: number; imageUrl?: string; portraitPosition?: string }) {
   return (
     <div
       style={{
@@ -728,7 +729,7 @@ function Portrait({ topMm, imageUrl }: { topMm: number; imageUrl?: string }) {
             width: "100%",
             height: "100%",
             objectFit: "cover",
-            objectPosition: "center 11%",
+            objectPosition: portraitPosition || "50% 50%",
             display: "block",
           }}
         />
@@ -936,19 +937,21 @@ function ContinuationPage({
   sections,
   doc,
   imageUrl,
+  portraitPosition,
 }: {
   showProjectsTitle: boolean;
   pageProjects: ProjectFragment[];
   sections: ContinuationSectionId[];
   doc: CVDocument;
   imageUrl?: string;
+  portraitPosition?: string;
 }) {
   const mergedProjects = mergeProjectFragmentsForPage(pageProjects);
 
   return (
     <div className="cv-page" style={pageStyle}>
       <div style={gridStyle}>
-        <EmptySidebar imageUrl={imageUrl} />
+        <EmptySidebar imageUrl={imageUrl} portraitPosition={portraitPosition} />
         <div style={continuationMainStyle}>
           {mergedProjects.length > 0 && (
             <>
@@ -1222,7 +1225,7 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
                     <LogoMark />
                   </div>
                 </div>
-                <Portrait topMm={CV_LAYOUT.hero.firstPagePortraitTopMm} imageUrl={imageUrl} />
+                <Portrait topMm={CV_LAYOUT.hero.firstPagePortraitTopMm} imageUrl={imageUrl} portraitPosition={doc.hero.portrait_position} />
                 <ContactBlock contact={hero.contact} />
                 <div
                   style={{
@@ -1283,6 +1286,7 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
               sections={page.sections}
               doc={doc}
               imageUrl={imageUrl}
+              portraitPosition={doc.hero.portrait_position}
             />
           ))}
         </div>

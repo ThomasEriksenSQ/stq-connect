@@ -1,0 +1,1 @@
+ALTER TABLE public.cv_documents ADD COLUMN IF NOT EXISTS portrait_position text DEFAULT '50% 50%';
