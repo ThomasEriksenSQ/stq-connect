@@ -65,6 +65,7 @@ function cvDocToDbRow(doc: CVDocument) {
     hero_name: doc.hero.name,
     hero_title: doc.hero.title,
     portrait_url: doc.hero.portrait_url || null,
+    portrait_position: doc.hero.portrait_position || "50% 50%",
     intro_paragraphs: doc.introParagraphs,
     competence_groups: doc.competenceGroups,
     projects: doc.projects,
