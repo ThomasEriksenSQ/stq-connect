@@ -361,8 +361,8 @@ export default function ImporterCver() {
                         Freelance
                       </button>
                       <button
-                        className={cv.type === "via_partner" ? TYPE_CHIP_ON : TYPE_CHIP_OFF}
-                        onClick={() => updateCv(idx, { type: "via_partner" })}
+                        className={cv.type === "partner" ? TYPE_CHIP_ON : TYPE_CHIP_OFF}
+                        onClick={() => updateCv(idx, { type: "partner" })}
                       >
                         Via partner
                       </button>
