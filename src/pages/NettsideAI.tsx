@@ -1112,6 +1112,7 @@ const NettsideAI = () => {
       <Tabs defaultValue="consultants">
         <TabsList>
           <TabsTrigger value="consultants">Konsulenter</TabsTrigger>
+          <TabsTrigger value="soknader">Søknader</TabsTrigger>
           <TabsTrigger value="knowledge">AI-kunnskap</TabsTrigger>
         </TabsList>
         <TabsContent value="consultants" className="mt-5">
