@@ -30,6 +30,7 @@ const ImporterCver = lazy(() => import("./pages/ImporterCver"));
 const ImporterSelskaper = lazy(() => import("./pages/ImporterSelskaper"));
 const Markedsradar = lazy(() => import("./pages/Markedsradar"));
 const CvAdmin = lazy(() => import("./pages/CvAdmin"));
+const Soknad = lazy(() => import("./pages/Soknad"));
 
 const queryClient = new QueryClient();
 
@@ -136,6 +137,14 @@ const App = () => (
                   element={
                     <Suspense fallback={<LazyFallback />}>
                       <ImporterSelskaper />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="soknad"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <Soknad />
                     </Suspense>
                   }
                 />

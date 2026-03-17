@@ -1,6 +1,6 @@
 import { Outlet, NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
-import { Moon, Sun, LogOut, Building2, Users, LayoutDashboard, Sparkles, Briefcase, ChevronDown, Users2, TrendingUp, UserPlus, Radar, Globe, FileText } from "lucide-react";
+import { Moon, Sun, LogOut, Building2, Users, LayoutDashboard, Sparkles, Briefcase, ChevronDown, Users2, TrendingUp, UserPlus, Radar, Globe, FileText, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -23,7 +23,7 @@ export function AppLayout() {
   const [aiOpen, setAiOpen] = useState(false);
   const [konsDropOpen, setKonsDropOpen] = useState(false);
   const konsRef = useRef<HTMLDivElement>(null);
-  const isKonsActive = location.pathname.startsWith("/konsulenter") || location.pathname.startsWith("/stacq") || location.pathname.startsWith("/markedsradar") || location.pathname.startsWith("/nettside-ai") || location.pathname.startsWith("/cv-maker");
+  const isKonsActive = location.pathname.startsWith("/konsulenter") || location.pathname.startsWith("/stacq") || location.pathname.startsWith("/markedsradar") || location.pathname.startsWith("/nettside-ai") || location.pathname.startsWith("/cv-maker") || location.pathname.startsWith("/soknad");
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -187,7 +187,22 @@ export function AppLayout() {
                   >
                     <Globe className="h-4 w-4 stroke-[1.5]" />
                     stacq.no
-                   </RouterNavLink>
+                  </RouterNavLink>
+                  <RouterNavLink
+                    to="/soknad"
+                    onClick={() => setKonsDropOpen(false)}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-3 px-4 py-2.5 text-[0.8125rem] font-medium transition-colors",
+                        isActive
+                          ? "bg-muted text-foreground"
+                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      )
+                    }
+                  >
+                    <ClipboardList className="h-4 w-4 stroke-[1.5]" />
+                    Søknader
+                  </RouterNavLink>
                 </div>
               )}
             </div>

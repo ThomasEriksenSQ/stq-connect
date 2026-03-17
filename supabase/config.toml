@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.analyze-cv-consultant]
 verify_jwt = false
+
+[functions.notify-new-application]
+verify_jwt = false
