@@ -158,7 +158,7 @@ function ImageRepositioner({
     <div className="flex flex-col gap-1">
       <div
         ref={containerRef}
-        className="group/repo w-full aspect-square rounded-lg border border-border overflow-hidden cursor-grab active:cursor-grabbing relative"
+        className="group/repo w-48 h-48 rounded-lg border border-border overflow-hidden cursor-grab active:cursor-grabbing relative"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
