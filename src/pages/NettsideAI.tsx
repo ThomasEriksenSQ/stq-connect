@@ -275,6 +275,7 @@ function ConsultantSheet({
   const [experienceYears, setExperienceYears] = useState(consultant?.experience_years ?? 0);
   const [location, setLocation] = useState(consultant?.location ?? "");
   const [imageUrl, setImageUrl] = useState(consultant?.image_url ?? "");
+  const [bildePos, setBildePos] = useState(consultant?.bilde_posisjon ?? "50% 50%");
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cvInputRef = useRef<HTMLInputElement>(null);
