@@ -644,6 +644,8 @@ function ConsultantSheet({
               <Input value={location} onChange={(e) => setLocation(e.target.value)} className="h-9 text-[0.8125rem]" />
             </div>
           </div>
+          <div>
+            <label className={LABEL}>Utdanning 1</label>
             <Input value={education1} onChange={e => setEducation1(e.target.value)} placeholder="F.eks. MSc Computer Science, NTNU" />
           </div>
           <div>
