@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 /* ─── Types ─── */
-type ConsultantType = "freelance" | "via_partner";
+type ConsultantType = "freelance" | "partner";
 
 interface ParsedCV {
   file: File;
