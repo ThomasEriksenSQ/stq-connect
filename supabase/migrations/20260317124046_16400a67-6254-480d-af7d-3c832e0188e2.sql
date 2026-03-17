@@ -1,0 +1,1 @@
+ALTER TABLE public.consultants ADD COLUMN IF NOT EXISTS bilde_posisjon text DEFAULT '50% 50%';

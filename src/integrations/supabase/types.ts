@@ -139,6 +139,7 @@ export type Database = {
       consultants: {
         Row: {
           active: boolean | null
+          bilde_posisjon: string | null
           competences: string[] | null
           created_at: string | null
           description: string | null
@@ -155,6 +156,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean | null
+          bilde_posisjon?: string | null
           competences?: string[] | null
           created_at?: string | null
           description?: string | null
@@ -171,6 +173,7 @@ export type Database = {
         }
         Update: {
           active?: boolean | null
+          bilde_posisjon?: string | null
           competences?: string[] | null
           created_at?: string | null
           description?: string | null
