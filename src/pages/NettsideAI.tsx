@@ -384,6 +384,8 @@ function ConsultantSheet({
   const [industries, setIndustries] = useState<string[]>(consultant?.industries ?? []);
   const [active, setActive] = useState(mode === "edit" ? (consultant?.active ?? true) : false);
   const [notStarted, setNotStarted] = useState(mode === "edit" ? (consultant?.ikke_startet ?? false) : false);
+  const [education1, setEducation1] = useState(consultant?.education_1 ?? "");
+  const [education2, setEducation2] = useState(consultant?.education_2 ?? "");
   const [cvAnalyzing, setCvAnalyzing] = useState(false);
 
   const handleCvUpload = async (file: File) => {
