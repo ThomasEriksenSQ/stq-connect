@@ -643,6 +643,14 @@ function ConsultantSheet({
             )}
           </div>
           <div>
+            <label className={LABEL}>Utdanning 1</label>
+            <Input value={education1} onChange={e => setEducation1(e.target.value)} placeholder="F.eks. MSc Computer Science, NTNU" />
+          </div>
+          <div>
+            <label className={LABEL}>Utdanning 2</label>
+            <Input value={education2} onChange={e => setEducation2(e.target.value)} placeholder="F.eks. BSc Informatikk, UiO" />
+          </div>
+          <div>
             <label className={LABEL}>Kompetanser</label>
             <TagInput value={competences} onChange={setCompetences} placeholder="Legg til kompetanse..." />
           </div>
