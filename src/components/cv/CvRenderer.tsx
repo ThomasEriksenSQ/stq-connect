@@ -1225,7 +1225,7 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
                     <LogoMark />
                   </div>
                 </div>
-                <Portrait topMm={CV_LAYOUT.hero.firstPagePortraitTopMm} imageUrl={imageUrl} />
+                <Portrait topMm={CV_LAYOUT.hero.firstPagePortraitTopMm} imageUrl={imageUrl} portraitPosition={doc.hero.portrait_position} />
                 <ContactBlock contact={hero.contact} />
                 <div
                   style={{
