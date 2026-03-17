@@ -565,24 +565,6 @@ function ConsultantSheet({
           </div>
 
           <div>
-            <label className={LABEL}>Navn</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Fullt navn" className="h-9 text-[0.8125rem]" />
-          </div>
-          <div>
-            <label className={LABEL}>Beskrivelse</label>
-            <Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} className="text-[0.8125rem]" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={LABEL}>Erfaring (år)</label>
-              <Input type="number" value={experienceYears} onChange={(e) => setExperienceYears(Number(e.target.value))} className="h-9 text-[0.8125rem]" />
-            </div>
-            <div>
-              <label className={LABEL}>Lokasjon</label>
-              <Input value={location} onChange={(e) => setLocation(e.target.value)} className="h-9 text-[0.8125rem]" />
-            </div>
-          </div>
-          <div>
             <label className={LABEL}>Bilde</label>
             <input
               ref={fileInputRef}
@@ -645,7 +627,23 @@ function ConsultantSheet({
             )}
           </div>
           <div>
-            <label className={LABEL}>Utdanning 1</label>
+            <label className={LABEL}>Navn</label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Fullt navn" className="h-9 text-[0.8125rem]" />
+          </div>
+          <div>
+            <label className={LABEL}>Beskrivelse</label>
+            <Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} className="text-[0.8125rem]" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={LABEL}>Erfaring (år)</label>
+              <Input type="number" value={experienceYears} onChange={(e) => setExperienceYears(Number(e.target.value))} className="h-9 text-[0.8125rem]" />
+            </div>
+            <div>
+              <label className={LABEL}>Lokasjon</label>
+              <Input value={location} onChange={(e) => setLocation(e.target.value)} className="h-9 text-[0.8125rem]" />
+            </div>
+          </div>
             <Input value={education1} onChange={e => setEducation1(e.target.value)} placeholder="F.eks. MSc Computer Science, NTNU" />
           </div>
           <div>
