@@ -462,6 +462,8 @@ function ConsultantSheet({
           competences,
           industries,
           active,
+          education_1: education1 || null,
+          education_2: education2 || null,
         });
         if (error) throw error;
       } else {
