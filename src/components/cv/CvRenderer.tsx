@@ -47,6 +47,7 @@ export type HeroContent = {
   title: string;
   contact: HeroContact;
   portrait_url?: string;
+  portrait_position?: string;
 };
 
 export type CVDocument = {
