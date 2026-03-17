@@ -104,6 +104,81 @@ function TagInput({ value, onChange, placeholder }: { value: string[]; onChange:
   );
 }
 
+/* ─── Image Repositioner ─── */
+
+function ImageRepositioner({
+  src,
+  position,
+  onPositionChange,
+}: {
+  src: string;
+  position: string;
+  onPositionChange: (pos: string) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+  const startPos = useRef({ x: 0, y: 0 });
+  const startPct = useRef({ x: 50, y: 50 });
+
+  const parsePct = useCallback((pos: string) => {
+    const parts = pos.split(/\s+/).map((s) => parseFloat(s));
+    return { x: parts[0] ?? 50, y: parts[1] ?? 50 };
+  }, []);
+
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      e.preventDefault();
+      dragging.current = true;
+      startPos.current = { x: e.clientX, y: e.clientY };
+      startPct.current = parsePct(position);
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    },
+    [position, parsePct]
+  );
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!dragging.current || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const dx = e.clientX - startPos.current.x;
+      const dy = e.clientY - startPos.current.y;
+      // Invert: dragging right moves object-position left
+      const newX = Math.max(0, Math.min(100, startPct.current.x - (dx / rect.width) * 100));
+      const newY = Math.max(0, Math.min(100, startPct.current.y - (dy / rect.height) * 100));
+      onPositionChange(`${Math.round(newX)}% ${Math.round(newY)}%`);
+    },
+    [onPositionChange]
+  );
+
+  const handlePointerUp = useCallback(() => {
+    dragging.current = false;
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div
+        ref={containerRef}
+        className="w-[80px] h-[80px] rounded-full border border-border overflow-hidden cursor-grab active:cursor-grabbing relative"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+      >
+        <img
+          src={src}
+          alt="Forhåndsvisning"
+          className="w-full h-full object-cover pointer-events-none select-none"
+          style={{ objectPosition: position }}
+          draggable={false}
+        />
+        <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/20 transition-colors">
+          <Move className="h-4 w-4 text-white opacity-0 hover:opacity-70 transition-opacity" style={{ pointerEvents: "none" }} />
+        </div>
+      </div>
+      <span className="text-[0.6875rem] text-muted-foreground">Dra for å justere</span>
+    </div>
+  );
+}
+
 /* ─── Consultants Tab ─── */
 
 interface Consultant {
