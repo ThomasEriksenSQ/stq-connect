@@ -412,19 +412,20 @@ export function CvEditorPanel({
                   </div>
                   <div>
                     <label className={LABEL}>Profilbilde</label>
-                    <div className="flex items-center gap-3 mt-1">
+                    <div className="flex items-start gap-3 mt-1">
                       {doc.hero.portrait_url ? (
                         <img
                           src={doc.hero.portrait_url}
                           alt=""
                           className="w-20 h-20 rounded-full object-cover border border-border"
+                          style={{ objectPosition: doc.hero.portrait_position || "50% 50%" }}
                         />
                       ) : (
                         <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-lg font-bold border border-border">
                           {getInitials(doc.hero.name)}
                         </div>
                       )}
-                      <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-2">
                         <button
                           onClick={() => portraitInputRef.current?.click()}
                           disabled={portraitUploading}
@@ -444,6 +445,13 @@ export function CvEditorPanel({
                           className="hidden"
                           onChange={handlePortraitUpload}
                         />
+                        {doc.hero.portrait_url && (
+                          <PortraitFocalPicker
+                            imageUrl={doc.hero.portrait_url}
+                            position={doc.hero.portrait_position || "50% 50%"}
+                            onChange={(pos) => update((p) => ({ ...p, hero: { ...p.hero, portrait_position: pos } }))}
+                          />
+                        )}
                       </div>
                     </div>
                   </div>
