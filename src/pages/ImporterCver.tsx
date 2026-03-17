@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 /* ─── Types ─── */
-type ConsultantType = "freelance" | "via_partner";
+type ConsultantType = "freelance" | "partner";
 
 interface ParsedCV {
   file: File;
@@ -183,7 +183,7 @@ export default function ImporterCver() {
       teknologier: cv.data.kompetanse || [],
       cv_tekst: cv.data.bio || null,
       type: cv.type,
-      company_id: cv.type === "via_partner" ? cv.partnerId : null,
+      company_id: cv.type === "partner" ? cv.partnerId : null,
       status: "ledig",
     });
     if (error) throw error;
@@ -361,13 +361,13 @@ export default function ImporterCver() {
                         Freelance
                       </button>
                       <button
-                        className={cv.type === "via_partner" ? TYPE_CHIP_ON : TYPE_CHIP_OFF}
-                        onClick={() => updateCv(idx, { type: "via_partner" })}
+                        className={cv.type === "partner" ? TYPE_CHIP_ON : TYPE_CHIP_OFF}
+                        onClick={() => updateCv(idx, { type: "partner" })}
                       >
                         Via partner
                       </button>
                     </div>
-                    {cv.type === "via_partner" && (
+                    {cv.type === "partner" && (
                       <PartnerSearch
                         selectedId={cv.partnerId}
                         selectedName={cv.partnerName}
