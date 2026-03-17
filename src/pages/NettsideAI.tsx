@@ -698,6 +698,14 @@ function ConsultantSheet({
 
 /* ─── Knowledge Tab ─── */
 
+function SoknaderTab() {
+  return (
+    <div className="py-12 text-center text-muted-foreground text-[0.8125rem]">
+      Ingen søknader ennå — kommer snart.
+    </div>
+  );
+}
+
 function KnowledgeTab() {
   const queryClient = useQueryClient();
   const [visFilter, setVisFilter] = useState<VisFilter>("alle");
@@ -1104,10 +1112,14 @@ const NettsideAI = () => {
       <Tabs defaultValue="consultants">
         <TabsList>
           <TabsTrigger value="consultants">Konsulenter</TabsTrigger>
+          <TabsTrigger value="soknader">Søknader</TabsTrigger>
           <TabsTrigger value="knowledge">AI-kunnskap</TabsTrigger>
         </TabsList>
         <TabsContent value="consultants" className="mt-5">
           <ConsultantsTab />
+        </TabsContent>
+        <TabsContent value="soknader" className="mt-5">
+          <SoknaderTab />
         </TabsContent>
         <TabsContent value="knowledge" className="mt-5">
           <KnowledgeTab />
