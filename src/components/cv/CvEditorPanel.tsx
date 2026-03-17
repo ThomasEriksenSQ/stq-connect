@@ -189,7 +189,7 @@ function PortraitFocalPicker({
   );
 }
 
-
+export function CvEditorPanel({
   cvData: initialData,
   onSave,
   savedBy,
