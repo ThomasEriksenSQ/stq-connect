@@ -22,12 +22,17 @@ Deno.serve(async (req) => {
       });
     }
 
+    const createdAt = new Date().toLocaleString("nb-NO", { timeZone: "Europe/Oslo" });
+
     const htmlBody = `
-      <h2>Ny søknad fra ${full_name}</h2>
+      <h2>Ny søknad mottatt via stacq.no</h2>
       <p><strong>Navn:</strong> ${full_name}</p>
       <p><strong>E-post:</strong> <a href="mailto:${email}">${email}</a></p>
       <p><strong>Telefon:</strong> ${phone || "Ikke oppgitt"}</p>
-      ${cv_url ? `<p><strong>CV:</strong> <a href="${cv_url}">Last ned CV</a></p>` : "<p><strong>CV:</strong> Ikke lastet opp</p>"}
+      <p><strong>CV:</strong> ${cv_url ? `<a href="${cv_url}">Last ned CV</a>` : "Ikke vedlagt"}</p>
+      <p><strong>Mottatt:</strong> ${createdAt}</p>
+      <br/>
+      <p>Logg inn på <a href="https://crm.stacq.no">crm.stacq.no</a> for å se søknaden.</p>
     `;
 
     const res = await fetch("https://api.resend.com/emails", {
