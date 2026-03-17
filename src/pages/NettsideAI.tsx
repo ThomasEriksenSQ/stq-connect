@@ -507,8 +507,12 @@ function ConsultantSheet({
               }}
             />
             {imageUrl ? (
-              <div className="flex items-center gap-3">
-                <img src={imageUrl} alt="Forhåndsvisning" className="w-[80px] h-[80px] object-cover rounded-sm border border-border" />
+              <div className="flex items-start gap-3">
+                <ImageRepositioner
+                  src={imageUrl}
+                  position={bildePos}
+                  onPositionChange={setBildePos}
+                />
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
