@@ -367,7 +367,7 @@ export default function ImporterCver() {
                         Via partner
                       </button>
                     </div>
-                    {cv.type === "via_partner" && (
+                    {cv.type === "partner" && (
                       <PartnerSearch
                         selectedId={cv.partnerId}
                         selectedName={cv.partnerName}
