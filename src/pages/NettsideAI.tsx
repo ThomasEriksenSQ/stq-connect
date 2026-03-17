@@ -1118,6 +1118,9 @@ const NettsideAI = () => {
         <TabsContent value="consultants" className="mt-5">
           <ConsultantsTab />
         </TabsContent>
+        <TabsContent value="soknader" className="mt-5">
+          <SoknaderTab />
+        </TabsContent>
         <TabsContent value="knowledge" className="mt-5">
           <KnowledgeTab />
         </TabsContent>
