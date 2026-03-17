@@ -113,7 +113,83 @@ function getSelectedContactPresetId(contact: CVDocument["hero"]["contact"]) {
   return entry?.[0] ?? CLEAR_SELECT;
 }
 
-export function CvEditorPanel({
+function PortraitFocalPicker({
+  imageUrl,
+  position,
+  onChange,
+}: {
+  imageUrl: string;
+  position: string;
+  onChange: (pos: string) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  const [xPct, yPct] = useMemo(() => {
+    const parts = position.split(/\s+/).map((s) => parseFloat(s));
+    return [isNaN(parts[0]) ? 50 : parts[0], isNaN(parts[1]) ? 50 : parts[1]];
+  }, [position]);
+
+  const handlePointer = useCallback(
+    (e: React.PointerEvent | PointerEvent) => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+      const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+      onChange(`${Math.round(x)}% ${Math.round(y)}%`);
+    },
+    [onChange],
+  );
+
+  useEffect(() => {
+    if (!dragging) return;
+    const move = (e: PointerEvent) => handlePointer(e);
+    const up = () => setDragging(false);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+  }, [dragging, handlePointer]);
+
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <div
+        ref={containerRef}
+        className="relative w-[160px] h-[100px] rounded-md border border-border overflow-hidden cursor-move select-none"
+        onPointerDown={(e) => {
+          setDragging(true);
+          handlePointer(e);
+          e.preventDefault();
+        }}
+      >
+        <img
+          src={imageUrl}
+          alt=""
+          className="w-full h-full object-cover pointer-events-none"
+          draggable={false}
+        />
+        {/* Crosshair */}
+        <div
+          className="absolute w-5 h-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-md pointer-events-none"
+          style={{
+            left: `${xPct}%`,
+            top: `${yPct}%`,
+            background: "rgba(255,255,255,0.3)",
+            boxShadow: "0 0 0 1px rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.3)",
+          }}
+        />
+        <Move className="absolute bottom-1 right-1 h-3 w-3 text-white/70 pointer-events-none" />
+      </div>
+      <span className="text-[0.6875rem] text-muted-foreground">
+        Dra for å justere · {Math.round(xPct)}% {Math.round(yPct)}%
+      </span>
+    </div>
+  );
+}
+
+
   cvData: initialData,
   onSave,
   savedBy,
