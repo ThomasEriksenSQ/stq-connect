@@ -245,8 +245,10 @@ function ConsultantsTab() {
   const sorted = [...consultants].sort((a, b) => {
     const aLast = a.ikke_startet ?? false;
     const bLast = b.ikke_startet ?? false;
-    if (aLast === bLast) return 0;
-    return aLast ? 1 : -1;
+    if (aLast !== bLast) return aLast ? 1 : -1;
+    const aLastName = a.name.trim().split(/\s+/).slice(-1)[0] ?? "";
+    const bLastName = b.name.trim().split(/\s+/).slice(-1)[0] ?? "";
+    return aLastName.localeCompare(bLastName, "nb");
   });
 
   return (
