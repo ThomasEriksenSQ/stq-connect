@@ -219,6 +219,8 @@ interface Consultant {
   sort_order: number | null;
   active: boolean | null;
   ikke_startet: boolean | null;
+  education_1: string | null;
+  education_2: string | null;
 }
 
 function ConsultantsTab() {
