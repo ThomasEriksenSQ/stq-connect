@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, X, Camera, Loader2, FileText, Upload } from "lucide-react";
+import { Plus, Trash2, Pencil, X, Camera, Loader2, FileText, Upload, Move } from "lucide-react";
 import { format } from "date-fns";
 import * as pdfjsLib from "pdfjs-dist";
 import mammoth from "mammoth";
