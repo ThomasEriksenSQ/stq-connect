@@ -150,6 +150,7 @@ export type Database = {
           ikke_startet: boolean | null
           image_url: string | null
           industries: string[] | null
+          kompetanse_nettside: string[] | null
           location: string | null
           name: string
           sort_order: number | null
@@ -169,6 +170,7 @@ export type Database = {
           ikke_startet?: boolean | null
           image_url?: string | null
           industries?: string[] | null
+          kompetanse_nettside?: string[] | null
           location?: string | null
           name: string
           sort_order?: number | null
@@ -188,6 +190,7 @@ export type Database = {
           ikke_startet?: boolean | null
           image_url?: string | null
           industries?: string[] | null
+          kompetanse_nettside?: string[] | null
           location?: string | null
           name?: string
           sort_order?: number | null

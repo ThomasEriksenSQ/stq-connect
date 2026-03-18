@@ -217,6 +217,7 @@ interface Consultant {
   image_url: string | null;
   bilde_posisjon: string | null;
   competences: string[] | null;
+  kompetanse_nettside: string[] | null;
   industries: string[] | null;
   sort_order: number | null;
   active: boolean | null;
@@ -387,6 +388,7 @@ function ConsultantSheet({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cvInputRef = useRef<HTMLInputElement>(null);
   const [competences, setCompetences] = useState<string[]>(consultant?.competences ?? []);
+  const [kompetanseNettside, setKompetanseNettside] = useState<string[]>(consultant?.kompetanse_nettside ?? []);
   const [industries, setIndustries] = useState<string[]>(consultant?.industries ?? []);
   const [active, setActive] = useState(mode === "edit" ? (consultant?.active ?? true) : false);
   const [notStarted, setNotStarted] = useState(mode === "edit" ? (consultant?.ikke_startet ?? false) : false);
@@ -466,11 +468,12 @@ function ConsultantSheet({
           image_url: imageUrl || null,
           bilde_posisjon: bildePos,
           competences,
+          kompetanse_nettside: kompetanseNettside,
           industries,
           active,
           education_1: education1 || null,
           education_2: education2 || null,
-        });
+        } as any);
         if (error) throw error;
       } else {
         const { error } = await supabase
@@ -484,11 +487,12 @@ function ConsultantSheet({
             image_url: imageUrl || null,
             bilde_posisjon: bildePos,
             competences,
+            kompetanse_nettside: kompetanseNettside,
             industries,
             active,
             education_1: education1 || null,
             education_2: education2 || null,
-          })
+          } as any)
           .eq("id", consultant!.id);
         if (error) throw error;
       }
@@ -672,7 +676,12 @@ function ConsultantSheet({
             <Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} className="text-[0.8125rem]" />
           </div>
           <div>
-            <label className={LABEL}>Kompetanser</label>
+            <label className={LABEL}>Kompetanse (profilbilde)</label>
+            <span className="text-[0.6875rem] text-muted-foreground block mb-1">Disse vises på stacq.no</span>
+            <TagInput value={kompetanseNettside} onChange={setKompetanseNettside} placeholder="Legg til kompetanse..." />
+          </div>
+          <div>
+            <label className={LABEL}>Kompetanse (profilside)</label>
             <TagInput value={competences} onChange={setCompetences} placeholder="Legg til kompetanse..." />
           </div>
           <div>
