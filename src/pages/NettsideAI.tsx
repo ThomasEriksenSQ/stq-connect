@@ -639,9 +639,18 @@ function ConsultantSheet({
                 <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Fullt navn" className="h-9 text-[0.8125rem]" />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={LABEL}>Erfaring (år)</label>
-                  <Input type="number" value={experienceYears} onChange={(e) => setExperienceYears(Number(e.target.value))} className="h-9 text-[0.8125rem]" />
+              <div>
+                  <label className={LABEL}>Startet som konsulent (år)</label>
+                  <Select value={experienceYears ? String(experienceYears) : ""} onValueChange={(v) => setExperienceYears(Number(v))}>
+                    <SelectTrigger className="h-9 text-[0.8125rem]">
+                      <SelectValue placeholder="Velg år" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: new Date().getFullYear() - 1990 + 1 }, (_, i) => new Date().getFullYear() - i).map((year) => (
+                        <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className={LABEL}>Lokasjon</label>
