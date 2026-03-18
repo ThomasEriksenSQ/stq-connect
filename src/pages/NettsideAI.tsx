@@ -12,6 +12,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs
 import { nb } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
+
 const ASCII_ROBOT = `┌────────────┐
 │  ○      ○  │
 │     ──     │
@@ -293,8 +294,8 @@ function ConsultantsTab() {
               )}
               <p className="font-medium text-[0.875rem] text-foreground truncate">{c.name}</p>
               <div className="flex items-center gap-2 mt-1">
-                {c.experience_years != null && (
-                  <span className="text-[0.75rem] text-muted-foreground">{c.experience_years} år</span>
+                {c.experience_years != null && c.experience_years > 0 && (
+                  <span className="text-[0.75rem] text-muted-foreground">{new Date().getFullYear() - c.experience_years} år</span>
                 )}
                 {c.location && (
                   <span className="text-[0.75rem] text-muted-foreground">{c.location}</span>
@@ -638,9 +639,18 @@ function ConsultantSheet({
                 <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Fullt navn" className="h-9 text-[0.8125rem]" />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={LABEL}>Erfaring (år)</label>
-                  <Input type="number" value={experienceYears} onChange={(e) => setExperienceYears(Number(e.target.value))} className="h-9 text-[0.8125rem]" />
+              <div>
+                  <label className={LABEL}>Startet som konsulent (år)</label>
+                  <Select value={experienceYears ? String(experienceYears) : ""} onValueChange={(v) => setExperienceYears(Number(v))}>
+                    <SelectTrigger className="h-9 text-[0.8125rem]">
+                      <SelectValue placeholder="Velg år" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: new Date().getFullYear() - 1990 + 1 }, (_, i) => new Date().getFullYear() - i).map((year) => (
+                        <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className={LABEL}>Lokasjon</label>
