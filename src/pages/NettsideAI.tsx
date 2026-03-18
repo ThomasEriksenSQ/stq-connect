@@ -11,6 +11,7 @@ import mammoth from "mammoth";
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 import { nb } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const ASCII_ROBOT = `┌────────────┐
 │  ○      ○  │
