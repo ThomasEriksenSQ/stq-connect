@@ -294,8 +294,8 @@ function ConsultantsTab() {
               )}
               <p className="font-medium text-[0.875rem] text-foreground truncate">{c.name}</p>
               <div className="flex items-center gap-2 mt-1">
-                {c.experience_years != null && (
-                  <span className="text-[0.75rem] text-muted-foreground">{c.experience_years} år</span>
+                {c.experience_years != null && c.experience_years > 0 && (
+                  <span className="text-[0.75rem] text-muted-foreground">{new Date().getFullYear() - c.experience_years} år</span>
                 )}
                 {c.location && (
                   <span className="text-[0.75rem] text-muted-foreground">{c.location}</span>
