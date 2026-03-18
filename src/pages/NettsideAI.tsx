@@ -487,11 +487,12 @@ function ConsultantSheet({
             image_url: imageUrl || null,
             bilde_posisjon: bildePos,
             competences,
+            kompetanse_nettside: kompetanseNettside,
             industries,
             active,
             education_1: education1 || null,
             education_2: education2 || null,
-          })
+          } as any)
           .eq("id", consultant!.id);
         if (error) throw error;
       }
