@@ -217,6 +217,7 @@ interface Consultant {
   image_url: string | null;
   bilde_posisjon: string | null;
   competences: string[] | null;
+  kompetanse_nettside: string[] | null;
   industries: string[] | null;
   sort_order: number | null;
   active: boolean | null;
