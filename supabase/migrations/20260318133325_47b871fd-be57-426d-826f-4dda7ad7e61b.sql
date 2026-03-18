@@ -1,0 +1,1 @@
+ALTER TABLE consultants ADD COLUMN IF NOT EXISTS kompetanse_nettside text[] DEFAULT '{}'::text[];
