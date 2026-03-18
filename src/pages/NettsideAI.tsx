@@ -388,6 +388,7 @@ function ConsultantSheet({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cvInputRef = useRef<HTMLInputElement>(null);
   const [competences, setCompetences] = useState<string[]>(consultant?.competences ?? []);
+  const [kompetanseNettside, setKompetanseNettside] = useState<string[]>(consultant?.kompetanse_nettside ?? []);
   const [industries, setIndustries] = useState<string[]>(consultant?.industries ?? []);
   const [active, setActive] = useState(mode === "edit" ? (consultant?.active ?? true) : false);
   const [notStarted, setNotStarted] = useState(mode === "edit" ? (consultant?.ikke_startet ?? false) : false);
