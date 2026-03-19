@@ -1,4 +1,4 @@
-import { Building2, Users, LogOut, FileText, Globe } from "lucide-react";
+import { Building2, Users, LogOut, FileText } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
 import {
