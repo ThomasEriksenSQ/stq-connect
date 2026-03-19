@@ -21,6 +21,7 @@ import AdminBrregSync from "./pages/AdminBrregSync";
 import Foresporsler from "./pages/Foresporsler";
 import NettsideAI from "./pages/NettsideAI";
 import CvEditor from "./pages/CvEditor";
+import NettsideLeads from "./pages/NettsideLeads";
 
 const KonsulenterAnsatte = lazy(() => import("./pages/KonsulenterAnsatte"));
 const KonsulenterOppdrag = lazy(() => import("./pages/KonsulenterOppdrag"));
@@ -82,6 +83,7 @@ const App = () => (
                 <Route path="foresporsler" element={<Foresporsler />} />
                 <Route path="nettside-ai" element={<NettsideAI />} />
                 <Route path="cv-maker" element={<CVMaker />} />
+                <Route path="nettside-leads" element={<NettsideLeads />} />
                 <Route path="import" element={<Import />} />
                 <Route path="admin/brreg-sync" element={<AdminBrregSync />} />
                 <Route
