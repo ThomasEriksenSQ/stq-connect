@@ -1,4 +1,4 @@
-import { Building2, Users, LogOut, FileText, Globe } from "lucide-react";
+import { Building2, Users, LogOut, FileText } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -18,7 +18,6 @@ const navItems = [
   { title: "Selskaper", url: "/selskaper", icon: Building2 },
   { title: "Kontakter", url: "/kontakter", icon: Users },
   { title: "CV Maker", url: "/cv-maker", icon: FileText },
-  { title: "Nettside-leads", url: "/nettside-leads", icon: Globe },
 ];
 
 export function AppSidebar() {

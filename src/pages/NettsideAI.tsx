@@ -1194,6 +1194,81 @@ function KnowledgeTab() {
   );
 }
 
+/* ─── Tilgjengelighet Leads Tab ─── */
+
+function TilgjengelighetLeadsTab() {
+  const { data: leads = [], isLoading } = useQuery({
+    queryKey: ["website-leads"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("website_leads")
+        .select("id, email, consultant_name, message, created_at")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  return (
+    <div>
+      <div className="mb-6">
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm inline-block min-w-[160px]">
+          <div className="flex items-center gap-2 text-muted-foreground mb-1">
+            <ClipboardList className="h-4 w-4" />
+            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em]">Totalt leads</span>
+          </div>
+          <div className="text-[1.5rem] font-bold text-foreground">
+            {isLoading ? "–" : leads.length}
+          </div>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-px">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-[44px] bg-secondary/50 animate-pulse rounded" />
+          ))}
+        </div>
+      ) : leads.length === 0 ? (
+        <p className="py-12 text-center text-muted-foreground text-[0.8125rem]">Ingen leads ennå.</p>
+      ) : (
+        <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Dato</TableHead>
+                <TableHead>E-post</TableHead>
+                <TableHead>Konsulent</TableHead>
+                <TableHead>Melding</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {leads.map((lead: any) => (
+                <TableRow key={lead.id}>
+                  <TableCell className="text-[0.8125rem] text-muted-foreground whitespace-nowrap">
+                    {lead.created_at
+                      ? format(new Date(lead.created_at), "d. MMM yyyy HH:mm", { locale: nb })
+                      : "—"}
+                  </TableCell>
+                  <TableCell className="text-[0.8125rem] text-foreground">
+                    {lead.email || "—"}
+                  </TableCell>
+                  <TableCell className="text-[0.8125rem] text-foreground">
+                    {lead.consultant_name || "—"}
+                  </TableCell>
+                  <TableCell className="text-[0.8125rem] text-foreground/70">
+                    {lead.message || "—"}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Main Page ─── */
 
 const NettsideAI = () => {
@@ -1210,6 +1285,7 @@ const NettsideAI = () => {
         <TabsList>
           <TabsTrigger value="consultants">Konsulenter</TabsTrigger>
           <TabsTrigger value="soknader">Søknader</TabsTrigger>
+          <TabsTrigger value="leads">Tilgjengelighet Leads</TabsTrigger>
           <TabsTrigger value="knowledge">AI-kunnskap</TabsTrigger>
         </TabsList>
         <TabsContent value="consultants" className="mt-5">
@@ -1217,6 +1293,9 @@ const NettsideAI = () => {
         </TabsContent>
         <TabsContent value="soknader" className="mt-5">
           <SoknaderTab />
+        </TabsContent>
+        <TabsContent value="leads" className="mt-5">
+          <TilgjengelighetLeadsTab />
         </TabsContent>
         <TabsContent value="knowledge" className="mt-5">
           <KnowledgeTab />
