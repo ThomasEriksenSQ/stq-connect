@@ -1285,6 +1285,7 @@ const NettsideAI = () => {
         <TabsList>
           <TabsTrigger value="consultants">Konsulenter</TabsTrigger>
           <TabsTrigger value="soknader">Søknader</TabsTrigger>
+          <TabsTrigger value="leads">Tilgjengelighet Leads</TabsTrigger>
           <TabsTrigger value="knowledge">AI-kunnskap</TabsTrigger>
         </TabsList>
         <TabsContent value="consultants" className="mt-5">
@@ -1292,6 +1293,9 @@ const NettsideAI = () => {
         </TabsContent>
         <TabsContent value="soknader" className="mt-5">
           <SoknaderTab />
+        </TabsContent>
+        <TabsContent value="leads" className="mt-5">
+          <TilgjengelighetLeadsTab />
         </TabsContent>
         <TabsContent value="knowledge" className="mt-5">
           <KnowledgeTab />
