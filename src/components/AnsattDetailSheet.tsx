@@ -216,6 +216,84 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
     }
   };
 
+  const handleFinnLeads = async () => {
+    if (!ansatt) return;
+    setLeadsLoading(true);
+    setLeadsResults(null);
+    try {
+      const { data: kontakter } = await supabase
+        .from("contacts")
+        .select("id, first_name, last_name, title, company_id, call_list, teknologier, companies(name)")
+        .not("teknologier", "eq", "{}")
+        .limit(200);
+
+      if (!kontakter?.length) {
+        toast("Ingen kontakter med teknisk profil ennå");
+        setLeadsLoading(false);
+        return;
+      }
+
+      const kontaktIds = kontakter.map((k: any) => k.id);
+
+      const [{ data: aktiviteter }, { data: tasks }] = await Promise.all([
+        supabase
+          .from("activities")
+          .select("contact_id, created_at, subject, description")
+          .in("contact_id", kontaktIds)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("tasks")
+          .select("contact_id, created_at, title, description, due_date")
+          .in("contact_id", kontaktIds)
+          .neq("status", "done"),
+      ]);
+
+      const berikede = kontakter.map((k: any) => {
+        const kAkts = (aktiviteter || []).filter((a: any) => a.contact_id === k.id);
+        const kTasks = (tasks || []).filter((t: any) => t.contact_id === k.id);
+        const signal = getEffectiveSignal(
+          kAkts.map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+          kTasks.map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date }))
+        );
+        const sisteKontakt = kAkts[0]?.created_at
+          ? new Date(kAkts[0].created_at).toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" })
+          : null;
+        return {
+          id: k.id,
+          navn: `${k.first_name} ${k.last_name}`,
+          selskap: (k.companies as any)?.name || "",
+          stilling: k.title || "",
+          er_innkjoper: k.call_list || false,
+          teknologier: k.teknologier || [],
+          signal: signal || "Ukjent om behov",
+          siste_kontakt: sisteKontakt,
+        };
+      });
+
+      const { data, error } = await supabase.functions.invoke("match-contacts-for-consultant", {
+        body: {
+          konsulent: {
+            navn: ansatt.navn,
+            teknologier: ansatt.kompetanse || [],
+            erfaring_aar: ansatt.erfaring_aar || null,
+            geografi: ansatt.geografi || null,
+            tilgjengelig_fra: ansatt.tilgjengelig_fra || null,
+          },
+          kontakter: berikede,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setLeadsResults(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      toast.error(err.message || "Kunne ikke kjøre matching");
+      setLeadsResults([]);
+    } finally {
+      setLeadsLoading(false);
+    }
+  };
+
   const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
 
   return (
