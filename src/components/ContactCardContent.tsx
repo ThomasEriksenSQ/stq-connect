@@ -187,6 +187,60 @@ function InlineField({
   );
 }
 
+const SUGGESTED_TECH_TAGS = ["C++", "C", "Embedded", "Yocto", "Linux", "Qt", "FPGA", "Python", "SPI/I2C", "MCU", "Embedded Linux", "Sikkerhet", "AUTOSAR", "FreeRTOS"];
+
+function TechTagEditor({ tags, onSave }: { tags: string[]; onSave: (tags: string[]) => void }) {
+  const [input, setInput] = useState("");
+
+  const addTag = (tag: string) => {
+    const t = tag.trim();
+    if (t && !tags.includes(t)) onSave([...tags, t]);
+    setInput("");
+  };
+
+  const removeTag = (tag: string) => {
+    onSave(tags.filter(t => t !== tag));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.key === "Enter" || e.key === ",") && input.trim()) {
+      e.preventDefault();
+      addTag(input);
+    }
+  };
+
+  return (
+    <div>
+      <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Teknisk profil</span>
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 p-2 border border-border rounded-lg bg-background min-h-[36px]">
+        {tags.map(t => (
+          <span key={t} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-[0.75rem] text-foreground">
+            {t}
+            <button onClick={() => removeTag(t)} className="hover:text-destructive">
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        ))}
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={tags.length === 0 ? "Legg til teknologi..." : ""}
+          className="flex-1 min-w-[100px] bg-transparent outline-none text-[0.8125rem] placeholder:text-muted-foreground"
+        />
+      </div>
+      <div className="flex flex-wrap gap-1.5 mt-1.5">
+        {SUGGESTED_TECH_TAGS.filter(s => !tags.includes(s)).slice(0, 8).map(s => (
+          <button key={s} onClick={() => addTag(s)}
+            className="h-6 px-2 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors">
+            {s}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const DATE_CHIPS = [
   { label: "I dag", fn: () => new Date() },
   { label: "1 uke", fn: () => addWeeks(new Date(), 1) },
