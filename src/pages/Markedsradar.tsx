@@ -923,6 +923,22 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
     }
   };
 
+  const doProcess = async () => {
+    setProcessing(true);
+    setProcessResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("process-finn-import");
+      if (error) throw error;
+      setProcessResult(data);
+      toast({ title: "Prosessering fullført", description: `${data.matched_til_selskap} annonser koblet til selskaper, ${data.selskaps_profiler_oppdatert} DNA-profiler oppdatert` });
+      refetch();
+    } catch (e: any) {
+      toast({ title: "Feil", description: e.message, variant: "destructive" });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-2xl">
