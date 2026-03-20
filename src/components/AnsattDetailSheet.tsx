@@ -264,6 +264,19 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
               </div>
 
               <div>
+                <label className={LABEL}>Tilgjengelig fra</label>
+                <Input
+                  type="date"
+                  value={form.tilgjengelig_fra}
+                  onChange={(e) => set("tilgjengelig_fra", e.target.value)}
+                  className="mt-1 text-[0.875rem]"
+                />
+                <p className="text-[0.6875rem] text-muted-foreground mt-1">
+                  Når kan konsulenten starte et nytt oppdrag? (kan være etter fornyelsesdato)
+                </p>
+              </div>
+
+              <div>
                 <label className={cn(LABEL, "mb-1.5 block")}>Status</label>
                 <div className="flex gap-2">
                   {STATUS_OPTIONS.map((s) => (
