@@ -751,15 +751,40 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
               Selskap <Pencil className="h-2.5 w-2.5" />
             </button>
           )}
-          {(contact.companies as any)?.city && (
-            <>
-              <span className="text-muted-foreground/40">·</span>
-              <span className="inline-flex items-center gap-0.5">
-                <MapPin className="h-3 w-3 text-muted-foreground/50" />
-                {(contact.companies as any).city}
-              </span>
-            </>
-          )}
+          {(() => {
+            const contactLocations: string[] = (contact as any).locations || [];
+            if (companyLocations.length === 0) return null;
+            return (
+              <>
+                <span className="text-muted-foreground/40">·</span>
+                <div className="inline-flex items-center gap-1 flex-wrap">
+                  <MapPin className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+                  {companyLocations.map((loc) => {
+                    const isSelected = contactLocations.includes(loc);
+                    return (
+                      <button
+                        key={loc}
+                        onClick={() => {
+                          const next = isSelected
+                            ? contactLocations.filter((l) => l !== loc)
+                            : [...contactLocations, loc];
+                          updateMutation.mutate({ locations: next } as any);
+                        }}
+                        className={cn(
+                          "text-[0.8125rem] px-1.5 py-0 rounded transition-colors",
+                          isSelected
+                            ? "text-foreground font-medium"
+                            : "text-muted-foreground/40 hover:text-muted-foreground"
+                        )}
+                      >
+                        {loc}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            );
+          })()}
           {(contact as any).location && (
             <>
               <span className="text-muted-foreground/40">·</span>
