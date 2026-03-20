@@ -23,6 +23,8 @@ interface Konsulent {
   /** For linking: internal ansatt id or external consultant id */
   ansatt_id?: number;
   ekstern_id?: string;
+  forny_dato?: string | null;
+  erfaring_aar?: number | null;
 }
 
 type MatchFilter = "Alle" | "Høy score" | "Frist snart";
