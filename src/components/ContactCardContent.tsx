@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Phone, Mail, Linkedin, FileText, Clock, ExternalLink, Pencil, Trash2, ChevronDown, ChevronUp, Plus, MessageCircle, PhoneOff, Send, Signal } from "lucide-react";
+import { Phone, Mail, Linkedin, FileText, Clock, ExternalLink, Pencil, Trash2, ChevronDown, ChevronUp, Plus, MessageCircle, PhoneOff, Send, Signal, X } from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday, getYear, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { nb } from "date-fns/locale";
@@ -184,6 +184,60 @@ function InlineField({
       <span>{value || placeholder || "—"}</span>
       <Pencil className="h-2.5 w-2.5 opacity-0 group-hover:opacity-50 transition-opacity flex-shrink-0" />
     </button>
+  );
+}
+
+const SUGGESTED_TECH_TAGS = ["C++", "C", "Embedded", "Yocto", "Linux", "Qt", "FPGA", "Python", "SPI/I2C", "MCU", "Embedded Linux", "Sikkerhet", "AUTOSAR", "FreeRTOS"];
+
+function TechTagEditor({ tags, onSave }: { tags: string[]; onSave: (tags: string[]) => void }) {
+  const [input, setInput] = useState("");
+
+  const addTag = (tag: string) => {
+    const t = tag.trim();
+    if (t && !tags.includes(t)) onSave([...tags, t]);
+    setInput("");
+  };
+
+  const removeTag = (tag: string) => {
+    onSave(tags.filter(t => t !== tag));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.key === "Enter" || e.key === ",") && input.trim()) {
+      e.preventDefault();
+      addTag(input);
+    }
+  };
+
+  return (
+    <div>
+      <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Teknisk profil</span>
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 p-2 border border-border rounded-lg bg-background min-h-[36px]">
+        {tags.map(t => (
+          <span key={t} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-[0.75rem] text-foreground">
+            {t}
+            <button onClick={() => removeTag(t)} className="hover:text-destructive">
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        ))}
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={tags.length === 0 ? "Legg til teknologi..." : ""}
+          className="flex-1 min-w-[100px] bg-transparent outline-none text-[0.8125rem] placeholder:text-muted-foreground"
+        />
+      </div>
+      <div className="flex flex-wrap gap-1.5 mt-1.5">
+        {SUGGESTED_TECH_TAGS.filter(s => !tags.includes(s)).slice(0, 8).map(s => (
+          <button key={s} onClick={() => addTag(s)}
+            className="h-6 px-2 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors">
+            {s}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -675,6 +729,21 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           )}
         </div>
 
+        {/* Avdeling */}
+        {editable && (
+          <div className="flex items-center gap-1 mt-0.5 text-[0.875rem] text-foreground/60">
+            <InlineField
+              value={(contact as any).department || ""}
+              onSave={(v) => updateMutation.mutate({ department: v || null })}
+              placeholder="Avdeling"
+              className="text-[0.875rem]"
+            />
+          </div>
+        )}
+        {!editable && (contact as any).department && (
+          <p className="text-[0.875rem] text-foreground/60 mt-0.5">{(contact as any).department}</p>
+        )}
+
         {/* Line 3: Checkboxes */}
         <div className="flex items-center gap-3 mt-2">
           <label className="inline-flex items-center gap-1.5 cursor-pointer">
@@ -690,6 +759,25 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
             <span className="text-[0.75rem] text-foreground">Innkjøper</span>
           </label>
         </div>
+
+        {/* Teknologitagger */}
+        {editable && (
+          <div className="mt-3">
+            <TechTagEditor
+              tags={(contact as any).teknologier || []}
+              onSave={(tags) => updateMutation.mutate({ teknologier: tags })}
+            />
+          </div>
+        )}
+        {!editable && (contact as any).teknologier?.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {((contact as any).teknologier as string[]).map((t: string) => (
+              <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.75rem] font-medium text-foreground">
+                {t}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* AI Signal suggestion */}
         {editable && activities.length > 0 && (() => {
