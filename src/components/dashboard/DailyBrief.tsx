@@ -7,16 +7,19 @@ import { getEffectiveSignal, CATEGORIES } from "@/lib/categoryUtils";
 import { calcHeatScore } from "@/lib/heatScore";
 import { differenceInDays, isPast, isToday, format, addWeeks, addMonths } from "date-fns";
 import { nb } from "date-fns/locale";
-import { Flame, Target, Clock, ChevronRight, Sparkles, Loader2, Calendar, Check } from "lucide-react";
+import { Flame, Target, ChevronRight, Sparkles, Loader2, Calendar, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const DATE_CHIPS = [
   { label: "1 uke", fn: () => addWeeks(new Date(), 1) },
   { label: "2 uker", fn: () => addWeeks(new Date(), 2) },
   { label: "1 mnd", fn: () => addMonths(new Date(), 1) },
 ];
+
+const SIGNAL_OPTIONS = CATEGORIES.map(c => c.label);
 
 const DailyBrief = () => {
   const navigate = useNavigate();
@@ -31,6 +34,25 @@ const DailyBrief = () => {
   const [oppfolgingTittel, setOppfolgingTittel] = useState("Følg opp om behov");
   const [savingOppfolging, setSavingOppfolging] = useState(false);
   const [selectedChip, setSelectedChip] = useState<number | null>(null);
+  const [ownerFilter, setOwnerFilter] = useState<string | null>(null); // null = current user initially
+
+  // Fetch profiles for the owner filter
+  const { data: profiles } = useQuery({
+    queryKey: ["profiles-for-filter"],
+    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("id, full_name");
+      return data || [];
+    },
+  });
+
+  // Set initial owner filter to current user once we know both
+  const effectiveOwnerFilter = ownerFilter === undefined ? null : ownerFilter;
+  const activeOwnerId = useMemo(() => {
+    if (effectiveOwnerFilter === "all") return null;
+    if (effectiveOwnerFilter) return effectiveOwnerFilter;
+    return user?.id || null;
+  }, [effectiveOwnerFilter, user?.id]);
 
   const { data: rawData } = useQuery({
     queryKey: ["salgssenteret-data"],
@@ -42,27 +64,45 @@ const DailyBrief = () => {
         { data: tasks },
         { data: foresporsler },
         { data: oppdrag },
-        { data: ansatte },
       ] = await Promise.all([
-        supabase.from("contacts").select("id, first_name, last_name, company_id, call_list, phone, email, companies(id, name)").limit(500),
+        supabase.from("contacts").select("id, first_name, last_name, company_id, call_list, phone, email, owner_id, companies(id, name)").limit(500),
         supabase.from("activities").select("contact_id, created_at, subject, description").not("contact_id", "is", null).order("created_at", { ascending: false }),
-        supabase.from("tasks").select("contact_id, created_at, title, description, due_date, status").not("contact_id", "is", null).neq("status", "done"),
+        supabase.from("tasks").select("contact_id, created_at, title, description, due_date, status, assigned_to").not("contact_id", "is", null).neq("status", "done"),
         supabase.from("foresporsler").select("id, selskap_id, selskap_navn, teknologier, mottatt_dato").gte("mottatt_dato", new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)),
         supabase.from("stacq_oppdrag").select("id, kandidat, kunde, forny_dato, status").in("status", ["Aktiv", "Oppstart"]),
-        supabase.from("stacq_ansatte").select("id, navn, kompetanse, tilgjengelig_fra, erfaring_aar").in("status", ["AKTIV/SIGNERT"]),
       ]);
-      return { contacts: contacts || [], activities: activities || [], tasks: tasks || [], foresporsler: foresporsler || [], oppdrag: oppdrag || [], ansatte: ansatte || [] };
+      return { contacts: contacts || [], activities: activities || [], tasks: tasks || [], foresporsler: foresporsler || [], oppdrag: oppdrag || [] };
     },
   });
 
+  // Group activities and tasks by contact_id once
+  const grouped = useMemo(() => {
+    if (!rawData) return { actsByContact: new Map(), tasksByContact: new Map() };
+    const actsByContact = new Map<string, any[]>();
+    for (const a of rawData.activities) {
+      if (!a.contact_id) continue;
+      if (!actsByContact.has(a.contact_id)) actsByContact.set(a.contact_id, []);
+      actsByContact.get(a.contact_id)!.push(a);
+    }
+    const tasksByContact = new Map<string, any[]>();
+    for (const t of rawData.tasks) {
+      if (!t.contact_id) continue;
+      if (!tasksByContact.has(t.contact_id)) tasksByContact.set(t.contact_id, []);
+      tasksByContact.get(t.contact_id)!.push(t);
+    }
+    return { actsByContact, tasksByContact };
+  }, [rawData]);
+
   const rankedContacts = useMemo(() => {
     if (!rawData) return [];
-    const { contacts, activities, tasks, foresporsler } = rawData;
+    const { contacts, foresporsler } = rawData;
+    const { actsByContact, tasksByContact } = grouped;
 
     return contacts
+      .filter(contact => !activeOwnerId || contact.owner_id === activeOwnerId)
       .map(contact => {
-        const cActs = activities.filter((a: any) => a.contact_id === contact.id);
-        const cTasks = tasks.filter((t: any) => t.contact_id === contact.id);
+        const cActs = actsByContact.get(contact.id) || [];
+        const cTasks = tasksByContact.get(contact.id) || [];
         const score = calcHeatScore(contact, cActs, cTasks, foresporsler);
         const signal = getEffectiveSignal(
           cActs.map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
@@ -75,7 +115,7 @@ const DailyBrief = () => {
       .filter(c => c.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 15);
-  }, [rawData]);
+  }, [rawData, grouped, activeOwnerId]);
 
   const konsulenterLedig = useMemo(() => {
     if (!rawData) return [];
@@ -93,11 +133,17 @@ const DailyBrief = () => {
     if (!rawData) return { forfalt: 0, idag: 0, behovNa: 0, foresporsler: 0 };
     const now = new Date();
     const todayStr = now.toISOString().slice(0, 10);
-    const forfalt = rawData.tasks.filter((t: any) => t.due_date && t.due_date < todayStr).length;
-    const idag = rawData.tasks.filter((t: any) => t.due_date === todayStr).length;
+
+    // Filter tasks by owner if needed
+    const filteredTasks = activeOwnerId
+      ? rawData.tasks.filter((t: any) => t.assigned_to === activeOwnerId)
+      : rawData.tasks;
+
+    const forfalt = filteredTasks.filter((t: any) => t.due_date && t.due_date < todayStr).length;
+    const idag = filteredTasks.filter((t: any) => t.due_date === todayStr).length;
     const behovNa = rankedContacts.filter(c => c.signal === "Behov nå").length;
     return { forfalt, idag, behovNa, foresporsler: rawData.foresporsler.length };
-  }, [rawData, rankedContacts]);
+  }, [rawData, rankedContacts, activeOwnerId]);
 
   const handleSelectContact = async (contact: any) => {
     setSelectedContact(contact);
@@ -165,10 +211,63 @@ const DailyBrief = () => {
     }
   };
 
+  const handleSetSignal = async (contactId: string, companyId: string | null, signalLabel: string) => {
+    try {
+      await supabase.from("activities").insert({
+        subject: signalLabel,
+        type: "note",
+        contact_id: contactId,
+        company_id: companyId,
+        created_by: user?.id,
+      });
+      toast.success(`Signal satt: ${signalLabel}`);
+      queryClient.invalidateQueries({ queryKey: ["salgssenteret-data"] });
+    } catch {
+      toast.error("Kunne ikke sette signal");
+    }
+  };
+
   const signalCat = selectedContact ? CATEGORIES.find(c => c.label === selectedContact.signal) : null;
+
+  // Build owner filter pills
+  const ownerPills = useMemo(() => {
+    if (!profiles) return [];
+    return [
+      { id: "all", label: "Alle" },
+      ...profiles.map(p => ({
+        id: p.id,
+        label: p.full_name.split(" ")[0], // First name for compact pill
+      })),
+    ];
+  }, [profiles]);
 
   return (
     <div className="space-y-4">
+      {/* Owner filter pills */}
+      {ownerPills.length > 1 && (
+        <div className="flex items-center gap-1">
+          {ownerPills.map(pill => {
+            const isActive = pill.id === "all"
+              ? effectiveOwnerFilter === "all"
+              : pill.id === (effectiveOwnerFilter || user?.id);
+            return (
+              <button
+                key={pill.id}
+                onClick={() => setOwnerFilter(pill.id)}
+                className={cn(
+                  "h-7 px-3 text-[0.75rem] rounded-full border transition-colors",
+                  isActive
+                    ? "bg-foreground text-background border-foreground font-medium"
+                    : "border-border text-muted-foreground hover:bg-secondary"
+                )}
+              >
+                {pill.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Live stats */}
       <div className="grid grid-cols-4 gap-3">
         {[
@@ -203,16 +302,18 @@ const DailyBrief = () => {
                   const isSelected = selectedContact?.id === contact.id;
                   const sigCat = CATEGORIES.find(c => c.label === contact.signal);
                   return (
-                    <button
+                    <div
                       key={contact.id}
-                      onClick={() => handleSelectContact(contact)}
                       className={cn(
-                        "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors",
+                        "flex items-center gap-3 px-4 py-3 transition-colors",
                         isSelected ? "bg-primary/5 border-l-2 border-l-primary" : "hover:bg-muted/40",
                         contact.harForfalt && !isSelected && "border-l-2 border-l-destructive"
                       )}
                     >
-                      <div className="flex-1 min-w-0">
+                      <button
+                        onClick={() => handleSelectContact(contact)}
+                        className="flex-1 min-w-0 text-left"
+                      >
                         <div className="flex items-center gap-1.5">
                           <span className="text-[0.875rem] font-medium text-foreground truncate">
                             {contact.first_name} {contact.last_name}
@@ -222,17 +323,47 @@ const DailyBrief = () => {
                           )}
                         </div>
                         <p className="text-[0.75rem] text-muted-foreground truncate">{(contact.companies as any)?.name || ""}</p>
-                        {sigCat && (
-                          <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold mt-0.5", sigCat.badgeColor)}>
-                            {contact.signal}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
+                      </button>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <span className={cn("text-[0.8125rem] font-bold", contact.score >= 60 ? "text-emerald-600" : contact.score >= 40 ? "text-amber-600" : "text-muted-foreground")}>{contact.score}p</span>
+
+                        {/* Signal picker popover */}
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              className={cn(
+                                "inline-flex items-center rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold max-w-[5.5rem] truncate",
+                                sigCat ? sigCat.badgeColor : "border-border text-muted-foreground/50 bg-transparent"
+                              )}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {contact.signal || "—"}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-44 p-1" align="end" side="bottom">
+                            {SIGNAL_OPTIONS.map(opt => {
+                              const optCat = CATEGORIES.find(c => c.label === opt);
+                              return (
+                                <button
+                                  key={opt}
+                                  onClick={() => handleSetSignal(contact.id, contact.company_id, opt)}
+                                  className={cn(
+                                    "w-full text-left px-3 py-1.5 text-[0.8125rem] rounded-md hover:bg-muted transition-colors",
+                                    contact.signal === opt && "font-semibold"
+                                  )}
+                                >
+                                  <span className={cn("inline-block w-2 h-2 rounded-full mr-2", optCat?.badgeColor.split(" ")[0])} />
+                                  {opt}
+                                </button>
+                              );
+                            })}
+                          </PopoverContent>
+                        </Popover>
+
                         <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
                       </div>
-                    </button>
+                    </div>
                   );
                 })
               )}
