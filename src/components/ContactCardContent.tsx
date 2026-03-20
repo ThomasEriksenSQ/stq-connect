@@ -224,20 +224,39 @@ function TechTagEditor({ tags, onSave, contact, updateMutation, showAnalyze, set
   const handleAnalyzeText = async () => {
     setIsAnalyzing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("extract-knowledge", {
+      const { data, error } = await supabase.functions.invoke("chat", {
         body: {
-          text: analyzeText,
-          prompt: `Analyser denne teksten og trekk ut relevante teknologier, programmeringsspråk, rammeverk og fagområder som er relevante for embedded/firmware/C/C++ konsulentbransjen. Returner KUN en JSON-array med strings, ingen annen tekst. Eksempel: ["C++", "Embedded Linux", "RTOS"]`
+          messages: [{
+            role: "user",
+            content: `Analyser denne teksten og trekk ut relevante teknologier, programmeringsspråk, rammeverk og fagområder som er relevante for embedded/firmware/C/C++ konsulentbransjen. Returner KUN en JSON-array med strings, ingen annen tekst. Eksempel: ["C++", "Embedded Linux", "RTOS"]\n\nTekst:\n${analyzeText}`
+          }]
         }
       });
       if (error) throw error;
-      const resultText = typeof data === "string" ? data : (data?.content?.[0]?.text || data?.result || JSON.stringify(data));
+      // Parse SSE streamed response or direct JSON
+      let resultText = "";
+      if (typeof data === "string") {
+        // SSE response - extract content from data lines
+        const lines = data.split("\n");
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.message?.content || "";
+            resultText += content;
+          } catch { /* skip partial */ }
+        }
+      } else {
+        resultText = data?.choices?.[0]?.message?.content || JSON.stringify(data);
+      }
       const clean = resultText.replace(/```json|```/g, "").trim();
       const parsed: string[] = JSON.parse(clean);
       const existing = tags || [];
       const merged = [...new Set([...existing, ...parsed])];
       onSave(merged);
-      setShowAnalyze(false);
+      if (setShowAnalyze) setShowAnalyze(false);
       setAnalyzeText("");
       toast.success(`${parsed.filter(t => !existing.includes(t)).length} teknologier lagt til`);
     } catch {
