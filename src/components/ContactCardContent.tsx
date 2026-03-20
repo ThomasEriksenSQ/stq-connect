@@ -433,6 +433,39 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
     },
   });
 
+  const handleFinnKonsulent = async () => {
+    const teknologier = (contact as any)?.teknologier || [];
+    if (!teknologier.length) {
+      toast("Legg til teknisk profil på kontakten først");
+      return;
+    }
+    setMatchingConsultants(true);
+    setConsultantResults(null);
+    try {
+      const { data: interne } = await supabase
+        .from("stacq_ansatte")
+        .select("id, navn, kompetanse, geografi, erfaring_aar, status")
+        .in("status", ["AKTIV/SIGNERT"]);
+
+      const { data, error } = await supabase.functions.invoke("match-contact-to-consultants", {
+        body: {
+          kontakt_teknologier: teknologier,
+          kontakt_navn: contact ? `${contact.first_name} ${contact.last_name}` : "",
+          selskap_navn: companyName || "",
+          interne: interne || [],
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setConsultantResults(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      toast.error(err.message || "Kunne ikke kjøre matching");
+      setConsultantResults([]);
+    } finally {
+      setMatchingConsultants(false);
+    }
+  };
+
   const openForm = (type: "call" | "meeting" | "task") => {
     setActiveForm(type);
     setFormTitle(type === "task" ? "Følg opp om behov" : "");
