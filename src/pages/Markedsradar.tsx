@@ -853,6 +853,8 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
   const { toast } = useToast();
   const [rows, setRows] = useState<any[]>([]);
   const [importing, setImporting] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [processResult, setProcessResult] = useState<any>(null);
   const [fileName, setFileName] = useState("");
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -921,6 +923,22 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
     }
   };
 
+  const doProcess = async () => {
+    setProcessing(true);
+    setProcessResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("process-finn-import");
+      if (error) throw error;
+      setProcessResult(data);
+      toast({ title: "Prosessering fullført", description: `${data.matched_til_selskap} annonser koblet til selskaper, ${data.selskaps_profiler_oppdatert} DNA-profiler oppdatert` });
+      refetch();
+    } catch (e: any) {
+      toast({ title: "Feil", description: e.message, variant: "destructive" });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-2xl">
@@ -963,12 +981,32 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Avbryt</Button>
-          <Button onClick={doImport} disabled={rows.length === 0 || importing}>
-            {importing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            Importer {rows.length} rader
-          </Button>
+        <DialogFooter className="flex-col gap-2">
+          {processResult && (
+            <div className="w-full rounded-lg bg-muted px-4 py-3 text-[0.8125rem] space-y-1">
+              <p className="font-medium text-foreground">Prosessering fullført</p>
+              <p className="text-muted-foreground">Behandlet: {processResult.annonser_behandlet} annonser</p>
+              <p className="text-muted-foreground">Koblet til selskap: {processResult.matched_til_selskap}</p>
+              <p className="text-muted-foreground">Ikke matchet: {processResult.ikke_matchet}</p>
+              <p className="text-muted-foreground">DNA-profiler oppdatert: {processResult.selskaps_profiler_oppdatert}</p>
+            </div>
+          )}
+          <div className="flex gap-2 w-full justify-end">
+            <Button variant="outline" onClick={onClose}>Avbryt</Button>
+            <Button
+              variant="outline"
+              onClick={doProcess}
+              disabled={processing}
+              className="gap-2"
+            >
+              {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              Prosesser Finn-data
+            </Button>
+            <Button onClick={doImport} disabled={rows.length === 0 || importing}>
+              {importing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Importer {rows.length} rader
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
