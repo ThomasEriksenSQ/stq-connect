@@ -1020,9 +1020,6 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
           {/* ── Teknisk DNA ── */}
           {editable && (
             <div className="mt-6 space-y-2">
-              <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                Teknisk DNA
-              </h3>
               <CompanyDnaPanel companyId={companyId} />
             </div>
           )}
