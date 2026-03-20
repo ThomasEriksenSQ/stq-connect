@@ -1296,56 +1296,23 @@ function CompanyActivityRow({ activity, profileMap, companyId, navigate }: {
 }
 
 /* ── Company DNA Panel ── */
-function CompanyDnaPanel({ companyId }: { companyId: string }) {
+function CompanyDnaPanel({ companyId, onFinnKonsulenter, matchingKonsulenter }: { companyId: string; onFinnKonsulenter: () => void; matchingKonsulenter: boolean }) {
   const queryClient = useQueryClient();
 
   const { data: dnaProfile } = useQuery({
-    queryKey: ["company-tech-profile", companyId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("company_tech_profile")
-        .select("*")
-        .eq("company_id", companyId)
-        .single();
-      return data || null;
-    },
+...
     enabled: !!companyId,
   });
 
   // Hent teknologier fra forespørsler for dette selskapet
   const { data: foresporslerTags = [] } = useQuery({
-    queryKey: ["company-foresporsler-tags", companyId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("foresporsler")
-        .select("teknologier")
-        .eq("selskap_id", companyId);
-      if (!data) return [];
-      const all: string[] = [];
-      data.forEach(f => { if (f.teknologier) all.push(...f.teknologier); });
-      // Tell frekvens
-      const freq: Record<string, number> = {};
-      all.forEach(t => { freq[t] = (freq[t] || 0) + 1; });
-      return Object.entries(freq)
-        .sort((a, b) => b[1] - a[1])
-        .map(([tag, count]) => ({ tag, count }));
-    },
+...
     enabled: !!companyId,
   });
 
   // Hent teknologier fra kontakter på dette selskapet
   const { data: contactTags = [] } = useQuery({
-    queryKey: ["company-contact-tags", companyId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("contacts")
-        .select("teknologier")
-        .eq("company_id", companyId);
-      if (!data) return [];
-      const all: string[] = [];
-      data.forEach(c => { if ((c as any).teknologier) all.push(...(c as any).teknologier); });
-      return [...new Set(all)];
-    },
+...
     enabled: !!companyId,
   });
 
@@ -1354,14 +1321,27 @@ function CompanyDnaPanel({ companyId }: { companyId: string }) {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-        Teknisk DNA
-        {dnaProfile?.konsulent_hyppighet ? (
-          <span className="ml-2 text-muted-foreground/50 font-normal normal-case tracking-normal">
-            · {dnaProfile.konsulent_hyppighet} annonser
-          </span>
-        ) : null}
-      </h3>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+          Teknisk DNA
+          {dnaProfile?.konsulent_hyppighet ? (
+            <span className="ml-2 text-muted-foreground/50 font-normal normal-case tracking-normal">
+              · {dnaProfile.konsulent_hyppighet} annonser
+            </span>
+          ) : null}
+        </h3>
+        <button
+          onClick={onFinnKonsulenter}
+          disabled={matchingKonsulenter}
+          className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+        >
+          {matchingKonsulenter ? (
+            <><Loader2 className="h-3.5 w-3.5 animate-spin" />Matcher...</>
+          ) : (
+            <><Target className="h-3.5 w-3.5 text-primary" /> Finn konsulenter</>
+          )}
+        </button>
+      </div>
 
       {!hasDna && (
         <p className="text-[0.8125rem] text-muted-foreground/60 italic">
