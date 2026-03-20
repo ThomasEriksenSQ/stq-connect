@@ -9,10 +9,34 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
-import { Phone, Mail, Globe, Linkedin, FileText, Calendar, CalendarDays, ExternalLink, ChevronRight, ChevronDown, Pencil, User, MessageCircle, Plus, Trash2, MapPin, Loader2, Target } from "lucide-react";
+import {
+  Phone,
+  Mail,
+  Globe,
+  Linkedin,
+  FileText,
+  Calendar,
+  CalendarDays,
+  ExternalLink,
+  ChevronRight,
+  ChevronDown,
+  Pencil,
+  User,
+  MessageCircle,
+  Plus,
+  Trash2,
+  MapPin,
+  Loader2,
+  Target,
+} from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday, getYear } from "date-fns";
 import { nb } from "date-fns/locale";
@@ -24,14 +48,33 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { CATEGORIES as SIGNAL_CATEGORIES, getEffectiveSignal, extractCategory } from "@/lib/categoryUtils";
 
-
 /* ── Category system (shared with ContactCardContent) ── */
 const CATEGORIES = [
-  { label: "Behov nå", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200", selectedColor: "bg-emerald-500 text-white border-emerald-500" },
-  { label: "Får fremtidig behov", badgeColor: "bg-blue-100 text-blue-800 border-blue-200", selectedColor: "bg-blue-500 text-white border-blue-500" },
-  { label: "Får kanskje behov", badgeColor: "bg-amber-100 text-amber-800 border-amber-200", selectedColor: "bg-amber-500 text-white border-amber-500" },
-  { label: "Ukjent om behov", badgeColor: "bg-gray-100 text-gray-600 border-gray-200", selectedColor: "bg-gray-400 text-white border-gray-400" },
-  { label: "Ikke aktuelt", badgeColor: "bg-red-50 text-red-700 border-red-200", selectedColor: "bg-red-400 text-white border-red-400" },
+  {
+    label: "Behov nå",
+    badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    selectedColor: "bg-emerald-500 text-white border-emerald-500",
+  },
+  {
+    label: "Får fremtidig behov",
+    badgeColor: "bg-blue-100 text-blue-800 border-blue-200",
+    selectedColor: "bg-blue-500 text-white border-blue-500",
+  },
+  {
+    label: "Får kanskje behov",
+    badgeColor: "bg-amber-100 text-amber-800 border-amber-200",
+    selectedColor: "bg-amber-500 text-white border-amber-500",
+  },
+  {
+    label: "Ukjent om behov",
+    badgeColor: "bg-gray-100 text-gray-600 border-gray-200",
+    selectedColor: "bg-gray-400 text-white border-gray-400",
+  },
+  {
+    label: "Ikke aktuelt",
+    badgeColor: "bg-red-50 text-red-700 border-red-200",
+    selectedColor: "bg-red-400 text-white border-red-400",
+  },
 ] as const;
 
 const LEGACY_CATEGORY_MAP: Record<string, string> = {
@@ -57,7 +100,13 @@ function CategoryBadge({ label, className }: { label: string; className?: string
   const isKnown = CATEGORIES.some((c) => c.label === normalized);
   if (!isKnown) return null;
   return (
-    <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", color, className)}>
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+        color,
+        className,
+      )}
+    >
       {normalized}
     </span>
   );
@@ -75,7 +124,7 @@ function CategoryPicker({ selected, onSelect }: { selected: string; onSelect: (v
             "h-7 px-2.5 text-[0.75rem] rounded-full border transition-all font-medium",
             selected === cat.label
               ? cat.selectedColor
-              : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
+              : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground",
           )}
         >
           {cat.label}
@@ -95,7 +144,7 @@ function parseDescriptionCategory(description: string | null): { category: strin
   const match = description.match(/^\[([^\]]+)\]\n?([\s\S]*)$/);
   if (match) {
     const cat = match[1];
-    if (CATEGORIES.some(c => c.label === cat) || Object.keys(LEGACY_CATEGORY_MAP).includes(cat)) {
+    if (CATEGORIES.some((c) => c.label === cat) || Object.keys(LEGACY_CATEGORY_MAP).includes(cat)) {
       return { category: normalizeCategoryLabel(cat), text: match[2].trim() };
     }
   }
@@ -104,7 +153,7 @@ function parseDescriptionCategory(description: string | null): { category: strin
 
 function extractTitleAndCategory(subject: string, description: string | null) {
   const normalizedSubject = normalizeCategoryLabel(subject);
-  if (CATEGORIES.some(c => c.label === normalizedSubject)) {
+  if (CATEGORIES.some((c) => c.label === normalizedSubject)) {
     return { title: normalizedSubject, category: normalizedSubject, cleanDesc: "" };
   }
   const parsed = parseDescriptionCategory(description);
@@ -126,15 +175,35 @@ interface CompanyCardContentProps {
   onNavigateToFullPage?: () => void;
 }
 
-export function CompanyCardContent({ companyId, editable = false, onOpenContact, onNavigateToFullPage }: CompanyCardContentProps) {
+export function CompanyCardContent({
+  companyId,
+  editable = false,
+  onOpenContact,
+  onNavigateToFullPage,
+}: CompanyCardContentProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
   const [newContactOpen, setNewContactOpen] = useState(false);
-  const [contactForm, setContactForm] = useState({ first_name: "", last_name: "", email: "", phone: "", title: "", linkedin: "", location: "" });
+  const [contactForm, setContactForm] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone: "",
+    title: "",
+    linkedin: "",
+    location: "",
+  });
   const [editCompanyOpen, setEditCompanyOpen] = useState(false);
-  const [editForm, setEditForm] = useState({ name: "", org_number: "", city: "", website: "", linkedin: "", locations: [] as string[] });
+  const [editForm, setEditForm] = useState({
+    name: "",
+    org_number: "",
+    city: "",
+    website: "",
+    linkedin: "",
+    locations: [] as string[],
+  });
   const [newLocation, setNewLocation] = useState("");
   const [signalPickerOpen, setSignalPickerOpen] = useState(false);
   const [pendingSignal, setPendingSignal] = useState<string | null>(null);
@@ -147,7 +216,11 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   const { data: company, isLoading } = useQuery({
     queryKey: ["company", companyId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("companies").select("*, profiles!companies_owner_id_fkey(full_name)").eq("id", companyId).single();
+      const { data, error } = await supabase
+        .from("companies")
+        .select("*, profiles!companies_owner_id_fkey(full_name)")
+        .eq("id", companyId)
+        .single();
       if (error) throw error;
       return data;
     },
@@ -157,7 +230,12 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   // Pre-fill edit form when dialog opens
   useEffect(() => {
     if (editCompanyOpen && company) {
-      const locs = company.city ? company.city.split(",").map((l: string) => l.trim()).filter(Boolean) : [];
+      const locs = company.city
+        ? company.city
+            .split(",")
+            .map((l: string) => l.trim())
+            .filter(Boolean)
+        : [];
       setEditForm({
         name: company.name || "",
         org_number: company.org_number || "",
@@ -174,12 +252,12 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   useEffect(() => {
     const cleaned = editForm.org_number.replace(/\s/g, "");
     if (cleaned.length !== 9 || !/^\d{9}$/.test(cleaned)) return;
-    lookupByOrgNr(cleaned).then(r => {
+    lookupByOrgNr(cleaned).then((r) => {
       if (r) {
-        if (!editForm.name) setEditForm(prev => ({ ...prev, name: r.navn }));
+        if (!editForm.name) setEditForm((prev) => ({ ...prev, name: r.navn }));
         const city = r.forretningsadresse?.kommune || null;
         if (city && editForm.locations.length === 0) {
-          setEditForm(prev => ({ ...prev, locations: [city] }));
+          setEditForm((prev) => ({ ...prev, locations: [city] }));
         }
       }
     });
@@ -193,7 +271,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
       return data;
     },
   });
-  const profileMapFull = Object.fromEntries(allProfiles.map(p => [p.id, p.full_name]));
+  const profileMapFull = Object.fromEntries(allProfiles.map((p) => [p.id, p.full_name]));
 
   const { data: contacts = [] } = useQuery({
     queryKey: ["company-contacts", companyId],
@@ -209,28 +287,16 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
     enabled: !!companyId,
   });
 
-  const { data: techProfile } = useQuery({
-    queryKey: ["company-tech-profile", companyId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("company_tech_profile")
-        .select("teknologier, konsulent_hyppighet, sist_fra_finn")
-        .eq("company_id", companyId)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!companyId,
-  });
-
-  const contactIds = contacts.map(c => c.id);
+  const contactIds = contacts.map((c) => c.id);
 
   const { data: companyActivities = [] } = useQuery({
     queryKey: ["company-activities-direct", companyId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("activities").select("*, contacts(first_name, last_name)")
-        .eq("company_id", companyId).order("created_at", { ascending: false });
+        .from("activities")
+        .select("*, contacts(first_name, last_name)")
+        .eq("company_id", companyId)
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -242,8 +308,10 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
     queryFn: async () => {
       if (contactIds.length === 0) return [];
       const { data, error } = await supabase
-        .from("activities").select("*, contacts(first_name, last_name)")
-        .in("contact_id", contactIds).order("created_at", { ascending: false });
+        .from("activities")
+        .select("*, contacts(first_name, last_name)")
+        .in("contact_id", contactIds)
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -251,18 +319,22 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   });
 
   const allActivitiesMap = new Map<string, any>();
-  companyActivities.forEach(a => allActivitiesMap.set(a.id, a));
-  contactActivities.forEach(a => { if (!allActivitiesMap.has(a.id)) allActivitiesMap.set(a.id, a); });
-  const activities = Array.from(allActivitiesMap.values()).sort((a, b) =>
-    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  companyActivities.forEach((a) => allActivitiesMap.set(a.id, a));
+  contactActivities.forEach((a) => {
+    if (!allActivitiesMap.has(a.id)) allActivitiesMap.set(a.id, a);
+  });
+  const activities = Array.from(allActivitiesMap.values()).sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
   );
 
   const { data: companyTasks = [] } = useQuery({
     queryKey: ["company-tasks", companyId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("tasks").select("*, contacts(first_name, last_name)")
-        .eq("company_id", companyId).neq("status", "done")
+        .from("tasks")
+        .select("*, contacts(first_name, last_name)")
+        .eq("company_id", companyId)
+        .neq("status", "done")
         .order("due_date", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data;
@@ -275,8 +347,10 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
     queryFn: async () => {
       if (contactIds.length === 0) return [];
       const { data, error } = await supabase
-        .from("tasks").select("*, contacts(first_name, last_name)")
-        .in("contact_id", contactIds).neq("status", "done")
+        .from("tasks")
+        .select("*, contacts(first_name, last_name)")
+        .in("contact_id", contactIds)
+        .neq("status", "done")
         .order("due_date", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data;
@@ -285,8 +359,10 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   });
 
   const allTasksMap = new Map<string, any>();
-  companyTasks.forEach(t => allTasksMap.set(t.id, t));
-  contactTasks.forEach(t => { if (!allTasksMap.has(t.id)) allTasksMap.set(t.id, t); });
+  companyTasks.forEach((t) => allTasksMap.set(t.id, t));
+  contactTasks.forEach((t) => {
+    if (!allTasksMap.has(t.id)) allTasksMap.set(t.id, t);
+  });
   const tasks = Array.from(allTasksMap.values()).sort((a, b) => {
     if (!a.due_date && !b.due_date) return 0;
     if (!a.due_date) return 1;
@@ -309,9 +385,14 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
 
   const toggleTaskMutation = useMutation({
     mutationFn: async (taskId: string) => {
-      const { error } = await supabase.from("tasks").update({
-        status: "done", completed_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-      }).eq("id", taskId);
+      const { error } = await supabase
+        .from("tasks")
+        .update({
+          status: "done",
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", taskId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -347,9 +428,13 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
     updateMutation.mutate({ [field]: value || null });
   };
 
-
   if (isLoading) {
-    return <div className="space-y-3 animate-pulse"><div className="h-7 w-48 bg-secondary rounded" /><div className="h-4 w-32 bg-secondary rounded" /></div>;
+    return (
+      <div className="space-y-3 animate-pulse">
+        <div className="h-7 w-48 bg-secondary rounded" />
+        <div className="h-4 w-32 bg-secondary rounded" />
+      </div>
+    );
   }
   if (!company) return <p className="text-sm text-muted-foreground">Selskap ikke funnet</p>;
 
@@ -359,15 +444,18 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
     { value: "partner", label: "Partner", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" },
     { value: "churned", label: "Ikke relevant selskap", badgeColor: "bg-red-50 text-red-700 border-red-200" },
   ] as const;
-  const currentStatus = STATUS_OPTIONS.find(s => s.value === company.status || (s.value === "customer" && company.status === "kunde")) || STATUS_OPTIONS[0];
+  const currentStatus =
+    STATUS_OPTIONS.find((s) => s.value === company.status || (s.value === "customer" && company.status === "kunde")) ||
+    STATUS_OPTIONS[0];
   const ownerFullName = (company as any).profiles?.full_name || null;
 
   const effectiveSignal = getEffectiveSignal(
-    activities.map(a => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
-    tasks.map(t => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date }))
+    activities.map((a) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+    tasks.map((t) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date })),
   );
   const signalBadgeColor = effectiveSignal
-    ? SIGNAL_CATEGORIES.find(c => c.label === effectiveSignal)?.badgeColor || "bg-gray-100 text-gray-600 border-gray-200"
+    ? SIGNAL_CATEGORIES.find((c) => c.label === effectiveSignal)?.badgeColor ||
+      "bg-gray-100 text-gray-600 border-gray-200"
     : "bg-gray-100 text-gray-600 border-gray-200";
 
   const handleFinnKonsulenter = async () => {
@@ -384,20 +472,19 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
           .from("stacq_ansatte")
           .select("id, navn, kompetanse, geografi, erfaring_aar, status")
           .in("status", ["AKTIV/SIGNERT"]),
-        supabase
-          .from("external_consultants")
-          .select("id, navn, teknologier, status")
-          .in("status", ["ledig", "aktiv"]),
+        supabase.from("external_consultants").select("id, navn, teknologier, status").in("status", ["ledig", "aktiv"]),
       ]);
       const alleTags: string[] = [];
-      (foresporslerData || []).forEach(f => {
+      (foresporslerData || []).forEach((f) => {
         if (f.teknologier) alleTags.push(...f.teknologier);
       });
-      (contacts as any[]).forEach(c => {
+      (contacts as any[]).forEach((c) => {
         if ((c as any).teknologier) alleTags.push(...(c as any).teknologier);
       });
       const freq: Record<string, number> = {};
-      alleTags.forEach(t => { freq[t] = (freq[t] || 0) + 1; });
+      alleTags.forEach((t) => {
+        freq[t] = (freq[t] || 0) + 1;
+      });
       const teknologier = Object.entries(freq)
         .sort((a, b) => b[1] - a[1])
         .map(([tag]) => tag)
@@ -416,7 +503,11 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
           kontakt_er_innkjoper: false,
           kontakt_signal: effectiveSignal || "Ukjent om behov",
           siste_kontakt_dato: activities[0]?.created_at
-            ? new Date(activities[0].created_at).toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" })
+            ? new Date(activities[0].created_at).toLocaleDateString("nb-NO", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })
             : null,
           aktive_foresporsler: [],
         },
@@ -435,7 +526,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   return (
     <div>
       {/* ── ZONE A: Header ── */}
-      <div className="mb-5">
+      <div className="mb-3">
         <div className="flex items-center gap-3">
           {editable ? (
             <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">
@@ -449,7 +540,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             {editable ? (
               <button
                 onClick={() => {
-                  const defaultContact = activities.find(a => a.contact_id)?.contact_id || contacts[0]?.id || "";
+                  const defaultContact = activities.find((a) => a.contact_id)?.contact_id || contacts[0]?.id || "";
                   setSignalContactId(defaultContact);
                   setSignalPickerOpen(true);
                 }}
@@ -457,13 +548,18 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                   effectiveSignal
                     ? "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer"
                     : "inline-flex items-center rounded-full border border-dashed border-border px-2.5 py-0.5 text-[0.6875rem] text-muted-foreground/50 cursor-pointer hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors",
-                  effectiveSignal ? signalBadgeColor : ""
+                  effectiveSignal ? signalBadgeColor : "",
                 )}
               >
                 {effectiveSignal || "Sett signal"}
               </button>
             ) : effectiveSignal ? (
-              <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", signalBadgeColor)}>
+              <span
+                className={cn(
+                  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+                  signalBadgeColor,
+                )}
+              >
                 {effectiveSignal}
               </span>
             ) : null}
@@ -508,61 +604,113 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : ownerFullName ? (
-              <span className="inline-flex items-center rounded-full border bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold">{ownerFullName}</span>
+              <span className="inline-flex items-center rounded-full border bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold">
+                {ownerFullName}
+              </span>
             ) : null}
             {editable && (
               <Dialog open={newContactOpen} onOpenChange={setNewContactOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium h-9 px-3.5 rounded-lg flex items-center gap-1.5 text-[0.8125rem]">
-                    <Plus className="h-3.5 w-3.5" />Ny kontakt
+                    <Plus className="h-3.5 w-3.5" />
+                    Ny kontakt
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[440px] rounded-xl">
-                  <DialogHeader><DialogTitle>Ny kontakt</DialogTitle></DialogHeader>
-                  <form onSubmit={async (e) => {
-                    e.preventDefault();
-                    const { error } = await supabase.from("contacts").insert({
-                      first_name: contactForm.first_name, last_name: contactForm.last_name,
-                      email: contactForm.email || null, phone: contactForm.phone || null,
-                      title: contactForm.title || null, linkedin: contactForm.linkedin || null,
-                      location: contactForm.location || null,
-                      company_id: companyId, created_by: user?.id, owner_id: user?.id,
-                    });
-                    if (error) { toast.error("Kunne ikke opprette kontakt"); return; }
-                    queryClient.invalidateQueries({ queryKey: ["company-contacts", companyId] });
-                    queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
-                    setNewContactOpen(false);
-                    setContactForm({ first_name: "", last_name: "", email: "", phone: "", title: "", linkedin: "", location: "" });
-                    toast.success("Kontakt opprettet");
-                  }} className="space-y-4 mt-3">
+                  <DialogHeader>
+                    <DialogTitle>Ny kontakt</DialogTitle>
+                  </DialogHeader>
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const { error } = await supabase.from("contacts").insert({
+                        first_name: contactForm.first_name,
+                        last_name: contactForm.last_name,
+                        email: contactForm.email || null,
+                        phone: contactForm.phone || null,
+                        title: contactForm.title || null,
+                        linkedin: contactForm.linkedin || null,
+                        location: contactForm.location || null,
+                        company_id: companyId,
+                        created_by: user?.id,
+                        owner_id: user?.id,
+                      });
+                      if (error) {
+                        toast.error("Kunne ikke opprette kontakt");
+                        return;
+                      }
+                      queryClient.invalidateQueries({ queryKey: ["company-contacts", companyId] });
+                      queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
+                      setNewContactOpen(false);
+                      setContactForm({
+                        first_name: "",
+                        last_name: "",
+                        email: "",
+                        phone: "",
+                        title: "",
+                        linkedin: "",
+                        location: "",
+                      });
+                      toast.success("Kontakt opprettet");
+                    }}
+                    className="space-y-4 mt-3"
+                  >
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
                         <Label className="text-label">Fornavn</Label>
-                        <Input value={contactForm.first_name} onChange={(e) => setContactForm({ ...contactForm, first_name: e.target.value })} required className="h-10 rounded-lg" />
+                        <Input
+                          value={contactForm.first_name}
+                          onChange={(e) => setContactForm({ ...contactForm, first_name: e.target.value })}
+                          required
+                          className="h-10 rounded-lg"
+                        />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-label">Etternavn</Label>
-                        <Input value={contactForm.last_name} onChange={(e) => setContactForm({ ...contactForm, last_name: e.target.value })} required className="h-10 rounded-lg" />
+                        <Input
+                          value={contactForm.last_name}
+                          onChange={(e) => setContactForm({ ...contactForm, last_name: e.target.value })}
+                          required
+                          className="h-10 rounded-lg"
+                        />
                       </div>
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-label">Stilling</Label>
-                      <Input value={contactForm.title} onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })} className="h-10 rounded-lg" />
+                      <Input
+                        value={contactForm.title}
+                        onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })}
+                        className="h-10 rounded-lg"
+                      />
                     </div>
                     {(() => {
-                      const companyLocations = company?.city ? company.city.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
+                      const companyLocations = company?.city
+                        ? company.city
+                            .split(",")
+                            .map((s: string) => s.trim())
+                            .filter(Boolean)
+                        : [];
                       if (companyLocations.length <= 1) return null;
                       return (
                         <div className="space-y-1.5">
-                          <Label className="text-label">Geografisk sted <span className="text-muted-foreground font-normal">(valgfritt)</span></Label>
-                          <Select value={contactForm.location} onValueChange={(v) => setContactForm({ ...contactForm, location: v === "__none__" ? "" : v })}>
+                          <Label className="text-label">
+                            Avdeling <span className="text-muted-foreground font-normal">(valgfritt)</span>
+                          </Label>
+                          <Select
+                            value={contactForm.location}
+                            onValueChange={(v) =>
+                              setContactForm({ ...contactForm, location: v === "__none__" ? "" : v })
+                            }
+                          >
                             <SelectTrigger className="h-10 rounded-lg">
-                              {contactForm.location || "Ingen spesifikt sted"}
+                              {contactForm.location || "Ingen spesifikk avdeling"}
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="__none__">Ingen spesifikt sted</SelectItem>
+                              <SelectItem value="__none__">Ingen spesifikk avdeling</SelectItem>
                               {companyLocations.map((loc: string) => (
-                                <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                                <SelectItem key={loc} value={loc}>
+                                  {loc}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -572,18 +720,34 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
                         <Label className="text-label">E-post</Label>
-                        <Input value={contactForm.email} onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })} type="email" className="h-10 rounded-lg" />
+                        <Input
+                          value={contactForm.email}
+                          onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                          type="email"
+                          className="h-10 rounded-lg"
+                        />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-label">Telefon</Label>
-                        <Input value={contactForm.phone} onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })} className="h-10 rounded-lg" />
+                        <Input
+                          value={contactForm.phone}
+                          onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                          className="h-10 rounded-lg"
+                        />
                       </div>
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-label">LinkedIn</Label>
-                      <Input value={contactForm.linkedin} onChange={(e) => setContactForm({ ...contactForm, linkedin: e.target.value })} placeholder="https://linkedin.com/in/..." className="h-10 rounded-lg" />
+                      <Input
+                        value={contactForm.linkedin}
+                        onChange={(e) => setContactForm({ ...contactForm, linkedin: e.target.value })}
+                        placeholder="https://linkedin.com/in/..."
+                        className="h-10 rounded-lg"
+                      />
                     </div>
-                    <Button type="submit" className="w-full h-10 rounded-lg">Opprett kontakt</Button>
+                    <Button type="submit" className="w-full h-10 rounded-lg">
+                      Opprett kontakt
+                    </Button>
                   </form>
                 </DialogContent>
               </Dialog>
@@ -598,14 +762,16 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                   <div className="space-y-1.5">
                     <Label className="text-label">Signal</Label>
                     <div className="flex flex-wrap gap-2">
-                      {SIGNAL_CATEGORIES.map(c => (
+                      {SIGNAL_CATEGORIES.map((c) => (
                         <button
                           key={c.label}
                           type="button"
                           onClick={() => setPendingSignal(c.label)}
                           className={cn(
                             "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer transition-all",
-                            pendingSignal === c.label ? c.badgeColor + " ring-2 ring-offset-1 ring-primary" : c.badgeColor + " opacity-50"
+                            pendingSignal === c.label
+                              ? c.badgeColor + " ring-2 ring-offset-1 ring-primary"
+                              : c.badgeColor + " opacity-50",
                           )}
                         >
                           {c.label}
@@ -617,11 +783,13 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                     <Label className="text-label">Gjelder kontakt</Label>
                     <select
                       value={signalContactId}
-                      onChange={e => setSignalContactId(e.target.value)}
+                      onChange={(e) => setSignalContactId(e.target.value)}
                       className="w-full h-10 rounded-lg border border-input bg-background px-3 text-[0.8125rem]"
                     >
-                      {contacts.map(c => (
-                        <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>
+                      {contacts.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.first_name} {c.last_name}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -644,39 +812,64 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             {/* Edit company dialog */}
             <Dialog open={editCompanyOpen} onOpenChange={setEditCompanyOpen}>
               <DialogContent className="sm:max-w-[440px] rounded-xl">
-                <DialogHeader><DialogTitle>Rediger selskap</DialogTitle></DialogHeader>
-                <form onSubmit={(e) => {
-                  e.preventDefault();
-                  const finalLocations = newLocation.trim()
-                    ? [...editForm.locations, newLocation.trim()]
-                    : editForm.locations;
-                  setNewLocation("");
-                  const cityValue = finalLocations.length > 0 ? finalLocations.join(", ") : editForm.city;
-                  updateMutation.mutate({
-                    name: editForm.name,
-                    org_number: editForm.org_number || null,
-                    city: cityValue || null,
-                    website: editForm.website || null,
-                    linkedin: editForm.linkedin || null,
-                  });
-                  setEditCompanyOpen(false);
-                }} className="space-y-4 mt-3">
+                <DialogHeader>
+                  <DialogTitle>Rediger selskap</DialogTitle>
+                </DialogHeader>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const finalLocations = newLocation.trim()
+                      ? [...editForm.locations, newLocation.trim()]
+                      : editForm.locations;
+                    setNewLocation("");
+                    const cityValue = finalLocations.length > 0 ? finalLocations.join(", ") : editForm.city;
+                    updateMutation.mutate({
+                      name: editForm.name,
+                      org_number: editForm.org_number || null,
+                      city: cityValue || null,
+                      website: editForm.website || null,
+                      linkedin: editForm.linkedin || null,
+                    });
+                    setEditCompanyOpen(false);
+                  }}
+                  className="space-y-4 mt-3"
+                >
                   <div className="space-y-1.5">
                     <Label className="text-label">Selskapsnavn</Label>
-                    <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required className="h-10 rounded-lg" />
+                    <Input
+                      value={editForm.name}
+                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                      required
+                      className="h-10 rounded-lg"
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-label">Org.nr</Label>
-                    <Input value={editForm.org_number} onChange={(e) => setEditForm({ ...editForm, org_number: e.target.value })} className="h-10 rounded-lg" />
+                    <Input
+                      value={editForm.org_number}
+                      onChange={(e) => setEditForm({ ...editForm, org_number: e.target.value })}
+                      className="h-10 rounded-lg"
+                    />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-label">Geografiske steder</Label>
+                    <Label className="text-label">Avdelinger</Label>
                     <div className="flex flex-wrap gap-1.5 mb-2">
                       {editForm.locations.map((loc, i) => (
-                        <span key={i} className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs font-medium text-foreground">
+                        <span
+                          key={i}
+                          className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs font-medium text-foreground"
+                        >
                           <MapPin className="h-3 w-3 text-muted-foreground" />
                           {loc}
-                          <button type="button" onClick={() => setEditForm({ ...editForm, locations: editForm.locations.filter((_, idx) => idx !== i) })} className="ml-0.5 text-muted-foreground hover:text-destructive">×</button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEditForm({ ...editForm, locations: editForm.locations.filter((_, idx) => idx !== i) })
+                            }
+                            className="ml-0.5 text-muted-foreground hover:text-destructive"
+                          >
+                            ×
+                          </button>
                         </span>
                       ))}
                     </div>
@@ -694,27 +887,52 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                           }
                         }}
                       />
-                      <Button type="button" variant="outline" size="sm" className="h-9 rounded-lg" onClick={() => {
-                        if (newLocation.trim()) {
-                          setEditForm({ ...editForm, locations: [...editForm.locations, newLocation.trim()] });
-                          setNewLocation("");
-                        }
-                      }}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-9 rounded-lg"
+                        onClick={() => {
+                          if (newLocation.trim()) {
+                            setEditForm({ ...editForm, locations: [...editForm.locations, newLocation.trim()] });
+                            setNewLocation("");
+                          }
+                        }}
+                      >
                         <Plus className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-label">Nettside</Label>
-                    <Input value={editForm.website} onChange={(e) => setEditForm({ ...editForm, website: e.target.value })} placeholder="https://..." className="h-10 rounded-lg" />
+                    <Input
+                      value={editForm.website}
+                      onChange={(e) => setEditForm({ ...editForm, website: e.target.value })}
+                      placeholder="https://..."
+                      className="h-10 rounded-lg"
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-label">LinkedIn</Label>
-                    <Input value={editForm.linkedin} onChange={(e) => setEditForm({ ...editForm, linkedin: e.target.value })} placeholder="https://linkedin.com/company/..." className="h-10 rounded-lg" />
+                    <Input
+                      value={editForm.linkedin}
+                      onChange={(e) => setEditForm({ ...editForm, linkedin: e.target.value })}
+                      placeholder="https://linkedin.com/company/..."
+                      className="h-10 rounded-lg"
+                    />
                   </div>
                   <div className="flex gap-2">
-                    <Button type="button" variant="outline" className="flex-1 h-10 rounded-lg" onClick={() => setEditCompanyOpen(false)}>Avbryt</Button>
-                    <Button type="submit" className="flex-1 h-10 rounded-lg">Lagre</Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1 h-10 rounded-lg"
+                      onClick={() => setEditCompanyOpen(false)}
+                    >
+                      Avbryt
+                    </Button>
+                    <Button type="submit" className="flex-1 h-10 rounded-lg">
+                      Lagre
+                    </Button>
                   </div>
                 </form>
               </DialogContent>
@@ -728,7 +946,12 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                     city: company.city || "",
                     website: company.website || "",
                     linkedin: company.linkedin || "",
-                    locations: company.city ? company.city.split(",").map((s: string) => s.trim()).filter(Boolean) : [],
+                    locations: company.city
+                      ? company.city
+                          .split(",")
+                          .map((s: string) => s.trim())
+                          .filter(Boolean)
+                      : [],
                   });
                   setNewLocation("");
                   setEditCompanyOpen(true);
@@ -749,42 +972,63 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
         {/* Line 2: org number · city */}
         <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
           {company.org_number && <span>Org.nr {company.org_number}</span>}
-          {company.city && company.city.split(",").map((loc: string) => loc.trim()).filter(Boolean).map((loc: string, i: number) => (
-            <a
-              key={i}
-              href={`https://maps.google.com/?q=${encodeURIComponent(loc)},Norge`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-            >
-              <MapPin className="h-3.5 w-3.5" />
-              {loc}
-            </a>
-          ))}
+          {company.city &&
+            company.city
+              .split(",")
+              .map((loc: string) => loc.trim())
+              .filter(Boolean)
+              .map((loc: string, i: number) => (
+                <a
+                  key={i}
+                  href={`https://maps.google.com/?q=${encodeURIComponent(loc)},Norge`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                >
+                  <MapPin className="h-3.5 w-3.5" />
+                  {loc}
+                </a>
+              ))}
         </div>
 
         {/* Line 3: phone · links */}
         <div className="flex items-center gap-2 flex-wrap text-[0.9375rem] text-foreground/70 mt-1">
           {company.website && (
             <>
-              <a href={company.website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
-                <Globe className="h-3 w-3" />{company.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
+              <a
+                href={company.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-primary hover:underline"
+              >
+                <Globe className="h-3 w-3" />
+                {company.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
               </a>
             </>
           )}
           {company.linkedin && (
             <>
               <span className="text-muted-foreground/40">·</span>
-              <a href={company.linkedin} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
-                <Linkedin className="h-3 w-3" />LinkedIn
+              <a
+                href={company.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-primary hover:underline"
+              >
+                <Linkedin className="h-3 w-3" />
+                LinkedIn
               </a>
             </>
           )}
           {company.email && (
             <>
               <span className="text-muted-foreground/40">·</span>
-              <a href={`mailto:${company.email}`} className="inline-flex items-center gap-1 text-primary hover:underline">
-                <Mail className="h-3 w-3" />{company.email}
+              <a
+                href={`mailto:${company.email}`}
+                className="inline-flex items-center gap-1 text-primary hover:underline"
+              >
+                <Mail className="h-3 w-3" />
+                {company.email}
               </a>
             </>
           )}
@@ -793,7 +1037,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
 
       {/* Notes (inline edit via pencil) */}
       {editable && editingNotes ? (
-        <div className="mb-6">
+        <div className="mb-4">
           <Textarea
             value={notesDraft}
             onChange={(e) => setNotesDraft(e.target.value)}
@@ -809,115 +1053,57 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             }}
           />
           <div className="flex gap-2 mt-1.5">
-            <Button size="sm" className="h-7 text-[0.75rem] px-3 rounded-md" onClick={() => { updateField("notes")(notesDraft); setEditingNotes(false); }}>Lagre</Button>
-            <Button variant="ghost" size="sm" className="h-7 text-[0.75rem] px-3 rounded-md" onClick={() => setEditingNotes(false)}>Avbryt</Button>
+            <Button
+              size="sm"
+              className="h-7 text-[0.75rem] px-3 rounded-md"
+              onClick={() => {
+                updateField("notes")(notesDraft);
+                setEditingNotes(false);
+              }}
+            >
+              Lagre
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-[0.75rem] px-3 rounded-md"
+              onClick={() => setEditingNotes(false)}
+            >
+              Avbryt
+            </Button>
           </div>
         </div>
       ) : company.notes ? (
-        <div className="group mb-6 relative">
+        <div className="group mb-4 relative">
           <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{company.notes}</p>
           {editable && (
-            <button onClick={() => { setNotesDraft(company.notes || ""); setEditingNotes(true); }}
-              className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-secondary">
+            <button
+              onClick={() => {
+                setNotesDraft(company.notes || "");
+                setEditingNotes(true);
+              }}
+              className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-secondary"
+            >
               <Pencil className="h-3 w-3 text-muted-foreground" />
             </button>
           )}
         </div>
+      ) : editable ? (
+        <button
+          onClick={() => {
+            setNotesDraft("");
+            setEditingNotes(true);
+          }}
+          className="text-[0.75rem] text-muted-foreground/50 hover:text-muted-foreground mb-4 inline-flex items-center gap-1 transition-colors"
+        >
+          <Pencil className="h-3 w-3" /> Legg til notat
+        </button>
       ) : null}
-
-      {/* ── Snapshot-rad ── */}
-      {(() => {
-        const sisteAktivitet = activities[0] ?? null;
-        const nesteOppfolging = tasks.filter(t => t.due_date).sort((a, b) =>
-          new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
-        )[0] ?? null;
-        if (!sisteAktivitet && !nesteOppfolging) return null;
-        return (
-          <div className="mb-5 rounded-lg bg-muted/40 border border-border px-3 py-2.5 space-y-1">
-            {sisteAktivitet && (() => {
-              const { title, category } = extractTitleAndCategory(sisteAktivitet.subject, sisteAktivitet.description);
-              const contactName = (sisteAktivitet.contacts as any)?.first_name
-                ? `${(sisteAktivitet.contacts as any).first_name} ${(sisteAktivitet.contacts as any).last_name}` : null;
-              return (
-                <div className="flex items-center gap-2 text-[0.8125rem]">
-                  <span className="text-muted-foreground shrink-0">Siste:</span>
-                  <span className="font-medium text-foreground truncate">"{title}"</span>
-                  {contactName && <span className="text-muted-foreground/60 text-[0.75rem] shrink-0">→ {contactName}</span>}
-                  <span className="text-muted-foreground shrink-0 ml-auto">
-                    {format(new Date(sisteAktivitet.created_at), "d. MMM yyyy", { locale: nb })}
-                  </span>
-                  {category && <CategoryBadge label={category} className="shrink-0" />}
-                </div>
-              );
-            })()}
-            {nesteOppfolging && (() => {
-              const { title, category } = extractTitleAndCategory(nesteOppfolging.title, nesteOppfolging.description);
-              const overdue = isPast(new Date(nesteOppfolging.due_date)) && !isToday(new Date(nesteOppfolging.due_date));
-              const contactName = (nesteOppfolging.contacts as any)?.first_name
-                ? `${(nesteOppfolging.contacts as any).first_name} ${(nesteOppfolging.contacts as any).last_name}` : null;
-              return (
-                <div className="flex items-center gap-2 text-[0.8125rem]">
-                  <span className="text-muted-foreground shrink-0">Neste:</span>
-                  <span className="font-medium text-foreground truncate">{title}</span>
-                  {contactName && <span className="text-muted-foreground/60 text-[0.75rem] shrink-0">→ {contactName}</span>}
-                  <span className={cn("shrink-0 ml-auto font-medium", overdue ? "text-destructive" : "text-muted-foreground")}>
-                    {format(new Date(nesteOppfolging.due_date), "d. MMM yyyy", { locale: nb })}
-                  </span>
-                  {category && <CategoryBadge label={category} className="shrink-0" />}
-                </div>
-              );
-            })()}
-          </div>
-        );
-      })()}
 
       {/* Two-column layout */}
       <div className="grid grid-cols-1 md:grid-cols-[1fr_1px_minmax(0,300px)] gap-0">
         {/* Left: Tasks + Activities */}
         <div className="space-y-5 pr-6">
-          {/* ── Teknisk DNA ── */}
-          {(() => {
-            const hasTechData = techProfile?.teknologier &&
-              Object.keys(techProfile.teknologier as Record<string, number>).length > 0;
-            const contactTechTags = contacts.flatMap(c => (c as any).teknologier || []);
-            const hasAnyTech = hasTechData || contactTechTags.length > 0;
-
-            return (
-              <div className="mb-5">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                    Teknisk DNA
-                    {techProfile?.konsulent_hyppighet ? (
-                      <span className="ml-2 text-muted-foreground/50 font-normal normal-case tracking-normal">
-                        · {techProfile.konsulent_hyppighet} annonser
-                      </span>
-                    ) : null}
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    {hasAnyTech && (
-                      <button
-                        onClick={handleFinnKonsulenter}
-                        disabled={matchingKonsulenter}
-                        className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
-                      >
-                        {matchingKonsulenter ? (
-                          <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Matcher...</>
-                        ) : (
-                          <><Target className="h-3.5 w-3.5 text-primary" /> Finn konsulenter</>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {hasTechData ? (
-                  <CompanyDnaPanel companyId={companyId} />
-                ) : (
-                  <p className="text-[0.8125rem] text-muted-foreground/50">Ingen teknisk data ennå</p>
-                )}
-              </div>
-            );
-          })()}
           {/* ── Oppfølginger ── */}
           {tasks.length > 0 && (
             <div className="bg-card border border-border rounded-lg shadow-card p-4 mb-6">
@@ -931,13 +1117,27 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                   const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
                   const today = task.due_date && isToday(new Date(task.due_date));
                   const contactName = (task.contacts as any)?.first_name
-                    ? `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}` : null;
-                  const { title: displayTitle, category: displayCategory, cleanDesc: displayDesc } = extractTitleAndCategory(task.title, task.description);
+                    ? `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}`
+                    : null;
+                  const {
+                    title: displayTitle,
+                    category: displayCategory,
+                    cleanDesc: displayDesc,
+                  } = extractTitleAndCategory(task.title, task.description);
                   return (
-                    <div key={task.id} className="flex items-start gap-2.5 py-2.5 px-1 rounded-md transition-all duration-200 group hover:bg-background/60 cursor-pointer" onClick={() => { if (task.contact_id) navigate(`/kontakter/${task.contact_id}`); }}>
+                    <div
+                      key={task.id}
+                      className="flex items-start gap-2.5 py-2.5 px-1 rounded-md transition-all duration-200 group hover:bg-background/60 cursor-pointer"
+                      onClick={() => {
+                        if (task.contact_id) navigate(`/kontakter/${task.contact_id}`);
+                      }}
+                    >
                       <div onClick={(e) => e.stopPropagation()}>
-                        <Checkbox checked={false} onCheckedChange={() => toggleTaskMutation.mutate(task.id)}
-                          className="h-4 w-4 rounded-[4px] border-2 border-muted-foreground/40 flex-shrink-0 mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
+                        <Checkbox
+                          checked={false}
+                          onCheckedChange={() => toggleTaskMutation.mutate(task.id)}
+                          className="h-4 w-4 rounded-[4px] border-2 border-muted-foreground/40 flex-shrink-0 mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                        />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</div>
@@ -955,7 +1155,9 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                         )}
                         <div className="flex items-center gap-1.5 mt-1">
                           {task.assigned_to && profileMapFull[task.assigned_to] && (
-                            <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{profileMapFull[task.assigned_to]}</span>
+                            <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+                              {profileMapFull[task.assigned_to]}
+                            </span>
                           )}
                         </div>
                       </div>
@@ -963,10 +1165,16 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                         {task.due_date && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className={cn(
-                                "text-[0.8125rem] font-medium",
-                                overdue ? "text-destructive" : today ? "text-[hsl(var(--warning))]" : "text-muted-foreground"
-                              )}>
+                              <span
+                                className={cn(
+                                  "text-[0.8125rem] font-medium",
+                                  overdue
+                                    ? "text-destructive"
+                                    : today
+                                      ? "text-[hsl(var(--warning))]"
+                                      : "text-muted-foreground",
+                                )}
+                              >
                                 {format(new Date(task.due_date), "d. MMM yyyy", { locale: nb })}
                               </span>
                             </TooltipTrigger>
@@ -994,20 +1202,42 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
         {/* Right: Contacts */}
         <div className="space-y-3 pl-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium uppercase tracking-[0.08em] text-muted-foreground">Kontakter · {contacts.length}</h3>
+            <h3 className="text-sm font-medium uppercase tracking-[0.08em] text-muted-foreground">
+              Kontakter · {contacts.length}
+            </h3>
           </div>
+          <button
+            onClick={handleFinnKonsulenter}
+            disabled={matchingKonsulenter}
+            className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50 w-full justify-center mt-1 mb-3"
+          >
+            {matchingKonsulenter ? (
+              <>
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Matcher...
+              </>
+            ) : (
+              <>
+                <Target className="h-3 w-3 text-primary" />
+                Finn konsulenter for selskapet
+              </>
+            )}
+          </button>
           {konsulentResults !== null && (
             <div className="mb-4 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                   Konsulentmatch · {konsulentResults.length}
                 </span>
-                <button onClick={handleFinnKonsulenter} className="text-[0.6875rem] text-muted-foreground hover:text-foreground">
+                <button
+                  onClick={handleFinnKonsulenter}
+                  className="text-[0.6875rem] text-muted-foreground hover:text-foreground"
+                >
                   Kjør på nytt
                 </button>
               </div>
               <div className="flex gap-1.5">
-                {(["Alle", "Ansatte", "Eksterne"] as const).map(f => (
+                {(["Alle", "Ansatte", "Eksterne"] as const).map((f) => (
                   <button
                     key={f}
                     onClick={() => setKonsulentFilter(f)}
@@ -1015,27 +1245,29 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                       "h-6 px-2.5 text-[0.6875rem] rounded-full border transition-colors font-medium",
                       konsulentFilter === f
                         ? "bg-foreground text-background border-foreground"
-                        : "border-border text-muted-foreground hover:bg-secondary"
+                        : "border-border text-muted-foreground hover:bg-secondary",
                     )}
                   >
                     {f}
                   </button>
                 ))}
               </div>
-              {konsulentResults
-                .filter((m: any) =>
-                  konsulentFilter === "Alle" ? true :
-                  konsulentFilter === "Ansatte" ? m.type === "intern" :
-                  m.type === "ekstern"
-                )
-                .length === 0 ? (
+              {konsulentResults.filter((m: any) =>
+                konsulentFilter === "Alle"
+                  ? true
+                  : konsulentFilter === "Ansatte"
+                    ? m.type === "intern"
+                    : m.type === "ekstern",
+              ).length === 0 ? (
                 <p className="text-[0.8125rem] text-muted-foreground">Ingen treff</p>
               ) : (
                 konsulentResults
                   .filter((m: any) =>
-                    konsulentFilter === "Alle" ? true :
-                    konsulentFilter === "Ansatte" ? m.type === "intern" :
-                    m.type === "ekstern"
+                    konsulentFilter === "Alle"
+                      ? true
+                      : konsulentFilter === "Ansatte"
+                        ? m.type === "intern"
+                        : m.type === "ekstern",
                   )
                   .map((m: any, i: number) => (
                     <div key={`${m.type}-${m.id}`} className="rounded-lg border border-border bg-card p-2.5">
@@ -1043,24 +1275,31 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                         <div className="flex items-center gap-1.5 min-w-0">
                           <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
                           <span className="text-[0.8125rem] font-semibold text-foreground truncate">{m.navn}</span>
-                          <span className={cn(
-                            "inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold shrink-0",
-                            m.type === "intern" ? "bg-foreground text-background" : "bg-blue-100 text-blue-700"
-                          )}>
+                          <span
+                            className={cn(
+                              "inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold shrink-0",
+                              m.type === "intern" ? "bg-foreground text-background" : "bg-blue-100 text-blue-700",
+                            )}
+                          >
                             {m.type === "intern" ? "Ansatt" : "Ekstern"}
                           </span>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
-                          <span className={cn(
-                            "inline-block h-2 w-2 rounded-full",
-                            m.score >= 8 ? "bg-emerald-500" : m.score >= 6 ? "bg-amber-500" : "bg-red-500"
-                          )} />
+                          <span
+                            className={cn(
+                              "inline-block h-2 w-2 rounded-full",
+                              m.score >= 8 ? "bg-emerald-500" : m.score >= 6 ? "bg-amber-500" : "bg-red-500",
+                            )}
+                          />
                           <span className="text-[0.75rem] font-bold">{m.score}/10</span>
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-1 mt-1.5">
                         {(m.match_tags || []).map((t: string) => (
-                          <span key={t} className="inline-flex items-center rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[0.625rem] font-medium">
+                          <span
+                            key={t}
+                            className="inline-flex items-center rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[0.625rem] font-medium"
+                          >
                             {t}
                           </span>
                         ))}
@@ -1081,16 +1320,22 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                   <button
                     key={c.id}
                     className="w-full flex items-center gap-2 py-2.5 hover:bg-secondary/50 transition-colors duration-75 text-left group rounded-md"
-                    onClick={() => onOpenContact ? onOpenContact(c.id) : navigate(`/kontakter/${c.id}`)}
+                    onClick={() => (onOpenContact ? onOpenContact(c.id) : navigate(`/kontakter/${c.id}`))}
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <p className="text-[0.9375rem] font-semibold truncate group-hover:text-primary transition-colors">{c.first_name} {c.last_name}</p>
+                        <p className="text-[0.9375rem] font-semibold truncate group-hover:text-primary transition-colors">
+                          {c.first_name} {c.last_name}
+                        </p>
                         {c.cv_email && (
-                          <span className="ml-1.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">CV</span>
+                          <span className="ml-1.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">
+                            CV
+                          </span>
                         )}
                         {c.call_list && (
-                          <span className="ml-1.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">INN</span>
+                          <span className="ml-1.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">
+                            INN
+                          </span>
                         )}
                       </div>
                       <p className="text-[0.8125rem] text-muted-foreground truncate">
@@ -1104,6 +1349,15 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             </div>
           )}
 
+          {/* ── Teknisk DNA ── */}
+          {editable && (
+            <div className="mt-6 space-y-2">
+              <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                Tekniske behov
+              </h3>
+              <CompanyDnaPanel companyId={companyId} />
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1111,7 +1365,15 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
 }
 
 /* ── Company Activity Timeline ── */
-function CompanyActivityTimeline({ activities, profileMap, companyId }: { activities: any[]; profileMap: Record<string, string>; companyId: string }) {
+function CompanyActivityTimeline({
+  activities,
+  profileMap,
+  companyId,
+}: {
+  activities: any[];
+  profileMap: Record<string, string>;
+  companyId: string;
+}) {
   const navigate = useNavigate();
   const currentYear = getYear(new Date());
 
@@ -1138,7 +1400,9 @@ function CompanyActivityTimeline({ activities, profileMap, companyId }: { activi
   if (activities.length === 0) {
     return (
       <div>
-        <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">Aktiviteter · 0</h3>
+        <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+          Aktiviteter · 0
+        </h3>
         <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen aktiviteter</p>
       </div>
     );
@@ -1181,7 +1445,12 @@ function CompanyActivityTimeline({ activities, profileMap, companyId }: { activi
 }
 
 /* ── Company Activity Row (with inline edit) ── */
-function CompanyActivityRow({ activity, profileMap, companyId, navigate }: {
+function CompanyActivityRow({
+  activity,
+  profileMap,
+  companyId,
+  navigate,
+}: {
   activity: any;
   profileMap: Record<string, string>;
   companyId: string;
@@ -1195,21 +1464,29 @@ function CompanyActivityRow({ activity, profileMap, companyId, navigate }: {
   const [editDate, setEditDate] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const { title: displayTitle, category: displayCategory, cleanDesc } = extractTitleAndCategory(activity.subject, activity.description);
+  const {
+    title: displayTitle,
+    category: displayCategory,
+    cleanDesc,
+  } = extractTitleAndCategory(activity.subject, activity.description);
   const ownerName = activity.created_by ? profileMap[activity.created_by] : null;
   const d = new Date(activity.created_at);
   const contactName = (activity.contacts as any)?.first_name
-    ? `${(activity.contacts as any).first_name} ${(activity.contacts as any).last_name}` : null;
+    ? `${(activity.contacts as any).first_name} ${(activity.contacts as any).last_name}`
+    : null;
 
-  const typeIcon = activity.type === "call" || activity.type === "phone"
-    ? <MessageCircle className="h-3.5 w-3.5 text-[hsl(var(--success))]" />
-    : <FileText className="h-3.5 w-3.5 text-primary" />;
+  const typeIcon =
+    activity.type === "call" || activity.type === "phone" ? (
+      <MessageCircle className="h-3.5 w-3.5 text-[hsl(var(--success))]" />
+    ) : (
+      <FileText className="h-3.5 w-3.5 text-primary" />
+    );
 
   const handleRowClick = () => {
     if (editing) return;
     const parsed = extractTitleAndCategory(activity.subject, activity.description);
     let cat = parsed.category;
-    if (!cat && CATEGORIES.some(c => c.label === activity.subject)) {
+    if (!cat && CATEGORIES.some((c) => c.label === activity.subject)) {
       cat = activity.subject;
     }
     setEditTitle(parsed.title);
@@ -1251,11 +1528,20 @@ function CompanyActivityRow({ activity, profileMap, companyId, navigate }: {
         {editing ? (
           <div className="space-y-2 animate-in fade-in duration-150">
             <div>
-              <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">Tittel</span>
-              <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="text-[0.9375rem] rounded-md" autoFocus />
+              <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">
+                Tittel
+              </span>
+              <Input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="text-[0.9375rem] rounded-md"
+                autoFocus
+              />
             </div>
             <div>
-              <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">Kategori</span>
+              <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">
+                Kategori
+              </span>
               <CategoryPicker selected={editCategory} onSelect={setEditCategory} />
             </div>
             <Textarea
@@ -1270,7 +1556,9 @@ function CompanyActivityRow({ activity, profileMap, companyId, navigate }: {
               }}
             />
             <div className="flex items-center gap-2">
-              <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Dato:</span>
+              <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Dato:
+              </span>
               <input
                 type="date"
                 value={editDate}
@@ -1279,17 +1567,47 @@ function CompanyActivityRow({ activity, profileMap, companyId, navigate }: {
               />
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" className="h-6 text-[0.6875rem] px-2 rounded" disabled={!editTitle.trim() || !editCategory} onClick={handleSave}>Lagre</Button>
-              <Button variant="ghost" size="sm" className="h-6 text-[0.6875rem] px-2 rounded" onClick={() => setEditing(false)}>Avbryt</Button>
+              <Button
+                size="sm"
+                className="h-6 text-[0.6875rem] px-2 rounded"
+                disabled={!editTitle.trim() || !editCategory}
+                onClick={handleSave}
+              >
+                Lagre
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 text-[0.6875rem] px-2 rounded"
+                onClick={() => setEditing(false)}
+              >
+                Avbryt
+              </Button>
               <div className="ml-auto">
                 {confirmDelete ? (
                   <span className="text-[0.75rem] animate-in fade-in duration-150">
                     <span className="text-destructive mr-1">Er du sikker?</span>
-                    <button onClick={() => { handleDelete(); setConfirmDelete(false); }} className="text-destructive font-medium hover:underline mr-1">Ja, slett</button>
-                    <button onClick={() => setConfirmDelete(false)} className="text-muted-foreground hover:text-foreground">Avbryt</button>
+                    <button
+                      onClick={() => {
+                        handleDelete();
+                        setConfirmDelete(false);
+                      }}
+                      className="text-destructive font-medium hover:underline mr-1"
+                    >
+                      Ja, slett
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete(false)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      Avbryt
+                    </button>
                   </span>
                 ) : (
-                  <button onClick={() => setConfirmDelete(true)} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                  <button
+                    onClick={() => setConfirmDelete(true)}
+                    className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                  >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 )}
@@ -1319,7 +1637,9 @@ function CompanyActivityRow({ activity, profileMap, companyId, navigate }: {
 
               <div className="flex items-center gap-2 mt-1">
                 {ownerName && (
-                  <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{ownerName}</span>
+                  <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+                    {ownerName}
+                  </span>
                 )}
               </div>
             </div>
@@ -1349,11 +1669,7 @@ function CompanyDnaPanel({ companyId }: { companyId: string }) {
   const { data: dnaProfile } = useQuery({
     queryKey: ["company-tech-profile", companyId],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("company_tech_profile")
-        .select("*")
-        .eq("company_id", companyId)
-        .single();
+      const { data } = await supabase.from("company_tech_profile").select("*").eq("company_id", companyId).single();
       return data || null;
     },
     enabled: !!companyId,
@@ -1363,15 +1679,17 @@ function CompanyDnaPanel({ companyId }: { companyId: string }) {
   const { data: foresporslerTags = [] } = useQuery({
     queryKey: ["company-foresporsler-tags", companyId],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("foresporsler")
-        .select("teknologier")
-        .eq("selskap_id", companyId);
+      const { data } = await supabase.from("foresporsler").select("teknologier").eq("selskap_id", companyId);
       if (!data) return [];
       const all: string[] = [];
-      data.forEach(f => { if (f.teknologier) all.push(...f.teknologier); });
+      data.forEach((f) => {
+        if (f.teknologier) all.push(...f.teknologier);
+      });
+      // Tell frekvens
       const freq: Record<string, number> = {};
-      all.forEach(t => { freq[t] = (freq[t] || 0) + 1; });
+      all.forEach((t) => {
+        freq[t] = (freq[t] || 0) + 1;
+      });
       return Object.entries(freq)
         .sort((a, b) => b[1] - a[1])
         .map(([tag, count]) => ({ tag, count }));
@@ -1383,71 +1701,48 @@ function CompanyDnaPanel({ companyId }: { companyId: string }) {
   const { data: contactTags = [] } = useQuery({
     queryKey: ["company-contact-tags", companyId],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("contacts")
-        .select("teknologier")
-        .eq("company_id", companyId);
+      const { data } = await supabase.from("contacts").select("teknologier").eq("company_id", companyId);
       if (!data) return [];
       const all: string[] = [];
-      data.forEach(c => { if ((c as any).teknologier) all.push(...(c as any).teknologier); });
+      data.forEach((c) => {
+        if ((c as any).teknologier) all.push(...(c as any).teknologier);
+      });
       return [...new Set(all)];
     },
     enabled: !!companyId,
   });
 
-  const finnTechs = dnaProfile?.teknologier ? Object.entries(dnaProfile.teknologier as Record<string, number>).sort((a, b) => b[1] - a[1]).slice(0, 20) : [];
-  const hasDna = foresporslerTags.length > 0 || contactTags.length > 0 || finnTechs.length > 0;
+  const hasDna =
+    foresporslerTags.length > 0 ||
+    contactTags.length > 0 ||
+    (dnaProfile?.teknologier && Object.keys(dnaProfile.teknologier).length > 0);
+
+  if (!hasDna) {
+    return (
+      <p className="text-[0.8125rem] text-muted-foreground/60 italic">
+        Ingen teknisk profil ennå — legges til automatisk fra forespørsler og kontakter.
+      </p>
+    );
+  }
 
   return (
     <div className="space-y-3">
-
-      {/* Finn.no DNA */}
-      {finnTechs.length > 0 && (
-        <div>
-          <p className="text-[0.6875rem] font-medium text-muted-foreground mb-1.5">Fra Finn.no</p>
-          <div className="flex flex-wrap gap-1.5">
-            {finnTechs.map(([tech, count]) => (
-              <span
-                key={tech}
-                className="inline-flex items-center rounded-full bg-secondary text-foreground px-2 py-0.5 text-[0.6875rem] font-mono border border-border"
-              >
-                {tech}{count > 1 ? <span className="ml-1 text-muted-foreground/60">×{count}</span> : null}
-              </span>
-            ))}
-          </div>
-          {dnaProfile?.sist_fra_finn && (
-            <p className="text-[0.6875rem] text-muted-foreground/40 mt-1.5">
-              Oppdatert {new Date(dnaProfile.sist_fra_finn).toLocaleDateString("nb-NO", { day: "numeric", month: "short", year: "numeric" })}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Separator */}
-      {finnTechs.length > 0 && foresporslerTags.length > 0 && (
-        <div className="border-t border-border/50 my-2" />
-      )}
-
       {/* Fra forespørsler */}
       {foresporslerTags.length > 0 && (
         <div>
           <p className="text-[0.6875rem] font-medium text-muted-foreground mb-1.5">Fra forespørsler</p>
           <div className="flex flex-wrap gap-1.5">
             {foresporslerTags.map(({ tag, count }) => (
-              <span key={tag} className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.75rem] font-medium text-foreground">
+              <span
+                key={tag}
+                className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.75rem] font-medium text-foreground"
+              >
                 {tag}
-                {count > 1 && (
-                  <span className="text-[0.625rem] text-muted-foreground font-normal">×{count}</span>
-                )}
+                {count > 1 && <span className="text-[0.625rem] text-muted-foreground font-normal">×{count}</span>}
               </span>
             ))}
           </div>
         </div>
-      )}
-
-      {/* Separator */}
-      {(finnTechs.length > 0 || foresporslerTags.length > 0) && contactTags.length > 0 && (
-        <div className="border-t border-border/50 my-2" />
       )}
 
       {/* Fra kontakter */}
@@ -1456,7 +1751,10 @@ function CompanyDnaPanel({ companyId }: { companyId: string }) {
           <p className="text-[0.6875rem] font-medium text-muted-foreground mb-1.5">Fra kontakter</p>
           <div className="flex flex-wrap gap-1.5">
             {contactTags.map((tag: string) => (
-              <span key={tag} className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-[0.75rem] font-medium text-primary">
+              <span
+                key={tag}
+                className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-[0.75rem] font-medium text-primary"
+              >
                 {tag}
               </span>
             ))}
