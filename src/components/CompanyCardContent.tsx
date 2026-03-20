@@ -209,15 +209,16 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
     enabled: !!companyId,
   });
 
-  const { data: techProfileData } = useQuery({
-    queryKey: ["company-tech-profile-summary", companyId],
+  const { data: techProfile } = useQuery({
+    queryKey: ["company-tech-profile", companyId],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("company_tech_profile")
-        .select("teknologier")
+        .select("teknologier, konsulent_hyppighet, sist_fra_finn")
         .eq("company_id", companyId)
-        .single();
-      return data || null;
+        .maybeSingle();
+      if (error) throw error;
+      return data;
     },
     enabled: !!companyId,
   });
@@ -822,80 +823,50 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             </button>
           )}
         </div>
-      ) : editable ? (
-        <button onClick={() => { setNotesDraft(""); setEditingNotes(true); }}
-          className="text-[0.75rem] text-muted-foreground/50 hover:text-muted-foreground mb-6 inline-flex items-center gap-1 transition-colors">
-          <Pencil className="h-3 w-3" /> Legg til notat
-        </button>
       ) : null}
 
-      {/* Snapshot-rad */}
+      {/* ── Snapshot-rad ── */}
       {(() => {
         const sisteAktivitet = activities[0] ?? null;
-        const nesteOppfolging = tasks[0] ?? null;
+        const nesteOppfolging = tasks.filter(t => t.due_date).sort((a, b) =>
+          new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
+        )[0] ?? null;
         if (!sisteAktivitet && !nesteOppfolging) return null;
         return (
-          <div className="mt-3 mb-5 rounded-lg bg-muted/40 border border-border px-3 py-2.5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 space-y-1 min-w-0">
-                {sisteAktivitet && (() => {
-                  const { title, category } = extractTitleAndCategory(sisteAktivitet.subject, sisteAktivitet.description);
-                  const contactName = (sisteAktivitet.contacts as any)?.first_name
-                    ? `${(sisteAktivitet.contacts as any).first_name} ${(sisteAktivitet.contacts as any).last_name}` : null;
-                  return (
-                    <div className="flex items-center gap-2 text-[0.8125rem]">
-                      <span className="text-muted-foreground shrink-0">Siste:</span>
-                      <span className="font-medium text-foreground truncate">"{title}"</span>
-                      {contactName && <span className="text-muted-foreground/60 text-[0.75rem] shrink-0">→ {contactName}</span>}
-                      <span className="text-muted-foreground shrink-0 ml-auto">
-                        {format(new Date(sisteAktivitet.created_at), "d. MMM yyyy", { locale: nb })}
-                      </span>
-                      {category && <CategoryBadge label={category} className="shrink-0" />}
-                    </div>
-                  );
-                })()}
-                {nesteOppfolging && (() => {
-                  const { title, category } = extractTitleAndCategory(nesteOppfolging.title, nesteOppfolging.description);
-                  const overdue = nesteOppfolging.due_date && isPast(new Date(nesteOppfolging.due_date)) && !isToday(new Date(nesteOppfolging.due_date));
-                  const contactName = (nesteOppfolging.contacts as any)?.first_name
-                    ? `${(nesteOppfolging.contacts as any).first_name} ${(nesteOppfolging.contacts as any).last_name}` : null;
-                  return (
-                    <div className="flex items-center gap-2 text-[0.8125rem]">
-                      <span className="text-muted-foreground shrink-0">Neste:</span>
-                      <span className="font-medium text-foreground truncate">{title}</span>
-                      {contactName && <span className="text-muted-foreground/60 text-[0.75rem] shrink-0">→ {contactName}</span>}
-                      {nesteOppfolging.due_date && (
-                        <span className={cn("shrink-0 ml-auto font-medium", overdue ? "text-destructive" : "text-muted-foreground")}>
-                          {format(new Date(nesteOppfolging.due_date), "d. MMM yyyy", { locale: nb })}
-                        </span>
-                      )}
-                      {category && <CategoryBadge label={category} className="shrink-0" />}
-                    </div>
-                  );
-                })()}
-              </div>
-              {(() => {
-                const hasTechData = techProfileData?.teknologier && 
-                  Object.keys(techProfileData.teknologier as Record<string, number>).length > 0;
-                const contactsHaveTech = contacts.some(
-                  c => (c as any).teknologier && (c as any).teknologier.length > 0
-                );
-                if (!hasTechData && !contactsHaveTech) return null;
-                return (
-                  <button
-                    onClick={handleFinnKonsulenter}
-                    disabled={matchingKonsulenter}
-                    className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors shrink-0 self-end disabled:opacity-50"
-                  >
-                    {matchingKonsulenter ? (
-                      <><Loader2 className="h-3.5 w-3.5 animate-spin" />Matcher...</>
-                    ) : (
-                      <><Target className="h-3.5 w-3.5 text-primary" /> Finn konsulenter</>
-                    )}
-                  </button>
-                );
-              })()}
-            </div>
+          <div className="mb-5 rounded-lg bg-muted/40 border border-border px-3 py-2.5 space-y-1">
+            {sisteAktivitet && (() => {
+              const { title, category } = extractTitleAndCategory(sisteAktivitet.subject, sisteAktivitet.description);
+              const contactName = (sisteAktivitet.contacts as any)?.first_name
+                ? `${(sisteAktivitet.contacts as any).first_name} ${(sisteAktivitet.contacts as any).last_name}` : null;
+              return (
+                <div className="flex items-center gap-2 text-[0.8125rem]">
+                  <span className="text-muted-foreground shrink-0">Siste:</span>
+                  <span className="font-medium text-foreground truncate">"{title}"</span>
+                  {contactName && <span className="text-muted-foreground/60 text-[0.75rem] shrink-0">→ {contactName}</span>}
+                  <span className="text-muted-foreground shrink-0 ml-auto">
+                    {format(new Date(sisteAktivitet.created_at), "d. MMM yyyy", { locale: nb })}
+                  </span>
+                  {category && <CategoryBadge label={category} className="shrink-0" />}
+                </div>
+              );
+            })()}
+            {nesteOppfolging && (() => {
+              const { title, category } = extractTitleAndCategory(nesteOppfolging.title, nesteOppfolging.description);
+              const overdue = isPast(new Date(nesteOppfolging.due_date)) && !isToday(new Date(nesteOppfolging.due_date));
+              const contactName = (nesteOppfolging.contacts as any)?.first_name
+                ? `${(nesteOppfolging.contacts as any).first_name} ${(nesteOppfolging.contacts as any).last_name}` : null;
+              return (
+                <div className="flex items-center gap-2 text-[0.8125rem]">
+                  <span className="text-muted-foreground shrink-0">Neste:</span>
+                  <span className="font-medium text-foreground truncate">{title}</span>
+                  {contactName && <span className="text-muted-foreground/60 text-[0.75rem] shrink-0">→ {contactName}</span>}
+                  <span className={cn("shrink-0 ml-auto font-medium", overdue ? "text-destructive" : "text-muted-foreground")}>
+                    {format(new Date(nesteOppfolging.due_date), "d. MMM yyyy", { locale: nb })}
+                  </span>
+                  {category && <CategoryBadge label={category} className="shrink-0" />}
+                </div>
+              );
+            })()}
           </div>
         );
       })()}
@@ -904,6 +875,49 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
       <div className="grid grid-cols-1 md:grid-cols-[1fr_1px_minmax(0,300px)] gap-0">
         {/* Left: Tasks + Activities */}
         <div className="space-y-5 pr-6">
+          {/* ── Teknisk DNA ── */}
+          {(() => {
+            const hasTechData = techProfile?.teknologier &&
+              Object.keys(techProfile.teknologier as Record<string, number>).length > 0;
+            const contactTechTags = contacts.flatMap(c => (c as any).teknologier || []);
+            const hasAnyTech = hasTechData || contactTechTags.length > 0;
+
+            return (
+              <div className="mb-5">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                    Teknisk DNA
+                    {techProfile?.konsulent_hyppighet ? (
+                      <span className="ml-2 text-muted-foreground/50 font-normal normal-case tracking-normal">
+                        · {techProfile.konsulent_hyppighet} annonser
+                      </span>
+                    ) : null}
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    {hasAnyTech && (
+                      <button
+                        onClick={handleFinnKonsulenter}
+                        disabled={matchingKonsulenter}
+                        className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+                      >
+                        {matchingKonsulenter ? (
+                          <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Matcher...</>
+                        ) : (
+                          <><Target className="h-3.5 w-3.5 text-primary" /> Finn konsulenter</>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {hasTechData ? (
+                  <CompanyDnaPanel companyId={companyId} />
+                ) : (
+                  <p className="text-[0.8125rem] text-muted-foreground/50">Ingen teknisk data ennå</p>
+                )}
+              </div>
+            );
+          })()}
           {/* ── Oppfølginger ── */}
           {tasks.length > 0 && (
             <div className="bg-card border border-border rounded-lg shadow-card p-4 mb-6">
@@ -1090,12 +1104,6 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             </div>
           )}
 
-          {/* ── Teknisk DNA ── */}
-          {editable && (
-            <div className="mt-6 space-y-2">
-              <CompanyDnaPanel companyId={companyId} />
-            </div>
-          )}
         </div>
       </div>
     </div>
@@ -1392,20 +1400,6 @@ function CompanyDnaPanel({ companyId }: { companyId: string }) {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-2">
-        Teknisk DNA
-        {dnaProfile?.konsulent_hyppighet ? (
-          <span className="ml-2 text-muted-foreground/50 font-normal normal-case tracking-normal">
-            · {dnaProfile.konsulent_hyppighet} annonser
-          </span>
-        ) : null}
-      </h3>
-
-      {!hasDna && (
-        <p className="text-[0.8125rem] text-muted-foreground/60 italic">
-          Ingen teknisk profil ennå — legges til automatisk fra forespørsler og kontakter.
-        </p>
-      )}
 
       {/* Finn.no DNA */}
       {finnTechs.length > 0 && (
