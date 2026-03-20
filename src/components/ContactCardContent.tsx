@@ -901,6 +901,19 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
             >
               <Clock className="h-[15px] w-[15px] text-[hsl(var(--warning))]" /> Ny oppfølging
             </button>
+            {(contact as any).teknologier?.length > 0 && (
+              <button
+                onClick={handleFinnKonsulent}
+                disabled={matchingConsultants}
+                className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+              >
+                {matchingConsultants ? (
+                  <><Loader2 className="h-[15px] w-[15px] animate-spin" />Matcher...</>
+                ) : (
+                  <><Target className="h-[15px] w-[15px] text-primary" />Finn konsulent</>
+                )}
+              </button>
+            )}
           </div>
 
           {/* Inline form */}
