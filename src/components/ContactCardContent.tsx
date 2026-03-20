@@ -1032,6 +1032,61 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
         </div>
       )}
 
+      {/* ── Konsulent match-resultater ── */}
+      {consultantResults !== null && (
+        <div className="mt-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Target className="h-4 w-4 text-primary" />
+              <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Konsulentmatch
+              </span>
+              <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-primary/10 text-primary text-[0.6875rem] font-semibold">
+                {consultantResults.length}
+              </span>
+            </div>
+            <button
+              onClick={handleFinnKonsulent}
+              className="text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Kjør på nytt
+            </button>
+          </div>
+
+          {consultantResults.length === 0 ? (
+            <p className="text-[0.8125rem] text-muted-foreground">Ingen treff med score ≥ 4</p>
+          ) : (
+            <div className="space-y-2">
+              {consultantResults.map((m: any, i: number) => (
+                <div key={m.id} className="rounded-lg border border-border bg-card p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
+                      <span className="text-[0.875rem] font-semibold text-foreground truncate">{m.navn}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className={cn(
+                        "inline-block h-2.5 w-2.5 rounded-full",
+                        m.score >= 8 ? "bg-emerald-500" : m.score >= 6 ? "bg-amber-500" : "bg-red-500"
+                      )} />
+                      <span className="text-[0.8125rem] font-bold text-foreground">{m.score}/10</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {(m.match_tags || []).map((t: string) => (
+                      <span key={t} className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-[0.8125rem] text-muted-foreground mt-1.5 italic">{m.begrunnelse}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── ZONE C: Oppfølginger ── */}
       {tasks.length > 0 && (
         <div className="bg-card border border-border rounded-lg shadow-card p-4 mb-6">
