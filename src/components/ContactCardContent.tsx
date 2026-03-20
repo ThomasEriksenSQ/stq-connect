@@ -850,7 +850,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                   onClick={() => setShowAnalyze(!showAnalyze)}
                   className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
                 >
-                  <Sparkles className="h-3.5 w-3.5 text-primary" /> Analyser tekst
+                  <Sparkles className="h-3.5 w-3.5 text-primary" /> Legg til tekniske tags fra tekst
                 </button>
                 {contact.teknologier && (contact.teknologier as string[]).length > 0 && (
                   <button
