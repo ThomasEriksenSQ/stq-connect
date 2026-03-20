@@ -209,6 +209,19 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
     enabled: !!companyId,
   });
 
+  const { data: techProfileData } = useQuery({
+    queryKey: ["company-tech-profile-summary", companyId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("company_tech_profile")
+        .select("teknologier")
+        .eq("company_id", companyId)
+        .single();
+      return data || null;
+    },
+    enabled: !!companyId,
+  });
+
   const contactIds = contacts.map(c => c.id);
 
   const { data: companyActivities = [] } = useQuery({
