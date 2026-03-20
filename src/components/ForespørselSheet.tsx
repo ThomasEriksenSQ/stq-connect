@@ -485,7 +485,7 @@ export function ForespørselSheet({
       const [aktiviteterRes, tasksRes, kontaktRes] = kontaktData as any;
       const aktiviteter = aktiviteterRes?.data || [];
       const kontaktTasks = tasksRes?.data || [];
-      const kontaktObj = kontaktRes?.data || null;
+      const kontakt = kontaktRes?.data || null;
 
       const signal = row.kontakt_id
         ? getEffectiveSignal(
@@ -504,7 +504,7 @@ export function ForespørselSheet({
           sted: row.sted || "",
           interne: interne || [],
           eksterne: eksterne || [],
-          kontakt_er_innkjoper: kontaktObj?.call_list || false,
+          kontakt_er_innkjoper: kontakt?.call_list || false,
           kontakt_signal: signal || "Ukjent om behov",
           siste_kontakt_dato: sisteKontakt,
           aktive_foresporsler: [],
@@ -513,7 +513,6 @@ export function ForespørselSheet({
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-
       setMatchResults(Array.isArray(data) ? data : []);
     } catch (err: any) {
       console.error("Match error:", err);
