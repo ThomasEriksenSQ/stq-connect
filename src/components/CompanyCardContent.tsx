@@ -875,6 +875,49 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
       <div className="grid grid-cols-1 md:grid-cols-[1fr_1px_minmax(0,300px)] gap-0">
         {/* Left: Tasks + Activities */}
         <div className="space-y-5 pr-6">
+          {/* ── Teknisk DNA ── */}
+          {(() => {
+            const hasTechData = techProfile?.teknologier &&
+              Object.keys(techProfile.teknologier as Record<string, number>).length > 0;
+            const contactTechTags = contacts.flatMap(c => (c as any).teknologier || []);
+            const hasAnyTech = hasTechData || contactTechTags.length > 0;
+
+            return (
+              <div className="mb-5">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                    Teknisk DNA
+                    {techProfile?.konsulent_hyppighet ? (
+                      <span className="ml-2 text-muted-foreground/50 font-normal normal-case tracking-normal">
+                        · {techProfile.konsulent_hyppighet} annonser
+                      </span>
+                    ) : null}
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    {hasAnyTech && (
+                      <button
+                        onClick={handleFinnKonsulenter}
+                        disabled={matchingKonsulenter}
+                        className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+                      >
+                        {matchingKonsulenter ? (
+                          <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Matcher...</>
+                        ) : (
+                          <><Target className="h-3.5 w-3.5 text-primary" /> Finn konsulenter</>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {hasTechData ? (
+                  <CompanyDnaPanel companyId={companyId} />
+                ) : (
+                  <p className="text-[0.8125rem] text-muted-foreground/50">Ingen teknisk data ennå</p>
+                )}
+              </div>
+            );
+          })()}
           {/* ── Oppfølginger ── */}
           {tasks.length > 0 && (
             <div className="bg-card border border-border rounded-lg shadow-card p-4 mb-6">
