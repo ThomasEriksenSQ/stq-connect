@@ -332,67 +332,6 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
     updateMutation.mutate({ [field]: value || null });
   };
 
-  const handleFinnKonsulenter = async () => {
-    setMatchingKonsulenter(true);
-    setKonsulentResults(null);
-    try {
-      const [{ data: foresporslerData }, { data: interne }, { data: eksterne }] = await Promise.all([
-        supabase
-          .from("foresporsler")
-          .select("teknologier")
-          .eq("selskap_id", companyId)
-          .gte("mottatt_dato", new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)),
-        supabase
-          .from("stacq_ansatte")
-          .select("id, navn, kompetanse, geografi, erfaring_aar, status")
-          .in("status", ["AKTIV/SIGNERT"]),
-        supabase
-          .from("external_consultants")
-          .select("id, navn, teknologier, status")
-          .in("status", ["ledig", "aktiv"]),
-      ]);
-      const alleTags: string[] = [];
-      (foresporslerData || []).forEach(f => {
-        if (f.teknologier) alleTags.push(...f.teknologier);
-      });
-      (contacts as any[]).forEach(c => {
-        if ((c as any).teknologier) alleTags.push(...(c as any).teknologier);
-      });
-      const freq: Record<string, number> = {};
-      alleTags.forEach(t => { freq[t] = (freq[t] || 0) + 1; });
-      const teknologier = Object.entries(freq)
-        .sort((a, b) => b[1] - a[1])
-        .map(([tag]) => tag)
-        .slice(0, 15);
-      if (!teknologier.length) {
-        toast("Ingen teknisk profil på selskapet ennå — legg til teknologier på forespørsler eller kontakter");
-        setMatchingKonsulenter(false);
-        return;
-      }
-      const { data, error } = await supabase.functions.invoke("match-consultants", {
-        body: {
-          teknologier,
-          sted: company?.city || "",
-          interne: interne || [],
-          eksterne: eksterne || [],
-          kontakt_er_innkjoper: false,
-          kontakt_signal: effectiveSignal || "Ukjent om behov",
-          siste_kontakt_dato: activities[0]?.created_at
-            ? new Date(activities[0].created_at).toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" })
-            : null,
-          aktive_foresporsler: [],
-        },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      setKonsulentResults(Array.isArray(data) ? data : []);
-    } catch (err: any) {
-      toast.error(err.message || "Kunne ikke kjøre matching");
-      setKonsulentResults([]);
-    } finally {
-      setMatchingKonsulenter(false);
-    }
-  };
 
   if (isLoading) {
     return <div className="space-y-3 animate-pulse"><div className="h-7 w-48 bg-secondary rounded" /><div className="h-4 w-32 bg-secondary rounded" /></div>;
