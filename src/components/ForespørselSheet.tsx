@@ -27,6 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { format, parseISO } from "date-fns";
 import { nb } from "date-fns/locale";
+import { getEffectiveSignal } from "@/lib/categoryUtils";
 
 const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
 
