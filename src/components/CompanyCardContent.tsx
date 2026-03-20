@@ -213,6 +213,10 @@ export function CompanyCardContent({
   const [konsulentResults, setKonsulentResults] = useState<any[] | null>(null);
   const [konsulentFilter, setKonsulentFilter] = useState<"Alle" | "Ansatte" | "Eksterne">("Alle");
   const { user } = useAuth();
+  const [showAnalyze, setShowAnalyze] = useState(false);
+  const [analyzeText, setAnalyzeText] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [techTagInput, setTechTagInput] = useState("");
 
   const { data: company, isLoading } = useQuery({
     queryKey: ["company", companyId],
