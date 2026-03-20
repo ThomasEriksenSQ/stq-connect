@@ -930,7 +930,7 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
       const { data, error } = await supabase.functions.invoke("process-finn-import");
       if (error) throw error;
       setProcessResult(data);
-      toast({ title: "Prosessering fullført", description: `${data.matched_til_selskap} annonser koblet til selskaper, ${data.selskaps_profiler_oppdatert} DNA-profiler oppdatert` });
+      toast({ title: "Prosessering fullført", description: `${data.teknologier_array_fikset} teknologier fikset, ${data.dna_profiler_oppdatert} DNA-profiler oppdatert` });
       refetch();
     } catch (e: any) {
       toast({ title: "Feil", description: e.message, variant: "destructive" });
