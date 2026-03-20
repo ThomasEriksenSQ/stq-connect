@@ -650,164 +650,83 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           </div>
         </div>
 
-        <div className="text-[0.9375rem] text-foreground/70 mt-0.5">
-          <div className="flex items-center gap-2 flex-wrap">
-            {companyName && (
-              <span className="group/co inline-flex items-center gap-1">
-                <button className="text-primary font-medium hover:underline" onClick={() => onOpenCompany ? onOpenCompany(companyId) : navigate(`/selskaper/${companyId}`)}>
-                  {companyName}
-                </button>
-                {editable && (
-                  <button
-                    onClick={() => { setChangingCompany(true); setCompanySearch(""); setCompanyResults([]); setTimeout(() => companySearchRef.current?.focus(), 0); }}
-                    className="opacity-0 group-hover/co:opacity-60 hover:!opacity-100 transition-opacity"
-                  >
-                    <Pencil className="h-2.5 w-2.5" />
-                  </button>
-                )}
-              </span>
-            )}
-            {!companyName && editable && (
-              <button
-                onClick={() => { setChangingCompany(true); setCompanySearch(""); setCompanyResults([]); setTimeout(() => companySearchRef.current?.focus(), 0); }}
-                className="text-muted-foreground/40 italic inline-flex items-center gap-1 hover:text-foreground/60 transition-colors"
-              >
-                Selskap <Pencil className="h-2.5 w-2.5" />
+        {/* Line 2: Selskap · Sted · Avdeling · Tittel */}
+        <div className="flex items-center gap-1.5 flex-wrap text-[0.9375rem] text-foreground/70 mt-0.5">
+          {companyName && (
+            <span className="group/co inline-flex items-center gap-1">
+              <button className="text-primary font-medium hover:underline" onClick={() => onOpenCompany ? onOpenCompany(companyId) : navigate(`/selskaper/${companyId}`)}>
+                {companyName}
               </button>
-            )}
-            {(companyName || editable) && (editable || contact.title) && <span className="text-muted-foreground/40">·</span>}
-            {editable ? (
-              <InlineField value={contact.title || ""} onSave={updateField("title")} placeholder="Stilling" className="text-[0.9375rem]" />
-            ) : (
-              contact.title && <span>{contact.title}</span>
-            )}
-            {showAvdeling && (
-              <>
-                <span className="text-muted-foreground/40">·</span>
-                {editable ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className={cn(
-                        "group inline-flex items-center gap-1 transition-colors cursor-pointer text-[0.9375rem]",
-                        contact.location ? "hover:text-foreground/60" : "text-muted-foreground/40 italic hover:text-foreground/60"
-                      )}>
-                        <span>{contact.location || "Avdeling"}</span>
-                        <Pencil className="h-2.5 w-2.5 opacity-0 group-hover:opacity-50 transition-opacity flex-shrink-0" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      <DropdownMenuItem onClick={() => updateMutation.mutate({ location: null })}>
-                        <span className="text-muted-foreground italic">Ingen spesifikk avdeling</span>
-                      </DropdownMenuItem>
-                      {companyLocations.map((loc) => (
-                        <DropdownMenuItem key={loc} onClick={() => updateMutation.mutate({ location: loc })}>
-                          {loc}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : (
-                  contact.location && <span>{contact.location}</span>
-                )}
-              </>
-            )}
-          </div>
-          {changingCompany && (
-            <div className="relative mt-1.5">
-              <Input
-                ref={companySearchRef}
-                value={companySearch}
-                onChange={async (e) => {
-                  const q = e.target.value;
-                  setCompanySearch(q);
-                  if (q.trim().length < 2) { setCompanyResults([]); return; }
-                  const { data } = await supabase.from("companies").select("id, name").ilike("name", `%${q.trim()}%`).limit(8);
-                  setCompanyResults(data || []);
-                }}
-                onKeyDown={(e) => { if (e.key === "Escape") setChangingCompany(false); }}
-                placeholder="Søk selskap..."
-                className="h-8 text-sm rounded-lg w-64"
-              />
-              {companyResults.length > 0 && (
-                <div className="absolute z-50 mt-1 w-64 bg-background border border-border rounded-lg shadow-md py-1 max-h-48 overflow-y-auto">
-                  {companyResults.map((c) => (
-                    <button
-                      key={c.id}
-                      className="w-full text-left px-3 py-1.5 text-sm hover:bg-secondary transition-colors"
-                      onClick={() => {
-                        updateMutation.mutate({ company_id: c.id });
-                        setChangingCompany(false);
-                      }}
-                    >
-                      {c.name}
-                    </button>
-                  ))}
-                </div>
+              {editable && (
+                <button
+                  onClick={() => { setChangingCompany(true); setCompanySearch(""); setCompanyResults([]); setTimeout(() => companySearchRef.current?.focus(), 0); }}
+                  className="opacity-0 group-hover/co:opacity-60 hover:!opacity-100 transition-opacity"
+                >
+                  <Pencil className="h-2.5 w-2.5" />
+                </button>
               )}
-            </div>
+            </span>
           )}
-        </div>
-
-        {/* Line 3: phone · email · linkedin */}
-        <div className="flex items-center gap-2 flex-wrap text-[0.9375rem] text-foreground/70 mt-1">
-          {contact.phone && (
-            <button onClick={() => copyToClipboard(contact.phone!)} className="inline-flex items-center gap-1 hover:text-foreground">
-              <Phone className="h-3 w-3" />{editable ? <InlineField value={contact.phone} onSave={updateField("phone")} className="text-[0.9375rem]" /> : contact.phone}
+          {!companyName && editable && (
+            <button
+              onClick={() => { setChangingCompany(true); setCompanySearch(""); setCompanyResults([]); setTimeout(() => companySearchRef.current?.focus(), 0); }}
+              className="text-muted-foreground/40 italic inline-flex items-center gap-1 hover:text-foreground/60 transition-colors"
+            >
+              Selskap <Pencil className="h-2.5 w-2.5" />
             </button>
           )}
-          {editable && !contact.phone && (
-            <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3 text-muted-foreground/40" /><InlineField value="" onSave={updateField("phone")} placeholder="Telefon" className="text-[0.9375rem]" /></span>
-          )}
-          {contact.email && (
+          {(contact as any).location && (
             <>
               <span className="text-muted-foreground/40">·</span>
-              <button onClick={() => copyToClipboard(contact.email!)} className="inline-flex items-center gap-1 hover:text-foreground">
-                <Mail className="h-3 w-3" />{editable ? <InlineField value={contact.email} onSave={updateField("email")} className="text-[0.9375rem]" /> : contact.email}
-              </button>
+              <span>{(contact as any).location}</span>
             </>
           )}
-          {editable && !contact.email && (
-            <>
-              <span className="text-muted-foreground/40">·</span>
-              <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3 text-muted-foreground/40" /><InlineField value="" onSave={updateField("email")} placeholder="E-post" className="text-[0.9375rem]" /></span>
-            </>
+          <span className="text-muted-foreground/40">·</span>
+          {editable ? (
+            <InlineField value={(contact as any).department || ""} onSave={updateField("department")} placeholder="Avdeling" className="text-[0.9375rem]" />
+          ) : (
+            (contact as any).department && <span>{(contact as any).department}</span>
           )}
-          {contact.linkedin && (
-            <>
-              <span className="text-muted-foreground/40">·</span>
-              {editable ? (
-                <span className="inline-flex items-center gap-1">
-                  <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline"><Linkedin className="h-3 w-3" /></a>
-                  <InlineField value={contact.linkedin} onSave={updateField("linkedin")} className="text-[0.9375rem]" />
-                </span>
-              ) : (
-                <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
-                  <Linkedin className="h-3 w-3" />in
-                </a>
-              )}
-            </>
-          )}
-          {editable && !contact.linkedin && (
-            <>
-              <span className="text-muted-foreground/40">·</span>
-              <span className="inline-flex items-center gap-1"><Linkedin className="h-3 w-3 text-muted-foreground/40" /><InlineField value="" onSave={updateField("linkedin")} placeholder="LinkedIn URL" className="text-[0.9375rem]" /></span>
-            </>
+          <span className="text-muted-foreground/40">·</span>
+          {editable ? (
+            <InlineField value={contact.title || ""} onSave={updateField("title")} placeholder="Stilling" className="text-[0.9375rem]" />
+          ) : (
+            contact.title && <span>{contact.title}</span>
           )}
         </div>
-
-        {/* Avdeling */}
-        {editable && (
-          <div className="flex items-center gap-1 mt-0.5 text-[0.875rem] text-foreground/60">
-            <InlineField
-              value={(contact as any).department || ""}
-              onSave={(v) => updateMutation.mutate({ department: v || null })}
-              placeholder="Avdeling"
-              className="text-[0.875rem]"
+        {changingCompany && (
+          <div className="relative mt-1.5">
+            <Input
+              ref={companySearchRef}
+              value={companySearch}
+              onChange={async (e) => {
+                const q = e.target.value;
+                setCompanySearch(q);
+                if (q.trim().length < 2) { setCompanyResults([]); return; }
+                const { data } = await supabase.from("companies").select("id, name").ilike("name", `%${q.trim()}%`).limit(8);
+                setCompanyResults(data || []);
+              }}
+              onKeyDown={(e) => { if (e.key === "Escape") setChangingCompany(false); }}
+              placeholder="Søk selskap..."
+              className="h-8 text-sm rounded-lg w-64"
             />
+            {companyResults.length > 0 && (
+              <div className="absolute z-50 mt-1 w-64 bg-background border border-border rounded-lg shadow-md py-1 max-h-48 overflow-y-auto">
+                {companyResults.map((c) => (
+                  <button
+                    key={c.id}
+                    className="w-full text-left px-3 py-1.5 text-sm hover:bg-secondary transition-colors"
+                    onClick={() => {
+                      updateMutation.mutate({ company_id: c.id });
+                      setChangingCompany(false);
+                    }}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-        {!editable && (contact as any).department && (
-          <p className="text-[0.875rem] text-foreground/60 mt-0.5">{(contact as any).department}</p>
         )}
 
         {/* Line 3: Checkboxes */}
