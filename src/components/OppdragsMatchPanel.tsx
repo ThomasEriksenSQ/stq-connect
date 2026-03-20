@@ -25,6 +25,7 @@ interface Konsulent {
   ekstern_id?: string;
   forny_dato?: string | null;
   erfaring_aar?: number | null;
+  tilgjengelig_fra?: string | null;
 }
 
 type MatchFilter = "Alle" | "Høy score" | "Frist snart";
