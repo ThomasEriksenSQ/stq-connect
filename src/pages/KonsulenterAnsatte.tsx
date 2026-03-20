@@ -17,6 +17,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+function getFornyColor(fornyDato: string): { label: string; className: string } {
+  const days = differenceInDays(new Date(fornyDato), new Date());
+  if (days < 0) return { label: `Utløpt ${Math.abs(days)}d siden`, className: "text-destructive font-semibold" };
+  if (days <= 30) return { label: `Om ${days}d`, className: "text-amber-600 font-semibold" };
+  if (days <= 60) return { label: `Om ${days}d`, className: "text-amber-500" };
+  return { label: format(new Date(fornyDato), "dd.MM.yy"), className: "text-muted-foreground" };
+}
+
 type Filter = "Alle" | "Aktiv" | "Kommende" | "Sluttet";
 
 export default function KonsulenterAnsatte() {
