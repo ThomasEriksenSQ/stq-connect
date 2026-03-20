@@ -39,6 +39,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
   const isCreate = ansatt === null;
 
   const [editing, setEditing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [tagInput, setTagInput] = useState("");
