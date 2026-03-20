@@ -61,7 +61,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
       setForm({
         navn: "", epost: "", tlf: "", geografi: "", status: "AKTIV/SIGNERT",
         start_dato: "", slutt_dato: "", kompetanse: [],
-        bilde_url: "", erfaring_aar: "",
+        bilde_url: "", erfaring_aar: "", tilgjengelig_fra: "",
       });
     } else if (ansatt) {
       setEditing(false);
