@@ -307,7 +307,7 @@ function TechTagEditor({ tags, onSave, contact, updateMutation, showAnalyze, set
               <Sparkles className="h-3.5 w-3.5" />
               {isAnalyzing ? "Analyserer..." : "Finn teknologier"}
             </button>
-            <button onClick={() => { setShowAnalyze(false); setAnalyzeText(""); }}
+            <button onClick={() => { if (setShowAnalyze) setShowAnalyze(false); setAnalyzeText(""); }}
               className="text-[0.75rem] text-muted-foreground hover:text-foreground">
               Avbryt
             </button>
