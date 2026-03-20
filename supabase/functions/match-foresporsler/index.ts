@@ -58,7 +58,7 @@ ${foresporsler.map((f: any) =>
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
-          max_tokens: 2000,
+          max_tokens: 4000,
         }),
       }
     );
