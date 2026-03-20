@@ -189,8 +189,11 @@ function InlineField({
 
 const SUGGESTED_TECH_TAGS = ["C++", "C", "Embedded", "Yocto", "Linux", "Qt", "FPGA", "Python", "SPI/I2C", "MCU", "Embedded Linux", "Sikkerhet", "AUTOSAR", "FreeRTOS"];
 
-function TechTagEditor({ tags, onSave }: { tags: string[]; onSave: (tags: string[]) => void }) {
+function TechTagEditor({ tags, onSave, contact, updateMutation }: { tags: string[]; onSave: (tags: string[]) => void; contact?: any; updateMutation?: any }) {
   const [input, setInput] = useState("");
+  const [showAnalyze, setShowAnalyze] = useState(false);
+  const [analyzeText, setAnalyzeText] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const addTags = (raw: string) => {
     const newTags = raw.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean);
@@ -218,10 +221,35 @@ function TechTagEditor({ tags, onSave }: { tags: string[]; onSave: (tags: string
     }
   };
 
+  const handleAnalyzeText = async () => {
+    setIsAnalyzing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("extract-knowledge", {
+        body: {
+          text: analyzeText,
+          prompt: `Analyser denne teksten og trekk ut relevante teknologier, programmeringsspråk, rammeverk og fagområder som er relevante for embedded/firmware/C/C++ konsulentbransjen. Returner KUN en JSON-array med strings, ingen annen tekst. Eksempel: ["C++", "Embedded Linux", "RTOS"]`
+        }
+      });
+      if (error) throw error;
+      const resultText = typeof data === "string" ? data : (data?.content?.[0]?.text || data?.result || JSON.stringify(data));
+      const clean = resultText.replace(/```json|```/g, "").trim();
+      const parsed: string[] = JSON.parse(clean);
+      const existing = tags || [];
+      const merged = [...new Set([...existing, ...parsed])];
+      onSave(merged);
+      setShowAnalyze(false);
+      setAnalyzeText("");
+      toast.success(`${parsed.filter(t => !existing.includes(t)).length} teknologier lagt til`);
+    } catch {
+      toast.error("Kunne ikke analysere tekst");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   return (
     <div>
-      <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Teknisk profil</span>
-      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 p-2 border border-border rounded-lg bg-background min-h-[36px]">
+      <div className="flex flex-wrap items-center gap-1.5 p-2 border border-border rounded-lg bg-background min-h-[36px]">
         {tags.map(t => (
           <span key={t} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-[0.75rem] text-foreground">
             {t}
@@ -239,6 +267,34 @@ function TechTagEditor({ tags, onSave }: { tags: string[]; onSave: (tags: string
           className="flex-1 min-w-[100px] bg-transparent outline-none text-[0.8125rem] placeholder:text-muted-foreground"
         />
       </div>
+      {showAnalyze && (
+        <div className="mt-2 p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-2">
+          <p className="text-[0.75rem] text-muted-foreground">
+            Lim inn stillingsbeskrivelse, e-post eller kravspesifikasjon — AI finner relevante teknologier automatisk.
+          </p>
+          <Textarea
+            value={analyzeText}
+            onChange={(e) => setAnalyzeText(e.target.value)}
+            placeholder="Lim inn tekst her..."
+            rows={4}
+            className="text-[0.875rem] rounded-md resize-none"
+          />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleAnalyzeText}
+              disabled={!analyzeText.trim() || isAnalyzing}
+              className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.75rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-colors"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              {isAnalyzing ? "Analyserer..." : "Finn teknologier"}
+            </button>
+            <button onClick={() => { setShowAnalyze(false); setAnalyzeText(""); }}
+              className="text-[0.75rem] text-muted-foreground hover:text-foreground">
+              Avbryt
+            </button>
+          </div>
+        </div>
+      )}
       <div className="flex flex-wrap gap-1.5 mt-1.5">
         {SUGGESTED_TECH_TAGS.filter(s => !tags.includes(s)).slice(0, 8).map(s => (
           <button key={s} onClick={() => addTags(s)}
