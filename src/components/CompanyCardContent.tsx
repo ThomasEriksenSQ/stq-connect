@@ -779,7 +779,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
 
       {/* Notes (inline edit via pencil) */}
       {editable && editingNotes ? (
-        <div className="mb-4">
+        <div className="mb-6">
           <Textarea
             value={notesDraft}
             onChange={(e) => setNotesDraft(e.target.value)}
