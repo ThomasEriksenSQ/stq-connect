@@ -1369,27 +1369,14 @@ function CompanyDnaPanel({ companyId }: { companyId: string }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-          Teknisk DNA
-          {dnaProfile?.konsulent_hyppighet ? (
-            <span className="ml-2 text-muted-foreground/50 font-normal normal-case tracking-normal">
-              · {dnaProfile.konsulent_hyppighet} annonser
-            </span>
-          ) : null}
-        </h3>
-        <button
-          onClick={onFinnKonsulenter}
-          disabled={matchingKonsulenter}
-          className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
-        >
-          {matchingKonsulenter ? (
-            <><Loader2 className="h-3.5 w-3.5 animate-spin" />Matcher...</>
-          ) : (
-            <><Target className="h-3.5 w-3.5 text-primary" /> Finn konsulenter</>
-          )}
-        </button>
-      </div>
+      <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-2">
+        Teknisk DNA
+        {dnaProfile?.konsulent_hyppighet ? (
+          <span className="ml-2 text-muted-foreground/50 font-normal normal-case tracking-normal">
+            · {dnaProfile.konsulent_hyppighet} annonser
+          </span>
+        ) : null}
+      </h3>
 
       {!hasDna && (
         <p className="text-[0.8125rem] text-muted-foreground/60 italic">
@@ -1401,7 +1388,7 @@ function CompanyDnaPanel({ companyId }: { companyId: string }) {
       {finnTechs.length > 0 && (
         <div>
           <p className="text-[0.6875rem] font-medium text-muted-foreground mb-1.5">Fra Finn.no</p>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1.5">
             {finnTechs.map(([tech, count]) => (
               <span
                 key={tech}
@@ -1419,6 +1406,11 @@ function CompanyDnaPanel({ companyId }: { companyId: string }) {
         </div>
       )}
 
+      {/* Separator */}
+      {finnTechs.length > 0 && foresporslerTags.length > 0 && (
+        <div className="border-t border-border/50 my-2" />
+      )}
+
       {/* Fra forespørsler */}
       {foresporslerTags.length > 0 && (
         <div>
@@ -1434,6 +1426,11 @@ function CompanyDnaPanel({ companyId }: { companyId: string }) {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Separator */}
+      {(finnTechs.length > 0 || foresporslerTags.length > 0) && contactTags.length > 0 && (
+        <div className="border-t border-border/50 my-2" />
       )}
 
       {/* Fra kontakter */}
