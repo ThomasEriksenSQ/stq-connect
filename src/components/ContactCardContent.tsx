@@ -675,6 +675,21 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           )}
         </div>
 
+        {/* Avdeling */}
+        {editable && (
+          <div className="flex items-center gap-1 mt-0.5 text-[0.875rem] text-foreground/60">
+            <InlineField
+              value={(contact as any).department || ""}
+              onSave={(v) => updateMutation.mutate({ department: v || null })}
+              placeholder="Avdeling"
+              className="text-[0.875rem]"
+            />
+          </div>
+        )}
+        {!editable && (contact as any).department && (
+          <p className="text-[0.875rem] text-foreground/60 mt-0.5">{(contact as any).department}</p>
+        )}
+
         {/* Line 3: Checkboxes */}
         <div className="flex items-center gap-3 mt-2">
           <label className="inline-flex items-center gap-1.5 cursor-pointer">
