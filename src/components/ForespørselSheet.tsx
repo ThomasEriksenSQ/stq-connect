@@ -27,6 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { format, parseISO } from "date-fns";
 import { nb } from "date-fns/locale";
+import { getEffectiveSignal } from "@/lib/categoryUtils";
 
 const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
 
@@ -469,10 +470,33 @@ export function ForespørselSheet({
     setMatching(true);
     setMatchResults(null);
     try {
-      const [{ data: interne }, { data: eksterne }] = await Promise.all([
-        supabase.from("stacq_ansatte").select("id, navn, kompetanse, geografi, status").in("status", ["AKTIV/SIGNERT", "Ledig"]),
+      const [{ data: interne }, { data: eksterne }, kontaktData] = await Promise.all([
+        supabase.from("stacq_ansatte").select("id, navn, kompetanse, geografi, erfaring_aar, status").in("status", ["AKTIV/SIGNERT", "Ledig"]),
         supabase.from("external_consultants").select("id, navn, teknologier, status").in("status", ["ledig", "aktiv"]),
+        row.kontakt_id
+          ? Promise.all([
+              supabase.from("activities").select("contact_id, created_at, subject, description").eq("contact_id", row.kontakt_id).order("created_at", { ascending: false }),
+              supabase.from("tasks").select("contact_id, created_at, title, description, due_date").eq("contact_id", row.kontakt_id).neq("status", "done"),
+              supabase.from("contacts").select("id, call_list").eq("id", row.kontakt_id).single(),
+            ])
+          : Promise.resolve([{ data: [] }, { data: [] }, { data: null }]),
       ]);
+
+      const [aktiviteterRes, tasksRes, kontaktRes] = kontaktData as any;
+      const aktiviteter = aktiviteterRes?.data || [];
+      const kontaktTasks = tasksRes?.data || [];
+      const kontaktObj = kontaktRes?.data || null;
+
+      const signal = row.kontakt_id
+        ? getEffectiveSignal(
+            aktiviteter.map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+            kontaktTasks.map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date }))
+          )
+        : null;
+
+      const sisteKontakt = aktiviteter[0]?.created_at
+        ? new Date(aktiviteter[0].created_at).toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" })
+        : null;
 
       const { data, error } = await supabase.functions.invoke("match-consultants", {
         body: {
@@ -480,6 +504,10 @@ export function ForespørselSheet({
           sted: row.sted || "",
           interne: interne || [],
           eksterne: eksterne || [],
+          kontakt_er_innkjoper: kontaktObj?.call_list || false,
+          kontakt_signal: signal || "Ukjent om behov",
+          siste_kontakt_dato: sisteKontakt,
+          aktive_foresporsler: [],
         },
       });
 
