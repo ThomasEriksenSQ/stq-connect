@@ -1019,239 +1019,246 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
         </button>
       ) : null}
 
-      {/* ── ZONE B: Action Bar ── */}
-      {editable && (
-        <div className="border-t border-border mt-2 pt-4 pb-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => openForm("call")}
-              className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg transition-colors bg-[hsl(var(--success))] text-white hover:opacity-90"
-            >
-              <MessageCircle className="h-[15px] w-[15px] text-white" /> Logg samtale
-            </button>
-            <button
-              onClick={() => openForm("meeting")}
-              className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg transition-colors bg-primary text-primary-foreground hover:opacity-90"
-            >
-              <FileText className="h-[15px] w-[15px] text-white" /> Logg møtereferat
-            </button>
-            <button
-              onClick={() => openForm("task")}
-              className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
-            >
-              <Clock className="h-[15px] w-[15px] text-[hsl(var(--warning))]" /> Ny oppfølging
-            </button>
-          </div>
-
-          {/* Inline form */}
-          {activeForm && (
-            <div
-              className="mt-3 animate-in slide-in-from-top-1 duration-200"
-              onKeyDown={handleFormKeyDown}
-            >
-              {/* Title input */}
-              <div className="mb-3">
-                <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">Tittel</span>
-                <Input
-                  value={formTitle}
-                  onChange={(e) => setFormTitle(e.target.value)}
-                  placeholder="Tittel"
-                  className="text-[0.9375rem] rounded-md"
-                  autoFocus
-                />
-                {activeForm === "call" && (
-                  <div className="flex items-center gap-1.5 mt-2">
-                    <button
-                      type="button"
-                      onClick={() => setFormTitle("Ringte, ikke svar")}
-                      className="inline-flex items-center gap-1 h-6 px-2.5 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                    >
-                      <PhoneOff className="h-3 w-3" /> Ringte, ikke svar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormTitle("Sendt LinkedIn melding")}
-                      className="inline-flex items-center gap-1 h-6 px-2.5 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                    >
-                      <Send className="h-3 w-3" /> Sendt LinkedIn melding
-                    </button>
-                  </div>
-                )}
+      {/* ── Grid wrapper to match company card column width ── */}
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_minmax(0,260px)] gap-6">
+        <div>
+          {/* ── ZONE B: Action Bar ── */}
+          {editable && (
+            <div className="border-t border-border mt-2 pt-4 pb-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => openForm("call")}
+                  className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg transition-colors bg-[hsl(var(--success))] text-white hover:opacity-90"
+                >
+                  <MessageCircle className="h-[15px] w-[15px] text-white" /> Logg samtale
+                </button>
+                <button
+                  onClick={() => openForm("meeting")}
+                  className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg transition-colors bg-primary text-primary-foreground hover:opacity-90"
+                >
+                  <FileText className="h-[15px] w-[15px] text-white" /> Logg møtereferat
+                </button>
+                <button
+                  onClick={() => openForm("task")}
+                  className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
+                >
+                  <Clock className="h-[15px] w-[15px] text-[hsl(var(--warning))]" /> Ny oppfølging
+                </button>
               </div>
 
-              {/* Category picker */}
-              <div className="mb-3">
-                <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">Kategori</span>
-                <CategoryPicker selected={formCategory} onSelect={setFormCategory} />
-              </div>
-
-              {/* Description */}
-              <Textarea
-                ref={descTextareaRef}
-                value={formDescription}
-                onChange={(e) => setFormDescription(e.target.value)}
-                placeholder="Beskrivelse (valgfritt)"
-                rows={3}
-                className="text-[0.9375rem] rounded-md border-border focus:ring-primary/30 resize-none"
-              />
-
-              {activeForm === "task" ? (
-                /* Date shortcut chips */
-                <div className="mt-3">
-                  <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Når?</span>
-                  <div className="flex flex-wrap gap-1.5 mt-1.5">
-                    {DATE_CHIPS.map((chip, i) => (
-                      <button
-                        key={chip.label}
-                        type="button"
-                        onClick={() => {
-                          const d = chip.fn();
-                          setFormDate(format(d, "yyyy-MM-dd"));
-                          setSelectedChipIdx(i);
-                        }}
-                        className={cn(
-                          "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors",
-                          selectedChipIdx === i
-                            ? "bg-primary/10 border-primary/30 text-primary font-medium"
-                            : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
-                        )}
-                      >
-                        {chip.label}
-                      </button>
-                    ))}
-                    <input
-                      type="date"
-                      value={formDate}
-                      onChange={(e) => { setFormDate(e.target.value); setSelectedChipIdx(null); }}
-                      className="h-7 px-2 text-[0.75rem] rounded-full border border-border text-muted-foreground bg-background"
+              {/* Inline form */}
+              {activeForm && (
+                <div
+                  className="mt-3 animate-in slide-in-from-top-1 duration-200"
+                  onKeyDown={handleFormKeyDown}
+                >
+                  {/* Title input */}
+                  <div className="mb-3">
+                    <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">Tittel</span>
+                    <Input
+                      value={formTitle}
+                      onChange={(e) => setFormTitle(e.target.value)}
+                      placeholder="Tittel"
+                      className="text-[0.9375rem] rounded-md"
+                      autoFocus
                     />
+                    {activeForm === "call" && (
+                      <div className="flex items-center gap-1.5 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => setFormTitle("Ringte, ikke svar")}
+                          className="inline-flex items-center gap-1 h-6 px-2.5 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                        >
+                          <PhoneOff className="h-3 w-3" /> Ringte, ikke svar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormTitle("Sendt LinkedIn melding")}
+                          className="inline-flex items-center gap-1 h-6 px-2.5 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                        >
+                          <Send className="h-3 w-3" /> Sendt LinkedIn melding
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  {formDate && (
-                    <p className="text-[0.75rem] text-muted-foreground mt-2">
-                      Frist: {format(new Date(formDate), "d. MMMM yyyy", { locale: nb })}
-                    </p>
+
+                  {/* Category picker */}
+                  <div className="mb-3">
+                    <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">Kategori</span>
+                    <CategoryPicker selected={formCategory} onSelect={setFormCategory} />
+                  </div>
+
+                  {/* Description */}
+                  <Textarea
+                    ref={descTextareaRef}
+                    value={formDescription}
+                    onChange={(e) => setFormDescription(e.target.value)}
+                    placeholder="Beskrivelse (valgfritt)"
+                    rows={3}
+                    className="text-[0.9375rem] rounded-md border-border focus:ring-primary/30 resize-none"
+                  />
+
+                  {activeForm === "task" ? (
+                    /* Date shortcut chips */
+                    <div className="mt-3">
+                      <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Når?</span>
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        {DATE_CHIPS.map((chip, i) => (
+                          <button
+                            key={chip.label}
+                            type="button"
+                            onClick={() => {
+                              const d = chip.fn();
+                              setFormDate(format(d, "yyyy-MM-dd"));
+                              setSelectedChipIdx(i);
+                            }}
+                            className={cn(
+                              "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors",
+                              selectedChipIdx === i
+                                ? "bg-primary/10 border-primary/30 text-primary font-medium"
+                                : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
+                            )}
+                          >
+                            {chip.label}
+                          </button>
+                        ))}
+                        <input
+                          type="date"
+                          value={formDate}
+                          onChange={(e) => { setFormDate(e.target.value); setSelectedChipIdx(null); }}
+                          className="h-7 px-2 text-[0.75rem] rounded-full border border-border text-muted-foreground bg-background"
+                        />
+                      </div>
+                      {formDate && (
+                        <p className="text-[0.75rem] text-muted-foreground mt-2">
+                          Frist: {format(new Date(formDate), "d. MMMM yyyy", { locale: nb })}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    /* Date for call/meeting + quick replies for call */
+                    <div className="mt-2">
+                      <span className="text-[0.75rem] text-muted-foreground">
+                        Dato: I dag, {format(new Date(), "d. MMMM", { locale: nb })}
+                      </span>
+                    </div>
                   )}
-                </div>
-              ) : (
-                /* Date for call/meeting + quick replies for call */
-                <div className="mt-2">
-                  <span className="text-[0.75rem] text-muted-foreground">
-                    Dato: I dag, {format(new Date(), "d. MMMM", { locale: nb })}
-                  </span>
+
+                  <div className="flex items-center gap-2 mt-3">
+                    <Button
+                      size="sm"
+                      className="h-[34px] px-4 text-[0.8125rem] rounded-md"
+                      disabled={!formTitle.trim() || !formCategory || (activeForm === "task" && createTaskMutation.isPending) || (activeForm !== "task" && createActivityMutation.isPending)}
+                      onClick={handleFormSubmit}
+                    >
+                      {activeForm === "task" ? "Lagre oppfølging" : activeForm === "meeting" ? "Lagre referat" : "Lagre samtale"}
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-[34px] px-3 text-[0.8125rem] text-muted-foreground rounded-md" onClick={closeForm}>
+                      Avbryt
+                    </Button>
+                  </div>
                 </div>
               )}
+            </div>
+          )}
 
-              <div className="flex items-center gap-2 mt-3">
-                <Button
-                  size="sm"
-                  className="h-[34px] px-4 text-[0.8125rem] rounded-md"
-                  disabled={!formTitle.trim() || !formCategory || (activeForm === "task" && createTaskMutation.isPending) || (activeForm !== "task" && createActivityMutation.isPending)}
-                  onClick={handleFormSubmit}
+          {/* ── Konsulent match-resultater ── */}
+          {consultantResults !== null && (
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-primary" />
+                  <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                    Konsulentmatch
+                  </span>
+                  <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-primary/10 text-primary text-[0.6875rem] font-semibold">
+                    {consultantResults.length}
+                  </span>
+                </div>
+                <button
+                  onClick={handleFinnKonsulent}
+                  className="text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  {activeForm === "task" ? "Lagre oppfølging" : activeForm === "meeting" ? "Lagre referat" : "Lagre samtale"}
-                </Button>
-                <Button variant="ghost" size="sm" className="h-[34px] px-3 text-[0.8125rem] text-muted-foreground rounded-md" onClick={closeForm}>
-                  Avbryt
-                </Button>
+                  Kjør på nytt
+                </button>
+              </div>
+
+              {consultantResults.length === 0 ? (
+                <p className="text-[0.8125rem] text-muted-foreground">Ingen treff med score ≥ 4</p>
+              ) : (
+                <div className="space-y-2">
+                  {consultantResults.map((m: any, i: number) => (
+                    <div key={m.id} className="rounded-lg border border-border bg-card p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
+                          <span className="text-[0.875rem] font-semibold text-foreground truncate">{m.navn}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className={cn(
+                            "inline-block h-2.5 w-2.5 rounded-full",
+                            m.score >= 8 ? "bg-emerald-500" : m.score >= 6 ? "bg-amber-500" : "bg-red-500"
+                          )} />
+                          <span className="text-[0.8125rem] font-bold text-foreground">{m.score}/10</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {(m.match_tags || []).map((t: string) => (
+                          <span key={t} className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="text-[0.8125rem] text-muted-foreground mt-1.5 italic">{m.begrunnelse}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── ZONE C: Oppfølginger ── */}
+          {tasks.length > 0 && (
+            <div className="bg-card border border-border rounded-lg shadow-card p-4 mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                  Oppfølginger · {tasks.length}
+                </h3>
+              </div>
+              <div className="space-y-px">
+                {tasks.map((task) => {
+                  const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
+                  const today = task.due_date && isToday(new Date(task.due_date));
+                  return (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      overdue={!!overdue}
+                      today={!!today}
+                      profileMap={profileMapFull}
+                      onToggle={() => toggleTaskMutation.mutate(task.id)}
+                      onDelete={(id) => deleteTaskMutation.mutate(id)}
+                      onUpdate={(id, updates) => updateTaskMutation.mutate({ id, updates })}
+                      editable={editable}
+                    />
+                  );
+                })}
               </div>
             </div>
           )}
+
+          {/* ── ZONE D: Aktiviteter Timeline ── */}
+          <ActivityTimeline
+            activities={activities}
+            profileMap={profileMapFull}
+            editable={editable}
+            onDelete={(id) => deleteActivityMutation.mutate(id)}
+            onUpdateActivity={(id, updates) => updateActivityMutation.mutate({ id, updates })}
+          />
         </div>
-      )}
-
-      {/* ── Konsulent match-resultater ── */}
-      {consultantResults !== null && (
-        <div className="mt-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Target className="h-4 w-4 text-primary" />
-              <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                Konsulentmatch
-              </span>
-              <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-primary/10 text-primary text-[0.6875rem] font-semibold">
-                {consultantResults.length}
-              </span>
-            </div>
-            <button
-              onClick={handleFinnKonsulent}
-              className="text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Kjør på nytt
-            </button>
-          </div>
-
-          {consultantResults.length === 0 ? (
-            <p className="text-[0.8125rem] text-muted-foreground">Ingen treff med score ≥ 4</p>
-          ) : (
-            <div className="space-y-2">
-              {consultantResults.map((m: any, i: number) => (
-                <div key={m.id} className="rounded-lg border border-border bg-card p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
-                      <span className="text-[0.875rem] font-semibold text-foreground truncate">{m.navn}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className={cn(
-                        "inline-block h-2.5 w-2.5 rounded-full",
-                        m.score >= 8 ? "bg-emerald-500" : m.score >= 6 ? "bg-amber-500" : "bg-red-500"
-                      )} />
-                      <span className="text-[0.8125rem] font-bold text-foreground">{m.score}/10</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {(m.match_tags || []).map((t: string) => (
-                      <span key={t} className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="text-[0.8125rem] text-muted-foreground mt-1.5 italic">{m.begrunnelse}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── ZONE C: Oppfølginger ── */}
-      {tasks.length > 0 && (
-        <div className="bg-card border border-border rounded-lg shadow-card p-4 mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-              Oppfølginger · {tasks.length}
-            </h3>
-          </div>
-          <div className="space-y-px">
-            {tasks.map((task) => {
-              const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
-              const today = task.due_date && isToday(new Date(task.due_date));
-              return (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  overdue={!!overdue}
-                  today={!!today}
-                  profileMap={profileMapFull}
-                  onToggle={() => toggleTaskMutation.mutate(task.id)}
-                  onDelete={(id) => deleteTaskMutation.mutate(id)}
-                  onUpdate={(id, updates) => updateTaskMutation.mutate({ id, updates })}
-                  editable={editable}
-                />
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── ZONE D: Aktiviteter Timeline ── */}
-      <ActivityTimeline
-        activities={activities}
-        profileMap={profileMapFull}
-        editable={editable}
-        onDelete={(id) => deleteActivityMutation.mutate(id)}
-        onUpdateActivity={(id, updates) => updateActivityMutation.mutate({ id, updates })}
-      />
+        {/* Høyre kolonne — tom, kun for å matche bredden på selskapskortet */}
+        <div />
+      </div>
     </div>
   );
 }
