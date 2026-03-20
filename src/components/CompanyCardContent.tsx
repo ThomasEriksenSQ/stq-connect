@@ -363,6 +363,20 @@ export function CompanyCardContent({
     enabled: !!companyId && contactIds.length > 0,
   });
 
+  const { data: techProfile } = useQuery({
+    queryKey: ["company-tech-profile", companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("company_tech_profile")
+        .select("teknologier, konsulent_hyppighet, sist_fra_finn")
+        .eq("company_id", companyId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!companyId,
+  });
+
   const allTasksMap = new Map<string, any>();
   companyTasks.forEach((t) => allTasksMap.set(t.id, t));
   contactTasks.forEach((t) => {
