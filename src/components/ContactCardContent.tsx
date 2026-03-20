@@ -831,10 +831,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
               </span>
               <div className="flex items-center gap-1.5">
                 <button
-                  onClick={() => {
-                    const editor = document.querySelector('[data-analyze-toggle]');
-                    if (editor) (editor as HTMLButtonElement).click();
-                  }}
+                  onClick={() => setShowAnalyze(!showAnalyze)}
                   className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
                 >
                   <Sparkles className="h-3.5 w-3.5 text-primary" /> Analyser tekst
