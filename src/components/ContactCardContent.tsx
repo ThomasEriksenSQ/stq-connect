@@ -234,6 +234,7 @@ function TechTagEditor({ tags, onSave }: { tags: string[]; onSave: (tags: string
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           placeholder={tags.length === 0 ? "Legg til teknologi..." : ""}
           className="flex-1 min-w-[100px] bg-transparent outline-none text-[0.8125rem] placeholder:text-muted-foreground"
         />
