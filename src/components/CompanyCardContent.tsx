@@ -864,6 +864,16 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
               })}
             </div>
           )}
+
+          {/* ── Teknisk DNA ── */}
+          {editable && (
+            <div className="mt-6 space-y-2">
+              <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                Teknisk DNA
+              </h3>
+              <CompanyDnaPanel companyId={companyId} />
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1098,6 +1108,106 @@ function CompanyActivityRow({ activity, profileMap, companyId, navigate }: {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ── Company DNA Panel ── */
+function CompanyDnaPanel({ companyId }: { companyId: string }) {
+  const queryClient = useQueryClient();
+
+  const { data: dnaProfile } = useQuery({
+    queryKey: ["company-tech-profile", companyId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("company_tech_profile")
+        .select("*")
+        .eq("company_id", companyId)
+        .single();
+      return data || null;
+    },
+    enabled: !!companyId,
+  });
+
+  // Hent teknologier fra forespørsler for dette selskapet
+  const { data: foresporslerTags = [] } = useQuery({
+    queryKey: ["company-foresporsler-tags", companyId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("foresporsler")
+        .select("teknologier")
+        .eq("selskap_id", companyId);
+      if (!data) return [];
+      const all: string[] = [];
+      data.forEach(f => { if (f.teknologier) all.push(...f.teknologier); });
+      // Tell frekvens
+      const freq: Record<string, number> = {};
+      all.forEach(t => { freq[t] = (freq[t] || 0) + 1; });
+      return Object.entries(freq)
+        .sort((a, b) => b[1] - a[1])
+        .map(([tag, count]) => ({ tag, count }));
+    },
+    enabled: !!companyId,
+  });
+
+  // Hent teknologier fra kontakter på dette selskapet
+  const { data: contactTags = [] } = useQuery({
+    queryKey: ["company-contact-tags", companyId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("contacts")
+        .select("teknologier")
+        .eq("company_id", companyId);
+      if (!data) return [];
+      const all: string[] = [];
+      data.forEach(c => { if ((c as any).teknologier) all.push(...(c as any).teknologier); });
+      return [...new Set(all)];
+    },
+    enabled: !!companyId,
+  });
+
+  const hasDna = foresporslerTags.length > 0 || contactTags.length > 0 || (dnaProfile?.teknologier && Object.keys(dnaProfile.teknologier).length > 0);
+
+  if (!hasDna) {
+    return (
+      <p className="text-[0.8125rem] text-muted-foreground/60 italic">
+        Ingen teknisk profil ennå — legges til automatisk fra forespørsler og kontakter.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Fra forespørsler */}
+      {foresporslerTags.length > 0 && (
+        <div>
+          <p className="text-[0.6875rem] font-medium text-muted-foreground mb-1.5">Fra forespørsler</p>
+          <div className="flex flex-wrap gap-1.5">
+            {foresporslerTags.map(({ tag, count }) => (
+              <span key={tag} className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.75rem] font-medium text-foreground">
+                {tag}
+                {count > 1 && (
+                  <span className="text-[0.625rem] text-muted-foreground font-normal">×{count}</span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Fra kontakter */}
+      {contactTags.length > 0 && (
+        <div>
+          <p className="text-[0.6875rem] font-medium text-muted-foreground mb-1.5">Fra kontakter</p>
+          <div className="flex flex-wrap gap-1.5">
+            {contactTags.map((tag: string) => (
+              <span key={tag} className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-[0.75rem] font-medium text-primary">
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
