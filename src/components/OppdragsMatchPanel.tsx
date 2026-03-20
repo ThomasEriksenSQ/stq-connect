@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { differenceInDays, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { getEffectiveSignal } from "@/lib/categoryUtils";
 
 export interface ForespørselMatch {
   id: number;
