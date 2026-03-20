@@ -853,6 +853,8 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
   const { toast } = useToast();
   const [rows, setRows] = useState<any[]>([]);
   const [importing, setImporting] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [processResult, setProcessResult] = useState<any>(null);
   const [fileName, setFileName] = useState("");
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
