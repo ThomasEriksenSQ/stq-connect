@@ -451,6 +451,24 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                   ))}
                 </div>
               )}
+
+              {/* Synkroniser kompetanse fra CV */}
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  onClick={handleSyncFromCV}
+                  disabled={syncing}
+                  className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50"
+                >
+                  {syncing ? (
+                    <><Loader2 className="h-3 w-3 animate-spin" />Synkroniserer...</>
+                  ) : (
+                    <><Sparkles className="h-3 w-3" />Synkroniser kompetanse fra CV</>
+                  )}
+                </button>
+                {ansatt?.cv_profil_hentet && (
+                  <span className="text-[0.6875rem] text-muted-foreground">✓ Hentet fra CV</span>
+                )}
+              </div>
             </div>
 
             {/* Content */}
