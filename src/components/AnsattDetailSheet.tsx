@@ -90,6 +90,24 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
     }
   }, [open, ansatt, openInEditMode]);
 
+  const handleSyncFromCV = async () => {
+    if (!ansatt?.id) return;
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-cv-kompetanse", {
+        body: { ansatt_id: ansatt.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`${data.count} kompetanser hentet fra CV`);
+      queryClient.invalidateQueries({ queryKey: ["stacq-ansatte"] });
+    } catch (err: any) {
+      toast.error(err.message || "Kunne ikke synkronisere");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const set = (key: string, val: any) => setForm((prev) => ({ ...prev, [key]: val }));
 
   const addTag = (tag: string) => {
