@@ -1070,7 +1070,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
           {/* ── Teknisk DNA ── */}
           {editable && (
             <div className="mt-6 space-y-2">
-              <CompanyDnaPanel companyId={companyId} onFinnKonsulenter={handleFinnKonsulenter} matchingKonsulenter={matchingKonsulenter} />
+              <CompanyDnaPanel companyId={companyId} />
             </div>
           )}
         </div>
