@@ -519,6 +519,9 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                   cv_tekst: ansatt?.bio || null,
                   geografi: ansatt?.geografi || null,
                   ansatt_id: ansatt?.id,
+                  forny_dato: ansatt?.forny_dato || null,
+                  erfaring_aar: ansatt?.erfaring_aar || null,
+                  tilgjengelig_fra: ansatt?.tilgjengelig_fra || null,
                 }}
                 autoRunMatch={autoRunMatch}
               />
