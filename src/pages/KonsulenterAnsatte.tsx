@@ -27,7 +27,7 @@ function getFornyColor(fornyDato: string): { label: string; className: string } 
 
 type Filter = "Alle" | "Aktiv" | "Kommende" | "Sluttet";
 
-const GRID_COLS = "grid grid-cols-[minmax(0,1.6fr)_100px_90px_80px_90px_170px_minmax(0,1.4fr)]";
+const GRID_COLS = "grid grid-cols-[minmax(0,1.4fr)_90px_90px_80px_90px_170px_minmax(0,1.6fr)]";
 
 export default function KonsulenterAnsatte() {
   const [filter, setFilter] = useState<Filter>("Aktiv");
