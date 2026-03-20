@@ -352,7 +352,7 @@ const Companies = () => {
               )}
               {/* AVDELINGER */}
               <div className="space-y-1.5">
-                <Label className="text-label">Avdelinger</Label>
+                <Label className="text-label">Geografiske steder</Label>
                 <div className="space-y-2">
                   {locations.map((loc, i) => (
                     <div key={i} className="flex items-center gap-2">
@@ -382,7 +382,7 @@ const Companies = () => {
                     onClick={() => setLocations([...locations, ""])}
                     className="w-full h-9 text-[0.8125rem] text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg border border-dashed border-border transition-colors"
                   >
-                    + Legg til avdeling
+                    + Legg til sted
                   </button>
                 </div>
               </div>

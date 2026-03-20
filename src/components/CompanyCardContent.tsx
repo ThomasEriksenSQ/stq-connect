@@ -540,13 +540,13 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                       if (companyLocations.length <= 1) return null;
                       return (
                         <div className="space-y-1.5">
-                          <Label className="text-label">Avdeling <span className="text-muted-foreground font-normal">(valgfritt)</span></Label>
+                          <Label className="text-label">Geografisk sted <span className="text-muted-foreground font-normal">(valgfritt)</span></Label>
                           <Select value={contactForm.location} onValueChange={(v) => setContactForm({ ...contactForm, location: v === "__none__" ? "" : v })}>
                             <SelectTrigger className="h-10 rounded-lg">
-                              {contactForm.location || "Ingen spesifikk avdeling"}
+                              {contactForm.location || "Ingen spesifikt sted"}
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="__none__">Ingen spesifikk avdeling</SelectItem>
+                              <SelectItem value="__none__">Ingen spesifikt sted</SelectItem>
                               {companyLocations.map((loc: string) => (
                                 <SelectItem key={loc} value={loc}>{loc}</SelectItem>
                               ))}
@@ -656,7 +656,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                     <Input value={editForm.org_number} onChange={(e) => setEditForm({ ...editForm, org_number: e.target.value })} className="h-10 rounded-lg" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-label">Avdelinger</Label>
+                    <Label className="text-label">Geografiske steder</Label>
                     <div className="flex flex-wrap gap-1.5 mb-2">
                       {editForm.locations.map((loc, i) => (
                         <span key={i} className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs font-medium text-foreground">

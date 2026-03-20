@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Phone, Mail, Linkedin, FileText, Clock, ExternalLink, Pencil, Trash2, ChevronDown, ChevronUp, Plus, MessageCircle, PhoneOff, Send, Signal, X, Target, Loader2 } from "lucide-react";
+import { Phone, Mail, Linkedin, FileText, Clock, ExternalLink, Pencil, Trash2, ChevronDown, ChevronUp, Plus, MessageCircle, PhoneOff, Send, Signal, X, Target, Loader2, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday, getYear, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { nb } from "date-fns/locale";
@@ -674,6 +674,15 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
             >
               Selskap <Pencil className="h-2.5 w-2.5" />
             </button>
+          )}
+          {(contact.companies as any)?.city && (
+            <>
+              <span className="text-muted-foreground/40">·</span>
+              <span className="inline-flex items-center gap-0.5">
+                <MapPin className="h-3 w-3 text-muted-foreground/50" />
+                {(contact.companies as any).city}
+              </span>
+            </>
           )}
           {(contact as any).location && (
             <>
