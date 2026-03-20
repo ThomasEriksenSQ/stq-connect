@@ -821,9 +821,40 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
         {/* Teknologitagger */}
         {editable && (
           <div className="mt-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                Teknisk profil
+              </span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    const editor = document.querySelector('[data-analyze-toggle]');
+                    if (editor) (editor as HTMLButtonElement).click();
+                  }}
+                  className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-primary" /> Analyser tekst
+                </button>
+                {contact.teknologier && (contact.teknologier as string[]).length > 0 && (
+                  <button
+                    onClick={handleFinnKonsulent}
+                    disabled={matchingConsultants}
+                    className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+                  >
+                    {matchingConsultants ? (
+                      <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Matcher...</>
+                    ) : (
+                      <><Target className="h-3.5 w-3.5 text-primary" /> Finn konsulent</>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
             <TechTagEditor
               tags={(contact as any).teknologier || []}
               onSave={(tags) => updateMutation.mutate({ teknologier: tags })}
+              contact={contact}
+              updateMutation={updateMutation}
             />
           </div>
         )}
