@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.sync-cv-kompetanse]
 verify_jwt = false
+
+[functions.match-contact-to-consultants]
+verify_jwt = false
