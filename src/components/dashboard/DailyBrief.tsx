@@ -236,7 +236,7 @@ const DailyBrief = () => {
       { id: "all", label: "Alle" },
       ...profiles.map(p => ({
         id: p.id,
-        label: p.full_name.split(" ")[0], // First name for compact pill
+        label: p.full_name || "Ukjent",
       })),
     ];
   }, [profiles]);
