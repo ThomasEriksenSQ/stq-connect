@@ -840,6 +840,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
 
         {/* Teknologitagger */}
         {editable && (
+          <>
           <div className="h-px bg-border mt-4 mb-3" />
           <div>
             <div className="flex items-center justify-between mb-2">
