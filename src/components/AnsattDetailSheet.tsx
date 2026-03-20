@@ -1,10 +1,11 @@
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { getInitials, cn } from "@/lib/utils";
-import { FileText, Pencil, X, Loader2, Upload, Sparkles } from "lucide-react";
+import { FileText, Pencil, X, Loader2, Upload, Sparkles, Target } from "lucide-react";
 import { format, differenceInMonths } from "date-fns";
 import { nb } from "date-fns/locale";
 import { formatMonths } from "@/lib/utils";
 import { OppdragsMatchPanel } from "@/components/OppdragsMatchPanel";
+import { getEffectiveSignal } from "@/lib/categoryUtils";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -47,6 +48,9 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [cvParsing, setCvParsing] = useState(false);
   const [cvParsed, setCvParsed] = useState(false);
+  const [finnLeads, setFinnLeads] = useState(false);
+  const [leadsResults, setLeadsResults] = useState<any[] | null>(null);
+  const [leadsLoading, setLeadsLoading] = useState(false);
 
   const [form, setForm] = useState({
     navn: "", epost: "", tlf: "", geografi: "", status: "AKTIV/SIGNERT",
@@ -209,6 +213,84 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
       onClose();
     } else {
       setEditing(false);
+    }
+  };
+
+  const handleFinnLeads = async () => {
+    if (!ansatt) return;
+    setLeadsLoading(true);
+    setLeadsResults(null);
+    try {
+      const { data: kontakter } = await supabase
+        .from("contacts")
+        .select("id, first_name, last_name, title, company_id, call_list, teknologier, companies(name)")
+        .not("teknologier", "eq", "{}")
+        .limit(200);
+
+      if (!kontakter?.length) {
+        toast("Ingen kontakter med teknisk profil ennå");
+        setLeadsLoading(false);
+        return;
+      }
+
+      const kontaktIds = kontakter.map((k: any) => k.id);
+
+      const [{ data: aktiviteter }, { data: tasks }] = await Promise.all([
+        supabase
+          .from("activities")
+          .select("contact_id, created_at, subject, description")
+          .in("contact_id", kontaktIds)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("tasks")
+          .select("contact_id, created_at, title, description, due_date")
+          .in("contact_id", kontaktIds)
+          .neq("status", "done"),
+      ]);
+
+      const berikede = kontakter.map((k: any) => {
+        const kAkts = (aktiviteter || []).filter((a: any) => a.contact_id === k.id);
+        const kTasks = (tasks || []).filter((t: any) => t.contact_id === k.id);
+        const signal = getEffectiveSignal(
+          kAkts.map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+          kTasks.map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date }))
+        );
+        const sisteKontakt = kAkts[0]?.created_at
+          ? new Date(kAkts[0].created_at).toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" })
+          : null;
+        return {
+          id: k.id,
+          navn: `${k.first_name} ${k.last_name}`,
+          selskap: (k.companies as any)?.name || "",
+          stilling: k.title || "",
+          er_innkjoper: k.call_list || false,
+          teknologier: k.teknologier || [],
+          signal: signal || "Ukjent om behov",
+          siste_kontakt: sisteKontakt,
+        };
+      });
+
+      const { data, error } = await supabase.functions.invoke("match-contacts-for-consultant", {
+        body: {
+          konsulent: {
+            navn: ansatt.navn,
+            teknologier: ansatt.kompetanse || [],
+            erfaring_aar: ansatt.erfaring_aar || null,
+            geografi: ansatt.geografi || null,
+            tilgjengelig_fra: ansatt.tilgjengelig_fra || null,
+          },
+          kontakter: berikede,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setLeadsResults(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      toast.error(err.message || "Kunne ikke kjøre matching");
+      setLeadsResults([]);
+    } finally {
+      setLeadsLoading(false);
     }
   };
 
@@ -525,6 +607,71 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                 }}
                 autoRunMatch={autoRunMatch}
               />
+              </div>
+
+              {/* Finn leads */}
+              <div className="mt-6">
+                <button
+                  onClick={() => { setFinnLeads(!finnLeads); if (!finnLeads && !leadsResults) handleFinnLeads(); }}
+                  className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.8125rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors w-full justify-center"
+                >
+                  {leadsLoading ? (
+                    <><Loader2 className="h-3 w-3 animate-spin" />Finner leads...</>
+                  ) : (
+                    <><Target className="h-3 w-3 text-primary" />Finn leads for {ansatt?.navn?.split(" ")[0]}</>
+                  )}
+                </button>
+
+                {finnLeads && leadsResults !== null && (
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                        Beste leads · {leadsResults.length}
+                      </span>
+                      <button onClick={handleFinnLeads} className="text-[0.6875rem] text-muted-foreground hover:text-foreground">
+                        Kjør på nytt
+                      </button>
+                    </div>
+
+                    {leadsResults.length === 0 ? (
+                      <p className="text-[0.8125rem] text-muted-foreground">Ingen treff</p>
+                    ) : (
+                      leadsResults.map((m: any, i: number) => (
+                        <div key={`lead-${m.id || i}`} className="rounded-lg border border-border bg-card p-2.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
+                              <span className="text-[0.8125rem] font-semibold text-foreground truncate">{m.navn}</span>
+                              {m.er_innkjoper && (
+                                <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 px-1.5 py-0.5 text-[0.625rem] font-semibold shrink-0">
+                                  INN
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[0.75rem] text-muted-foreground truncate">{m.selskap}</p>
+                          </div>
+                          <div className="flex items-center justify-between mt-1">
+                            <div className="flex flex-wrap gap-1">
+                              {(m.match_tags || []).map((t: string) => (
+                                <span key={t} className="inline-flex items-center rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[0.625rem] font-medium">
+                                  {t}
+                                </span>
+                              ))}
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <span className={cn(
+                                "inline-block h-2 w-2 rounded-full",
+                                m.score >= 8 ? "bg-emerald-500" : m.score >= 6 ? "bg-amber-500" : "bg-red-500"
+                              )} />
+                              <span className="text-[0.75rem] font-bold">{m.score}/10</span>
+                            </div>
+                          </div>
+                          <p className="text-[0.75rem] text-muted-foreground mt-1 italic">{m.begrunnelse}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </>
