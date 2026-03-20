@@ -843,7 +843,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           <div className="mt-3">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                Teknisk profil
+                Tekniske behov
               </span>
               <div className="flex items-center gap-1.5">
                 <button
