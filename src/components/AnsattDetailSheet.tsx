@@ -48,6 +48,9 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [cvParsing, setCvParsing] = useState(false);
   const [cvParsed, setCvParsed] = useState(false);
+  const [finnLeads, setFinnLeads] = useState(false);
+  const [leadsResults, setLeadsResults] = useState<any[] | null>(null);
+  const [leadsLoading, setLeadsLoading] = useState(false);
 
   const [form, setForm] = useState({
     navn: "", epost: "", tlf: "", geografi: "", status: "AKTIV/SIGNERT",
