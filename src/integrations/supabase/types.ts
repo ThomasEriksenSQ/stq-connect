@@ -258,6 +258,7 @@ export type Database = {
           last_name: string
           linkedin: string | null
           location: string | null
+          locations: string[] | null
           notes: string | null
           owner_id: string | null
           phone: string | null
@@ -280,6 +281,7 @@ export type Database = {
           last_name: string
           linkedin?: string | null
           location?: string | null
+          locations?: string[] | null
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
@@ -302,6 +304,7 @@ export type Database = {
           last_name?: string
           linkedin?: string | null
           location?: string | null
+          locations?: string[] | null
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
