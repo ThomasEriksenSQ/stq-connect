@@ -996,7 +996,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
 
       {/* ── ZONE B: Action Bar ── */}
       {editable && (
-        <div className="border-t border-border pt-4 pb-4">
+        <div className="border-t border-border mt-2 pt-4 pb-4">
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => openForm("call")}
