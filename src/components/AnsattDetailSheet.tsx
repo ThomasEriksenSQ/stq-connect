@@ -2,6 +2,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { getInitials, cn } from "@/lib/utils";
 import { FileText, Pencil, X, Loader2, Upload, Sparkles } from "lucide-react";
 import { format, differenceInMonths } from "date-fns";
+import { nb } from "date-fns/locale";
 import { formatMonths } from "@/lib/utils";
 import { OppdragsMatchPanel } from "@/components/OppdragsMatchPanel";
 import { useState, useEffect, useRef } from "react";
@@ -50,7 +51,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
   const [form, setForm] = useState({
     navn: "", epost: "", tlf: "", geografi: "", status: "AKTIV/SIGNERT",
     start_dato: "", slutt_dato: "", kompetanse: [] as string[],
-    bilde_url: "", erfaring_aar: "",
+    bilde_url: "", erfaring_aar: "", tilgjengelig_fra: "",
   });
 
   // Reset form when panel opens/closes or ansatt changes
@@ -60,7 +61,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
       setForm({
         navn: "", epost: "", tlf: "", geografi: "", status: "AKTIV/SIGNERT",
         start_dato: "", slutt_dato: "", kompetanse: [],
-        bilde_url: "", erfaring_aar: "",
+        bilde_url: "", erfaring_aar: "", tilgjengelig_fra: "",
       });
     } else if (ansatt) {
       setEditing(false);
@@ -75,6 +76,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
         kompetanse: ansatt.kompetanse || [],
         bilde_url: ansatt.bilde_url || "",
         erfaring_aar: ansatt.erfaring_aar?.toString() || "",
+        tilgjengelig_fra: ansatt.tilgjengelig_fra || "",
       });
     }
     setTagInput("");
@@ -189,6 +191,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
       kompetanse: form.kompetanse,
       bilde_url: form.bilde_url || null,
       erfaring_aar: form.erfaring_aar ? parseInt(form.erfaring_aar) : null,
+      tilgjengelig_fra: form.tilgjengelig_fra || null,
       updated_at: new Date().toISOString(),
     };
 
@@ -258,6 +261,19 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                   </label>
                   <Input type="date" value={form.slutt_dato} onChange={(e) => set("slutt_dato", e.target.value)} className="mt-1 text-[0.875rem]" />
                 </div>
+              </div>
+
+              <div>
+                <label className={LABEL}>Tilgjengelig fra</label>
+                <Input
+                  type="date"
+                  value={form.tilgjengelig_fra}
+                  onChange={(e) => set("tilgjengelig_fra", e.target.value)}
+                  className="mt-1 text-[0.875rem]"
+                />
+                <p className="text-[0.6875rem] text-muted-foreground mt-1">
+                  Når kan konsulenten starte et nytt oppdrag? (kan være etter fornyelsesdato)
+                </p>
               </div>
 
               <div>
@@ -449,6 +465,28 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                       {t}
                     </span>
                   ))}
+                </div>
+              )}
+
+              {ansatt?.tilgjengelig_fra && (
+                <div className="mt-3 flex items-center gap-2 text-[0.8125rem]">
+                  <span className="text-muted-foreground">Tilgjengelig fra:</span>
+                  <span className={cn(
+                    "font-medium",
+                    (() => {
+                      const dager = Math.round((new Date(ansatt.tilgjengelig_fra).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                      if (dager <= 0) return "text-emerald-600";
+                      if (dager <= 30) return "text-amber-600";
+                      return "text-muted-foreground";
+                    })()
+                  )}>
+                    {(() => {
+                      const dager = Math.round((new Date(ansatt.tilgjengelig_fra).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                      if (dager <= 0) return "Tilgjengelig nå";
+                      if (dager <= 30) return `Om ${dager} dager (${format(new Date(ansatt.tilgjengelig_fra), "d. MMM yyyy", { locale: nb })})`;
+                      return format(new Date(ansatt.tilgjengelig_fra), "d. MMMM yyyy", { locale: nb });
+                    })()}
+                  </span>
                 </div>
               )}
 
