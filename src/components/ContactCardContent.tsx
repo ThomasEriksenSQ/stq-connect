@@ -240,7 +240,7 @@ function TechTagEditor({ tags, onSave }: { tags: string[]; onSave: (tags: string
       </div>
       <div className="flex flex-wrap gap-1.5 mt-1.5">
         {SUGGESTED_TECH_TAGS.filter(s => !tags.includes(s)).slice(0, 8).map(s => (
-          <button key={s} onClick={() => addTag(s)}
+          <button key={s} onClick={() => addTags(s)}
             className="h-6 px-2 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors">
             {s}
           </button>
