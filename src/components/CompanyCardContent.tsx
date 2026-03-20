@@ -36,6 +36,7 @@ import {
   MapPin,
   Loader2,
   Target,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday, getYear } from "date-fns";
