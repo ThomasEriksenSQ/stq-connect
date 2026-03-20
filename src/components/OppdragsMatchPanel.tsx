@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { differenceInDays, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { getEffectiveSignal } from "@/lib/categoryUtils";
 
 export interface ForespørselMatch {
   id: number;
@@ -22,6 +23,8 @@ interface Konsulent {
   /** For linking: internal ansatt id or external consultant id */
   ansatt_id?: number;
   ekstern_id?: string;
+  forny_dato?: string | null;
+  erfaring_aar?: number | null;
 }
 
 type MatchFilter = "Alle" | "Høy score" | "Frist snart";
@@ -74,7 +77,7 @@ export function OppdragsMatchPanel({
         const fortyFiveDaysAgo = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString();
         const { data } = await supabase
           .from("foresporsler")
-          .select("id, selskap_navn, sted, teknologier, frist_dato, status")
+          .select("id, selskap_navn, sted, teknologier, frist_dato, status, kontakt_id, selskap_id")
           .gte("created_at", fortyFiveDaysAgo)
           .in("status", ["Ny", "Aktiv"])
           .order("frist_dato", { ascending: true });
@@ -89,6 +92,43 @@ export function OppdragsMatchPanel({
         return;
       }
 
+      const kontaktIds = fData.map((f: any) => f.kontakt_id).filter(Boolean);
+
+      const [{ data: kontakter }, { data: aktiviteter }, { data: tasks }] = await Promise.all([
+        kontaktIds.length > 0
+          ? supabase.from("contacts").select("id, call_list").in("id", kontaktIds)
+          : Promise.resolve({ data: [] }),
+        kontaktIds.length > 0
+          ? supabase.from("activities").select("contact_id, created_at, subject, description").in("contact_id", kontaktIds).order("created_at", { ascending: false })
+          : Promise.resolve({ data: [] }),
+        kontaktIds.length > 0
+          ? supabase.from("tasks").select("contact_id, created_at, title, description, due_date").in("contact_id", kontaktIds).neq("status", "done")
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      const kontaktMap = Object.fromEntries((kontakter || []).map((k: any) => [k.id, k]));
+
+      const berikede = fData.map((f: any) => {
+        const kontakt = f.kontakt_id ? kontaktMap[f.kontakt_id] : null;
+        const kontaktAkts = (aktiviteter || []).filter((a: any) => a.contact_id === f.kontakt_id);
+        const kontaktTasks = (tasks || []).filter((t: any) => t.contact_id === f.kontakt_id);
+        const signal = f.kontakt_id
+          ? getEffectiveSignal(
+              kontaktAkts.map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+              kontaktTasks.map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date }))
+            )
+          : null;
+        const sisteKontakt = kontaktAkts[0]?.created_at
+          ? new Date(kontaktAkts[0].created_at).toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" })
+          : null;
+        return {
+          ...f,
+          kontakt_er_innkjoper: kontakt?.call_list || false,
+          kontakt_signal: signal || "Ukjent om behov",
+          siste_kontakt_dato: sisteKontakt,
+        };
+      });
+
       const { data, error } = await supabase.functions.invoke("match-foresporsler", {
         body: {
           konsulent: {
@@ -96,8 +136,10 @@ export function OppdragsMatchPanel({
             teknologier: konsulent.teknologier,
             cv_tekst: konsulent.cv_tekst,
             geografi: konsulent.geografi,
+            forny_dato: konsulent.forny_dato || null,
+            erfaring_aar: konsulent.erfaring_aar || null,
           },
-          foresporsler: fData,
+          foresporsler: berikede,
         },
       });
 
