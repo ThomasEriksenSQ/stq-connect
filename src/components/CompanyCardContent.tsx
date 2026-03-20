@@ -421,7 +421,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   return (
     <div>
       {/* ── ZONE A: Header ── */}
-      <div className="mb-3">
+      <div className="mb-5">
         <div className="flex items-center gap-3">
           {editable ? (
             <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">
