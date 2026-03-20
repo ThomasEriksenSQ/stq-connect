@@ -816,6 +816,51 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
         </button>
       ) : null}
 
+      {/* Snapshot-rad */}
+      {(() => {
+        const sisteAktivitet = activities[0] ?? null;
+        const nesteOppfolging = tasks[0] ?? null;
+        if (!sisteAktivitet && !nesteOppfolging) return null;
+        return (
+          <div className="mt-3 mb-5 rounded-lg bg-muted/40 border border-border px-3 py-2.5 space-y-1">
+            {sisteAktivitet && (() => {
+              const { title } = extractTitleAndCategory(sisteAktivitet.subject, sisteAktivitet.description);
+              const contactName = (sisteAktivitet.contacts as any)?.first_name
+                ? `${(sisteAktivitet.contacts as any).first_name} ${(sisteAktivitet.contacts as any).last_name}` : null;
+              return (
+                <div className="flex items-center gap-2 text-[0.8125rem]">
+                  <span className="text-muted-foreground shrink-0">Siste:</span>
+                  <span className="font-medium text-foreground truncate">"{title}"</span>
+                  {contactName && <span className="text-muted-foreground/60 text-[0.75rem] shrink-0">→ {contactName}</span>}
+                  <span className="text-muted-foreground shrink-0 ml-auto">
+                    {format(new Date(sisteAktivitet.created_at), "d. MMM yyyy", { locale: nb })}
+                  </span>
+                </div>
+              );
+            })()}
+            {nesteOppfolging && (() => {
+              const { title, category } = extractTitleAndCategory(nesteOppfolging.title, nesteOppfolging.description);
+              const overdue = nesteOppfolging.due_date && isPast(new Date(nesteOppfolging.due_date)) && !isToday(new Date(nesteOppfolging.due_date));
+              const contactName = (nesteOppfolging.contacts as any)?.first_name
+                ? `${(nesteOppfolging.contacts as any).first_name} ${(nesteOppfolging.contacts as any).last_name}` : null;
+              return (
+                <div className="flex items-center gap-2 text-[0.8125rem]">
+                  <span className="text-muted-foreground shrink-0">Neste:</span>
+                  <span className="font-medium text-foreground truncate">{title}</span>
+                  {contactName && <span className="text-muted-foreground/60 text-[0.75rem] shrink-0">→ {contactName}</span>}
+                  {nesteOppfolging.due_date && (
+                    <span className={cn("shrink-0 ml-auto font-medium", overdue ? "text-destructive" : "text-muted-foreground")}>
+                      {format(new Date(nesteOppfolging.due_date), "d. MMM yyyy", { locale: nb })}
+                    </span>
+                  )}
+                  {category && <CategoryBadge label={category} className="shrink-0" />}
+                </div>
+              );
+            })()}
+          </div>
+        );
+      })()}
+
       {/* Two-column layout */}
       <div className="grid grid-cols-1 md:grid-cols-[1fr_1px_minmax(0,300px)] gap-0">
         {/* Left: Tasks + Activities */}
