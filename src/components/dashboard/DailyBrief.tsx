@@ -1,386 +1,395 @@
-import { useEffect, useState, useCallback } from "react";
-import { RefreshCw } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Link } from "react-router-dom";
-import { relativeDate } from "@/lib/relativeDate";
+import { getEffectiveSignal, CATEGORIES } from "@/lib/categoryUtils";
+import { calcHeatScore } from "@/lib/heatScore";
+import { differenceInDays, isPast, isToday, format, addWeeks, addMonths } from "date-fns";
+import { nb } from "date-fns/locale";
+import { Flame, Target, Clock, ChevronRight, Sparkles, Loader2, Calendar, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 
-const TRACKED_TECHS = [
-  "C++", "C", "Rust", "Python", "Zephyr", "Yocto", "Embedded Linux",
-  "FreeRTOS", "FPGA", "Qt", "ROS", "CMake", "Linux", "ARM", "RTOS",
-  "Bare metal", "Nordic", "STM32", "CAN", "Ethernet", "TCP/IP",
-  "Bluetooth", "BLE", "Wi-Fi", "UART", "SPI", "I2C", "USB",
-  "Docker", "Git", "Jenkins", "Buildroot", "OpenWRT",
-  "Cortex-M", "NRF52", "ESP32", "Raspberry Pi",
-  "AUTOSAR", "MISRA", "ISO 26262", "IEC 62443",
-  "Modbus", "MQTT", "OPC-UA", "AWS IoT", "Azure IoT",
-  "DSP", "Signal processing", "OpenCV", "CUDA",
-  "Bootloader", "OTA", "Functional Safety",
-  "WebAssembly", "Golang", "Java",
+const DATE_CHIPS = [
+  { label: "1 uke", fn: () => addWeeks(new Date(), 1) },
+  { label: "2 uker", fn: () => addWeeks(new Date(), 2) },
+  { label: "1 mnd", fn: () => addMonths(new Date(), 1) },
 ];
 
-function matchTech(text: string, keyword: string): boolean {
-  if (keyword === "C") return /\bC\b/.test(text);
-  if (keyword === "C++") return text.includes("C++");
-  if (keyword === "BLE") return /\bBLE\b/i.test(text);
-  return text.toLowerCase().includes(keyword.toLowerCase());
-}
-
-function getGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return "God morgen";
-  if (h < 18) return "God dag";
-  return "God kveld";
-}
-
-interface OpenForesporsel {
-  id: number;
-  selskap: string;
-  teknologier: string[];
-  mottattDato: string;
-}
-
-interface MulighetItem {
-  selskap: string;
-  konsulentNavn: string;
-  status: string;
-}
-
-interface MarketData {
-  techPulse: { name: string; count: number; trend: "up" | "down" | "flat" }[];
-}
-
 const DailyBrief = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const [firstName, setFirstName] = useState("");
-  const [openForesp, setOpenForesp] = useState<OpenForesporsel[]>([]);
-  const [muligheter, setMuligheter] = useState<MulighetItem[]>([]);
-  const [market, setMarket] = useState<MarketData | null>(null);
-  const [aiMarket, setAiMarket] = useState<string | null>(null);
-  const [aiMarketLoading, setAiMarketLoading] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchMarketAI = useCallback(async (techPulse: { name: string; count: number }[]) => {
-    if (techPulse.length === 0) return;
-    setAiMarketLoading(true);
-    setAiMarket(null);
+  const [selectedContact, setSelectedContact] = useState<any>(null);
+  const [aiText, setAiText] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiCache, setAiCache] = useState<Record<string, string>>({});
+  const [oppfolgingDato, setOppfolgingDato] = useState("");
+  const [oppfolgingTittel, setOppfolgingTittel] = useState("Følg opp om behov");
+  const [savingOppfolging, setSavingOppfolging] = useState(false);
+  const [selectedChip, setSelectedChip] = useState<number | null>(null);
+
+  const { data: rawData } = useQuery({
+    queryKey: ["salgssenteret-data"],
+    staleTime: 2 * 60 * 1000,
+    queryFn: async () => {
+      const [
+        { data: contacts },
+        { data: activities },
+        { data: tasks },
+        { data: foresporsler },
+        { data: oppdrag },
+        { data: ansatte },
+      ] = await Promise.all([
+        supabase.from("contacts").select("id, first_name, last_name, company_id, call_list, phone, email, companies(id, name)").limit(500),
+        supabase.from("activities").select("contact_id, created_at, subject, description").not("contact_id", "is", null).order("created_at", { ascending: false }),
+        supabase.from("tasks").select("contact_id, created_at, title, description, due_date, status").not("contact_id", "is", null).neq("status", "done"),
+        supabase.from("foresporsler").select("id, selskap_id, selskap_navn, teknologier, mottatt_dato").gte("mottatt_dato", new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)),
+        supabase.from("stacq_oppdrag").select("id, kandidat, kunde, forny_dato, status").in("status", ["Aktiv", "Oppstart"]),
+        supabase.from("stacq_ansatte").select("id, navn, kompetanse, tilgjengelig_fra, erfaring_aar").in("status", ["AKTIV/SIGNERT"]),
+      ]);
+      return { contacts: contacts || [], activities: activities || [], tasks: tasks || [], foresporsler: foresporsler || [], oppdrag: oppdrag || [], ansatte: ansatte || [] };
+    },
+  });
+
+  const rankedContacts = useMemo(() => {
+    if (!rawData) return [];
+    const { contacts, activities, tasks, foresporsler } = rawData;
+
+    return contacts
+      .map(contact => {
+        const cActs = activities.filter((a: any) => a.contact_id === contact.id);
+        const cTasks = tasks.filter((t: any) => t.contact_id === contact.id);
+        const score = calcHeatScore(contact, cActs, cTasks, foresporsler);
+        const signal = getEffectiveSignal(
+          cActs.map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+          cTasks.map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date }))
+        );
+        const sisteAkt = cActs[0];
+        const harForfalt = cTasks.some((t: any) => t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date)));
+        return { ...contact, score, signal, sisteAkt, harForfalt, cActs, cTasks };
+      })
+      .filter(c => c.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 15);
+  }, [rawData]);
+
+  const konsulenterLedig = useMemo(() => {
+    if (!rawData) return [];
+    return rawData.oppdrag
+      .filter((o: any) => o.forny_dato)
+      .map((o: any) => {
+        const dager = differenceInDays(new Date(o.forny_dato), new Date());
+        return { ...o, dager };
+      })
+      .filter((o: any) => o.dager <= 60)
+      .sort((a: any, b: any) => a.dager - b.dager);
+  }, [rawData]);
+
+  const stats = useMemo(() => {
+    if (!rawData) return { forfalt: 0, idag: 0, behovNa: 0, foresporsler: 0 };
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    const forfalt = rawData.tasks.filter((t: any) => t.due_date && t.due_date < todayStr).length;
+    const idag = rawData.tasks.filter((t: any) => t.due_date === todayStr).length;
+    const behovNa = rankedContacts.filter(c => c.signal === "Behov nå").length;
+    return { forfalt, idag, behovNa, foresporsler: rawData.foresporsler.length };
+  }, [rawData, rankedContacts]);
+
+  const handleSelectContact = async (contact: any) => {
+    setSelectedContact(contact);
+    setOppfolgingDato("");
+    setOppfolgingTittel("Følg opp om behov");
+    setSelectedChip(null);
+
+    if (aiCache[contact.id]) {
+      setAiText(aiCache[contact.id]);
+      return;
+    }
+
+    setAiText(null);
+    setAiLoading(true);
     try {
-      const techStr = techPulse.map(t => `${t.name}(${t.count})`).join(", ");
+      const sisteAkts = contact.cActs.slice(0, 5).map((a: any) =>
+        `${a.subject}${a.description ? ": " + a.description.slice(0, 100) : ""} (${format(new Date(a.created_at), "d. MMM", { locale: nb })})`
+      ).join("\n");
+
       const { data } = await supabase.functions.invoke("chat", {
         body: {
-          system: "Du er markedsanalytiker for STACQ, et norsk konsulentselskap innen embedded/firmware. Svar KUN med 2-3 korte setninger på norsk. Maks 40 ord totalt. Vær konkret og direkte.",
+          system: "Du er en hjelpsom salgsassistent for et norsk IT-konsulentselskap. Gi en kort, konkret briefing på 2 setninger på norsk basert på aktivitetshistorikken. Fokuser på hva som skjedde sist og hva som er anbefalt neste steg.",
           messages: [{
             role: "user",
-            content: `Basert på disse teknologifrekvensene fra bemanningsforespørsler og stillingsannonser siste 2 uker: ${techStr}. Oppsummer hva embedded/firmware-markedet etterspør akkurat nå.`,
-          }],
-        },
+            content: `Kontakt: ${contact.first_name} ${contact.last_name} hos ${(contact.companies as any)?.name || "ukjent selskap"}\nSignal: ${contact.signal || "ukjent"}\nInnkjøper: ${contact.call_list ? "ja" : "nei"}\nSiste aktiviteter:\n${sisteAkts || "Ingen aktiviteter"}`
+          }]
+        }
       });
-      if (data?.text && typeof data.text === "string") {
-        setAiMarket(data.text);
-      } else if (data && typeof data === "object" && "text" in data) {
-        const val = data.text;
-        setAiMarket(typeof val === "string" ? val : String(val ?? ""));
-      }
+      const text = data?.text || "Ingen briefing tilgjengelig.";
+      setAiText(text);
+      setAiCache(prev => ({ ...prev, [contact.id]: text }));
     } catch {
-      // AI failure is fine
+      setAiText("Kunne ikke generere briefing.");
     } finally {
-      setAiMarketLoading(false);
+      setAiLoading(false);
     }
-  }, []);
+  };
 
-  const fetchAll = useCallback(async () => {
-    if (!user?.id) return;
-    setLoading(true);
-
+  const handleLagreOppfolging = async () => {
+    if (!selectedContact || !oppfolgingDato) return;
+    setSavingOppfolging(true);
     try {
-      const now = new Date();
-      const d45 = new Date(now.getTime() - 45 * 86400000).toISOString().slice(0, 10);
-      const d60 = new Date(now.getTime() - 60 * 86400000).toISOString().slice(0, 10);
-      const d30 = new Date(now.getTime() - 30 * 86400000).toISOString().slice(0, 10);
+      await supabase.from("tasks").insert({
+        title: oppfolgingTittel,
+        contact_id: selectedContact.id,
+        company_id: selectedContact.company_id,
+        due_date: oppfolgingDato,
+        assigned_to: user?.id,
+        created_by: user?.id,
+        priority: "medium",
+        status: "open",
+      });
+      toast.success("Oppfølging satt");
+      queryClient.invalidateQueries({ queryKey: ["salgssenteret-data"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-oppfolginger-v3"] });
 
-      const [
-        profileRes,
-        foresporlerRes,
-        fkRes,
-        fkActiveRes,
-        ansatteRes,
-        finnRes,
-      ] = await Promise.all([
-        supabase.from("profiles").select("full_name").eq("id", user.id).single(),
-        supabase.from("foresporsler").select("id, selskap_navn, teknologier, mottatt_dato")
-          .gte("mottatt_dato", d45)
-          .order("mottatt_dato", { ascending: false }),
-        supabase.from("foresporsler_konsulenter").select("foresporsler_id, status, ansatt_id, ekstern_id"),
-        supabase.from("foresporsler_konsulenter").select("foresporsler_id, status, ansatt_id, ekstern_id")
-          .in("status", ["intervju", "sendt_cv", "Intervju", "Sendt CV"]),
-        supabase.from("stacq_ansatte").select("id, navn"),
-        supabase.from("finn_annonser").select("teknologier, dato, uke").gte("dato", d60),
-      ]);
-
-      if (profileRes.data) {
-        setFirstName(profileRes.data.full_name?.split(" ")[0] ?? "");
-      }
-
-      // Åpne forespørsler without consultants (already filtered to 45 days by query)
-      const allForesp = foresporlerRes.data ?? [];
-      const fkData = fkRes.data ?? [];
-      const fkByForesp = new Set(fkData.map(r => r.foresporsler_id));
-      const openItems: OpenForesporsel[] = allForesp
-        .filter(f => !fkByForesp.has(f.id))
-        .slice(0, 3)
-        .map(f => ({
-          id: f.id,
-          selskap: f.selskap_navn,
-          teknologier: f.teknologier ?? [],
-          mottattDato: f.mottatt_dato,
-        }));
-      setOpenForesp(openItems);
-
-      // Biggest opportunities (Intervju > Sendt CV)
-      const activeFk = fkActiveRes.data ?? [];
-      const ansatte = ansatteRes.data ?? [];
-      const ansattMap = new Map(ansatte.map(a => [a.id, a.navn]));
-      const forespMap = new Map(allForesp.map(f => [f.id, f.selskap_navn]));
-
-      const mulighetItems: MulighetItem[] = activeFk
-        .sort((a, b) => {
-          const order = (s: string) => s.toLowerCase() === "intervju" ? 0 : 1;
-          return order(a.status) - order(b.status);
-        })
-        .slice(0, 3)
-        .map(fk => {
-          const selskap = forespMap.get(fk.foresporsler_id) ?? "";
-          let konsulentNavn = "";
-          if (fk.ansatt_id) {
-            const full = ansattMap.get(fk.ansatt_id) ?? "";
-            konsulentNavn = full.split(" ")[0];
-          }
-          return {
-            selskap,
-            konsulentNavn,
-            status: fk.status.toLowerCase() === "intervju" ? "Intervju" : "Sendt CV",
-          };
-        });
-      setMuligheter(mulighetItems);
-
-      // Market tech tags — use finn_annonser + forespørsler combined
-      const finnRows = finnRes.data ?? [];
-      const allForespFull = foresporlerRes.data ?? [];
-
-      // Get current ISO week number
-      const getISOWeek = (d: Date) => {
-        const date = new Date(d.getTime());
-        date.setHours(0, 0, 0, 0);
-        date.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7));
-        const week1 = new Date(date.getFullYear(), 0, 4);
-        return 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
-      };
-
-      const currentWeek = getISOWeek(now);
-      const currentYear = now.getFullYear();
-
-      // Current period: last 2 weeks, Previous: 2 weeks before that
-      const isInWeekRange = (dato: string, weeksAgo: number, weeksEnd: number) => {
-        const d = new Date(dato);
-        const diffMs = now.getTime() - d.getTime();
-        const diffWeeks = diffMs / (7 * 86400000);
-        return diffWeeks >= weeksAgo && diffWeeks < weeksEnd;
-      };
-
-      const currentCounts: Record<string, number> = {};
-      const prevCounts: Record<string, number> = {};
-
-      // Count from finn_annonser
-      for (const r of finnRows) {
-        if (!r.teknologier) continue;
-        const isCurrent = isInWeekRange(r.dato, 0, 2);
-        const isPrev = isInWeekRange(r.dato, 2, 4);
-        if (!isCurrent && !isPrev) continue;
-        const counts = isCurrent ? currentCounts : prevCounts;
-        for (const kw of TRACKED_TECHS) {
-          if (matchTech(r.teknologier, kw)) counts[kw] = (counts[kw] || 0) + 1;
-        }
-      }
-
-      // Count from forespørsler teknologier
-      for (const f of allForespFull) {
-        if (!f.teknologier) continue;
-        const isCurrent = isInWeekRange(f.mottatt_dato, 0, 2);
-        const isPrev = isInWeekRange(f.mottatt_dato, 2, 4);
-        if (!isCurrent && !isPrev) continue;
-        const counts = isCurrent ? currentCounts : prevCounts;
-        for (const tech of f.teknologier) {
-          for (const kw of TRACKED_TECHS) {
-            if (matchTech(tech, kw)) counts[kw] = (counts[kw] || 0) + 1;
-          }
-        }
-      }
-
-      // Also fetch previous period forespørsler (2-4 weeks ago) not in current query
-      const d28 = new Date(now.getTime() - 28 * 86400000).toISOString().slice(0, 10);
-      const d14 = new Date(now.getTime() - 14 * 86400000).toISOString().slice(0, 10);
-      const { data: prevForesp } = await supabase.from("foresporsler")
-        .select("teknologier, mottatt_dato")
-        .gte("mottatt_dato", d28)
-        .lt("mottatt_dato", d14);
-
-      for (const f of (prevForesp ?? [])) {
-        if (!f.teknologier) continue;
-        for (const tech of f.teknologier) {
-          for (const kw of TRACKED_TECHS) {
-            if (matchTech(tech, kw)) prevCounts[kw] = (prevCounts[kw] || 0) + 1;
-          }
-        }
-      }
-
-      const techPulse = TRACKED_TECHS
-        .map(t => {
-          const curr = currentCounts[t] || 0;
-          const prev = prevCounts[t] || 0;
-          let trend: "up" | "down" | "flat" = "flat";
-          if (prev > 0) {
-            if (curr > prev * 1.15) trend = "up";
-            else if (curr < prev * 0.85) trend = "down";
-          } else if (curr > 0) {
-            trend = "up";
-          }
-          return { name: t, count: curr, trend };
-        })
-        .filter(t => t.count >= 1)
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 8);
-
-      if (techPulse.length > 0) {
-        setMarket({ techPulse });
-        fetchMarketAI(techPulse);
-      } else {
-        setMarket(null);
-      }
-
-      setFetchedAt(new Date());
-      setLoading(false);
-    } catch (e) {
-      console.error("DailyBrief error:", e);
-      setLoading(false);
+      const idx = rankedContacts.findIndex(c => c.id === selectedContact.id);
+      const neste = rankedContacts[idx + 1];
+      if (neste) handleSelectContact(neste);
+      else setSelectedContact(null);
+    } catch {
+      toast.error("Kunne ikke lagre oppfølging");
+    } finally {
+      setSavingOppfolging(false);
     }
-  }, [user?.id, fetchMarketAI]);
+  };
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
-
-  const timeStr = fetchedAt
-    ? `kl. ${fetchedAt.getHours().toString().padStart(2, "0")}:${fetchedAt.getMinutes().toString().padStart(2, "0")}`
-    : "";
+  const signalCat = selectedContact ? CATEGORIES.find(c => c.label === selectedContact.signal) : null;
 
   return (
-    <div className="bg-card border border-border rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.07)] overflow-hidden px-5 pt-4 pb-4">
-      {/* HEADER */}
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-[1.25rem] font-bold text-foreground">
-          {getGreeting()}, {firstName} 👋
-        </h2>
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <button onClick={fetchAll} className="p-1 rounded hover:bg-secondary transition-colors" title="Oppdater">
-            <RefreshCw className="h-3.5 w-3.5" />
-          </button>
-          {timeStr && <span className="text-[0.75rem]">{timeStr}</span>}
-        </div>
+    <div className="space-y-4">
+      {/* Live stats */}
+      <div className="grid grid-cols-4 gap-3">
+        {[
+          { label: "Forfalt", value: stats.forfalt, color: "text-destructive" },
+          { label: "I dag", value: stats.idag, color: "text-primary" },
+          { label: "Behov nå", value: stats.behovNa, color: "text-emerald-600" },
+          { label: "Forespørsler", value: stats.foresporsler, color: "text-foreground" },
+        ].map(s => (
+          <div key={s.label} className="bg-card border border-border rounded-lg px-4 py-3 text-center">
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{s.label}</p>
+            <p className={cn("text-[1.5rem] font-bold", s.color)}>{s.value}</p>
+          </div>
+        ))}
       </div>
 
-      {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-6 w-full rounded" />)}
-        </div>
-      ) : (
-        <div className="space-y-0">
-          {/* Åpne forespørsler */}
-          {openForesp.length > 0 && (
-            <>
-              <div className="border-t border-border pt-3 pb-2">
-                <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Åpne forespørsler uten konsulent</span>
-              </div>
-              <div className="space-y-1 pb-2">
-                {openForesp.map((item) => (
-                  <Link key={item.id} to="/foresporsler" className="block text-[0.875rem] text-foreground hover:bg-secondary/50 rounded px-1 -mx-1 py-0.5 transition-colors">
-                    📋 <span className="font-medium">{item.selskap}</span>
-                    {item.teknologier.length > 0 && <span className="text-muted-foreground"> — {item.teknologier.slice(0, 3).join(", ")}</span>}
-                    <span className="text-muted-foreground"> — {relativeDate(item.mottattDato)}</span>
-                  </Link>
-                ))}
-              </div>
-            </>
-          )}
+      {/* Hoved-grid: Leads + Kø-modus */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-4">
+        {/* Venstre: Ranket liste */}
+        <div className="space-y-4">
+          <div className="bg-card border border-border rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.07)] overflow-hidden">
+            <div className="flex items-center gap-2 px-5 pt-4 pb-2">
+              <Flame className="h-4 w-4 text-orange-500" />
+              <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Varmeste leads</h2>
+              <span className="ml-auto text-[0.75rem] text-muted-foreground">{rankedContacts.length}</span>
+            </div>
 
-          {/* Største muligheter */}
-          {muligheter.length > 0 && (
-            <>
-              <div className="border-t border-border pt-3 pb-2">
-                <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Største muligheter</span>
+            <div className="divide-y divide-border">
+              {rankedContacts.length === 0 ? (
+                <p className="px-5 py-8 text-[0.875rem] text-muted-foreground text-center">Ingen varme leads akkurat nå</p>
+              ) : (
+                rankedContacts.map(contact => {
+                  const isSelected = selectedContact?.id === contact.id;
+                  const sigCat = CATEGORIES.find(c => c.label === contact.signal);
+                  return (
+                    <button
+                      key={contact.id}
+                      onClick={() => handleSelectContact(contact)}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors",
+                        isSelected ? "bg-primary/5 border-l-2 border-l-primary" : "hover:bg-muted/40",
+                        contact.harForfalt && !isSelected && "border-l-2 border-l-destructive"
+                      )}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[0.875rem] font-medium text-foreground truncate">
+                            {contact.first_name} {contact.last_name}
+                          </span>
+                          {contact.call_list && (
+                            <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0 text-[0.625rem] font-semibold">INN</span>
+                          )}
+                        </div>
+                        <p className="text-[0.75rem] text-muted-foreground truncate">{(contact.companies as any)?.name || ""}</p>
+                        {sigCat && (
+                          <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold mt-0.5", sigCat.badgeColor)}>
+                            {contact.signal}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className={cn("text-[0.8125rem] font-bold", contact.score >= 60 ? "text-emerald-600" : contact.score >= 40 ? "text-amber-600" : "text-muted-foreground")}>{contact.score}p</span>
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Konsulenter som nærmer seg ledig */}
+          {konsulenterLedig.length > 0 && (
+            <div className="bg-card border border-border rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.07)] overflow-hidden">
+              <div className="flex items-center gap-2 px-5 pt-4 pb-2">
+                <Calendar className="h-4 w-4 text-primary" />
+                <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Nærmer seg ledig</h2>
               </div>
-              <div className="space-y-1 pb-2">
-                {muligheter.map((item, i) => (
-                  <Link key={`mul-${i}`} to="/foresporsler" className="flex items-center gap-2 text-[0.875rem] text-foreground hover:bg-secondary/50 rounded px-1 -mx-1 py-0.5 transition-colors">
-                    <span>🏆 <span className="font-medium">{item.selskap}</span></span>
-                    {item.konsulentNavn && <span className="text-muted-foreground">— {item.konsulentNavn}</span>}
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold border ${
-                      item.status === "Intervju"
-                        ? "bg-purple-100 text-purple-700 border-purple-200"
-                        : "bg-blue-100 text-blue-700 border-blue-200"
-                    }`}>
-                      {item.status}
+              <div className="divide-y divide-border">
+                {konsulenterLedig.map((o: any) => (
+                  <div key={o.id} className="flex items-center justify-between px-4 py-2.5">
+                    <div>
+                      <p className="text-[0.875rem] font-medium text-foreground">{o.kandidat}</p>
+                      <p className="text-[0.75rem] text-muted-foreground">{o.kunde || "Ukjent kunde"}</p>
+                    </div>
+                    <span className={cn("text-[0.75rem] font-semibold", o.dager <= 0 ? "text-emerald-600" : o.dager <= 14 ? "text-amber-600" : "text-muted-foreground")}>
+                      {o.dager <= 0 ? "Ledig nå" : `Om ${o.dager}d`}
                     </span>
-                  </Link>
+                  </div>
                 ))}
               </div>
-            </>
+            </div>
           )}
+        </div>
 
-          {/* Marked */}
-          {market && market.techPulse.length > 0 && (
-            <>
-              <div className="border-t border-border pt-3 pb-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Marked siste 2 uker</span>
-                  <Link to="/markedsradar" className="text-[0.75rem] text-primary hover:underline">Se mer →</Link>
+        {/* Høyre: Kø-modus */}
+        <div className="bg-card border border-border rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.07)] overflow-hidden">
+          {!selectedContact ? (
+            <div className="flex flex-col items-center justify-center h-full min-h-[320px] text-center px-6">
+              <Target className="h-10 w-10 text-muted-foreground/30 mb-3" />
+              <p className="text-[0.9375rem] font-medium text-foreground">Velg en kontakt fra listen</p>
+              <p className="text-[0.8125rem] text-muted-foreground mt-1">Klikk på en lead for å se briefing og sette oppfølging</p>
+            </div>
+          ) : (
+            <div className="p-5 space-y-4">
+              {/* Header */}
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-[1.25rem] font-bold text-foreground">
+                      {selectedContact.first_name} {selectedContact.last_name}
+                    </h3>
+                    {selectedContact.call_list && (
+                      <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2 py-0.5 text-[0.6875rem] font-semibold">Innkjøper</span>
+                    )}
+                    {signalCat && (
+                      <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", signalCat.badgeColor)}>
+                        {selectedContact.signal}
+                      </span>
+                    )}
+                    <span className={cn("text-[0.8125rem] font-bold", selectedContact.score >= 60 ? "text-emerald-600" : "text-amber-600")}>Score: {selectedContact.score}p</span>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/kontakter/${selectedContact.id}`)}
+                    className="text-[0.875rem] text-primary hover:underline mt-0.5"
+                  >
+                    {(selectedContact.companies as any)?.name || "Ukjent selskap"} →
+                  </button>
                 </div>
               </div>
-              {(() => {
-                const sorted = [...market.techPulse].sort((a, b) => b.count - a.count);
-                if (sorted.length >= 2) {
-                  const top1 = sorted[0];
-                  const top2 = sorted[1];
-                  const total = top1.count + top2.count;
-                  return (
-                    <p className="text-[0.8125rem] text-muted-foreground mt-1.5">
-                      {top1.name} og {top2.name} er mest etterspurt med {total} annonser til sammen de siste 2 ukene.
-                    </p>
-                  );
-                }
-                return null;
-              })()}
-              {/* AI market summary */}
-              {aiMarketLoading ? (
-                <Skeleton className="h-4 w-3/4 mb-3" />
-              ) : aiMarket ? (
-                <p className="text-sm text-muted-foreground mb-4 animate-in fade-in duration-500">{aiMarket}</p>
-              ) : null}
-              <div className="flex flex-wrap gap-1.5 pb-1" style={{ marginTop: '1rem' }}>
-                {market.techPulse.map(t => (
-                  <span
-                    key={t.name}
-                    className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[0.75rem] font-medium text-muted-foreground"
-                  >
-                    {t.name} <span className="font-bold">{t.count}</span>
-                    {t.trend === "up" && <span className="text-emerald-500">↑</span>}
-                    {t.trend === "down" && <span className="text-red-400">↓</span>}
-                  </span>
-                ))}
+
+              {/* AI Briefing */}
+              <div className="rounded-lg bg-muted/50 border border-border px-4 py-3">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">AI-briefing</span>
+                </div>
+                {aiLoading ? (
+                  <div className="flex items-center gap-2 text-[0.8125rem] text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Analyserer historikk...
+                  </div>
+                ) : (
+                  <p className="text-[0.8125rem] text-foreground/80 leading-relaxed">{aiText || "Ingen historikk å analysere."}</p>
+                )}
               </div>
-            </>
+
+              {/* Siste aktivitet */}
+              {selectedContact.sisteAkt && (
+                <p className="text-[0.8125rem] text-muted-foreground">
+                  <span className="font-medium">Siste:</span> "{selectedContact.sisteAkt.subject}"
+                  {" — "}{format(new Date(selectedContact.sisteAkt.created_at), "d. MMM yyyy", { locale: nb })}
+                </p>
+              )}
+
+              {/* Sett neste oppfølging */}
+              <div className="space-y-2">
+                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Sett neste oppfølging</p>
+                <Input
+                  value={oppfolgingTittel}
+                  onChange={(e) => setOppfolgingTittel(e.target.value)}
+                  placeholder="Tittel på oppfølging"
+                  className="text-[0.875rem]"
+                />
+                <div className="flex items-center gap-2 flex-wrap">
+                  {DATE_CHIPS.map((chip, i) => (
+                    <button
+                      key={chip.label}
+                      onClick={() => {
+                        setOppfolgingDato(format(chip.fn(), "yyyy-MM-dd"));
+                        setSelectedChip(i);
+                      }}
+                      className={cn(
+                        "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
+                        selectedChip === i
+                          ? "bg-primary/10 border-primary/30 text-primary font-medium"
+                          : "border-border text-muted-foreground hover:bg-secondary"
+                      )}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                  <input
+                    type="date"
+                    value={oppfolgingDato}
+                    onChange={(e) => { setOppfolgingDato(e.target.value); setSelectedChip(null); }}
+                    className="h-8 px-2 text-[0.75rem] rounded-full border border-border text-muted-foreground bg-background"
+                  />
+                </div>
+                {oppfolgingDato && (
+                  <p className="text-[0.75rem] text-muted-foreground">
+                    Frist: {format(new Date(oppfolgingDato), "d. MMMM yyyy", { locale: nb })}
+                  </p>
+                )}
+              </div>
+
+              {/* Knapper */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => {
+                    const idx = rankedContacts.findIndex(c => c.id === selectedContact.id);
+                    const neste = rankedContacts[idx + 1];
+                    if (neste) handleSelectContact(neste);
+                    else setSelectedContact(null);
+                  }}
+                  className="flex-1 h-9 text-[0.8125rem] rounded-lg border border-border text-muted-foreground hover:bg-secondary transition-colors"
+                >
+                  ← Hopp over
+                </button>
+                <button
+                  onClick={handleLagreOppfolging}
+                  disabled={!oppfolgingDato || savingOppfolging}
+                  className="flex-1 h-9 inline-flex items-center justify-center gap-1.5 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {savingOppfolging ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                  Lagre og neste →
+                </button>
+              </div>
+            </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 };
