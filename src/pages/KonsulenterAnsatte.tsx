@@ -319,13 +319,6 @@ export default function KonsulenterAnsatte() {
                   <ExternalLink className="h-3 w-3" />
                   CV-editor
                 </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); generateLink(a); }}
-                  className="inline-flex items-center gap-1.5 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg border border-border text-foreground hover:bg-muted transition-colors"
-                >
-                  <Link2 className="h-3 w-3" />
-                  Del link
-                </button>
               </div>
               {/* HANDLINGER */}
               <div className="flex items-center gap-1.5 justify-end">
