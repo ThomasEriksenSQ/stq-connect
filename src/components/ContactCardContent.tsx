@@ -271,6 +271,8 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
   const [companySearch, setCompanySearch] = useState("");
   const [companyResults, setCompanyResults] = useState<{ id: string; name: string }[]>([]);
   const companySearchRef = useRef<HTMLInputElement>(null);
+  const [matchingConsultants, setMatchingConsultants] = useState(false);
+  const [consultantResults, setConsultantResults] = useState<any[] | null>(null);
 
   const { data: contact, isLoading } = useQuery({
     queryKey: ["contact", contactId],
