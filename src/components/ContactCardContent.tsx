@@ -912,7 +912,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                  Tekniske behov
+                  Teknisk behov {contact.first_name} {contact.last_name}
                 </span>
                 <div className="flex items-center gap-1.5">
                   <button
