@@ -902,129 +902,16 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           );
         })()}
 
-        {/* Teknologitagger */}
-        {editable && (
-          <>
-          <div className="h-px bg-border mt-4 mb-3" />
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                Tekniske behov
-              </span>
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => setShowAnalyze(!showAnalyze)}
-                  className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
-                >
-                  <Sparkles className="h-3.5 w-3.5 text-primary" /> Legg til tekniske tags fra tekst
-                </button>
-                {contact.teknologier && (contact.teknologier as string[]).length > 0 && (
-                  <button
-                    onClick={handleFinnKonsulent}
-                    disabled={matchingConsultants}
-                    className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
-                  >
-                    {matchingConsultants ? (
-                      <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Matcher...</>
-                    ) : (
-                      <><Target className="h-3.5 w-3.5 text-primary" /> Finn konsulent til tekniske behov</>
-                    )}
-                  </button>
-                )}
-              </div>
-            </div>
-            <TechTagEditor
-              tags={(contact as any).teknologier || []}
-              onSave={(tags) => updateMutation.mutate({ teknologier: tags })}
-              contact={contact}
-              updateMutation={updateMutation}
-              showAnalyze={showAnalyze}
-              setShowAnalyze={setShowAnalyze}
-            />
-          </div>
-          </>
-        )}
-        {!editable && (contact as any).teknologier?.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-2">
-            {((contact as any).teknologier as string[]).map((t: string) => (
-              <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.75rem] font-medium text-foreground">
-                {t}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* AI Signal suggestion */}
-        {editable && activities.length > 0 && (() => {
-          const effectiveSignal = getEffectiveSignal(
-            activities.map(a => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
-            tasks.map(t => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date })),
-          );
-          const lastTaskDue = tasks.length > 0 ? tasks[0]?.due_date || null : null;
-          return (
-            <AiSignalBanner
-              contactId={contactId}
-              contactName={`${contact.first_name} ${contact.last_name}`}
-              currentSignal={effectiveSignal}
-              activities={activities.slice(0, 5).map(a => ({ type: a.type, subject: a.subject, created_at: a.created_at }))}
-              lastTaskDueDate={lastTaskDue}
-              onUpdateSignal={(signal) => {
-                createActivityMutation.mutate({
-                  type: "note",
-                  subject: signal,
-                  description: `[${signal}]`,
-                });
-              }}
-            />
-          );
-        })()}
       </div>
 
-      {/* Notes (inline edit via pencil) */}
-      {editable && editingNotes ? (
-        <div className="mb-6">
-          <Textarea
-            value={notesDraft}
-            onChange={(e) => setNotesDraft(e.target.value)}
-            rows={3}
-            autoFocus
-            className="text-[0.875rem] rounded-md"
-            onKeyDown={(e) => {
-              if (e.key === "Escape") setEditingNotes(false);
-              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                updateField("notes")(notesDraft);
-                setEditingNotes(false);
-              }
-            }}
-          />
-          <div className="flex gap-2 mt-1.5">
-            <Button size="sm" className="h-7 text-[0.75rem] px-3 rounded-md" onClick={() => { updateField("notes")(notesDraft); setEditingNotes(false); }}>Lagre</Button>
-            <Button variant="ghost" size="sm" className="h-7 text-[0.75rem] px-3 rounded-md" onClick={() => setEditingNotes(false)}>Avbryt</Button>
-          </div>
-        </div>
-      ) : contact.notes ? (
-        <div className="group mb-6 relative">
-          <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{contact.notes}</p>
-          {editable && (
-            <button onClick={() => { setNotesDraft(contact.notes || ""); setEditingNotes(true); }}
-              className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-secondary">
-              <Pencil className="h-3 w-3 text-muted-foreground" />
-            </button>
-          )}
-        </div>
-      ) : editable ? (
-        <button onClick={() => { setNotesDraft(""); setEditingNotes(true); }}
-          className="text-[0.75rem] text-muted-foreground/50 hover:text-muted-foreground mb-6 inline-flex items-center gap-1 transition-colors">
-          <Pencil className="h-3 w-3" /> Legg til notat
-        </button>
-      ) : null}
+      {/* ── To-kolonne layout ── */}
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_minmax(0,280px)] gap-6 mt-5">
 
-      {/* ── Grid wrapper to match company card column width ── */}
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_minmax(0,260px)] gap-6">
-        <div>
-          {/* ── ZONE B: Action Bar ── */}
+        {/* Venstre: Logg-knapper + Oppfølginger + Aktiviteter */}
+        <div className="space-y-5">
+          {/* ── Action Bar ── */}
           {editable && (
-            <div className="border-t border-border mt-2 pt-4 pb-4">
+            <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => openForm("call")}
@@ -1136,7 +1023,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                       )}
                     </div>
                   ) : (
-                    /* Date for call/meeting + quick replies for call */
+                    /* Date for call/meeting */
                     <div className="mt-2">
                       <span className="text-[0.75rem] text-muted-foreground">
                         Dato: I dag, {format(new Date(), "d. MMMM", { locale: nb })}
@@ -1164,7 +1051,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
 
           {/* ── Konsulent match-resultater ── */}
           {consultantResults !== null && (
-            <div className="mt-4 space-y-3">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Target className="h-4 w-4 text-primary" />
@@ -1217,9 +1104,9 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
             </div>
           )}
 
-          {/* ── ZONE C: Oppfølginger ── */}
+          {/* ── Oppfølginger ── */}
           {tasks.length > 0 && (
-            <div className="bg-card border border-border rounded-lg shadow-card p-4 mb-6">
+            <div className="bg-card border border-border rounded-lg shadow-card p-4">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
                   Oppfølginger · {tasks.length}
@@ -1247,7 +1134,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
             </div>
           )}
 
-          {/* ── ZONE D: Aktiviteter Timeline ── */}
+          {/* ── Aktiviteter ── */}
           <ActivityTimeline
             activities={activities}
             profileMap={profileMapFull}
@@ -1256,8 +1143,131 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
             onUpdateActivity={(id, updates) => updateActivityMutation.mutate({ id, updates })}
           />
         </div>
-        {/* Høyre kolonne — tom, kun for å matche bredden på selskapskortet */}
-        <div />
+
+        {/* Høyre: Tekniske behov + Notat */}
+        <div className="space-y-5">
+
+          {/* ── Tekniske behov ── */}
+          {editable && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                  Tekniske behov
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setShowAnalyze(!showAnalyze)}
+                    className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-primary" /> Analyser tekst
+                  </button>
+                  {contact.teknologier && (contact.teknologier as string[]).length > 0 && (
+                    <button
+                      onClick={handleFinnKonsulent}
+                      disabled={matchingConsultants}
+                      className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+                    >
+                      {matchingConsultants ? (
+                        <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Matcher...</>
+                      ) : (
+                        <><Target className="h-3.5 w-3.5 text-primary" /> Finn konsulent</>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+              <TechTagEditor
+                tags={(contact as any).teknologier || []}
+                onSave={(tags) => updateMutation.mutate({ teknologier: tags })}
+                contact={contact}
+                updateMutation={updateMutation}
+                showAnalyze={showAnalyze}
+                setShowAnalyze={setShowAnalyze}
+              />
+            </div>
+          )}
+          {!editable && (contact as any).teknologier?.length > 0 && (
+            <div>
+              <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground block mb-2">
+                Tekniske behov
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {((contact as any).teknologier as string[]).map((t: string) => (
+                  <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.75rem] font-medium text-foreground">
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* AI Signal suggestion */}
+          {editable && activities.length > 0 && (() => {
+            const effectiveSignal = getEffectiveSignal(
+              activities.map(a => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+              tasks.map(t => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date })),
+            );
+            const lastTaskDue = tasks.length > 0 ? tasks[0]?.due_date || null : null;
+            return (
+              <AiSignalBanner
+                contactId={contactId}
+                contactName={`${contact.first_name} ${contact.last_name}`}
+                currentSignal={effectiveSignal}
+                activities={activities.slice(0, 5).map(a => ({ type: a.type, subject: a.subject, created_at: a.created_at }))}
+                lastTaskDueDate={lastTaskDue}
+                onUpdateSignal={(signal) => {
+                  createActivityMutation.mutate({
+                    type: "note",
+                    subject: signal,
+                    description: `[${signal}]`,
+                  });
+                }}
+              />
+            );
+          })()}
+
+          {/* ── Notat ── */}
+          <div>
+            {editingNotes ? (
+              <div>
+                <Textarea
+                  value={notesDraft}
+                  onChange={(e) => setNotesDraft(e.target.value)}
+                  rows={3}
+                  autoFocus
+                  className="text-[0.875rem] rounded-md"
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") setEditingNotes(false);
+                    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                      updateField("notes")(notesDraft);
+                      setEditingNotes(false);
+                    }
+                  }}
+                />
+                <div className="flex gap-2 mt-1.5">
+                  <Button size="sm" className="h-7 text-[0.75rem] px-3 rounded-md" onClick={() => { updateField("notes")(notesDraft); setEditingNotes(false); }}>Lagre</Button>
+                  <Button variant="ghost" size="sm" className="h-7 text-[0.75rem] px-3 rounded-md" onClick={() => setEditingNotes(false)}>Avbryt</Button>
+                </div>
+              </div>
+            ) : contact.notes ? (
+              <div className="group relative">
+                <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{contact.notes}</p>
+                {editable && (
+                  <button onClick={() => { setNotesDraft(contact.notes || ""); setEditingNotes(true); }}
+                    className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-secondary">
+                    <Pencil className="h-3 w-3 text-muted-foreground" />
+                  </button>
+                )}
+              </div>
+            ) : editable ? (
+              <button onClick={() => { setNotesDraft(""); setEditingNotes(true); }}
+                className="text-[0.75rem] text-muted-foreground/50 hover:text-muted-foreground inline-flex items-center gap-1 transition-colors">
+                <Pencil className="h-3 w-3" /> Legg til notat
+              </button>
+            ) : null}
+          </div>
+
+        </div>
       </div>
     </div>
   );
