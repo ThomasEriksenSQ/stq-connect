@@ -189,7 +189,7 @@ function InlineField({
 
 const SUGGESTED_TECH_TAGS = ["C++", "C", "Embedded", "Yocto", "Linux", "Qt", "FPGA", "Python", "SPI/I2C", "MCU", "Embedded Linux", "Sikkerhet", "AUTOSAR", "FreeRTOS"];
 
-function TechTagEditor({ tags, onSave, contact, updateMutation }: { tags: string[]; onSave: (tags: string[]) => void; contact?: any; updateMutation?: any }) {
+function TechTagEditor({ tags, onSave, contact, updateMutation, showAnalyze, setShowAnalyze }: { tags: string[]; onSave: (tags: string[]) => void; contact?: any; updateMutation?: any; showAnalyze?: boolean; setShowAnalyze?: (v: boolean) => void }) {
   const [input, setInput] = useState("");
   const [showAnalyze, setShowAnalyze] = useState(false);
   const [analyzeText, setAnalyzeText] = useState("");
