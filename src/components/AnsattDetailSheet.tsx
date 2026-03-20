@@ -2,6 +2,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { getInitials, cn } from "@/lib/utils";
 import { FileText, Pencil, X, Loader2, Upload, Sparkles } from "lucide-react";
 import { format, differenceInMonths } from "date-fns";
+import { nb } from "date-fns/locale";
 import { formatMonths } from "@/lib/utils";
 import { OppdragsMatchPanel } from "@/components/OppdragsMatchPanel";
 import { useState, useEffect, useRef } from "react";
