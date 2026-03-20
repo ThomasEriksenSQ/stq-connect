@@ -833,7 +833,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
               onCheckedChange={(checked) => updateMutation.mutate({ ikke_aktuell_kontakt: checked as any })}
               className="h-3.5 w-3.5 rounded-[3px] data-[state=checked]:bg-destructive data-[state=checked]:border-destructive" />
             <span className={cn("text-[0.75rem]", (contact as any).ikke_aktuell_kontakt ? "text-destructive font-medium" : "text-foreground")}>
-              Ikke relevant person å kontakte igjen
+              Ikke aktuell å kontakte
             </span>
           </label>
         </div>
