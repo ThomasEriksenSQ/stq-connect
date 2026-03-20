@@ -289,7 +289,7 @@ function TechTagEditor({ tags, onSave, contact, updateMutation, showAnalyze, set
       {showAnalyze && (
         <div className="mt-2 p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-2">
           <p className="text-[0.75rem] text-muted-foreground">
-            Lim inn stillingsbeskrivelse, e-post eller kravspesifikasjon — AI finner relevante teknologier automatisk.
+            Lim inn tekst og AI henter ut relevante tags som legges til
           </p>
           <Textarea
             value={analyzeText}
