@@ -1312,7 +1312,7 @@ function CompanyActivityRow({ activity, profileMap, companyId, navigate }: {
 }
 
 /* ── Company DNA Panel ── */
-function CompanyDnaPanel({ companyId, onFinnKonsulenter, matchingKonsulenter }: { companyId: string; onFinnKonsulenter: () => void; matchingKonsulenter: boolean }) {
+function CompanyDnaPanel({ companyId }: { companyId: string }) {
   const queryClient = useQueryClient();
 
   const { data: dnaProfile } = useQuery({
