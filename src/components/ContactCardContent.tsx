@@ -706,6 +706,25 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           </label>
         </div>
 
+        {/* Teknologitagger */}
+        {editable && (
+          <div className="mt-3">
+            <TechTagEditor
+              tags={(contact as any).teknologier || []}
+              onSave={(tags) => updateMutation.mutate({ teknologier: tags })}
+            />
+          </div>
+        )}
+        {!editable && (contact as any).teknologier?.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {((contact as any).teknologier as string[]).map((t: string) => (
+              <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.75rem] font-medium text-foreground">
+                {t}
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* AI Signal suggestion */}
         {editable && activities.length > 0 && (() => {
           const effectiveSignal = getEffectiveSignal(
