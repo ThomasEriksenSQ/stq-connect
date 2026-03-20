@@ -191,7 +191,7 @@ const SUGGESTED_TECH_TAGS = ["C++", "C", "Embedded", "Yocto", "Linux", "Qt", "FP
 
 function TechTagEditor({ tags, onSave, contact, updateMutation, showAnalyze, setShowAnalyze }: { tags: string[]; onSave: (tags: string[]) => void; contact?: any; updateMutation?: any; showAnalyze?: boolean; setShowAnalyze?: (v: boolean) => void }) {
   const [input, setInput] = useState("");
-  const [showAnalyze, setShowAnalyze] = useState(false);
+  
   const [analyzeText, setAnalyzeText] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
