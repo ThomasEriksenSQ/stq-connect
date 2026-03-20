@@ -53,8 +53,8 @@ export default function KonsulenterAnsatte() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stacq_oppdrag")
-        .select("kandidat, status")
-        .in("status", ["Aktiv", "Oppstart"]);
+      .select("kandidat, status, forny_dato")
+      .in("status", ["Aktiv", "Oppstart"]);
       if (error) throw error;
       return data;
     },
