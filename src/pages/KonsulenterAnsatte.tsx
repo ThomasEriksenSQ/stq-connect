@@ -2,8 +2,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState } from "react";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
-import { format, differenceInMonths, isAfter } from "date-fns";
+import { format, differenceInMonths, differenceInDays, isAfter } from "date-fns";
+import { nb } from "date-fns/locale";
 import { ExternalLink, Link2, Pencil, Plus, Sparkles } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
@@ -14,6 +16,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+function getFornyColor(fornyDato: string): { label: string; className: string } {
+  const days = differenceInDays(new Date(fornyDato), new Date());
+  if (days < 0) return { label: `Utløpt ${Math.abs(days)}d siden`, className: "text-destructive font-semibold" };
+  if (days <= 30) return { label: `Om ${days}d`, className: "text-amber-600 font-semibold" };
+  if (days <= 60) return { label: `Om ${days}d`, className: "text-amber-500" };
+  return { label: format(new Date(fornyDato), "dd.MM.yy"), className: "text-muted-foreground" };
+}
 
 type Filter = "Alle" | "Aktiv" | "Kommende" | "Sluttet";
 
@@ -43,8 +53,8 @@ export default function KonsulenterAnsatte() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stacq_oppdrag")
-        .select("kandidat, status")
-        .in("status", ["Aktiv", "Oppstart"]);
+      .select("kandidat, status, forny_dato")
+      .in("status", ["Aktiv", "Oppstart"]);
       if (error) throw error;
       return data;
     },
@@ -54,6 +64,14 @@ export default function KonsulenterAnsatte() {
     const m = new Map<string, string>();
     (oppdrag as any[]).forEach((o) => {
       if (!m.has(o.kandidat) || o.status === "Aktiv") m.set(o.kandidat, o.status);
+    });
+    return m;
+  }, [oppdrag]);
+
+  const fornyDateMap = useMemo(() => {
+    const m = new Map<string, string>();
+    (oppdrag as any[]).forEach((o) => {
+      if (o.forny_dato) m.set(o.kandidat, o.forny_dato);
     });
     return m;
   }, [oppdrag]);
@@ -186,8 +204,8 @@ export default function KonsulenterAnsatte() {
       {/* Table */}
       <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
         {/* Header */}
-        <div className="grid grid-cols-[minmax(0,1.8fr)_110px_100px_120px_180px_minmax(0,1fr)] gap-3 px-4 py-2.5 border-b border-border bg-background">
-          {["NAVN", "START", "ANSETTELSE", "OPPDRAG", "CV / LINK", "HANDLINGER"].map((h) => (
+        <div className="grid grid-cols-[minmax(0,1.8fr)_110px_100px_120px_100px_180px_minmax(0,1fr)] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          {["NAVN", "START", "ANSETTELSE", "OPPDRAG", "FORNYES", "CV / LINK", "HANDLINGER"].map((h) => (
             <span key={h} className={cn("text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground", h === "HANDLINGER" && "text-right")}>{h}</span>
           ))}
         </div>
@@ -215,7 +233,7 @@ export default function KonsulenterAnsatte() {
             <div
               key={a.id}
               className={cn(
-                "group grid grid-cols-[minmax(0,1.8fr)_110px_100px_120px_180px_minmax(0,1fr)] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75",
+                "group grid grid-cols-[minmax(0,1.8fr)_110px_100px_120px_100px_180px_minmax(0,1fr)] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75",
                 isKommende && "opacity-80",
                 isSluttet && "opacity-50"
               )}
@@ -269,6 +287,26 @@ export default function KonsulenterAnsatte() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+              </div>
+              {/* FORNYES */}
+              <div>
+                {(() => {
+                  const fornyDato = fornyDateMap.get(a.navn);
+                  if (!fornyDato) return <span className="text-[0.8125rem] text-muted-foreground">—</span>;
+                  const { label, className } = getFornyColor(fornyDato);
+                  return (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className={cn("text-[0.8125rem] cursor-default", className)}>
+                          {label}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {format(new Date(fornyDato), "d. MMMM yyyy", { locale: nb })}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })()}
               </div>
               {/* CV / LINK */}
               <div className="flex items-center gap-1.5">
