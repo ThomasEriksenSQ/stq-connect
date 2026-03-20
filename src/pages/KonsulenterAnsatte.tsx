@@ -208,7 +208,7 @@ export default function KonsulenterAnsatte() {
         {/* Header */}
         <div className={cn(GRID_COLS, "gap-3 px-4 py-2.5 border-b border-border bg-background")}>
           {["NAVN", "START", "ANSETTELSE", "OPPDRAG", "FORNYES", "CV / LINK", "HANDLINGER"].map((h) => (
-            <span key={h} className={cn("text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground", h === "HANDLINGER" && "text-right")}>{h}</span>
+            <span key={h} className={cn("text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap", h === "HANDLINGER" && "text-right")}>{h}</span>
           ))}
         </div>
         <div className="divide-y divide-border">
