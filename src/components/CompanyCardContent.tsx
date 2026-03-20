@@ -800,7 +800,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
           </div>
         </div>
       ) : company.notes ? (
-        <div className="group mb-4 relative">
+        <div className="group mb-6 relative">
           <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{company.notes}</p>
           {editable && (
             <button onClick={() => { setNotesDraft(company.notes || ""); setEditingNotes(true); }}
