@@ -543,7 +543,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                           <Label className="text-label">Geografisk sted <span className="text-muted-foreground font-normal">(valgfritt)</span></Label>
                           <Select value={contactForm.location} onValueChange={(v) => setContactForm({ ...contactForm, location: v === "__none__" ? "" : v })}>
                             <SelectTrigger className="h-10 rounded-lg">
-                              {contactForm.location || "Ingen spesifikk avdeling"}
+                              {contactForm.location || "Ingen spesifikt sted"}
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="__none__">Ingen spesifikk avdeling</SelectItem>
