@@ -141,6 +141,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   const [signalContactId, setSignalContactId] = useState<string>("");
   const [matchingKonsulenter, setMatchingKonsulenter] = useState(false);
   const [konsulentResults, setKonsulentResults] = useState<any[] | null>(null);
+  const [konsulentFilter, setKonsulentFilter] = useState<"Alle" | "Ansatte" | "Eksterne">("Alle");
   const { user } = useAuth();
 
   const { data: company, isLoading } = useQuery({
