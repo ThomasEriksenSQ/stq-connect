@@ -919,40 +919,68 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                   Kjør på nytt
                 </button>
               </div>
-              {konsulentResults.length === 0 ? (
+              <div className="flex gap-1.5">
+                {(["Alle", "Ansatte", "Eksterne"] as const).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setKonsulentFilter(f)}
+                    className={cn(
+                      "h-6 px-2.5 text-[0.6875rem] rounded-full border transition-colors font-medium",
+                      konsulentFilter === f
+                        ? "bg-foreground text-background border-foreground"
+                        : "border-border text-muted-foreground hover:bg-secondary"
+                    )}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+              {konsulentResults
+                .filter((m: any) =>
+                  konsulentFilter === "Alle" ? true :
+                  konsulentFilter === "Ansatte" ? m.type === "intern" :
+                  m.type === "ekstern"
+                )
+                .length === 0 ? (
                 <p className="text-[0.8125rem] text-muted-foreground">Ingen treff</p>
               ) : (
-                konsulentResults.map((m: any, i: number) => (
-                  <div key={`${m.type}-${m.id}`} className="rounded-lg border border-border bg-card p-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
-                        <span className="text-[0.8125rem] font-semibold text-foreground truncate">{m.navn}</span>
-                        <span className={cn(
-                          "inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold shrink-0",
-                          m.type === "intern" ? "bg-foreground text-background" : "bg-blue-100 text-blue-700"
-                        )}>
-                          {m.type === "intern" ? "Ansatt" : "Ekstern"}
-                        </span>
+                konsulentResults
+                  .filter((m: any) =>
+                    konsulentFilter === "Alle" ? true :
+                    konsulentFilter === "Ansatte" ? m.type === "intern" :
+                    m.type === "ekstern"
+                  )
+                  .map((m: any, i: number) => (
+                    <div key={`${m.type}-${m.id}`} className="rounded-lg border border-border bg-card p-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
+                          <span className="text-[0.8125rem] font-semibold text-foreground truncate">{m.navn}</span>
+                          <span className={cn(
+                            "inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold shrink-0",
+                            m.type === "intern" ? "bg-foreground text-background" : "bg-blue-100 text-blue-700"
+                          )}>
+                            {m.type === "intern" ? "Ansatt" : "Ekstern"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className={cn(
+                            "inline-block h-2 w-2 rounded-full",
+                            m.score >= 8 ? "bg-emerald-500" : m.score >= 6 ? "bg-amber-500" : "bg-red-500"
+                          )} />
+                          <span className="text-[0.75rem] font-bold">{m.score}/10</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <span className={cn(
-                          "inline-block h-2 w-2 rounded-full",
-                          m.score >= 8 ? "bg-emerald-500" : m.score >= 6 ? "bg-amber-500" : "bg-red-500"
-                        )} />
-                        <span className="text-[0.75rem] font-bold">{m.score}/10</span>
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {(m.match_tags || []).map((t: string) => (
+                          <span key={t} className="inline-flex items-center rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[0.625rem] font-medium">
+                            {t}
+                          </span>
+                        ))}
                       </div>
+                      <p className="text-[0.75rem] text-muted-foreground mt-1 italic">{m.begrunnelse}</p>
                     </div>
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {(m.match_tags || []).map((t: string) => (
-                        <span key={t} className="inline-flex items-center rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[0.625rem] font-medium">
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                    <p className="text-[0.75rem] text-muted-foreground mt-1 italic">{m.begrunnelse}</p>
-                  </div>
-                ))
+                  ))
               )}
             </div>
           )}
