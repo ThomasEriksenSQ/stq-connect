@@ -68,6 +68,14 @@ export default function KonsulenterAnsatte() {
     return m;
   }, [oppdrag]);
 
+  const fornyDateMap = useMemo(() => {
+    const m = new Map<string, string>();
+    (oppdrag as any[]).forEach((o) => {
+      if (o.forny_dato) m.set(o.kandidat, o.forny_dato);
+    });
+    return m;
+  }, [oppdrag]);
+
   const activeOppdragNames = useMemo(
     () => new Set(oppdrag.map((o: any) => o.kandidat)),
     [oppdrag]
