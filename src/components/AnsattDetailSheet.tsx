@@ -5,6 +5,7 @@ import { format, differenceInMonths } from "date-fns";
 import { nb } from "date-fns/locale";
 import { formatMonths } from "@/lib/utils";
 import { OppdragsMatchPanel } from "@/components/OppdragsMatchPanel";
+import { getEffectiveSignal } from "@/lib/categoryUtils";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
