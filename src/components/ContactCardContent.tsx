@@ -192,9 +192,10 @@ const SUGGESTED_TECH_TAGS = ["C++", "C", "Embedded", "Yocto", "Linux", "Qt", "FP
 function TechTagEditor({ tags, onSave }: { tags: string[]; onSave: (tags: string[]) => void }) {
   const [input, setInput] = useState("");
 
-  const addTag = (tag: string) => {
-    const t = tag.trim();
-    if (t && !tags.includes(t)) onSave([...tags, t]);
+  const addTags = (raw: string) => {
+    const newTags = raw.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean);
+    const unique = newTags.filter(t => !tags.includes(t));
+    if (unique.length) onSave([...tags, ...unique.filter((t, i, a) => a.indexOf(t) === i)]);
     setInput("");
   };
 
@@ -205,7 +206,15 @@ function TechTagEditor({ tags, onSave }: { tags: string[]; onSave: (tags: string
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.key === "Enter" || e.key === ",") && input.trim()) {
       e.preventDefault();
-      addTag(input);
+      addTags(input);
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const pasted = e.clipboardData.getData("text");
+    if (pasted.includes(",") || pasted.includes(";") || pasted.includes("\n")) {
+      e.preventDefault();
+      addTags(pasted);
     }
   };
 
