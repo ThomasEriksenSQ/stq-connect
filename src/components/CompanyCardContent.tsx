@@ -421,7 +421,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
   return (
     <div>
       {/* ── ZONE A: Header ── */}
-      <div className="mb-3">
+      <div className="mb-5">
         <div className="flex items-center gap-3">
           {editable ? (
             <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">
@@ -779,7 +779,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
 
       {/* Notes (inline edit via pencil) */}
       {editable && editingNotes ? (
-        <div className="mb-4">
+        <div className="mb-6">
           <Textarea
             value={notesDraft}
             onChange={(e) => setNotesDraft(e.target.value)}
@@ -800,7 +800,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
           </div>
         </div>
       ) : company.notes ? (
-        <div className="group mb-4 relative">
+        <div className="group mb-6 relative">
           <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{company.notes}</p>
           {editable && (
             <button onClick={() => { setNotesDraft(company.notes || ""); setEditingNotes(true); }}
@@ -811,10 +811,55 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
         </div>
       ) : editable ? (
         <button onClick={() => { setNotesDraft(""); setEditingNotes(true); }}
-          className="text-[0.75rem] text-muted-foreground/50 hover:text-muted-foreground mb-4 inline-flex items-center gap-1 transition-colors">
+          className="text-[0.75rem] text-muted-foreground/50 hover:text-muted-foreground mb-6 inline-flex items-center gap-1 transition-colors">
           <Pencil className="h-3 w-3" /> Legg til notat
         </button>
       ) : null}
+
+      {/* Snapshot-rad */}
+      {(() => {
+        const sisteAktivitet = activities[0] ?? null;
+        const nesteOppfolging = tasks[0] ?? null;
+        if (!sisteAktivitet && !nesteOppfolging) return null;
+        return (
+          <div className="mt-3 mb-5 rounded-lg bg-muted/40 border border-border px-3 py-2.5 space-y-1">
+            {sisteAktivitet && (() => {
+              const { title } = extractTitleAndCategory(sisteAktivitet.subject, sisteAktivitet.description);
+              const contactName = (sisteAktivitet.contacts as any)?.first_name
+                ? `${(sisteAktivitet.contacts as any).first_name} ${(sisteAktivitet.contacts as any).last_name}` : null;
+              return (
+                <div className="flex items-center gap-2 text-[0.8125rem]">
+                  <span className="text-muted-foreground shrink-0">Siste:</span>
+                  <span className="font-medium text-foreground truncate">"{title}"</span>
+                  {contactName && <span className="text-muted-foreground/60 text-[0.75rem] shrink-0">→ {contactName}</span>}
+                  <span className="text-muted-foreground shrink-0 ml-auto">
+                    {format(new Date(sisteAktivitet.created_at), "d. MMM yyyy", { locale: nb })}
+                  </span>
+                </div>
+              );
+            })()}
+            {nesteOppfolging && (() => {
+              const { title, category } = extractTitleAndCategory(nesteOppfolging.title, nesteOppfolging.description);
+              const overdue = nesteOppfolging.due_date && isPast(new Date(nesteOppfolging.due_date)) && !isToday(new Date(nesteOppfolging.due_date));
+              const contactName = (nesteOppfolging.contacts as any)?.first_name
+                ? `${(nesteOppfolging.contacts as any).first_name} ${(nesteOppfolging.contacts as any).last_name}` : null;
+              return (
+                <div className="flex items-center gap-2 text-[0.8125rem]">
+                  <span className="text-muted-foreground shrink-0">Neste:</span>
+                  <span className="font-medium text-foreground truncate">{title}</span>
+                  {contactName && <span className="text-muted-foreground/60 text-[0.75rem] shrink-0">→ {contactName}</span>}
+                  {nesteOppfolging.due_date && (
+                    <span className={cn("shrink-0 ml-auto font-medium", overdue ? "text-destructive" : "text-muted-foreground")}>
+                      {format(new Date(nesteOppfolging.due_date), "d. MMM yyyy", { locale: nb })}
+                    </span>
+                  )}
+                  {category && <CategoryBadge label={category} className="shrink-0" />}
+                </div>
+              );
+            })()}
+          </div>
+        );
+      })()}
 
       {/* Two-column layout */}
       <div className="grid grid-cols-1 md:grid-cols-[1fr_1px_minmax(0,300px)] gap-0">
@@ -898,17 +943,6 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-medium uppercase tracking-[0.08em] text-muted-foreground">Kontakter · {contacts.length}</h3>
           </div>
-          <button
-            onClick={handleFinnKonsulenter}
-            disabled={matchingKonsulenter}
-            className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50 w-full justify-center mt-1 mb-3"
-          >
-            {matchingKonsulenter ? (
-              <><Loader2 className="h-3 w-3 animate-spin" />Matcher...</>
-            ) : (
-              <><Target className="h-3 w-3 text-primary" />Finn konsulenter for selskapet</>
-            )}
-          </button>
           {konsulentResults !== null && (
             <div className="mb-4 space-y-2">
               <div className="flex items-center justify-between">
@@ -1020,7 +1054,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
           {/* ── Teknisk DNA ── */}
           {editable && (
             <div className="mt-6 space-y-2">
-              <CompanyDnaPanel companyId={companyId} />
+              <CompanyDnaPanel companyId={companyId} onFinnKonsulenter={handleFinnKonsulenter} matchingKonsulenter={matchingKonsulenter} />
             </div>
           )}
         </div>
@@ -1262,7 +1296,7 @@ function CompanyActivityRow({ activity, profileMap, companyId, navigate }: {
 }
 
 /* ── Company DNA Panel ── */
-function CompanyDnaPanel({ companyId }: { companyId: string }) {
+function CompanyDnaPanel({ companyId, onFinnKonsulenter, matchingKonsulenter }: { companyId: string; onFinnKonsulenter: () => void; matchingKonsulenter: boolean }) {
   const queryClient = useQueryClient();
 
   const { data: dnaProfile } = useQuery({
@@ -1289,7 +1323,6 @@ function CompanyDnaPanel({ companyId }: { companyId: string }) {
       if (!data) return [];
       const all: string[] = [];
       data.forEach(f => { if (f.teknologier) all.push(...f.teknologier); });
-      // Tell frekvens
       const freq: Record<string, number> = {};
       all.forEach(t => { freq[t] = (freq[t] || 0) + 1; });
       return Object.entries(freq)
@@ -1320,14 +1353,27 @@ function CompanyDnaPanel({ companyId }: { companyId: string }) {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-        Teknisk DNA
-        {dnaProfile?.konsulent_hyppighet ? (
-          <span className="ml-2 text-muted-foreground/50 font-normal normal-case tracking-normal">
-            · {dnaProfile.konsulent_hyppighet} annonser
-          </span>
-        ) : null}
-      </h3>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+          Teknisk DNA
+          {dnaProfile?.konsulent_hyppighet ? (
+            <span className="ml-2 text-muted-foreground/50 font-normal normal-case tracking-normal">
+              · {dnaProfile.konsulent_hyppighet} annonser
+            </span>
+          ) : null}
+        </h3>
+        <button
+          onClick={onFinnKonsulenter}
+          disabled={matchingKonsulenter}
+          className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+        >
+          {matchingKonsulenter ? (
+            <><Loader2 className="h-3.5 w-3.5 animate-spin" />Matcher...</>
+          ) : (
+            <><Target className="h-3.5 w-3.5 text-primary" /> Finn konsulenter</>
+          )}
+        </button>
+      </div>
 
       {!hasDna && (
         <p className="text-[0.8125rem] text-muted-foreground/60 italic">
