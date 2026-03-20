@@ -856,6 +856,8 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
               onSave={(tags) => updateMutation.mutate({ teknologier: tags })}
               contact={contact}
               updateMutation={updateMutation}
+              showAnalyze={showAnalyze}
+              setShowAnalyze={setShowAnalyze}
             />
           </div>
         )}
