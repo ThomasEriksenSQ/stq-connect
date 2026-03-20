@@ -822,41 +822,57 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
         const nesteOppfolging = tasks[0] ?? null;
         if (!sisteAktivitet && !nesteOppfolging) return null;
         return (
-          <div className="mt-3 mb-5 rounded-lg bg-muted/40 border border-border px-3 py-2.5 space-y-1">
-            {sisteAktivitet && (() => {
-              const { title } = extractTitleAndCategory(sisteAktivitet.subject, sisteAktivitet.description);
-              const contactName = (sisteAktivitet.contacts as any)?.first_name
-                ? `${(sisteAktivitet.contacts as any).first_name} ${(sisteAktivitet.contacts as any).last_name}` : null;
-              return (
-                <div className="flex items-center gap-2 text-[0.8125rem]">
-                  <span className="text-muted-foreground shrink-0">Siste:</span>
-                  <span className="font-medium text-foreground truncate">"{title}"</span>
-                  {contactName && <span className="text-muted-foreground/60 text-[0.75rem] shrink-0">→ {contactName}</span>}
-                  <span className="text-muted-foreground shrink-0 ml-auto">
-                    {format(new Date(sisteAktivitet.created_at), "d. MMM yyyy", { locale: nb })}
-                  </span>
-                </div>
-              );
-            })()}
-            {nesteOppfolging && (() => {
-              const { title, category } = extractTitleAndCategory(nesteOppfolging.title, nesteOppfolging.description);
-              const overdue = nesteOppfolging.due_date && isPast(new Date(nesteOppfolging.due_date)) && !isToday(new Date(nesteOppfolging.due_date));
-              const contactName = (nesteOppfolging.contacts as any)?.first_name
-                ? `${(nesteOppfolging.contacts as any).first_name} ${(nesteOppfolging.contacts as any).last_name}` : null;
-              return (
-                <div className="flex items-center gap-2 text-[0.8125rem]">
-                  <span className="text-muted-foreground shrink-0">Neste:</span>
-                  <span className="font-medium text-foreground truncate">{title}</span>
-                  {contactName && <span className="text-muted-foreground/60 text-[0.75rem] shrink-0">→ {contactName}</span>}
-                  {nesteOppfolging.due_date && (
-                    <span className={cn("shrink-0 ml-auto font-medium", overdue ? "text-destructive" : "text-muted-foreground")}>
-                      {format(new Date(nesteOppfolging.due_date), "d. MMM yyyy", { locale: nb })}
-                    </span>
-                  )}
-                  {category && <CategoryBadge label={category} className="shrink-0" />}
-                </div>
-              );
-            })()}
+          <div className="mt-3 mb-5 rounded-lg bg-muted/40 border border-border px-3 py-2.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 space-y-1 min-w-0">
+                {sisteAktivitet && (() => {
+                  const { title, category } = extractTitleAndCategory(sisteAktivitet.subject, sisteAktivitet.description);
+                  const contactName = (sisteAktivitet.contacts as any)?.first_name
+                    ? `${(sisteAktivitet.contacts as any).first_name} ${(sisteAktivitet.contacts as any).last_name}` : null;
+                  return (
+                    <div className="flex items-center gap-2 text-[0.8125rem]">
+                      <span className="text-muted-foreground shrink-0">Siste:</span>
+                      <span className="font-medium text-foreground truncate">"{title}"</span>
+                      {contactName && <span className="text-muted-foreground/60 text-[0.75rem] shrink-0">→ {contactName}</span>}
+                      <span className="text-muted-foreground shrink-0 ml-auto">
+                        {format(new Date(sisteAktivitet.created_at), "d. MMM yyyy", { locale: nb })}
+                      </span>
+                      {category && <CategoryBadge label={category} className="shrink-0" />}
+                    </div>
+                  );
+                })()}
+                {nesteOppfolging && (() => {
+                  const { title, category } = extractTitleAndCategory(nesteOppfolging.title, nesteOppfolging.description);
+                  const overdue = nesteOppfolging.due_date && isPast(new Date(nesteOppfolging.due_date)) && !isToday(new Date(nesteOppfolging.due_date));
+                  const contactName = (nesteOppfolging.contacts as any)?.first_name
+                    ? `${(nesteOppfolging.contacts as any).first_name} ${(nesteOppfolging.contacts as any).last_name}` : null;
+                  return (
+                    <div className="flex items-center gap-2 text-[0.8125rem]">
+                      <span className="text-muted-foreground shrink-0">Neste:</span>
+                      <span className="font-medium text-foreground truncate">{title}</span>
+                      {contactName && <span className="text-muted-foreground/60 text-[0.75rem] shrink-0">→ {contactName}</span>}
+                      {nesteOppfolging.due_date && (
+                        <span className={cn("shrink-0 ml-auto font-medium", overdue ? "text-destructive" : "text-muted-foreground")}>
+                          {format(new Date(nesteOppfolging.due_date), "d. MMM yyyy", { locale: nb })}
+                        </span>
+                      )}
+                      {category && <CategoryBadge label={category} className="shrink-0" />}
+                    </div>
+                  );
+                })()}
+              </div>
+              <button
+                onClick={handleFinnKonsulenter}
+                disabled={matchingKonsulenter}
+                className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.75rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-colors shrink-0 self-center disabled:opacity-50"
+              >
+                {matchingKonsulenter ? (
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin" />Matcher...</>
+                ) : (
+                  <><Target className="h-3.5 w-3.5" /> Finn konsulenter</>
+                )}
+              </button>
+            </div>
           </div>
         );
       })()}
