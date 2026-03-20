@@ -943,17 +943,6 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-medium uppercase tracking-[0.08em] text-muted-foreground">Kontakter · {contacts.length}</h3>
           </div>
-          <button
-            onClick={handleFinnKonsulenter}
-            disabled={matchingKonsulenter}
-            className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50 w-full justify-center mt-1 mb-3"
-          >
-            {matchingKonsulenter ? (
-              <><Loader2 className="h-3 w-3 animate-spin" />Matcher...</>
-            ) : (
-              <><Target className="h-3 w-3 text-primary" />Finn konsulenter for selskapet</>
-            )}
-          </button>
           {konsulentResults !== null && (
             <div className="mb-4 space-y-2">
               <div className="flex items-center justify-between">
