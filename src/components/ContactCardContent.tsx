@@ -861,7 +861,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
                     {matchingConsultants ? (
                       <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Matcher...</>
                     ) : (
-                      <><Target className="h-3.5 w-3.5 text-primary" /> Finn konsulent</>
+                      <><Target className="h-3.5 w-3.5 text-primary" /> Finn konsulent til tekniske behov</>
                     )}
                   </button>
                 )}
