@@ -136,6 +136,41 @@ export type Database = {
           },
         ]
       }
+      company_tech_profile: {
+        Row: {
+          company_id: string | null
+          domener: string[] | null
+          id: string
+          konsulent_hyppighet: number | null
+          sist_oppdatert: string | null
+          teknologier: Json | null
+        }
+        Insert: {
+          company_id?: string | null
+          domener?: string[] | null
+          id?: string
+          konsulent_hyppighet?: number | null
+          sist_oppdatert?: string | null
+          teknologier?: Json | null
+        }
+        Update: {
+          company_id?: string | null
+          domener?: string[] | null
+          id?: string
+          konsulent_hyppighet?: number | null
+          sist_oppdatert?: string | null
+          teknologier?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_tech_profile_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consultants: {
         Row: {
           active: boolean | null
@@ -206,6 +241,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           cv_email: boolean
+          department: string | null
           email: string | null
           first_name: string
           id: string
@@ -216,6 +252,7 @@ export type Database = {
           owner_id: string | null
           phone: string | null
           sf_contact_id: string | null
+          teknologier: string[] | null
           title: string | null
           updated_at: string
         }
@@ -225,6 +262,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           cv_email?: boolean
+          department?: string | null
           email?: string | null
           first_name: string
           id?: string
@@ -235,6 +273,7 @@ export type Database = {
           owner_id?: string | null
           phone?: string | null
           sf_contact_id?: string | null
+          teknologier?: string[] | null
           title?: string | null
           updated_at?: string
         }
@@ -244,6 +283,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           cv_email?: boolean
+          department?: string | null
           email?: string | null
           first_name?: string
           id?: string
@@ -254,6 +294,7 @@ export type Database = {
           owner_id?: string | null
           phone?: string | null
           sf_contact_id?: string | null
+          teknologier?: string[] | null
           title?: string | null
           updated_at?: string
         }
@@ -509,9 +550,11 @@ export type Database = {
           kontaktnavn: string | null
           lenke: string | null
           lokasjon: string | null
+          matched_company_id: string | null
           selskap: string | null
           stillingsrolle: string | null
           teknologier: string | null
+          teknologier_array: string[] | null
           uke: string | null
         }
         Insert: {
@@ -523,9 +566,11 @@ export type Database = {
           kontaktnavn?: string | null
           lenke?: string | null
           lokasjon?: string | null
+          matched_company_id?: string | null
           selskap?: string | null
           stillingsrolle?: string | null
           teknologier?: string | null
+          teknologier_array?: string[] | null
           uke?: string | null
         }
         Update: {
@@ -537,12 +582,22 @@ export type Database = {
           kontaktnavn?: string | null
           lenke?: string | null
           lokasjon?: string | null
+          matched_company_id?: string | null
           selskap?: string | null
           stillingsrolle?: string | null
           teknologier?: string | null
+          teknologier_array?: string[] | null
           uke?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "finn_annonser_matched_company_id_fkey"
+            columns: ["matched_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       foresporsler: {
         Row: {
@@ -737,6 +792,7 @@ export type Database = {
           bilde_url: string | null
           bio: string | null
           created_at: string | null
+          cv_profil_hentet: boolean | null
           epost: string | null
           erfaring_aar: number | null
           geografi: string | null
@@ -745,10 +801,12 @@ export type Database = {
           kompetanse: string[] | null
           linkedin: string | null
           navn: string
+          oppdrag_slutt: string | null
           slutt_dato: string | null
           start_dato: string | null
           status: string | null
           synlig_web: boolean | null
+          tilgjengelig_fra: string | null
           tlf: string | null
           updated_at: string | null
         }
@@ -757,6 +815,7 @@ export type Database = {
           bilde_url?: string | null
           bio?: string | null
           created_at?: string | null
+          cv_profil_hentet?: boolean | null
           epost?: string | null
           erfaring_aar?: number | null
           geografi?: string | null
@@ -765,10 +824,12 @@ export type Database = {
           kompetanse?: string[] | null
           linkedin?: string | null
           navn: string
+          oppdrag_slutt?: string | null
           slutt_dato?: string | null
           start_dato?: string | null
           status?: string | null
           synlig_web?: boolean | null
+          tilgjengelig_fra?: string | null
           tlf?: string | null
           updated_at?: string | null
         }
@@ -777,6 +838,7 @@ export type Database = {
           bilde_url?: string | null
           bio?: string | null
           created_at?: string | null
+          cv_profil_hentet?: boolean | null
           epost?: string | null
           erfaring_aar?: number | null
           geografi?: string | null
@@ -785,10 +847,12 @@ export type Database = {
           kompetanse?: string[] | null
           linkedin?: string | null
           navn?: string
+          oppdrag_slutt?: string | null
           slutt_dato?: string | null
           start_dato?: string | null
           status?: string | null
           synlig_web?: boolean | null
+          tilgjengelig_fra?: string | null
           tlf?: string | null
           updated_at?: string | null
         }
