@@ -32,7 +32,7 @@ Return ONLY valid JSON array, no markdown, no explanation:
   "begrunnelse": "<string, maks 12 ord, norsk>",
   "match_tags": ["<matching technology>", ...]
 }]
-Ranger best match først. Inkluder kun score >= 4. Returner så mange matcher som mulig.`;
+Ranger best match først. Inkluder kun score >= 4. Returner maks 15 matcher.`;
 
     const userPrompt = `Konsulent: ${konsulent.navn}
 Teknologier: ${konsulent.teknologier?.join(", ") || "ukjent"}
