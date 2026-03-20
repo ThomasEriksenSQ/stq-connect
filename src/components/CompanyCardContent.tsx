@@ -834,6 +834,64 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-medium uppercase tracking-[0.08em] text-muted-foreground">Kontakter · {contacts.length}</h3>
           </div>
+          <button
+            onClick={handleFinnKonsulenter}
+            disabled={matchingKonsulenter}
+            className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50 w-full justify-center mt-1 mb-3"
+          >
+            {matchingKonsulenter ? (
+              <><Loader2 className="h-3 w-3 animate-spin" />Matcher...</>
+            ) : (
+              <><Target className="h-3 w-3 text-primary" />Finn konsulenter for selskapet</>
+            )}
+          </button>
+          {konsulentResults !== null && (
+            <div className="mb-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                  Konsulentmatch · {konsulentResults.length}
+                </span>
+                <button onClick={handleFinnKonsulenter} className="text-[0.6875rem] text-muted-foreground hover:text-foreground">
+                  Kjør på nytt
+                </button>
+              </div>
+              {konsulentResults.length === 0 ? (
+                <p className="text-[0.8125rem] text-muted-foreground">Ingen treff</p>
+              ) : (
+                konsulentResults.map((m: any, i: number) => (
+                  <div key={`${m.type}-${m.id}`} className="rounded-lg border border-border bg-card p-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
+                        <span className="text-[0.8125rem] font-semibold text-foreground truncate">{m.navn}</span>
+                        <span className={cn(
+                          "inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold shrink-0",
+                          m.type === "intern" ? "bg-foreground text-background" : "bg-blue-100 text-blue-700"
+                        )}>
+                          {m.type === "intern" ? "Ansatt" : "Ekstern"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <span className={cn(
+                          "inline-block h-2 w-2 rounded-full",
+                          m.score >= 8 ? "bg-emerald-500" : m.score >= 6 ? "bg-amber-500" : "bg-red-500"
+                        )} />
+                        <span className="text-[0.75rem] font-bold">{m.score}/10</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {(m.match_tags || []).map((t: string) => (
+                        <span key={t} className="inline-flex items-center rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[0.625rem] font-medium">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-[0.75rem] text-muted-foreground mt-1 italic">{m.begrunnelse}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
           {contacts.length === 0 ? (
             <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen kontakter</p>
           ) : (
