@@ -27,6 +27,8 @@ function getFornyColor(fornyDato: string): { label: string; className: string } 
 
 type Filter = "Alle" | "Aktiv" | "Kommende" | "Sluttet";
 
+const GRID_COLS = "grid grid-cols-[minmax(0,1.8fr)_110px_100px_120px_100px_180px_minmax(0,1fr)]";
+
 export default function KonsulenterAnsatte() {
   const [filter, setFilter] = useState<Filter>("Aktiv");
   const [detailAnsatt, setDetailAnsatt] = useState<any | null>(null);
@@ -204,7 +206,7 @@ export default function KonsulenterAnsatte() {
       {/* Table */}
       <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
         {/* Header */}
-        <div className="grid grid-cols-[minmax(0,1.8fr)_110px_100px_120px_100px_180px_minmax(0,1fr)] gap-3 px-4 py-2.5 border-b border-border bg-background">
+        <div className={cn(GRID_COLS, "gap-3 px-4 py-2.5 border-b border-border bg-background")}>
           {["NAVN", "START", "ANSETTELSE", "OPPDRAG", "FORNYES", "CV / LINK", "HANDLINGER"].map((h) => (
             <span key={h} className={cn("text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground", h === "HANDLINGER" && "text-right")}>{h}</span>
           ))}
@@ -233,7 +235,7 @@ export default function KonsulenterAnsatte() {
             <div
               key={a.id}
               className={cn(
-                "group grid grid-cols-[minmax(0,1.8fr)_110px_100px_120px_100px_180px_minmax(0,1fr)] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75",
+                GRID_COLS, "group gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75",
                 isKommende && "opacity-80",
                 isSluttet && "opacity-50"
               )}
