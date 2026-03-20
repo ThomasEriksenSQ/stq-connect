@@ -142,6 +142,9 @@ export type Database = {
           domener: string[] | null
           id: string
           konsulent_hyppighet: number | null
+          oppdatert_at: string | null
+          senioritet: string | null
+          sist_fra_finn: string | null
           sist_oppdatert: string | null
           teknologier: Json | null
         }
@@ -150,6 +153,9 @@ export type Database = {
           domener?: string[] | null
           id?: string
           konsulent_hyppighet?: number | null
+          oppdatert_at?: string | null
+          senioritet?: string | null
+          sist_fra_finn?: string | null
           sist_oppdatert?: string | null
           teknologier?: Json | null
         }
@@ -158,6 +164,9 @@ export type Database = {
           domener?: string[] | null
           id?: string
           konsulent_hyppighet?: number | null
+          oppdatert_at?: string | null
+          senioritet?: string | null
+          sist_fra_finn?: string | null
           sist_oppdatert?: string | null
           teknologier?: Json | null
         }
