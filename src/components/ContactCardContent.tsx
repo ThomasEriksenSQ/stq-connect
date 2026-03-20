@@ -729,8 +729,8 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           </div>
         )}
 
-        {/* Line 3: Checkboxes */}
-        <div className="flex items-center gap-3 mt-2">
+        {/* Line 4: Checkboxes */}
+        <div className="flex items-center gap-4 mt-2">
           <label className="inline-flex items-center gap-1.5 cursor-pointer">
             <Checkbox checked={(contact as any).cv_email ?? false}
               onCheckedChange={(checked) => updateMutation.mutate({ cv_email: checked as any })}
@@ -742,6 +742,14 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
               onCheckedChange={(checked) => updateMutation.mutate({ call_list: checked as any })}
               className="h-3.5 w-3.5 rounded-[3px]" />
             <span className="text-[0.75rem] text-foreground">Innkjøper</span>
+          </label>
+          <label className="inline-flex items-center gap-1.5 cursor-pointer">
+            <Checkbox checked={(contact as any).ikke_aktuell_kontakt ?? false}
+              onCheckedChange={(checked) => updateMutation.mutate({ ikke_aktuell_kontakt: checked as any })}
+              className="h-3.5 w-3.5 rounded-[3px] data-[state=checked]:bg-destructive data-[state=checked]:border-destructive" />
+            <span className={cn("text-[0.75rem]", (contact as any).ikke_aktuell_kontakt ? "text-destructive font-medium" : "text-foreground")}>
+              Ikke aktuell å kontakte
+            </span>
           </label>
         </div>
 

@@ -65,7 +65,7 @@ const DailyBrief = () => {
         { data: foresporsler },
         { data: oppdrag },
       ] = await Promise.all([
-        supabase.from("contacts").select("id, first_name, last_name, company_id, call_list, phone, email, owner_id, companies(id, name)").limit(500),
+        supabase.from("contacts").select("id, first_name, last_name, company_id, call_list, phone, email, owner_id, ikke_aktuell_kontakt, companies(id, name)").or("ikke_aktuell_kontakt.is.null,ikke_aktuell_kontakt.eq.false").limit(500),
         supabase.from("activities").select("contact_id, created_at, subject, description").not("contact_id", "is", null).order("created_at", { ascending: false }),
         supabase.from("tasks").select("contact_id, created_at, title, description, due_date, status, assigned_to").not("contact_id", "is", null).neq("status", "done"),
         supabase.from("foresporsler").select("id, selskap_id, selskap_navn, teknologier, mottatt_dato").gte("mottatt_dato", new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)),
