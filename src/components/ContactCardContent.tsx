@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Phone, Mail, Linkedin, FileText, Clock, ExternalLink, Pencil, Trash2, ChevronDown, ChevronUp, Plus, MessageCircle, PhoneOff, Send, Signal, X, Target, Loader2 } from "lucide-react";
+import { Phone, Mail, Linkedin, FileText, Clock, ExternalLink, Pencil, Trash2, ChevronDown, ChevronUp, Plus, MessageCircle, PhoneOff, Send, Signal, X, Target, Loader2, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday, getYear, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { nb } from "date-fns/locale";
