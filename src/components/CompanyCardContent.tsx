@@ -36,6 +36,7 @@ import {
   MapPin,
   Loader2,
   Target,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday, getYear } from "date-fns";
@@ -212,6 +213,10 @@ export function CompanyCardContent({
   const [konsulentResults, setKonsulentResults] = useState<any[] | null>(null);
   const [konsulentFilter, setKonsulentFilter] = useState<"Alle" | "Ansatte" | "Eksterne">("Alle");
   const { user } = useAuth();
+  const [showAnalyze, setShowAnalyze] = useState(false);
+  const [analyzeText, setAnalyzeText] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [techTagInput, setTechTagInput] = useState("");
 
   const { data: company, isLoading } = useQuery({
     queryKey: ["company", companyId],
@@ -358,6 +363,20 @@ export function CompanyCardContent({
     enabled: !!companyId && contactIds.length > 0,
   });
 
+  const { data: techProfile } = useQuery({
+    queryKey: ["company-tech-profile", companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("company_tech_profile")
+        .select("teknologier, konsulent_hyppighet, sist_fra_finn")
+        .eq("company_id", companyId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!companyId,
+  });
+
   const allTasksMap = new Map<string, any>();
   companyTasks.forEach((t) => allTasksMap.set(t.id, t));
   contactTasks.forEach((t) => {
@@ -475,6 +494,10 @@ export function CompanyCardContent({
         supabase.from("external_consultants").select("id, navn, teknologier, status").in("status", ["ledig", "aktiv"]),
       ]);
       const alleTags: string[] = [];
+      // From techProfile
+      if (techProfile?.teknologier) {
+        alleTags.push(...Object.keys(techProfile.teknologier as Record<string, number>));
+      }
       (foresporslerData || []).forEach((f) => {
         if (f.teknologier) alleTags.push(...f.teknologier);
       });
@@ -523,10 +546,33 @@ export function CompanyCardContent({
     }
   };
 
+  const handleAnalyzeText = async () => {
+    if (!analyzeText.trim()) return;
+    setIsAnalyzing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("extract-knowledge", {
+        body: { text: analyzeText, type: "teknologier" },
+      });
+      if (error) throw error;
+      const tags: string[] = data?.tags || data?.teknologier || [];
+      if (tags.length > 0) {
+        toast.success(`${tags.length} teknologier funnet`);
+      } else {
+        toast("Ingen teknologier funnet i teksten");
+      }
+      setShowAnalyze(false);
+      setAnalyzeText("");
+    } catch {
+      toast.error("Kunne ikke analysere tekst");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   return (
     <div>
       {/* ── ZONE A: Header ── */}
-      <div className="mb-3">
+      <div className="mb-5">
         <div className="flex items-center gap-3">
           {editable ? (
             <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">
@@ -536,7 +582,7 @@ export function CompanyCardContent({
             <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">{company.name}</h2>
           )}
           <div className="ml-auto flex items-center gap-2 flex-shrink-0">
-            {/* Signal badge FIRST */}
+            {/* Signal badge */}
             {editable ? (
               <button
                 onClick={() => {
@@ -554,16 +600,11 @@ export function CompanyCardContent({
                 {effectiveSignal || "Sett signal"}
               </button>
             ) : effectiveSignal ? (
-              <span
-                className={cn(
-                  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
-                  signalBadgeColor,
-                )}
-              >
+              <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", signalBadgeColor)}>
                 {effectiveSignal}
               </span>
             ) : null}
-            {/* Type badge SECOND — neutral style */}
+            {/* Type badge */}
             {editable ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -585,6 +626,7 @@ export function CompanyCardContent({
                 {currentStatus.label}
               </span>
             )}
+            {/* Owner badge */}
             {editable ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -608,150 +650,6 @@ export function CompanyCardContent({
                 {ownerFullName}
               </span>
             ) : null}
-            {editable && (
-              <Dialog open={newContactOpen} onOpenChange={setNewContactOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium h-9 px-3.5 rounded-lg flex items-center gap-1.5 text-[0.8125rem]">
-                    <Plus className="h-3.5 w-3.5" />
-                    Ny kontakt
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[440px] rounded-xl">
-                  <DialogHeader>
-                    <DialogTitle>Ny kontakt</DialogTitle>
-                  </DialogHeader>
-                  <form
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      const { error } = await supabase.from("contacts").insert({
-                        first_name: contactForm.first_name,
-                        last_name: contactForm.last_name,
-                        email: contactForm.email || null,
-                        phone: contactForm.phone || null,
-                        title: contactForm.title || null,
-                        linkedin: contactForm.linkedin || null,
-                        location: contactForm.location || null,
-                        company_id: companyId,
-                        created_by: user?.id,
-                        owner_id: user?.id,
-                      });
-                      if (error) {
-                        toast.error("Kunne ikke opprette kontakt");
-                        return;
-                      }
-                      queryClient.invalidateQueries({ queryKey: ["company-contacts", companyId] });
-                      queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
-                      setNewContactOpen(false);
-                      setContactForm({
-                        first_name: "",
-                        last_name: "",
-                        email: "",
-                        phone: "",
-                        title: "",
-                        linkedin: "",
-                        location: "",
-                      });
-                      toast.success("Kontakt opprettet");
-                    }}
-                    className="space-y-4 mt-3"
-                  >
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-label">Fornavn</Label>
-                        <Input
-                          value={contactForm.first_name}
-                          onChange={(e) => setContactForm({ ...contactForm, first_name: e.target.value })}
-                          required
-                          className="h-10 rounded-lg"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-label">Etternavn</Label>
-                        <Input
-                          value={contactForm.last_name}
-                          onChange={(e) => setContactForm({ ...contactForm, last_name: e.target.value })}
-                          required
-                          className="h-10 rounded-lg"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-label">Stilling</Label>
-                      <Input
-                        value={contactForm.title}
-                        onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })}
-                        className="h-10 rounded-lg"
-                      />
-                    </div>
-                    {(() => {
-                      const companyLocations = company?.city
-                        ? company.city
-                            .split(",")
-                            .map((s: string) => s.trim())
-                            .filter(Boolean)
-                        : [];
-                      if (companyLocations.length <= 1) return null;
-                      return (
-                        <div className="space-y-1.5">
-                          <Label className="text-label">
-                            Avdeling <span className="text-muted-foreground font-normal">(valgfritt)</span>
-                          </Label>
-                          <Select
-                            value={contactForm.location}
-                            onValueChange={(v) =>
-                              setContactForm({ ...contactForm, location: v === "__none__" ? "" : v })
-                            }
-                          >
-                            <SelectTrigger className="h-10 rounded-lg">
-                              {contactForm.location || "Ingen spesifikk avdeling"}
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="__none__">Ingen spesifikk avdeling</SelectItem>
-                              {companyLocations.map((loc: string) => (
-                                <SelectItem key={loc} value={loc}>
-                                  {loc}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      );
-                    })()}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-label">E-post</Label>
-                        <Input
-                          value={contactForm.email}
-                          onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                          type="email"
-                          className="h-10 rounded-lg"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-label">Telefon</Label>
-                        <Input
-                          value={contactForm.phone}
-                          onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-                          className="h-10 rounded-lg"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-label">LinkedIn</Label>
-                      <Input
-                        value={contactForm.linkedin}
-                        onChange={(e) => setContactForm({ ...contactForm, linkedin: e.target.value })}
-                        placeholder="https://linkedin.com/in/..."
-                        className="h-10 rounded-lg"
-                      />
-                    </div>
-                    <Button type="submit" className="w-full h-10 rounded-lg">
-                      Opprett kontakt
-                    </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            )}
             {/* Signal picker dialog */}
             <Dialog open={signalPickerOpen} onOpenChange={setSignalPickerOpen}>
               <DialogContent className="sm:max-w-[360px] rounded-xl">
@@ -947,10 +845,7 @@ export function CompanyCardContent({
                     website: company.website || "",
                     linkedin: company.linkedin || "",
                     locations: company.city
-                      ? company.city
-                          .split(",")
-                          .map((s: string) => s.trim())
-                          .filter(Boolean)
+                      ? company.city.split(",").map((s: string) => s.trim()).filter(Boolean)
                       : [],
                   });
                   setNewLocation("");
@@ -969,8 +864,8 @@ export function CompanyCardContent({
           </div>
         </div>
 
-        {/* Line 2: org number · city */}
-        <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+        {/* Org.nr · city */}
+        <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap mt-0.5">
           {company.org_number && <span>Org.nr {company.org_number}</span>}
           {company.city &&
             company.city
@@ -991,53 +886,43 @@ export function CompanyCardContent({
               ))}
         </div>
 
-        {/* Line 3: phone · links */}
+        {/* Phone · links */}
         <div className="flex items-center gap-2 flex-wrap text-[0.9375rem] text-foreground/70 mt-1">
+          {company.phone && (
+            <a href={`tel:${company.phone}`} className="inline-flex items-center gap-1 hover:text-foreground">
+              <Phone className="h-3 w-3" />{company.phone}
+            </a>
+          )}
           {company.website && (
             <>
-              <a
-                href={company.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-primary hover:underline"
-              >
-                <Globe className="h-3 w-3" />
-                {company.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
+              {company.phone && <span className="text-muted-foreground/40">·</span>}
+              <a href={company.website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                <Globe className="h-3 w-3" />{company.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
               </a>
             </>
           )}
           {company.linkedin && (
             <>
               <span className="text-muted-foreground/40">·</span>
-              <a
-                href={company.linkedin}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-primary hover:underline"
-              >
-                <Linkedin className="h-3 w-3" />
-                LinkedIn
+              <a href={company.linkedin} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                <Linkedin className="h-3 w-3" />LinkedIn
               </a>
             </>
           )}
           {company.email && (
             <>
               <span className="text-muted-foreground/40">·</span>
-              <a
-                href={`mailto:${company.email}`}
-                className="inline-flex items-center gap-1 text-primary hover:underline"
-              >
-                <Mail className="h-3 w-3" />
-                {company.email}
+              <a href={`mailto:${company.email}`} className="inline-flex items-center gap-1 text-primary hover:underline">
+                <Mail className="h-3 w-3" />{company.email}
               </a>
             </>
           )}
         </div>
       </div>
 
-      {/* Notes (inline edit via pencil) */}
+      {/* Notat — kun når det finnes innhold eller redigeres */}
       {editable && editingNotes ? (
-        <div className="mb-4">
+        <div className="mb-5">
           <Textarea
             value={notesDraft}
             onChange={(e) => setNotesDraft(e.target.value)}
@@ -1053,60 +938,260 @@ export function CompanyCardContent({
             }}
           />
           <div className="flex gap-2 mt-1.5">
-            <Button
-              size="sm"
-              className="h-7 text-[0.75rem] px-3 rounded-md"
-              onClick={() => {
-                updateField("notes")(notesDraft);
-                setEditingNotes(false);
-              }}
-            >
+            <Button size="sm" className="h-7 text-[0.75rem] px-3 rounded-md" onClick={() => { updateField("notes")(notesDraft); setEditingNotes(false); }}>
               Lagre
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-[0.75rem] px-3 rounded-md"
-              onClick={() => setEditingNotes(false)}
-            >
+            <Button variant="ghost" size="sm" className="h-7 text-[0.75rem] px-3 rounded-md" onClick={() => setEditingNotes(false)}>
               Avbryt
             </Button>
           </div>
         </div>
       ) : company.notes ? (
-        <div className="group mb-4 relative">
+        <div className="group relative mb-5">
           <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{company.notes}</p>
           {editable && (
             <button
-              onClick={() => {
-                setNotesDraft(company.notes || "");
-                setEditingNotes(true);
-              }}
+              onClick={() => { setNotesDraft(company.notes || ""); setEditingNotes(true); }}
               className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-secondary"
             >
               <Pencil className="h-3 w-3 text-muted-foreground" />
             </button>
           )}
         </div>
-      ) : editable ? (
-        <button
-          onClick={() => {
-            setNotesDraft("");
-            setEditingNotes(true);
-          }}
-          className="text-[0.75rem] text-muted-foreground/50 hover:text-muted-foreground mb-4 inline-flex items-center gap-1 transition-colors"
-        >
-          <Pencil className="h-3 w-3" /> Legg til notat
-        </button>
       ) : null}
 
-      {/* Two-column layout */}
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_1px_minmax(0,300px)] gap-0">
-        {/* Left: Tasks + Activities */}
-        <div className="space-y-5 pr-6">
+      {/* ── Snapshot-rad ── */}
+      {(() => {
+        const sisteAkt = activities[0] ?? null;
+        const nesteOppf = tasks.filter(t => t.due_date)[0] ?? null;
+        if (!sisteAkt && !nesteOppf) return null;
+        return (
+          <div className="mb-5 rounded-lg bg-muted/40 border border-border px-3 py-2.5 space-y-1.5">
+            {sisteAkt && (() => {
+              const { title, category } = extractTitleAndCategory(sisteAkt.subject, sisteAkt.description);
+              const cName = (sisteAkt.contacts as any)?.first_name
+                ? `${(sisteAkt.contacts as any).first_name} ${(sisteAkt.contacts as any).last_name}` : null;
+              return (
+                <div className="flex items-center gap-2 text-[0.8125rem]">
+                  <span className="text-muted-foreground shrink-0">Siste:</span>
+                  <span className="font-medium text-foreground truncate">"{title}"</span>
+                  {cName && <span className="text-muted-foreground/60 text-[0.75rem] shrink-0">→ {cName}</span>}
+                  <span className="text-muted-foreground shrink-0 ml-auto">{format(new Date(sisteAkt.created_at), "d. MMM yyyy", { locale: nb })}</span>
+                  {category && <CategoryBadge label={category} className="shrink-0" />}
+                </div>
+              );
+            })()}
+            {nesteOppf && (() => {
+              const { title, category } = extractTitleAndCategory(nesteOppf.title, nesteOppf.description);
+              const overdue = isPast(new Date(nesteOppf.due_date)) && !isToday(new Date(nesteOppf.due_date));
+              const cName = (nesteOppf.contacts as any)?.first_name
+                ? `${(nesteOppf.contacts as any).first_name} ${(nesteOppf.contacts as any).last_name}` : null;
+              return (
+                <div className="flex items-center gap-2 text-[0.8125rem]">
+                  <span className="text-muted-foreground shrink-0">Neste:</span>
+                  <span className="font-medium text-foreground truncate">{title}</span>
+                  {cName && <span className="text-muted-foreground/60 text-[0.75rem] shrink-0">→ {cName}</span>}
+                  <span className={cn("shrink-0 ml-auto font-medium", overdue ? "text-destructive" : "text-muted-foreground")}>
+                    {format(new Date(nesteOppf.due_date), "d. MMM yyyy", { locale: nb })}
+                  </span>
+                  {category && <CategoryBadge label={category} className="shrink-0" />}
+                </div>
+              );
+            })()}
+          </div>
+        );
+      })()}
+
+      {/* ── To-kolonne layout ── */}
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_minmax(0,260px)] gap-6">
+
+        {/* Venstre: Teknisk DNA + Oppfølginger + Aktiviteter */}
+        <div className="space-y-5">
+
+          {/* ── Teknisk DNA ── */}
+          {(() => {
+            const techTags = techProfile?.teknologier
+              ? Object.entries(techProfile.teknologier as Record<string, number>).sort((a, b) => b[1] - a[1])
+              : [];
+            const contactTechTags = [...new Set(contacts.flatMap(c => (c as any).teknologier || []))];
+            const hasTech = techTags.length > 0 || contactTechTags.length > 0;
+
+            return (
+              <div className="mb-2">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                    Teknisk DNA
+                    {techProfile?.konsulent_hyppighet ? (
+                      <span className="ml-2 text-muted-foreground/50 font-normal normal-case tracking-normal">
+                        · {techProfile.konsulent_hyppighet} annonser
+                      </span>
+                    ) : null}
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowAnalyze(!showAnalyze)}
+                      className="inline-flex items-center gap-1 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                    >
+                      <Sparkles className="h-3 w-3" /> Analyser tekst
+                    </button>
+                    {hasTech && (
+                      <button
+                        onClick={handleFinnKonsulenter}
+                        disabled={matchingKonsulenter}
+                        className="inline-flex items-center gap-1.5 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+                      >
+                        {matchingKonsulenter ? (
+                          <><Loader2 className="h-3 w-3 animate-spin" /> Matcher...</>
+                        ) : (
+                          <><Target className="h-3.5 w-3.5 text-primary" /> Finn konsulenter</>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {showAnalyze && (
+                  <div className="mb-3 p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-2">
+                    <p className="text-[0.75rem] text-muted-foreground">
+                      Lim inn stillingsbeskrivelse, e-post eller kravspesifikasjon — AI finner relevante teknologier automatisk.
+                    </p>
+                    <textarea
+                      value={analyzeText}
+                      onChange={(e) => setAnalyzeText(e.target.value)}
+                      placeholder="Lim inn tekst her..."
+                      rows={4}
+                      className="w-full text-[0.875rem] rounded-md border border-border bg-background px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleAnalyzeText}
+                        disabled={!analyzeText.trim() || isAnalyzing}
+                        className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.75rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-colors"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        {isAnalyzing ? "Analyserer..." : "Finn teknologier"}
+                      </button>
+                      <button onClick={() => { setShowAnalyze(false); setAnalyzeText(""); }}
+                        className="text-[0.75rem] text-muted-foreground hover:text-foreground">
+                        Avbryt
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Konsulentmatch-resultater */}
+                {konsulentResults !== null && (
+                  <div className="mb-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                        Konsulentmatch · {konsulentResults.length}
+                      </span>
+                      <button onClick={handleFinnKonsulenter} className="text-[0.6875rem] text-muted-foreground hover:text-foreground">
+                        Kjør på nytt
+                      </button>
+                    </div>
+                    <div className="flex gap-1.5">
+                      {(["Alle", "Ansatte", "Eksterne"] as const).map((f) => (
+                        <button
+                          key={f}
+                          onClick={() => setKonsulentFilter(f)}
+                          className={cn(
+                            "h-6 px-2.5 text-[0.6875rem] rounded-full border transition-colors font-medium",
+                            konsulentFilter === f
+                              ? "bg-foreground text-background border-foreground"
+                              : "border-border text-muted-foreground hover:bg-secondary",
+                          )}
+                        >
+                          {f}
+                        </button>
+                      ))}
+                    </div>
+                    {konsulentResults.filter((m: any) =>
+                      konsulentFilter === "Alle" ? true : konsulentFilter === "Ansatte" ? m.type === "intern" : m.type === "ekstern",
+                    ).length === 0 ? (
+                      <p className="text-[0.8125rem] text-muted-foreground">Ingen treff</p>
+                    ) : (
+                      konsulentResults
+                        .filter((m: any) =>
+                          konsulentFilter === "Alle" ? true : konsulentFilter === "Ansatte" ? m.type === "intern" : m.type === "ekstern",
+                        )
+                        .map((m: any, i: number) => (
+                          <div key={`${m.type}-${m.id}`} className="rounded-lg border border-border bg-card p-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
+                                <span className="text-[0.8125rem] font-semibold text-foreground truncate">{m.navn}</span>
+                                <span className={cn("inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold shrink-0",
+                                  m.type === "intern" ? "bg-foreground text-background" : "bg-blue-100 text-blue-700")}>
+                                  {m.type === "intern" ? "Ansatt" : "Ekstern"}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className={cn("inline-block h-2 w-2 rounded-full",
+                                  m.score >= 8 ? "bg-emerald-500" : m.score >= 6 ? "bg-amber-500" : "bg-red-500")} />
+                                <span className="text-[0.75rem] font-bold">{m.score}/10</span>
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {(m.match_tags || []).map((t: string) => (
+                                <span key={t} className="inline-flex items-center rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[0.625rem] font-medium">
+                                  {t}
+                                </span>
+                              ))}
+                            </div>
+                            <p className="text-[0.75rem] text-muted-foreground mt-1 italic">{m.begrunnelse}</p>
+                          </div>
+                        ))
+                    )}
+                  </div>
+                )}
+
+                {techTags.length > 0 ? (
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-[0.6875rem] text-muted-foreground/60 mb-1.5">Fra Finn.no</p>
+                      <div className="flex flex-wrap gap-1">
+                        {techTags.slice(0, 20).map(([tech, count]) => (
+                          <span key={tech} className="inline-flex items-center rounded-full bg-secondary text-foreground px-2 py-0.5 text-[0.6875rem] font-mono border border-border">
+                            {tech}{count > 1 ? <span className="ml-1 text-muted-foreground/60">×{count}</span> : null}
+                          </span>
+                        ))}
+                      </div>
+                      {techProfile?.sist_fra_finn && (
+                        <p className="text-[0.6875rem] text-muted-foreground/40 mt-1.5">
+                          Oppdatert {new Date(techProfile.sist_fra_finn).toLocaleDateString("nb-NO", { day: "numeric", month: "short", year: "numeric" })}
+                        </p>
+                      )}
+                    </div>
+                    {contactTechTags.length > 0 && (
+                      <>
+                        <div className="border-t border-border/50" />
+                        <div>
+                          <p className="text-[0.6875rem] text-muted-foreground/60 mb-1.5">Fra kontakter</p>
+                          <div className="flex flex-wrap gap-1">
+                            {contactTechTags.slice(0, 10).map((tech: string) => (
+                              <span key={tech} className="inline-flex items-center rounded-full bg-secondary text-foreground px-2 py-0.5 text-[0.6875rem] font-mono border border-border">
+                                {tech}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[0.8125rem] text-muted-foreground/50">Ingen teknisk data ennå</p>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Separator */}
+          <div className="border-t border-border/50" />
+
           {/* ── Oppfølginger ── */}
           {tasks.length > 0 && (
-            <div className="bg-card border border-border rounded-lg shadow-card p-4 mb-6">
+            <div className="bg-card border border-border rounded-lg shadow-card p-4">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
                   Oppfølginger · {tasks.length}
@@ -1128,9 +1213,7 @@ export function CompanyCardContent({
                     <div
                       key={task.id}
                       className="flex items-start gap-2.5 py-2.5 px-1 rounded-md transition-all duration-200 group hover:bg-background/60 cursor-pointer"
-                      onClick={() => {
-                        if (task.contact_id) navigate(`/kontakter/${task.contact_id}`);
-                      }}
+                      onClick={() => { if (task.contact_id) navigate(`/kontakter/${task.contact_id}`); }}
                     >
                       <div onClick={(e) => e.stopPropagation()}>
                         <Checkbox
@@ -1168,11 +1251,7 @@ export function CompanyCardContent({
                               <span
                                 className={cn(
                                   "text-[0.8125rem] font-medium",
-                                  overdue
-                                    ? "text-destructive"
-                                    : today
-                                      ? "text-[hsl(var(--warning))]"
-                                      : "text-muted-foreground",
+                                  overdue ? "text-destructive" : today ? "text-[hsl(var(--warning))]" : "text-muted-foreground",
                                 )}
                               >
                                 {format(new Date(task.due_date), "d. MMM yyyy", { locale: nb })}
@@ -1190,155 +1269,89 @@ export function CompanyCardContent({
             </div>
           )}
 
-          <hr className="border-border my-4" />
-
           {/* ── Activities Timeline ── */}
           <CompanyActivityTimeline activities={activities} profileMap={profileMapFull} companyId={companyId} />
         </div>
 
-        {/* Vertical divider */}
-        <div className="hidden md:block w-px bg-border flex-shrink-0" />
-
-        {/* Right: Contacts */}
-        <div className="space-y-3 pl-6">
+        {/* Høyre: Kun kontakter */}
+        <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium uppercase tracking-[0.08em] text-muted-foreground">
-              Kontakter · {contacts.length}
-            </h3>
-          </div>
-          <button
-            onClick={handleFinnKonsulenter}
-            disabled={matchingKonsulenter}
-            className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50 w-full justify-center mt-1 mb-3"
-          >
-            {matchingKonsulenter ? (
-              <>
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Matcher...
-              </>
-            ) : (
-              <>
-                <Target className="h-3 w-3 text-primary" />
-                Finn konsulenter for selskapet
-              </>
-            )}
-          </button>
-          {konsulentResults !== null && (
-            <div className="mb-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                  Konsulentmatch · {konsulentResults.length}
-                </span>
-                <button
-                  onClick={handleFinnKonsulenter}
-                  className="text-[0.6875rem] text-muted-foreground hover:text-foreground"
-                >
-                  Kjør på nytt
-                </button>
-              </div>
-              <div className="flex gap-1.5">
-                {(["Alle", "Ansatte", "Eksterne"] as const).map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => setKonsulentFilter(f)}
-                    className={cn(
-                      "h-6 px-2.5 text-[0.6875rem] rounded-full border transition-colors font-medium",
-                      konsulentFilter === f
-                        ? "bg-foreground text-background border-foreground"
-                        : "border-border text-muted-foreground hover:bg-secondary",
-                    )}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
-              {konsulentResults.filter((m: any) =>
-                konsulentFilter === "Alle"
-                  ? true
-                  : konsulentFilter === "Ansatte"
-                    ? m.type === "intern"
-                    : m.type === "ekstern",
-              ).length === 0 ? (
-                <p className="text-[0.8125rem] text-muted-foreground">Ingen treff</p>
-              ) : (
-                konsulentResults
-                  .filter((m: any) =>
-                    konsulentFilter === "Alle"
-                      ? true
-                      : konsulentFilter === "Ansatte"
-                        ? m.type === "intern"
-                        : m.type === "ekstern",
-                  )
-                  .map((m: any, i: number) => (
-                    <div key={`${m.type}-${m.id}`} className="rounded-lg border border-border bg-card p-2.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
-                          <span className="text-[0.8125rem] font-semibold text-foreground truncate">{m.navn}</span>
-                          <span
-                            className={cn(
-                              "inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold shrink-0",
-                              m.type === "intern" ? "bg-foreground text-background" : "bg-blue-100 text-blue-700",
-                            )}
-                          >
-                            {m.type === "intern" ? "Ansatt" : "Ekstern"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <span
-                            className={cn(
-                              "inline-block h-2 w-2 rounded-full",
-                              m.score >= 8 ? "bg-emerald-500" : m.score >= 6 ? "bg-amber-500" : "bg-red-500",
-                            )}
-                          />
-                          <span className="text-[0.75rem] font-bold">{m.score}/10</span>
-                        </div>
+            <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">Kontakter · {contacts.length}</h3>
+            {editable && (
+              <Dialog open={newContactOpen} onOpenChange={setNewContactOpen}>
+                <DialogTrigger asChild>
+                  <Button className="rounded-lg h-7 px-2.5 text-[0.75rem] font-medium gap-1">
+                    <Plus className="h-3 w-3" />Ny kontakt
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[440px] rounded-xl">
+                  <DialogHeader><DialogTitle>Ny kontakt</DialogTitle></DialogHeader>
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    const { error } = await supabase.from("contacts").insert({
+                      first_name: contactForm.first_name, last_name: contactForm.last_name,
+                      email: contactForm.email || null, phone: contactForm.phone || null,
+                      title: contactForm.title || null, linkedin: contactForm.linkedin || null,
+                      company_id: companyId, created_by: user?.id, owner_id: user?.id,
+                    });
+                    if (error) { toast.error("Kunne ikke opprette kontakt"); return; }
+                    queryClient.invalidateQueries({ queryKey: ["company-contacts", companyId] });
+                    queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
+                    setNewContactOpen(false);
+                    setContactForm({ first_name: "", last_name: "", email: "", phone: "", title: "", linkedin: "", location: "" });
+                    toast.success("Kontakt opprettet");
+                  }} className="space-y-4 mt-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-label">Fornavn</Label>
+                        <Input value={contactForm.first_name} onChange={(e) => setContactForm({ ...contactForm, first_name: e.target.value })} required className="h-10 rounded-lg" />
                       </div>
-                      <div className="flex flex-wrap gap-1 mt-1.5">
-                        {(m.match_tags || []).map((t: string) => (
-                          <span
-                            key={t}
-                            className="inline-flex items-center rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[0.625rem] font-medium"
-                          >
-                            {t}
-                          </span>
-                        ))}
+                      <div className="space-y-1.5">
+                        <Label className="text-label">Etternavn</Label>
+                        <Input value={contactForm.last_name} onChange={(e) => setContactForm({ ...contactForm, last_name: e.target.value })} required className="h-10 rounded-lg" />
                       </div>
-                      <p className="text-[0.75rem] text-muted-foreground mt-1 italic">{m.begrunnelse}</p>
                     </div>
-                  ))
-              )}
-            </div>
-          )}
+                    <div className="space-y-1.5">
+                      <Label className="text-label">Stilling</Label>
+                      <Input value={contactForm.title} onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })} className="h-10 rounded-lg" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-label">E-post</Label>
+                        <Input value={contactForm.email} onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })} type="email" className="h-10 rounded-lg" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-label">Telefon</Label>
+                        <Input value={contactForm.phone} onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })} className="h-10 rounded-lg" />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-label">LinkedIn</Label>
+                      <Input value={contactForm.linkedin} onChange={(e) => setContactForm({ ...contactForm, linkedin: e.target.value })} placeholder="https://linkedin.com/in/..." className="h-10 rounded-lg" />
+                    </div>
+                    <Button type="submit" className="w-full h-10 rounded-lg">Opprett</Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
           {contacts.length === 0 ? (
             <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen kontakter</p>
           ) : (
-            <div className="space-y-3">
+            <div className="divide-y divide-border">
               {contacts.map((c) => {
                 const contactOwner = (c as any).profiles?.full_name || null;
                 return (
-                  <button
-                    key={c.id}
+                  <button key={c.id}
                     className="w-full flex items-center gap-2 py-2.5 hover:bg-secondary/50 transition-colors duration-75 text-left group rounded-md"
-                    onClick={() => (onOpenContact ? onOpenContact(c.id) : navigate(`/kontakter/${c.id}`))}
-                  >
+                    onClick={() => onOpenContact ? onOpenContact(c.id) : navigate(`/kontakter/${c.id}`)}>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <p className="text-[0.9375rem] font-semibold truncate group-hover:text-primary transition-colors">
-                          {c.first_name} {c.last_name}
-                        </p>
-                        {c.cv_email && (
-                          <span className="ml-1.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">
-                            CV
-                          </span>
-                        )}
-                        {c.call_list && (
-                          <span className="ml-1.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">
-                            INN
-                          </span>
-                        )}
+                        <p className="text-[0.8125rem] font-medium truncate group-hover:text-primary transition-colors">{c.first_name} {c.last_name}</p>
+                        {c.cv_email && <span className="rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">CV</span>}
+                        {c.call_list && <span className="rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">INN</span>}
                       </div>
-                      <p className="text-[0.8125rem] text-muted-foreground truncate">
+                      <p className="text-[0.6875rem] text-muted-foreground truncate">
                         {[c.title, contactOwner].filter(Boolean).join(" · ") || ""}
                       </p>
                     </div>
@@ -1346,16 +1359,6 @@ export function CompanyCardContent({
                   </button>
                 );
               })}
-            </div>
-          )}
-
-          {/* ── Teknisk DNA ── */}
-          {editable && (
-            <div className="mt-6 space-y-2">
-              <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                Tekniske behov
-              </h3>
-              <CompanyDnaPanel companyId={companyId} />
             </div>
           )}
         </div>
