@@ -861,17 +861,27 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                   );
                 })()}
               </div>
-              <button
-                onClick={handleFinnKonsulenter}
-                disabled={matchingKonsulenter}
-                className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.75rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-colors shrink-0 self-center disabled:opacity-50"
-              >
-                {matchingKonsulenter ? (
-                  <><Loader2 className="h-3.5 w-3.5 animate-spin" />Matcher...</>
-                ) : (
-                  <><Target className="h-3.5 w-3.5" /> Finn konsulenter</>
-                )}
-              </button>
+              {(() => {
+                const hasTechData = techProfile?.teknologier && 
+                  Object.keys(techProfile.teknologier as Record<string, number>).length > 0;
+                const contactsHaveTech = contacts.some(
+                  c => (c as any).teknologier && (c as any).teknologier.length > 0
+                );
+                if (!hasTechData && !contactsHaveTech) return null;
+                return (
+                  <button
+                    onClick={handleFinnKonsulenter}
+                    disabled={matchingKonsulenter}
+                    className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors shrink-0 self-end disabled:opacity-50"
+                  >
+                    {matchingKonsulenter ? (
+                      <><Loader2 className="h-3.5 w-3.5 animate-spin" />Matcher...</>
+                    ) : (
+                      <><Target className="h-3.5 w-3.5 text-primary" /> Finn konsulenter</>
+                    )}
+                  </button>
+                );
+              })()}
             </div>
           </div>
         );
