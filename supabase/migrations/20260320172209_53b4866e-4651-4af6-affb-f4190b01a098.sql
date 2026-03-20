@@ -1,0 +1,1 @@
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS ikke_aktuell_kontakt boolean DEFAULT false;

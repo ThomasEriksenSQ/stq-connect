@@ -254,6 +254,7 @@ export type Database = {
           email: string | null
           first_name: string
           id: string
+          ikke_aktuell_kontakt: boolean | null
           last_name: string
           linkedin: string | null
           location: string | null
@@ -275,6 +276,7 @@ export type Database = {
           email?: string | null
           first_name: string
           id?: string
+          ikke_aktuell_kontakt?: boolean | null
           last_name: string
           linkedin?: string | null
           location?: string | null
@@ -296,6 +298,7 @@ export type Database = {
           email?: string | null
           first_name?: string
           id?: string
+          ikke_aktuell_kontakt?: boolean | null
           last_name?: string
           linkedin?: string | null
           location?: string | null
