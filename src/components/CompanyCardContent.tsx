@@ -875,8 +875,8 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                 })()}
               </div>
               {(() => {
-                const hasTechData = techProfile?.teknologier && 
-                  Object.keys(techProfile.teknologier as Record<string, number>).length > 0;
+                const hasTechData = techProfileData?.teknologier && 
+                  Object.keys(techProfileData.teknologier as Record<string, number>).length > 0;
                 const contactsHaveTech = contacts.some(
                   c => (c as any).teknologier && (c as any).teknologier.length > 0
                 );
