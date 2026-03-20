@@ -1300,19 +1300,51 @@ function CompanyDnaPanel({ companyId, onFinnKonsulenter, matchingKonsulenter }: 
   const queryClient = useQueryClient();
 
   const { data: dnaProfile } = useQuery({
-...
+    queryKey: ["company-tech-profile", companyId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("company_tech_profile")
+        .select("*")
+        .eq("company_id", companyId)
+        .single();
+      return data || null;
+    },
     enabled: !!companyId,
   });
 
   // Hent teknologier fra forespørsler for dette selskapet
   const { data: foresporslerTags = [] } = useQuery({
-...
+    queryKey: ["company-foresporsler-tags", companyId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("foresporsler")
+        .select("teknologier")
+        .eq("selskap_id", companyId);
+      if (!data) return [];
+      const all: string[] = [];
+      data.forEach(f => { if (f.teknologier) all.push(...f.teknologier); });
+      const freq: Record<string, number> = {};
+      all.forEach(t => { freq[t] = (freq[t] || 0) + 1; });
+      return Object.entries(freq)
+        .sort((a, b) => b[1] - a[1])
+        .map(([tag, count]) => ({ tag, count }));
+    },
     enabled: !!companyId,
   });
 
   // Hent teknologier fra kontakter på dette selskapet
   const { data: contactTags = [] } = useQuery({
-...
+    queryKey: ["company-contact-tags", companyId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("contacts")
+        .select("teknologier")
+        .eq("company_id", companyId);
+      if (!data) return [];
+      const all: string[] = [];
+      data.forEach(c => { if ((c as any).teknologier) all.push(...(c as any).teknologier); });
+      return [...new Set(all)];
+    },
     enabled: !!companyId,
   });
 
