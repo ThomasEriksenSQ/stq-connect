@@ -1400,20 +1400,6 @@ function CompanyDnaPanel({ companyId }: { companyId: string }) {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-2">
-        Teknisk DNA
-        {dnaProfile?.konsulent_hyppighet ? (
-          <span className="ml-2 text-muted-foreground/50 font-normal normal-case tracking-normal">
-            · {dnaProfile.konsulent_hyppighet} annonser
-          </span>
-        ) : null}
-      </h3>
-
-      {!hasDna && (
-        <p className="text-[0.8125rem] text-muted-foreground/60 italic">
-          Ingen teknisk profil ennå — legges til automatisk fra forespørsler og kontakter.
-        </p>
-      )}
 
       {/* Finn.no DNA */}
       {finnTechs.length > 0 && (
