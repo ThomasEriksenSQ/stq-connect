@@ -139,6 +139,7 @@ export function OppdragsMatchPanel({
             geografi: konsulent.geografi,
             forny_dato: konsulent.forny_dato || null,
             erfaring_aar: konsulent.erfaring_aar || null,
+            tilgjengelig_fra: konsulent.tilgjengelig_fra || null,
           },
           foresporsler: berikede,
         },
