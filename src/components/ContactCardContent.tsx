@@ -340,9 +340,6 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
   const [matchingConsultants, setMatchingConsultants] = useState(false);
   const [consultantResults, setConsultantResults] = useState<any[] | null>(null);
   const [showAnalyze, setShowAnalyze] = useState(false);
-  const companySearchRef = useRef<HTMLInputElement>(null);
-  const [matchingConsultants, setMatchingConsultants] = useState(false);
-  const [consultantResults, setConsultantResults] = useState<any[] | null>(null);
 
   const { data: contact, isLoading } = useQuery({
     queryKey: ["contact", contactId],
