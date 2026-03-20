@@ -930,7 +930,7 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
       const { data, error } = await supabase.functions.invoke("process-finn-import");
       if (error) throw error;
       setProcessResult(data);
-      toast({ title: "Prosessering fullført", description: `${data.matched_til_selskap} annonser koblet til selskaper, ${data.selskaps_profiler_oppdatert} DNA-profiler oppdatert` });
+      toast({ title: "Prosessering fullført", description: `${data.teknologier_array_fikset} teknologier fikset, ${data.dna_profiler_oppdatert} DNA-profiler oppdatert` });
       refetch();
     } catch (e: any) {
       toast({ title: "Feil", description: e.message, variant: "destructive" });
@@ -986,9 +986,12 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
             <div className="w-full rounded-lg bg-muted px-4 py-3 text-[0.8125rem] space-y-1">
               <p className="font-medium text-foreground">Prosessering fullført</p>
               <p className="text-muted-foreground">Behandlet: {processResult.annonser_behandlet} annonser</p>
-              <p className="text-muted-foreground">Koblet til selskap: {processResult.matched_til_selskap}</p>
-              <p className="text-muted-foreground">Ikke matchet: {processResult.ikke_matchet}</p>
-              <p className="text-muted-foreground">DNA-profiler oppdatert: {processResult.selskaps_profiler_oppdatert}</p>
+              <p className="text-muted-foreground">Teknologier fikset: {processResult.teknologier_array_fikset}</p>
+              <p className="text-muted-foreground">Selskaper med teknologier: {processResult.selskaper_med_teknologier}</p>
+              <p className="text-muted-foreground">DNA-profiler oppdatert: {processResult.dna_profiler_oppdatert}</p>
+              {processResult.errors?.length > 0 && (
+                <p className="text-destructive text-[0.75rem]">Feil: {processResult.errors.join(", ")}</p>
+              )}
             </div>
           )}
           <div className="flex gap-2 w-full justify-end">
