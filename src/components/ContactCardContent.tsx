@@ -978,7 +978,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           </div>
         </div>
       ) : contact.notes ? (
-        <div className="group mb-4 relative">
+        <div className="group mb-6 relative">
           <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{contact.notes}</p>
           {editable && (
             <button onClick={() => { setNotesDraft(contact.notes || ""); setEditingNotes(true); }}
