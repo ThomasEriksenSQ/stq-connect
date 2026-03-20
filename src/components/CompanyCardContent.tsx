@@ -823,11 +823,6 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
             </button>
           )}
         </div>
-      ) : editable ? (
-        <button onClick={() => { setNotesDraft(""); setEditingNotes(true); }}
-          className="text-[0.75rem] text-muted-foreground/50 hover:text-muted-foreground mb-6 inline-flex items-center gap-1 transition-colors">
-          <Pencil className="h-3 w-3" /> Legg til notat
-        </button>
       ) : null}
 
       {/* Snapshot-rad */}
