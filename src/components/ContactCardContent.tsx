@@ -878,6 +878,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
               setShowAnalyze={setShowAnalyze}
             />
           </div>
+          </>
         )}
         {!editable && (contact as any).teknologier?.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-2">
