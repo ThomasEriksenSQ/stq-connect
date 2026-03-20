@@ -32,7 +32,7 @@ Return ONLY valid JSON array, no markdown, no explanation:
   "begrunnelse": "<string, maks 12 ord, norsk>",
   "match_tags": ["<matching technology>", ...]
 }]
-Ranger best match først. Inkluder kun score >= 4. Returner så mange matcher som mulig.`;
+Ranger best match først. Inkluder kun score >= 4. Returner maks 15 matcher.`;
 
     const userPrompt = `Konsulent: ${konsulent.navn}
 Teknologier: ${konsulent.teknologier?.join(", ") || "ukjent"}
@@ -58,7 +58,7 @@ ${foresporsler.map((f: any) =>
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
-          max_tokens: 2000,
+          max_tokens: 4000,
         }),
       }
     );
@@ -88,17 +88,34 @@ ${foresporsler.map((f: any) =>
 
     const data = await response.json();
     const text = data.choices?.[0]?.message?.content ?? "[]";
-    const clean = text.replace(/```json|```/g, "").trim();
+    let clean = text.replace(/```json|```/g, "").trim();
 
+    // Handle truncated JSON: try to recover a valid array
     let parsed;
     try {
       parsed = JSON.parse(clean);
     } catch {
-      console.error("Failed to parse AI match response:", text);
-      return new Response(
-        JSON.stringify({ error: "Kunne ikke tolke AI-svaret" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      // Attempt to recover truncated JSON array
+      const lastBrace = clean.lastIndexOf("}");
+      if (lastBrace > 0) {
+        const recovered = clean.slice(0, lastBrace + 1) + "]";
+        try {
+          parsed = JSON.parse(recovered);
+          console.log("Recovered truncated JSON with", parsed.length, "items");
+        } catch {
+          console.error("Failed to parse AI match response:", text.slice(0, 500));
+          return new Response(
+            JSON.stringify({ error: "Kunne ikke tolke AI-svaret" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      } else {
+        console.error("Failed to parse AI match response:", text.slice(0, 500));
+        return new Response(
+          JSON.stringify({ error: "Kunne ikke tolke AI-svaret" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     return new Response(JSON.stringify(parsed), {
