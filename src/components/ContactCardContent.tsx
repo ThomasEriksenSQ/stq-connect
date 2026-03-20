@@ -434,7 +434,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
   });
 
   const handleFinnKonsulent = async () => {
-    const teknologier = (contact as any)?.teknologier || [];
+    const teknologier = (contact as any).teknologier || [];
     if (!teknologier.length) {
       toast("Legg til teknisk profil på kontakten først");
       return;
@@ -442,16 +442,37 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
     setMatchingConsultants(true);
     setConsultantResults(null);
     try {
-      const { data: interne } = await supabase
-        .from("stacq_ansatte")
-        .select("id, navn, kompetanse, geografi, erfaring_aar, status")
-        .in("status", ["AKTIV/SIGNERT"]);
+      const [{ data: interne }, { data: foresporsler }] = await Promise.all([
+        supabase
+          .from("stacq_ansatte")
+          .select("id, navn, kompetanse, geografi, erfaring_aar, status")
+          .in("status", ["AKTIV/SIGNERT"]),
+        supabase
+          .from("foresporsler")
+          .select("teknologier")
+          .eq("selskap_id", contact.company_id || "")
+          .gte("mottatt_dato", new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)),
+      ]);
+
+      const effectiveSignal = getEffectiveSignal(
+        activities.map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+        tasks.map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date }))
+      );
+
+      const sisteAktivitet = activities[0]?.created_at
+        ? new Date(activities[0].created_at).toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" })
+        : null;
 
       const { data, error } = await supabase.functions.invoke("match-contact-to-consultants", {
         body: {
           kontakt_teknologier: teknologier,
-          kontakt_navn: contact ? `${contact.first_name} ${contact.last_name}` : "",
+          kontakt_navn: `${contact.first_name} ${contact.last_name}`,
           selskap_navn: companyName || "",
+          selskap_id: contact.company_id || null,
+          kontakt_er_innkjoper: (contact as any).call_list || false,
+          kontakt_signal: effectiveSignal || "Ukjent om behov",
+          aktive_foresporsler: foresporsler || [],
+          siste_kontakt_dato: sisteAktivitet,
           interne: interne || [],
         },
       });
