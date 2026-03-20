@@ -546,7 +546,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                               {contactForm.location || "Ingen spesifikt sted"}
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="__none__">Ingen spesifikk avdeling</SelectItem>
+                              <SelectItem value="__none__">Ingen spesifikt sted</SelectItem>
                               {companyLocations.map((loc: string) => (
                                 <SelectItem key={loc} value={loc}>{loc}</SelectItem>
                               ))}
