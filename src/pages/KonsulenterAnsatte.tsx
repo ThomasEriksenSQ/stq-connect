@@ -288,6 +288,26 @@ export default function KonsulenterAnsatte() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
+              {/* FORNYES */}
+              <div>
+                {(() => {
+                  const fornyDato = fornyDateMap.get(a.navn);
+                  if (!fornyDato) return <span className="text-[0.8125rem] text-muted-foreground">—</span>;
+                  const { label, className } = getFornyColor(fornyDato);
+                  return (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className={cn("text-[0.8125rem] cursor-default", className)}>
+                          {label}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {format(new Date(fornyDato), "d. MMMM yyyy", { locale: nb })}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })()}
+              </div>
               {/* CV / LINK */}
               <div className="flex items-center gap-1.5">
                 <button
