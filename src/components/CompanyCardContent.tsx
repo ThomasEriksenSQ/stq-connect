@@ -209,15 +209,16 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
     enabled: !!companyId,
   });
 
-  const { data: techProfileData } = useQuery({
-    queryKey: ["company-tech-profile-summary", companyId],
+  const { data: techProfile } = useQuery({
+    queryKey: ["company-tech-profile", companyId],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("company_tech_profile")
-        .select("teknologier")
+        .select("teknologier, konsulent_hyppighet, sist_fra_finn")
         .eq("company_id", companyId)
-        .single();
-      return data || null;
+        .maybeSingle();
+      if (error) throw error;
+      return data;
     },
     enabled: !!companyId,
   });
