@@ -468,6 +468,28 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                 </div>
               )}
 
+              {ansatt?.tilgjengelig_fra && (
+                <div className="mt-3 flex items-center gap-2 text-[0.8125rem]">
+                  <span className="text-muted-foreground">Tilgjengelig fra:</span>
+                  <span className={cn(
+                    "font-medium",
+                    (() => {
+                      const dager = Math.round((new Date(ansatt.tilgjengelig_fra).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                      if (dager <= 0) return "text-emerald-600";
+                      if (dager <= 30) return "text-amber-600";
+                      return "text-muted-foreground";
+                    })()
+                  )}>
+                    {(() => {
+                      const dager = Math.round((new Date(ansatt.tilgjengelig_fra).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                      if (dager <= 0) return "Tilgjengelig nå";
+                      if (dager <= 30) return `Om ${dager} dager (${format(new Date(ansatt.tilgjengelig_fra), "d. MMM yyyy", { locale: nb })})`;
+                      return format(new Date(ansatt.tilgjengelig_fra), "d. MMMM yyyy", { locale: nb });
+                    })()}
+                  </span>
+                </div>
+              )}
+
               {/* Synkroniser kompetanse fra CV */}
               <div className="mt-3 flex items-center gap-2">
                 <button
