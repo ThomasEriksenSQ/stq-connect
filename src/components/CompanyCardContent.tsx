@@ -1020,9 +1020,6 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
           {/* ── Teknisk DNA ── */}
           {editable && (
             <div className="mt-6 space-y-2">
-              <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                Teknisk DNA
-              </h3>
               <CompanyDnaPanel companyId={companyId} />
             </div>
           )}
@@ -1318,18 +1315,48 @@ function CompanyDnaPanel({ companyId }: { companyId: string }) {
     enabled: !!companyId,
   });
 
-  const hasDna = foresporslerTags.length > 0 || contactTags.length > 0 || (dnaProfile?.teknologier && Object.keys(dnaProfile.teknologier).length > 0);
-
-  if (!hasDna) {
-    return (
-      <p className="text-[0.8125rem] text-muted-foreground/60 italic">
-        Ingen teknisk profil ennå — legges til automatisk fra forespørsler og kontakter.
-      </p>
-    );
-  }
+  const finnTechs = dnaProfile?.teknologier ? Object.entries(dnaProfile.teknologier as Record<string, number>).sort((a, b) => b[1] - a[1]).slice(0, 20) : [];
+  const hasDna = foresporslerTags.length > 0 || contactTags.length > 0 || finnTechs.length > 0;
 
   return (
     <div className="space-y-3">
+      <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+        Teknisk DNA
+        {dnaProfile?.konsulent_hyppighet ? (
+          <span className="ml-2 text-muted-foreground/50 font-normal normal-case tracking-normal">
+            · {dnaProfile.konsulent_hyppighet} annonser
+          </span>
+        ) : null}
+      </h3>
+
+      {!hasDna && (
+        <p className="text-[0.8125rem] text-muted-foreground/60 italic">
+          Ingen teknisk profil ennå — legges til automatisk fra forespørsler og kontakter.
+        </p>
+      )}
+
+      {/* Finn.no DNA */}
+      {finnTechs.length > 0 && (
+        <div>
+          <p className="text-[0.6875rem] font-medium text-muted-foreground mb-1.5">Fra Finn.no</p>
+          <div className="flex flex-wrap gap-1">
+            {finnTechs.map(([tech, count]) => (
+              <span
+                key={tech}
+                className="inline-flex items-center rounded-full bg-secondary text-foreground px-2 py-0.5 text-[0.6875rem] font-mono border border-border"
+              >
+                {tech}{count > 1 ? <span className="ml-1 text-muted-foreground/60">×{count}</span> : null}
+              </span>
+            ))}
+          </div>
+          {dnaProfile?.sist_fra_finn && (
+            <p className="text-[0.6875rem] text-muted-foreground/40 mt-1.5">
+              Oppdatert {new Date(dnaProfile.sist_fra_finn).toLocaleDateString("nb-NO", { day: "numeric", month: "short", year: "numeric" })}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Fra forespørsler */}
       {foresporslerTags.length > 0 && (
         <div>
