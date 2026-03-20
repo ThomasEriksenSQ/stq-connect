@@ -39,6 +39,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
   const isCreate = ansatt === null;
 
   const [editing, setEditing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [tagInput, setTagInput] = useState("");
@@ -88,6 +89,24 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
       setEditing(true);
     }
   }, [open, ansatt, openInEditMode]);
+
+  const handleSyncFromCV = async () => {
+    if (!ansatt?.id) return;
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-cv-kompetanse", {
+        body: { ansatt_id: ansatt.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`${data.count} kompetanser hentet fra CV`);
+      queryClient.invalidateQueries({ queryKey: ["stacq-ansatte"] });
+    } catch (err: any) {
+      toast.error(err.message || "Kunne ikke synkronisere");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const set = (key: string, val: any) => setForm((prev) => ({ ...prev, [key]: val }));
 
@@ -432,6 +451,24 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                   ))}
                 </div>
               )}
+
+              {/* Synkroniser kompetanse fra CV */}
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  onClick={handleSyncFromCV}
+                  disabled={syncing}
+                  className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50"
+                >
+                  {syncing ? (
+                    <><Loader2 className="h-3 w-3 animate-spin" />Synkroniserer...</>
+                  ) : (
+                    <><Sparkles className="h-3 w-3" />Synkroniser kompetanse fra CV</>
+                  )}
+                </button>
+                {ansatt?.cv_profil_hentet && (
+                  <span className="text-[0.6875rem] text-muted-foreground">✓ Hentet fra CV</span>
+                )}
+              </div>
             </div>
 
             {/* Content */}
