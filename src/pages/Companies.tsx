@@ -352,7 +352,7 @@ const Companies = () => {
               )}
               {/* AVDELINGER */}
               <div className="space-y-1.5">
-                <Label className="text-label">Avdelinger</Label>
+                <Label className="text-label">Geografiske steder</Label>
                 <div className="space-y-2">
                   {locations.map((loc, i) => (
                     <div key={i} className="flex items-center gap-2">
