@@ -656,7 +656,7 @@ export function CompanyCardContent({ companyId, editable = false, onOpenContact,
                     <Input value={editForm.org_number} onChange={(e) => setEditForm({ ...editForm, org_number: e.target.value })} className="h-10 rounded-lg" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-label">Avdelinger</Label>
+                    <Label className="text-label">Geografiske steder</Label>
                     <div className="flex flex-wrap gap-1.5 mb-2">
                       {editForm.locations.map((loc, i) => (
                         <span key={i} className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs font-medium text-foreground">

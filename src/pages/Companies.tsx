@@ -382,7 +382,7 @@ const Companies = () => {
                     onClick={() => setLocations([...locations, ""])}
                     className="w-full h-9 text-[0.8125rem] text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg border border-dashed border-border transition-colors"
                   >
-                    + Legg til avdeling
+                    + Legg til sted
                   </button>
                 </div>
               </div>

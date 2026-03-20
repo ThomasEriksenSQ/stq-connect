@@ -675,6 +675,15 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
               Selskap <Pencil className="h-2.5 w-2.5" />
             </button>
           )}
+          {(contact.companies as any)?.city && (
+            <>
+              <span className="text-muted-foreground/40">·</span>
+              <span className="inline-flex items-center gap-0.5">
+                <MapPin className="h-3 w-3 text-muted-foreground/50" />
+                {(contact.companies as any).city}
+              </span>
+            </>
+          )}
           {(contact as any).location && (
             <>
               <span className="text-muted-foreground/40">·</span>
