@@ -358,297 +358,319 @@ const DailyBrief = () => {
               <p className="text-[0.875rem] text-muted-foreground mt-1">Du har behandlet alle leads i dag.</p>
             </div>
           ) : current ? (
-            <div
-              ref={cardRef}
-              className="w-full bg-card border border-border rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden"
-            >
-              {/* Temperaturstrek øverst */}
-              <div className={cn("h-1", TEMP_CONFIG[current.temperature].bar)} />
+            <div className="space-y-2">
+              <div
+                ref={cardRef}
+                className="w-full bg-card border border-border rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden"
+              >
+                {/* Temperaturstrek øverst */}
+                <div className={cn("h-1", TEMP_CONFIG[current.temperature].bar)} />
 
-              <div className="flex justify-end px-5 pt-4">
-                <button
-                  onClick={() => setPanelOpen(true)}
-                  className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg bg-secondary border border-border text-[0.75rem] text-muted-foreground hover:text-foreground transition-all"
-                >
-                  <span>↗</span>
-                  <span>Åpne kontakt</span>
-                </button>
-              </div>
-
-              <div className="p-7 pt-3 space-y-5">
-
-                {/* ── Navn + meta ── */}
-                <div className="space-y-1">
+                <div className="flex justify-end px-5 pt-4">
                   <button
-                    onClick={() => navigate(`/kontakter/${current.contact.id}`)}
-                    className="text-[1.5rem] font-bold text-foreground hover:text-primary transition-colors text-left leading-tight"
+                    onClick={() => setPanelOpen(true)}
+                    className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg bg-secondary border border-border text-[0.75rem] text-muted-foreground hover:text-foreground transition-all"
                   >
-                    {current.contact.first_name} {current.contact.last_name}
+                    <span>↗</span>
+                    <span>Åpne kontakt</span>
                   </button>
-                  <div className="flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground flex-wrap">
-                    {current.contact.title && <span>{current.contact.title}</span>}
-                    {current.contact.companies?.name && (
-                      <>
-                        {current.contact.title && <span>·</span>}
-                        <button onClick={() => navigate(`/selskaper/${current.contact.company_id}`)} className="text-primary hover:underline font-medium">
-                          {current.contact.companies.name}
-                        </button>
-                      </>
-                    )}
-                    {current.contact.companies?.city && (
-                      <>
-                        <span>·</span>
-                        <span>{current.contact.companies.city}</span>
-                      </>
-                    )}
-                  </div>
                 </div>
 
-                {/* ── Snapshot-grid ── */}
-                <div className="grid grid-cols-2 gap-6">
-                  {/* Siste */}
-                  <div className="space-y-1.5">
-                    <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Siste</p>
-                    {current.lastAct ? (
-                      <>
-                        <p className="text-[0.9375rem] font-medium text-foreground leading-snug">
-                          &ldquo;{current.lastAct.subject}&rdquo;
-                        </p>
-                        <p className="text-[0.75rem] text-muted-foreground">
-                          {format(new Date(current.lastAct.created_at), "d. MMM yyyy", { locale: nb })}
-                          {" · "}{daysSinceLast === 999 ? "aldri" : `${daysSinceLast} dager siden`}
-                        </p>
-                      </>
-                    ) : (
-                      <p className="text-[0.8125rem] text-muted-foreground/60 italic">Ingen aktivitet</p>
-                    )}
-                  </div>
+                <div className="p-7 pt-3">
 
-                  {/* Neste */}
-                  <div className="space-y-1.5">
-                    <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Neste oppfølging</p>
-                    {current.nextTask ? (() => {
-                      const overdue = isPast(new Date(current.nextTask.due_date)) && !isToday(new Date(current.nextTask.due_date));
-                      return (
-                        <>
-                          <p className="text-[0.9375rem] font-medium text-foreground leading-snug">{current.nextTask.title}</p>
-                          <div className="flex items-center gap-2">
-                            <span className={cn(
-                              "text-[0.75rem]",
-                              overdue ? "text-destructive font-medium" : "text-muted-foreground"
-                            )}>
-                              {format(new Date(current.nextTask.due_date), "d. MMM yyyy", { locale: nb })}
-                            </span>
-                            {overdue && (
-                              <button
-                                onClick={() => setActiveForm(activeForm === "snooze" ? null : "snooze")}
-                                className="text-[0.75rem] text-muted-foreground/50 hover:text-amber-600 transition-colors"
-                              >
-                                ↷ utsett
-                              </button>
-                            )}
-                          </div>
-                        </>
-                      );
-                    })() : (
-                      <p className="text-[0.8125rem] text-muted-foreground/60 italic">Ingen planlagt</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* ── Temperatur + Finn.no strips ── */}
-                <div className="flex flex-col gap-2">
-                  {/* Lovende-strip */}
-                  {(() => {
-                    const tempColors = {
-                      hett:    { strip: "bg-red-50 border-red-100",     label: "text-red-800 font-medium",    reason: "text-red-600"    },
-                      lovende: { strip: "bg-orange-50 border-orange-100", label: "text-orange-800 font-medium", reason: "text-orange-600" },
-                      mulig:   { strip: "bg-amber-50 border-amber-100",  label: "text-amber-800 font-medium",  reason: "text-amber-600"  },
-                      sovende: { strip: "bg-gray-50 border-gray-100",    label: "text-gray-600 font-medium",   reason: "text-gray-500"   },
-                    };
-                    const tc = tempColors[current.temperature];
-                    const emoji = current.temperature === "hett" ? "🔥" : current.temperature === "lovende" ? "⚡" : current.temperature === "mulig" ? "💡" : "💤";
-                    return (
-                      <div className={cn("flex items-center gap-2 px-3 py-2 rounded-xl border", tc.strip)}>
-                        <span className="text-[0.875rem]">{emoji}</span>
-                        <span className={cn("text-[0.8125rem]", tc.label)}>{TEMP_CONFIG[current.temperature].label}</span>
-                        {reasonLine && (
+                  {/* ── Sone 1: Navn + meta ── */}
+                  <div className="pb-5">
+                    <div className="space-y-1">
+                      <button
+                        onClick={() => navigate(`/kontakter/${current.contact.id}`)}
+                        className="text-[1.5rem] font-bold text-foreground hover:text-primary transition-colors text-left leading-tight"
+                      >
+                        {current.contact.first_name} {current.contact.last_name}
+                      </button>
+                      <div className="flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground flex-wrap">
+                        {current.contact.title && <span>{current.contact.title}</span>}
+                        {current.contact.companies?.name && (
                           <>
-                            <span className={cn("text-[0.8125rem]", tc.reason)}>·</span>
-                            <span className={cn("text-[0.8125rem]", tc.reason)}>{reasonLine}</span>
+                            {current.contact.title && <span>·</span>}
+                            <button onClick={() => navigate(`/selskaper/${current.contact.company_id}`)} className="text-primary hover:underline font-medium">
+                              {current.contact.companies.name}
+                            </button>
+                          </>
+                        )}
+                        {current.contact.companies?.city && (
+                          <>
+                            <span>·</span>
+                            <span>{current.contact.companies.city}</span>
                           </>
                         )}
                       </div>
-                    );
-                  })()}
-
-                  {/* Finn.no-strip */}
-                  {(() => {
-                    const companyTech = techProfiles.find((tp: any) => tp.company_id === current.contact.company_id);
-                    if (!companyTech?.teknologier) return null;
-                    const topTech = Object.entries(companyTech.teknologier as Record<string, number>)
-                      .sort((a, b) => (b[1] as number) - (a[1] as number))
-                      .slice(0, 5).map(([t]) => t);
-                    if (topTech.length === 0) return null;
-                    return (
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-50 border border-blue-100">
-                        <Radio className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
-                        <span className="text-[0.8125rem] text-blue-800 font-medium">Finn.no</span>
-                        <span className="text-[0.75rem] text-blue-600">Søker: {topTech.join(", ")}</span>
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {/* Snooze */}
-                {activeForm === "snooze" && current.nextTask && (
-                  <div className="space-y-2">
-                    <p className="text-[0.75rem] font-medium text-muted-foreground">Utsett til:</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {DATE_CHIPS.map(chip => (
-                        <button
-                          key={chip.label}
-                          onClick={() => {
-                            updateTaskMutation.mutate({ taskId: current.nextTask.id, dueDate: format(chip.fn(), "yyyy-MM-dd") });
-                            setActiveForm(null);
-                          }}
-                          className="h-7 px-3 text-[0.75rem] rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                        >
-                          {chip.label}
-                        </button>
-                      ))}
                     </div>
                   </div>
-                )}
 
-                {/* ── Toggle-piller ── */}
-                <div className="flex flex-wrap items-center gap-2">
+                  {/* Divider */}
+                  <div className="border-t border-border/50" />
 
-                  {/* Signal */}
-                  <div className="relative">
-                    <button
-                      onClick={() => setActiveForm(activeForm === "signal" ? null : "signal")}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
-                        currentSignal
-                          ? SIGNAL_CATEGORIES.find(c => c.label === currentSignal)?.badgeColor
-                          : "bg-background text-muted-foreground border-border hover:bg-secondary"
-                      )}
-                    >
-                      {currentSignal || "Signal"} <ChevronDown className="h-3 w-3" />
-                    </button>
-                    {activeForm === "signal" && (
-                      <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-xl shadow-lg py-1 min-w-[200px]">
-                        {SIGNAL_CATEGORIES.map(cat => (
-                          <button
-                            key={cat.label}
-                            onClick={() => {
-                              setLocalSignals(prev => ({ ...prev, [current.contact.id]: cat.label }));
-                              supabase.from("activities").insert({
-                                type: "note", subject: cat.label, description: `[${cat.label}]`,
-                                contact_id: current.contact.id, company_id: current.contact.company_id, created_by: user?.id,
-                              }).then(() => queryClient.invalidateQueries({ queryKey: ["salgssenter-activities"] }));
-                              setActiveForm(null);
-                            }}
-                            className="w-full flex items-center gap-2 px-3 py-2.5 text-[0.8125rem] hover:bg-secondary transition-colors text-left"
-                          >
-                            <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold", cat.badgeColor)}>
-                              {cat.label}
-                            </span>
-                            {currentSignal === cat.label && <span className="ml-auto text-primary">✓</span>}
-                          </button>
-                        ))}
+                  {/* ── Sone 2: Siste + Neste oppfølging ── */}
+                  <div className="py-5">
+                    {/* Snapshot-grid */}
+                    <div className="grid grid-cols-2 gap-6">
+                      {/* Siste */}
+                      <div className="space-y-1.5">
+                        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Siste</p>
+                        {current.lastAct ? (
+                          <>
+                            <p className="text-[0.9375rem] font-medium text-foreground leading-snug">
+                              &ldquo;{current.lastAct.subject}&rdquo;
+                            </p>
+                            <p className="text-[0.75rem] text-muted-foreground">
+                              {format(new Date(current.lastAct.created_at), "d. MMM yyyy", { locale: nb })}
+                              {" · "}{daysSinceLast === 999 ? "aldri" : `${daysSinceLast} dager siden`}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-[0.8125rem] text-muted-foreground/60 italic">Ingen aktivitet</p>
+                        )}
+                      </div>
+
+                      {/* Neste */}
+                      <div className="space-y-1.5">
+                        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Neste oppfølging</p>
+                        {current.nextTask ? (() => {
+                          const overdue = isPast(new Date(current.nextTask.due_date)) && !isToday(new Date(current.nextTask.due_date));
+                          return (
+                            <>
+                              <p className="text-[0.9375rem] font-medium text-foreground leading-snug">{current.nextTask.title}</p>
+                              <div className="flex items-center gap-2">
+                                <span className={cn(
+                                  "text-[0.75rem]",
+                                  overdue ? "text-destructive font-medium" : "text-muted-foreground"
+                                )}>
+                                  {format(new Date(current.nextTask.due_date), "d. MMM yyyy", { locale: nb })}
+                                </span>
+                                {overdue && (
+                                  <button
+                                    onClick={() => setActiveForm(activeForm === "snooze" ? null : "snooze")}
+                                    className="text-[0.75rem] text-muted-foreground/50 hover:text-amber-600 transition-colors"
+                                  >
+                                    ↷ utsett
+                                  </button>
+                                )}
+                              </div>
+                            </>
+                          );
+                        })() : (
+                          <p className="text-[0.8125rem] text-muted-foreground/60 italic">Ingen planlagt</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Snooze */}
+                    {activeForm === "snooze" && current.nextTask && (
+                      <div className="space-y-2 mt-4">
+                        <p className="text-[0.75rem] font-medium text-muted-foreground">Utsett til:</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {DATE_CHIPS.map(chip => (
+                            <button
+                              key={chip.label}
+                              onClick={() => {
+                                updateTaskMutation.mutate({ taskId: current.nextTask.id, dueDate: format(chip.fn(), "yyyy-MM-dd") });
+                                setActiveForm(null);
+                              }}
+                              className="h-7 px-3 text-[0.75rem] rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                            >
+                              {chip.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
 
-                  {/* Innkjøper */}
-                  <button
-                    onClick={() => {
-                      const newVal = !current.contact.call_list;
-                      supabase.from("contacts").update({ call_list: newVal }).eq("id", current.contact.id)
-                        .then(() => queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
-                          old?.map((c: any) => c.id === current.contact.id ? { ...c, call_list: newVal } : c)
-                        ));
-                    }}
-                    className={cn(
-                      "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
-                      current.contact.call_list
-                        ? "bg-amber-100 text-amber-800 border-amber-200"
-                        : "bg-background text-muted-foreground border-border hover:bg-secondary"
-                    )}
-                  >
-                    Innkjøper
-                  </button>
+                  {/* Divider */}
+                  <div className="border-t border-border/50" />
 
-                  {/* CV-epost */}
-                  <button
-                    onClick={() => {
-                      const newVal = !current.contact.cv_email;
-                      supabase.from("contacts").update({ cv_email: newVal }).eq("id", current.contact.id)
-                        .then(() => queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
-                          old?.map((c: any) => c.id === current.contact.id ? { ...c, cv_email: newVal } : c)
-                        ));
-                    }}
-                    className={cn(
-                      "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
-                      current.contact.cv_email
-                        ? "bg-blue-100 text-blue-800 border-blue-200"
-                        : "bg-background text-muted-foreground border-border hover:bg-secondary"
-                    )}
-                  >
-                    CV-epost
-                  </button>
+                  {/* ── Sone 3: Lovende + Finn.no strips ── */}
+                  <div className="py-5">
+                    <div className="flex flex-col gap-2">
+                      {/* Lovende-strip */}
+                      {(() => {
+                        const tempColors = {
+                          hett:    { strip: "bg-red-50 border-red-100",     label: "text-red-800 font-medium",    reason: "text-red-600"    },
+                          lovende: { strip: "bg-orange-50 border-orange-100", label: "text-orange-800 font-medium", reason: "text-orange-600" },
+                          mulig:   { strip: "bg-amber-50 border-amber-100",  label: "text-amber-800 font-medium",  reason: "text-amber-600"  },
+                          sovende: { strip: "bg-gray-50 border-gray-100",    label: "text-gray-600 font-medium",   reason: "text-gray-500"   },
+                        };
+                        const tc = tempColors[current.temperature];
+                        const emoji = current.temperature === "hett" ? "🔥" : current.temperature === "lovende" ? "⚡" : current.temperature === "mulig" ? "💡" : "💤";
+                        return (
+                          <div className={cn("flex items-center gap-2 px-3 py-2 rounded-xl border", tc.strip)}>
+                            <span className="text-[0.875rem]">{emoji}</span>
+                            <span className={cn("text-[0.8125rem]", tc.label)}>{TEMP_CONFIG[current.temperature].label}</span>
+                            {reasonLine && (
+                              <>
+                                <span className={cn("text-[0.8125rem]", tc.reason)}>·</span>
+                                <span className={cn("text-[0.8125rem]", tc.reason)}>{reasonLine}</span>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })()}
 
-                  {/* Ikke relevant person */}
-                  <button
-                    onClick={() => {
-                      const newVal = !current.contact.ikke_aktuell_kontakt;
-                      supabase.from("contacts").update({ ikke_aktuell_kontakt: newVal }).eq("id", current.contact.id)
-                        .then(() => queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
-                          old?.map((c: any) => c.id === current.contact.id ? { ...c, ikke_aktuell_kontakt: newVal } : c)
-                        ));
-                    }}
-                    className={cn(
-                      "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
-                      current.contact.ikke_aktuell_kontakt
-                        ? "bg-destructive/10 text-destructive border-destructive/30"
-                        : "bg-background text-muted-foreground border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
-                    )}
-                  >
-                    Ikke relevant person
-                  </button>
-                </div>
+                      {/* Finn.no-strip */}
+                      {(() => {
+                        const companyTech = techProfiles.find((tp: any) => tp.company_id === current.contact.company_id);
+                        if (!companyTech?.teknologier) return null;
+                        const topTech = Object.entries(companyTech.teknologier as Record<string, number>)
+                          .sort((a, b) => (b[1] as number) - (a[1] as number))
+                          .slice(0, 5).map(([t]) => t);
+                        if (topTech.length === 0) return null;
+                        return (
+                          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-50 border border-blue-100">
+                            <Radio className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+                            <span className="text-[0.8125rem] text-blue-800 font-medium">Finn.no</span>
+                            <span className="text-[0.75rem] text-blue-600">Søker: {topTech.join(", ")}</span>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
 
-                {/* ── Ok, neste + navigasjon ── */}
-                <div className="pt-1">
-                  <button
-                    onClick={() => {
-                      setTreated(prev => new Set([...prev, current.contact.id]));
-                      setTimeout(() => goNext("left"), 100);
-                    }}
-                    className="w-full h-[46px] rounded-xl bg-foreground text-background text-[0.9375rem] font-medium hover:opacity-90 active:scale-[0.99] transition-all"
-                  >
-                    Ok, neste →
-                  </button>
-                  <div className="flex items-center justify-between mt-3 px-1">
+                  {/* Divider */}
+                  <div className="border-t border-border/50" />
+
+                  {/* ── Sone 4: Toggle-piller ── */}
+                  <div className="py-5">
+                    <div className="flex flex-wrap items-center gap-2">
+
+                      {/* Signal */}
+                      <div className="relative">
+                        <button
+                          onClick={() => setActiveForm(activeForm === "signal" ? null : "signal")}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+                            currentSignal
+                              ? SIGNAL_CATEGORIES.find(c => c.label === currentSignal)?.badgeColor
+                              : "bg-background text-muted-foreground border-border hover:bg-secondary"
+                          )}
+                        >
+                          {currentSignal || "Signal"} <ChevronDown className="h-3 w-3" />
+                        </button>
+                        {activeForm === "signal" && (
+                          <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-xl shadow-lg py-1 min-w-[200px]">
+                            {SIGNAL_CATEGORIES.map(cat => (
+                              <button
+                                key={cat.label}
+                                onClick={() => {
+                                  setLocalSignals(prev => ({ ...prev, [current.contact.id]: cat.label }));
+                                  supabase.from("activities").insert({
+                                    type: "note", subject: cat.label, description: `[${cat.label}]`,
+                                    contact_id: current.contact.id, company_id: current.contact.company_id, created_by: user?.id,
+                                  }).then(() => queryClient.invalidateQueries({ queryKey: ["salgssenter-activities"] }));
+                                  setActiveForm(null);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2.5 text-[0.8125rem] hover:bg-secondary transition-colors text-left"
+                              >
+                                <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold", cat.badgeColor)}>
+                                  {cat.label}
+                                </span>
+                                {currentSignal === cat.label && <span className="ml-auto text-primary">✓</span>}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Innkjøper */}
+                      <button
+                        onClick={() => {
+                          const newVal = !current.contact.call_list;
+                          supabase.from("contacts").update({ call_list: newVal }).eq("id", current.contact.id)
+                            .then(() => queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
+                              old?.map((c: any) => c.id === current.contact.id ? { ...c, call_list: newVal } : c)
+                            ));
+                        }}
+                        className={cn(
+                          "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+                          current.contact.call_list
+                            ? "bg-amber-100 text-amber-800 border-amber-200"
+                            : "bg-background text-muted-foreground border-border hover:bg-secondary"
+                        )}
+                      >
+                        Innkjøper
+                      </button>
+
+                      {/* CV-epost */}
+                      <button
+                        onClick={() => {
+                          const newVal = !current.contact.cv_email;
+                          supabase.from("contacts").update({ cv_email: newVal }).eq("id", current.contact.id)
+                            .then(() => queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
+                              old?.map((c: any) => c.id === current.contact.id ? { ...c, cv_email: newVal } : c)
+                            ));
+                        }}
+                        className={cn(
+                          "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+                          current.contact.cv_email
+                            ? "bg-blue-100 text-blue-800 border-blue-200"
+                            : "bg-background text-muted-foreground border-border hover:bg-secondary"
+                        )}
+                      >
+                        CV-epost
+                      </button>
+
+                      {/* Ikke relevant person */}
+                      <button
+                        onClick={() => {
+                          const newVal = !current.contact.ikke_aktuell_kontakt;
+                          supabase.from("contacts").update({ ikke_aktuell_kontakt: newVal }).eq("id", current.contact.id)
+                            .then(() => queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
+                              old?.map((c: any) => c.id === current.contact.id ? { ...c, ikke_aktuell_kontakt: newVal } : c)
+                            ));
+                        }}
+                        className={cn(
+                          "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+                          current.contact.ikke_aktuell_kontakt
+                            ? "bg-destructive/10 text-destructive border-destructive/30"
+                            : "bg-background text-muted-foreground border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                        )}
+                      >
+                        Ikke relevant person
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* ── Sone 5: CTA ── */}
+                  <div className="pt-1 pb-2">
                     <button
-                      onClick={() => goNext("right")}
-                      disabled={currentIndex === 0}
-                      className="flex items-center justify-center w-8 h-8 rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-20 disabled:pointer-events-none transition-all"
+                      onClick={() => {
+                        setTreated(prev => new Set([...prev, current.contact.id]));
+                        setTimeout(() => goNext("left"), 100);
+                      }}
+                      className="w-full h-[46px] rounded-xl bg-foreground text-background text-[0.9375rem] font-medium hover:opacity-90 active:scale-[0.99] transition-all"
                     >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => goNext("left")}
-                      disabled={currentIndex >= queue.length - 1}
-                      className="flex items-center justify-center w-8 h-8 rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-20 disabled:pointer-events-none transition-all"
-                    >
-                      <ChevronRight className="h-4 w-4" />
+                      Ok, neste →
                     </button>
                   </div>
-                </div>
 
+                </div>
+              </div>
+
+              {/* Navigasjon under kortet */}
+              <div className="flex items-center justify-between px-2">
+                <button
+                  onClick={() => goNext("right")}
+                  disabled={currentIndex === 0}
+                  className="flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-15 disabled:pointer-events-none transition-all"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => goNext("left")}
+                  disabled={currentIndex >= queue.length - 1}
+                  className="flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-15 disabled:pointer-events-none transition-all"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
               </div>
             </div>
           ) : null}
