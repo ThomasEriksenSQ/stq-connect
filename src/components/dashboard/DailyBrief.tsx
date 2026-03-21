@@ -864,14 +864,14 @@ const DailyBrief = () => {
       {/* ── Nudge modal ── */}
       {nudgeOpen && current && (() => {
         const navn = `${current.contact.first_name} ${current.contact.last_name}`;
-        const harEksisterendeTask = !!current.nextTask;
+        const harEksisterendeTask = !!(allTasks as any[]).filter((t: any) => t.contact_id === current.contact.id).length;
+        const contactTasks = (allTasks as any[]).filter((t: any) => t.contact_id === current.contact.id);
 
         const handleOkNeste = async () => {
           const isSomeday = nudgeDate === "someday";
           const newDate = isSomeday ? null : (nudgeDate === "custom" ? nudgeCustomDate : nudgeDate);
 
           if (harEksisterendeTask) {
-            const contactTasks = allTasks.filter((t: any) => t.contact_id === current.contact.id);
             for (const task of contactTasks) {
               const rawDesc = (task.description || "")
                 .replace(/^\[[^\]]+\]\n?/, "")
