@@ -905,9 +905,6 @@ const DailyBrief = () => {
           queryClient.invalidateQueries({ queryKey: ["salgssenter-activities"] });
         };
 
-        const [nudgeSignal, setNudgeSignal] = useState(currentSignal || "Ukjent om behov");
-        const [nudgeDate, setNudgeDate] = useState("someday");
-        const [nudgeCustomDate, setNudgeCustomDate] = useState("");
 
         const handleOkNeste = async () => {
           if (nudgeSignal && nudgeSignal !== currentSignal) {
