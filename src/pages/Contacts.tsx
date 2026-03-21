@@ -118,12 +118,36 @@ const Contacts = () => {
         }
       });
 
-      const rows = data.map(c => ({
-        ...c,
-        lastActivity: lastActMap[c.id] || null,
-        signal: signalMap[c.id] || null,
-        openTasks: openTasksMap[c.id] || { count: 0, overdue: false },
-      }));
+      const rows = data.map(c => {
+        const lastActivity = lastActMap[c.id] || null;
+        const signal = signalMap[c.id] || null;
+        const openTasks = openTasksMap[c.id] || { count: 0, overdue: false };
+        const isInnkjoper = !!c.call_list;
+        const techProfile = (techProfiles || []).find((tp: any) => tp.company_id === c.company_id);
+        const hasMarkedsradar = !!(techProfile?.sist_fra_finn && differenceInDays(new Date(), new Date(techProfile.sist_fra_finn)) <= 90);
+        const hasAktivForespørsel = (foresporsler || []).some((f: any) =>
+          f.selskap_id === c.company_id &&
+          f.mottatt_dato &&
+          differenceInDays(new Date(), new Date(f.mottatt_dato)) <= 45
+        );
+        const daysSince = lastActivity ? differenceInDays(new Date(), new Date(lastActivity)) : 999;
+        const heatScore = signal === "Ikke aktuelt" ? -1000 : calcHeatScore({
+          signal: signal || "",
+          isInnkjoper,
+          hasMarkedsradar,
+          hasAktivForespørsel,
+          hasOverdue: openTasks.overdue,
+          daysSinceLastContact: daysSince,
+        });
+        const temperature = signal === "Ikke aktuelt" ? "sovende" : getTemperature({
+          score: heatScore,
+          signal: signal || "",
+          hasOverdue: openTasks.overdue,
+          hasMarkedsradar,
+          isInnkjoper,
+        });
+        return { ...c, lastActivity, signal, openTasks, heatScore, temperature, hasMarkedsradar };
+      });
 
       return { rows, totalCount: count ?? data.length, capped: data.length < (count ?? 0) };
     },
