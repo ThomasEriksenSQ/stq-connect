@@ -888,7 +888,7 @@ const DailyBrief = () => {
 
               await supabase.from("tasks").update({
                 due_date: newDate,
-                description: finalDesc || null,
+                description: finalDesc,
                 updated_at: new Date().toISOString(),
               }).eq("id", task.id);
             }
