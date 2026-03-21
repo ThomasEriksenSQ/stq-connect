@@ -891,7 +891,7 @@ export function ContactCardContent({
         </div>
 
         {/* Line 2: Selskap · Sted */}
-        <div className="flex items-center gap-1.5 flex-wrap text-[0.875rem] mt-1">
+        <div className="flex items-center gap-1.5 flex-wrap text-[0.875rem] mt-1.5">
           {companyName &&
           <span className="group/co inline-flex items-center gap-1">
               <button
