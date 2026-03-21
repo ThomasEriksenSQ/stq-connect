@@ -233,7 +233,7 @@ const DailyBrief = () => {
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <p className="text-3xl mb-3">🎉</p>
         <p className="text-[1.125rem] font-semibold text-foreground">Alt gjennomgått for i dag</p>
-        <p className="text-[0.8125rem] text-muted-foreground mt-1">{treated} kontakter behandlet.</p>
+        <p className="text-[0.8125rem] text-muted-foreground mt-1">{treated.size} kontakter behandlet.</p>
       </div>
     );
   }
