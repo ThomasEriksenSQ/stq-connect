@@ -1436,6 +1436,34 @@ export function CompanyCardContent({
                       className="h-10 rounded-lg" />
                     
                     </div>
+                    {(() => {
+                      const locs: string[] = company.city
+                        ? company.city.split(",").map((s: string) => s.trim()).filter(Boolean)
+                        : [];
+                      if (locs.length === 0) return null;
+                      return (
+                        <div className="space-y-1.5">
+                          <Label className="text-label">Geografisk sted</Label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {locs.map(loc => (
+                              <button
+                                key={loc}
+                                type="button"
+                                onClick={() => setContactForm({ ...contactForm, location: loc === contactForm.location ? "" : loc })}
+                                className={cn(
+                                  "inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-[0.8125rem] font-medium transition-colors",
+                                  contactForm.location === loc
+                                    ? "bg-foreground text-background border-foreground"
+                                    : "border-border text-muted-foreground hover:bg-secondary"
+                                )}
+                              >
+                                {loc}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
                     <Button type="submit" className="w-full h-10 rounded-lg">
                       Opprett
                     </Button>
