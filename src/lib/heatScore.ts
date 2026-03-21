@@ -19,7 +19,7 @@ export function calcHeatScore(params: {
   if (params.signal === "Behov nå") score += 40;
   else if (params.signal === "Får fremtidig behov") score += 20;
   else if (params.signal === "Får kanskje behov") score += 8;
-  else if (params.signal === "Ukjent om behov") score += 2;
+  else if (params.signal === "Ukjent om behov") score += 16;
   if (params.isInnkjoper) score += 15;
   if (params.hasMarkedsradar) score += 12;
   if (params.hasMarkedsradar && params.signal === "Behov nå") score += 8;
