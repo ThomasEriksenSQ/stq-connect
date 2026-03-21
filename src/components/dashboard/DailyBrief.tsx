@@ -165,7 +165,6 @@ const DailyBrief = () => {
     }
     setTimeout(() => {
       setIdx(nextIdx);
-      if (dir === "left") setTreated(t => t + 1);
       if (card) {
         card.style.transition = "none";
         card.style.transform = dir === "left" ? "translateX(52px)" : "translateX(-52px)";
