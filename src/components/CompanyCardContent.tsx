@@ -1531,7 +1531,7 @@ export function CompanyCardContent({
                       }
                         {c.call_list &&
                       <span className="rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">
-                            INN
+                            Innkjøper
                           </span>
                       }
                       </div>
