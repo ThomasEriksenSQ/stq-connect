@@ -1017,7 +1017,7 @@ const DailyBrief = () => {
 
               {/* CTA */}
               <button
-                onClick={handleOkNeste}
+                onClick={handleNudgeOkNeste}
                 className="w-full h-[52px] rounded-xl bg-foreground text-background text-[1rem] font-medium hover:opacity-90 active:scale-[0.99] transition-all"
               >
                 Ok, neste →
