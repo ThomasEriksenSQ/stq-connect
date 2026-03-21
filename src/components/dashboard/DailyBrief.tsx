@@ -124,9 +124,6 @@ const DailyBrief = () => {
   const [localSignals, setLocalSignals] = useState<Record<string, string>>({});
   const cardRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (user?.id && !ownerFilter) setOwnerFilter(user.id);
-  }, [user?.id]);
 
   const { data: allProfiles = [] } = useQuery({
     queryKey: ["profiles"],
