@@ -1,26 +1,20 @@
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { differenceInDays, isPast, isToday, format, addWeeks, addMonths } from "date-fns";
 import { nb } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { getEffectiveSignal, CATEGORIES } from "@/lib/categoryUtils";
-import { Loader2, ExternalLink, ChevronDown, ChevronLeft, ChevronRight, Check, Flame, List, Radio } from "lucide-react";
-import { toast } from "sonner";
+import { getEffectiveSignal } from "@/lib/categoryUtils";
+import { Flame, List, ChevronLeft, ChevronRight, Radio, Loader2, MapPin, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { ContactCardContent } from "@/components/ContactCardContent";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cleanDescription } from "@/lib/cleanDescription";
+import { ContactCardContent } from "@/components/ContactCardContent";
 
 /* ── Scoring ── */
 function calcHeatScore(params: {
-  signal: string;
-  isInnkjoper: boolean;
-  hasFinnAd: boolean;
-  hasOverdue: boolean;
-  daysSinceLastContact: number;
+  signal: string; isInnkjoper: boolean; hasMarkedsradar: boolean;
+  hasAktivForespørsel: boolean; hasOverdue: boolean; daysSinceLastContact: number;
 }): number {
   let score = 0;
   if (params.signal === "Behov nå") score += 40;
@@ -28,37 +22,91 @@ function calcHeatScore(params: {
   else if (params.signal === "Får kanskje behov") score += 8;
   else if (params.signal === "Ukjent om behov") score += 2;
   if (params.isInnkjoper) score += 15;
-  if (params.hasFinnAd) score += 12;
+  if (params.hasMarkedsradar) score += 12;
+  if (params.hasMarkedsradar && params.signal === "Behov nå") score += 8;
+  if (params.hasAktivForespørsel) score += 15;
   if (params.hasOverdue) score += 10;
   if (params.daysSinceLastContact > 90) score += 5;
   if (params.daysSinceLastContact > 180) score += 5;
   return score;
 }
 
-function getTemperatureLabel(score: number): { label: string; emoji: string; bg: string; text: string; border: string } {
-  if (score >= 50) return { label: "Hett", emoji: "🔥", bg: "bg-emerald-100", text: "text-emerald-800", border: "border-emerald-200" };
-  if (score >= 25) return { label: "Lovende", emoji: "", bg: "bg-amber-100", text: "text-amber-800", border: "border-amber-200" };
-  if (score >= 10) return { label: "Mulig", emoji: "", bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-200" };
-  return { label: "Sovende", emoji: "", bg: "bg-gray-100", text: "text-gray-500", border: "border-gray-200" };
+function getTemperature(params: {
+  score: number; signal: string; hasOverdue: boolean; hasMarkedsradar: boolean; isInnkjoper: boolean;
+}): "hett" | "lovende" | "mulig" | "sovende" {
+  const { signal, hasOverdue, hasMarkedsradar, isInnkjoper, score } = params;
+  if (signal === "Behov nå" && hasOverdue) return "hett";
+  if (signal === "Behov nå" && hasMarkedsradar) return "hett";
+  if (isInnkjoper && signal === "Behov nå") return "hett";
+  if (signal === "Behov nå") return "lovende";
+  if (hasMarkedsradar && signal === "Får fremtidig behov") return "lovende";
+  if (isInnkjoper && signal === "Får fremtidig behov") return "lovende";
+  if (score >= 35) return "lovende";
+  if (signal === "Får fremtidig behov") return "mulig";
+  if (signal === "Får kanskje behov") return "mulig";
+  if (hasMarkedsradar) return "mulig";
+  if (isInnkjoper) return "mulig";
+  return "sovende";
 }
 
+const TEMP_CONFIG = {
+  hett:    { label: "Hett",    bg: "bg-red-500",    text: "text-white",      dot: "bg-red-500",    bar: "bg-red-500"    },
+  lovende: { label: "Lovende", bg: "bg-orange-400", text: "text-white",      dot: "bg-orange-400", bar: "bg-orange-400" },
+  mulig:   { label: "Mulig",   bg: "bg-amber-400",  text: "text-amber-900",  dot: "bg-amber-400",  bar: "bg-amber-400"  },
+  sovende: { label: "Sovende", bg: "bg-gray-200",   text: "text-gray-600",   dot: "bg-gray-400",   bar: "bg-gray-300"   },
+};
+
 const DATE_CHIPS = [
-  { label: "1 uke", fn: () => addWeeks(new Date(), 1) },
-  { label: "2 uker", fn: () => addWeeks(new Date(), 2) },
-  { label: "1 måned", fn: () => addMonths(new Date(), 1) },
+  { label: "1 uke",     fn: () => addWeeks(new Date(), 1)  },
+  { label: "2 uker",    fn: () => addWeeks(new Date(), 2)  },
+  { label: "1 måned",   fn: () => addMonths(new Date(), 1) },
   { label: "3 måneder", fn: () => addMonths(new Date(), 3) },
 ];
 
+const SIGNAL_CATEGORIES = [
+  { label: "Behov nå",            badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  { label: "Får fremtidig behov", badgeColor: "bg-blue-100 text-blue-800 border-blue-200"          },
+  { label: "Får kanskje behov",   badgeColor: "bg-amber-100 text-amber-800 border-amber-200"       },
+  { label: "Ukjent om behov",     badgeColor: "bg-gray-100 text-gray-600 border-gray-200"          },
+  { label: "Ikke aktuelt",        badgeColor: "bg-red-50 text-red-700 border-red-200"              },
+];
+
 interface ScoredLead {
-  contact: any;
-  signal: string;
-  score: number;
-  temp: ReturnType<typeof getTemperatureLabel>;
-  lastAct: any;
-  nextTask: any;
-  hasOverdue: boolean;
-  hasFinnAd: any; // the finn_annonser row or null
-  isInnkjoper: boolean;
+  contact: any; signal: string; score: number;
+  temperature: "hett" | "lovende" | "mulig" | "sovende";
+  lastAct: any; nextTask: any; hasOverdue: boolean;
+  hasMarkedsradar: boolean; isInnkjoper: boolean; hasAktivForespørsel: boolean;
+}
+
+function buildReasonLine(lead: ScoredLead, daysSince: number): string {
+  const parts: string[] = [];
+  if (lead.signal === "Behov nå" && lead.hasMarkedsradar) {
+    parts.push("Annonserer aktivt på Finn.no med behov nå");
+  } else if (lead.signal === "Behov nå") {
+    parts.push("Aktivt behov nå");
+  } else if (lead.signal === "Får fremtidig behov" && lead.hasMarkedsradar) {
+    parts.push("Annonserer på Finn.no — fremtidig behov");
+  } else if (lead.signal === "Får fremtidig behov") {
+    parts.push("Fremtidig behov signalisert");
+  } else if (lead.signal === "Får kanskje behov") {
+    parts.push("Mulig fremtidig behov");
+  } else if (lead.hasMarkedsradar) {
+    parts.push("Annonserer på Finn.no");
+  }
+  if (lead.isInnkjoper) parts.push("innkjøper");
+  if (lead.hasAktivForespørsel) parts.push("aktiv forespørsel");
+  if (lead.hasOverdue) {
+    parts.push("forfalt oppfølging");
+  } else if (daysSince === 999) {
+    parts.push("aldri kontaktet");
+  } else if (daysSince > 180) {
+    parts.push(`ikke kontaktet på ${daysSince} dager`);
+  } else if (daysSince > 90) {
+    parts.push(`${daysSince} dager siden sist`);
+  }
+  if (parts.length === 0) return "";
+  const joined = parts.join(" · ");
+  return joined.charAt(0).toUpperCase() + joined.slice(1);
 }
 
 /* ── Main Component ── */
@@ -66,630 +114,611 @@ const DailyBrief = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [viewMode, setViewMode] = useState<"kort" | "liste">("kort");
+  const [ownerFilter, setOwnerFilter] = useState(user?.id || "");
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [treated, setTreated] = useState<Set<string>>(new Set());
+  const [activeForm, setActiveForm] = useState<"snooze" | "signal" | null>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [localSignals, setLocalSignals] = useState<Record<string, string>>({});
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const [idx, setIdx] = useState(0);
-  const [treated, setTreated] = useState<Set<string>>(new Set());
-  const [signalOpen, setSignalOpen] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [localSignals, setLocalSignals] = useState<Record<string, string>>({});
-  const [sheetContactId, setSheetContactId] = useState<string | null>(null);
-  const [ownerFilter, setOwnerFilter] = useState(user?.id || "");
-  const [viewMode, setViewMode] = useState<"kort" | "liste">("kort");
+  useEffect(() => {
+    if (user?.id && !ownerFilter) setOwnerFilter(user.id);
+  }, [user?.id]);
 
-  // ── Data queries ──
-  const { data: profiles = [] } = useQuery({
-    queryKey: ["salgssenter-profiles"],
+  const { data: allProfiles = [] } = useQuery({
+    queryKey: ["profiles"],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id, full_name");
-      return data || [];
+      const { data, error } = await supabase.from("profiles").select("id, full_name");
+      if (error) throw error;
+      return data;
     },
   });
 
-  const filterOptions = useMemo(() => {
-    const opts = profiles.map((p: any) => ({ id: p.id, label: p.full_name }));
-    return [{ id: "all", label: "Alle" }, ...opts];
-  }, [profiles]);
-
-  const { data: contacts = [], isLoading } = useQuery({
+  const { data: rawContacts = [], isLoading } = useQuery({
     queryKey: ["salgssenter-contacts", ownerFilter],
     queryFn: async () => {
       let q = supabase
         .from("contacts")
-        .select(`
-          id, first_name, last_name, title, company_id, owner_id,
-          cv_email, call_list, ikke_aktuell_kontakt,
-          companies(id, name, city),
-          activities(created_at, subject, description),
-          tasks(id, created_at, title, description, due_date, status)
-        `)
+        .select("*, companies(id, name, city)")
         .or("ikke_aktuell_kontakt.is.null,ikke_aktuell_kontakt.eq.false");
-      if (ownerFilter !== "all") {
-        q = q.eq("owner_id", ownerFilter);
-      }
-      const { data, error } = await q.order("created_at", { ascending: false }).limit(100);
+      if (ownerFilter && ownerFilter !== "alle") q = q.eq("owner_id", ownerFilter);
+      const { data, error } = await q.limit(500);
       if (error) throw error;
-      return data || [];
+      return data;
     },
   });
 
-  const { data: finnAds = [] } = useQuery({
-    queryKey: ["finn-annonser"],
+  const contactIds = useMemo(() => rawContacts.map((c: any) => c.id), [rawContacts]);
+  const companyIds = useMemo(() => [...new Set(rawContacts.map((c: any) => c.company_id).filter(Boolean))], [rawContacts]);
+
+  const { data: allActivities = [] } = useQuery({
+    queryKey: ["salgssenter-activities", contactIds],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("finn_annonser")
-        .select("*")
-        .order("dato", { ascending: false });
-      return data || [];
+      if (contactIds.length === 0) return [];
+      const { data, error } = await supabase.from("activities").select("*").in("contact_id", contactIds).order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: contactIds.length > 0,
+  });
+
+  const { data: allTasks = [] } = useQuery({
+    queryKey: ["salgssenter-tasks", contactIds],
+    queryFn: async () => {
+      if (contactIds.length === 0) return [];
+      const { data, error } = await supabase.from("tasks").select("*").in("contact_id", contactIds).neq("status", "done").order("due_date", { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: contactIds.length > 0,
+  });
+
+  const { data: techProfiles = [] } = useQuery({
+    queryKey: ["salgssenter-tech", companyIds],
+    queryFn: async () => {
+      if (companyIds.length === 0) return [];
+      const { data, error } = await supabase.from("company_tech_profile").select("company_id, konsulent_hyppighet, sist_fra_finn, teknologier").in("company_id", companyIds);
+      if (error) throw error;
+      return data;
+    },
+    enabled: companyIds.length > 0,
+  });
+
+  const { data: foresporsler = [] } = useQuery({
+    queryKey: ["salgssenter-foresporsler"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("foresporsler").select("id, selskap_id, status").not("status", "in", '("avsluttet","tapt")');
+      if (error) throw error;
+      return data;
     },
   });
 
-  // ── Scored leads ──
-  const scoredLeads = useMemo<ScoredLead[]>(() => {
-    const now = new Date();
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+  const scoredLeads = useMemo(() => {
+    return rawContacts.map((contact: any) => {
+      const contactActs = allActivities.filter((a: any) => a.contact_id === contact.id);
+      const contactTasks = allTasks.filter((t: any) => t.contact_id === contact.id);
+      const signal = getEffectiveSignal(
+        contactActs.map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+        contactTasks.map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date }))
+      );
+      if (signal === "Ikke aktuelt") return null;
+      const lastAct = contactActs[0];
+      const daysSince = lastAct ? differenceInDays(new Date(), new Date(lastAct.created_at)) : 999;
+      const nextTask = contactTasks.find((t: any) => t.due_date);
+      const hasOverdue = nextTask ? isPast(new Date(nextTask.due_date)) && !isToday(new Date(nextTask.due_date)) : false;
+      const techProfile = techProfiles.find((tp: any) => tp.company_id === contact.company_id);
+      const hasMarkedsradar = !!(techProfile?.sist_fra_finn && differenceInDays(new Date(), new Date(techProfile.sist_fra_finn)) <= 90);
+      const hasAktivForespørsel = foresporsler.some((f: any) => f.selskap_id === contact.company_id);
+      const isInnkjoper = !!contact.call_list;
+      const score = calcHeatScore({ signal, isInnkjoper, hasMarkedsradar, hasAktivForespørsel, hasOverdue, daysSinceLastContact: daysSince });
+      const temperature = getTemperature({ score, signal, hasOverdue, hasMarkedsradar, isInnkjoper });
+      return { contact, signal, score, temperature, lastAct, nextTask, hasOverdue, hasMarkedsradar, isInnkjoper, hasAktivForespørsel };
+    }).filter(Boolean).sort((a: any, b: any) => {
+      const tempOrder = { hett: 0, lovende: 1, mulig: 2, sovende: 3 };
+      if (tempOrder[a.temperature] !== tempOrder[b.temperature]) return tempOrder[a.temperature] - tempOrder[b.temperature];
+      return b.score - a.score;
+    }) as ScoredLead[];
+  }, [rawContacts, allActivities, allTasks, techProfiles, foresporsler]);
 
-    return contacts
-      .map((c: any) => {
-        const acts = (c.activities || []).sort((a: any, b: any) => b.created_at.localeCompare(a.created_at));
-        const tasks = (c.tasks || []).filter((t: any) => t.status !== "done");
-        const signal = getEffectiveSignal(
-          acts.map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
-          tasks.map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date }))
-        );
-        if (signal === "Ikke aktuelt") return null;
+  const queue = useMemo(() => scoredLeads.filter(l => !treated.has(l.contact.id)), [scoredLeads, treated]);
+  const current = queue[currentIndex];
+  const treatedCount = treated.size;
 
-        const lastAct = acts[0] || null;
-        const daysSince = lastAct ? differenceInDays(now, new Date(lastAct.created_at)) : 999;
-        const nextTask = tasks
-          .filter((t: any) => t.due_date)
-          .sort((a: any, b: any) => (a.due_date || "").localeCompare(b.due_date || ""))[0] || null;
-        const hasOverdue = nextTask ? isPast(new Date(nextTask.due_date)) && !isToday(new Date(nextTask.due_date)) : false;
+  const daysSinceLast = current?.lastAct ? differenceInDays(new Date(), new Date(current.lastAct.created_at)) : 999;
+  const reasonLine = current ? buildReasonLine(current, daysSinceLast) : "";
+  const currentSignal = current ? (localSignals[current.contact.id] ?? current.signal) : "";
 
-        // Finn.no match — check if company name appears in finn_annonser in last 90 days
-        const companyName = c.companies?.name?.toLowerCase();
-        const finnAd = companyName
-          ? finnAds.find((fa: any) =>
-              fa.selskap?.toLowerCase().includes(companyName) &&
-              new Date(fa.dato) >= ninetyDaysAgo
-            )
-          : null;
-
-        const isInnkjoper = !!c.call_list;
-        const score = calcHeatScore({ signal, isInnkjoper, hasFinnAd: !!finnAd, hasOverdue, daysSinceLastContact: daysSince });
-        const temp = getTemperatureLabel(score);
-
-        return { contact: c, signal, score, temp, lastAct, nextTask, hasOverdue, hasFinnAd: finnAd, isInnkjoper };
-      })
-      .filter(Boolean)
-      .sort((a: any, b: any) => b.score - a.score) as ScoredLead[];
-  }, [contacts, finnAds]);
-
-  const current = scoredLeads[idx];
-  const total = scoredLeads.length;
-
-  // ── Swipe animation ──
   const goNext = useCallback((dir: "left" | "right" = "left") => {
     if (isAnimating) return;
-    const nextIdx = dir === "left" ? idx + 1 : idx - 1;
-    if (nextIdx < 0 || nextIdx >= total) return;
     setIsAnimating(true);
     const card = cardRef.current;
     if (card) {
-      card.style.transition = "transform 200ms ease, opacity 200ms ease";
-      card.style.transform = dir === "left" ? "translateX(-52px)" : "translateX(52px)";
+      card.style.transition = "transform 180ms ease-in, opacity 180ms ease-in";
+      card.style.transform = dir === "left" ? "translateX(-40px)" : "translateX(40px)";
       card.style.opacity = "0";
     }
     setTimeout(() => {
-      setIdx(nextIdx);
+      setActiveForm(null);
+      if (dir === "left") setCurrentIndex(i => Math.min(i + 1, queue.length - 1));
+      else setCurrentIndex(i => Math.max(i - 1, 0));
       if (card) {
         card.style.transition = "none";
-        card.style.transform = dir === "left" ? "translateX(52px)" : "translateX(-52px)";
+        card.style.transform = dir === "left" ? "translateX(40px)" : "translateX(-40px)";
         card.style.opacity = "0";
       }
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (card) {
-            card.style.transition = "transform 180ms ease-out, opacity 180ms ease-out";
-            card.style.transform = "translateX(0)";
-            card.style.opacity = "1";
-          }
-          setIsAnimating(false);
-        });
-      });
-    }, 200);
-  }, [isAnimating, idx, total]);
-
-  // ── Mutations ──
-  const createActivityMutation = useMutation({
-    mutationFn: async (params: { type: string; subject: string; description?: string | null; contactId: string; companyId: string | null }) => {
-      const { error } = await supabase.from("activities").insert({
-        type: params.type, subject: params.subject, description: params.description || null,
-        contact_id: params.contactId, company_id: params.companyId, created_by: user?.id,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["salgssenter-contacts"] });
-    },
-  });
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (card) {
+          card.style.transition = "transform 200ms ease-out, opacity 200ms ease-out";
+          card.style.transform = "translateX(0)";
+          card.style.opacity = "1";
+        }
+        setIsAnimating(false);
+      }));
+    }, 180);
+  }, [isAnimating, queue.length]);
 
   const updateTaskMutation = useMutation({
     mutationFn: async ({ taskId, dueDate }: { taskId: string; dueDate: string }) => {
       const { error } = await supabase.from("tasks").update({ due_date: dueDate, updated_at: new Date().toISOString() }).eq("id", taskId);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["salgssenter-contacts"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["salgssenter-tasks"] }),
   });
 
-  // removed toggleContactField and handleIkkeRelevant — logic is now inline
+  const filterOptions = useMemo(() => {
+    const myProfile = allProfiles.find(p => p.id === user?.id);
+    const myLabel = myProfile?.full_name?.split(" ")[0] || "Mine";
+    const others = allProfiles.filter(p => p.id !== user?.id).map(p => {
+      const parts = p.full_name.split(" ");
+      return { id: p.id, label: parts.length > 2 ? `${parts[0]} ${parts[1][0]}.` : parts[0] };
+    });
+    return [
+      { id: user?.id || "", label: myLabel },
+      { id: "alle", label: "Alle" },
+      ...others,
+    ];
+  }, [allProfiles, user?.id]);
 
-  const progress = total > 0 ? (treated.size / total) * 100 : 0;
-
-  // ── Done state ──
-  if (!isLoading && idx >= total && total > 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <p className="text-3xl mb-3">🎉</p>
-        <p className="text-[1.125rem] font-semibold text-foreground">Alt gjennomgått for i dag</p>
-        <p className="text-[0.8125rem] text-muted-foreground mt-1">{treated.size} kontakter behandlet.</p>
-      </div>
-    );
-  }
+  const progress = scoredLeads.length > 0 ? (treatedCount / scoredLeads.length) * 100 : 0;
 
   return (
-    <div className="space-y-3">
-      {/* ── Filter row ── */}
+    <div className="space-y-4">
+
+      {/* ── Filter + visningsvalg ── */}
       <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-14 flex-shrink-0">Eier</span>
-          <div className="flex items-center gap-1.5 flex-1">
-            {filterOptions.map(opt => (
-              <button
-                key={opt.id}
-                onClick={() => { setOwnerFilter(opt.id); setIdx(0); setTreated(new Set()); }}
-                className={cn(
-                  "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
-                  ownerFilter === opt.id
-                    ? "bg-foreground text-background border-foreground font-medium"
-                    : "border-border text-muted-foreground hover:bg-secondary"
-                )}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center flex-shrink-0 ml-auto">
+        <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-14 flex-shrink-0">Eier</span>
+        <div className="flex items-center gap-1.5 flex-1">
+          {filterOptions.map(opt => (
             <button
-              onClick={() => setViewMode("kort")}
+              key={opt.id}
+              onClick={() => { setOwnerFilter(opt.id); setCurrentIndex(0); setTreated(new Set()); }}
               className={cn(
-                "h-8 px-3 text-[0.8125rem] rounded-l-full border transition-colors inline-flex items-center gap-1.5",
-                viewMode === "kort"
+                "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
+                ownerFilter === opt.id
                   ? "bg-foreground text-background border-foreground font-medium"
                   : "border-border text-muted-foreground hover:bg-secondary"
               )}
             >
-              <Flame className="h-3.5 w-3.5" /> Kort
+              {opt.label}
             </button>
-            <button
-              onClick={() => setViewMode("liste")}
-              className={cn(
-                "h-8 px-3 text-[0.8125rem] rounded-r-full border-t border-b border-r transition-colors inline-flex items-center gap-1.5",
-                viewMode === "liste"
-                  ? "bg-foreground text-background border-foreground font-medium"
-                  : "border-border text-muted-foreground hover:bg-secondary"
-              )}
-            >
-              <List className="h-3.5 w-3.5" /> Liste
-            </button>
-          </div>
+          ))}
+        </div>
+
+        <div className="flex items-center flex-shrink-0 ml-auto">
+          <button
+            onClick={() => setViewMode("kort")}
+            className={cn(
+              "h-8 px-3 text-[0.8125rem] rounded-l-full border transition-colors inline-flex items-center gap-1.5",
+              viewMode === "kort" ? "bg-foreground text-background border-foreground font-medium" : "border-border text-muted-foreground hover:bg-secondary"
+            )}
+          >
+            <Flame className="h-3.5 w-3.5" /> Kort
+          </button>
+          <button
+            onClick={() => setViewMode("liste")}
+            className={cn(
+              "h-8 px-3 text-[0.8125rem] rounded-r-full border-t border-b border-r transition-colors inline-flex items-center gap-1.5",
+              viewMode === "liste" ? "bg-foreground text-background border-foreground font-medium" : "border-border text-muted-foreground hover:bg-secondary"
+            )}
+          >
+            <List className="h-3.5 w-3.5" /> Liste
+          </button>
+        </div>
       </div>
 
-      {/* ── Counter row (kort only) ── */}
+      {/* ── KORTVISNING ── */}
       {viewMode === "kort" && (
-        <div className="flex justify-between text-[0.75rem] text-muted-foreground">
-          <span>{treated.size} behandlet i dag</span>
-          <span>{Math.max(0, total - idx)} igjen</span>
-        </div>
-      )}
+        <div>
 
-      {/* ── Card layout ── */}
-      {viewMode === "kort" && (
-        <>
+          {/* Progressbar */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between text-[0.75rem] text-muted-foreground mb-1.5">
+              <span>{treatedCount} behandlet i dag</span>
+              <span>{queue.length} igjen</span>
+            </div>
+            <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-500"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+
           {isLoading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : total === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-[0.9375rem] text-muted-foreground">Ingen kontakter å vise.</p>
+          ) : queue.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <p className="text-4xl mb-3">🎉</p>
+              <p className="text-[1.125rem] font-semibold text-foreground">Køen er tom!</p>
+              <p className="text-[0.875rem] text-muted-foreground mt-1">Du har behandlet alle leads i dag.</p>
             </div>
           ) : current ? (
-            <div ref={cardRef} className="w-full bg-card border border-border rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden">
-                {/* 1. Progressbar */}
-                <div className="h-[3px] bg-border">
-                  <div className="h-full bg-amber-400 transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
-                </div>
+            <div
+              ref={cardRef}
+              className="w-full bg-card border border-border rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden"
+            >
+              {/* Temperaturstrek øverst */}
+              <div className={cn("h-1", TEMP_CONFIG[current.temperature].bar)} />
 
-                {/* 2. Header row */}
-                <div className="flex items-center gap-2" style={{ padding: "16px 18px 0" }}>
-                  {/* Forrige-pil */}
+              <div className="p-7 space-y-5">
+
+                {/* ── Header: chevrons + badge + Finn.no + åpne-knapp ── */}
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => goNext("right")}
-                    disabled={idx === 0}
+                    disabled={currentIndex === 0}
                     className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-15 disabled:pointer-events-none transition-all"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
 
                   {/* Temperatur-badge */}
-                  <span className={cn(
-                    "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium",
-                    current.temp.bg, current.temp.text, current.temp.border
+                  <div className={cn(
+                    "inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[0.8125rem] font-semibold",
+                    TEMP_CONFIG[current.temperature].bg,
+                    TEMP_CONFIG[current.temperature].text
                   )}>
-                    {current.temp.emoji && `${current.temp.emoji} `}{current.temp.label}
-                  </span>
+                    {current.temperature === "hett" && "🔥"}
+                    {current.temperature === "lovende" && "⚡"}
+                    {current.temperature === "mulig" && "💡"}
+                    {current.temperature === "sovende" && "💤"}
+                    {" "}{TEMP_CONFIG[current.temperature].label}
+                  </div>
 
                   {/* Finn.no-badge */}
-                  {current.hasFinnAd && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 text-[0.6875rem] font-semibold">
-                      <Radio className="h-3 w-3" /> Finn.no
-                    </span>
+                  {current.hasMarkedsradar && (
+                    <div className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-blue-100 text-blue-800 border border-blue-200 text-[0.8125rem] font-semibold">
+                      <Radio className="h-3.5 w-3.5" /> Finn.no
+                    </div>
                   )}
 
-                  {/* Spacer */}
                   <div className="flex-1" />
 
-                  {/* Neste-pil */}
                   <button
                     onClick={() => goNext("left")}
-                    disabled={idx >= total - 1}
+                    disabled={currentIndex >= queue.length - 1}
                     className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-15 disabled:pointer-events-none transition-all"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>
 
-                  {/* Åpne kontakt */}
                   <button
-                    onClick={() => setSheetContactId(current.contact.id)}
-                    className="w-[26px] h-[26px] rounded-lg bg-secondary border border-border inline-flex items-center justify-center hover:bg-muted transition-colors"
+                    onClick={() => setPanelOpen(true)}
+                    className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-lg bg-secondary border border-border text-[0.75rem] text-muted-foreground hover:text-foreground transition-all"
                   >
-                    <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                    ↗
                   </button>
                 </div>
 
-                {/* 3. Name + meta */}
-                <div style={{ padding: "10px 18px 0" }}>
-                  <p className="text-[1.5rem] font-bold text-foreground">
+                {/* ── Begrunnelses-linje ── */}
+                {reasonLine && (
+                  <p className="text-[0.8125rem] text-muted-foreground leading-snug -mt-2">
+                    {reasonLine}
+                  </p>
+                )}
+
+                {/* ── Navn + meta ── */}
+                <div className="space-y-1">
+                  <button
+                    onClick={() => navigate(`/kontakter/${current.contact.id}`)}
+                    className="text-[1.5rem] font-bold text-foreground hover:text-primary transition-colors text-left leading-tight"
+                  >
                     {current.contact.first_name} {current.contact.last_name}
-                  </p>
-                  <p className="flex items-center gap-1.5 text-[0.875rem] text-muted-foreground flex-wrap mt-0.5">
-                    {current.contact.title && <>{current.contact.title} · </>}
+                  </button>
+                  <div className="flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground flex-wrap">
+                    {current.contact.title && <span>{current.contact.title}</span>}
                     {current.contact.companies?.name && (
-                      <button
-                        onClick={() => navigate(`/selskaper/${current.contact.company_id}`)}
-                        className="text-primary hover:underline"
-                      >
-                        {current.contact.companies.name}
-                      </button>
+                      <>
+                        {current.contact.title && <span>·</span>}
+                        <button onClick={() => navigate(`/selskaper/${current.contact.company_id}`)} className="text-primary hover:underline font-medium">
+                          {current.contact.companies.name}
+                        </button>
+                      </>
                     )}
-                    {current.contact.companies?.city && <> · {current.contact.companies.city}</>}
-                  </p>
-                </div>
-
-                {/* 4. Snapshot row */}
-                <div className="mt-[10px] mx-[18px]">
-                  <div className="grid grid-cols-2 divide-x divide-border border border-border rounded-xl overflow-hidden">
-                    {/* SISTE */}
-                    <div className="px-4 py-3 bg-secondary/40">
-                      <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60 mb-1">Siste</p>
-                      {current.lastAct ? (
-                        <>
-                          <p className="text-[0.9375rem] font-medium text-foreground leading-snug">
-                            &ldquo;{cleanDescription(current.lastAct.subject) || current.lastAct.subject}&rdquo;
-                          </p>
-                          <p className="text-[0.8125rem] text-muted-foreground mt-1">
-                            {format(new Date(current.lastAct.created_at), "d. MMM yyyy", { locale: nb })}
-                            {" · "}
-                            {differenceInDays(new Date(), new Date(current.lastAct.created_at))} dager siden
-                          </p>
-                        </>
-                      ) : (
-                        <p className="text-[0.875rem] text-muted-foreground/50 italic">Ingen aktivitet</p>
-                      )}
-                    </div>
-
-                    {/* NESTE OPPFØLGING */}
-                    <div className="px-4 py-3 bg-secondary/40">
-                      <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60 mb-1">Neste oppfølging</p>
-                      {current.nextTask ? (() => {
-                        const overdue = isPast(new Date(current.nextTask.due_date)) && !isToday(new Date(current.nextTask.due_date));
-                        return (
-                          <>
-                            <p className="text-[0.9375rem] font-medium text-foreground leading-snug">
-                              {current.nextTask.title}
-                            </p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <p className={cn("text-[0.8125rem]", overdue ? "text-destructive font-medium" : "text-muted-foreground")}>
-                                {format(new Date(current.nextTask.due_date), "d. MMM yyyy", { locale: nb })}
-                              </p>
-                              {overdue && (
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <button className="text-[0.75rem] text-muted-foreground/50 hover:text-amber-600 transition-colors">
-                                      ↷ utsett
-                                    </button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-auto p-2 flex gap-1.5" align="start">
-                                    {DATE_CHIPS.map(chip => (
-                                      <button
-                                        key={chip.label}
-                                        onClick={() => {
-                                          updateTaskMutation.mutate({ taskId: current.nextTask.id, dueDate: format(chip.fn(), "yyyy-MM-dd") });
-                                          toast.success("Oppfølging utsatt");
-                                        }}
-                                        className="h-7 px-2.5 text-[0.75rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors"
-                                      >
-                                        {chip.label}
-                                      </button>
-                                    ))}
-                                  </PopoverContent>
-                                </Popover>
-                              )}
-                            </div>
-                          </>
-                        );
-                      })() : (
-                        <p className="text-[0.875rem] text-muted-foreground/50 italic">Ingen planlagt</p>
-                      )}
-                    </div>
+                    {current.contact.companies?.city && (
+                      <>
+                        <span>·</span>
+                        <span>{current.contact.companies.city}</span>
+                      </>
+                    )}
                   </div>
                 </div>
 
-                {/* 5. Finn.no strip */}
-                {current.hasFinnAd && (
-                  <div className="mt-2 mx-[18px]">
-                    <div className="bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-2.5" style={{ padding: "9px 12px" }}>
-                      <div className="w-[22px] h-[22px] bg-blue-500 rounded-md flex items-center justify-center shrink-0">
-                        <div className="w-2 h-2 bg-white rounded-sm" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-medium text-blue-800 truncate">
-                          Finn.no: {current.hasFinnAd.teknologier_array?.join(", ") || current.hasFinnAd.teknologier || current.hasFinnAd.stillingsrolle || "Konsulent"}
+                {/* ── Snapshot-grid ── */}
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Siste */}
+                  <div className="space-y-1.5">
+                    <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Siste</p>
+                    {current.lastAct ? (
+                      <>
+                        <p className="text-[0.9375rem] font-medium text-foreground leading-snug">
+                          &ldquo;{current.lastAct.subject}&rdquo;
                         </p>
-                        <p className="text-[10px] text-gray-500">
-                          {format(new Date(current.hasFinnAd.dato), "d. MMM yyyy", { locale: nb })}
-                          {" · "}{differenceInDays(new Date(), new Date(current.hasFinnAd.dato))} dager siden
+                        <p className="text-[0.75rem] text-muted-foreground">
+                          {format(new Date(current.lastAct.created_at), "d. MMM yyyy", { locale: nb })}
+                          {" · "}{daysSinceLast === 999 ? "aldri" : `${daysSinceLast} dager siden`}
                         </p>
-                      </div>
-                      <span className="rounded-full bg-blue-100 text-blue-700 border border-blue-200 text-[10px] px-2 py-0.5 font-medium shrink-0">
-                        Aktiv nå
-                      </span>
+                      </>
+                    ) : (
+                      <p className="text-[0.8125rem] text-muted-foreground/60 italic">Ingen aktivitet</p>
+                    )}
+                  </div>
+
+                  {/* Neste */}
+                  <div className="space-y-1.5">
+                    <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Neste oppfølging</p>
+                    {current.nextTask ? (() => {
+                      const overdue = isPast(new Date(current.nextTask.due_date)) && !isToday(new Date(current.nextTask.due_date));
+                      return (
+                        <>
+                          <p className="text-[0.9375rem] font-medium text-foreground leading-snug">{current.nextTask.title}</p>
+                          <div className="flex items-center gap-2">
+                            <span className={cn(
+                              "text-[0.75rem]",
+                              overdue ? "text-destructive font-medium" : "text-muted-foreground"
+                            )}>
+                              {format(new Date(current.nextTask.due_date), "d. MMM yyyy", { locale: nb })}
+                            </span>
+                            {overdue && (
+                              <button
+                                onClick={() => setActiveForm(activeForm === "snooze" ? null : "snooze")}
+                                className="text-[0.75rem] text-muted-foreground/50 hover:text-amber-600 transition-colors"
+                              >
+                                ↷ utsett
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      );
+                    })() : (
+                      <p className="text-[0.8125rem] text-muted-foreground/60 italic">Ingen planlagt</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Snooze */}
+                {activeForm === "snooze" && current.nextTask && (
+                  <div className="space-y-2">
+                    <p className="text-[0.75rem] font-medium text-muted-foreground">Utsett til:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {DATE_CHIPS.map(chip => (
+                        <button
+                          key={chip.label}
+                          onClick={() => {
+                            updateTaskMutation.mutate({ taskId: current.nextTask.id, dueDate: format(chip.fn(), "yyyy-MM-dd") });
+                            setActiveForm(null);
+                          }}
+                          className="h-7 px-3 text-[0.75rem] rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                        >
+                          {chip.label}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}
 
-                <div className="mt-[10px] border-t border-border" style={{ padding: "10px 18px 0" }}>
-                  <div className="flex items-center gap-2 flex-wrap pt-1">
-                    {/* Signal dropdown */}
-                    <div className="relative" onClick={e => e.stopPropagation()}>
-                      <button
-                        onClick={() => setSignalOpen(!signalOpen)}
-                        className={cn(
-                          "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors cursor-pointer",
-                          (() => {
-                            const sig = localSignals[current.contact.id] ?? current.signal;
-                            return sig
-                              ? CATEGORIES.find(c => c.label === sig)?.badgeColor || "bg-background text-muted-foreground border-border hover:bg-secondary"
-                              : "bg-background text-muted-foreground border-border hover:bg-secondary";
-                          })()
-                        )}
-                      >
-                        {(localSignals[current.contact.id] ?? current.signal) || "Signal"} <ChevronDown className="h-3 w-3 opacity-50" />
-                      </button>
-                      {signalOpen && (
-                        <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-lg shadow-md overflow-hidden min-w-[190px]">
-                          {CATEGORIES.map(cat => (
-                            <button
-                              key={cat.label}
-                              onClick={() => {
-                                const label = cat.label;
-                                setLocalSignals(prev => ({ ...prev, [current.contact.id]: label }));
-                                supabase.from("activities").insert({
-                                  type: "note",
-                                  subject: label,
-                                  description: `[${label}]`,
-                                  contact_id: current.contact.id,
-                                  company_id: current.contact.company_id,
-                                  created_by: user?.id,
-                                }).then(() => {
-                                  queryClient.invalidateQueries({ queryKey: ["salgssenter-contacts", ownerFilter] });
-                                });
-                                setSignalOpen(false);
-                              }}
-                              className="w-full flex items-center gap-2 px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors text-left"
-                            >
-                              <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold", cat.badgeColor)}>
-                                {cat.label}
-                              </span>
-                              {(localSignals[current.contact.id] ?? current.signal) === cat.label && <Check className="ml-auto h-3.5 w-3.5 text-muted-foreground" />}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                {/* ── Finn.no teknologi-fakta ── */}
+                {(() => {
+                  const companyTech = techProfiles.find((tp: any) => tp.company_id === current.contact.company_id);
+                  if (!companyTech?.teknologier) return null;
+                  const topTech = Object.entries(companyTech.teknologier as Record<string, number>)
+                    .sort((a, b) => (b[1] as number) - (a[1] as number))
+                    .slice(0, 5).map(([t]) => t);
+                  if (topTech.length === 0) return null;
+                  return (
+                    <p className="text-[0.8125rem] text-muted-foreground bg-secondary/50 rounded-lg px-3 py-2">
+                      <Radio className="h-3.5 w-3.5 inline mr-1.5 text-blue-600" />
+                      Søker: {topTech.join(", ")}
+                    </p>
+                  );
+                })()}
 
-                    {/* Innkjøper toggle */}
+                {/* ── Toggle-piller ── */}
+                <div className="flex flex-wrap items-center gap-2">
+
+                  {/* Signal */}
+                  <div className="relative">
                     <button
-                      onClick={() => {
-                        supabase.from("contacts")
-                          .update({ call_list: !current.contact.call_list })
-                          .eq("id", current.contact.id)
-                          .then(() => {
-                            queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
-                              old?.map((c: any) => c.id === current.contact.id ? { ...c, call_list: !current.contact.call_list } : c)
-                            );
-                          });
-                      }}
+                      onClick={() => setActiveForm(activeForm === "signal" ? null : "signal")}
                       className={cn(
                         "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
-                        current.contact.call_list
-                          ? "bg-amber-100 text-amber-800 border-amber-200"
+                        currentSignal
+                          ? SIGNAL_CATEGORIES.find(c => c.label === currentSignal)?.badgeColor
                           : "bg-background text-muted-foreground border-border hover:bg-secondary"
                       )}
                     >
-                      Innkjøper
+                      {currentSignal || "Signal"} <ChevronDown className="h-3 w-3" />
                     </button>
-
-                    {/* CV-epost toggle */}
-                    <button
-                      onClick={() => {
-                        supabase.from("contacts")
-                          .update({ cv_email: !current.contact.cv_email })
-                          .eq("id", current.contact.id)
-                          .then(() => {
-                            queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
-                              old?.map((c: any) => c.id === current.contact.id ? { ...c, cv_email: !current.contact.cv_email } : c)
-                            );
-                          });
-                      }}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
-                        current.contact.cv_email
-                          ? "bg-blue-100 text-blue-800 border-blue-200"
-                          : "bg-background text-muted-foreground border-border hover:bg-secondary"
-                      )}
-                    >
-                      CV-epost
-                    </button>
-
-                    {/* Ikke relevant person */}
-                    <button
-                      onClick={() => {
-                        supabase.from("contacts")
-                          .update({ ikke_aktuell_kontakt: !current.contact.ikke_aktuell_kontakt })
-                          .eq("id", current.contact.id)
-                          .then(() => {
-                            queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
-                              old?.map((c: any) => c.id === current.contact.id ? { ...c, ikke_aktuell_kontakt: !current.contact.ikke_aktuell_kontakt } : c)
-                            );
-                          });
-                      }}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
-                        current.contact.ikke_aktuell_kontakt
-                          ? "bg-destructive/10 text-destructive border-destructive/30"
-                          : "bg-background text-muted-foreground border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
-                      )}
-                    >
-                      Ikke relevant person
-                    </button>
+                    {activeForm === "signal" && (
+                      <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-xl shadow-lg py-1 min-w-[200px]">
+                        {SIGNAL_CATEGORIES.map(cat => (
+                          <button
+                            key={cat.label}
+                            onClick={() => {
+                              setLocalSignals(prev => ({ ...prev, [current.contact.id]: cat.label }));
+                              supabase.from("activities").insert({
+                                type: "note", subject: cat.label, description: `[${cat.label}]`,
+                                contact_id: current.contact.id, company_id: current.contact.company_id, created_by: user?.id,
+                              }).then(() => queryClient.invalidateQueries({ queryKey: ["salgssenter-activities"] }));
+                              setActiveForm(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2.5 text-[0.8125rem] hover:bg-secondary transition-colors text-left"
+                          >
+                            <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold", cat.badgeColor)}>
+                              {cat.label}
+                            </span>
+                            {currentSignal === cat.label && <span className="ml-auto text-primary">✓</span>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
+
+                  {/* Innkjøper */}
+                  <button
+                    onClick={() => {
+                      const newVal = !current.contact.call_list;
+                      supabase.from("contacts").update({ call_list: newVal }).eq("id", current.contact.id)
+                        .then(() => queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
+                          old?.map((c: any) => c.id === current.contact.id ? { ...c, call_list: newVal } : c)
+                        ));
+                    }}
+                    className={cn(
+                      "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+                      current.contact.call_list
+                        ? "bg-amber-100 text-amber-800 border-amber-200"
+                        : "bg-background text-muted-foreground border-border hover:bg-secondary"
+                    )}
+                  >
+                    Innkjøper
+                  </button>
+
+                  {/* CV-epost */}
+                  <button
+                    onClick={() => {
+                      const newVal = !current.contact.cv_email;
+                      supabase.from("contacts").update({ cv_email: newVal }).eq("id", current.contact.id)
+                        .then(() => queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
+                          old?.map((c: any) => c.id === current.contact.id ? { ...c, cv_email: newVal } : c)
+                        ));
+                    }}
+                    className={cn(
+                      "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+                      current.contact.cv_email
+                        ? "bg-blue-100 text-blue-800 border-blue-200"
+                        : "bg-background text-muted-foreground border-border hover:bg-secondary"
+                    )}
+                  >
+                    CV-epost
+                  </button>
+
+                  {/* Ikke relevant person */}
+                  <button
+                    onClick={() => {
+                      const newVal = !current.contact.ikke_aktuell_kontakt;
+                      supabase.from("contacts").update({ ikke_aktuell_kontakt: newVal }).eq("id", current.contact.id)
+                        .then(() => queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
+                          old?.map((c: any) => c.id === current.contact.id ? { ...c, ikke_aktuell_kontakt: newVal } : c)
+                        ));
+                    }}
+                    className={cn(
+                      "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+                      current.contact.ikke_aktuell_kontakt
+                        ? "bg-destructive/10 text-destructive border-destructive/30"
+                        : "bg-background text-muted-foreground border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                    )}
+                  >
+                    Ikke relevant person
+                  </button>
                 </div>
 
-                {/* 7. CTA */}
-                <div style={{ padding: "10px 18px 0" }}>
+                {/* ── Ok, neste ── */}
+                <div className="pt-1">
                   <button
                     onClick={() => {
                       setTreated(prev => new Set([...prev, current.contact.id]));
                       setTimeout(() => goNext("left"), 100);
                     }}
-                    disabled={idx >= total - 1 || isAnimating}
-                    className="w-full h-[46px] bg-foreground text-background rounded-xl text-[14px] font-medium hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-40"
+                    className="w-full h-[46px] rounded-xl bg-foreground text-background text-[0.9375rem] font-medium hover:opacity-90 active:scale-[0.99] transition-all"
                   >
                     Ok, neste →
                   </button>
                 </div>
 
-                {/* 8. Dots */}
-                <div className="flex items-center justify-center gap-1 pt-2 pb-3">
-                  {scoredLeads.slice(Math.max(0, idx - 2), idx + 5).map((_, i) => {
-                    const dotIdx = Math.max(0, idx - 2) + i;
-                    return (
-                      <button
-                        key={dotIdx}
-                        onClick={() => { setIdx(dotIdx); setSignalOpen(false); }}
-                        className={cn(
-                          "rounded-full transition-all",
-                          dotIdx === idx ? "w-4 h-2 bg-amber-400" : "w-2 h-2 bg-border hover:bg-muted-foreground/40"
-                        )}
-                      />
-                    );
-                  })}
-                </div>
+              </div>
             </div>
           ) : null}
-        </>
+        </div>
       )}
 
-      {/* ── List view ── */}
+      {/* ── LISTEVISNING ── */}
       {viewMode === "liste" && (
-        <>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : scoredLeads.length === 0 ? (
-            <div className="px-4 py-12 text-center text-[0.875rem] text-muted-foreground">
-              Ingen leads å vise
-            </div>
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          {queue.length === 0 ? (
+            <p className="text-center py-12 text-muted-foreground">Ingen leads å vise</p>
           ) : (
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
-              <div className="divide-y divide-border">
-                {scoredLeads.map(lead => (
+            <div className="divide-y divide-border">
+              {queue.map(lead => {
+                const temp = TEMP_CONFIG[lead.temperature];
+                return (
                   <button
                     key={lead.contact.id}
                     onClick={() => navigate(`/kontakter/${lead.contact.id}`)}
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary/50 transition-colors text-left"
                   >
-                    <div className={cn("w-2 h-2 rounded-full shrink-0 mt-0.5", lead.temp.bg)} />
+                    <div className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", temp.dot)} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-[0.875rem] font-medium text-foreground truncate">
                           {lead.contact.first_name} {lead.contact.last_name}
                         </span>
-                        <span className={cn(
-                          "inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold flex-shrink-0",
-                          CATEGORIES.find(c => c.label === lead.signal)?.badgeColor || "bg-gray-100 text-gray-600 border-gray-200"
-                        )}>
-                          {lead.signal || "—"}
-                        </span>
-                        {lead.hasFinnAd && (
+                        {lead.signal && (
+                          <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold flex-shrink-0", SIGNAL_CATEGORIES.find(c => c.label === lead.signal)?.badgeColor)}>
+                            {lead.signal}
+                          </span>
+                        )}
+                        {lead.hasMarkedsradar && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 text-[0.6875rem] font-semibold flex-shrink-0">
                             <Radio className="h-3 w-3" /> Finn.no
                           </span>
                         )}
+                        {lead.isInnkjoper && (
+                          <span className="inline-flex items-center rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 text-[0.6875rem] font-semibold flex-shrink-0">Innkjøper</span>
+                        )}
                       </div>
-                      <p className="text-[0.75rem] text-muted-foreground truncate mt-0.5">
+                      <p className="text-[0.75rem] text-muted-foreground truncate">
                         {lead.contact.companies?.name}
                         {lead.contact.title && ` · ${lead.contact.title}`}
                         {lead.contact.companies?.city && ` · ${lead.contact.companies.city}`}
                       </p>
                     </div>
-                    <span className={cn(
-                      "text-[0.75rem] font-medium shrink-0 px-2.5 py-0.5 rounded-full",
-                      lead.temp.bg, lead.temp.text
-                    )}>
-                      {lead.temp.label}
+                    <span className={cn("text-[0.75rem] font-medium flex-shrink-0 px-2 py-0.5 rounded-full", temp.bg, temp.text)}>
+                      {temp.label}
                     </span>
                   </button>
-                ))}
-              </div>
+                );
+              })}
             </div>
           )}
-        </>
+        </div>
       )}
 
-      {/* ── Side panel (Sheet) ── */}
-      <Sheet open={!!sheetContactId} onOpenChange={open => !open && setSheetContactId(null)}>
-        <SheetContent className="w-full sm:max-w-2xl p-0 overflow-y-auto">
-          {sheetContactId && (
-            <div className="p-6">
-              <ContactCardContent contactId={sheetContactId} editable />
+      {/* ── Side panel ── */}
+      {current && (
+        <Sheet open={panelOpen} onOpenChange={setPanelOpen}>
+          <SheetContent side="right" className="overflow-y-auto">
+            <div className="pt-6">
+              <ContactCardContent contactId={current.contact.id} />
             </div>
-          )}
-        </SheetContent>
-      </Sheet>
+          </SheetContent>
+        </Sheet>
+      )}
+
     </div>
   );
 };
