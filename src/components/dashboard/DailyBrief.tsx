@@ -365,7 +365,17 @@ const DailyBrief = () => {
               {/* Temperaturstrek øverst */}
               <div className={cn("h-1", TEMP_CONFIG[current.temperature].bar)} />
 
-              <div className="p-7 space-y-5">
+              <div className="flex justify-end px-5 pt-4">
+                <button
+                  onClick={() => setPanelOpen(true)}
+                  className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg bg-secondary border border-border text-[0.75rem] text-muted-foreground hover:text-foreground transition-all"
+                >
+                  <span>↗</span>
+                  <span>Åpne kontakt</span>
+                </button>
+              </div>
+
+              <div className="p-7 pt-3 space-y-5">
 
                 {/* ── Navn + meta ── */}
                 <div className="space-y-1">
