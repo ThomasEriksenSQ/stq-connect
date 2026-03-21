@@ -233,8 +233,9 @@ const DailyBrief = () => {
     setIsAnimating(true);
     const card = cardRef.current;
     if (card) {
-      card.style.transition = "transform 180ms ease-in, opacity 180ms ease-in";
-      card.style.transform = dir === "left" ? "translateX(-40px)" : "translateX(40px)";
+      const outX = dir === "left" ? -70 : 70;
+      card.style.transition = "transform 220ms cubic-bezier(0.4, 0, 1, 1), opacity 200ms cubic-bezier(0.4, 0, 1, 1)";
+      card.style.transform = `translateX(${outX}px) scale(0.96)`;
       card.style.opacity = "0";
     }
     setTimeout(() => {
@@ -242,19 +243,20 @@ const DailyBrief = () => {
       if (dir === "left") setCurrentIndex(i => Math.min(i + 1, queue.length - 1));
       else setCurrentIndex(i => Math.max(i - 1, 0));
       if (card) {
+        const inX = dir === "left" ? 70 : -70;
         card.style.transition = "none";
-        card.style.transform = dir === "left" ? "translateX(40px)" : "translateX(-40px)";
+        card.style.transform = `translateX(${inX}px) scale(0.96)`;
         card.style.opacity = "0";
       }
       requestAnimationFrame(() => requestAnimationFrame(() => {
         if (card) {
-          card.style.transition = "transform 200ms ease-out, opacity 200ms ease-out";
-          card.style.transform = "translateX(0)";
+          card.style.transition = "transform 380ms cubic-bezier(0.32, 0.72, 0, 1), opacity 280ms cubic-bezier(0.32, 0.72, 0, 1)";
+          card.style.transform = "translateX(0) scale(1)";
           card.style.opacity = "1";
         }
         setIsAnimating(false);
       }));
-    }, 180);
+    }, 220);
   }, [isAnimating, queue.length]);
 
   const updateTaskMutation = useMutation({
