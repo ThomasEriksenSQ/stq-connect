@@ -76,6 +76,7 @@ interface ScoredLead {
   temperature: "hett" | "lovende" | "mulig" | "sovende";
   lastAct: any; nextTask: any; hasOverdue: boolean;
   hasMarkedsradar: boolean; isInnkjoper: boolean; hasAktivForespørsel: boolean;
+  hasTidligereForespørsel: boolean;
 }
 
 function buildReasonLine(lead: ScoredLead, daysSince: number): string {
