@@ -883,8 +883,8 @@ const DailyBrief = () => {
                 : rawDesc;
 
               const finalDesc = isSomeday
-                ? (newDesc ? newDesc + "\n[someday]" : "[someday]")
-                : newDesc;
+                ? (withSignal ? withSignal + "\n[someday]" : "[someday]")
+                : (withSignal || null);
 
               await supabase.from("tasks").update({
                 due_date: newDate,
