@@ -259,7 +259,7 @@ const DailyBrief = () => {
               </button>
             ))}
           </div>
-          <div className="flex items-center flex-shrink-0">
+          <div className="flex items-center flex-shrink-0 ml-auto">
             <button
               onClick={() => setViewMode("kort")}
               className={cn(
