@@ -307,18 +307,7 @@ const DailyBrief = () => {
               <p className="text-[0.9375rem] text-muted-foreground">Ingen kontakter å vise.</p>
             </div>
           ) : current ? (
-            <div className="flex items-center gap-2">
-              {/* Left nav chevron */}
-              <button
-                onClick={() => goNext("right")}
-                disabled={idx === 0}
-                className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-20 disabled:pointer-events-none transition-all"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-
-              {/* Card */}
-              <div ref={cardRef} className="flex-1 min-w-0 rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+            <div ref={cardRef} className="w-full bg-card border border-border rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden">
                 {/* 1. Progressbar */}
                 <div className="h-[3px] bg-border">
                   <div className="h-full bg-amber-400 transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
