@@ -863,6 +863,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
               <InlineField value="" onSave={updateField("linkedin")} placeholder="LinkedIn" className="text-[0.8125rem]" />
             </span>
           ) : null}
+        </div>
         {changingCompany &&
         <div className="relative mt-1.5">
             <Input
