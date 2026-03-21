@@ -1,526 +1,865 @@
-import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { getEffectiveSignal, CATEGORIES } from "@/lib/categoryUtils";
-import { calcHeatScore } from "@/lib/heatScore";
 import { differenceInDays, isPast, isToday, format, addWeeks, addMonths } from "date-fns";
 import { nb } from "date-fns/locale";
-import { Flame, Target, ChevronRight, Sparkles, Loader2, Calendar, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getEffectiveSignal } from "@/lib/categoryUtils";
+import { Flame, List, ChevronLeft, ChevronRight, Sparkles, Phone, Calendar, Check, X, Radio, Loader2, MapPin, Building2 } from "lucide-react";
 import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useNavigate } from "react-router-dom";
+
+/* ── Scoring ── */
+function calcHeatScore(params: {
+  signal: string;
+  isInnkjoper: boolean;
+  hasMarkedsradar: boolean;
+  hasAktivForespørsel: boolean;
+  hasOverdue: boolean;
+  daysSinceLastContact: number;
+}): number {
+  let score = 0;
+  if (params.signal === "Behov nå") score += 40;
+  else if (params.signal === "Får fremtidig behov") score += 20;
+  else if (params.signal === "Får kanskje behov") score += 8;
+  else if (params.signal === "Ukjent om behov") score += 2;
+  if (params.isInnkjoper) score += 15;
+  if (params.hasMarkedsradar) score += 12;
+  if (params.hasMarkedsradar && params.signal === "Behov nå") score += 8;
+  if (params.hasAktivForespørsel) score += 15;
+  if (params.hasOverdue) score += 10;
+  if (params.daysSinceLastContact > 90) score += 5;
+  if (params.daysSinceLastContact > 180) score += 5;
+  return score;
+}
+
+function getTemperature(params: {
+  score: number;
+  signal: string;
+  hasOverdue: boolean;
+  hasMarkedsradar: boolean;
+  isInnkjoper: boolean;
+}): "hett" | "lovende" | "mulig" | "sovende" {
+  const { signal, hasOverdue, hasMarkedsradar, isInnkjoper, score } = params;
+  if (signal === "Behov nå" && hasOverdue) return "hett";
+  if (signal === "Behov nå" && hasMarkedsradar) return "hett";
+  if (isInnkjoper && signal === "Behov nå") return "hett";
+  if (signal === "Behov nå") return "lovende";
+  if (hasMarkedsradar && signal === "Får fremtidig behov") return "lovende";
+  if (isInnkjoper && signal === "Får fremtidig behov") return "lovende";
+  if (score >= 35) return "lovende";
+  if (signal === "Får fremtidig behov") return "mulig";
+  if (signal === "Får kanskje behov") return "mulig";
+  if (hasMarkedsradar) return "mulig";
+  if (isInnkjoper) return "mulig";
+  return "sovende";
+}
+
+const TEMP_CONFIG = {
+  hett:    { label: "Hett",    bg: "bg-red-500",    text: "text-white",     dot: "bg-red-500"    },
+  lovende: { label: "Lovende", bg: "bg-orange-400", text: "text-white",     dot: "bg-orange-400" },
+  mulig:   { label: "Mulig",   bg: "bg-amber-400",  text: "text-amber-900", dot: "bg-amber-400"  },
+  sovende: { label: "Sovende", bg: "bg-gray-200",   text: "text-gray-600",  dot: "bg-gray-400"   },
+};
 
 const DATE_CHIPS = [
-  { label: "1 uke", fn: () => addWeeks(new Date(), 1) },
-  { label: "2 uker", fn: () => addWeeks(new Date(), 2) },
-  { label: "1 mnd", fn: () => addMonths(new Date(), 1) },
+  { label: "1 uke",     fn: () => addWeeks(new Date(), 1) },
+  { label: "2 uker",    fn: () => addWeeks(new Date(), 2) },
+  { label: "1 måned",   fn: () => addMonths(new Date(), 1) },
+  { label: "3 måneder", fn: () => addMonths(new Date(), 3) },
 ];
 
-const SIGNAL_OPTIONS = CATEGORIES.map(c => c.label);
+const SIGNAL_CATEGORIES = [
+  { label: "Behov nå",            badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  { label: "Får fremtidig behov", badgeColor: "bg-blue-100 text-blue-800 border-blue-200" },
+  { label: "Får kanskje behov",   badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
+  { label: "Ukjent om behov",     badgeColor: "bg-gray-100 text-gray-600 border-gray-200" },
+  { label: "Ikke aktuelt",        badgeColor: "bg-red-50 text-red-700 border-red-200" },
+];
 
+/* ── Types ── */
+interface ScoredLead {
+  contact: any;
+  signal: string;
+  score: number;
+  temperature: "hett" | "lovende" | "mulig" | "sovende";
+  lastAct: any;
+  nextTask: any;
+  hasOverdue: boolean;
+  hasMarkedsradar: boolean;
+  isInnkjoper: boolean;
+  hasAktivForespørsel: boolean;
+}
+
+/* ── Main Component ── */
 const DailyBrief = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [viewMode, setViewMode] = useState<"kort" | "liste">("kort");
+  const [ownerFilter, setOwnerFilter] = useState(user?.id || "");
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [treated, setTreated] = useState<Set<string>>(new Set());
+  const [animDir, setAnimDir] = useState<"left" | "right" | null>(null);
+  const [aiText, setAiText] = useState<Record<string, string>>({});
+  const [aiLoading, setAiLoading] = useState<string | null>(null);
+  const [activeForm, setActiveForm] = useState<"call" | "meeting" | "task" | "snooze" | "signal" | null>(null);
+  const [formTitle, setFormTitle] = useState("");
+  const [formCategory, setFormCategory] = useState("");
+  const [formDescription, setFormDescription] = useState("");
+  const [formDate, setFormDate] = useState("");
+  const [isAnimating, setIsAnimating] = useState(false);
 
-  const [selectedContact, setSelectedContact] = useState<any>(null);
-  const [aiText, setAiText] = useState<string | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiCache, setAiCache] = useState<Record<string, string>>({});
-  const [oppfolgingDato, setOppfolgingDato] = useState("");
-  const [oppfolgingTittel, setOppfolgingTittel] = useState("Følg opp om behov");
-  const [savingOppfolging, setSavingOppfolging] = useState(false);
-  const [selectedChip, setSelectedChip] = useState<number | null>(null);
-  const [ownerFilter, setOwnerFilter] = useState<string | null>(null); // null = current user initially
+  // Set owner filter when user loads
+  useEffect(() => {
+    if (user?.id && !ownerFilter) setOwnerFilter(user.id);
+  }, [user?.id]);
 
-  // Fetch profiles for the owner filter
-  const { data: profiles } = useQuery({
-    queryKey: ["profiles-for-filter"],
-    staleTime: 10 * 60 * 1000,
+  const { data: allProfiles = [] } = useQuery({
+    queryKey: ["profiles"],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id, full_name");
-      return data || [];
+      const { data, error } = await supabase.from("profiles").select("id, full_name");
+      if (error) throw error;
+      return data;
     },
   });
 
-  // Set initial owner filter to current user once we know both
-  const effectiveOwnerFilter = ownerFilter === undefined ? null : ownerFilter;
-  const activeOwnerId = useMemo(() => {
-    if (effectiveOwnerFilter === "all") return null;
-    if (effectiveOwnerFilter) return effectiveOwnerFilter;
-    return user?.id || null;
-  }, [effectiveOwnerFilter, user?.id]);
-
-  const { data: rawData } = useQuery({
-    queryKey: ["salgssenteret-data"],
-    staleTime: 2 * 60 * 1000,
+  const { data: rawContacts = [], isLoading } = useQuery({
+    queryKey: ["salgssenter-contacts", ownerFilter],
     queryFn: async () => {
-      const [
-        { data: contacts },
-        { data: activities },
-        { data: tasks },
-        { data: foresporsler },
-        { data: oppdrag },
-      ] = await Promise.all([
-        supabase.from("contacts").select("id, first_name, last_name, company_id, call_list, phone, email, owner_id, ikke_aktuell_kontakt, companies(id, name)").or("ikke_aktuell_kontakt.is.null,ikke_aktuell_kontakt.eq.false").limit(500),
-        supabase.from("activities").select("contact_id, created_at, subject, description").not("contact_id", "is", null).order("created_at", { ascending: false }),
-        supabase.from("tasks").select("contact_id, created_at, title, description, due_date, status, assigned_to").not("contact_id", "is", null).neq("status", "done"),
-        supabase.from("foresporsler").select("id, selskap_id, selskap_navn, teknologier, mottatt_dato").gte("mottatt_dato", new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)),
-        supabase.from("stacq_oppdrag").select("id, kandidat, kunde, forny_dato, status").in("status", ["Aktiv", "Oppstart"]),
-      ]);
-      return { contacts: contacts || [], activities: activities || [], tasks: tasks || [], foresporsler: foresporsler || [], oppdrag: oppdrag || [] };
+      let q = supabase
+        .from("contacts")
+        .select("*, companies(id, name, city)")
+        .or("ikke_aktuell_kontakt.is.null,ikke_aktuell_kontakt.eq.false");
+      if (ownerFilter && ownerFilter !== "alle") {
+        q = q.eq("owner_id", ownerFilter);
+      }
+      const { data, error } = await q.limit(500);
+      if (error) throw error;
+      return data;
     },
   });
 
-  // Group activities and tasks by contact_id once
-  const grouped = useMemo(() => {
-    if (!rawData) return { actsByContact: new Map(), tasksByContact: new Map() };
-    const actsByContact = new Map<string, any[]>();
-    for (const a of rawData.activities) {
-      if (!a.contact_id) continue;
-      if (!actsByContact.has(a.contact_id)) actsByContact.set(a.contact_id, []);
-      actsByContact.get(a.contact_id)!.push(a);
-    }
-    const tasksByContact = new Map<string, any[]>();
-    for (const t of rawData.tasks) {
-      if (!t.contact_id) continue;
-      if (!tasksByContact.has(t.contact_id)) tasksByContact.set(t.contact_id, []);
-      tasksByContact.get(t.contact_id)!.push(t);
-    }
-    return { actsByContact, tasksByContact };
-  }, [rawData]);
+  const contactIds = useMemo(() => rawContacts.map((c: any) => c.id), [rawContacts]);
+  const companyIds = useMemo(() => [...new Set(rawContacts.map((c: any) => c.company_id).filter(Boolean))], [rawContacts]);
 
-  const rankedContacts = useMemo(() => {
-    if (!rawData) return [];
-    const { contacts, foresporsler } = rawData;
-    const { actsByContact, tasksByContact } = grouped;
+  const { data: allActivities = [] } = useQuery({
+    queryKey: ["salgssenter-activities", contactIds],
+    queryFn: async () => {
+      if (contactIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("activities").select("*")
+        .in("contact_id", contactIds)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: contactIds.length > 0,
+  });
 
-    return contacts
-      .filter(contact => !activeOwnerId || contact.owner_id === activeOwnerId)
-      .map(contact => {
-        const cActs = actsByContact.get(contact.id) || [];
-        const cTasks = tasksByContact.get(contact.id) || [];
-        const score = calcHeatScore(contact, cActs, cTasks, foresporsler);
+  const { data: allTasks = [] } = useQuery({
+    queryKey: ["salgssenter-tasks", contactIds],
+    queryFn: async () => {
+      if (contactIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("tasks").select("*")
+        .in("contact_id", contactIds)
+        .neq("status", "done")
+        .order("due_date", { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: contactIds.length > 0,
+  });
+
+  const { data: techProfiles = [] } = useQuery({
+    queryKey: ["salgssenter-tech", companyIds],
+    queryFn: async () => {
+      if (companyIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("company_tech_profile")
+        .select("company_id, konsulent_hyppighet, sist_fra_finn")
+        .in("company_id", companyIds);
+      if (error) throw error;
+      return data;
+    },
+    enabled: companyIds.length > 0,
+  });
+
+  const { data: foresporsler = [] } = useQuery({
+    queryKey: ["salgssenter-foresporsler"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("foresporsler")
+        .select("id, selskap_id, status")
+        .not("status", "in", '("avsluttet","tapt")');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Build scored leads
+  const scoredLeads = useMemo<ScoredLead[]>(() => {
+    return rawContacts
+      .map((contact: any) => {
+        const contactActs = allActivities.filter((a: any) => a.contact_id === contact.id);
+        const contactTasks = allTasks.filter((t: any) => t.contact_id === contact.id);
         const signal = getEffectiveSignal(
-          cActs.map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
-          cTasks.map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date }))
+          contactActs.map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+          contactTasks.map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date }))
         );
-        const sisteAkt = cActs[0];
-        const harForfalt = cTasks.some((t: any) => t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date)));
-        return { ...contact, score, signal, sisteAkt, harForfalt, cActs, cTasks };
+        if (signal === "Ikke aktuelt") return null;
+
+        const lastAct = contactActs[0];
+        const daysSince = lastAct ? differenceInDays(new Date(), new Date(lastAct.created_at)) : 999;
+        const nextTask = contactTasks.find((t: any) => t.due_date);
+        const hasOverdue = nextTask ? isPast(new Date(nextTask.due_date)) && !isToday(new Date(nextTask.due_date)) : false;
+        const techProfile = techProfiles.find((tp: any) => tp.company_id === contact.company_id);
+        const hasMarkedsradar = !!(techProfile?.sist_fra_finn &&
+          differenceInDays(new Date(), new Date(techProfile.sist_fra_finn)) <= 90);
+        const hasAktivForespørsel = foresporsler.some((f: any) => f.selskap_id === contact.company_id);
+        const isInnkjoper = !!contact.call_list;
+
+        const score = calcHeatScore({ signal, isInnkjoper, hasMarkedsradar, hasAktivForespørsel, hasOverdue, daysSinceLastContact: daysSince });
+        const temperature = getTemperature({ score, signal, hasOverdue, hasMarkedsradar, isInnkjoper });
+
+        return { contact, signal, score, temperature, lastAct, nextTask, hasOverdue, hasMarkedsradar, isInnkjoper, hasAktivForespørsel };
       })
-      .filter(c => c.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 15);
-  }, [rawData, grouped, activeOwnerId]);
+      .filter(Boolean)
+      .sort((a: any, b: any) => {
+        const tempOrder = { hett: 0, lovende: 1, mulig: 2, sovende: 3 };
+        if (tempOrder[a.temperature as keyof typeof tempOrder] !== tempOrder[b.temperature as keyof typeof tempOrder])
+          return tempOrder[a.temperature as keyof typeof tempOrder] - tempOrder[b.temperature as keyof typeof tempOrder];
+        return b.score - a.score;
+      }) as ScoredLead[];
+  }, [rawContacts, allActivities, allTasks, techProfiles, foresporsler]);
 
-  const konsulenterLedig = useMemo(() => {
-    if (!rawData) return [];
-    return rawData.oppdrag
-      .filter((o: any) => o.forny_dato)
-      .map((o: any) => {
-        const dager = differenceInDays(new Date(o.forny_dato), new Date());
-        return { ...o, dager };
-      })
-      .filter((o: any) => o.dager <= 60)
-      .sort((a: any, b: any) => a.dager - b.dager);
-  }, [rawData]);
+  const queue = useMemo(() => scoredLeads.filter(l => !treated.has(l.contact.id)), [scoredLeads, treated]);
+  const current = queue[currentIndex];
+  const totalToday = scoredLeads.length;
+  const treatedCount = treated.size;
 
-  const stats = useMemo(() => {
-    if (!rawData) return { forfalt: 0, idag: 0, behovNa: 0, foresporsler: 0 };
-    const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10);
+  // Stats
+  const forfalt = allTasks.filter((t: any) => t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date))).length;
+  const iDag = allTasks.filter((t: any) => t.due_date && isToday(new Date(t.due_date))).length;
+  const behovNaa = scoredLeads.filter(l => l.signal === "Behov nå").length;
 
-    // Filter tasks by owner if needed
-    const filteredTasks = activeOwnerId
-      ? rawData.tasks.filter((t: any) => t.assigned_to === activeOwnerId)
-      : rawData.tasks;
+  const goNext = useCallback((dir: "left" | "right" = "left") => {
+    if (isAnimating) return;
+    setIsAnimating(true);
+    setAnimDir(dir);
+    setTimeout(() => {
+      setActiveForm(null);
+      setFormTitle(""); setFormCategory(""); setFormDescription(""); setFormDate("");
+      if (dir === "left") {
+        setCurrentIndex(i => Math.min(i + 1, queue.length - 1));
+      } else {
+        setCurrentIndex(i => Math.max(i - 1, 0));
+      }
+      setAnimDir(null);
+      setIsAnimating(false);
+    }, 220);
+  }, [isAnimating, queue.length]);
 
-    const forfalt = filteredTasks.filter((t: any) => t.due_date && t.due_date < todayStr).length;
-    const idag = filteredTasks.filter((t: any) => t.due_date === todayStr).length;
-    const behovNa = rankedContacts.filter(c => c.signal === "Behov nå").length;
-    return { forfalt, idag, behovNa, foresporsler: rawData.foresporsler.length };
-  }, [rawData, rankedContacts, activeOwnerId]);
+  const markTreated = useCallback((contactId: string) => {
+    setTreated(prev => new Set([...prev, contactId]));
+    setTimeout(() => goNext("left"), 100);
+  }, [goNext]);
 
-  const handleSelectContact = async (contact: any) => {
-    setSelectedContact(contact);
-    setOppfolgingDato("");
-    setOppfolgingTittel("Følg opp om behov");
-    setSelectedChip(null);
-
-    if (aiCache[contact.id]) {
-      setAiText(aiCache[contact.id]);
-      return;
-    }
-
-    setAiText(null);
-    setAiLoading(true);
+  // AI briefing via chat edge function
+  const loadAi = useCallback(async (lead: ScoredLead) => {
+    if (!lead || aiText[lead.contact.id] || aiLoading === lead.contact.id) return;
+    setAiLoading(lead.contact.id);
     try {
-      const sisteAkts = contact.cActs.slice(0, 5).map((a: any) =>
-        `${a.subject}${a.description ? ": " + a.description.slice(0, 100) : ""} (${format(new Date(a.created_at), "d. MMM", { locale: nb })})`
-      ).join("\n");
+      const lastActText = lead.lastAct
+        ? `Siste aktivitet: "${lead.lastAct.subject}" (${format(new Date(lead.lastAct.created_at), "d. MMM yyyy", { locale: nb })})`
+        : "Ingen aktiviteter registrert.";
+      const nextTaskText = lead.nextTask
+        ? `Neste oppfølging: "${lead.nextTask.title}" (${format(new Date(lead.nextTask.due_date), "d. MMM yyyy", { locale: nb })})`
+        : "Ingen planlagte oppfølginger.";
 
-      const { data } = await supabase.functions.invoke("chat", {
+      const { data, error } = await supabase.functions.invoke("chat", {
         body: {
-          system: "Du er en hjelpsom salgsassistent for et norsk IT-konsulentselskap. Gi en kort, konkret briefing på 2 setninger på norsk basert på aktivitetshistorikken. Fokuser på hva som skjedde sist og hva som er anbefalt neste steg.",
+          system: "Du er en erfaren konsulentmegler-assistent. Gi en kort, konkret briefing (maks 2 setninger) om hva selger bør si/fokusere på i neste kontakt med denne personen. Svar kun med briefing-teksten, ingen innledning.",
           messages: [{
             role: "user",
-            content: `Kontakt: ${contact.first_name} ${contact.last_name} hos ${(contact.companies as any)?.name || "ukjent selskap"}\nSignal: ${contact.signal || "ukjent"}\nInnkjøper: ${contact.call_list ? "ja" : "nei"}\nSiste aktiviteter:\n${sisteAkts || "Ingen aktiviteter"}`
+            content: `Kontakt: ${lead.contact.first_name} ${lead.contact.last_name}, ${lead.contact.title || ""} hos ${lead.contact.companies?.name || ""}.\nSignal: ${lead.signal}.\n${lastActText}\n${nextTaskText}\nInnkjøper: ${lead.isInnkjoper ? "Ja" : "Nei"}.\nMarkedsradar aktiv: ${lead.hasMarkedsradar ? "Ja" : "Nei"}.`
           }]
         }
       });
+      if (error) throw error;
       const text = data?.text || "Ingen briefing tilgjengelig.";
-      setAiText(text);
-      setAiCache(prev => ({ ...prev, [contact.id]: text }));
+      setAiText(prev => ({ ...prev, [lead.contact.id]: text }));
     } catch {
-      setAiText("Kunne ikke generere briefing.");
+      setAiText(prev => ({ ...prev, [lead.contact.id]: "Kunne ikke generere briefing." }));
     } finally {
-      setAiLoading(false);
+      setAiLoading(null);
     }
-  };
+  }, [aiText, aiLoading]);
 
-  const handleLagreOppfolging = async () => {
-    if (!selectedContact || !oppfolgingDato) return;
-    setSavingOppfolging(true);
-    try {
-      await supabase.from("tasks").insert({
-        title: oppfolgingTittel,
-        contact_id: selectedContact.id,
-        company_id: selectedContact.company_id,
-        due_date: oppfolgingDato,
-        assigned_to: user?.id,
-        created_by: user?.id,
-        priority: "medium",
-        status: "open",
+  useEffect(() => {
+    if (current) loadAi(current);
+  }, [current?.contact.id]);
+
+  // Mutations
+  const createActivityMutation = useMutation({
+    mutationFn: async ({ type, subject, description, contactId, companyId }: any) => {
+      const { error } = await supabase.from("activities").insert({
+        type, subject, description: description || null,
+        contact_id: contactId, company_id: companyId, created_by: user?.id,
       });
-      toast.success("Oppfølging satt");
-      queryClient.invalidateQueries({ queryKey: ["salgssenteret-data"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-oppfolginger-v3"] });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["salgssenter-activities"] });
+      queryClient.invalidateQueries({ queryKey: ["contact-activities"] });
+    },
+  });
 
-      const idx = rankedContacts.findIndex(c => c.id === selectedContact.id);
-      const neste = rankedContacts[idx + 1];
-      if (neste) handleSelectContact(neste);
-      else setSelectedContact(null);
-    } catch {
-      toast.error("Kunne ikke lagre oppfølging");
-    } finally {
-      setSavingOppfolging(false);
-    }
-  };
-
-  const handleSetSignal = async (contactId: string, companyId: string | null, signalLabel: string) => {
-    try {
-      await supabase.from("activities").insert({
-        subject: signalLabel,
-        type: "note",
-        contact_id: contactId,
-        company_id: companyId,
-        created_by: user?.id,
+  const createTaskMutation = useMutation({
+    mutationFn: async ({ title, description, dueDate, contactId, companyId }: any) => {
+      const { error } = await supabase.from("tasks").insert({
+        title, description: description || null, priority: "medium",
+        due_date: dueDate, contact_id: contactId, company_id: companyId,
+        assigned_to: user?.id, created_by: user?.id,
       });
-      toast.success(`Signal satt: ${signalLabel}`);
-      queryClient.invalidateQueries({ queryKey: ["salgssenteret-data"] });
-    } catch {
-      toast.error("Kunne ikke sette signal");
-    }
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["salgssenter-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["contact-tasks"] });
+    },
+  });
+
+  const updateTaskMutation = useMutation({
+    mutationFn: async ({ taskId, dueDate }: { taskId: string; dueDate: string }) => {
+      const { error } = await supabase.from("tasks").update({ due_date: dueDate, updated_at: new Date().toISOString() }).eq("id", taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["salgssenter-tasks"] }),
+  });
+
+  const markIkkeRelevantMutation = useMutation({
+    mutationFn: async (contactId: string) => {
+      const { error } = await supabase.from("contacts").update({ ikke_aktuell_kontakt: true }).eq("id", contactId);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["salgssenter-contacts"] }),
+  });
+
+  const handleLoggSamtale = () => {
+    if (!formTitle || !formCategory || !current) return;
+    createActivityMutation.mutate({
+      type: activeForm === "call" ? "call" : "meeting",
+      subject: formTitle,
+      description: formCategory ? `[${formCategory}]\n${formDescription}` : formDescription,
+      contactId: current.contact.id,
+      companyId: current.contact.company_id,
+    }, {
+      onSuccess: () => {
+        toast.success(activeForm === "call" ? "Samtale logget" : "Møtereferat logget");
+        markTreated(current.contact.id);
+      }
+    });
   };
 
-  const signalCat = selectedContact ? CATEGORIES.find(c => c.label === selectedContact.signal) : null;
+  const handleNyOppfolging = () => {
+    if (!formTitle || !formDate || !current) return;
+    createTaskMutation.mutate({
+      title: formTitle,
+      description: formCategory ? `[${formCategory}]` : null,
+      dueDate: formDate,
+      contactId: current.contact.id,
+      companyId: current.contact.company_id,
+    }, {
+      onSuccess: () => {
+        toast.success("Oppfølging satt");
+        markTreated(current.contact.id);
+      }
+    });
+  };
 
-  // Build owner filter pills
-  const ownerPills = useMemo(() => {
-    if (!profiles) return [];
-    return [
-      { id: "all", label: "Alle" },
-      ...profiles.map(p => ({
-        id: p.id,
-        label: p.full_name || "Ukjent",
-      })),
-    ];
-  }, [profiles]);
+  const handleSjekket = () => {
+    if (!current) return;
+    createActivityMutation.mutate({
+      type: "check",
+      subject: "Sjekket - ingen endring",
+      description: null,
+      contactId: current.contact.id,
+      companyId: current.contact.company_id,
+    }, {
+      onSuccess: () => {
+        toast.success("Sjekket ✓");
+        markTreated(current.contact.id);
+      }
+    });
+  };
+
+  const handleIkkeRelevant = () => {
+    if (!current) return;
+    markIkkeRelevantMutation.mutate(current.contact.id, {
+      onSuccess: () => {
+        toast.success("Merket som ikke relevant");
+        markTreated(current.contact.id);
+      }
+    });
+  };
+
+  const handleUtsett = (taskId: string, newDate: string) => {
+    updateTaskMutation.mutate({ taskId, dueDate: newDate }, {
+      onSuccess: () => toast.success("Oppfølging utsatt")
+    });
+    setActiveForm(null);
+  };
+
+  const progress = totalToday > 0 ? (treatedCount / totalToday) * 100 : 0;
 
   return (
-    <div className="space-y-4">
-      {/* Owner filter pills */}
-      {ownerPills.length > 1 && (
-        <div className="flex items-center gap-1">
-          {ownerPills.map(pill => {
-            const isActive = pill.id === "all"
-              ? effectiveOwnerFilter === "all"
-              : pill.id === (effectiveOwnerFilter || user?.id);
-            return (
-              <button
-                key={pill.id}
-                onClick={() => setOwnerFilter(pill.id)}
-                className={cn(
-                  "h-7 px-3 text-[0.75rem] rounded-full border transition-colors",
-                  isActive
-                    ? "bg-foreground text-background border-foreground font-medium"
-                    : "border-border text-muted-foreground hover:bg-secondary"
-                )}
-              >
-                {pill.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Live stats */}
+    <div className="space-y-5">
+      {/* ── Stats ── */}
       <div className="grid grid-cols-4 gap-3">
         {[
-          { label: "Forfalt", value: stats.forfalt, color: "text-destructive" },
-          { label: "I dag", value: stats.idag, color: "text-primary" },
-          { label: "Behov nå", value: stats.behovNa, color: "text-emerald-600" },
-          { label: "Forespørsler", value: stats.foresporsler, color: "text-foreground" },
-        ].map(s => (
-          <div key={s.label} className="bg-card border border-border rounded-lg px-4 py-3 text-center">
-            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{s.label}</p>
-            <p className={cn("text-[1.5rem] font-bold", s.color)}>{s.value}</p>
+          { label: "FORFALT", value: forfalt, color: forfalt > 0 ? "text-destructive" : "text-foreground" },
+          { label: "I DAG", value: iDag, color: iDag > 0 ? "text-blue-600" : "text-foreground" },
+          { label: "BEHOV NÅ", value: behovNaa, color: behovNaa > 0 ? "text-emerald-600" : "text-foreground" },
+          { label: "FORESPØRSLER", value: foresporsler.length, color: "text-foreground" },
+        ].map(stat => (
+          <div key={stat.label} className="bg-card border border-border rounded-lg px-4 py-3 text-center">
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{stat.label}</p>
+            <p className={cn("text-[1.5rem] font-bold", stat.color)}>{stat.value}</p>
           </div>
         ))}
       </div>
 
-      {/* Hoved-grid: Leads + Kø-modus */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-4">
-        {/* Venstre: Ranket liste */}
-        <div className="space-y-4">
-          <div className="bg-card border border-border rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.07)] overflow-hidden">
-            <div className="flex items-center gap-2 px-5 pt-4 pb-2">
-              <Flame className="h-4 w-4 text-orange-500" />
-              <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Varmeste leads</h2>
-              <span className="ml-auto text-[0.75rem] text-muted-foreground">{rankedContacts.length}</span>
-            </div>
-
-            <div className="divide-y divide-border">
-              {rankedContacts.length === 0 ? (
-                <p className="px-5 py-8 text-[0.875rem] text-muted-foreground text-center">Ingen varme leads akkurat nå</p>
-              ) : (
-                rankedContacts.map(contact => {
-                  const isSelected = selectedContact?.id === contact.id;
-                  const sigCat = CATEGORIES.find(c => c.label === contact.signal);
-                  return (
-                    <div
-                      key={contact.id}
-                      className={cn(
-                        "flex items-center gap-3 px-4 py-3 transition-colors",
-                        isSelected ? "bg-primary/5 border-l-2 border-l-primary" : "hover:bg-muted/40",
-                        contact.harForfalt && !isSelected && "border-l-2 border-l-destructive"
-                      )}
-                    >
-                      <button
-                        onClick={() => handleSelectContact(contact)}
-                        className="flex-1 min-w-0 text-left"
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[0.875rem] font-medium text-foreground truncate">
-                            {contact.first_name} {contact.last_name}
-                          </span>
-                          {contact.call_list && (
-                            <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0 text-[0.625rem] font-semibold">INN</span>
-                          )}
-                        </div>
-                        <p className="text-[0.75rem] text-muted-foreground truncate">{(contact.companies as any)?.name || ""}</p>
-                      </button>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className={cn("text-[0.8125rem] font-bold", contact.score >= 60 ? "text-emerald-600" : contact.score >= 40 ? "text-amber-600" : "text-muted-foreground")}>{contact.score}p</span>
-
-                        {/* Signal picker popover */}
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <button
-                              className={cn(
-                                "inline-flex items-center rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold max-w-[5.5rem] truncate",
-                                sigCat ? sigCat.badgeColor : "border-border text-muted-foreground/50 bg-transparent"
-                              )}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {contact.signal || "—"}
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-44 p-1" align="end" side="bottom">
-                            {SIGNAL_OPTIONS.map(opt => {
-                              const optCat = CATEGORIES.find(c => c.label === opt);
-                              return (
-                                <button
-                                  key={opt}
-                                  onClick={() => handleSetSignal(contact.id, contact.company_id, opt)}
-                                  className={cn(
-                                    "w-full text-left px-3 py-1.5 text-[0.8125rem] rounded-md hover:bg-muted transition-colors",
-                                    contact.signal === opt && "font-semibold"
-                                  )}
-                                >
-                                  <span className={cn("inline-block w-2 h-2 rounded-full mr-2", optCat?.badgeColor.split(" ")[0])} />
-                                  {opt}
-                                </button>
-                              );
-                            })}
-                          </PopoverContent>
-                        </Popover>
-
-                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
-                      </div>
-                    </div>
-                  );
-                })
+      {/* ── Mode + Owner filter ── */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-1">
+          {[
+            { id: user?.id || "", label: "Mine" },
+            { id: "alle", label: "Alle" },
+            ...allProfiles.filter(p => p.id !== user?.id).map(p => ({ id: p.id, label: p.full_name.split(" ")[0] }))
+          ].map(opt => (
+            <button
+              key={opt.id}
+              onClick={() => { setOwnerFilter(opt.id); setCurrentIndex(0); setTreated(new Set()); }}
+              className={cn(
+                "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
+                ownerFilter === opt.id
+                  ? "bg-foreground text-background border-foreground font-medium"
+                  : "border-border text-muted-foreground hover:bg-secondary"
               )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center">
+          <button
+            onClick={() => setViewMode("kort")}
+            className={cn(
+              "h-8 px-3 text-[0.8125rem] rounded-l-full border transition-colors inline-flex items-center gap-1.5",
+              viewMode === "kort" ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:bg-secondary"
+            )}
+          >
+            <Flame className="h-3.5 w-3.5" /> Kortvisning
+          </button>
+          <button
+            onClick={() => setViewMode("liste")}
+            className={cn(
+              "h-8 px-3 text-[0.8125rem] rounded-r-full border-t border-b border-r transition-colors inline-flex items-center gap-1.5",
+              viewMode === "liste" ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:bg-secondary"
+            )}
+          >
+            <List className="h-3.5 w-3.5" /> Liste
+          </button>
+        </div>
+      </div>
+
+      {viewMode === "kort" && (
+        <div className="space-y-4">
+          {/* ── Progressbar ── */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-[0.75rem] text-muted-foreground">
+              <span>{treatedCount} behandlet i dag</span>
+              <span>{queue.length} igjen</span>
+            </div>
+            <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${progress}%` }}
+              />
             </div>
           </div>
 
-          {/* Konsulenter som nærmer seg ledig */}
-          {konsulenterLedig.length > 0 && (
-            <div className="bg-card border border-border rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.07)] overflow-hidden">
-              <div className="flex items-center gap-2 px-5 pt-4 pb-2">
-                <Calendar className="h-4 w-4 text-primary" />
-                <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Nærmer seg ledig</h2>
-              </div>
-              <div className="divide-y divide-border">
-                {konsulenterLedig.map((o: any) => (
-                  <div key={o.id} className="flex items-center justify-between px-4 py-2.5">
-                    <div>
-                      <p className="text-[0.875rem] font-medium text-foreground">{o.kandidat}</p>
-                      <p className="text-[0.75rem] text-muted-foreground">{o.kunde || "Ukjent kunde"}</p>
-                    </div>
-                    <span className={cn("text-[0.75rem] font-semibold", o.dager <= 0 ? "text-emerald-600" : o.dager <= 14 ? "text-amber-600" : "text-muted-foreground")}>
-                      {o.dager <= 0 ? "Ledig nå" : `Om ${o.dager}d`}
-                    </span>
-                  </div>
-                ))}
-              </div>
+          {/* ── Card ── */}
+          {isLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          )}
-        </div>
+          ) : queue.length === 0 ? (
+            <div className="bg-card border border-border rounded-xl p-12 text-center">
+              <p className="text-3xl mb-2">🎉</p>
+              <p className="text-[1.125rem] font-semibold text-foreground">Køen er tom!</p>
+              <p className="text-[0.875rem] text-muted-foreground mt-1">Du har behandlet alle leads i dag.</p>
+            </div>
+          ) : current ? (
+            <div
+              className={cn(
+                "bg-card border border-border rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden transition-all duration-200",
+                animDir === "left" && "translate-x-[-8px] opacity-90",
+                animDir === "right" && "translate-x-[8px] opacity-90"
+              )}
+            >
+              {/* Temperature bar */}
+              <div className={cn("h-1", TEMP_CONFIG[current.temperature].bg)} />
 
-        {/* Høyre: Kø-modus */}
-        <div className="bg-card border border-border rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.07)] overflow-hidden">
-          {!selectedContact ? (
-            <div className="flex flex-col items-center justify-center h-full min-h-[320px] text-center px-6">
-              <Target className="h-10 w-10 text-muted-foreground/30 mb-3" />
-              <p className="text-[0.9375rem] font-medium text-foreground">Velg en kontakt fra listen</p>
-              <p className="text-[0.8125rem] text-muted-foreground mt-1">Klikk på en lead for å se briefing og sette oppfølging</p>
-            </div>
-          ) : (
-            <div className="p-5 space-y-4">
-              {/* Header */}
-              <div className="flex items-start justify-between">
-                <div>
+              <div className="p-5 space-y-4">
+                {/* ── Header ── */}
+                <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-[1.25rem] font-bold text-foreground">
-                      {selectedContact.first_name} {selectedContact.last_name}
-                    </h3>
-                    {selectedContact.call_list && (
-                      <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2 py-0.5 text-[0.6875rem] font-semibold">Innkjøper</span>
-                    )}
-                    {signalCat && (
-                      <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", signalCat.badgeColor)}>
-                        {selectedContact.signal}
+                    <span className={cn("text-[0.6875rem] font-bold rounded-full px-2 py-0.5", TEMP_CONFIG[current.temperature].bg, TEMP_CONFIG[current.temperature].text)}>
+                      {TEMP_CONFIG[current.temperature].label}
+                    </span>
+                    {current.isInnkjoper && (
+                      <span className="rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-[0.625rem] font-bold">
+                        INN
                       </span>
                     )}
-                    <span className={cn("text-[0.8125rem] font-bold", selectedContact.score >= 60 ? "text-emerald-600" : "text-amber-600")}>Score: {selectedContact.score}p</span>
+                    {current.hasMarkedsradar && (
+                      <span className="rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 text-[0.625rem] font-bold inline-flex items-center gap-1">
+                        <Radio className="h-3 w-3" /> Annonserer
+                      </span>
+                    )}
                   </div>
                   <button
-                    onClick={() => navigate(`/kontakter/${selectedContact.id}`)}
-                    className="text-[0.875rem] text-primary hover:underline mt-0.5"
+                    onClick={() => navigate(`/kontakter/${current.contact.id}`)}
+                    className="text-[1.375rem] font-bold text-foreground hover:text-primary transition-colors text-left"
                   >
-                    {(selectedContact.companies as any)?.name || "Ukjent selskap"} →
+                    {current.contact.first_name} {current.contact.last_name}
+                  </button>
+                  <div className="flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground flex-wrap">
+                    {current.contact.title && <span>{current.contact.title}</span>}
+                    {current.contact.companies?.name && (
+                      <>
+                        {current.contact.title && <span>·</span>}
+                        <button
+                          onClick={() => navigate(`/selskaper/${current.contact.company_id}`)}
+                          className="text-primary hover:underline font-medium"
+                        >
+                          {current.contact.companies.name}
+                        </button>
+                      </>
+                    )}
+                    {current.contact.companies?.city && (
+                      <>
+                        <span>·</span>
+                        <span className="inline-flex items-center gap-0.5">
+                          <MapPin className="h-3 w-3" />
+                          {current.contact.companies.city}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── Snapshot ── */}
+                <div className="space-y-1.5">
+                  {current.lastAct && (
+                    <div className="flex items-baseline gap-1.5 text-[0.8125rem]">
+                      <span className="text-muted-foreground font-medium shrink-0">Siste:</span>
+                      <span className="text-foreground">"{current.lastAct.subject}"</span>
+                      <span className="text-muted-foreground text-[0.75rem]">
+                        {format(new Date(current.lastAct.created_at), "d. MMM yyyy", { locale: nb })}
+                      </span>
+                    </div>
+                  )}
+                  {current.nextTask && (() => {
+                    const overdue = isPast(new Date(current.nextTask.due_date)) && !isToday(new Date(current.nextTask.due_date));
+                    return (
+                      <div className="flex items-baseline gap-1.5 text-[0.8125rem]">
+                        <span className="text-muted-foreground font-medium shrink-0">Neste:</span>
+                        <span className="text-foreground">{current.nextTask.title}</span>
+                        <span className={cn("text-[0.75rem]", overdue ? "text-destructive font-medium" : "text-muted-foreground")}>
+                          {format(new Date(current.nextTask.due_date), "d. MMM yyyy", { locale: nb })}
+                        </span>
+                        {overdue && (
+                          <button
+                            onClick={() => setActiveForm(activeForm === "snooze" ? null : "snooze")}
+                            className="shrink-0 text-[0.6875rem] text-primary hover:underline"
+                          >
+                            Utsett
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
+                  {!current.lastAct && !current.nextTask && (
+                    <p className="text-[0.8125rem] text-muted-foreground/60">Ingen aktiviteter eller oppfølginger ennå</p>
+                  )}
+                </div>
+
+                {/* Snooze form */}
+                {activeForm === "snooze" && current.nextTask && (
+                  <div className="rounded-lg border border-border p-3 space-y-2 animate-in slide-in-from-top-1 duration-150">
+                    <p className="text-[0.75rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">Utsett oppfølging til:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {DATE_CHIPS.map(chip => (
+                        <button
+                          key={chip.label}
+                          onClick={() => handleUtsett(current.nextTask!.id, format(chip.fn(), "yyyy-MM-dd"))}
+                          className="h-7 px-3 text-[0.75rem] rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                        >
+                          {chip.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── AI Briefing ── */}
+                <div className="rounded-lg bg-secondary/40 border border-border/50 p-3 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                    <Sparkles className="h-3 w-3" />
+                    AI-briefing
+                  </div>
+                  {aiLoading === current.contact.id ? (
+                    <div className="flex items-center gap-2 text-[0.8125rem] text-muted-foreground">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Analyserer kontakten...
+                    </div>
+                  ) : aiText[current.contact.id] ? (
+                    <p className="text-[0.8125rem] text-foreground/80 leading-relaxed">{aiText[current.contact.id]}</p>
+                  ) : (
+                    <p className="text-[0.8125rem] text-muted-foreground">Laster briefing...</p>
+                  )}
+                </div>
+
+                {/* ── Inline forms ── */}
+                {(activeForm === "call" || activeForm === "meeting") && (
+                  <div className="rounded-lg border border-border p-4 space-y-3 animate-in slide-in-from-top-1 duration-150">
+                    <p className="text-[0.75rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                      {activeForm === "call" ? "Logg samtale" : "Logg møtereferat"}
+                    </p>
+                    <input
+                      value={formTitle}
+                      onChange={e => setFormTitle(e.target.value)}
+                      placeholder="Tittel (eks: Ringte om C++ behov)"
+                      className="w-full text-[0.875rem] border border-border rounded-md px-3 py-2 bg-background focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    />
+                    <div className="flex flex-wrap gap-1.5">
+                      {SIGNAL_CATEGORIES.map(cat => (
+                        <button
+                          key={cat.label}
+                          onClick={() => setFormCategory(cat.label)}
+                          className={cn(
+                            "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors",
+                            formCategory === cat.label
+                              ? "bg-foreground text-background border-foreground font-medium"
+                              : "border-border text-muted-foreground hover:bg-secondary"
+                          )}
+                        >
+                          {cat.label}
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      value={formDescription}
+                      onChange={e => setFormDescription(e.target.value)}
+                      placeholder="Beskrivelse (valgfritt)"
+                      rows={2}
+                      className="w-full text-[0.875rem] border border-border rounded-md px-3 py-2 bg-background focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleLoggSamtale}
+                        disabled={!formTitle || !formCategory}
+                        className="h-8 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40 transition-colors"
+                      >
+                        Lagre og neste
+                      </button>
+                      <button
+                        onClick={() => setActiveForm(null)}
+                        className="h-8 px-3 text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        Avbryt
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {activeForm === "task" && (
+                  <div className="rounded-lg border border-border p-4 space-y-3 animate-in slide-in-from-top-1 duration-150">
+                    <p className="text-[0.75rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">Ny oppfølging</p>
+                    <input
+                      value={formTitle}
+                      onChange={e => setFormTitle(e.target.value)}
+                      placeholder="Hva skal følges opp?"
+                      className="w-full text-[0.875rem] border border-border rounded-md px-3 py-2 bg-background focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    />
+                    <div className="flex flex-wrap gap-1.5">
+                      {SIGNAL_CATEGORIES.map(cat => (
+                        <button
+                          key={cat.label}
+                          onClick={() => setFormCategory(cat.label)}
+                          className={cn(
+                            "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors",
+                            formCategory === cat.label
+                              ? "bg-foreground text-background border-foreground font-medium"
+                              : "border-border text-muted-foreground hover:bg-secondary"
+                          )}
+                        >
+                          {cat.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {DATE_CHIPS.map(chip => (
+                        <button
+                          key={chip.label}
+                          onClick={() => setFormDate(format(chip.fn(), "yyyy-MM-dd"))}
+                          className={cn(
+                            "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors",
+                            formDate === format(chip.fn(), "yyyy-MM-dd")
+                              ? "bg-primary/10 border-primary/30 text-primary font-medium"
+                              : "border-border text-muted-foreground hover:bg-secondary"
+                          )}
+                        >
+                          {chip.label}
+                        </button>
+                      ))}
+                      <input
+                        type="date"
+                        value={formDate}
+                        onChange={e => setFormDate(e.target.value)}
+                        className="h-7 px-2 text-[0.75rem] rounded-full border border-border text-muted-foreground bg-background"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleNyOppfolging}
+                        disabled={!formTitle || !formDate}
+                        className="h-8 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40 transition-colors"
+                      >
+                        Lagre og neste
+                      </button>
+                      <button
+                        onClick={() => setActiveForm(null)}
+                        className="h-8 px-3 text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        Avbryt
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Action buttons ── */}
+                {!activeForm && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => { setActiveForm("call"); setFormTitle(""); setFormCategory(""); setFormDescription(""); }}
+                      className="h-11 rounded-xl bg-[hsl(var(--success))] text-white text-[0.875rem] font-medium hover:opacity-90 transition-colors inline-flex items-center justify-center gap-2"
+                    >
+                      <Phone className="h-4 w-4" /> Logg samtale
+                    </button>
+                    <button
+                      onClick={() => { setActiveForm("task"); setFormTitle("Følg opp om behov"); setFormCategory(""); setFormDate(""); }}
+                      className="h-11 rounded-xl border border-border bg-background text-foreground text-[0.875rem] font-medium hover:bg-secondary transition-colors inline-flex items-center justify-center gap-2"
+                    >
+                      <Calendar className="h-4 w-4" /> Ny oppfølging
+                    </button>
+                    <button
+                      onClick={handleSjekket}
+                      className="h-11 rounded-xl border border-border bg-background text-muted-foreground text-[0.875rem] font-medium hover:bg-secondary transition-colors inline-flex items-center justify-center gap-2"
+                    >
+                      <Check className="h-4 w-4" /> Sjekket - neste
+                    </button>
+                    <button
+                      onClick={handleIkkeRelevant}
+                      className="h-11 rounded-xl border border-red-200 bg-red-50 text-red-700 text-[0.875rem] font-medium hover:bg-red-100 transition-colors inline-flex items-center justify-center gap-2"
+                    >
+                      <X className="h-4 w-4" /> Ikke relevant
+                    </button>
+                  </div>
+                )}
+
+                {/* ── Navigation ── */}
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    onClick={() => goNext("right")}
+                    disabled={currentIndex === 0}
+                    className="inline-flex items-center gap-1 text-[0.8125rem] text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+                  >
+                    <ChevronLeft className="h-4 w-4" /> Forrige
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {queue.slice(Math.max(0, currentIndex - 2), currentIndex + 5).map((_, i) => {
+                      const idx = Math.max(0, currentIndex - 2) + i;
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => { setCurrentIndex(idx); setActiveForm(null); }}
+                          className={cn(
+                            "rounded-full transition-all",
+                            idx === currentIndex ? "w-4 h-2 bg-primary" : "w-2 h-2 bg-border hover:bg-muted-foreground/40"
+                          )}
+                        />
+                      );
+                    })}
+                  </div>
+                  <button
+                    onClick={() => goNext("left")}
+                    disabled={currentIndex >= queue.length - 1}
+                    className="inline-flex items-center gap-1 text-[0.8125rem] text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+                  >
+                    Neste <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
               </div>
-
-              {/* AI Briefing */}
-              <div className="rounded-lg bg-muted/50 border border-border px-4 py-3">
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">AI-briefing</span>
-                </div>
-                {aiLoading ? (
-                  <div className="flex items-center gap-2 text-[0.8125rem] text-muted-foreground">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Analyserer historikk...
-                  </div>
-                ) : (
-                  <p className="text-[0.8125rem] text-foreground/80 leading-relaxed">{aiText || "Ingen historikk å analysere."}</p>
-                )}
-              </div>
-
-              {/* Siste aktivitet */}
-              {selectedContact.sisteAkt && (
-                <p className="text-[0.8125rem] text-muted-foreground">
-                  <span className="font-medium">Siste:</span> "{selectedContact.sisteAkt.subject}"
-                  {" — "}{format(new Date(selectedContact.sisteAkt.created_at), "d. MMM yyyy", { locale: nb })}
-                </p>
-              )}
-
-              {/* Sett neste oppfølging */}
-              <div className="space-y-2">
-                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Sett neste oppfølging</p>
-                <Input
-                  value={oppfolgingTittel}
-                  onChange={(e) => setOppfolgingTittel(e.target.value)}
-                  placeholder="Tittel på oppfølging"
-                  className="text-[0.875rem]"
-                />
-                <div className="flex items-center gap-2 flex-wrap">
-                  {DATE_CHIPS.map((chip, i) => (
-                    <button
-                      key={chip.label}
-                      onClick={() => {
-                        setOppfolgingDato(format(chip.fn(), "yyyy-MM-dd"));
-                        setSelectedChip(i);
-                      }}
-                      className={cn(
-                        "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
-                        selectedChip === i
-                          ? "bg-primary/10 border-primary/30 text-primary font-medium"
-                          : "border-border text-muted-foreground hover:bg-secondary"
-                      )}
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                  <input
-                    type="date"
-                    value={oppfolgingDato}
-                    onChange={(e) => { setOppfolgingDato(e.target.value); setSelectedChip(null); }}
-                    className="h-8 px-2 text-[0.75rem] rounded-full border border-border text-muted-foreground bg-background"
-                  />
-                </div>
-                {oppfolgingDato && (
-                  <p className="text-[0.75rem] text-muted-foreground">
-                    Frist: {format(new Date(oppfolgingDato), "d. MMMM yyyy", { locale: nb })}
-                  </p>
-                )}
-              </div>
-
-              {/* Knapper */}
-              <div className="flex gap-2 pt-2">
-                <button
-                  onClick={() => {
-                    const idx = rankedContacts.findIndex(c => c.id === selectedContact.id);
-                    const neste = rankedContacts[idx + 1];
-                    if (neste) handleSelectContact(neste);
-                    else setSelectedContact(null);
-                  }}
-                  className="flex-1 h-9 text-[0.8125rem] rounded-lg border border-border text-muted-foreground hover:bg-secondary transition-colors"
-                >
-                  ← Hopp over
-                </button>
-                <button
-                  onClick={handleLagreOppfolging}
-                  disabled={!oppfolgingDato || savingOppfolging}
-                  className="flex-1 h-9 inline-flex items-center justify-center gap-1.5 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {savingOppfolging ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                  Lagre og neste →
-                </button>
-              </div>
             </div>
-          )}
+          ) : null}
         </div>
-      </div>
+      )}
+
+      {viewMode === "liste" && (
+        <div className="bg-card border border-border rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.07)] overflow-hidden">
+          <div className="divide-y divide-border">
+            {scoredLeads.map(lead => {
+              const temp = TEMP_CONFIG[lead.temperature];
+              return (
+                <button
+                  key={lead.contact.id}
+                  onClick={() => navigate(`/kontakter/${lead.contact.id}`)}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary/50 transition-colors text-left"
+                >
+                  <div className={cn("w-2 h-2 rounded-full shrink-0", temp.dot)} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[0.875rem] font-medium text-foreground truncate">
+                        {lead.contact.first_name} {lead.contact.last_name}
+                      </span>
+                      {lead.isInnkjoper && (
+                        <span className="rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-1.5 py-0 text-[0.625rem] font-medium shrink-0">INN</span>
+                      )}
+                      {lead.hasMarkedsradar && (
+                        <span className="rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0 text-[0.625rem] font-medium shrink-0">📡</span>
+                      )}
+                    </div>
+                    <p className="text-[0.75rem] text-muted-foreground truncate">
+                      {lead.contact.companies?.name}
+                      {lead.signal && ` · ${lead.signal}`}
+                    </p>
+                  </div>
+                  <span className={cn("text-[0.75rem] font-medium shrink-0 px-2 py-0.5 rounded-full", temp.bg, temp.text)}>
+                    {temp.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
