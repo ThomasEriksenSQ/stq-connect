@@ -800,18 +800,12 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
               }
             </>
           )}
+          <span className="text-muted-foreground/40">·</span>
+          {editable ?
+          <InlineField value={contact.title || ""} onSave={updateField("title")} placeholder="Stilling" className="text-[0.9375rem]" /> :
+          contact.title && <span>{contact.title}</span>
+          }
         </div>
-
-        {/* Rad 1: Stilling */}
-        {(editable || contact.title) && (
-          <div className="text-[0.875rem] text-muted-foreground mt-0.5">
-            {editable ? (
-              <InlineField value={contact.title || ""} onSave={updateField("title")} placeholder="Stilling" className="text-[0.875rem]" />
-            ) : (
-              <span>{contact.title}</span>
-            )}
-          </div>
-        )}
 
         {/* Rad 2: Kontaktinfo — telefon, epost, linkedin */}
         <div className="flex items-center gap-3 flex-wrap mt-2">
