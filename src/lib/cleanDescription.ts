@@ -14,6 +14,7 @@ const URL_RE = /https?:\/\/[^\s)>\]]+/g;
 export function cleanDescription(text: string | null | undefined): string | null {
   if (!text) return null;
 
+  text = text.replace(/\[someday\]/g, "").trim();
   let cleaned = text;
 
   // Cut at Teams / noise markers
