@@ -96,6 +96,7 @@ function buildReasonLine(lead: ScoredLead, daysSince: number): string {
   }
   if (lead.isInnkjoper) parts.push("innkjøper");
   if (lead.hasAktivForespørsel) parts.push("aktiv forespørsel");
+  else if (lead.hasTidligereForespørsel) parts.push("tidligere forespørsel");
   if (lead.hasOverdue) {
     parts.push("forfalt oppfølging");
   } else if (daysSince === 999) {
