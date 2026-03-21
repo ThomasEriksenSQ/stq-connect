@@ -994,7 +994,7 @@ const DailyBrief = () => {
 
               {/* Signal */}
               <div className="mb-8">
-                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">Signal</p>
+                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">Hva er signalet nå?</p>
                 <div className="grid grid-cols-2 gap-2">
                   {SIGNAL_CATEGORIES.filter(c => c.label !== "Ikke aktuelt").map(cat => (
                     <button
