@@ -899,7 +899,7 @@ const DailyBrief = () => {
 
             await supabase.from("tasks").insert({
               title: "Følg opp om behov",
-              description: newDesc,
+              description: withSignal,
               priority: "medium",
               due_date: newDate,
               contact_id: current.contact.id,
