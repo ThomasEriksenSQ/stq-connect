@@ -255,6 +255,18 @@ export function CompanyCardContent({
     }
   }, [editCompanyOpen, company]);
 
+  // Pre-fill contact location when dialog opens
+  useEffect(() => {
+    if (newContactOpen && company) {
+      const locs = company.city
+        ? company.city.split(",").map((s: string) => s.trim()).filter(Boolean)
+        : [];
+      if (locs.length === 1) {
+        setContactForm(prev => ({ ...prev, location: locs[0] }));
+      }
+    }
+  }, [newContactOpen, company]);
+
   // BRREG lookup when org.nr is 9 digits
   useEffect(() => {
     const cleaned = editForm.org_number.replace(/\s/g, "");
