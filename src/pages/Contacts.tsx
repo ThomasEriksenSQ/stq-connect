@@ -11,8 +11,9 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { relativeDate } from "@/lib/relativeDate";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { nb } from "date-fns/locale";
+import { calcHeatScore, getTemperature, TEMP_CONFIG } from "@/lib/heatScore";
 
 type SortField = "name" | "company" | "title" | "signal" | "owner" | "last_activity" | "priority";
 type SortDir = "asc" | "desc";
@@ -54,7 +55,9 @@ const Contacts = () => {
 
       const contactIds = new Set(data.map(c => c.id));
 
-      const [{ data: acts }, { data: tasks }] = await Promise.all([
+      const companyIds = [...new Set(data.map(c => c.company_id).filter(Boolean))];
+
+      const [{ data: acts }, { data: tasks }, { data: techProfiles }, { data: foresporsler }] = await Promise.all([
         supabase
           .from("activities")
           .select("contact_id, created_at, description, subject")
@@ -66,6 +69,10 @@ const Contacts = () => {
           .select("contact_id, created_at, due_date, status, description, title")
           .not("contact_id", "is", null)
           .limit(5000),
+        companyIds.length > 0
+          ? supabase.from("company_tech_profile").select("company_id, sist_fra_finn, teknologier").in("company_id", companyIds)
+          : Promise.resolve({ data: [] }),
+        supabase.from("foresporsler").select("selskap_id, mottatt_dato, status").not("status", "in", '("avsluttet","tapt")'),
       ]);
 
       // Last activity date map — only past activities count
@@ -111,12 +118,36 @@ const Contacts = () => {
         }
       });
 
-      const rows = data.map(c => ({
-        ...c,
-        lastActivity: lastActMap[c.id] || null,
-        signal: signalMap[c.id] || null,
-        openTasks: openTasksMap[c.id] || { count: 0, overdue: false },
-      }));
+      const rows = data.map(c => {
+        const lastActivity = lastActMap[c.id] || null;
+        const signal = signalMap[c.id] || null;
+        const openTasks = openTasksMap[c.id] || { count: 0, overdue: false };
+        const isInnkjoper = !!c.call_list;
+        const techProfile = (techProfiles || []).find((tp: any) => tp.company_id === c.company_id);
+        const hasMarkedsradar = !!(techProfile?.sist_fra_finn && differenceInDays(new Date(), new Date(techProfile.sist_fra_finn)) <= 90);
+        const hasAktivForespørsel = (foresporsler || []).some((f: any) =>
+          f.selskap_id === c.company_id &&
+          f.mottatt_dato &&
+          differenceInDays(new Date(), new Date(f.mottatt_dato)) <= 45
+        );
+        const daysSince = lastActivity ? differenceInDays(new Date(), new Date(lastActivity)) : 999;
+        const heatScore = signal === "Ikke aktuelt" ? -1000 : calcHeatScore({
+          signal: signal || "",
+          isInnkjoper,
+          hasMarkedsradar,
+          hasAktivForespørsel,
+          hasOverdue: openTasks.overdue,
+          daysSinceLastContact: daysSince,
+        });
+        const temperature = signal === "Ikke aktuelt" ? "sovende" : getTemperature({
+          score: heatScore,
+          signal: signal || "",
+          hasOverdue: openTasks.overdue,
+          hasMarkedsradar,
+          isInnkjoper,
+        });
+        return { ...c, lastActivity, signal, openTasks, heatScore, temperature, hasMarkedsradar };
+      });
 
       return { rows, totalCount: count ?? data.length, capped: data.length < (count ?? 0) };
     },
@@ -226,27 +257,6 @@ const Contacts = () => {
     return matchSearch && matchOwner && matchSignal && matchType;
   });
 
-function calcContactHeatScore(contact: any): number {
-  const signal = contact.signal as string | null;
-  if (signal === "Ikke aktuelt") return -1000;
-  let score = 0;
-  if (signal === "Behov nå") score += 100;
-  else if (signal === "Får fremtidig behov") score += 60;
-  else if (signal === "Får kanskje behov") score += 30;
-  else if (signal === "Ukjent om behov") score += 10;
-  else score += 5;
-  if (contact.call_list) score += 20;
-  if (contact.openTasks?.overdue) score += 15;
-  if (contact.openTasks?.count > 0) score += 5;
-  if (contact.cv_email) score += 5;
-  if (!contact.lastActivity) score -= 10;
-  else {
-    const days = Math.floor((Date.now() - new Date(contact.lastActivity).getTime()) / 86400000);
-    if (days > 180) score -= 5;
-    else if (days > 90) score -= 2;
-  }
-  return score;
-}
 
   const SIGNAL_ORDER: Record<string, number> = {
     "Behov nå": 0,
@@ -276,7 +286,7 @@ function calcContactHeatScore(contact: any): number {
         if (!(b as any).lastActivity) return -1;
         return dir * (a as any).lastActivity.localeCompare((b as any).lastActivity);
       case "priority":
-        return dir * (calcContactHeatScore(b) - calcContactHeatScore(a));
+        return dir * ((b as any).heatScore - (a as any).heatScore);
       default: return 0;
     }
   });
@@ -402,11 +412,9 @@ function calcContactHeatScore(contact: any): number {
                 <div key={contact.id} className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)_90px_90px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75">
                   {/* NAME - clickable */}
                   <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="min-w-0 text-left cursor-pointer flex items-center gap-2">
-                    {hotListActive && (() => {
-                      const score = calcContactHeatScore(contact);
-                      const dotColor = score >= 80 ? "bg-red-500" : score >= 40 ? "bg-orange-400" : score >= 20 ? "bg-amber-400" : score <= -100 ? "bg-gray-200" : "bg-gray-300";
-                      return <span className={cn("w-2 h-2 rounded-full flex-shrink-0", dotColor)} />;
-                    })()}
+                    {hotListActive && (
+                      <span className={cn("w-2 h-2 rounded-full flex-shrink-0", TEMP_CONFIG[(contact as any).temperature as keyof typeof TEMP_CONFIG]?.dot || "bg-gray-300")} />
+                    )}
                     <p className="text-[0.8125rem] font-medium text-foreground truncate">
                       {contact.first_name} {contact.last_name}
                     </p>
