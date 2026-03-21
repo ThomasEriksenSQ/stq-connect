@@ -95,7 +95,18 @@ const OppfolgingerSection = () => {
   let filtered = tasks.filter((t) => {
     if (fadingIds.has(t.id)) return false;
     const sig = getContactSignal(t.contact_id);
-    return sig !== "Ikke aktuelt";
+    if (sig === "Ikke aktuelt") return false;
+    // Exclude someday tasks from main list
+    if (!t.due_date && t.description?.includes("[someday]")) return false;
+    return true;
+  });
+
+  // Someday tasks — separate group
+  const somedayTasks = tasks.filter((t) => {
+    if (fadingIds.has(t.id)) return false;
+    const sig = getContactSignal(t.contact_id);
+    if (sig === "Ikke aktuelt") return false;
+    return !t.due_date && t.description?.includes("[someday]");
   });
 
   // 2. Owner filter
@@ -143,6 +154,18 @@ const OppfolgingerSection = () => {
   const isAllFilter = naarFilter === "Alle";
   const hiddenCount = isAllFilter && sorted.length > MAX_UNFILTERED ? sorted.length - MAX_UNFILTERED : 0;
   const visible = isAllFilter ? sorted.slice(0, MAX_UNFILTERED) : sorted;
+
+  // Someday filtered by owner + signal
+  const filteredSomeday = somedayTasks.filter((t) => {
+    if (ownerFilter !== "all" && t.assigned_to !== ownerFilter && t.created_by !== ownerFilter) return false;
+    if (signalFilter !== "Alle" && getContactSignal(t.contact_id) !== signalFilter) return false;
+    return true;
+  }).sort((a, b) => {
+    const sa = SIGNAL_PRIORITY[getContactSignal(a.contact_id)] ?? CATEGORIES.length;
+    const sb = SIGNAL_PRIORITY[getContactSignal(b.contact_id)] ?? CATEGORIES.length;
+    if (sa !== sb) return sa - sb;
+    return 0;
+  });
 
   // Empty state for "Forfalt + I dag" — show this week fallback
   const showForfaltEmpty = naarFilter === "Forfalt + I dag" && visible.length === 0;
@@ -364,6 +387,30 @@ const OppfolgingerSection = () => {
           </>);
 
       })()}
+
+      {/* Someday tasks */}
+      {filteredSomeday.length > 0 && (
+        <div className="mt-6">
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">
+            Følg opp på sikt · {filteredSomeday.length}
+          </p>
+          <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+            {filteredSomeday.map((task, i) =>
+              <TaskRow
+                key={task.id}
+                task={task}
+                isLast={i === filteredSomeday.length - 1}
+                profiles={profiles}
+                signal={getContactSignal(task.contact_id)}
+                fadingIds={fadingIds}
+                onComplete={handleComplete}
+                onChangeOwner={handleChangeOwner}
+                onChangeSignal={handleChangeSignal}
+                onPostpone={handlePostpone} />
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Follow-up modal */}
       <FollowUpModal
