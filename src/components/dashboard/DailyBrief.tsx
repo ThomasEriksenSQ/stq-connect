@@ -69,7 +69,8 @@ const DailyBrief = () => {
   const cardRef = useRef<HTMLDivElement>(null);
 
   const [idx, setIdx] = useState(0);
-  const [treated, setTreated] = useState(0);
+  const [treated, setTreated] = useState<Set<string>>(new Set());
+  const [signalOpen, setSignalOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [sheetContactId, setSheetContactId] = useState<string | null>(null);
 
