@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -129,13 +129,13 @@ const DailyBrief = () => {
   const [ownerFilter, setOwnerFilter] = useState(user?.id || "");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [treated, setTreated] = useState<Set<string>>(new Set());
-  const [slideDir, setSlideDir] = useState<"out-left" | "out-right" | "in-right" | "in-left" | "idle">("idle");
   const [activeForm, setActiveForm] = useState<"call" | "meeting" | "task" | "snooze" | "signal" | null>(null);
   const [formTitle, setFormTitle] = useState("");
   const [formCategory, setFormCategory] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formDate, setFormDate] = useState("");
   const [isAnimating, setIsAnimating] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (user?.id && !ownerFilter) setOwnerFilter(user.id);
@@ -267,7 +267,12 @@ const DailyBrief = () => {
   const goNext = useCallback((dir: "left" | "right" = "left") => {
     if (isAnimating) return;
     setIsAnimating(true);
-    setSlideDir(dir === "left" ? "out-left" : "out-right");
+    const card = cardRef.current;
+    if (card) {
+      card.style.transition = "transform 180ms ease-in, opacity 180ms ease-in";
+      card.style.transform = dir === "left" ? "translateX(-40px)" : "translateX(40px)";
+      card.style.opacity = "0";
+    }
     setTimeout(() => {
       setActiveForm(null);
       setFormTitle(""); setFormCategory(""); setFormDescription(""); setFormDate("");
@@ -276,11 +281,21 @@ const DailyBrief = () => {
       } else {
         setCurrentIndex(i => Math.max(i - 1, 0));
       }
-      setSlideDir(dir === "left" ? "in-right" : "in-left");
-      setTimeout(() => {
-        setSlideDir("idle");
-        setIsAnimating(false);
-      }, 20);
+      if (card) {
+        card.style.transition = "none";
+        card.style.transform = dir === "left" ? "translateX(40px)" : "translateX(-40px)";
+        card.style.opacity = "0";
+      }
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (card) {
+            card.style.transition = "transform 200ms ease-out, opacity 200ms ease-out";
+            card.style.transform = "translateX(0)";
+            card.style.opacity = "1";
+          }
+          setIsAnimating(false);
+        });
+      });
     }, 180);
   }, [isAnimating, queue.length]);
 
@@ -402,16 +417,26 @@ const DailyBrief = () => {
 
   const progress = totalToday > 0 ? (treatedCount / totalToday) * 100 : 0;
 
+  // Build filter labels
+  const filterOptions = useMemo(() => {
+    const myLabel = allProfiles.find(p => p.id === user?.id)?.full_name?.split(" ")[0] || "Mine";
+    const others = allProfiles.filter(p => p.id !== user?.id).map(p => {
+      const parts = p.full_name.split(" ");
+      return { id: p.id, label: parts.length > 2 ? `${parts[0]} ${parts[1][0]}.` : parts[0] };
+    });
+    return [
+      { id: user?.id || "", label: myLabel },
+      { id: "alle", label: "Alle" },
+      ...others,
+    ];
+  }, [allProfiles, user?.id]);
+
   return (
     <div className="space-y-5">
       {/* ── Mode + Owner filter ── */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-1">
-          {[
-            { id: user?.id || "", label: "Mine" },
-            { id: "alle", label: "Alle" },
-            ...allProfiles.filter(p => p.id !== user?.id).map(p => ({ id: p.id, label: p.full_name.split(" ")[0] }))
-          ].map(opt => (
+          {filterOptions.map(opt => (
             <button
               key={opt.id}
               onClick={() => { setOwnerFilter(opt.id); setCurrentIndex(0); setTreated(new Set()); }}
@@ -478,24 +503,17 @@ const DailyBrief = () => {
             </div>
           ) : current ? (
             <div
-              className={cn(
-                "bg-card border border-border rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden",
-                "transition-all duration-200 ease-out",
-                slideDir === "out-left" && "translate-x-[-30px] opacity-0",
-                slideDir === "out-right" && "translate-x-[30px] opacity-0",
-                slideDir === "in-right" && "translate-x-[30px] opacity-0",
-                slideDir === "in-left" && "translate-x-[-30px] opacity-0",
-                slideDir === "idle" && "translate-x-0 opacity-100",
-              )}
+              ref={cardRef}
+              className="bg-card border border-border rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden"
             >
               {/* Temperature bar */}
               <div className={cn("h-1", TEMP_CONFIG[current.temperature].bg)} />
 
-              <div className="p-5 space-y-4">
+              <div className="p-7 space-y-6">
                 {/* ── Temp + badges ── */}
-                <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center gap-2 mb-2">
                   <div className={cn(
-                    "inline-flex items-center gap-1.5 rounded-xl px-4 py-1.5 text-[0.9375rem] font-bold",
+                    "inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[0.8125rem] font-semibold",
                     TEMP_CONFIG[current.temperature].bg,
                     TEMP_CONFIG[current.temperature].text
                   )}>
@@ -507,15 +525,15 @@ const DailyBrief = () => {
                   </div>
 
                   {current.hasMarkedsradar && (
-                    <div className="inline-flex items-center gap-1.5 rounded-xl bg-blue-500 text-white px-3 py-1.5 text-[0.8125rem] font-semibold">
+                    <div className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-blue-100 text-blue-800 border border-blue-200 text-[0.8125rem] font-semibold">
                       <Radio className="h-3.5 w-3.5" /> Annonserer på Finn.no
                     </div>
                   )}
 
                   {current.isInnkjoper && (
-                    <span className="rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1 text-[0.8125rem] font-medium">
+                    <div className="inline-flex items-center h-8 px-3 rounded-full bg-amber-100 text-amber-800 border border-amber-200 text-[0.8125rem] font-semibold">
                       Innkjøper
-                    </span>
+                    </div>
                   )}
                 </div>
 
@@ -560,7 +578,7 @@ const DailyBrief = () => {
                         Siste
                       </span>
                       <span className="text-[0.9375rem] font-medium text-foreground truncate">
-                        "{current.lastAct.subject}"
+                        &ldquo;{current.lastAct.subject}&rdquo;
                       </span>
                       <span className="text-[0.8125rem] text-muted-foreground shrink-0 ml-auto">
                         {format(new Date(current.lastAct.created_at), "d. MMM yyyy", { locale: nb })}
@@ -615,6 +633,42 @@ const DailyBrief = () => {
                     </div>
                   </div>
                 )}
+
+                {/* ── Raske toggles ── */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      supabase.from("contacts")
+                        .update({ call_list: !current.contact.call_list })
+                        .eq("id", current.contact.id)
+                        .then(() => queryClient.invalidateQueries({ queryKey: ["salgssenter-contacts"] }));
+                    }}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+                      current.contact.call_list
+                        ? "bg-amber-100 text-amber-800 border-amber-300"
+                        : "bg-background text-muted-foreground border-border hover:bg-secondary"
+                    )}
+                  >
+                    {current.contact.call_list ? "✓ Innkjøper" : "+ Innkjøper"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      supabase.from("contacts")
+                        .update({ cv_email: !current.contact.cv_email })
+                        .eq("id", current.contact.id)
+                        .then(() => queryClient.invalidateQueries({ queryKey: ["salgssenter-contacts"] }));
+                    }}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+                      current.contact.cv_email
+                        ? "bg-blue-100 text-blue-800 border-blue-300"
+                        : "bg-background text-muted-foreground border-border hover:bg-secondary"
+                    )}
+                  >
+                    {current.contact.cv_email ? "✓ CV-epost" : "+ CV-epost"}
+                  </button>
+                </div>
 
                 {/* ── Faktabriefing ── */}
                 {(() => {
@@ -756,25 +810,25 @@ const DailyBrief = () => {
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => { setActiveForm("call"); setFormTitle(""); setFormCategory(""); setFormDescription(""); }}
-                      className="h-11 rounded-xl bg-[hsl(var(--success))] text-white text-[0.875rem] font-medium hover:opacity-90 transition-colors inline-flex items-center justify-center gap-2"
+                      className="h-12 rounded-xl border-2 border-[hsl(var(--success))] bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] text-[0.875rem] font-semibold hover:bg-[hsl(var(--success))]/20 transition-colors inline-flex items-center justify-center gap-2"
                     >
                       <Phone className="h-4 w-4" /> Logg samtale
                     </button>
                     <button
                       onClick={() => { setActiveForm("task"); setFormTitle("Følg opp om behov"); setFormCategory(""); setFormDate(""); }}
-                      className="h-11 rounded-xl border border-border bg-background text-foreground text-[0.875rem] font-medium hover:bg-secondary transition-colors inline-flex items-center justify-center gap-2"
+                      className="h-12 rounded-xl border-2 border-primary bg-primary/10 text-primary text-[0.875rem] font-semibold hover:bg-primary/20 transition-colors inline-flex items-center justify-center gap-2"
                     >
                       <Calendar className="h-4 w-4" /> Ny oppfølging
                     </button>
                     <button
                       onClick={handleIkkeRelevant}
-                      className="h-11 rounded-xl border border-red-200 bg-red-50 text-red-700 text-[0.875rem] font-medium hover:bg-red-100 transition-colors inline-flex items-center justify-center gap-2"
+                      className="h-12 rounded-xl border-2 border-destructive/30 bg-destructive/5 text-destructive text-[0.875rem] font-semibold hover:bg-destructive/10 transition-colors inline-flex items-center justify-center gap-2"
                     >
                       <X className="h-4 w-4" /> Ikke relevant
                     </button>
                     <button
                       onClick={handleSjekket}
-                      className="h-11 rounded-xl border border-border bg-background text-muted-foreground text-[0.875rem] font-medium hover:bg-secondary transition-colors inline-flex items-center justify-center gap-2"
+                      className="h-12 rounded-xl border-2 border-border bg-background text-muted-foreground text-[0.875rem] font-semibold hover:bg-secondary transition-colors inline-flex items-center justify-center gap-2"
                     >
                       <Check className="h-4 w-4" /> Sjekket - neste
                     </button>
@@ -840,7 +894,9 @@ const DailyBrief = () => {
                         <span className="rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-1.5 py-0 text-[0.625rem] font-medium shrink-0">Innkjøper</span>
                       )}
                       {lead.hasMarkedsradar && (
-                        <span className="rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0 text-[0.625rem] font-medium shrink-0">📡</span>
+                        <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0 text-[0.625rem] font-medium shrink-0">
+                          <Radio className="h-3 w-3 text-blue-500" /> Finn.no
+                        </span>
                       )}
                     </div>
                     <p className="text-[0.75rem] text-muted-foreground truncate">
