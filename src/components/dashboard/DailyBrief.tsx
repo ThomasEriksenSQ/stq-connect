@@ -398,36 +398,41 @@ const DailyBrief = () => {
               </div>
             )}
 
-            {/* 6. Toggle row */}
             <div className="mt-[10px] border-t border-border" style={{ padding: "10px 18px 0" }}>
               <div className="flex flex-wrap items-center gap-1.5">
                 {/* Signal dropdown */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button className={cn(
+                <div className="relative" onClick={e => e.stopPropagation()}>
+                  <button
+                    onClick={() => setSignalOpen(!signalOpen)}
+                    className={cn(
                       "inline-flex items-center gap-1 rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors",
                       current.signal
                         ? CATEGORIES.find(c => c.label === current.signal)?.badgeColor || "border-border bg-secondary text-muted-foreground"
                         : "border-border bg-secondary text-muted-foreground"
-                    )}>
-                      {current.signal || "Signal"} <ChevronDown className="h-3 w-3" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-1.5 space-y-0.5" align="start">
-                    {CATEGORIES.map(cat => (
-                      <button
-                        key={cat.label}
-                        onClick={() => handleSignalChange(cat.label)}
-                        className={cn(
-                          "w-full text-left rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors hover:bg-secondary",
-                          cat.badgeColor
-                        )}
-                      >
-                        {cat.label}
-                      </button>
-                    ))}
-                  </PopoverContent>
-                </Popover>
+                    )}
+                  >
+                    {current.signal || "Signal"} <ChevronDown className="h-3 w-3 opacity-50" />
+                  </button>
+                  {signalOpen && (
+                    <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-lg shadow-md overflow-hidden min-w-[190px]">
+                      {CATEGORIES.map(cat => (
+                        <button
+                          key={cat.label}
+                          onClick={() => {
+                            handleSignalChange(cat.label);
+                            setSignalOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors text-left"
+                        >
+                          <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold", cat.badgeColor)}>
+                            {cat.label}
+                          </span>
+                          {current.signal === cat.label && <Check className="ml-auto h-3.5 w-3.5 text-muted-foreground" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 {/* Innkjøper toggle */}
                 <button
@@ -435,7 +440,7 @@ const DailyBrief = () => {
                   className={cn(
                     "rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors",
                     current.contact.call_list
-                      ? "bg-blue-50 text-blue-800 border-blue-200"
+                      ? "bg-amber-100 text-amber-800 border-amber-200"
                       : "border-border bg-secondary text-muted-foreground"
                   )}
                 >
@@ -448,7 +453,7 @@ const DailyBrief = () => {
                   className={cn(
                     "rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors",
                     current.contact.cv_email
-                      ? "bg-green-50 text-green-800 border-green-200"
+                      ? "bg-blue-100 text-blue-800 border-blue-200"
                       : "border-border bg-secondary text-muted-foreground"
                   )}
                 >
@@ -458,14 +463,9 @@ const DailyBrief = () => {
                 {/* Ikke relevant person */}
                 <button
                   onClick={handleIkkeRelevant}
-                  className={cn(
-                    "rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors",
-                    current.contact.ikke_aktuell_kontakt
-                      ? "bg-red-50 text-red-800 border-red-200"
-                      : "border-border bg-secondary text-muted-foreground"
-                  )}
+                  className="rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors border-border bg-secondary text-muted-foreground hover:bg-red-50 hover:text-red-700 hover:border-red-200"
                 >
-                  {current.contact.ikke_aktuell_kontakt ? "✕ " : ""}Ikke relevant person
+                  Ikke relevant person
                 </button>
               </div>
             </div>
