@@ -6,7 +6,7 @@ import { differenceInDays, isPast, isToday, format, addWeeks, addMonths } from "
 import { nb } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { getEffectiveSignal } from "@/lib/categoryUtils";
-import { Flame, List, ChevronLeft, ChevronRight, Sparkles, Phone, Calendar, Check, X, Radio, Loader2, MapPin, Building2 } from "lucide-react";
+import { Flame, List, ChevronLeft, ChevronRight, Phone, Calendar, Check, X, Radio, Loader2, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -78,7 +78,6 @@ const SIGNAL_CATEGORIES = [
   { label: "Ikke aktuelt",        badgeColor: "bg-red-50 text-red-700 border-red-200" },
 ];
 
-/* ── Types ── */
 interface ScoredLead {
   contact: any;
   signal: string;
@@ -92,6 +91,35 @@ interface ScoredLead {
   hasAktivForespørsel: boolean;
 }
 
+/* ── Fact briefing (local, no API) ── */
+function buildFactBrief(lead: ScoredLead, techProfile: any): string[] {
+  const facts: string[] = [];
+
+  if (techProfile?.teknologier) {
+    const topTech = Object.entries(techProfile.teknologier as Record<string, number>)
+      .sort((a, b) => (b[1] as number) - (a[1] as number))
+      .slice(0, 4)
+      .map(([t]) => t);
+    if (topTech.length > 0) {
+      facts.push(`Finn.no: søker ${topTech.join(", ")}`);
+    }
+  }
+
+  if (techProfile?.sist_fra_finn) {
+    const days = differenceInDays(new Date(), new Date(techProfile.sist_fra_finn));
+    facts.push(`Sist annonsert for ${days} dager siden`);
+  }
+
+  if (lead.lastAct) {
+    const days = differenceInDays(new Date(), new Date(lead.lastAct.created_at));
+    facts.push(`Sist kontaktet for ${days} dager siden`);
+  } else {
+    facts.push("Aldri kontaktet");
+  }
+
+  return facts;
+}
+
 /* ── Main Component ── */
 const DailyBrief = () => {
   const { user } = useAuth();
@@ -101,9 +129,7 @@ const DailyBrief = () => {
   const [ownerFilter, setOwnerFilter] = useState(user?.id || "");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [treated, setTreated] = useState<Set<string>>(new Set());
-  const [animDir, setAnimDir] = useState<"left" | "right" | null>(null);
-  const [aiText, setAiText] = useState<Record<string, string>>({});
-  const [aiLoading, setAiLoading] = useState<string | null>(null);
+  const [slideDir, setSlideDir] = useState<"out-left" | "out-right" | "in-right" | "in-left" | "idle">("idle");
   const [activeForm, setActiveForm] = useState<"call" | "meeting" | "task" | "snooze" | "signal" | null>(null);
   const [formTitle, setFormTitle] = useState("");
   const [formCategory, setFormCategory] = useState("");
@@ -111,7 +137,6 @@ const DailyBrief = () => {
   const [formDate, setFormDate] = useState("");
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // Set owner filter when user loads
   useEffect(() => {
     if (user?.id && !ownerFilter) setOwnerFilter(user.id);
   }, [user?.id]);
@@ -179,7 +204,7 @@ const DailyBrief = () => {
       if (companyIds.length === 0) return [];
       const { data, error } = await supabase
         .from("company_tech_profile")
-        .select("company_id, konsulent_hyppighet, sist_fra_finn")
+        .select("company_id, konsulent_hyppighet, sist_fra_finn, teknologier")
         .in("company_id", companyIds);
       if (error) throw error;
       return data;
@@ -199,7 +224,6 @@ const DailyBrief = () => {
     },
   });
 
-  // Build scored leads
   const scoredLeads = useMemo<ScoredLead[]>(() => {
     return rawContacts
       .map((contact: any) => {
@@ -240,15 +264,10 @@ const DailyBrief = () => {
   const totalToday = scoredLeads.length;
   const treatedCount = treated.size;
 
-  // Stats
-  const forfalt = allTasks.filter((t: any) => t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date))).length;
-  const iDag = allTasks.filter((t: any) => t.due_date && isToday(new Date(t.due_date))).length;
-  const behovNaa = scoredLeads.filter(l => l.signal === "Behov nå").length;
-
   const goNext = useCallback((dir: "left" | "right" = "left") => {
     if (isAnimating) return;
     setIsAnimating(true);
-    setAnimDir(dir);
+    setSlideDir(dir === "left" ? "out-left" : "out-right");
     setTimeout(() => {
       setActiveForm(null);
       setFormTitle(""); setFormCategory(""); setFormDescription(""); setFormDate("");
@@ -257,50 +276,18 @@ const DailyBrief = () => {
       } else {
         setCurrentIndex(i => Math.max(i - 1, 0));
       }
-      setAnimDir(null);
-      setIsAnimating(false);
-    }, 220);
+      setSlideDir(dir === "left" ? "in-right" : "in-left");
+      setTimeout(() => {
+        setSlideDir("idle");
+        setIsAnimating(false);
+      }, 20);
+    }, 180);
   }, [isAnimating, queue.length]);
 
   const markTreated = useCallback((contactId: string) => {
     setTreated(prev => new Set([...prev, contactId]));
     setTimeout(() => goNext("left"), 100);
   }, [goNext]);
-
-  // AI briefing via chat edge function
-  const loadAi = useCallback(async (lead: ScoredLead) => {
-    if (!lead || aiText[lead.contact.id] || aiLoading === lead.contact.id) return;
-    setAiLoading(lead.contact.id);
-    try {
-      const lastActText = lead.lastAct
-        ? `Siste aktivitet: "${lead.lastAct.subject}" (${format(new Date(lead.lastAct.created_at), "d. MMM yyyy", { locale: nb })})`
-        : "Ingen aktiviteter registrert.";
-      const nextTaskText = lead.nextTask
-        ? `Neste oppfølging: "${lead.nextTask.title}" (${format(new Date(lead.nextTask.due_date), "d. MMM yyyy", { locale: nb })})`
-        : "Ingen planlagte oppfølginger.";
-
-      const { data, error } = await supabase.functions.invoke("chat", {
-        body: {
-          system: "Du er en erfaren konsulentmegler-assistent. Gi en kort, konkret briefing (maks 2 setninger) om hva selger bør si/fokusere på i neste kontakt med denne personen. Svar kun med briefing-teksten, ingen innledning.",
-          messages: [{
-            role: "user",
-            content: `Kontakt: ${lead.contact.first_name} ${lead.contact.last_name}, ${lead.contact.title || ""} hos ${lead.contact.companies?.name || ""}.\nSignal: ${lead.signal}.\n${lastActText}\n${nextTaskText}\nInnkjøper: ${lead.isInnkjoper ? "Ja" : "Nei"}.\nMarkedsradar aktiv: ${lead.hasMarkedsradar ? "Ja" : "Nei"}.`
-          }]
-        }
-      });
-      if (error) throw error;
-      const text = data?.text || "Ingen briefing tilgjengelig.";
-      setAiText(prev => ({ ...prev, [lead.contact.id]: text }));
-    } catch {
-      setAiText(prev => ({ ...prev, [lead.contact.id]: "Kunne ikke generere briefing." }));
-    } finally {
-      setAiLoading(null);
-    }
-  }, [aiText, aiLoading]);
-
-  useEffect(() => {
-    if (current) loadAi(current);
-  }, [current?.contact.id]);
 
   // Mutations
   const createActivityMutation = useMutation({
@@ -417,21 +404,6 @@ const DailyBrief = () => {
 
   return (
     <div className="space-y-5">
-      {/* ── Stats ── */}
-      <div className="grid grid-cols-4 gap-3">
-        {[
-          { label: "FORFALT", value: forfalt, color: forfalt > 0 ? "text-destructive" : "text-foreground" },
-          { label: "I DAG", value: iDag, color: iDag > 0 ? "text-blue-600" : "text-foreground" },
-          { label: "BEHOV NÅ", value: behovNaa, color: behovNaa > 0 ? "text-emerald-600" : "text-foreground" },
-          { label: "FORESPØRSLER", value: foresporsler.length, color: "text-foreground" },
-        ].map(stat => (
-          <div key={stat.label} className="bg-card border border-border rounded-lg px-4 py-3 text-center">
-            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{stat.label}</p>
-            <p className={cn("text-[1.5rem] font-bold", stat.color)}>{stat.value}</p>
-          </div>
-        ))}
-      </div>
-
       {/* ── Mode + Owner filter ── */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-1">
@@ -507,32 +479,48 @@ const DailyBrief = () => {
           ) : current ? (
             <div
               className={cn(
-                "bg-card border border-border rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden transition-all duration-200",
-                animDir === "left" && "translate-x-[-8px] opacity-90",
-                animDir === "right" && "translate-x-[8px] opacity-90"
+                "bg-card border border-border rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden",
+                "transition-all duration-200 ease-out",
+                slideDir === "out-left" && "translate-x-[-30px] opacity-0",
+                slideDir === "out-right" && "translate-x-[30px] opacity-0",
+                slideDir === "in-right" && "translate-x-[30px] opacity-0",
+                slideDir === "in-left" && "translate-x-[-30px] opacity-0",
+                slideDir === "idle" && "translate-x-0 opacity-100",
               )}
             >
               {/* Temperature bar */}
               <div className={cn("h-1", TEMP_CONFIG[current.temperature].bg)} />
 
               <div className="p-5 space-y-4">
+                {/* ── Temp + badges ── */}
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={cn(
+                    "inline-flex items-center gap-1.5 rounded-xl px-4 py-1.5 text-[0.9375rem] font-bold",
+                    TEMP_CONFIG[current.temperature].bg,
+                    TEMP_CONFIG[current.temperature].text
+                  )}>
+                    {current.temperature === "hett" && "🔥"}
+                    {current.temperature === "lovende" && "⚡"}
+                    {current.temperature === "mulig" && "💡"}
+                    {current.temperature === "sovende" && "💤"}
+                    {" "}{TEMP_CONFIG[current.temperature].label}
+                  </div>
+
+                  {current.hasMarkedsradar && (
+                    <div className="inline-flex items-center gap-1.5 rounded-xl bg-blue-500 text-white px-3 py-1.5 text-[0.8125rem] font-semibold">
+                      <Radio className="h-3.5 w-3.5" /> Annonserer på Finn.no
+                    </div>
+                  )}
+
+                  {current.isInnkjoper && (
+                    <span className="rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1 text-[0.8125rem] font-medium">
+                      Innkjøper
+                    </span>
+                  )}
+                </div>
+
                 {/* ── Header ── */}
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={cn("text-[0.6875rem] font-bold rounded-full px-2 py-0.5", TEMP_CONFIG[current.temperature].bg, TEMP_CONFIG[current.temperature].text)}>
-                      {TEMP_CONFIG[current.temperature].label}
-                    </span>
-                    {current.isInnkjoper && (
-                      <span className="rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-[0.625rem] font-bold">
-                        INN
-                      </span>
-                    )}
-                    {current.hasMarkedsradar && (
-                      <span className="rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 text-[0.625rem] font-bold inline-flex items-center gap-1">
-                        <Radio className="h-3 w-3" /> Annonserer
-                      </span>
-                    )}
-                  </div>
                   <button
                     onClick={() => navigate(`/kontakter/${current.contact.id}`)}
                     className="text-[1.375rem] font-bold text-foreground hover:text-primary transition-colors text-left"
@@ -565,12 +553,16 @@ const DailyBrief = () => {
                 </div>
 
                 {/* ── Snapshot ── */}
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   {current.lastAct && (
-                    <div className="flex items-baseline gap-1.5 text-[0.8125rem]">
-                      <span className="text-muted-foreground font-medium shrink-0">Siste:</span>
-                      <span className="text-foreground">"{current.lastAct.subject}"</span>
-                      <span className="text-muted-foreground text-[0.75rem]">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground/60 shrink-0 w-12">
+                        Siste
+                      </span>
+                      <span className="text-[0.9375rem] font-medium text-foreground truncate">
+                        "{current.lastAct.subject}"
+                      </span>
+                      <span className="text-[0.8125rem] text-muted-foreground shrink-0 ml-auto">
                         {format(new Date(current.lastAct.created_at), "d. MMM yyyy", { locale: nb })}
                       </span>
                     </div>
@@ -578,20 +570,26 @@ const DailyBrief = () => {
                   {current.nextTask && (() => {
                     const overdue = isPast(new Date(current.nextTask.due_date)) && !isToday(new Date(current.nextTask.due_date));
                     return (
-                      <div className="flex items-baseline gap-1.5 text-[0.8125rem]">
-                        <span className="text-muted-foreground font-medium shrink-0">Neste:</span>
-                        <span className="text-foreground">{current.nextTask.title}</span>
-                        <span className={cn("text-[0.75rem]", overdue ? "text-destructive font-medium" : "text-muted-foreground")}>
-                          {format(new Date(current.nextTask.due_date), "d. MMM yyyy", { locale: nb })}
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground/60 shrink-0 w-12">
+                          Neste
                         </span>
-                        {overdue && (
-                          <button
-                            onClick={() => setActiveForm(activeForm === "snooze" ? null : "snooze")}
-                            className="shrink-0 text-[0.6875rem] text-primary hover:underline"
-                          >
-                            Utsett
-                          </button>
-                        )}
+                        <span className="text-[0.9375rem] font-medium text-foreground truncate">
+                          {current.nextTask.title}
+                        </span>
+                        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                          <span className={cn("text-[0.8125rem] font-medium", overdue ? "text-destructive" : "text-muted-foreground")}>
+                            {format(new Date(current.nextTask.due_date), "d. MMM yyyy", { locale: nb })}
+                          </span>
+                          {overdue && (
+                            <button
+                              onClick={() => setActiveForm(activeForm === "snooze" ? null : "snooze")}
+                              className="text-[0.75rem] text-primary hover:underline font-medium"
+                            >
+                              Utsett
+                            </button>
+                          )}
+                        </div>
                       </div>
                     );
                   })()}
@@ -618,23 +616,22 @@ const DailyBrief = () => {
                   </div>
                 )}
 
-                {/* ── AI Briefing ── */}
-                <div className="rounded-lg bg-secondary/40 border border-border/50 p-3 space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                    <Sparkles className="h-3 w-3" />
-                    AI-briefing
-                  </div>
-                  {aiLoading === current.contact.id ? (
-                    <div className="flex items-center gap-2 text-[0.8125rem] text-muted-foreground">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Analyserer kontakten...
+                {/* ── Faktabriefing ── */}
+                {(() => {
+                  const companyTech = techProfiles.find((tp: any) => tp.company_id === current.contact.company_id);
+                  const facts = buildFactBrief(current, companyTech);
+                  if (facts.length === 0) return null;
+                  return (
+                    <div className="flex flex-wrap gap-1.5">
+                      {facts.map((fact, i) => (
+                        <span key={i} className="inline-flex items-center gap-1 rounded-full bg-muted/60 border border-border px-2.5 py-1 text-[0.75rem] text-muted-foreground">
+                          {i === 0 && companyTech?.teknologier && <Radio className="h-3 w-3 text-blue-500 shrink-0" />}
+                          {fact}
+                        </span>
+                      ))}
                     </div>
-                  ) : aiText[current.contact.id] ? (
-                    <p className="text-[0.8125rem] text-foreground/80 leading-relaxed">{aiText[current.contact.id]}</p>
-                  ) : (
-                    <p className="text-[0.8125rem] text-muted-foreground">Laster briefing...</p>
-                  )}
-                </div>
+                  );
+                })()}
 
                 {/* ── Inline forms ── */}
                 {(activeForm === "call" || activeForm === "meeting") && (
@@ -770,16 +767,16 @@ const DailyBrief = () => {
                       <Calendar className="h-4 w-4" /> Ny oppfølging
                     </button>
                     <button
-                      onClick={handleSjekket}
-                      className="h-11 rounded-xl border border-border bg-background text-muted-foreground text-[0.875rem] font-medium hover:bg-secondary transition-colors inline-flex items-center justify-center gap-2"
-                    >
-                      <Check className="h-4 w-4" /> Sjekket - neste
-                    </button>
-                    <button
                       onClick={handleIkkeRelevant}
                       className="h-11 rounded-xl border border-red-200 bg-red-50 text-red-700 text-[0.875rem] font-medium hover:bg-red-100 transition-colors inline-flex items-center justify-center gap-2"
                     >
                       <X className="h-4 w-4" /> Ikke relevant
+                    </button>
+                    <button
+                      onClick={handleSjekket}
+                      className="h-11 rounded-xl border border-border bg-background text-muted-foreground text-[0.875rem] font-medium hover:bg-secondary transition-colors inline-flex items-center justify-center gap-2"
+                    >
+                      <Check className="h-4 w-4" /> Sjekket - neste
                     </button>
                   </div>
                 )}
@@ -840,7 +837,7 @@ const DailyBrief = () => {
                         {lead.contact.first_name} {lead.contact.last_name}
                       </span>
                       {lead.isInnkjoper && (
-                        <span className="rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-1.5 py-0 text-[0.625rem] font-medium shrink-0">INN</span>
+                        <span className="rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-1.5 py-0 text-[0.625rem] font-medium shrink-0">Innkjøper</span>
                       )}
                       {lead.hasMarkedsradar && (
                         <span className="rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0 text-[0.625rem] font-medium shrink-0">📡</span>
