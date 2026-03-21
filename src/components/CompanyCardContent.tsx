@@ -873,8 +873,8 @@ export function CompanyCardContent({
           </div>
         </div>
 
-        {/* Org.nr · city */}
-        <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap mt-0.5">
+        {/* Org.nr · city · phone · links */}
+        <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap mt-0.5">
           {company.org_number && <span>Org.nr {company.org_number}</span>}
           {company.city &&
           company.city.
@@ -888,30 +888,27 @@ export function CompanyCardContent({
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
-            
                   <MapPin className="h-3.5 w-3.5" />
                   {loc}
                 </a>
           )}
-        </div>
-
-        {/* Phone · links */}
-        <div className="flex items-center gap-2 flex-wrap text-[0.9375rem] text-foreground/70 mt-1">
           {company.phone &&
-          <a href={`tel:${company.phone}`} className="inline-flex items-center gap-1 hover:text-foreground">
-              <Phone className="h-3 w-3" />
-              {company.phone}
-            </a>
+          <>
+              <span className="text-muted-foreground/40">·</span>
+              <a href={`tel:${company.phone}`} className="inline-flex items-center gap-1 hover:text-foreground">
+                <Phone className="h-3 w-3" />
+                {company.phone}
+              </a>
+            </>
           }
           {company.website &&
           <>
-              {company.phone && <span className="text-muted-foreground/40">·</span>}
+              <span className="text-muted-foreground/40">·</span>
               <a
               href={company.website}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-primary hover:underline">
-              
                 <Globe className="h-3 w-3" />
                 {company.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
               </a>
@@ -925,7 +922,6 @@ export function CompanyCardContent({
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-primary hover:underline">
-              
                 <Linkedin className="h-3 w-3" />
                 LinkedIn
               </a>
@@ -937,7 +933,6 @@ export function CompanyCardContent({
               <a
               href={`mailto:${company.email}`}
               className="inline-flex items-center gap-1 text-primary hover:underline">
-              
                 <Mail className="h-3 w-3" />
                 {company.email}
               </a>
