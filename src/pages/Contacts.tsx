@@ -335,6 +335,25 @@ function calcContactHeatScore(contact: any): number {
             {SIGNAL_OPTIONS.map((s) => (
               <Chip key={s.label} label={s.label} value={s.label} current={signalFilter} onSelect={setSignalFilter} />
             ))}
+            <div className="w-px h-5 bg-border mx-1" />
+            <button
+              onClick={() => {
+                const next = !hotListActive;
+                setHotListActive(next);
+                setSort(next
+                  ? { field: "priority", dir: "desc" }
+                  : { field: "signal", dir: "asc" }
+                );
+              }}
+              className={cn(
+                "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer inline-flex items-center gap-1.5",
+                hotListActive
+                  ? "bg-red-500 text-white border-red-500 font-medium"
+                  : "border-border text-muted-foreground hover:bg-secondary"
+              )}
+            >
+              🔥 Hot list
+            </button>
           </div>
           {/* TYPE */}
           <div className="flex items-center gap-2 flex-wrap">
