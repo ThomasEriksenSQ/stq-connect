@@ -116,7 +116,7 @@ const DailyBrief = () => {
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<"kort" | "liste">("kort");
   const [ownerFilter, setOwnerFilter] = useState(user?.id || "alle");
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentContactId, setCurrentContactId] = useState<string | null>(null);
   const [treated, setTreated] = useState<Set<string>>(new Set());
   const [activeForm, setActiveForm] = useState<"snooze" | "signal" | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -224,7 +224,17 @@ const DailyBrief = () => {
   }, [rawContacts, allActivities, allTasks, techProfiles, foresporsler]);
 
   const queue = useMemo(() => scoredLeads.filter(l => !treated.has(l.contact.id)), [scoredLeads, treated]);
-  const current = queue[currentIndex];
+
+  const current = useMemo(() => {
+    if (currentContactId) {
+      return scoredLeads.find(l => l.contact.id === currentContactId) ?? queue[0] ?? null;
+    }
+    return queue[0] ?? null;
+  }, [currentContactId, scoredLeads, queue]);
+
+  const currentIndexInScored = currentContactId
+    ? scoredLeads.findIndex(l => l.contact.id === currentContactId)
+    : 0;
   const treatedCount = treated.size;
 
   const daysSinceLast = current?.lastAct ? differenceInDays(new Date(), new Date(current.lastAct.created_at)) : 999;
@@ -235,9 +245,7 @@ const DailyBrief = () => {
     if (isAnimating) return;
     setIsAnimating(true);
     setIsDragging(false);
-    if (markCurrent && current) {
-      setTreated(prev => new Set([...prev, current.contact.id]));
-    }
+    const contactIdToMark = markCurrent && current ? current.contact.id : null;
     const card = cardRef.current;
     if (card) {
       const outX = dir === "left" ? -80 : 80;
@@ -247,8 +255,17 @@ const DailyBrief = () => {
     }
     setTimeout(() => {
       setActiveForm(null);
-      if (dir === "left") setCurrentIndex(i => Math.min(i + 1, queue.length - 1));
-      else setCurrentIndex(i => Math.max(i - 1, 0));
+      if (contactIdToMark) {
+        setTreated(prev => new Set([...prev, contactIdToMark]));
+      }
+      if (dir === "left") {
+        const startIdx = currentIndexInScored;
+        const next = scoredLeads.slice(startIdx + 1).find(l => !treated.has(l.contact.id) && l.contact.id !== contactIdToMark);
+        setCurrentContactId(next?.contact.id ?? null);
+      } else {
+        const prevIdx = Math.max(currentIndexInScored - 1, 0);
+        setCurrentContactId(scoredLeads[prevIdx]?.contact.id ?? null);
+      }
       if (card) {
         const inX = dir === "left" ? 80 : -80;
         card.style.transition = "none";
@@ -264,7 +281,7 @@ const DailyBrief = () => {
         setTimeout(() => setIsAnimating(false), 420);
       }));
     }, 240);
-  }, [isAnimating, queue.length, current]);
+  }, [isAnimating, scoredLeads, treated, current, currentIndexInScored]);
 
   const updateTaskMutation = useMutation({
     mutationFn: async ({ taskId, dueDate }: { taskId: string; dueDate: string }) => {
@@ -299,7 +316,7 @@ const DailyBrief = () => {
           {filterOptions.map(opt => (
             <button
               key={opt.id}
-              onClick={() => { setOwnerFilter(opt.id); setCurrentIndex(0); setTreated(new Set()); }}
+              onClick={() => { setOwnerFilter(opt.id); setCurrentContactId(null); setTreated(new Set()); }}
               className={cn(
                 "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
                 ownerFilter === opt.id
@@ -743,14 +760,14 @@ const DailyBrief = () => {
               <div className="flex items-center justify-between px-2">
                 <button
                   onClick={() => goNext("right")}
-                  disabled={currentIndex === 0}
+                  disabled={currentIndexInScored === 0}
                   className="flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-15 disabled:pointer-events-none transition-all"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => goNext("left")}
-                  disabled={currentIndex >= queue.length - 1}
+                  disabled={!scoredLeads.slice(currentIndexInScored + 1).some(l => !treated.has(l.contact.id))}
                   className="flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-15 disabled:pointer-events-none transition-all"
                 >
                   <ChevronRight className="h-4 w-4" />
