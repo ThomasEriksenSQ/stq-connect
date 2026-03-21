@@ -941,7 +941,7 @@ const DailyBrief = () => {
           <div className="fixed inset-0 z-[100] flex items-center justify-center">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setNudgeOpen(false)} />
             <div
-              className="relative w-full max-w-md mx-4 bg-card border border-border rounded-2xl shadow-xl p-6"
+              className="relative w-full max-w-lg mx-4 bg-card border border-border rounded-2xl shadow-xl p-8"
               style={{ animation: "shake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97)" }}
             >
               <button
@@ -954,15 +954,15 @@ const DailyBrief = () => {
               <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1">
                 Før du går videre
               </p>
-              <p className="text-[0.9375rem] text-muted-foreground mb-1">Hold kontakten oppdatert</p>
-              <p className="text-[1.125rem] font-bold text-foreground mb-5">{navn}</p>
+              <p className="text-[0.875rem] text-muted-foreground mb-1">Hold kontakten oppdatert</p>
+              <p className="text-[1rem] font-semibold text-foreground mb-6">{navn}</p>
 
               {/* Oppfølging */}
-              <div className="mb-4">
+              <div className="mb-6">
                 <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">
                   {nudgeScenario === "forfalt" ? `Forfalt: "${forfaltTitle}"` : "Oppfølging"}
                 </p>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {NUDGE_DATE_CHIPS.map(chip => (
                     <button
                       key={chip.value}
@@ -986,10 +986,12 @@ const DailyBrief = () => {
                 </div>
               </div>
 
+              <div className="border-t border-border/50 mb-6" />
+
               {/* Signal */}
-              <div className="mb-5">
+              <div className="mb-8">
                 <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">Signal</p>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {SIGNAL_CATEGORIES.filter(c => c.label !== "Ikke aktuelt").map(cat => (
                     <button
                       key={cat.label}
@@ -1010,7 +1012,7 @@ const DailyBrief = () => {
               {/* CTA */}
               <button
                 onClick={handleOkNeste}
-                className="w-full h-10 rounded-xl bg-foreground text-background text-[0.875rem] font-medium hover:opacity-90 transition-all"
+                className="w-full h-[52px] rounded-xl bg-foreground text-background text-[1rem] font-medium hover:opacity-90 active:scale-[0.99] transition-all"
               >
                 Ok, neste →
               </button>
