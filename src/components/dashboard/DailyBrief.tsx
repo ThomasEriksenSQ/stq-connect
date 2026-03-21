@@ -126,6 +126,9 @@ const DailyBrief = () => {
   const [localSignals, setLocalSignals] = useState<Record<string, string>>({});
   const [nudgeOpen, setNudgeOpen] = useState(false);
   const [nudgeScenario, setNudgeScenario] = useState<"ingen_signal_ingen_task" | "signal_ingen_task" | "forfalt" | null>(null);
+  const [nudgeSignal, setNudgeSignal] = useState("Ukjent om behov");
+  const [nudgeDate, setNudgeDate] = useState("someday");
+  const [nudgeCustomDate, setNudgeCustomDate] = useState("");
   const cardRef = useRef<HTMLDivElement>(null);
   const [dragStartX, setDragStartX] = useState<number | null>(null);
   const [dragDeltaX, setDragDeltaX] = useState(0);
@@ -763,9 +766,16 @@ const DailyBrief = () => {
                         const harSignal = !!currentSignal && currentSignal !== "Ukjent om behov";
                         const harTask = !!current.nextTask;
                         const harForfalt = current.hasOverdue;
-                        if (harForfalt) { setNudgeScenario("forfalt"); setNudgeOpen(true); return; }
-                        if (!harSignal && !harTask) { setNudgeScenario("ingen_signal_ingen_task"); setNudgeOpen(true); return; }
-                        if (harSignal && !harTask) { setNudgeScenario("signal_ingen_task"); setNudgeOpen(true); return; }
+                        const openNudge = (scenario: typeof nudgeScenario) => {
+                          setNudgeScenario(scenario);
+                          setNudgeSignal(currentSignal || "Ukjent om behov");
+                          setNudgeDate("someday");
+                          setNudgeCustomDate("");
+                          setNudgeOpen(true);
+                        };
+                        if (harForfalt) { openNudge("forfalt"); return; }
+                        if (!harSignal && !harTask) { openNudge("ingen_signal_ingen_task"); return; }
+                        if (harSignal && !harTask) { openNudge("signal_ingen_task"); return; }
                         goNext("left", true);
                       }}
                       className="w-full h-[46px] rounded-xl bg-foreground text-background text-[0.9375rem] font-medium hover:opacity-90 active:scale-[0.99] transition-all"
@@ -854,16 +864,6 @@ const DailyBrief = () => {
       {/* ── Nudge modal ── */}
       {nudgeOpen && current && (() => {
         const navn = `${current.contact.first_name} ${current.contact.last_name}`;
-        const title =
-          nudgeScenario === "forfalt" ? "Forfalt oppfølging" :
-          nudgeScenario === "ingen_signal_ingen_task" ? "Ingen signal eller oppfølging" :
-          "Ingen oppfølging satt";
-        const desc =
-          nudgeScenario === "forfalt"
-            ? `${navn} har en forfalt oppfølging. Hva gjør vi?`
-            : nudgeScenario === "ingen_signal_ingen_task"
-            ? `Du har ikke satt signal eller oppfølging på ${navn}. Ta et raskt standpunkt.`
-            : `${navn} mangler en oppfølging. Legg til en?`;
 
         const handleSomeDayTask = async () => {
           await supabase.from("tasks").insert({
@@ -881,6 +881,28 @@ const DailyBrief = () => {
           goNext("left", true);
         };
 
+        const handleTaskWithDate = async (date: string | null) => {
+          if (nudgeScenario === "forfalt" && current.nextTask) {
+            await supabase.from("tasks").update({
+              due_date: date,
+              updated_at: new Date().toISOString(),
+            }).eq("id", current.nextTask.id);
+          } else {
+            await supabase.from("tasks").insert({
+              title: "Følg opp om behov",
+              priority: "medium",
+              due_date: date,
+              contact_id: current.contact.id,
+              company_id: current.contact.company_id,
+              assigned_to: user?.id,
+              created_by: user?.id,
+            });
+          }
+          queryClient.invalidateQueries({ queryKey: ["salgssenter-tasks"] });
+          setNudgeOpen(false);
+          goNext("left", true);
+        };
+
         const handleSetSignal = async (signal: string) => {
           setLocalSignals(prev => ({ ...prev, [current.contact.id]: signal }));
           await supabase.from("activities").insert({
@@ -888,23 +910,32 @@ const DailyBrief = () => {
             contact_id: current.contact.id, company_id: current.contact.company_id, created_by: user?.id,
           });
           queryClient.invalidateQueries({ queryKey: ["salgssenter-activities"] });
-          setNudgeOpen(false);
-          goNext("left", true);
         };
 
-        const handleIkkeRelevant = async () => {
-          await supabase.from("contacts").update({ ikke_aktuell_kontakt: true }).eq("id", current.contact.id);
-          queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
-            old?.map((c: any) => c.id === current.contact.id ? { ...c, ikke_aktuell_kontakt: true } : c)
-          );
-          setNudgeOpen(false);
-          goNext("left", true);
+
+        const handleOkNeste = async () => {
+          if (nudgeSignal && nudgeSignal !== currentSignal) {
+            await handleSetSignal(nudgeSignal);
+          }
+          if (nudgeDate === "someday") {
+            await handleSomeDayTask();
+          } else {
+            const date = nudgeDate === "custom" ? nudgeCustomDate : nudgeDate;
+            await handleTaskWithDate(date || null);
+          }
         };
 
-        const handleSkip = () => {
-          setNudgeOpen(false);
-          goNext("left", true);
-        };
+        const NUDGE_DATE_CHIPS = [
+          { label: "Følg opp på sikt", value: "someday" },
+          { label: "1 uke", value: format(addWeeks(new Date(), 1), "yyyy-MM-dd") },
+          { label: "2 uker", value: format(addWeeks(new Date(), 2), "yyyy-MM-dd") },
+          { label: "1 måned", value: format(addMonths(new Date(), 1), "yyyy-MM-dd") },
+          { label: "3 måneder", value: format(addMonths(new Date(), 3), "yyyy-MM-dd") },
+        ];
+
+        const forfaltTitle = nudgeScenario === "forfalt" && current.nextTask
+          ? current.nextTask.title
+          : "Følg opp om behov";
 
         return (
           <div className="fixed inset-0 z-[100] flex items-center justify-center">
@@ -923,41 +954,77 @@ const DailyBrief = () => {
               <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1">
                 Før du går videre
               </p>
-              <p className="text-[1.125rem] font-bold text-foreground mb-1">{title}</p>
-              <p className="text-[0.875rem] text-muted-foreground mb-5">{desc}</p>
+              <p className="text-[0.9375rem] text-muted-foreground mb-1">Hold kontakten oppdatert</p>
+              <p className="text-[1.125rem] font-bold text-foreground mb-5">{navn}</p>
 
-              <div className="space-y-2">
-                <button
-                  onClick={handleSomeDayTask}
-                  className="w-full h-10 rounded-xl bg-foreground text-background text-[0.875rem] font-medium hover:opacity-90 transition-all"
-                >
-                  Legg til &ldquo;Følg opp på sikt&rdquo;
-                </button>
-
-                {(nudgeScenario === "ingen_signal_ingen_task" || nudgeScenario === "forfalt") && (
-                  <button
-                    onClick={() => handleSetSignal("Ukjent om behov")}
-                    className="w-full h-10 rounded-xl border border-border text-[0.875rem] font-medium text-foreground hover:bg-secondary transition-all"
-                  >
-                    Sett &ldquo;Ukjent om behov&rdquo;
-                  </button>
-                )}
-
-                <button
-                  onClick={handleIkkeRelevant}
-                  className="w-full h-10 rounded-xl border border-destructive/30 text-[0.875rem] font-medium text-destructive hover:bg-destructive/5 transition-all"
-                >
-                  Ikke relevant person
-                </button>
-
-                <button
-                  onClick={handleSkip}
-                  className="w-full h-9 text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Hopp over likevel
-                </button>
+              {/* Oppfølging */}
+              <div className="mb-4">
+                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">
+                  {nudgeScenario === "forfalt" ? `Forfalt: "${forfaltTitle}"` : "Oppfølging"}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {NUDGE_DATE_CHIPS.map(chip => (
+                    <button
+                      key={chip.value}
+                      onClick={() => setNudgeDate(chip.value)}
+                      className={cn(
+                        "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
+                        nudgeDate === chip.value
+                          ? "bg-foreground text-background border-foreground font-medium"
+                          : "border-border text-muted-foreground hover:bg-secondary"
+                      )}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                  <input
+                    type="date"
+                    value={nudgeCustomDate}
+                    onChange={(e) => { setNudgeCustomDate(e.target.value); setNudgeDate("custom"); }}
+                    className="h-8 px-2 text-[0.75rem] rounded-full border border-border text-muted-foreground bg-background"
+                  />
+                </div>
               </div>
+
+              {/* Signal */}
+              <div className="mb-5">
+                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">Signal</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {SIGNAL_CATEGORIES.filter(c => c.label !== "Ikke aktuelt").map(cat => (
+                    <button
+                      key={cat.label}
+                      onClick={() => setNudgeSignal(cat.label)}
+                      className={cn(
+                        "h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+                        nudgeSignal === cat.label
+                          ? cat.badgeColor
+                          : "border-border text-muted-foreground hover:bg-secondary"
+                      )}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* CTA */}
+              <button
+                onClick={handleOkNeste}
+                className="w-full h-10 rounded-xl bg-foreground text-background text-[0.875rem] font-medium hover:opacity-90 transition-all"
+              >
+                Ok, neste →
+              </button>
             </div>
+
+            <style>{`
+              @keyframes shake {
+                0%, 100% { transform: translateX(0) rotate(0deg); }
+                20% { transform: translateX(-3px) rotate(-0.5deg); }
+                40% { transform: translateX(3px) rotate(0.5deg); }
+                60% { transform: translateX(-2px) rotate(-0.3deg); }
+                80% { transform: translateX(2px) rotate(0.3deg); }
+              }
+            `}</style>
           </div>
         );
       })()}
