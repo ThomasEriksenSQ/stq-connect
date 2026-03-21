@@ -1833,7 +1833,7 @@ function TaskRow({
             </TooltipTrigger>
             <TooltipContent>{fullDate(task.due_date)}</TooltipContent>
           </Tooltip>
-        ) : task.description?.includes("[someday]") ? (
+        ) : task.description?.includes("[someday]") || !task.due_date ? (
           <span className="text-[0.8125rem] font-medium text-muted-foreground italic">
             Følg opp på sikt
           </span>
