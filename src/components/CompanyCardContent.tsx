@@ -755,7 +755,7 @@ export function CompanyCardContent({
                     
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-label">Avdelinger</Label>
+                    <Label className="text-label">Geografisk sted</Label>
                     <div className="flex flex-wrap gap-1.5 mb-2">
                       {editForm.locations.map((loc, i) =>
                       <span

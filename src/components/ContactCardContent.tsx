@@ -928,12 +928,6 @@ export function ContactCardContent({
               Selskap <Pencil className="h-2.5 w-2.5" />
             </button>
           )}
-          {(contact as any).companies?.city && (
-            <>
-              <span className="text-muted-foreground/40">·</span>
-              <span className="text-muted-foreground">{(contact as any).companies.city}</span>
-            </>
-          )}
           {(() => {
             const contactLocations: string[] = (contact as any).locations || [];
             if (companyLocations.length === 0) return null;
