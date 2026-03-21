@@ -245,9 +245,7 @@ const DailyBrief = () => {
     if (isAnimating) return;
     setIsAnimating(true);
     setIsDragging(false);
-    if (markCurrent && current) {
-      setTreated(prev => new Set([...prev, current.contact.id]));
-    }
+    const contactIdToMark = markCurrent && current ? current.contact.id : null;
     const card = cardRef.current;
     if (card) {
       const outX = dir === "left" ? -80 : 80;
@@ -257,8 +255,17 @@ const DailyBrief = () => {
     }
     setTimeout(() => {
       setActiveForm(null);
-      if (dir === "left") setCurrentIndex(i => Math.min(i + 1, queue.length - 1));
-      else setCurrentIndex(i => Math.max(i - 1, 0));
+      if (contactIdToMark) {
+        setTreated(prev => new Set([...prev, contactIdToMark]));
+      }
+      if (dir === "left") {
+        const startIdx = currentIndexInScored;
+        const next = scoredLeads.slice(startIdx + 1).find(l => !treated.has(l.contact.id) && l.contact.id !== contactIdToMark);
+        setCurrentContactId(next?.contact.id ?? null);
+      } else {
+        const prevIdx = Math.max(currentIndexInScored - 1, 0);
+        setCurrentContactId(scoredLeads[prevIdx]?.contact.id ?? null);
+      }
       if (card) {
         const inX = dir === "left" ? 80 : -80;
         card.style.transition = "none";
@@ -274,7 +281,7 @@ const DailyBrief = () => {
         setTimeout(() => setIsAnimating(false), 420);
       }));
     }, 240);
-  }, [isAnimating, queue.length, current]);
+  }, [isAnimating, scoredLeads, treated, current, currentIndexInScored]);
 
   const updateTaskMutation = useMutation({
     mutationFn: async ({ taskId, dueDate }: { taskId: string; dueDate: string }) => {
