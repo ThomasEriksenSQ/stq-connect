@@ -1441,11 +1441,15 @@ export function ContactCardContent({
                   className="h-7 px-2 text-[0.75rem] rounded-full border border-border text-muted-foreground bg-background" />
                 
                     </div>
-                    {formDate &&
-              <p className="text-[0.75rem] text-muted-foreground mt-2">
+                    {formDate === "someday" ? (
+                      <p className="text-[0.75rem] text-muted-foreground mt-2">
+                        Ingen fast dato — legges i "Følg opp på sikt"-listen
+                      </p>
+                    ) : formDate ? (
+                      <p className="text-[0.75rem] text-muted-foreground mt-2">
                         Frist: {format(new Date(formDate), "d. MMMM yyyy", { locale: nb })}
                       </p>
-              }
+                    ) : null}
                   </div> :
 
             <div className="mt-2">
