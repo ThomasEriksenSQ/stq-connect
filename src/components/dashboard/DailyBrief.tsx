@@ -386,18 +386,18 @@ const DailyBrief = () => {
             )}
 
             <div className="mt-[10px] border-t border-border" style={{ padding: "10px 18px 0" }}>
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex items-center gap-2 flex-wrap pt-1">
                 {/* Signal dropdown */}
                 <div className="relative" onClick={e => e.stopPropagation()}>
                   <button
                     onClick={() => setSignalOpen(!signalOpen)}
                     className={cn(
-                      "inline-flex items-center gap-1 rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors",
+                      "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors cursor-pointer",
                       (() => {
                         const sig = localSignals[current.contact.id] ?? current.signal;
                         return sig
-                          ? CATEGORIES.find(c => c.label === sig)?.badgeColor || "border-border bg-secondary text-muted-foreground"
-                          : "border-border bg-secondary text-muted-foreground";
+                          ? CATEGORIES.find(c => c.label === sig)?.badgeColor || "bg-background text-muted-foreground border-border hover:bg-secondary"
+                          : "bg-background text-muted-foreground border-border hover:bg-secondary";
                       })()
                     )}
                   >
@@ -425,7 +425,7 @@ const DailyBrief = () => {
                           }}
                           className="w-full flex items-center gap-2 px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors text-left"
                         >
-                          <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold", cat.badgeColor)}>
+                          <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold", cat.badgeColor)}>
                             {cat.label}
                           </span>
                           {(localSignals[current.contact.id] ?? current.signal) === cat.label && <Check className="ml-auto h-3.5 w-3.5 text-muted-foreground" />}
@@ -448,13 +448,13 @@ const DailyBrief = () => {
                       });
                   }}
                   className={cn(
-                    "rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors",
+                    "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
                     current.contact.call_list
                       ? "bg-amber-100 text-amber-800 border-amber-200"
-                      : "border-border bg-secondary text-muted-foreground"
+                      : "bg-background text-muted-foreground border-border hover:bg-secondary"
                   )}
                 >
-                  {current.contact.call_list ? "✓ " : ""}Innkjøper
+                  Innkjøper
                 </button>
 
                 {/* CV-epost toggle */}
@@ -470,13 +470,13 @@ const DailyBrief = () => {
                       });
                   }}
                   className={cn(
-                    "rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors",
+                    "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
                     current.contact.cv_email
                       ? "bg-blue-100 text-blue-800 border-blue-200"
-                      : "border-border bg-secondary text-muted-foreground"
+                      : "bg-background text-muted-foreground border-border hover:bg-secondary"
                   )}
                 >
-                  {current.contact.cv_email ? "✓ " : ""}CV-epost
+                  CV-epost
                 </button>
 
                 {/* Ikke relevant person */}
@@ -492,7 +492,12 @@ const DailyBrief = () => {
                       });
                     toast.success("Merket som ikke relevant — trykk Ok, neste for å gå videre");
                   }}
-                  className="rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors border-border bg-secondary text-muted-foreground hover:bg-red-50 hover:text-red-700 hover:border-red-200"
+                  className={cn(
+                    "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+                    current.contact.ikke_aktuell_kontakt
+                      ? "bg-destructive/10 text-destructive border-destructive/30"
+                      : "bg-background text-muted-foreground border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                  )}
                 >
                   Ikke relevant person
                 </button>
