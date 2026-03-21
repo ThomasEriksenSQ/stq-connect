@@ -1644,7 +1644,7 @@ function TaskRow({
     setEditTitle(parsed.title);
     setEditCategory(parsed.category);
     setEditDesc(parsed.cleanDesc);
-    const isSomeday = !task.due_date && !!task.description?.includes("[someday]");
+    const isSomeday = !task.due_date;
     setEditDate(isSomeday ? "someday" : (task.due_date || ""));
     if (isSomeday) {
       setEditChipIdx(0);
@@ -1833,7 +1833,7 @@ function TaskRow({
             </TooltipTrigger>
             <TooltipContent>{fullDate(task.due_date)}</TooltipContent>
           </Tooltip>
-        ) : task.description?.includes("[someday]") ? (
+        ) : task.description?.includes("[someday]") || !task.due_date ? (
           <span className="text-[0.8125rem] font-medium text-muted-foreground italic">
             Følg opp på sikt
           </span>
