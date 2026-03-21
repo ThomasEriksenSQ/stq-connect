@@ -803,7 +803,8 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           <span className="text-muted-foreground/40">·</span>
           {editable ?
           <InlineField value={contact.title || ""} onSave={updateField("title")} placeholder="Stilling" className="text-[0.9375rem]" /> :
-          contact.title && <span>{contact.title}</span>
+          contact.title ? <span>{contact.title}</span> : null
+          }
           {/* Kontaktinfo-piller */}
           {contact.phone ? (
             <a
