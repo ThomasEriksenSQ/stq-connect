@@ -289,7 +289,7 @@ const DailyBrief = () => {
 
       {/* ── Counter row (kort only) ── */}
       {viewMode === "kort" && (
-        <div className="flex justify-between text-[0.75rem] text-muted-foreground" style={{ padding: "0 42px" }}>
+        <div className="flex justify-between text-[0.75rem] text-muted-foreground">
           <span>{treated.size} behandlet i dag</span>
           <span>{Math.max(0, total - idx)} igjen</span>
         </div>
