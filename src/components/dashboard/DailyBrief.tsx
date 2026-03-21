@@ -241,8 +241,7 @@ const DailyBrief = () => {
   return (
     <div className="space-y-3">
       {/* ── Filter row ── */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-14 flex-shrink-0">Eier</span>
           <div className="flex items-center gap-1.5 flex-1">
             {filterOptions.map(opt => (
