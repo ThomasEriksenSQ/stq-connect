@@ -192,7 +192,7 @@ const DailyBrief = () => {
   const { data: foresporsler = [] } = useQuery({
     queryKey: ["salgssenter-foresporsler"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("foresporsler").select("id, selskap_id, status").not("status", "in", '("avsluttet","tapt")');
+      const { data, error } = await supabase.from("foresporsler").select("id, selskap_id, status, mottatt_dato").not("status", "in", '("avsluttet","tapt")');
       if (error) throw error;
       return data;
     },
