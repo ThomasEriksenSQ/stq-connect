@@ -891,7 +891,7 @@ export function ContactCardContent({
         </div>
 
         {/* Line 2: Selskap · Sted */}
-        <div className="flex items-center gap-1.5 flex-wrap text-[0.875rem] mt-1">
+        <div className="flex items-center gap-1.5 flex-wrap text-[0.875rem] mt-1.5">
           {companyName &&
           <span className="group/co inline-flex items-center gap-1">
               <button
@@ -1063,6 +1063,9 @@ export function ContactCardContent({
             
             </span> :
           null}
+        </div>
+        {/* Status-piller */}
+        <div className="flex items-center gap-2 flex-wrap mt-3 pt-3 border-t border-border/40">
           {/* CV-Epost */}
           <button
             onClick={() => {
@@ -1091,7 +1094,7 @@ export function ContactCardContent({
             )}>
             {(contact as any).call_list ? "✓ Innkjøper" : "Innkjøper"}
           </button>
-          {/* Ikke aktuelt å kontakte igjen */}
+          {/* Ikke aktuell å kontakte */}
           <button
             onClick={() => updateMutation.mutate({ ikke_aktuell_kontakt: !(contact as any).ikke_aktuell_kontakt })}
             className={cn(
