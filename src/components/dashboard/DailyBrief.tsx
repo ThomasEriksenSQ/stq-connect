@@ -1017,7 +1017,41 @@ const DailyBrief = () => {
 
               {/* CTA */}
               <button
-                onClick={handleNudgeOkNeste}
+                onClick={async () => {
+                  if (!current) return;
+                  const isSomeday = nudgeDate === "someday";
+                  const newDate = isSomeday ? null : (nudgeDate === "custom" ? nudgeCustomDate : nudgeDate);
+                  const contactTasks = (allTasks as any[]).filter((t: any) => t.contact_id === current.contact.id);
+
+                  if (contactTasks.length > 0) {
+                    for (const task of contactTasks) {
+                      const rawDesc = (task.description || "").replace(/^\[[^\]]+\]\n?/, "").replace(/\[someday\]/g, "").trim();
+                      const withSignal = nudgeSignal ? (rawDesc ? `[${nudgeSignal}]\n${rawDesc}` : `[${nudgeSignal}]`) : rawDesc;
+                      const finalDesc = isSomeday ? (withSignal ? withSignal + "\n[someday]" : "[someday]") : (withSignal || null);
+                      await supabase.from("tasks").update({ due_date: newDate, description: finalDesc, updated_at: new Date().toISOString() }).eq("id", task.id);
+                    }
+                  } else {
+                    const withSignal = nudgeSignal ? (isSomeday ? `[${nudgeSignal}]\n[someday]` : `[${nudgeSignal}]`) : (isSomeday ? "[someday]" : null);
+                    await supabase.from("tasks").insert({
+                      title: "Følg opp om behov", description: withSignal, priority: "medium",
+                      due_date: newDate, contact_id: current.contact.id, company_id: current.contact.company_id,
+                      assigned_to: user?.id, created_by: user?.id,
+                    });
+                  }
+
+                  if (nudgeSignal && nudgeSignal !== currentSignal) {
+                    setLocalSignals(prev => ({ ...prev, [current.contact.id]: nudgeSignal }));
+                    await supabase.from("activities").insert({
+                      type: "note", subject: nudgeSignal, description: `[${nudgeSignal}]`,
+                      contact_id: current.contact.id, company_id: current.contact.company_id, created_by: user?.id,
+                    });
+                    queryClient.invalidateQueries({ queryKey: ["salgssenter-activities"] });
+                  }
+
+                  queryClient.invalidateQueries({ queryKey: ["salgssenter-tasks"] });
+                  setNudgeOpen(false);
+                  goNext("left", true);
+                }}
                 className="w-full h-[52px] rounded-xl bg-foreground text-background text-[1rem] font-medium hover:opacity-90 active:scale-[0.99] transition-all"
               >
                 Ok, neste →
