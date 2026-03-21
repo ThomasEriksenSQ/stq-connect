@@ -321,6 +321,69 @@ const DailyBrief = () => {
 
   const progress = scoredLeads.length > 0 ? (treatedCount / scoredLeads.length) * 100 : 0;
 
+  const nudgeContactTasks = useMemo(() =>
+    current ? (allTasks as any[]).filter((t: any) => t.contact_id === current.contact.id) : [],
+    [allTasks, current]
+  );
+  const nudgeHarEksisterendeTask = nudgeContactTasks.length > 0;
+
+  const handleNudgeOkNeste = useCallback(async () => {
+    if (!current) return;
+    const isSomeday = nudgeDate === "someday";
+    const newDate = isSomeday ? null : (nudgeDate === "custom" ? nudgeCustomDate : nudgeDate);
+
+    if (nudgeHarEksisterendeTask) {
+      for (const task of nudgeContactTasks) {
+        const rawDesc = (task.description || "")
+          .replace(/^\[[^\]]+\]\n?/, "")
+          .replace(/\[someday\]/g, "")
+          .trim();
+        const withSignal = nudgeSignal
+          ? (rawDesc ? `[${nudgeSignal}]\n${rawDesc}` : `[${nudgeSignal}]`)
+          : rawDesc;
+        const finalDesc = isSomeday
+          ? (withSignal ? withSignal + "\n[someday]" : "[someday]")
+          : (withSignal || null);
+        await supabase.from("tasks").update({
+          due_date: newDate,
+          description: finalDesc,
+          updated_at: new Date().toISOString(),
+        }).eq("id", task.id);
+      }
+    } else {
+      const withSignal = nudgeSignal
+        ? (isSomeday ? `[${nudgeSignal}]\n[someday]` : `[${nudgeSignal}]`)
+        : (isSomeday ? "[someday]" : null);
+      await supabase.from("tasks").insert({
+        title: "Følg opp om behov",
+        description: withSignal,
+        priority: "medium",
+        due_date: newDate,
+        contact_id: current.contact.id,
+        company_id: current.contact.company_id,
+        assigned_to: user?.id,
+        created_by: user?.id,
+      });
+    }
+
+    if (nudgeSignal && nudgeSignal !== currentSignal) {
+      setLocalSignals(prev => ({ ...prev, [current.contact.id]: nudgeSignal }));
+      await supabase.from("activities").insert({
+        type: "note",
+        subject: nudgeSignal,
+        description: `[${nudgeSignal}]`,
+        contact_id: current.contact.id,
+        company_id: current.contact.company_id,
+        created_by: user?.id,
+      });
+      queryClient.invalidateQueries({ queryKey: ["salgssenter-activities"] });
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["salgssenter-tasks"] });
+    setNudgeOpen(false);
+    goNext("left", true);
+  }, [current, nudgeDate, nudgeCustomDate, nudgeSignal, nudgeHarEksisterendeTask, nudgeContactTasks, currentSignal, user?.id, goNext, queryClient]);
+
   return (
     <div className="space-y-4">
 
@@ -864,68 +927,6 @@ const DailyBrief = () => {
       {/* ── Nudge modal ── */}
       {nudgeOpen && current && (() => {
         const navn = `${current.contact.first_name} ${current.contact.last_name}`;
-        const harEksisterendeTask = !!(allTasks as any[]).filter((t: any) => t.contact_id === current.contact.id).length;
-        const contactTasks = (allTasks as any[]).filter((t: any) => t.contact_id === current.contact.id);
-
-        const handleOkNeste = async () => {
-          const isSomeday = nudgeDate === "someday";
-          const newDate = isSomeday ? null : (nudgeDate === "custom" ? nudgeCustomDate : nudgeDate);
-
-          if (harEksisterendeTask) {
-            for (const task of contactTasks) {
-              const rawDesc = (task.description || "")
-                .replace(/^\[[^\]]+\]\n?/, "")
-                .replace(/\[someday\]/g, "")
-                .trim();
-
-              const withSignal = nudgeSignal
-                ? (rawDesc ? `[${nudgeSignal}]\n${rawDesc}` : `[${nudgeSignal}]`)
-                : rawDesc;
-
-              const finalDesc = isSomeday
-                ? (withSignal ? withSignal + "\n[someday]" : "[someday]")
-                : (withSignal || null);
-
-              await supabase.from("tasks").update({
-                due_date: newDate,
-                description: finalDesc,
-                updated_at: new Date().toISOString(),
-              }).eq("id", task.id);
-            }
-          } else {
-            const withSignal = nudgeSignal
-              ? (isSomeday ? `[${nudgeSignal}]\n[someday]` : `[${nudgeSignal}]`)
-              : (isSomeday ? "[someday]" : null);
-
-            await supabase.from("tasks").insert({
-              title: "Følg opp om behov",
-              description: withSignal,
-              priority: "medium",
-              due_date: newDate,
-              contact_id: current.contact.id,
-              company_id: current.contact.company_id,
-              assigned_to: user?.id,
-              created_by: user?.id,
-            });
-          }
-
-          if (nudgeSignal && nudgeSignal !== currentSignal) {
-            setLocalSignals(prev => ({ ...prev, [current.contact.id]: nudgeSignal }));
-            await supabase.from("activities").insert({
-              type: "note",
-              subject: nudgeSignal,
-              description: `[${nudgeSignal}]`,
-              contact_id: current.contact.id,
-              company_id: current.contact.company_id,
-              created_by: user?.id,
-            });
-            queryClient.invalidateQueries({ queryKey: ["salgssenter-activities"] });
-          }
-
-          queryClient.invalidateQueries({ queryKey: ["salgssenter-tasks"] });
-          setNudgeOpen(false);
-          goNext("left", true);
-        };
 
         const NUDGE_DATE_CHIPS = [
           { label: "Følg opp på sikt", value: "someday" },
@@ -958,7 +959,7 @@ const DailyBrief = () => {
               {/* Oppfølging */}
               <div className="mb-6">
                 <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-3">
-                  {harEksisterendeTask
+                  {nudgeHarEksisterendeTask
                     ? (nudgeScenario === "forfalt" ? `Forfalt: "${current.nextTask?.title}"` : `Oppdater oppfølging`)
                     : "Ny oppfølging — Følg opp om behov"}
                 </p>
@@ -1016,7 +1017,7 @@ const DailyBrief = () => {
 
               {/* CTA */}
               <button
-                onClick={handleOkNeste}
+                onClick={handleNudgeOkNeste}
                 className="w-full h-[52px] rounded-xl bg-foreground text-background text-[1rem] font-medium hover:opacity-90 active:scale-[0.99] transition-all"
               >
                 Ok, neste →
