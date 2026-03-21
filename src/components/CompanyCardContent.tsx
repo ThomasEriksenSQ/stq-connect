@@ -1231,7 +1231,7 @@ export function CompanyCardContent({
                             {contactTechTags.slice(0, 10).map((tech: string) =>
                         <span
                           key={tech}
-                          className="inline-flex items-center rounded-full bg-secondary text-foreground px-2 py-0.5 text-[0.6875rem] font-mono border border-border">
+                          className="inline-flex items-center rounded-full bg-secondary text-foreground px-2.5 py-0.5 text-[0.75rem] font-mono border border-border">
                           
                                 {tech}
                               </span>
