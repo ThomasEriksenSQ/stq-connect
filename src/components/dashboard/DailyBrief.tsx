@@ -893,7 +893,7 @@ const DailyBrief = () => {
               }).eq("id", task.id);
             }
           } else {
-            const newDesc = nudgeSignal
+            const withSignal = nudgeSignal
               ? (isSomeday ? `[${nudgeSignal}]\n[someday]` : `[${nudgeSignal}]`)
               : (isSomeday ? "[someday]" : null);
 
