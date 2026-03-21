@@ -920,44 +920,6 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           </label>
         </div>
 
-        {/* Snapshot: siste aktivitet + neste oppfølging */}
-        {(activities.length > 0 || tasks.length > 0) && (() => {
-          const sisteAktivitet = activities[0] ?? null;
-          const nesteOppfolging = tasks[0] ?? null;
-          if (!sisteAktivitet && !nesteOppfolging) return null;
-          return (
-            <div className="mt-3 mb-4 rounded-lg bg-muted/40 border border-border px-3 py-2.5 space-y-1">
-              {sisteAktivitet && (() => {
-                const { title } = extractTitleAndCategory(sisteAktivitet.subject, sisteAktivitet.description);
-                return (
-                  <div className="flex items-center gap-2 text-[0.8125rem]">
-                    <span className="text-muted-foreground shrink-0">Siste:</span>
-                    <span className="font-medium text-foreground truncate">"{title}"</span>
-                    <span className="text-muted-foreground shrink-0 ml-auto">
-                      {format(new Date(sisteAktivitet.created_at), "d. MMM yyyy", { locale: nb })}
-                    </span>
-                  </div>);
-
-              })()}
-              {nesteOppfolging && (() => {
-                const { title, category } = extractTitleAndCategory(nesteOppfolging.title, nesteOppfolging.description);
-                const overdue = nesteOppfolging.due_date && isPast(new Date(nesteOppfolging.due_date)) && !isToday(new Date(nesteOppfolging.due_date));
-                return (
-                  <div className="flex items-center gap-2 text-[0.8125rem]">
-                    <span className="text-muted-foreground shrink-0">Neste:</span>
-                    <span className="font-medium text-foreground truncate">{title}</span>
-                    {nesteOppfolging.due_date &&
-                    <span className={cn("shrink-0 ml-auto font-medium", overdue ? "text-destructive" : "text-muted-foreground")}>
-                        {format(new Date(nesteOppfolging.due_date), "d. MMM yyyy", { locale: nb })}
-                      </span>
-                    }
-                    {category && <CategoryBadge label={category} className="shrink-0" />}
-                  </div>);
-
-              })()}
-            </div>);
-
-        })()}
 
       </div>
 
