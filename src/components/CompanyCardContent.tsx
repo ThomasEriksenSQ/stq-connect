@@ -1342,7 +1342,7 @@ export function CompanyCardContent({
         </div>
 
         {/* Høyre: Kun kontakter */}
-        <div className="space-y-2">
+        <div className="space-y-2 border-l border-border pl-5">
           <div className="flex items-center justify-between">
             <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
               Kontakter · {contacts.length}
