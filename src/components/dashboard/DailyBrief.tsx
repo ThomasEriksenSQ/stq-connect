@@ -664,26 +664,6 @@ const DailyBrief = () => {
                       </div>
                     </div>
 
-                    {/* Snooze */}
-                    {activeForm === "snooze" && current.nextTask && (
-                      <div className="space-y-2 mt-4">
-                        <p className="text-[0.75rem] font-medium text-muted-foreground">Utsett til:</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {DATE_CHIPS.map(chip => (
-                            <button
-                              key={chip.label}
-                              onClick={() => {
-                                updateTaskMutation.mutate({ taskId: current.nextTask.id, dueDate: format(chip.fn(), "yyyy-MM-dd") });
-                                setActiveForm(null);
-                              }}
-                              className="h-7 px-3 text-[0.75rem] rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                            >
-                              {chip.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   {/* Divider */}
