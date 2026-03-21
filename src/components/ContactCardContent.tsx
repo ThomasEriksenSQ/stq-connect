@@ -890,8 +890,8 @@ export function ContactCardContent({
           </div>
         </div>
 
-        {/* Line 2: Selskap · Sted · Avdeling · Tittel */}
-        <div className="flex items-center gap-1.5 flex-wrap text-[0.9375rem] text-foreground/70 mt-0.5">
+        {/* Line 2: Selskap · Sted */}
+        <div className="flex items-center gap-1.5 flex-wrap text-[0.875rem] mt-1">
           {companyName && (
             <span className="group/co inline-flex items-center gap-1">
               <button
@@ -927,6 +927,12 @@ export function ContactCardContent({
             >
               Selskap <Pencil className="h-2.5 w-2.5" />
             </button>
+          )}
+          {(contact as any).companies?.city && (
+            <>
+              <span className="text-muted-foreground/40">·</span>
+              <span className="text-muted-foreground">{(contact as any).companies.city}</span>
+            </>
           )}
           {(() => {
             const contactLocations: string[] = (contact as any).locations || [];
@@ -965,31 +971,34 @@ export function ContactCardContent({
           {(contact as any).location && (
             <>
               <span className="text-muted-foreground/40">·</span>
-              <span>{(contact as any).location}</span>
+              <span className="text-muted-foreground">{(contact as any).location}</span>
             </>
           )}
+        </div>
+
+        {/* Line 3: Avdeling · Stilling */}
+        <div className="flex items-center gap-1.5 flex-wrap text-[0.875rem] text-foreground/70 mt-0.5">
           {showAvdeling && (
             <>
-              <span className="text-muted-foreground/40">·</span>
               {editable ? (
                 <InlineField
                   value={(contact as any).department || ""}
                   onSave={updateField("department")}
                   placeholder="Avdeling"
-                  className="text-[0.9375rem]"
+                  className="text-[0.875rem]"
                 />
               ) : (
                 (contact as any).department && <span>{(contact as any).department}</span>
               )}
+              <span className="text-muted-foreground/40">·</span>
             </>
           )}
-          <span className="text-muted-foreground/40">·</span>
           {editable ? (
             <InlineField
               value={contact.title || ""}
               onSave={updateField("title")}
               placeholder="Stilling"
-              className="text-[0.9375rem]"
+              className="text-[0.875rem]"
             />
           ) : contact.title ? (
             <span>{contact.title}</span>
@@ -1110,7 +1119,7 @@ export function ContactCardContent({
         )}
 
         {/* Line 4: Toggle pills */}
-        <div className="flex items-center gap-2 flex-wrap mt-2">
+        <div className="flex items-center gap-2 flex-wrap mt-3">
           {/* CV-Epost */}
           <button
             onClick={() => {
