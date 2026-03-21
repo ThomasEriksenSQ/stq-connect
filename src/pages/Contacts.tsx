@@ -226,6 +226,28 @@ const Contacts = () => {
     return matchSearch && matchOwner && matchSignal && matchType;
   });
 
+function calcContactHeatScore(contact: any): number {
+  const signal = contact.signal as string | null;
+  if (signal === "Ikke aktuelt") return -1000;
+  let score = 0;
+  if (signal === "Behov nå") score += 100;
+  else if (signal === "Får fremtidig behov") score += 60;
+  else if (signal === "Får kanskje behov") score += 30;
+  else if (signal === "Ukjent om behov") score += 10;
+  else score += 5;
+  if (contact.call_list) score += 20;
+  if (contact.openTasks?.overdue) score += 15;
+  if (contact.openTasks?.count > 0) score += 5;
+  if (contact.cv_email) score += 5;
+  if (!contact.lastActivity) score -= 10;
+  else {
+    const days = Math.floor((Date.now() - new Date(contact.lastActivity).getTime()) / 86400000);
+    if (days > 180) score -= 5;
+    else if (days > 90) score -= 2;
+  }
+  return score;
+}
+
   const SIGNAL_ORDER: Record<string, number> = {
     "Behov nå": 0,
     "Får fremtidig behov": 1,
