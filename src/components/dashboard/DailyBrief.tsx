@@ -316,7 +316,7 @@ const DailyBrief = () => {
           {filterOptions.map(opt => (
             <button
               key={opt.id}
-              onClick={() => { setOwnerFilter(opt.id); setCurrentIndex(0); setTreated(new Set()); }}
+              onClick={() => { setOwnerFilter(opt.id); setCurrentContactId(null); setTreated(new Set()); }}
               className={cn(
                 "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
                 ownerFilter === opt.id
