@@ -369,14 +369,6 @@ const DailyBrief = () => {
 
                 {/* ── Header: chevrons + badge + Finn.no + åpne-knapp ── */}
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => goNext("right")}
-                    disabled={currentIndex === 0}
-                    className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-15 disabled:pointer-events-none transition-all"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-
                   {/* Temperatur-badge */}
                   <div className={cn(
                     "inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[0.8125rem] font-semibold",
@@ -390,28 +382,14 @@ const DailyBrief = () => {
                     {" "}{TEMP_CONFIG[current.temperature].label}
                   </div>
 
-                  {/* Finn.no-badge */}
-                  {current.hasMarkedsradar && (
-                    <div className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-blue-100 text-blue-800 border border-blue-200 text-[0.8125rem] font-semibold">
-                      <Radio className="h-3.5 w-3.5" /> Finn.no
-                    </div>
-                  )}
-
                   <div className="flex-1" />
 
                   <button
-                    onClick={() => goNext("left")}
-                    disabled={currentIndex >= queue.length - 1}
-                    className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-15 disabled:pointer-events-none transition-all"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-
-                  <button
                     onClick={() => setPanelOpen(true)}
-                    className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-lg bg-secondary border border-border text-[0.75rem] text-muted-foreground hover:text-foreground transition-all"
+                    className="flex-shrink-0 inline-flex items-center gap-1.5 h-7 px-3 rounded-lg bg-secondary border border-border text-[0.75rem] text-muted-foreground hover:text-foreground transition-all"
                   >
-                    ↗
+                    <span>↗</span>
+                    <span>Åpne kontakt</span>
                   </button>
                 </div>
 
