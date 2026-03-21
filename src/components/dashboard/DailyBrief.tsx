@@ -295,42 +295,44 @@ const DailyBrief = () => {
 
             {/* 4. Snapshot row */}
             <div className="mt-[10px] mx-[18px]">
-              <div className="border border-border rounded-xl overflow-hidden grid grid-cols-2 divide-x divide-border">
+              <div className="grid grid-cols-2 divide-x divide-border border border-border rounded-xl overflow-hidden">
                 {/* SISTE */}
-                <div className="p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/60 mb-1">Siste</p>
+                <div className="px-4 py-3 bg-secondary/40">
+                  <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60 mb-1">Siste</p>
                   {current.lastAct ? (
                     <>
-                      <p className="text-[13px] font-medium text-foreground truncate">
-                        {cleanDescription(current.lastAct.subject) || current.lastAct.subject}
+                      <p className="text-[0.9375rem] font-medium text-foreground leading-snug">
+                        &ldquo;{cleanDescription(current.lastAct.subject) || current.lastAct.subject}&rdquo;
                       </p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                      <p className="text-[0.8125rem] text-muted-foreground mt-1">
                         {format(new Date(current.lastAct.created_at), "d. MMM yyyy", { locale: nb })}
                         {" · "}
                         {differenceInDays(new Date(), new Date(current.lastAct.created_at))} dager siden
                       </p>
                     </>
                   ) : (
-                    <p className="text-[12px] text-muted-foreground/60 italic">Ingen aktiviteter</p>
+                    <p className="text-[0.875rem] text-muted-foreground/50 italic">Ingen aktivitet</p>
                   )}
                 </div>
 
                 {/* NESTE OPPFØLGING */}
-                <div className="p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/60 mb-1">Neste oppfølging</p>
+                <div className="px-4 py-3 bg-secondary/40">
+                  <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60 mb-1">Neste oppfølging</p>
                   {current.nextTask ? (() => {
                     const overdue = isPast(new Date(current.nextTask.due_date)) && !isToday(new Date(current.nextTask.due_date));
                     return (
                       <>
-                        <p className="text-[13px] font-medium text-foreground truncate">{current.nextTask.title}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className={cn("text-[11px]", overdue ? "text-destructive font-medium" : "text-muted-foreground")}>
+                        <p className="text-[0.9375rem] font-medium text-foreground leading-snug">
+                          {current.nextTask.title}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className={cn("text-[0.8125rem]", overdue ? "text-destructive font-medium" : "text-muted-foreground")}>
                             {format(new Date(current.nextTask.due_date), "d. MMM yyyy", { locale: nb })}
-                          </span>
+                          </p>
                           {overdue && (
                             <Popover>
                               <PopoverTrigger asChild>
-                                <button className="text-[11px] text-muted-foreground/60 hover:text-amber-600 transition-colors">
+                                <button className="text-[0.75rem] text-muted-foreground/50 hover:text-amber-600 transition-colors">
                                   ↷ utsett
                                 </button>
                               </PopoverTrigger>
@@ -354,7 +356,7 @@ const DailyBrief = () => {
                       </>
                     );
                   })() : (
-                    <p className="text-[12px] text-muted-foreground/60 italic">Ingen planlagt</p>
+                    <p className="text-[0.875rem] text-muted-foreground/50 italic">Ingen planlagt</p>
                   )}
                 </div>
               </div>
