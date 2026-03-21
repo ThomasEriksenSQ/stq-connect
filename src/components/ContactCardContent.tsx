@@ -1087,7 +1087,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
 
         {/* ── Separator + Action Bar ── */}
         {editable &&
-        <div className="border-t border-border pt-5 mb-5">
+        <div className="border-t border-border pt-5 mb-8">
             <div className="flex items-center gap-2 flex-wrap">
               <button
               onClick={() => openForm("call")}
@@ -1306,13 +1306,14 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
         }
 
         {/* ── Aktiviteter ── */}
-        <ActivityTimeline
-          activities={activities}
-          profileMap={profileMapFull}
-          editable={editable}
-          onDelete={(id) => deleteActivityMutation.mutate(id)}
-          onUpdateActivity={(id, updates) => updateActivityMutation.mutate({ id, updates })} />
-        
+        <div className="mt-8">
+          <ActivityTimeline
+            activities={activities}
+            profileMap={profileMapFull}
+            editable={editable}
+            onDelete={(id) => deleteActivityMutation.mutate(id)}
+            onUpdateActivity={(id, updates) => updateActivityMutation.mutate({ id, updates })} />
+        </div>
 
       </div>
     </div>);
