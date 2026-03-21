@@ -367,39 +367,6 @@ const DailyBrief = () => {
 
               <div className="p-7 space-y-5">
 
-                {/* ── Header: chevrons + badge + Finn.no + åpne-knapp ── */}
-                <div className="flex items-center gap-2">
-                  {/* Temperatur-badge */}
-                  <div className={cn(
-                    "inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[0.8125rem] font-semibold",
-                    TEMP_CONFIG[current.temperature].bg,
-                    TEMP_CONFIG[current.temperature].text
-                  )}>
-                    {current.temperature === "hett" && "🔥"}
-                    {current.temperature === "lovende" && "⚡"}
-                    {current.temperature === "mulig" && "💡"}
-                    {current.temperature === "sovende" && "💤"}
-                    {" "}{TEMP_CONFIG[current.temperature].label}
-                  </div>
-
-                  <div className="flex-1" />
-
-                  <button
-                    onClick={() => setPanelOpen(true)}
-                    className="flex-shrink-0 inline-flex items-center gap-1.5 h-7 px-3 rounded-lg bg-secondary border border-border text-[0.75rem] text-muted-foreground hover:text-foreground transition-all"
-                  >
-                    <span>↗</span>
-                    <span>Åpne kontakt</span>
-                  </button>
-                </div>
-
-                {/* ── Begrunnelses-linje ── */}
-                {reasonLine && (
-                  <p className="text-[0.8125rem] text-muted-foreground leading-snug -mt-2">
-                    {reasonLine}
-                  </p>
-                )}
-
                 {/* ── Navn + meta ── */}
                 <div className="space-y-1">
                   <button
@@ -478,6 +445,38 @@ const DailyBrief = () => {
                     )}
                   </div>
                 </div>
+
+                {/* ── Temperatur-badge + Åpne kontakt ── */}
+                <div className="flex items-center gap-2">
+                  <div className={cn(
+                    "inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[0.8125rem] font-semibold",
+                    TEMP_CONFIG[current.temperature].bg,
+                    TEMP_CONFIG[current.temperature].text
+                  )}>
+                    {current.temperature === "hett" && "🔥"}
+                    {current.temperature === "lovende" && "⚡"}
+                    {current.temperature === "mulig" && "💡"}
+                    {current.temperature === "sovende" && "💤"}
+                    {" "}{TEMP_CONFIG[current.temperature].label}
+                  </div>
+
+                  <div className="flex-1" />
+
+                  <button
+                    onClick={() => setPanelOpen(true)}
+                    className="flex-shrink-0 inline-flex items-center gap-1.5 h-7 px-3 rounded-lg bg-secondary border border-border text-[0.75rem] text-muted-foreground hover:text-foreground transition-all"
+                  >
+                    <span>↗</span>
+                    <span>Åpne kontakt</span>
+                  </button>
+                </div>
+
+                {/* ── Begrunnelses-linje ── */}
+                {reasonLine && (
+                  <p className="text-[0.8125rem] text-muted-foreground leading-snug -mt-2">
+                    {reasonLine}
+                  </p>
+                )}
 
                 {/* Snooze */}
                 {activeForm === "snooze" && current.nextTask && (
