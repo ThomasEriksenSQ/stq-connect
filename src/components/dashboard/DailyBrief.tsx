@@ -72,6 +72,7 @@ const DailyBrief = () => {
   const [treated, setTreated] = useState<Set<string>>(new Set());
   const [signalOpen, setSignalOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [localSignals, setLocalSignals] = useState<Record<string, string>>({});
   const [sheetContactId, setSheetContactId] = useState<string | null>(null);
 
   // ── Data queries ──
