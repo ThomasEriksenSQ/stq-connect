@@ -242,7 +242,7 @@ const DailyBrief = () => {
     <div className="space-y-3">
       {/* ── Counter row ── */}
       <div className="flex justify-between text-[0.75rem] text-muted-foreground" style={{ padding: "0 42px" }}>
-        <span>{treated} behandlet i dag</span>
+        <span>{treated.size} behandlet i dag</span>
         <span>{Math.max(0, total - idx)} igjen</span>
       </div>
 
