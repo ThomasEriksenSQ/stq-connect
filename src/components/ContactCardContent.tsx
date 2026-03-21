@@ -1801,21 +1801,23 @@ function TaskRow({
         }
       </div>
       <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
-        {task.due_date &&
-        <Tooltip>
+        {task.due_date ? (
+          <Tooltip>
             <TooltipTrigger asChild>
-              <span
-              className={cn(
+              <span className={cn(
                 "text-[0.8125rem] font-medium",
                 overdue ? "text-destructive" : today ? "text-[hsl(var(--warning))]" : "text-muted-foreground"
               )}>
-              
                 {format(new Date(task.due_date), "d. MMM yyyy", { locale: nb })}
               </span>
             </TooltipTrigger>
             <TooltipContent>{fullDate(task.due_date)}</TooltipContent>
           </Tooltip>
-        }
+        ) : task.description?.includes("[someday]") ? (
+          <span className="text-[0.8125rem] font-medium text-muted-foreground italic">
+            Følg opp på sikt
+          </span>
+        ) : null}
         {displayCategory && <CategoryBadge label={displayCategory} />}
       </div>
     </div>);
