@@ -415,7 +415,7 @@ const DailyBrief = () => {
               viewMode === "kort" ? "bg-foreground text-background border-foreground font-medium" : "border-border text-muted-foreground hover:bg-secondary"
             )}
           >
-            <Flame className="h-3.5 w-3.5" /> Kort
+            <Flame className="h-3.5 w-3.5" /> Agent
           </button>
           <button
             onClick={() => setViewMode("liste")}
@@ -424,7 +424,7 @@ const DailyBrief = () => {
               viewMode === "liste" ? "bg-foreground text-background border-foreground font-medium" : "border-border text-muted-foreground hover:bg-secondary"
             )}
           >
-            <List className="h-3.5 w-3.5" /> Liste
+            <List className="h-3.5 w-3.5" /> Hot list
           </button>
         </div>
       </div>
