@@ -952,18 +952,14 @@ const DailyBrief = () => {
                 <X className="h-4 w-4" />
               </button>
 
-              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1">
-                Før du går videre
-              </p>
-              <p className="text-[0.875rem] text-muted-foreground mb-1">Hold kontakten oppdatert</p>
-              <p className="text-[1.125rem] font-bold text-foreground mb-6">{navn}</p>
+              <p className="text-[1.5rem] font-bold text-foreground mb-6">Hva er status på {navn}?</p>
 
               {/* Oppfølging */}
               <div className="mb-6">
                 <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-3">
                   {nudgeHarEksisterendeTask
-                    ? (nudgeScenario === "forfalt" ? `Forfalt: "${current.nextTask?.title}"` : `Oppdater oppfølging`)
-                    : "Ny oppfølging — Følg opp om behov"}
+                    ? (nudgeScenario === "forfalt" ? `Sett ny dato for: "${current.nextTask?.title}"` : `Sett ny dato for oppfølging`)
+                    : "Sett ny dato for: \"Følg opp om behov\""}
                 </p>
                 <div className="grid grid-cols-3 gap-2">
                   {NUDGE_DATE_CHIPS.map(chip => (
@@ -973,7 +969,7 @@ const DailyBrief = () => {
                       className={cn(
                         "h-10 px-3 text-[0.8125rem] rounded-xl border transition-all font-medium",
                         nudgeDate === chip.value
-                          ? "bg-foreground text-background border-foreground shadow-sm"
+                          ? "bg-primary/10 border-primary/30 text-primary font-medium shadow-sm"
                           : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
                       )}
                     >
@@ -998,7 +994,7 @@ const DailyBrief = () => {
 
               {/* Signal */}
               <div className="mb-8">
-                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">Signal</p>
+                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">Hva er signalet nå?</p>
                 <div className="grid grid-cols-2 gap-2">
                   {SIGNAL_CATEGORIES.filter(c => c.label !== "Ikke aktuelt").map(cat => (
                     <button
