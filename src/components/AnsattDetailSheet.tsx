@@ -23,15 +23,15 @@ interface AnsattDetailSheetProps {
 }
 
 const SUGGESTED_TAGS = [
-  "C++", "C", "Embedded", "Yocto", "Linux", "Qt", "FPGA", "Python",
-  "SPI/I2C", "MCU", "Embedded Linux", "Sikkerhet", "Assembly",
-  "FreeRTOS", "TrustZone",
-];
+"C++", "C", "Embedded", "Yocto", "Linux", "Qt", "FPGA", "Python",
+"SPI/I2C", "MCU", "Embedded Linux", "Sikkerhet", "Assembly",
+"FreeRTOS", "TrustZone"];
+
 
 const STATUS_OPTIONS = [
-  { value: "AKTIV/SIGNERT", label: "Aktiv" },
-  { value: "SLUTTET", label: "Sluttet" },
-];
+{ value: "AKTIV/SIGNERT", label: "Aktiv" },
+{ value: "SLUTTET", label: "Sluttet" }];
+
 
 export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoRunMatch }: AnsattDetailSheetProps) {
   const queryClient = useQueryClient();
@@ -55,7 +55,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
   const [form, setForm] = useState({
     navn: "", epost: "", tlf: "", geografi: "", status: "AKTIV/SIGNERT",
     start_dato: "", slutt_dato: "", kompetanse: [] as string[],
-    bilde_url: "", erfaring_aar: "", tilgjengelig_fra: "",
+    bilde_url: "", erfaring_aar: "", tilgjengelig_fra: ""
   });
 
   // Reset form when panel opens/closes or ansatt changes
@@ -65,7 +65,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
       setForm({
         navn: "", epost: "", tlf: "", geografi: "", status: "AKTIV/SIGNERT",
         start_dato: "", slutt_dato: "", kompetanse: [],
-        bilde_url: "", erfaring_aar: "", tilgjengelig_fra: "",
+        bilde_url: "", erfaring_aar: "", tilgjengelig_fra: ""
       });
     } else if (ansatt) {
       setEditing(false);
@@ -80,7 +80,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
         kompetanse: ansatt.kompetanse || [],
         bilde_url: ansatt.bilde_url || "",
         erfaring_aar: ansatt.erfaring_aar?.toString() || "",
-        tilgjengelig_fra: ansatt.tilgjengelig_fra || "",
+        tilgjengelig_fra: ansatt.tilgjengelig_fra || ""
       });
     }
     setTagInput("");
@@ -101,7 +101,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
     setSyncing(true);
     try {
       const { data, error } = await supabase.functions.invoke("sync-cv-kompetanse", {
-        body: { ansatt_id: ansatt.id },
+        body: { ansatt_id: ansatt.id }
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -132,13 +132,13 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error("Maks 5 MB"); return; }
+    if (file.size > 5 * 1024 * 1024) {toast.error("Maks 5 MB");return;}
     setUploading(true);
     const ext = file.name.split(".").pop() || "jpg";
     const path = `${ansatt?.id || "new"}-${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("ansatte-bilder").upload(path, file, { upsert: true });
     setUploading(false);
-    if (error) { toast.error("Opplasting feilet"); return; }
+    if (error) {toast.error("Opplasting feilet");return;}
     const url = `${SUPABASE_URL}/storage/v1/object/public/ansatte-bilder/${path}`;
     set("bilde_url", url);
   };
@@ -146,7 +146,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
   const handleCvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { toast.error("Maks 10 MB"); return; }
+    if (file.size > 10 * 1024 * 1024) {toast.error("Maks 10 MB");return;}
     setCvFile(file);
     setCvParsing(true);
     setCvParsed(false);
@@ -162,7 +162,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
       });
 
       const { data, error } = await supabase.functions.invoke("parse-cv", {
-        body: { base64, filename: file.name },
+        body: { base64, filename: file.name }
       });
 
       if (error) throw error;
@@ -196,7 +196,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
       bilde_url: form.bilde_url || null,
       erfaring_aar: form.erfaring_aar ? parseInt(form.erfaring_aar) : null,
       tilgjengelig_fra: form.tilgjengelig_fra || null,
-      updated_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
 
     let error;
@@ -206,7 +206,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
       ({ error } = await supabase.from("stacq_ansatte").update(payload).eq("id", ansatt.id));
     }
     setSaving(false);
-    if (error) { toast.error("Kunne ikke lagre"); return; }
+    if (error) {toast.error("Kunne ikke lagre");return;}
     toast.success(isCreate ? "Ansatt lagt til" : "Profil oppdatert");
     queryClient.invalidateQueries({ queryKey: ["stacq-ansatte"] });
     if (isCreate) {
@@ -221,11 +221,11 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
     setLeadsLoading(true);
     setLeadsResults(null);
     try {
-      const { data: kontakter } = await supabase
-        .from("contacts")
-        .select("id, first_name, last_name, title, company_id, call_list, teknologier, companies(name)")
-        .not("teknologier", "eq", "{}")
-        .limit(200);
+      const { data: kontakter } = await supabase.
+      from("contacts").
+      select("id, first_name, last_name, title, company_id, call_list, teknologier, companies(name)").
+      not("teknologier", "eq", "{}").
+      limit(200);
 
       if (!kontakter?.length) {
         toast("Ingen kontakter med teknisk profil ennå");
@@ -236,17 +236,17 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
       const kontaktIds = kontakter.map((k: any) => k.id);
 
       const [{ data: aktiviteter }, { data: tasks }] = await Promise.all([
-        supabase
-          .from("activities")
-          .select("contact_id, created_at, subject, description")
-          .in("contact_id", kontaktIds)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("tasks")
-          .select("contact_id, created_at, title, description, due_date")
-          .in("contact_id", kontaktIds)
-          .neq("status", "done"),
-      ]);
+      supabase.
+      from("activities").
+      select("contact_id, created_at, subject, description").
+      in("contact_id", kontaktIds).
+      order("created_at", { ascending: false }),
+      supabase.
+      from("tasks").
+      select("contact_id, created_at, title, description, due_date").
+      in("contact_id", kontaktIds).
+      neq("status", "done")]
+      );
 
       const berikede = kontakter.map((k: any) => {
         const kAkts = (aktiviteter || []).filter((a: any) => a.contact_id === k.id);
@@ -255,9 +255,9 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
           kAkts.map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
           kTasks.map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date }))
         );
-        const sisteKontakt = kAkts[0]?.created_at
-          ? new Date(kAkts[0].created_at).toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" })
-          : null;
+        const sisteKontakt = kAkts[0]?.created_at ?
+        new Date(kAkts[0].created_at).toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" }) :
+        null;
         return {
           id: k.id,
           navn: `${k.first_name} ${k.last_name}`,
@@ -266,7 +266,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
           er_innkjoper: k.call_list || false,
           teknologier: k.teknologier || [],
           signal: signal || "Ukjent om behov",
-          siste_kontakt: sisteKontakt,
+          siste_kontakt: sisteKontakt
         };
       });
 
@@ -277,10 +277,10 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
             teknologier: ansatt.kompetanse || [],
             erfaring_aar: ansatt.erfaring_aar || null,
             geografi: ansatt.geografi || null,
-            tilgjengelig_fra: ansatt.tilgjengelig_fra || null,
+            tilgjengelig_fra: ansatt.tilgjengelig_fra || null
           },
-          kontakter: berikede,
-        },
+          kontakter: berikede
+        }
       });
 
       if (error) throw error;
@@ -297,17 +297,17 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
   const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
 
   return (
-    <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Sheet open={open} onOpenChange={(v) => {if (!v) onClose();}}>
       <SheetContent side="right" className="w-[840px] sm:w-[920px] p-0 flex flex-col [&>button]:hidden">
 
         {/* ─── EDIT MODE ─── */}
-        {editing ? (
-          <div className="flex-1 overflow-y-auto px-6 py-5">
+        {editing ?
+        <div className="flex-1 overflow-y-auto px-6 py-5">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-[1.25rem] font-bold text-foreground">
                 {isCreate ? "Ny ansatt" : `Rediger ${form.navn.split(" ")[0]}`}
               </h2>
-              <button onClick={() => { if (isCreate) onClose(); else setEditing(false); }} className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">
+              <button onClick={() => {if (isCreate) onClose();else setEditing(false);}} className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">
                 Avbryt
               </button>
             </div>
@@ -348,11 +348,11 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
               <div>
                 <label className={LABEL}>Tilgjengelig fra</label>
                 <Input
-                  type="date"
-                  value={form.tilgjengelig_fra}
-                  onChange={(e) => set("tilgjengelig_fra", e.target.value)}
-                  className="mt-1 text-[0.875rem]"
-                />
+                type="date"
+                value={form.tilgjengelig_fra}
+                onChange={(e) => set("tilgjengelig_fra", e.target.value)}
+                className="mt-1 text-[0.875rem]" />
+              
                 <p className="text-[0.6875rem] text-muted-foreground mt-1">
                   Når kan konsulenten starte et nytt oppdrag? (kan være etter fornyelsesdato)
                 </p>
@@ -361,104 +361,104 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
               <div>
                 <label className={cn(LABEL, "mb-1.5 block")}>Status</label>
                 <div className="flex gap-2">
-                  {STATUS_OPTIONS.map((s) => (
-                    <button
-                      key={s.value}
-                      onClick={() => set("status", s.value)}
-                      className={cn(
-                        "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
-                        form.status === s.value
-                          ? "bg-foreground text-background border-foreground"
-                          : "border-border text-muted-foreground hover:bg-secondary"
-                      )}
-                    >
+                  {STATUS_OPTIONS.map((s) =>
+                <button
+                  key={s.value}
+                  onClick={() => set("status", s.value)}
+                  className={cn(
+                    "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
+                    form.status === s.value ?
+                    "bg-foreground text-background border-foreground" :
+                    "border-border text-muted-foreground hover:bg-secondary"
+                  )}>
+                  
                       {s.label}
                     </button>
-                  ))}
+                )}
                 </div>
               </div>
 
               {/* ── PROFIL ── */}
-              <div className="space-y-3 mt-6">
-                <label className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                  Profil — vises på nettsiden
-                </label>
+              
 
-                {/* Avatar + CV upload */}
-                <div className="flex gap-4 items-start">
-                  <div className="shrink-0">
-                    {form.bilde_url ? (
-                      <img src={form.bilde_url} alt="" className="w-20 h-20 rounded-full object-cover border border-border" />
-                    ) : (
-                      <div className="w-20 h-20 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg font-bold">
-                        {form.navn ? getInitials(form.navn) : "?"}
-                      </div>
-                    )}
-                    <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-                    <button
-                      onClick={() => fileRef.current?.click()}
-                      disabled={uploading}
-                      className="text-[0.6875rem] font-medium text-primary hover:underline disabled:opacity-50 mt-1.5 block mx-auto"
-                    >
-                      {uploading ? "Laster opp..." : "Bytt bilde"}
-                    </button>
-                  </div>
 
-                  {/* CV upload box */}
-                  <div className="flex-1">
-                    <label className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground block mb-1.5">
-                      Last opp CV (PDF)
-                    </label>
-                    <div
-                      onClick={() => cvInputRef.current?.click()}
-                      className={cn(
-                        "border-2 border-dashed rounded-lg px-4 py-3 cursor-pointer transition-colors text-sm",
-                        cvParsing
-                          ? "border-primary/40 bg-primary/5"
-                          : cvFile
-                            ? "border-emerald-500/40 bg-emerald-500/5"
-                            : "border-border hover:border-primary/40 hover:bg-primary/5"
-                      )}
-                    >
-                      {cvParsing ? (
-                        <div className="flex items-center gap-2 text-primary">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Analyserer CV med AI...</span>
-                        </div>
-                      ) : cvFile ? (
-                        <div className="flex items-center gap-2 text-emerald-600">
-                          <FileText className="h-4 w-4" />
-                          <span className="font-medium">{cvFile.name}</span>
-                          <span className="text-muted-foreground text-xs ml-auto">Klikk for å bytte</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Upload className="h-4 w-4" />
-                          <div>
-                            <span className="text-foreground font-medium">Last opp CV</span>
-                            <span className="text-muted-foreground"> — PDF, maks 10 MB</span>
-                            <p className="text-xs text-muted-foreground mt-0.5">AI henter ut erfaring, kompetanse og forslag til bio</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <input ref={cvInputRef} type="file" accept=".pdf" className="hidden" onChange={handleCvUpload} />
-                  </div>
-                </div>
 
-                {/* AI result banner */}
-                {cvParsed && (
-                  <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                      <Sparkles className="h-3.5 w-3.5" />
-                      AI hentet ut følgende — rediger gjerne
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Feltene nedenfor er fylt inn automatisk. Du kan justere dem før du lagrer.
-                    </p>
-                  </div>
-                )}
-              </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -475,28 +475,28 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
               <div>
                 <label className={LABEL}>Kompetanse</label>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5 p-2 border border-border rounded-lg bg-background min-h-[38px]">
-                  {form.kompetanse.map((t) => (
-                    <span key={t} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-[0.75rem] text-foreground">
+                  {form.kompetanse.map((t) =>
+                <span key={t} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-[0.75rem] text-foreground">
                       {t}
                       <button onClick={() => set("kompetanse", form.kompetanse.filter((x) => x !== t))} className="hover:text-destructive">
                         <X className="h-3 w-3" />
                       </button>
                     </span>
-                  ))}
+                )}
                   <input
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={handleTagKeyDown}
-                    placeholder={form.kompetanse.length === 0 ? "Legg til kompetanse..." : ""}
-                    className="flex-1 min-w-[100px] bg-transparent outline-none text-[0.8125rem] placeholder:text-muted-foreground"
-                  />
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleTagKeyDown}
+                  placeholder={form.kompetanse.length === 0 ? "Legg til kompetanse..." : ""}
+                  className="flex-1 min-w-[100px] bg-transparent outline-none text-[0.8125rem] placeholder:text-muted-foreground" />
+                
                 </div>
                 <div className="flex flex-wrap gap-1.5 mt-2">
-                  {SUGGESTED_TAGS.filter((s) => !form.kompetanse.includes(s)).slice(0, 10).map((s) => (
-                    <button key={s} onClick={() => addTag(s)} className="h-6 px-2 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors">
+                  {SUGGESTED_TAGS.filter((s) => !form.kompetanse.includes(s)).slice(0, 10).map((s) =>
+                <button key={s} onClick={() => addTag(s)} className="h-6 px-2 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors">
                       {s}
                     </button>
-                  ))}
+                )}
                 </div>
               </div>
 
@@ -504,90 +504,90 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
 
             {/* Save / Cancel footer */}
             <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
-              <button onClick={() => { if (isCreate) onClose(); else setEditing(false); }} className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">
+              <button onClick={() => {if (isCreate) onClose();else setEditing(false);}} className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">
                 Avbryt
               </button>
               <button
-                disabled={!form.navn.trim() || saving}
-                onClick={handleSave}
-                className={cn(
-                  "inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg transition-colors",
-                  form.navn.trim() && !saving
-                    ? "bg-primary text-primary-foreground hover:opacity-90"
-                    : "bg-muted text-muted-foreground cursor-not-allowed"
-                )}
-              >
+              disabled={!form.navn.trim() || saving}
+              onClick={handleSave}
+              className={cn(
+                "inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg transition-colors",
+                form.navn.trim() && !saving ?
+                "bg-primary text-primary-foreground hover:opacity-90" :
+                "bg-muted text-muted-foreground cursor-not-allowed"
+              )}>
+              
                 {saving ? "Lagrer..." : "Lagre"}
               </button>
             </div>
-          </div>
-        ) : (
-          /* ─── VIEW MODE ─── */
-          <>
+          </div> : (
+
+        /* ─── VIEW MODE ─── */
+        <>
             {/* Header */}
             <div className="px-6 py-5 border-b border-border">
               <div className="flex items-center gap-3">
-                {ansatt?.bilde_url ? (
-                  <img src={ansatt.bilde_url} alt={ansatt.navn} className="w-12 h-12 rounded-full object-cover border border-border" />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-primary/10 text-primary text-sm font-bold flex items-center justify-center">
+                {ansatt?.bilde_url ?
+              <img src={ansatt.bilde_url} alt={ansatt.navn} className="w-12 h-12 rounded-full object-cover border border-border" /> :
+
+              <div className="w-12 h-12 rounded-full bg-primary/10 text-primary text-sm font-bold flex items-center justify-center">
                     {getInitials(ansatt?.navn || "")}
                   </div>
-                )}
+              }
                 <div className="min-w-0 flex-1">
                   <h2 className="text-[1.25rem] font-bold text-foreground truncate">{ansatt?.navn}</h2>
                 </div>
               </div>
 
               {/* Tech tags */}
-              {ansatt?.kompetanse?.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-3">
-                  {ansatt.kompetanse.map((t: string) => (
-                    <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.75rem] font-medium text-foreground">
+              {ansatt?.kompetanse?.length > 0 &&
+            <div className="flex flex-wrap gap-1.5 mt-3">
+                  {ansatt.kompetanse.map((t: string) =>
+              <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.75rem] font-medium text-foreground">
                       {t}
                     </span>
-                  ))}
-                </div>
               )}
+                </div>
+            }
 
-              {ansatt?.tilgjengelig_fra && (
-                <div className="mt-3 flex items-center gap-2 text-[0.8125rem]">
+              {ansatt?.tilgjengelig_fra &&
+            <div className="mt-3 flex items-center gap-2 text-[0.8125rem]">
                   <span className="text-muted-foreground">Tilgjengelig fra:</span>
                   <span className={cn(
-                    "font-medium",
-                    (() => {
-                      const dager = Math.round((new Date(ansatt.tilgjengelig_fra).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                      if (dager <= 0) return "text-emerald-600";
-                      if (dager <= 30) return "text-amber-600";
-                      return "text-muted-foreground";
-                    })()
-                  )}>
+                "font-medium",
+                (() => {
+                  const dager = Math.round((new Date(ansatt.tilgjengelig_fra).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                  if (dager <= 0) return "text-emerald-600";
+                  if (dager <= 30) return "text-amber-600";
+                  return "text-muted-foreground";
+                })()
+              )}>
                     {(() => {
-                      const dager = Math.round((new Date(ansatt.tilgjengelig_fra).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                      if (dager <= 0) return "Tilgjengelig nå";
-                      if (dager <= 30) return `Om ${dager} dager (${format(new Date(ansatt.tilgjengelig_fra), "d. MMM yyyy", { locale: nb })})`;
-                      return format(new Date(ansatt.tilgjengelig_fra), "d. MMMM yyyy", { locale: nb });
-                    })()}
+                  const dager = Math.round((new Date(ansatt.tilgjengelig_fra).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                  if (dager <= 0) return "Tilgjengelig nå";
+                  if (dager <= 30) return `Om ${dager} dager (${format(new Date(ansatt.tilgjengelig_fra), "d. MMM yyyy", { locale: nb })})`;
+                  return format(new Date(ansatt.tilgjengelig_fra), "d. MMMM yyyy", { locale: nb });
+                })()}
                   </span>
                 </div>
-              )}
+            }
 
               {/* Synkroniser kompetanse fra CV */}
               <div className="mt-3 flex items-center gap-2">
                 <button
-                  onClick={handleSyncFromCV}
-                  disabled={syncing}
-                  className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50"
-                >
-                  {syncing ? (
-                    <><Loader2 className="h-3 w-3 animate-spin" />Synkroniserer...</>
-                  ) : (
-                    <><Sparkles className="h-3 w-3" />Synkroniser kompetanse fra CV</>
-                  )}
+                onClick={handleSyncFromCV}
+                disabled={syncing}
+                className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50">
+                
+                  {syncing ?
+                <><Loader2 className="h-3 w-3 animate-spin" />Synkroniserer...</> :
+
+                <><Sparkles className="h-3 w-3" />Synkroniser kompetanse fra CV</>
+                }
                 </button>
-                {ansatt?.cv_profil_hentet && (
-                  <span className="text-[0.6875rem] text-muted-foreground">✓ Hentet fra CV</span>
-                )}
+                {ansatt?.cv_profil_hentet &&
+              <span className="text-[0.6875rem] text-muted-foreground">✓ Hentet fra CV</span>
+              }
               </div>
             </div>
 
@@ -603,27 +603,27 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                   ansatt_id: ansatt?.id,
                   forny_dato: ansatt?.forny_dato || null,
                   erfaring_aar: ansatt?.erfaring_aar || null,
-                  tilgjengelig_fra: ansatt?.tilgjengelig_fra || null,
+                  tilgjengelig_fra: ansatt?.tilgjengelig_fra || null
                 }}
-                autoRunMatch={autoRunMatch}
-              />
+                autoRunMatch={autoRunMatch} />
+              
               </div>
 
               {/* Finn leads */}
               <div className="mt-6">
                 <button
-                  onClick={() => { setFinnLeads(!finnLeads); if (!finnLeads && !leadsResults) handleFinnLeads(); }}
-                  className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.8125rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors w-full justify-center"
-                >
-                  {leadsLoading ? (
-                    <><Loader2 className="h-3 w-3 animate-spin" />Finner leads...</>
-                  ) : (
-                    <><Target className="h-3 w-3 text-primary" />Finn leads for {ansatt?.navn?.split(" ")[0]}</>
-                  )}
+                onClick={() => {setFinnLeads(!finnLeads);if (!finnLeads && !leadsResults) handleFinnLeads();}}
+                className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.8125rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors w-full justify-center">
+                
+                  {leadsLoading ?
+                <><Loader2 className="h-3 w-3 animate-spin" />Finner leads...</> :
+
+                <><Target className="h-3 w-3 text-primary" />Finn leads for {ansatt?.navn?.split(" ")[0]}</>
+                }
                 </button>
 
-                {finnLeads && leadsResults !== null && (
-                  <div className="mt-3 space-y-2">
+                {finnLeads && leadsResults !== null &&
+              <div className="mt-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                         Beste leads · {leadsResults.length}
@@ -633,50 +633,50 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                       </button>
                     </div>
 
-                    {leadsResults.length === 0 ? (
-                      <p className="text-[0.8125rem] text-muted-foreground">Ingen treff</p>
-                    ) : (
-                      leadsResults.map((m: any, i: number) => (
-                        <div key={`lead-${m.id || i}`} className="rounded-lg border border-border bg-card p-2.5">
+                    {leadsResults.length === 0 ?
+                <p className="text-[0.8125rem] text-muted-foreground">Ingen treff</p> :
+
+                leadsResults.map((m: any, i: number) =>
+                <div key={`lead-${m.id || i}`} className="rounded-lg border border-border bg-card p-2.5">
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5 min-w-0">
                               <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
                               <span className="text-[0.8125rem] font-semibold text-foreground truncate">{m.navn}</span>
-                              {m.er_innkjoper && (
-                                <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 px-1.5 py-0.5 text-[0.625rem] font-semibold shrink-0">
+                              {m.er_innkjoper &&
+                      <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 px-1.5 py-0.5 text-[0.625rem] font-semibold shrink-0">
                                   INN
                                 </span>
-                              )}
+                      }
                             </div>
                             <p className="text-[0.75rem] text-muted-foreground truncate">{m.selskap}</p>
                           </div>
                           <div className="flex items-center justify-between mt-1">
                             <div className="flex flex-wrap gap-1">
-                              {(m.match_tags || []).map((t: string) => (
-                                <span key={t} className="inline-flex items-center rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[0.625rem] font-medium">
+                              {(m.match_tags || []).map((t: string) =>
+                      <span key={t} className="inline-flex items-center rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[0.625rem] font-medium">
                                   {t}
                                 </span>
-                              ))}
+                      )}
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
                               <span className={cn(
-                                "inline-block h-2 w-2 rounded-full",
-                                m.score >= 8 ? "bg-emerald-500" : m.score >= 6 ? "bg-amber-500" : "bg-red-500"
-                              )} />
+                        "inline-block h-2 w-2 rounded-full",
+                        m.score >= 8 ? "bg-emerald-500" : m.score >= 6 ? "bg-amber-500" : "bg-red-500"
+                      )} />
                               <span className="text-[0.75rem] font-bold">{m.score}/10</span>
                             </div>
                           </div>
                           <p className="text-[0.75rem] text-muted-foreground mt-1 italic">{m.begrunnelse}</p>
                         </div>
-                      ))
-                    )}
+                )
+                }
                   </div>
-                )}
+              }
               </div>
             </div>
-          </>
-        )}
+          </>)
+        }
       </SheetContent>
-    </Sheet>
-  );
+    </Sheet>);
+
 }
