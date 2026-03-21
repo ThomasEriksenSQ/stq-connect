@@ -74,9 +74,22 @@ const DailyBrief = () => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [localSignals, setLocalSignals] = useState<Record<string, string>>({});
   const [sheetContactId, setSheetContactId] = useState<string | null>(null);
+  const [ownerFilter, setOwnerFilter] = useState("all");
+  const [viewMode, setViewMode] = useState<"kort" | "liste">("kort");
 
   // ── Data queries ──
-  const ownerFilter = "all"; // placeholder for future owner filtering
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["salgssenter-profiles"],
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("id, full_name");
+      return data || [];
+    },
+  });
+
+  const filterOptions = useMemo(() => {
+    const opts = profiles.map((p: any) => ({ id: p.id, label: p.full_name }));
+    return [{ id: "all", label: "Alle" }, ...opts];
+  }, [profiles]);
 
   const { data: contacts = [], isLoading } = useQuery({
     queryKey: ["salgssenter-contacts", ownerFilter],
