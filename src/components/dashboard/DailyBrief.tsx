@@ -116,7 +116,7 @@ const DailyBrief = () => {
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<"kort" | "liste">("kort");
   const [ownerFilter, setOwnerFilter] = useState(user?.id || "alle");
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentContactId, setCurrentContactId] = useState<string | null>(null);
   const [treated, setTreated] = useState<Set<string>>(new Set());
   const [activeForm, setActiveForm] = useState<"snooze" | "signal" | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
