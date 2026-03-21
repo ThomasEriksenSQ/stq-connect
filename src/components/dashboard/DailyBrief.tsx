@@ -6,7 +6,7 @@ import { differenceInDays, isPast, isToday, format, addWeeks, addMonths } from "
 import { nb } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { getEffectiveSignal, CATEGORIES } from "@/lib/categoryUtils";
-import { Loader2, ExternalLink, ChevronDown, ChevronLeft, ChevronRight, Check, Flame, List } from "lucide-react";
+import { Loader2, ExternalLink, ChevronDown, ChevronLeft, ChevronRight, Check, Flame, List, Radio } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { ContactCardContent } from "@/components/ContactCardContent";
@@ -646,6 +646,11 @@ const DailyBrief = () => {
                         )}>
                           {lead.signal || "—"}
                         </span>
+                        {lead.hasFinnAd && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 text-[0.6875rem] font-semibold flex-shrink-0">
+                            <Radio className="h-3 w-3" /> Finn.no
+                          </span>
+                        )}
                       </div>
                       <p className="text-[0.75rem] text-muted-foreground truncate mt-0.5">
                         {lead.contact.companies?.name}
