@@ -270,11 +270,11 @@ const DailyBrief = () => {
 
   const filterOptions = useMemo(() => {
     const myProfile = allProfiles.find(p => p.id === user?.id);
-    const myLabel = myProfile?.full_name?.split(" ")[0] || "Mine";
-    const others = allProfiles.filter(p => p.id !== user?.id).map(p => {
-      const parts = p.full_name.split(" ");
-      return { id: p.id, label: parts.length > 2 ? `${parts[0]} ${parts[1][0]}.` : parts[0] };
-    });
+    const myLabel = myProfile?.full_name || "Mine";
+    const others = allProfiles.filter(p => p.id !== user?.id).map(p => ({
+      id: p.id,
+      label: p.full_name,
+    }));
     return [
       { id: user?.id || "", label: myLabel },
       { id: "alle", label: "Alle" },
