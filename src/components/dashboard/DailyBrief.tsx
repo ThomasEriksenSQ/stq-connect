@@ -72,11 +72,14 @@ const DailyBrief = () => {
   const [treated, setTreated] = useState<Set<string>>(new Set());
   const [signalOpen, setSignalOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [localSignals, setLocalSignals] = useState<Record<string, string>>({});
   const [sheetContactId, setSheetContactId] = useState<string | null>(null);
 
   // ── Data queries ──
+  const ownerFilter = "all"; // placeholder for future owner filtering
+
   const { data: contacts = [], isLoading } = useQuery({
-    queryKey: ["dailybrief-contacts"],
+    queryKey: ["salgssenter-contacts", ownerFilter],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
@@ -193,7 +196,7 @@ const DailyBrief = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["dailybrief-contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["salgssenter-contacts"] });
     },
   });
 
@@ -202,28 +205,10 @@ const DailyBrief = () => {
       const { error } = await supabase.from("tasks").update({ due_date: dueDate, updated_at: new Date().toISOString() }).eq("id", taskId);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["dailybrief-contacts"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["salgssenter-contacts"] }),
   });
 
-  const toggleContactField = useCallback(async (contactId: string, field: "call_list" | "cv_email" | "ikke_aktuell_kontakt", currentVal: boolean) => {
-    await supabase.from("contacts").update({ [field]: !currentVal }).eq("id", contactId);
-    queryClient.invalidateQueries({ queryKey: ["dailybrief-contacts"] });
-  }, [queryClient]);
-
-  const handleSignalChange = useCallback((label: string) => {
-    if (!current) return;
-    createActivityMutation.mutate({
-      type: "note", subject: label,
-      contactId: current.contact.id, companyId: current.contact.company_id,
-    }, { onSuccess: () => toast.success(`Signal: ${label}`) });
-  }, [current, createActivityMutation]);
-
-  const handleIkkeRelevant = useCallback(() => {
-    if (!current) return;
-    toggleContactField(current.contact.id, "ikke_aktuell_kontakt", false);
-    toast.success("Merket som ikke relevant");
-    goNext("left");
-  }, [current, toggleContactField, goNext]);
+  // removed toggleContactField and handleIkkeRelevant — logic is now inline
 
   const progress = total > 0 ? (treated.size / total) * 100 : 0;
 
@@ -267,7 +252,7 @@ const DailyBrief = () => {
           </button>
 
           {/* Card */}
-          <div ref={cardRef} className="flex-1 max-w-[480px] rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+          <div ref={cardRef} className="flex-1 min-w-0 rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
             {/* 1. Progressbar */}
             <div className="h-[3px] bg-border">
               <div className="h-full bg-amber-400 transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
@@ -406,12 +391,15 @@ const DailyBrief = () => {
                     onClick={() => setSignalOpen(!signalOpen)}
                     className={cn(
                       "inline-flex items-center gap-1 rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors",
-                      current.signal
-                        ? CATEGORIES.find(c => c.label === current.signal)?.badgeColor || "border-border bg-secondary text-muted-foreground"
-                        : "border-border bg-secondary text-muted-foreground"
+                      (() => {
+                        const sig = localSignals[current.contact.id] ?? current.signal;
+                        return sig
+                          ? CATEGORIES.find(c => c.label === sig)?.badgeColor || "border-border bg-secondary text-muted-foreground"
+                          : "border-border bg-secondary text-muted-foreground";
+                      })()
                     )}
                   >
-                    {current.signal || "Signal"} <ChevronDown className="h-3 w-3 opacity-50" />
+                    {(localSignals[current.contact.id] ?? current.signal) || "Signal"} <ChevronDown className="h-3 w-3 opacity-50" />
                   </button>
                   {signalOpen && (
                     <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-lg shadow-md overflow-hidden min-w-[190px]">
@@ -419,7 +407,18 @@ const DailyBrief = () => {
                         <button
                           key={cat.label}
                           onClick={() => {
-                            handleSignalChange(cat.label);
+                            const label = cat.label;
+                            setLocalSignals(prev => ({ ...prev, [current.contact.id]: label }));
+                            supabase.from("activities").insert({
+                              type: "note",
+                              subject: label,
+                              description: `[${label}]`,
+                              contact_id: current.contact.id,
+                              company_id: current.contact.company_id,
+                              created_by: user?.id,
+                            }).then(() => {
+                              queryClient.invalidateQueries({ queryKey: ["salgssenter-contacts", ownerFilter] });
+                            });
                             setSignalOpen(false);
                           }}
                           className="w-full flex items-center gap-2 px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors text-left"
@@ -427,7 +426,7 @@ const DailyBrief = () => {
                           <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold", cat.badgeColor)}>
                             {cat.label}
                           </span>
-                          {current.signal === cat.label && <Check className="ml-auto h-3.5 w-3.5 text-muted-foreground" />}
+                          {(localSignals[current.contact.id] ?? current.signal) === cat.label && <Check className="ml-auto h-3.5 w-3.5 text-muted-foreground" />}
                         </button>
                       ))}
                     </div>
@@ -436,7 +435,16 @@ const DailyBrief = () => {
 
                 {/* Innkjøper toggle */}
                 <button
-                  onClick={() => toggleContactField(current.contact.id, "call_list", current.contact.call_list)}
+                  onClick={() => {
+                    supabase.from("contacts")
+                      .update({ call_list: !current.contact.call_list })
+                      .eq("id", current.contact.id)
+                      .then(() => {
+                        queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
+                          old?.map((c: any) => c.id === current.contact.id ? { ...c, call_list: !current.contact.call_list } : c)
+                        );
+                      });
+                  }}
                   className={cn(
                     "rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors",
                     current.contact.call_list
@@ -449,7 +457,16 @@ const DailyBrief = () => {
 
                 {/* CV-epost toggle */}
                 <button
-                  onClick={() => toggleContactField(current.contact.id, "cv_email", current.contact.cv_email)}
+                  onClick={() => {
+                    supabase.from("contacts")
+                      .update({ cv_email: !current.contact.cv_email })
+                      .eq("id", current.contact.id)
+                      .then(() => {
+                        queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
+                          old?.map((c: any) => c.id === current.contact.id ? { ...c, cv_email: !current.contact.cv_email } : c)
+                        );
+                      });
+                  }}
                   className={cn(
                     "rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors",
                     current.contact.cv_email
@@ -462,7 +479,17 @@ const DailyBrief = () => {
 
                 {/* Ikke relevant person */}
                 <button
-                  onClick={handleIkkeRelevant}
+                  onClick={() => {
+                    supabase.from("contacts")
+                      .update({ ikke_aktuell_kontakt: true })
+                      .eq("id", current.contact.id)
+                      .then(() => {
+                        queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
+                          old?.map((c: any) => c.id === current.contact.id ? { ...c, ikke_aktuell_kontakt: true } : c)
+                        );
+                      });
+                    toast.success("Merket som ikke relevant — trykk Ok, neste for å gå videre");
+                  }}
                   className="rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors border-border bg-secondary text-muted-foreground hover:bg-red-50 hover:text-red-700 hover:border-red-200"
                 >
                   Ikke relevant person
