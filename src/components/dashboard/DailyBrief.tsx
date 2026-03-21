@@ -196,7 +196,7 @@ const DailyBrief = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["dailybrief-contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["salgssenter-contacts"] });
     },
   });
 
