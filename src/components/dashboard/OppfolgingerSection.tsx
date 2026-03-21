@@ -155,6 +155,18 @@ const OppfolgingerSection = () => {
   const hiddenCount = isAllFilter && sorted.length > MAX_UNFILTERED ? sorted.length - MAX_UNFILTERED : 0;
   const visible = isAllFilter ? sorted.slice(0, MAX_UNFILTERED) : sorted;
 
+  // Someday filtered by owner + signal
+  const filteredSomeday = somedayTasks.filter((t) => {
+    if (ownerFilter !== "all" && t.assigned_to !== ownerFilter && t.created_by !== ownerFilter) return false;
+    if (signalFilter !== "Alle" && getContactSignal(t.contact_id) !== signalFilter) return false;
+    return true;
+  }).sort((a, b) => {
+    const sa = SIGNAL_PRIORITY[getContactSignal(a.contact_id)] ?? CATEGORIES.length;
+    const sb = SIGNAL_PRIORITY[getContactSignal(b.contact_id)] ?? CATEGORIES.length;
+    if (sa !== sb) return sa - sb;
+    return 0;
+  });
+
   // Empty state for "Forfalt + I dag" — show this week fallback
   const showForfaltEmpty = naarFilter === "Forfalt + I dag" && visible.length === 0;
   const weekFallback = showForfaltEmpty ?
