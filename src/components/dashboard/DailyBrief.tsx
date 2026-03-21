@@ -312,13 +312,44 @@ const DailyBrief = () => {
                 </div>
 
                 {/* 2. Header row */}
-                <div className="flex items-center justify-between" style={{ padding: "16px 18px 0" }}>
+                <div className="flex items-center gap-2" style={{ padding: "16px 18px 0" }}>
+                  {/* Forrige-pil */}
+                  <button
+                    onClick={() => goNext("right")}
+                    disabled={idx === 0}
+                    className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-15 disabled:pointer-events-none transition-all"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+
+                  {/* Temperatur-badge */}
                   <span className={cn(
                     "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium",
                     current.temp.bg, current.temp.text, current.temp.border
                   )}>
                     {current.temp.emoji && `${current.temp.emoji} `}{current.temp.label}
                   </span>
+
+                  {/* Finn.no-badge */}
+                  {current.hasFinnAd && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 text-[0.6875rem] font-semibold">
+                      <Radio className="h-3 w-3" /> Finn.no
+                    </span>
+                  )}
+
+                  {/* Spacer */}
+                  <div className="flex-1" />
+
+                  {/* Neste-pil */}
+                  <button
+                    onClick={() => goNext("left")}
+                    disabled={idx >= total - 1}
+                    className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-15 disabled:pointer-events-none transition-all"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+
+                  {/* Åpne kontakt */}
                   <button
                     onClick={() => setSheetContactId(current.contact.id)}
                     className="w-[26px] h-[26px] rounded-lg bg-secondary border border-border inline-flex items-center justify-center hover:bg-muted transition-colors"
