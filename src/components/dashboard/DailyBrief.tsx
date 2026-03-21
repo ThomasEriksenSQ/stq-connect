@@ -625,9 +625,11 @@ const DailyBrief = () => {
                               <div className="flex items-center gap-2">
                                 <span className={cn(
                                   "text-[0.75rem]",
-                                  overdue ? "text-destructive font-medium" : "text-muted-foreground"
+                                  overdue ? "text-destructive font-medium" : "text-muted-foreground italic"
                                 )}>
-                                  {format(new Date(current.nextTask.due_date), "d. MMM yyyy", { locale: nb })}
+                                  {current.nextTask.due_date
+                                    ? format(new Date(current.nextTask.due_date), "d. MMM yyyy", { locale: nb })
+                                    : "Følg opp på sikt"}
                                 </span>
                                 {overdue && (
                                   <button
