@@ -627,20 +627,20 @@ const DailyBrief = () => {
                   >
                     Ok, neste →
                   </button>
-                  <div className="flex items-center justify-between mt-3">
+                  <div className="flex items-center justify-between mt-3 px-1">
                     <button
                       onClick={() => goNext("right")}
                       disabled={currentIndex === 0}
-                      className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-border text-[0.8125rem] text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-20 disabled:pointer-events-none transition-all"
+                      className="flex items-center justify-center w-8 h-8 rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-20 disabled:pointer-events-none transition-all"
                     >
-                      <ChevronLeft className="h-4 w-4" /> Forrige
+                      <ChevronLeft className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => goNext("left")}
                       disabled={currentIndex >= queue.length - 1}
-                      className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-border text-[0.8125rem] text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-20 disabled:pointer-events-none transition-all"
+                      className="flex items-center justify-center w-8 h-8 rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-20 disabled:pointer-events-none transition-all"
                     >
-                      Neste <ChevronRight className="h-4 w-4" />
+                      <ChevronRight className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
