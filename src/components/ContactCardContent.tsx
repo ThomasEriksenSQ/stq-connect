@@ -804,11 +804,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           {editable ?
           <InlineField value={contact.title || ""} onSave={updateField("title")} placeholder="Stilling" className="text-[0.9375rem]" /> :
           contact.title && <span>{contact.title}</span>
-          }
-        </div>
-
-        {/* Rad 2: Kontaktinfo — telefon, epost, linkedin */}
-        <div className="flex items-center gap-3 flex-wrap mt-2">
+          {/* Kontaktinfo-piller */}
           {contact.phone ? (
             <a
               href={`tel:${contact.phone}`}
@@ -825,10 +821,9 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           ) : editable ? (
             <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-dashed border-border text-[0.8125rem] text-muted-foreground/50 hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors">
               <Phone className="h-3.5 w-3.5" />
-              <InlineField value="" onSave={updateField("phone")} placeholder="Legg til telefon" className="text-[0.8125rem]" />
+              <InlineField value="" onSave={updateField("phone")} placeholder="Telefon" className="text-[0.8125rem]" />
             </span>
           ) : null}
-
           {contact.email ? (
             <a
               href={`mailto:${contact.email}`}
@@ -845,10 +840,9 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           ) : editable ? (
             <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-dashed border-border text-[0.8125rem] text-muted-foreground/50 hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors">
               <Mail className="h-3.5 w-3.5" />
-              <InlineField value="" onSave={updateField("email")} placeholder="Legg til e-post" className="text-[0.8125rem]" />
+              <InlineField value="" onSave={updateField("email")} placeholder="E-post" className="text-[0.8125rem]" />
             </span>
           ) : null}
-
           {contact.linkedin ? (
             <a
               href={contact.linkedin}
@@ -862,7 +856,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           ) : editable ? (
             <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-dashed border-border text-[0.8125rem] text-muted-foreground/50 hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors">
               <Linkedin className="h-3.5 w-3.5" />
-              <InlineField value="" onSave={updateField("linkedin")} placeholder="Legg til LinkedIn" className="text-[0.8125rem]" />
+              <InlineField value="" onSave={updateField("linkedin")} placeholder="LinkedIn" className="text-[0.8125rem]" />
             </span>
           ) : null}
         </div>
