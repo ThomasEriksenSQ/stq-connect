@@ -1355,6 +1355,7 @@ export function CompanyCardContent({
                       phone: contactForm.phone || null,
                       title: contactForm.title || null,
                       linkedin: contactForm.linkedin || null,
+                      locations: contactForm.location ? [contactForm.location] : [],
                       company_id: companyId,
                       created_by: user?.id,
                       owner_id: user?.id
