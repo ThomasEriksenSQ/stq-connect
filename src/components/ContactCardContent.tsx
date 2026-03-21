@@ -1063,6 +1063,45 @@ export function ContactCardContent({
             
             </span> :
           null}
+          {/* CV-Epost */}
+          <button
+            onClick={() => {
+              if (!contact.cv_email && !(contact as any).email) {
+                toast.error("Legg til e-postadresse før du aktiverer CV-Epost-listen");
+                return;
+              }
+              updateMutation.mutate({ cv_email: !(contact as any).cv_email });
+            }}
+            className={cn(
+              "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+              (contact as any).cv_email
+                ? "bg-green-100 text-green-800 border-green-200"
+                : "bg-background text-muted-foreground border-border hover:bg-secondary"
+            )}>
+            {(contact as any).cv_email ? "✓ CV-Epost" : "CV-Epost"}
+          </button>
+          {/* Innkjøper */}
+          <button
+            onClick={() => updateMutation.mutate({ call_list: !(contact as any).call_list })}
+            className={cn(
+              "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+              (contact as any).call_list
+                ? "bg-amber-100 text-amber-800 border-amber-200"
+                : "bg-background text-muted-foreground border-border hover:bg-secondary"
+            )}>
+            {(contact as any).call_list ? "✓ Innkjøper" : "Innkjøper"}
+          </button>
+          {/* Ikke aktuelt å kontakte igjen */}
+          <button
+            onClick={() => updateMutation.mutate({ ikke_aktuell_kontakt: !(contact as any).ikke_aktuell_kontakt })}
+            className={cn(
+              "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+              (contact as any).ikke_aktuell_kontakt
+                ? "bg-destructive/10 text-destructive border-destructive/30"
+                : "bg-background text-muted-foreground border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+            )}>
+            {(contact as any).ikke_aktuell_kontakt ? "✕ Ikke aktuell å kontakte" : "Ikke aktuell å kontakte"}
+          </button>
         </div>
         {changingCompany &&
         <div className="relative mt-1.5">
