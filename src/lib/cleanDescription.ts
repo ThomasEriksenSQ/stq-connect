@@ -14,8 +14,7 @@ const URL_RE = /https?:\/\/[^\s)>\]]+/g;
 export function cleanDescription(rawText: string | null | undefined): string | null {
   if (!rawText) return null;
 
-  let text = rawText.replace(/\[someday\]/g, "").replace(/\[Følg opp på sikt\]/g, "").trim();
-  let cleaned = text;
+  let cleaned = rawText.replace(/\[someday\]/g, "").replace(/\[Følg opp på sikt\]/g, "").trim();
 
   // Cut at Teams / noise markers
   for (const marker of NOISE_MARKERS) {
