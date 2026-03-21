@@ -618,28 +618,44 @@ const DailyBrief = () => {
                       <div className="space-y-1.5">
                         <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Neste oppfølging</p>
                         {current.nextTask ? (() => {
-                          const overdue = isPast(new Date(current.nextTask.due_date)) && !isToday(new Date(current.nextTask.due_date));
+                          const overdue = current.nextTask.due_date ? isPast(new Date(current.nextTask.due_date)) && !isToday(new Date(current.nextTask.due_date)) : false;
                           return (
                             <>
                               <p className="text-[0.9375rem] font-medium text-foreground leading-snug">{current.nextTask.title}</p>
-                              <div className="flex items-center gap-2">
-                                <span className={cn(
-                                  "text-[0.75rem]",
-                                  overdue ? "text-destructive font-medium" : "text-muted-foreground italic"
-                                )}>
-                                  {current.nextTask.due_date
-                                    ? format(new Date(current.nextTask.due_date), "d. MMM yyyy", { locale: nb })
-                                    : "Følg opp på sikt"}
-                                </span>
-                                {overdue && (
-                                  <button
-                                    onClick={() => setActiveForm(activeForm === "snooze" ? null : "snooze")}
-                                    className="text-[0.75rem] text-muted-foreground/50 hover:text-amber-600 transition-colors"
-                                  >
-                                    ↷ utsett
-                                  </button>
-                                )}
-                              </div>
+                              <span className={cn(
+                                "text-[0.75rem]",
+                                overdue ? "text-destructive font-medium" : "text-muted-foreground italic"
+                              )}>
+                                {current.nextTask.due_date
+                                  ? format(new Date(current.nextTask.due_date), "d. MMM yyyy", { locale: nb })
+                                  : "Følg opp på sikt"}
+                              </span>
+                              {overdue && (
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                  {[
+                                    { label: "Følg opp på sikt", value: null },
+                                    { label: "1 uke", value: format(addWeeks(new Date(), 1), "yyyy-MM-dd") },
+                                    { label: "2 uker", value: format(addWeeks(new Date(), 2), "yyyy-MM-dd") },
+                                    { label: "1 måned", value: format(addMonths(new Date(), 1), "yyyy-MM-dd") },
+                                    { label: "3 måneder", value: format(addMonths(new Date(), 3), "yyyy-MM-dd") },
+                                  ].map(chip => (
+                                    <button
+                                      key={chip.label}
+                                      onClick={() => {
+                                        if (chip.value === null) {
+                                          supabase.from("tasks").update({ due_date: null, updated_at: new Date().toISOString() }).eq("id", current.nextTask.id)
+                                            .then(() => queryClient.invalidateQueries({ queryKey: ["salgssenter-tasks"] }));
+                                        } else {
+                                          updateTaskMutation.mutate({ taskId: current.nextTask.id, dueDate: chip.value });
+                                        }
+                                      }}
+                                      className="h-7 px-3 text-[0.75rem] rounded-full border border-border text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors"
+                                    >
+                                      {chip.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                             </>
                           );
                         })() : (
