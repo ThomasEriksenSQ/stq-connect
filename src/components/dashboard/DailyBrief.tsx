@@ -471,9 +471,12 @@ const DailyBrief = () => {
             </div>
 
             {/* 7. CTA */}
-            <div style={{ padding: "10px 18px 14px" }}>
+            <div style={{ padding: "10px 18px 0" }}>
               <button
-                onClick={() => goNext("left")}
+                onClick={() => {
+                  setTreated(prev => new Set([...prev, current.contact.id]));
+                  setTimeout(() => goNext("left"), 100);
+                }}
                 disabled={idx >= total - 1 || isAnimating}
                 className="w-full h-[46px] bg-foreground text-background rounded-xl text-[14px] font-medium hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-40"
               >
@@ -482,18 +485,16 @@ const DailyBrief = () => {
             </div>
 
             {/* 8. Dots */}
-            <div className="flex items-center justify-center gap-[3px] pb-3">
-              {scoredLeads.slice(Math.max(0, idx - 3), idx + 6).map((_, i) => {
-                const dotIdx = Math.max(0, idx - 3) + i;
+            <div className="flex items-center justify-center gap-1 pt-2 pb-3">
+              {scoredLeads.slice(Math.max(0, idx - 2), idx + 5).map((_, i) => {
+                const dotIdx = Math.max(0, idx - 2) + i;
                 return (
                   <button
                     key={dotIdx}
-                    onClick={() => setIdx(dotIdx)}
+                    onClick={() => { setIdx(dotIdx); setSignalOpen(false); }}
                     className={cn(
-                      "h-[5px] rounded-full transition-all",
-                      dotIdx === idx
-                        ? "w-[16px] bg-amber-400 rounded-[3px]"
-                        : "w-[5px] bg-border"
+                      "rounded-full transition-all",
+                      dotIdx === idx ? "w-4 h-2 bg-amber-400" : "w-2 h-2 bg-border hover:bg-muted-foreground/40"
                     )}
                   />
                 );
