@@ -216,7 +216,7 @@ const DailyBrief = () => {
       const hasAktivForespørsel = foresporsler.some((f: any) =>
         f.selskap_id === contact.company_id &&
         f.mottatt_dato &&
-        differenceInDays(new Date(), new Date(f.mottatt_dato)) <= 90
+        differenceInDays(new Date(), new Date(f.mottatt_dato)) <= 45
       );
       const hasTidligereForespørsel = foresporsler.some((f: any) =>
         f.selskap_id === contact.company_id &&
