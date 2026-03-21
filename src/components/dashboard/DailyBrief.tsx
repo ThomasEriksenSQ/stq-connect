@@ -287,326 +287,385 @@ const DailyBrief = () => {
         </div>
       </div>
 
-      {/* ── Counter row ── */}
-      <div className="flex justify-between text-[0.75rem] text-muted-foreground" style={{ padding: "0 42px" }}>
-        <span>{treated.size} behandlet i dag</span>
-        <span>{Math.max(0, total - idx)} igjen</span>
-      </div>
+      {/* ── Counter row (kort only) ── */}
+      {viewMode === "kort" && (
+        <div className="flex justify-between text-[0.75rem] text-muted-foreground" style={{ padding: "0 42px" }}>
+          <span>{treated.size} behandlet i dag</span>
+          <span>{Math.max(0, total - idx)} igjen</span>
+        </div>
+      )}
 
       {/* ── Card layout ── */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      ) : total === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-[0.9375rem] text-muted-foreground">Ingen kontakter å vise.</p>
-        </div>
-      ) : current ? (
-        <div className="flex items-center gap-2">
-          {/* Left nav chevron */}
-          <button
-            onClick={() => goNext("right")}
-            disabled={idx === 0}
-            className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-20 disabled:pointer-events-none transition-all"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-
-          {/* Card */}
-          <div ref={cardRef} className="flex-1 min-w-0 rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
-            {/* 1. Progressbar */}
-            <div className="h-[3px] bg-border">
-              <div className="h-full bg-amber-400 transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
+      {viewMode === "kort" && (
+        <>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-
-            {/* 2. Header row */}
-            <div className="flex items-center justify-between" style={{ padding: "16px 18px 0" }}>
-              <span className={cn(
-                "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium",
-                current.temp.bg, current.temp.text, current.temp.border
-              )}>
-                {current.temp.emoji && `${current.temp.emoji} `}{current.temp.label}
-              </span>
+          ) : total === 0 ? (
+            <div className="text-center py-16">
+              <p className="text-[0.9375rem] text-muted-foreground">Ingen kontakter å vise.</p>
+            </div>
+          ) : current ? (
+            <div className="flex items-center gap-2">
+              {/* Left nav chevron */}
               <button
-                onClick={() => setSheetContactId(current.contact.id)}
-                className="w-[26px] h-[26px] rounded-lg bg-secondary border border-border inline-flex items-center justify-center hover:bg-muted transition-colors"
+                onClick={() => goNext("right")}
+                disabled={idx === 0}
+                className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-20 disabled:pointer-events-none transition-all"
               >
-                <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                <ChevronLeft className="h-5 w-5" />
               </button>
-            </div>
 
-            {/* 3. Name + meta */}
-            <div style={{ padding: "10px 18px 0" }}>
-              <p className="text-[1.5rem] font-bold text-foreground">
-                {current.contact.first_name} {current.contact.last_name}
-              </p>
-              <p className="flex items-center gap-1.5 text-[0.875rem] text-muted-foreground flex-wrap mt-0.5">
-                {current.contact.title && <>{current.contact.title} · </>}
-                {current.contact.companies?.name && (
-                  <button
-                    onClick={() => navigate(`/selskaper/${current.contact.company_id}`)}
-                    className="text-primary hover:underline"
-                  >
-                    {current.contact.companies.name}
-                  </button>
-                )}
-                {current.contact.companies?.city && <> · {current.contact.companies.city}</>}
-              </p>
-            </div>
-
-            {/* 4. Snapshot row */}
-            <div className="mt-[10px] mx-[18px]">
-              <div className="grid grid-cols-2 divide-x divide-border border border-border rounded-xl overflow-hidden">
-                {/* SISTE */}
-                <div className="px-4 py-3 bg-secondary/40">
-                  <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60 mb-1">Siste</p>
-                  {current.lastAct ? (
-                    <>
-                      <p className="text-[0.9375rem] font-medium text-foreground leading-snug">
-                        &ldquo;{cleanDescription(current.lastAct.subject) || current.lastAct.subject}&rdquo;
-                      </p>
-                      <p className="text-[0.8125rem] text-muted-foreground mt-1">
-                        {format(new Date(current.lastAct.created_at), "d. MMM yyyy", { locale: nb })}
-                        {" · "}
-                        {differenceInDays(new Date(), new Date(current.lastAct.created_at))} dager siden
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-[0.875rem] text-muted-foreground/50 italic">Ingen aktivitet</p>
-                  )}
+              {/* Card */}
+              <div ref={cardRef} className="flex-1 min-w-0 rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+                {/* 1. Progressbar */}
+                <div className="h-[3px] bg-border">
+                  <div className="h-full bg-amber-400 transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
                 </div>
 
-                {/* NESTE OPPFØLGING */}
-                <div className="px-4 py-3 bg-secondary/40">
-                  <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60 mb-1">Neste oppfølging</p>
-                  {current.nextTask ? (() => {
-                    const overdue = isPast(new Date(current.nextTask.due_date)) && !isToday(new Date(current.nextTask.due_date));
-                    return (
-                      <>
-                        <p className="text-[0.9375rem] font-medium text-foreground leading-snug">
-                          {current.nextTask.title}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <p className={cn("text-[0.8125rem]", overdue ? "text-destructive font-medium" : "text-muted-foreground")}>
-                            {format(new Date(current.nextTask.due_date), "d. MMM yyyy", { locale: nb })}
-                          </p>
-                          {overdue && (
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <button className="text-[0.75rem] text-muted-foreground/50 hover:text-amber-600 transition-colors">
-                                  ↷ utsett
-                                </button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-2 flex gap-1.5" align="start">
-                                {DATE_CHIPS.map(chip => (
-                                  <button
-                                    key={chip.label}
-                                    onClick={() => {
-                                      updateTaskMutation.mutate({ taskId: current.nextTask.id, dueDate: format(chip.fn(), "yyyy-MM-dd") });
-                                      toast.success("Oppfølging utsatt");
-                                    }}
-                                    className="h-7 px-2.5 text-[0.75rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors"
-                                  >
-                                    {chip.label}
-                                  </button>
-                                ))}
-                              </PopoverContent>
-                            </Popover>
-                          )}
-                        </div>
-                      </>
-                    );
-                  })() : (
-                    <p className="text-[0.875rem] text-muted-foreground/50 italic">Ingen planlagt</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* 5. Finn.no strip */}
-            {current.hasFinnAd && (
-              <div className="mt-2 mx-[18px]">
-                <div className="bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-2.5" style={{ padding: "9px 12px" }}>
-                  <div className="w-[22px] h-[22px] bg-blue-500 rounded-md flex items-center justify-center shrink-0">
-                    <div className="w-2 h-2 bg-white rounded-sm" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-medium text-blue-800 truncate">
-                      Finn.no: {current.hasFinnAd.teknologier_array?.join(", ") || current.hasFinnAd.teknologier || current.hasFinnAd.stillingsrolle || "Konsulent"}
-                    </p>
-                    <p className="text-[10px] text-gray-500">
-                      {format(new Date(current.hasFinnAd.dato), "d. MMM yyyy", { locale: nb })}
-                      {" · "}{differenceInDays(new Date(), new Date(current.hasFinnAd.dato))} dager siden
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-blue-100 text-blue-700 border border-blue-200 text-[10px] px-2 py-0.5 font-medium shrink-0">
-                    Aktiv nå
+                {/* 2. Header row */}
+                <div className="flex items-center justify-between" style={{ padding: "16px 18px 0" }}>
+                  <span className={cn(
+                    "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium",
+                    current.temp.bg, current.temp.text, current.temp.border
+                  )}>
+                    {current.temp.emoji && `${current.temp.emoji} `}{current.temp.label}
                   </span>
-                </div>
-              </div>
-            )}
-
-            <div className="mt-[10px] border-t border-border" style={{ padding: "10px 18px 0" }}>
-              <div className="flex items-center gap-2 flex-wrap pt-1">
-                {/* Signal dropdown */}
-                <div className="relative" onClick={e => e.stopPropagation()}>
                   <button
-                    onClick={() => setSignalOpen(!signalOpen)}
-                    className={cn(
-                      "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors cursor-pointer",
-                      (() => {
-                        const sig = localSignals[current.contact.id] ?? current.signal;
-                        return sig
-                          ? CATEGORIES.find(c => c.label === sig)?.badgeColor || "bg-background text-muted-foreground border-border hover:bg-secondary"
-                          : "bg-background text-muted-foreground border-border hover:bg-secondary";
-                      })()
-                    )}
+                    onClick={() => setSheetContactId(current.contact.id)}
+                    className="w-[26px] h-[26px] rounded-lg bg-secondary border border-border inline-flex items-center justify-center hover:bg-muted transition-colors"
                   >
-                    {(localSignals[current.contact.id] ?? current.signal) || "Signal"} <ChevronDown className="h-3 w-3 opacity-50" />
+                    <ExternalLink className="h-3 w-3 text-muted-foreground" />
                   </button>
-                  {signalOpen && (
-                    <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-lg shadow-md overflow-hidden min-w-[190px]">
-                      {CATEGORIES.map(cat => (
-                        <button
-                          key={cat.label}
-                          onClick={() => {
-                            const label = cat.label;
-                            setLocalSignals(prev => ({ ...prev, [current.contact.id]: label }));
-                            supabase.from("activities").insert({
-                              type: "note",
-                              subject: label,
-                              description: `[${label}]`,
-                              contact_id: current.contact.id,
-                              company_id: current.contact.company_id,
-                              created_by: user?.id,
-                            }).then(() => {
-                              queryClient.invalidateQueries({ queryKey: ["salgssenter-contacts", ownerFilter] });
-                            });
-                            setSignalOpen(false);
-                          }}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors text-left"
-                        >
-                          <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold", cat.badgeColor)}>
-                            {cat.label}
-                          </span>
-                          {(localSignals[current.contact.id] ?? current.signal) === cat.label && <Check className="ml-auto h-3.5 w-3.5 text-muted-foreground" />}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
 
-                {/* Innkjøper toggle */}
-                <button
-                  onClick={() => {
-                    supabase.from("contacts")
-                      .update({ call_list: !current.contact.call_list })
-                      .eq("id", current.contact.id)
-                      .then(() => {
-                        queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
-                          old?.map((c: any) => c.id === current.contact.id ? { ...c, call_list: !current.contact.call_list } : c)
-                        );
-                      });
-                  }}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
-                    current.contact.call_list
-                      ? "bg-amber-100 text-amber-800 border-amber-200"
-                      : "bg-background text-muted-foreground border-border hover:bg-secondary"
-                  )}
-                >
-                  Innkjøper
-                </button>
+                {/* 3. Name + meta */}
+                <div style={{ padding: "10px 18px 0" }}>
+                  <p className="text-[1.5rem] font-bold text-foreground">
+                    {current.contact.first_name} {current.contact.last_name}
+                  </p>
+                  <p className="flex items-center gap-1.5 text-[0.875rem] text-muted-foreground flex-wrap mt-0.5">
+                    {current.contact.title && <>{current.contact.title} · </>}
+                    {current.contact.companies?.name && (
+                      <button
+                        onClick={() => navigate(`/selskaper/${current.contact.company_id}`)}
+                        className="text-primary hover:underline"
+                      >
+                        {current.contact.companies.name}
+                      </button>
+                    )}
+                    {current.contact.companies?.city && <> · {current.contact.companies.city}</>}
+                  </p>
+                </div>
 
-                {/* CV-epost toggle */}
-                <button
-                  onClick={() => {
-                    supabase.from("contacts")
-                      .update({ cv_email: !current.contact.cv_email })
-                      .eq("id", current.contact.id)
-                      .then(() => {
-                        queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
-                          old?.map((c: any) => c.id === current.contact.id ? { ...c, cv_email: !current.contact.cv_email } : c)
-                        );
-                      });
-                  }}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
-                    current.contact.cv_email
-                      ? "bg-blue-100 text-blue-800 border-blue-200"
-                      : "bg-background text-muted-foreground border-border hover:bg-secondary"
-                  )}
-                >
-                  CV-epost
-                </button>
+                {/* 4. Snapshot row */}
+                <div className="mt-[10px] mx-[18px]">
+                  <div className="grid grid-cols-2 divide-x divide-border border border-border rounded-xl overflow-hidden">
+                    {/* SISTE */}
+                    <div className="px-4 py-3 bg-secondary/40">
+                      <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60 mb-1">Siste</p>
+                      {current.lastAct ? (
+                        <>
+                          <p className="text-[0.9375rem] font-medium text-foreground leading-snug">
+                            &ldquo;{cleanDescription(current.lastAct.subject) || current.lastAct.subject}&rdquo;
+                          </p>
+                          <p className="text-[0.8125rem] text-muted-foreground mt-1">
+                            {format(new Date(current.lastAct.created_at), "d. MMM yyyy", { locale: nb })}
+                            {" · "}
+                            {differenceInDays(new Date(), new Date(current.lastAct.created_at))} dager siden
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-[0.875rem] text-muted-foreground/50 italic">Ingen aktivitet</p>
+                      )}
+                    </div>
 
-                {/* Ikke relevant person */}
-                <button
-                  onClick={() => {
-                    supabase.from("contacts")
-                      .update({ ikke_aktuell_kontakt: !current.contact.ikke_aktuell_kontakt })
-                      .eq("id", current.contact.id)
-                      .then(() => {
-                        queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
-                          old?.map((c: any) => c.id === current.contact.id ? { ...c, ikke_aktuell_kontakt: !current.contact.ikke_aktuell_kontakt } : c)
+                    {/* NESTE OPPFØLGING */}
+                    <div className="px-4 py-3 bg-secondary/40">
+                      <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60 mb-1">Neste oppfølging</p>
+                      {current.nextTask ? (() => {
+                        const overdue = isPast(new Date(current.nextTask.due_date)) && !isToday(new Date(current.nextTask.due_date));
+                        return (
+                          <>
+                            <p className="text-[0.9375rem] font-medium text-foreground leading-snug">
+                              {current.nextTask.title}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className={cn("text-[0.8125rem]", overdue ? "text-destructive font-medium" : "text-muted-foreground")}>
+                                {format(new Date(current.nextTask.due_date), "d. MMM yyyy", { locale: nb })}
+                              </p>
+                              {overdue && (
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <button className="text-[0.75rem] text-muted-foreground/50 hover:text-amber-600 transition-colors">
+                                      ↷ utsett
+                                    </button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-2 flex gap-1.5" align="start">
+                                    {DATE_CHIPS.map(chip => (
+                                      <button
+                                        key={chip.label}
+                                        onClick={() => {
+                                          updateTaskMutation.mutate({ taskId: current.nextTask.id, dueDate: format(chip.fn(), "yyyy-MM-dd") });
+                                          toast.success("Oppfølging utsatt");
+                                        }}
+                                        className="h-7 px-2.5 text-[0.75rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors"
+                                      >
+                                        {chip.label}
+                                      </button>
+                                    ))}
+                                  </PopoverContent>
+                                </Popover>
+                              )}
+                            </div>
+                          </>
                         );
-                      });
-                  }}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
-                    current.contact.ikke_aktuell_kontakt
-                      ? "bg-destructive/10 text-destructive border-destructive/30"
-                      : "bg-background text-muted-foreground border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
-                  )}
-                >
-                  Ikke relevant person
-                </button>
+                      })() : (
+                        <p className="text-[0.875rem] text-muted-foreground/50 italic">Ingen planlagt</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. Finn.no strip */}
+                {current.hasFinnAd && (
+                  <div className="mt-2 mx-[18px]">
+                    <div className="bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-2.5" style={{ padding: "9px 12px" }}>
+                      <div className="w-[22px] h-[22px] bg-blue-500 rounded-md flex items-center justify-center shrink-0">
+                        <div className="w-2 h-2 bg-white rounded-sm" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-medium text-blue-800 truncate">
+                          Finn.no: {current.hasFinnAd.teknologier_array?.join(", ") || current.hasFinnAd.teknologier || current.hasFinnAd.stillingsrolle || "Konsulent"}
+                        </p>
+                        <p className="text-[10px] text-gray-500">
+                          {format(new Date(current.hasFinnAd.dato), "d. MMM yyyy", { locale: nb })}
+                          {" · "}{differenceInDays(new Date(), new Date(current.hasFinnAd.dato))} dager siden
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-blue-100 text-blue-700 border border-blue-200 text-[10px] px-2 py-0.5 font-medium shrink-0">
+                        Aktiv nå
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-[10px] border-t border-border" style={{ padding: "10px 18px 0" }}>
+                  <div className="flex items-center gap-2 flex-wrap pt-1">
+                    {/* Signal dropdown */}
+                    <div className="relative" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => setSignalOpen(!signalOpen)}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors cursor-pointer",
+                          (() => {
+                            const sig = localSignals[current.contact.id] ?? current.signal;
+                            return sig
+                              ? CATEGORIES.find(c => c.label === sig)?.badgeColor || "bg-background text-muted-foreground border-border hover:bg-secondary"
+                              : "bg-background text-muted-foreground border-border hover:bg-secondary";
+                          })()
+                        )}
+                      >
+                        {(localSignals[current.contact.id] ?? current.signal) || "Signal"} <ChevronDown className="h-3 w-3 opacity-50" />
+                      </button>
+                      {signalOpen && (
+                        <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-lg shadow-md overflow-hidden min-w-[190px]">
+                          {CATEGORIES.map(cat => (
+                            <button
+                              key={cat.label}
+                              onClick={() => {
+                                const label = cat.label;
+                                setLocalSignals(prev => ({ ...prev, [current.contact.id]: label }));
+                                supabase.from("activities").insert({
+                                  type: "note",
+                                  subject: label,
+                                  description: `[${label}]`,
+                                  contact_id: current.contact.id,
+                                  company_id: current.contact.company_id,
+                                  created_by: user?.id,
+                                }).then(() => {
+                                  queryClient.invalidateQueries({ queryKey: ["salgssenter-contacts", ownerFilter] });
+                                });
+                                setSignalOpen(false);
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors text-left"
+                            >
+                              <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold", cat.badgeColor)}>
+                                {cat.label}
+                              </span>
+                              {(localSignals[current.contact.id] ?? current.signal) === cat.label && <Check className="ml-auto h-3.5 w-3.5 text-muted-foreground" />}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Innkjøper toggle */}
+                    <button
+                      onClick={() => {
+                        supabase.from("contacts")
+                          .update({ call_list: !current.contact.call_list })
+                          .eq("id", current.contact.id)
+                          .then(() => {
+                            queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
+                              old?.map((c: any) => c.id === current.contact.id ? { ...c, call_list: !current.contact.call_list } : c)
+                            );
+                          });
+                      }}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+                        current.contact.call_list
+                          ? "bg-amber-100 text-amber-800 border-amber-200"
+                          : "bg-background text-muted-foreground border-border hover:bg-secondary"
+                      )}
+                    >
+                      Innkjøper
+                    </button>
+
+                    {/* CV-epost toggle */}
+                    <button
+                      onClick={() => {
+                        supabase.from("contacts")
+                          .update({ cv_email: !current.contact.cv_email })
+                          .eq("id", current.contact.id)
+                          .then(() => {
+                            queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
+                              old?.map((c: any) => c.id === current.contact.id ? { ...c, cv_email: !current.contact.cv_email } : c)
+                            );
+                          });
+                      }}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+                        current.contact.cv_email
+                          ? "bg-blue-100 text-blue-800 border-blue-200"
+                          : "bg-background text-muted-foreground border-border hover:bg-secondary"
+                      )}
+                    >
+                      CV-epost
+                    </button>
+
+                    {/* Ikke relevant person */}
+                    <button
+                      onClick={() => {
+                        supabase.from("contacts")
+                          .update({ ikke_aktuell_kontakt: !current.contact.ikke_aktuell_kontakt })
+                          .eq("id", current.contact.id)
+                          .then(() => {
+                            queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
+                              old?.map((c: any) => c.id === current.contact.id ? { ...c, ikke_aktuell_kontakt: !current.contact.ikke_aktuell_kontakt } : c)
+                            );
+                          });
+                      }}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+                        current.contact.ikke_aktuell_kontakt
+                          ? "bg-destructive/10 text-destructive border-destructive/30"
+                          : "bg-background text-muted-foreground border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                      )}
+                    >
+                      Ikke relevant person
+                    </button>
+                  </div>
+                </div>
+
+                {/* 7. CTA */}
+                <div style={{ padding: "10px 18px 0" }}>
+                  <button
+                    onClick={() => {
+                      setTreated(prev => new Set([...prev, current.contact.id]));
+                      setTimeout(() => goNext("left"), 100);
+                    }}
+                    disabled={idx >= total - 1 || isAnimating}
+                    className="w-full h-[46px] bg-foreground text-background rounded-xl text-[14px] font-medium hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-40"
+                  >
+                    Ok, neste →
+                  </button>
+                </div>
+
+                {/* 8. Dots */}
+                <div className="flex items-center justify-center gap-1 pt-2 pb-3">
+                  {scoredLeads.slice(Math.max(0, idx - 2), idx + 5).map((_, i) => {
+                    const dotIdx = Math.max(0, idx - 2) + i;
+                    return (
+                      <button
+                        key={dotIdx}
+                        onClick={() => { setIdx(dotIdx); setSignalOpen(false); }}
+                        className={cn(
+                          "rounded-full transition-all",
+                          dotIdx === idx ? "w-4 h-2 bg-amber-400" : "w-2 h-2 bg-border hover:bg-muted-foreground/40"
+                        )}
+                      />
+                    );
+                  })}
+                </div>
               </div>
-            </div>
 
-            {/* 7. CTA */}
-            <div style={{ padding: "10px 18px 0" }}>
+              {/* Right nav chevron */}
               <button
-                onClick={() => {
-                  setTreated(prev => new Set([...prev, current.contact.id]));
-                  setTimeout(() => goNext("left"), 100);
-                }}
-                disabled={idx >= total - 1 || isAnimating}
-                className="w-full h-[46px] bg-foreground text-background rounded-xl text-[14px] font-medium hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-40"
+                onClick={() => goNext("left")}
+                disabled={idx >= total - 1}
+                className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-20 disabled:pointer-events-none transition-all"
               >
-                Ok, neste →
+                <ChevronRight className="h-5 w-5" />
               </button>
             </div>
+          ) : null}
+        </>
+      )}
 
-            {/* 8. Dots */}
-            <div className="flex items-center justify-center gap-1 pt-2 pb-3">
-              {scoredLeads.slice(Math.max(0, idx - 2), idx + 5).map((_, i) => {
-                const dotIdx = Math.max(0, idx - 2) + i;
-                return (
-                  <button
-                    key={dotIdx}
-                    onClick={() => { setIdx(dotIdx); setSignalOpen(false); }}
-                    className={cn(
-                      "rounded-full transition-all",
-                      dotIdx === idx ? "w-4 h-2 bg-amber-400" : "w-2 h-2 bg-border hover:bg-muted-foreground/40"
-                    )}
-                  />
-                );
-              })}
+      {/* ── List view ── */}
+      {viewMode === "liste" && (
+        <>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          </div>
-
-          {/* Right nav chevron */}
-          <button
-            onClick={() => goNext("left")}
-            disabled={idx >= total - 1}
-            className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-20 disabled:pointer-events-none transition-all"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-        </div>
-      ) : null}
+          ) : scoredLeads.length === 0 ? (
+            <div className="px-4 py-12 text-center text-[0.875rem] text-muted-foreground">
+              Ingen leads å vise
+            </div>
+          ) : (
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="divide-y divide-border">
+                {scoredLeads.map(lead => (
+                  <button
+                    key={lead.contact.id}
+                    onClick={() => navigate(`/kontakter/${lead.contact.id}`)}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary/50 transition-colors text-left"
+                  >
+                    <div className={cn("w-2 h-2 rounded-full shrink-0 mt-0.5", lead.temp.bg)} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[0.875rem] font-medium text-foreground truncate">
+                          {lead.contact.first_name} {lead.contact.last_name}
+                        </span>
+                        <span className={cn(
+                          "inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold flex-shrink-0",
+                          CATEGORIES.find(c => c.label === lead.signal)?.badgeColor || "bg-gray-100 text-gray-600 border-gray-200"
+                        )}>
+                          {lead.signal || "—"}
+                        </span>
+                      </div>
+                      <p className="text-[0.75rem] text-muted-foreground truncate mt-0.5">
+                        {lead.contact.companies?.name}
+                        {lead.contact.title && ` · ${lead.contact.title}`}
+                        {lead.contact.companies?.city && ` · ${lead.contact.companies.city}`}
+                      </p>
+                    </div>
+                    <span className={cn(
+                      "text-[0.75rem] font-medium shrink-0 px-2.5 py-0.5 rounded-full",
+                      lead.temp.bg, lead.temp.text
+                    )}>
+                      {lead.temp.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {/* ── Side panel (Sheet) ── */}
       <Sheet open={!!sheetContactId} onOpenChange={open => !open && setSheetContactId(null)}>
