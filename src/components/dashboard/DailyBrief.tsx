@@ -76,8 +76,10 @@ const DailyBrief = () => {
   const [sheetContactId, setSheetContactId] = useState<string | null>(null);
 
   // ── Data queries ──
+  const ownerFilter = "all"; // placeholder for future owner filtering
+
   const { data: contacts = [], isLoading } = useQuery({
-    queryKey: ["dailybrief-contacts"],
+    queryKey: ["salgssenter-contacts", ownerFilter],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
