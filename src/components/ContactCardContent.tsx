@@ -1651,7 +1651,7 @@ function TaskRow({
   const handleSave = () => {
     if (!editTitle || !editCategory) return;
     const descWithCat = buildDescriptionWithCategory(editCategory, editDesc.trim());
-    onUpdate(task.id, { title: editTitle.trim(), description: descWithCat || null, due_date: editDate || null });
+    onUpdate(task.id, { title: editTitle.trim(), description: descWithCat || null, due_date: editDate === "someday" ? null : (editDate || null) });
     setEditing(false);
   };
 
