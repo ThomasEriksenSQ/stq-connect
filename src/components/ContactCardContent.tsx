@@ -791,18 +791,86 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
               <span>{(contact as any).location}</span>
             </>
           }
-          <span className="text-muted-foreground/40">·</span>
-          {editable ?
-          <InlineField value={(contact as any).department || ""} onSave={updateField("department")} placeholder="Avdeling" className="text-[0.9375rem]" /> :
+          {showAvdeling && (
+            <>
+              <span className="text-muted-foreground/40">·</span>
+              {editable ?
+              <InlineField value={(contact as any).department || ""} onSave={updateField("department")} placeholder="Avdeling" className="text-[0.9375rem]" /> :
+              (contact as any).department && <span>{(contact as any).department}</span>
+              }
+            </>
+          )}
+        </div>
 
-          (contact as any).department && <span>{(contact as any).department}</span>
-          }
-          <span className="text-muted-foreground/40">·</span>
-          {editable ?
-          <InlineField value={contact.title || ""} onSave={updateField("title")} placeholder="Stilling" className="text-[0.9375rem]" /> :
+        {/* Rad 1: Stilling */}
+        {(editable || contact.title) && (
+          <div className="text-[0.875rem] text-muted-foreground mt-0.5">
+            {editable ? (
+              <InlineField value={contact.title || ""} onSave={updateField("title")} placeholder="Stilling" className="text-[0.875rem]" />
+            ) : (
+              <span>{contact.title}</span>
+            )}
+          </div>
+        )}
 
-          contact.title && <span>{contact.title}</span>
-          }
+        {/* Rad 2: Kontaktinfo — telefon, epost, linkedin */}
+        <div className="flex items-center gap-3 flex-wrap mt-2">
+          {contact.phone ? (
+            <a
+              href={`tel:${contact.phone}`}
+              onClick={(e) => { e.preventDefault(); copyToClipboard(contact.phone!); }}
+              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-border bg-secondary text-[0.8125rem] text-foreground hover:bg-secondary/80 transition-colors"
+            >
+              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+              {editable ? (
+                <InlineField value={contact.phone} onSave={updateField("phone")} className="text-[0.8125rem]" />
+              ) : (
+                contact.phone
+              )}
+            </a>
+          ) : editable ? (
+            <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-dashed border-border text-[0.8125rem] text-muted-foreground/50 hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors">
+              <Phone className="h-3.5 w-3.5" />
+              <InlineField value="" onSave={updateField("phone")} placeholder="Legg til telefon" className="text-[0.8125rem]" />
+            </span>
+          ) : null}
+
+          {contact.email ? (
+            <a
+              href={`mailto:${contact.email}`}
+              onClick={(e) => { e.preventDefault(); copyToClipboard(contact.email!); }}
+              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-border bg-secondary text-[0.8125rem] text-foreground hover:bg-secondary/80 transition-colors"
+            >
+              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+              {editable ? (
+                <InlineField value={contact.email} onSave={updateField("email")} className="text-[0.8125rem]" />
+              ) : (
+                contact.email
+              )}
+            </a>
+          ) : editable ? (
+            <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-dashed border-border text-[0.8125rem] text-muted-foreground/50 hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors">
+              <Mail className="h-3.5 w-3.5" />
+              <InlineField value="" onSave={updateField("email")} placeholder="Legg til e-post" className="text-[0.8125rem]" />
+            </span>
+          ) : null}
+
+          {contact.linkedin ? (
+            <a
+              href={contact.linkedin}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-border bg-secondary text-[0.8125rem] text-foreground hover:bg-secondary/80 transition-colors"
+            >
+              <Linkedin className="h-3.5 w-3.5 text-muted-foreground" />
+              LinkedIn
+            </a>
+          ) : editable ? (
+            <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-dashed border-border text-[0.8125rem] text-muted-foreground/50 hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors">
+              <Linkedin className="h-3.5 w-3.5" />
+              <InlineField value="" onSave={updateField("linkedin")} placeholder="Legg til LinkedIn" className="text-[0.8125rem]" />
+            </span>
+          ) : null}
         </div>
         {changingCompany &&
         <div className="relative mt-1.5">
