@@ -911,7 +911,7 @@ const DailyBrief = () => {
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setNudgeOpen(false)} />
             <div
               className="relative w-full max-w-md mx-4 bg-card border border-border rounded-2xl shadow-xl p-6"
-              style={{ animation: "shake 0.5s ease-in-out" }}
+              style={{ animation: "shake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97)" }}
             >
               <button
                 onClick={() => setNudgeOpen(false)}
