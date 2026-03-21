@@ -399,7 +399,7 @@ const DailyBrief = () => {
                       })()
                     )}
                   >
-                    {localSignals[current.contact.id] ?? current.signal || "Signal"} <ChevronDown className="h-3 w-3 opacity-50" />
+                    {(localSignals[current.contact.id] ?? current.signal) || "Signal"} <ChevronDown className="h-3 w-3 opacity-50" />
                   </button>
                   {signalOpen && (
                     <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-lg shadow-md overflow-hidden min-w-[190px]">
