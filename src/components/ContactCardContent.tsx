@@ -1411,11 +1411,16 @@ export function ContactCardContent({
                 <button
                   key={chip.label}
                   type="button"
-                  onClick={() => {
-                    const d = chip.fn();
-                    setFormDate(format(d, "yyyy-MM-dd"));
-                    setSelectedChipIdx(i);
-                  }}
+                   onClick={() => {
+                     const d = chip.fn();
+                     if (d === null) {
+                       setFormDate("someday");
+                       setSelectedChipIdx(i);
+                     } else {
+                       setFormDate(format(d, "yyyy-MM-dd"));
+                       setSelectedChipIdx(i);
+                     }
+                   }}
                   className={cn(
                     "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors",
                     selectedChipIdx === i ?
