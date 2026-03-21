@@ -14,37 +14,29 @@ const URL_RE = /https?:\/\/[^\s)>\]]+/g;
 export function cleanDescription(rawText: string | null | undefined): string | null {
   if (!rawText) return null;
 
-  let cleaned = rawText.replace(/\[someday\]/g, "").replace(/\[Følg opp på sikt\]/g, "").trim();
+  let cleaned = rawText
+    .replace(/\[someday\]/g, "")
+    .replace(/\[Følg opp på sikt\]/g, "")
+    .trim();
 
-  // Cut at Teams / noise markers
   for (const marker of NOISE_MARKERS) {
     const idx = cleaned.indexOf(marker);
-    if (idx !== -1) {
-      cleaned = cleaned.substring(0, idx);
-    }
+    if (idx !== -1) cleaned = cleaned.substring(0, idx);
   }
 
-  // If it starts with email headers, try to extract body content
   if (EMAIL_HEADER_RE.test(cleaned)) {
-    // Look for "Body:" marker
     const bodyIdx = cleaned.indexOf("Body:");
     if (bodyIdx !== -1) {
       cleaned = cleaned.substring(bodyIdx + 5);
     } else {
-      // If entire text is email headers, discard
       const lines = cleaned.split("\n");
-      const nonHeaderLines = lines.filter(
+      cleaned = lines.filter(
         (l) => !(/^(To|From|BCC|CC|Attachment|Subject|Sent|Sendt|Fra):\s/.test(l.trim()))
-      );
-      cleaned = nonHeaderLines.join("\n");
+      ).join("\n");
     }
   }
 
-  // Remove URLs
-  cleaned = cleaned.replace(URL_RE, "");
-
-  // Clean whitespace
-  cleaned = cleaned.replace(/\s+/g, " ").trim();
+  cleaned = cleaned.replace(URL_RE, "").replace(/\s+/g, " ").trim();
 
   if (cleaned.length < 3) return null;
   return cleaned;
