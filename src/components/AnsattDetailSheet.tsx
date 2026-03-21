@@ -307,9 +307,9 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
               <h2 className="text-[1.25rem] font-bold text-foreground">
                 {isCreate ? "Ny ansatt" : `Rediger ${form.navn.split(" ")[0]}`}
               </h2>
-              <button onClick={() => {if (isCreate) onClose();else setEditing(false);}} className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">
-                Avbryt
-              </button>
+              
+
+            
             </div>
 
             <div className="space-y-4">
