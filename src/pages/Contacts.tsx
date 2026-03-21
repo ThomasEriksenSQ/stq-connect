@@ -55,7 +55,9 @@ const Contacts = () => {
 
       const contactIds = new Set(data.map(c => c.id));
 
-      const [{ data: acts }, { data: tasks }] = await Promise.all([
+      const companyIds = [...new Set(data.map(c => c.company_id).filter(Boolean))];
+
+      const [{ data: acts }, { data: tasks }, { data: techProfiles }, { data: foresporsler }] = await Promise.all([
         supabase
           .from("activities")
           .select("contact_id, created_at, description, subject")
@@ -67,6 +69,10 @@ const Contacts = () => {
           .select("contact_id, created_at, due_date, status, description, title")
           .not("contact_id", "is", null)
           .limit(5000),
+        companyIds.length > 0
+          ? supabase.from("company_tech_profile").select("company_id, sist_fra_finn, teknologier").in("company_id", companyIds)
+          : Promise.resolve({ data: [] }),
+        supabase.from("foresporsler").select("selskap_id, mottatt_dato, status").not("status", "in", '("avsluttet","tapt")'),
       ]);
 
       // Last activity date map — only past activities count
