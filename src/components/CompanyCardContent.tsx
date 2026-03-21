@@ -1378,7 +1378,9 @@ export function CompanyCardContent({
                       phone: "",
                       title: "",
                       linkedin: "",
-                      location: ""
+                      location: "",
+                      cv_email: false,
+                      call_list: false
                     });
                     toast.success("Kontakt opprettet");
                   }}
