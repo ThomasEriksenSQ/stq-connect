@@ -515,8 +515,12 @@ const DailyBrief = () => {
 
       {/* ── Side panel (Sheet) ── */}
       <Sheet open={!!sheetContactId} onOpenChange={open => !open && setSheetContactId(null)}>
-        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto p-0">
-          {sheetContactId && <ContactCardContent contactId={sheetContactId} editable />}
+        <SheetContent className="w-full sm:max-w-2xl p-0 overflow-y-auto">
+          {sheetContactId && (
+            <div className="p-6">
+              <ContactCardContent contactId={sheetContactId} editable />
+            </div>
+          )}
         </SheetContent>
       </Sheet>
     </div>
