@@ -6,7 +6,7 @@ import { differenceInDays, isPast, isToday, format, addWeeks, addMonths } from "
 import { nb } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { getEffectiveSignal, CATEGORIES } from "@/lib/categoryUtils";
-import { Loader2, ExternalLink, ChevronDown, ChevronLeft, ChevronRight, Check, Flame, List } from "lucide-react";
+import { Loader2, ExternalLink, ChevronDown, ChevronLeft, ChevronRight, Check, Flame, List, Radio } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { ContactCardContent } from "@/components/ContactCardContent";
