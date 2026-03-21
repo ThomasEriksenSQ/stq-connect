@@ -774,7 +774,7 @@ const DailyBrief = () => {
                             ));
                         }}
                         className={cn(
-                          "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+                          "inline-flex items-center h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors",
                           current.contact.call_list
                             ? "bg-amber-100 text-amber-800 border-amber-200"
                             : "bg-background text-muted-foreground border-border hover:bg-secondary"
