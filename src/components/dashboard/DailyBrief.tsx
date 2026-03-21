@@ -878,9 +878,9 @@ const DailyBrief = () => {
                 .replace(/\[someday\]/g, "")
                 .trim();
 
-              const newDesc = nudgeSignal
+              const withSignal = nudgeSignal
                 ? (rawDesc ? `[${nudgeSignal}]\n${rawDesc}` : `[${nudgeSignal}]`)
-                : (rawDesc || null);
+                : rawDesc;
 
               const finalDesc = isSomeday
                 ? (newDesc ? newDesc + "\n[someday]" : "[someday]")
