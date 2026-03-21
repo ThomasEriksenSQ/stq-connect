@@ -498,14 +498,13 @@ const DailyBrief = () => {
                 <button
                   onClick={() => {
                     supabase.from("contacts")
-                      .update({ ikke_aktuell_kontakt: true })
+                      .update({ ikke_aktuell_kontakt: !current.contact.ikke_aktuell_kontakt })
                       .eq("id", current.contact.id)
                       .then(() => {
                         queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
-                          old?.map((c: any) => c.id === current.contact.id ? { ...c, ikke_aktuell_kontakt: true } : c)
+                          old?.map((c: any) => c.id === current.contact.id ? { ...c, ikke_aktuell_kontakt: !current.contact.ikke_aktuell_kontakt } : c)
                         );
                       });
-                    toast.success("Merket som ikke relevant — trykk Ok, neste for å gå videre");
                   }}
                   className={cn(
                     "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
