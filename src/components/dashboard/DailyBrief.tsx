@@ -241,49 +241,49 @@ const DailyBrief = () => {
   return (
     <div className="space-y-3">
       {/* ── Filter row ── */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        {/* Eier-filter */}
-        <div className="flex items-center gap-1.5">
-          {filterOptions.map(opt => (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-14 flex-shrink-0">Eier</span>
+          <div className="flex items-center gap-1.5 flex-1">
+            {filterOptions.map(opt => (
+              <button
+                key={opt.id}
+                onClick={() => { setOwnerFilter(opt.id); setIdx(0); setTreated(new Set()); }}
+                className={cn(
+                  "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
+                  ownerFilter === opt.id
+                    ? "bg-foreground text-background border-foreground font-medium"
+                    : "border-border text-muted-foreground hover:bg-secondary"
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center flex-shrink-0">
             <button
-              key={opt.id}
-              onClick={() => { setOwnerFilter(opt.id); setIdx(0); setTreated(new Set()); }}
+              onClick={() => setViewMode("kort")}
               className={cn(
-                "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
-                ownerFilter === opt.id
+                "h-8 px-3 text-[0.8125rem] rounded-l-full border transition-colors inline-flex items-center gap-1.5",
+                viewMode === "kort"
                   ? "bg-foreground text-background border-foreground font-medium"
                   : "border-border text-muted-foreground hover:bg-secondary"
               )}
             >
-              {opt.label}
+              <Flame className="h-3.5 w-3.5" /> Kort
             </button>
-          ))}
-        </div>
-
-        {/* Kort / Liste toggle */}
-        <div className="flex items-center">
-          <button
-            onClick={() => setViewMode("kort")}
-            className={cn(
-              "h-8 px-3 text-[0.8125rem] rounded-l-full border transition-colors inline-flex items-center gap-1.5",
-              viewMode === "kort"
-                ? "bg-foreground text-background border-foreground font-medium"
-                : "border-border text-muted-foreground hover:bg-secondary"
-            )}
-          >
-            <Flame className="h-3.5 w-3.5" /> Kort
-          </button>
-          <button
-            onClick={() => setViewMode("liste")}
-            className={cn(
-              "h-8 px-3 text-[0.8125rem] rounded-r-full border-t border-b border-r transition-colors inline-flex items-center gap-1.5",
-              viewMode === "liste"
-                ? "bg-foreground text-background border-foreground font-medium"
-                : "border-border text-muted-foreground hover:bg-secondary"
-            )}
-          >
-            <List className="h-3.5 w-3.5" /> Liste
-          </button>
+            <button
+              onClick={() => setViewMode("liste")}
+              className={cn(
+                "h-8 px-3 text-[0.8125rem] rounded-r-full border-t border-b border-r transition-colors inline-flex items-center gap-1.5",
+                viewMode === "liste"
+                  ? "bg-foreground text-background border-foreground font-medium"
+                  : "border-border text-muted-foreground hover:bg-secondary"
+              )}
+            >
+              <List className="h-3.5 w-3.5" /> Liste
+            </button>
+          </div>
         </div>
       </div>
 
