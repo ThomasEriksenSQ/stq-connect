@@ -276,10 +276,10 @@ const DailyBrief = () => {
 
             {/* 3. Name + meta */}
             <div style={{ padding: "10px 18px 0" }}>
-              <p className="text-[19px] font-medium text-foreground">
+              <p className="text-[1.5rem] font-bold text-foreground">
                 {current.contact.first_name} {current.contact.last_name}
               </p>
-              <p className="text-[12px] text-muted-foreground mt-0.5">
+              <p className="flex items-center gap-1.5 text-[0.875rem] text-muted-foreground flex-wrap mt-0.5">
                 {current.contact.title && <>{current.contact.title} · </>}
                 {current.contact.companies?.name && (
                   <button
@@ -295,42 +295,44 @@ const DailyBrief = () => {
 
             {/* 4. Snapshot row */}
             <div className="mt-[10px] mx-[18px]">
-              <div className="border border-border rounded-xl overflow-hidden grid grid-cols-2 divide-x divide-border">
+              <div className="grid grid-cols-2 divide-x divide-border border border-border rounded-xl overflow-hidden">
                 {/* SISTE */}
-                <div className="p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/60 mb-1">Siste</p>
+                <div className="px-4 py-3 bg-secondary/40">
+                  <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60 mb-1">Siste</p>
                   {current.lastAct ? (
                     <>
-                      <p className="text-[13px] font-medium text-foreground truncate">
-                        {cleanDescription(current.lastAct.subject) || current.lastAct.subject}
+                      <p className="text-[0.9375rem] font-medium text-foreground leading-snug">
+                        &ldquo;{cleanDescription(current.lastAct.subject) || current.lastAct.subject}&rdquo;
                       </p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                      <p className="text-[0.8125rem] text-muted-foreground mt-1">
                         {format(new Date(current.lastAct.created_at), "d. MMM yyyy", { locale: nb })}
                         {" · "}
                         {differenceInDays(new Date(), new Date(current.lastAct.created_at))} dager siden
                       </p>
                     </>
                   ) : (
-                    <p className="text-[12px] text-muted-foreground/60 italic">Ingen aktiviteter</p>
+                    <p className="text-[0.875rem] text-muted-foreground/50 italic">Ingen aktivitet</p>
                   )}
                 </div>
 
                 {/* NESTE OPPFØLGING */}
-                <div className="p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/60 mb-1">Neste oppfølging</p>
+                <div className="px-4 py-3 bg-secondary/40">
+                  <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60 mb-1">Neste oppfølging</p>
                   {current.nextTask ? (() => {
                     const overdue = isPast(new Date(current.nextTask.due_date)) && !isToday(new Date(current.nextTask.due_date));
                     return (
                       <>
-                        <p className="text-[13px] font-medium text-foreground truncate">{current.nextTask.title}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className={cn("text-[11px]", overdue ? "text-destructive font-medium" : "text-muted-foreground")}>
+                        <p className="text-[0.9375rem] font-medium text-foreground leading-snug">
+                          {current.nextTask.title}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className={cn("text-[0.8125rem]", overdue ? "text-destructive font-medium" : "text-muted-foreground")}>
                             {format(new Date(current.nextTask.due_date), "d. MMM yyyy", { locale: nb })}
-                          </span>
+                          </p>
                           {overdue && (
                             <Popover>
                               <PopoverTrigger asChild>
-                                <button className="text-[11px] text-muted-foreground/60 hover:text-amber-600 transition-colors">
+                                <button className="text-[0.75rem] text-muted-foreground/50 hover:text-amber-600 transition-colors">
                                   ↷ utsett
                                 </button>
                               </PopoverTrigger>
@@ -354,7 +356,7 @@ const DailyBrief = () => {
                       </>
                     );
                   })() : (
-                    <p className="text-[12px] text-muted-foreground/60 italic">Ingen planlagt</p>
+                    <p className="text-[0.875rem] text-muted-foreground/50 italic">Ingen planlagt</p>
                   )}
                 </div>
               </div>
@@ -384,18 +386,18 @@ const DailyBrief = () => {
             )}
 
             <div className="mt-[10px] border-t border-border" style={{ padding: "10px 18px 0" }}>
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex items-center gap-2 flex-wrap pt-1">
                 {/* Signal dropdown */}
                 <div className="relative" onClick={e => e.stopPropagation()}>
                   <button
                     onClick={() => setSignalOpen(!signalOpen)}
                     className={cn(
-                      "inline-flex items-center gap-1 rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors",
+                      "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors cursor-pointer",
                       (() => {
                         const sig = localSignals[current.contact.id] ?? current.signal;
                         return sig
-                          ? CATEGORIES.find(c => c.label === sig)?.badgeColor || "border-border bg-secondary text-muted-foreground"
-                          : "border-border bg-secondary text-muted-foreground";
+                          ? CATEGORIES.find(c => c.label === sig)?.badgeColor || "bg-background text-muted-foreground border-border hover:bg-secondary"
+                          : "bg-background text-muted-foreground border-border hover:bg-secondary";
                       })()
                     )}
                   >
@@ -423,7 +425,7 @@ const DailyBrief = () => {
                           }}
                           className="w-full flex items-center gap-2 px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors text-left"
                         >
-                          <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold", cat.badgeColor)}>
+                          <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold", cat.badgeColor)}>
                             {cat.label}
                           </span>
                           {(localSignals[current.contact.id] ?? current.signal) === cat.label && <Check className="ml-auto h-3.5 w-3.5 text-muted-foreground" />}
@@ -446,13 +448,13 @@ const DailyBrief = () => {
                       });
                   }}
                   className={cn(
-                    "rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors",
+                    "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
                     current.contact.call_list
                       ? "bg-amber-100 text-amber-800 border-amber-200"
-                      : "border-border bg-secondary text-muted-foreground"
+                      : "bg-background text-muted-foreground border-border hover:bg-secondary"
                   )}
                 >
-                  {current.contact.call_list ? "✓ " : ""}Innkjøper
+                  Innkjøper
                 </button>
 
                 {/* CV-epost toggle */}
@@ -468,13 +470,13 @@ const DailyBrief = () => {
                       });
                   }}
                   className={cn(
-                    "rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors",
+                    "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
                     current.contact.cv_email
                       ? "bg-blue-100 text-blue-800 border-blue-200"
-                      : "border-border bg-secondary text-muted-foreground"
+                      : "bg-background text-muted-foreground border-border hover:bg-secondary"
                   )}
                 >
-                  {current.contact.cv_email ? "✓ " : ""}CV-epost
+                  CV-epost
                 </button>
 
                 {/* Ikke relevant person */}
@@ -490,7 +492,12 @@ const DailyBrief = () => {
                       });
                     toast.success("Merket som ikke relevant — trykk Ok, neste for å gå videre");
                   }}
-                  className="rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors border-border bg-secondary text-muted-foreground hover:bg-red-50 hover:text-red-700 hover:border-red-200"
+                  className={cn(
+                    "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+                    current.contact.ikke_aktuell_kontakt
+                      ? "bg-destructive/10 text-destructive border-destructive/30"
+                      : "bg-background text-muted-foreground border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                  )}
                 >
                   Ikke relevant person
                 </button>
