@@ -447,7 +447,9 @@ const DailyBrief = () => {
                 }}
               >
                 {/* Temperaturstrek øverst */}
-                <div className={cn("h-1", TEMP_CONFIG[current.temperature].bar)} />
+                <div className="rounded-t-2xl overflow-hidden">
+                  <div className={cn("h-1", TEMP_CONFIG[current.temperature].bar)} />
+                </div>
 
                 <div className="flex justify-end px-5 pt-4">
                   <button
