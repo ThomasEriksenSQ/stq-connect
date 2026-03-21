@@ -864,42 +864,42 @@ const DailyBrief = () => {
       {/* ── Nudge modal ── */}
       {nudgeOpen && current && (() => {
         const navn = `${current.contact.first_name} ${current.contact.last_name}`;
-        const harEksisterendeTask = !!current.nextTask;
+        const harEksisterendeTask = !!(allTasks as any[]).filter((t: any) => t.contact_id === current.contact.id).length;
+        const contactTasks = (allTasks as any[]).filter((t: any) => t.contact_id === current.contact.id);
 
         const handleOkNeste = async () => {
           const isSomeday = nudgeDate === "someday";
           const newDate = isSomeday ? null : (nudgeDate === "custom" ? nudgeCustomDate : nudgeDate);
 
           if (harEksisterendeTask) {
-            const contactTasks = allTasks.filter((t: any) => t.contact_id === current.contact.id);
             for (const task of contactTasks) {
               const rawDesc = (task.description || "")
                 .replace(/^\[[^\]]+\]\n?/, "")
                 .replace(/\[someday\]/g, "")
                 .trim();
 
-              const newDesc = nudgeSignal
+              const withSignal = nudgeSignal
                 ? (rawDesc ? `[${nudgeSignal}]\n${rawDesc}` : `[${nudgeSignal}]`)
-                : (rawDesc || null);
+                : rawDesc;
 
               const finalDesc = isSomeday
-                ? (newDesc ? newDesc + "\n[someday]" : "[someday]")
-                : newDesc;
+                ? (withSignal ? withSignal + "\n[someday]" : "[someday]")
+                : (withSignal || null);
 
               await supabase.from("tasks").update({
                 due_date: newDate,
-                description: finalDesc || null,
+                description: finalDesc,
                 updated_at: new Date().toISOString(),
               }).eq("id", task.id);
             }
           } else {
-            const newDesc = nudgeSignal
+            const withSignal = nudgeSignal
               ? (isSomeday ? `[${nudgeSignal}]\n[someday]` : `[${nudgeSignal}]`)
               : (isSomeday ? "[someday]" : null);
 
             await supabase.from("tasks").insert({
               title: "Følg opp om behov",
-              description: newDesc,
+              description: withSignal,
               priority: "medium",
               due_date: newDate,
               contact_id: current.contact.id,
@@ -959,8 +959,8 @@ const DailyBrief = () => {
               <div className="mb-6">
                 <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-3">
                   {harEksisterendeTask
-                    ? `Oppdater oppfølging — "${current.nextTask.title}"`
-                    : "Opprett oppfølging — Følg opp om behov"}
+                    ? (nudgeScenario === "forfalt" ? `Forfalt: "${current.nextTask?.title}"` : `Oppdater oppfølging`)
+                    : "Ny oppfølging — Følg opp om behov"}
                 </p>
                 <div className="grid grid-cols-3 gap-2">
                   {NUDGE_DATE_CHIPS.map(chip => (
