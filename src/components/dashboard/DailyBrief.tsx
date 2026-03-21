@@ -208,25 +208,7 @@ const DailyBrief = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["salgssenter-contacts"] }),
   });
 
-  const toggleContactField = useCallback(async (contactId: string, field: "call_list" | "cv_email" | "ikke_aktuell_kontakt", currentVal: boolean) => {
-    await supabase.from("contacts").update({ [field]: !currentVal }).eq("id", contactId);
-    queryClient.invalidateQueries({ queryKey: ["dailybrief-contacts"] });
-  }, [queryClient]);
-
-  const handleSignalChange = useCallback((label: string) => {
-    if (!current) return;
-    createActivityMutation.mutate({
-      type: "note", subject: label,
-      contactId: current.contact.id, companyId: current.contact.company_id,
-    }, { onSuccess: () => toast.success(`Signal: ${label}`) });
-  }, [current, createActivityMutation]);
-
-  const handleIkkeRelevant = useCallback(() => {
-    if (!current) return;
-    toggleContactField(current.contact.id, "ikke_aktuell_kontakt", false);
-    toast.success("Merket som ikke relevant");
-    goNext("left");
-  }, [current, toggleContactField, goNext]);
+  // removed toggleContactField and handleIkkeRelevant — logic is now inline
 
   const progress = total > 0 ? (treated.size / total) * 100 : 0;
 
