@@ -1307,13 +1307,13 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
 
         {/* ── Aktiviteter ── */}
         <div className="mt-8">
-        <ActivityTimeline
-          activities={activities}
-          profileMap={profileMapFull}
-          editable={editable}
-          onDelete={(id) => deleteActivityMutation.mutate(id)}
-          onUpdateActivity={(id, updates) => updateActivityMutation.mutate({ id, updates })} />
-        
+          <ActivityTimeline
+            activities={activities}
+            profileMap={profileMapFull}
+            editable={editable}
+            onDelete={(id) => deleteActivityMutation.mutate(id)}
+            onUpdateActivity={(id, updates) => updateActivityMutation.mutate({ id, updates })} />
+        </div>
 
       </div>
     </div>);
