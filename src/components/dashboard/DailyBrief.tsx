@@ -760,7 +760,7 @@ const DailyBrief = () => {
               <div className="flex items-center justify-between px-2">
                 <button
                   onClick={() => goNext("right")}
-                  disabled={currentIndex === 0}
+                  disabled={currentIndexInScored === 0}
                   className="flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-15 disabled:pointer-events-none transition-all"
                 >
                   <ChevronLeft className="h-4 w-4" />
