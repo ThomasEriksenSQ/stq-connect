@@ -716,7 +716,7 @@ const DailyBrief = () => {
                           "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
                           current.contact.ikke_aktuell_kontakt
                             ? "bg-destructive/10 text-destructive border-destructive/30"
-                            : "bg-background text-muted-foreground border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                            : "bg-background text-muted-foreground border-border hover:bg-secondary"
                         )}
                       >
                         Ikke relevant person
