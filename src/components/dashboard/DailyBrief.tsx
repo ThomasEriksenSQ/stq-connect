@@ -360,7 +360,82 @@ const DailyBrief = () => {
             <div className="space-y-2">
               <div
                 ref={cardRef}
-                className="w-full bg-card border border-border rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden"
+                className="w-full bg-card border border-border rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden select-none"
+                style={{ cursor: isDragging ? "grabbing" : "grab" }}
+                onMouseDown={(e) => {
+                  setDragStartX(e.clientX);
+                  setIsDragging(true);
+                  setDragDeltaX(0);
+                }}
+                onMouseMove={(e) => {
+                  if (!isDragging || dragStartX === null) return;
+                  const delta = e.clientX - dragStartX;
+                  setDragDeltaX(delta);
+                  if (cardRef.current) {
+                    const resistance = 0.4;
+                    cardRef.current.style.transition = "none";
+                    cardRef.current.style.transform = `translateX(${delta * resistance}px) scale(${1 - Math.abs(delta) * 0.0003})`;
+                  }
+                }}
+                onMouseUp={(e) => {
+                  if (!isDragging || dragStartX === null) return;
+                  setIsDragging(false);
+                  const delta = e.clientX - dragStartX;
+                  const threshold = 80;
+                  if (delta < -threshold && !isAnimating) {
+                    goNext("left");
+                  } else if (delta > threshold && !isAnimating) {
+                    goNext("right");
+                  } else {
+                    if (cardRef.current) {
+                      cardRef.current.style.transition = "transform 300ms cubic-bezier(0.32, 0.72, 0, 1)";
+                      cardRef.current.style.transform = "translateX(0) scale(1)";
+                    }
+                  }
+                  setDragStartX(null);
+                  setDragDeltaX(0);
+                }}
+                onMouseLeave={() => {
+                  if (isDragging) {
+                    setIsDragging(false);
+                    setDragStartX(null);
+                    setDragDeltaX(0);
+                    if (cardRef.current) {
+                      cardRef.current.style.transition = "transform 300ms cubic-bezier(0.32, 0.72, 0, 1)";
+                      cardRef.current.style.transform = "translateX(0) scale(1)";
+                    }
+                  }
+                }}
+                onTouchStart={(e) => {
+                  setDragStartX(e.touches[0].clientX);
+                  setIsDragging(true);
+                }}
+                onTouchMove={(e) => {
+                  if (dragStartX === null) return;
+                  const delta = e.touches[0].clientX - dragStartX;
+                  setDragDeltaX(delta);
+                  if (cardRef.current) {
+                    cardRef.current.style.transition = "none";
+                    cardRef.current.style.transform = `translateX(${delta * 0.4}px) scale(${1 - Math.abs(delta) * 0.0003})`;
+                  }
+                }}
+                onTouchEnd={() => {
+                  if (dragStartX === null) return;
+                  setIsDragging(false);
+                  const threshold = 80;
+                  if (dragDeltaX < -threshold && !isAnimating) {
+                    goNext("left");
+                  } else if (dragDeltaX > threshold && !isAnimating) {
+                    goNext("right");
+                  } else {
+                    if (cardRef.current) {
+                      cardRef.current.style.transition = "transform 300ms cubic-bezier(0.32, 0.72, 0, 1)";
+                      cardRef.current.style.transform = "translateX(0) scale(1)";
+                    }
+                  }
+                  setDragStartX(null);
+                  setDragDeltaX(0);
+                }}
               >
                 {/* Temperaturstrek øverst */}
                 <div className={cn("h-1", TEMP_CONFIG[current.temperature].bar)} />
