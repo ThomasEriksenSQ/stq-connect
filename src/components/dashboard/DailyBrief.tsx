@@ -283,7 +283,6 @@ const DailyBrief = () => {
               <List className="h-3.5 w-3.5" /> Liste
             </button>
           </div>
-        </div>
       </div>
 
       {/* ── Counter row (kort only) ── */}
