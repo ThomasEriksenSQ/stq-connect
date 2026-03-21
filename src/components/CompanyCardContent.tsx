@@ -1358,6 +1358,8 @@ export function CompanyCardContent({
                       title: contactForm.title || null,
                       linkedin: contactForm.linkedin || null,
                       locations: contactForm.location ? [contactForm.location] : [],
+                      cv_email: contactForm.cv_email,
+                      call_list: contactForm.call_list,
                       company_id: companyId,
                       created_by: user?.id,
                       owner_id: user?.id
