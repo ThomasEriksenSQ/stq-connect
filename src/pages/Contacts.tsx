@@ -286,7 +286,7 @@ const Contacts = () => {
         if (!(b as any).lastActivity) return -1;
         return dir * (a as any).lastActivity.localeCompare((b as any).lastActivity);
       case "priority":
-        return dir * (calcContactHeatScore(b) - calcContactHeatScore(a));
+        return dir * ((b as any).heatScore - (a as any).heatScore);
       default: return 0;
     }
   });
