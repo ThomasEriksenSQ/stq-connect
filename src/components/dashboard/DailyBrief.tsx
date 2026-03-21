@@ -115,7 +115,7 @@ const DailyBrief = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<"kort" | "liste">("kort");
-  const [ownerFilter, setOwnerFilter] = useState(user?.id || "");
+  const [ownerFilter, setOwnerFilter] = useState("alle");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [treated, setTreated] = useState<Set<string>>(new Set());
   const [activeForm, setActiveForm] = useState<"snooze" | "signal" | null>(null);
@@ -124,9 +124,6 @@ const DailyBrief = () => {
   const [localSignals, setLocalSignals] = useState<Record<string, string>>({});
   const cardRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (user?.id && !ownerFilter) setOwnerFilter(user.id);
-  }, [user?.id]);
 
   const { data: allProfiles = [] } = useQuery({
     queryKey: ["profiles"],
@@ -269,14 +266,11 @@ const DailyBrief = () => {
   });
 
   const filterOptions = useMemo(() => {
-    const myProfile = allProfiles.find(p => p.id === user?.id);
-    const myLabel = myProfile?.full_name || "Mine";
-    const others = allProfiles.filter(p => p.id !== user?.id).map(p => ({
+    const others = allProfiles.map(p => ({
       id: p.id,
       label: p.full_name,
     }));
     return [
-      { id: user?.id || "", label: myLabel },
       { id: "alle", label: "Alle" },
       ...others,
     ];
