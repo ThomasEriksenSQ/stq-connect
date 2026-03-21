@@ -220,7 +220,7 @@ const DailyBrief = () => {
       );
       const hasTidligereForespørsel = foresporsler.some((f: any) =>
         f.selskap_id === contact.company_id &&
-        (!f.mottatt_dato || differenceInDays(new Date(), new Date(f.mottatt_dato)) > 90)
+        (!f.mottatt_dato || differenceInDays(new Date(), new Date(f.mottatt_dato)) > 45)
       );
       const isInnkjoper = !!contact.call_list;
       const score = calcHeatScore({ signal, isInnkjoper, hasMarkedsradar, hasAktivForespørsel, hasOverdue, daysSinceLastContact: daysSince });
