@@ -126,6 +126,9 @@ const DailyBrief = () => {
   const [localSignals, setLocalSignals] = useState<Record<string, string>>({});
   const [nudgeOpen, setNudgeOpen] = useState(false);
   const [nudgeScenario, setNudgeScenario] = useState<"ingen_signal_ingen_task" | "signal_ingen_task" | "forfalt" | null>(null);
+  const [nudgeSignal, setNudgeSignal] = useState("Ukjent om behov");
+  const [nudgeDate, setNudgeDate] = useState("someday");
+  const [nudgeCustomDate, setNudgeCustomDate] = useState("");
   const cardRef = useRef<HTMLDivElement>(null);
   const [dragStartX, setDragStartX] = useState<number | null>(null);
   const [dragDeltaX, setDragDeltaX] = useState(0);
