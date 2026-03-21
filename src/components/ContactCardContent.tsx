@@ -1306,6 +1306,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
         }
 
         {/* ── Aktiviteter ── */}
+        <div className="mt-8">
         <ActivityTimeline
           activities={activities}
           profileMap={profileMapFull}
