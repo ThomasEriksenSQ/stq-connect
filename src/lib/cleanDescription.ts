@@ -11,10 +11,10 @@ const NOISE_MARKERS = [
 const EMAIL_HEADER_RE = /^(To|From|BCC|CC|Attachment|Subject|Body|Sent|Sendt|Fra):\s/m;
 const URL_RE = /https?:\/\/[^\s)>\]]+/g;
 
-export function cleanDescription(text: string | null | undefined): string | null {
-  if (!text) return null;
+export function cleanDescription(rawText: string | null | undefined): string | null {
+  if (!rawText) return null;
 
-  text = text.replace(/\[someday\]/g, "").trim();
+  let text = rawText.replace(/\[someday\]/g, "").replace(/\[Følg opp på sikt\]/g, "").trim();
   let cleaned = text;
 
   // Cut at Teams / noise markers
