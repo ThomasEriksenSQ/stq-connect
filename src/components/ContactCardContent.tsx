@@ -997,7 +997,7 @@ export function ContactCardContent({
         </div>
 
         {/* Line 3: Telefon · E-post · LinkedIn */}
-        <div className="flex items-center gap-1.5 flex-wrap mt-1">
+        <div className="flex items-center gap-1.5 flex-wrap mt-2">
           {contact.phone ?
           <a
             href={`tel:${contact.phone}`}
@@ -1065,7 +1065,7 @@ export function ContactCardContent({
           null}
         </div>
         {/* Status-piller */}
-        <div className="flex items-center gap-2 flex-wrap mt-3 pt-3 border-t border-border/40">
+        <div className="flex items-center gap-2 flex-wrap mt-2 pt-2 border-t border-border/40">
           {/* CV-Epost */}
           <button
             onClick={() => {
