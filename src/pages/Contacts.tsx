@@ -275,6 +275,8 @@ function calcContactHeatScore(contact: any): number {
         if (!(a as any).lastActivity) return 1;
         if (!(b as any).lastActivity) return -1;
         return dir * (a as any).lastActivity.localeCompare((b as any).lastActivity);
+      case "priority":
+        return dir * (calcContactHeatScore(b) - calcContactHeatScore(a));
       default: return 0;
     }
   });
