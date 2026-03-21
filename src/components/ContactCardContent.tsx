@@ -1542,7 +1542,7 @@ function ActivityTimeline({
 
   return (
     <div>
-      <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4">
+      <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4 mt-8">
         Aktiviteter · {activities.length}
       </h3>
 
