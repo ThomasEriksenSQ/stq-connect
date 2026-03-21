@@ -456,37 +456,29 @@ const DailyBrief = () => {
                   </div>
                 </div>
 
-                {/* ── Temperatur-badge + Åpne kontakt ── */}
-                <div className="flex items-center gap-2">
-                  <div className={cn(
-                    "inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[0.8125rem] font-semibold",
-                    TEMP_CONFIG[current.temperature].bg,
-                    TEMP_CONFIG[current.temperature].text
-                  )}>
-                    {current.temperature === "hett" && "🔥"}
-                    {current.temperature === "lovende" && "⚡"}
-                    {current.temperature === "mulig" && "💡"}
-                    {current.temperature === "sovende" && "💤"}
-                    {" "}{TEMP_CONFIG[current.temperature].label}
-                  </div>
-
-                  <div className="flex-1" />
-
-                  <button
-                    onClick={() => setPanelOpen(true)}
-                    className="flex-shrink-0 inline-flex items-center gap-1.5 h-7 px-3 rounded-lg bg-secondary border border-border text-[0.75rem] text-muted-foreground hover:text-foreground transition-all"
-                  >
-                    <span>↗</span>
-                    <span>Åpne kontakt</span>
-                  </button>
-                </div>
-
-                {/* ── Begrunnelses-linje ── */}
-                {reasonLine && (
-                  <p className="text-[0.8125rem] text-muted-foreground leading-snug -mt-2">
-                    {reasonLine}
-                  </p>
-                )}
+                {/* ── Temperatur + begrunnelse strip ── */}
+                {(() => {
+                  const tempColors = {
+                    hett:    { strip: "bg-red-50 border-red-100",     label: "text-red-800 font-medium",    reason: "text-red-600"    },
+                    lovende: { strip: "bg-orange-50 border-orange-100", label: "text-orange-800 font-medium", reason: "text-orange-600" },
+                    mulig:   { strip: "bg-amber-50 border-amber-100",  label: "text-amber-800 font-medium",  reason: "text-amber-600"  },
+                    sovende: { strip: "bg-gray-50 border-gray-100",    label: "text-gray-600 font-medium",   reason: "text-gray-500"   },
+                  };
+                  const tc = tempColors[current.temperature];
+                  const emoji = current.temperature === "hett" ? "🔥" : current.temperature === "lovende" ? "⚡" : current.temperature === "mulig" ? "💡" : "💤";
+                  return (
+                    <div className={cn("inline-flex items-center gap-2 px-3 py-2 rounded-xl border", tc.strip)}>
+                      <span className="text-[0.875rem]">{emoji}</span>
+                      <span className={cn("text-[0.8125rem]", tc.label)}>{TEMP_CONFIG[current.temperature].label}</span>
+                      {reasonLine && (
+                        <>
+                          <span className={cn("text-[0.8125rem]", tc.reason)}>·</span>
+                          <span className={cn("text-[0.8125rem]", tc.reason)}>{reasonLine}</span>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Snooze */}
                 {activeForm === "snooze" && current.nextTask && (
