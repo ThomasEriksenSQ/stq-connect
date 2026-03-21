@@ -13,8 +13,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger } from
-"@/components/ui/dropdown-menu";
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -36,8 +36,8 @@ import {
   MapPin,
   Loader2,
   Target,
-  Sparkles } from
-"lucide-react";
+  Sparkles,
+} from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday, getYear } from "date-fns";
 import { nb } from "date-fns/locale";
@@ -51,38 +51,38 @@ import { CATEGORIES as SIGNAL_CATEGORIES, getEffectiveSignal, extractCategory } 
 
 /* ── Category system (shared with ContactCardContent) ── */
 const CATEGORIES = [
-{
-  label: "Behov nå",
-  badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  selectedColor: "bg-emerald-500 text-white border-emerald-500"
-},
-{
-  label: "Får fremtidig behov",
-  badgeColor: "bg-blue-100 text-blue-800 border-blue-200",
-  selectedColor: "bg-blue-500 text-white border-blue-500"
-},
-{
-  label: "Får kanskje behov",
-  badgeColor: "bg-amber-100 text-amber-800 border-amber-200",
-  selectedColor: "bg-amber-500 text-white border-amber-500"
-},
-{
-  label: "Ukjent om behov",
-  badgeColor: "bg-gray-100 text-gray-600 border-gray-200",
-  selectedColor: "bg-gray-400 text-white border-gray-400"
-},
-{
-  label: "Ikke aktuelt",
-  badgeColor: "bg-red-50 text-red-700 border-red-200",
-  selectedColor: "bg-red-400 text-white border-red-400"
-}] as
-const;
+  {
+    label: "Behov nå",
+    badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    selectedColor: "bg-emerald-500 text-white border-emerald-500",
+  },
+  {
+    label: "Får fremtidig behov",
+    badgeColor: "bg-blue-100 text-blue-800 border-blue-200",
+    selectedColor: "bg-blue-500 text-white border-blue-500",
+  },
+  {
+    label: "Får kanskje behov",
+    badgeColor: "bg-amber-100 text-amber-800 border-amber-200",
+    selectedColor: "bg-amber-500 text-white border-amber-500",
+  },
+  {
+    label: "Ukjent om behov",
+    badgeColor: "bg-gray-100 text-gray-600 border-gray-200",
+    selectedColor: "bg-gray-400 text-white border-gray-400",
+  },
+  {
+    label: "Ikke aktuelt",
+    badgeColor: "bg-red-50 text-red-700 border-red-200",
+    selectedColor: "bg-red-400 text-white border-red-400",
+  },
+] as const;
 
 const LEGACY_CATEGORY_MAP: Record<string, string> = {
   "Fremtidig behov": "Får fremtidig behov",
   "Har kanskje behov": "Får kanskje behov",
   "Vil kanskje få behov": "Får kanskje behov",
-  "Aldri aktuelt": "Ikke aktuelt"
+  "Aldri aktuelt": "Ikke aktuelt",
 };
 
 function normalizeCategoryLabel(label: string): string {
@@ -95,7 +95,7 @@ function getCategoryBadgeColor(label: string) {
   return cat?.badgeColor || "bg-secondary text-foreground border-border";
 }
 
-function CategoryBadge({ label, className }: {label: string;className?: string;}) {
+function CategoryBadge({ label, className }: { label: string; className?: string }) {
   const normalized = normalizeCategoryLabel(label);
   const color = getCategoryBadgeColor(normalized);
   const isKnown = CATEGORIES.some((c) => c.label === normalized);
@@ -105,34 +105,34 @@ function CategoryBadge({ label, className }: {label: string;className?: string;}
       className={cn(
         "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
         color,
-        className
-      )}>
-      
+        className,
+      )}
+    >
       {normalized}
-    </span>);
-
+    </span>
+  );
 }
 
-function CategoryPicker({ selected, onSelect }: {selected: string;onSelect: (v: string) => void;}) {
+function CategoryPicker({ selected, onSelect }: { selected: string; onSelect: (v: string) => void }) {
   return (
     <div className="flex flex-wrap gap-1.5">
-      {CATEGORIES.map((cat) =>
-      <button
-        key={cat.label}
-        type="button"
-        onClick={() => onSelect(cat.label)}
-        className={cn(
-          "h-7 px-2.5 text-[0.75rem] rounded-full border transition-all font-medium",
-          selected === cat.label ?
-          cat.selectedColor :
-          "border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
-        )}>
-        
+      {CATEGORIES.map((cat) => (
+        <button
+          key={cat.label}
+          type="button"
+          onClick={() => onSelect(cat.label)}
+          className={cn(
+            "h-7 px-2.5 text-[0.75rem] rounded-full border transition-all font-medium",
+            selected === cat.label
+              ? cat.selectedColor
+              : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground",
+          )}
+        >
           {cat.label}
         </button>
-      )}
-    </div>);
-
+      ))}
+    </div>
+  );
 }
 
 function buildDescriptionWithCategory(category: string, description: string): string {
@@ -140,7 +140,7 @@ function buildDescriptionWithCategory(category: string, description: string): st
   return description ? `[${category}]\n${description}` : `[${category}]`;
 }
 
-function parseDescriptionCategory(description: string | null): {category: string;text: string;} {
+function parseDescriptionCategory(description: string | null): { category: string; text: string } {
   if (!description) return { category: "", text: "" };
   const match = description.match(/^\[([^\]]+)\]\n?([\s\S]*)$/);
   if (match) {
@@ -161,12 +161,12 @@ function extractTitleAndCategory(subject: string, description: string | null) {
   return { title: subject, category: parsed.category, cleanDesc: cleanDescription(parsed.text) || "" };
 }
 
-const statusLabels: Record<string, {label: string;className: string;}> = {
+const statusLabels: Record<string, { label: string; className: string }> = {
   lead: { label: "Lead", className: "bg-tag text-tag-foreground" },
   prospect: { label: "Prospekt", className: "bg-warning/10 text-warning" },
   customer: { label: "Kunde", className: "bg-success/10 text-success" },
   churned: { label: "Tapt", className: "bg-destructive/10 text-destructive" },
-  active: { label: "Aktiv", className: "bg-success/10 text-success" }
+  active: { label: "Aktiv", className: "bg-success/10 text-success" },
 };
 
 interface CompanyCardContentProps {
@@ -180,7 +180,7 @@ export function CompanyCardContent({
   companyId,
   editable = false,
   onOpenContact,
-  onNavigateToFullPage
+  onNavigateToFullPage,
 }: CompanyCardContentProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -194,7 +194,7 @@ export function CompanyCardContent({
     phone: "",
     title: "",
     linkedin: "",
-    location: ""
+    location: "",
   });
   const [editCompanyOpen, setEditCompanyOpen] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -203,7 +203,7 @@ export function CompanyCardContent({
     city: "",
     website: "",
     linkedin: "",
-    locations: [] as string[]
+    locations: [] as string[],
   });
   const [newLocation, setNewLocation] = useState("");
   const [signalPickerOpen, setSignalPickerOpen] = useState(false);
@@ -221,33 +221,33 @@ export function CompanyCardContent({
   const { data: company, isLoading } = useQuery({
     queryKey: ["company", companyId],
     queryFn: async () => {
-      const { data, error } = await supabase.
-      from("companies").
-      select("*, profiles!companies_owner_id_fkey(full_name)").
-      eq("id", companyId).
-      single();
+      const { data, error } = await supabase
+        .from("companies")
+        .select("*, profiles!companies_owner_id_fkey(full_name)")
+        .eq("id", companyId)
+        .single();
       if (error) throw error;
       return data;
     },
-    enabled: !!companyId
+    enabled: !!companyId,
   });
 
   // Pre-fill edit form when dialog opens
   useEffect(() => {
     if (editCompanyOpen && company) {
-      const locs = company.city ?
-      company.city.
-      split(",").
-      map((l: string) => l.trim()).
-      filter(Boolean) :
-      [];
+      const locs = company.city
+        ? company.city
+            .split(",")
+            .map((l: string) => l.trim())
+            .filter(Boolean)
+        : [];
       setEditForm({
         name: company.name || "",
         org_number: company.org_number || "",
         city: company.city || "",
         website: company.website || "",
         linkedin: company.linkedin || "",
-        locations: locs.length > 0 ? locs : []
+        locations: locs.length > 0 ? locs : [],
       });
       setNewLocation("");
     }
@@ -274,22 +274,22 @@ export function CompanyCardContent({
       const { data, error } = await supabase.from("profiles").select("id, full_name");
       if (error) throw error;
       return data;
-    }
+    },
   });
   const profileMapFull = Object.fromEntries(allProfiles.map((p) => [p.id, p.full_name]));
 
   const { data: contacts = [] } = useQuery({
     queryKey: ["company-contacts", companyId],
     queryFn: async () => {
-      const { data, error } = await supabase.
-      from("contacts").
-      select("*, profiles!contacts_owner_id_fkey(full_name)").
-      eq("company_id", companyId).
-      order("first_name");
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*, profiles!contacts_owner_id_fkey(full_name)")
+        .eq("company_id", companyId)
+        .order("first_name");
       if (error) throw error;
       return data;
     },
-    enabled: !!companyId
+    enabled: !!companyId,
   });
 
   const contactIds = contacts.map((c) => c.id);
@@ -297,30 +297,30 @@ export function CompanyCardContent({
   const { data: companyActivities = [] } = useQuery({
     queryKey: ["company-activities-direct", companyId],
     queryFn: async () => {
-      const { data, error } = await supabase.
-      from("activities").
-      select("*, contacts(first_name, last_name)").
-      eq("company_id", companyId).
-      order("created_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("activities")
+        .select("*, contacts(first_name, last_name)")
+        .eq("company_id", companyId)
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!companyId
+    enabled: !!companyId,
   });
 
   const { data: contactActivities = [] } = useQuery({
     queryKey: ["company-contact-activities", companyId, contactIds],
     queryFn: async () => {
       if (contactIds.length === 0) return [];
-      const { data, error } = await supabase.
-      from("activities").
-      select("*, contacts(first_name, last_name)").
-      in("contact_id", contactIds).
-      order("created_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("activities")
+        .select("*, contacts(first_name, last_name)")
+        .in("contact_id", contactIds)
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!companyId && contactIds.length > 0
+    enabled: !!companyId && contactIds.length > 0,
   });
 
   const allActivitiesMap = new Map<string, any>();
@@ -329,52 +329,52 @@ export function CompanyCardContent({
     if (!allActivitiesMap.has(a.id)) allActivitiesMap.set(a.id, a);
   });
   const activities = Array.from(allActivitiesMap.values()).sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
   );
 
   const { data: companyTasks = [] } = useQuery({
     queryKey: ["company-tasks", companyId],
     queryFn: async () => {
-      const { data, error } = await supabase.
-      from("tasks").
-      select("*, contacts(first_name, last_name)").
-      eq("company_id", companyId).
-      neq("status", "done").
-      order("due_date", { ascending: true, nullsFirst: false });
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*, contacts(first_name, last_name)")
+        .eq("company_id", companyId)
+        .neq("status", "done")
+        .order("due_date", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!companyId
+    enabled: !!companyId,
   });
 
   const { data: contactTasks = [] } = useQuery({
     queryKey: ["company-contact-tasks", companyId, contactIds],
     queryFn: async () => {
       if (contactIds.length === 0) return [];
-      const { data, error } = await supabase.
-      from("tasks").
-      select("*, contacts(first_name, last_name)").
-      in("contact_id", contactIds).
-      neq("status", "done").
-      order("due_date", { ascending: true, nullsFirst: false });
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*, contacts(first_name, last_name)")
+        .in("contact_id", contactIds)
+        .neq("status", "done")
+        .order("due_date", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!companyId && contactIds.length > 0
+    enabled: !!companyId && contactIds.length > 0,
   });
 
   const { data: techProfile } = useQuery({
     queryKey: ["company-tech-profile", companyId],
     queryFn: async () => {
-      const { data, error } = await supabase.
-      from("company_tech_profile").
-      select("teknologier, konsulent_hyppighet, sist_fra_finn").
-      eq("company_id", companyId).
-      maybeSingle();
+      const { data, error } = await supabase
+        .from("company_tech_profile")
+        .select("teknologier, konsulent_hyppighet, sist_fra_finn")
+        .eq("company_id", companyId)
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!companyId
+    enabled: !!companyId,
   });
 
   const allTasksMap = new Map<string, any>();
@@ -399,37 +399,37 @@ export function CompanyCardContent({
       queryClient.invalidateQueries({ queryKey: ["companies-full"] });
       toast.success("Oppdatert");
     },
-    onError: () => toast.error("Kunne ikke oppdatere")
+    onError: () => toast.error("Kunne ikke oppdatere"),
   });
 
   const toggleTaskMutation = useMutation({
     mutationFn: async (taskId: string) => {
-      const { error } = await supabase.
-      from("tasks").
-      update({
-        status: "done",
-        completed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }).
-      eq("id", taskId);
+      const { error } = await supabase
+        .from("tasks")
+        .update({
+          status: "done",
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", taskId);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company-tasks", companyId] });
       queryClient.invalidateQueries({ queryKey: ["company-contact-tasks", companyId] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
-    }
+    },
   });
 
   const changeSignalMutation = useMutation({
-    mutationFn: async ({ signal, contactId }: {signal: string;contactId: string;}) => {
+    mutationFn: async ({ signal, contactId }: { signal: string; contactId: string }) => {
       const { error } = await supabase.from("activities").insert({
         subject: signal,
         type: "note",
         contact_id: contactId,
         company_id: companyId,
         created_by: user?.id,
-        description: `[${signal}]`
+        description: `[${signal}]`,
       });
       if (error) throw error;
     },
@@ -440,7 +440,7 @@ export function CompanyCardContent({
       queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
       toast.success("Signal oppdatert");
     },
-    onError: () => toast.error("Kunne ikke oppdatere signal")
+    onError: () => toast.error("Kunne ikke oppdatere signal"),
   });
 
   const updateField = (field: string) => (value: string) => {
@@ -452,47 +452,47 @@ export function CompanyCardContent({
       <div className="space-y-3 animate-pulse">
         <div className="h-7 w-48 bg-secondary rounded" />
         <div className="h-4 w-32 bg-secondary rounded" />
-      </div>);
-
+      </div>
+    );
   }
   if (!company) return <p className="text-sm text-muted-foreground">Selskap ikke funnet</p>;
 
   const STATUS_OPTIONS = [
-  { value: "prospect", label: "Potensiell kunde", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
-  { value: "customer", label: "Kunde", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-  { value: "partner", label: "Partner", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" },
-  { value: "churned", label: "Ikke relevant selskap", badgeColor: "bg-red-50 text-red-700 border-red-200" }] as
-  const;
+    { value: "prospect", label: "Potensiell kunde", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
+    { value: "customer", label: "Kunde", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+    { value: "partner", label: "Partner", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" },
+    { value: "churned", label: "Ikke relevant selskap", badgeColor: "bg-red-50 text-red-700 border-red-200" },
+  ] as const;
   const currentStatus =
-  STATUS_OPTIONS.find((s) => s.value === company.status || s.value === "customer" && company.status === "kunde") ||
-  STATUS_OPTIONS[0];
+    STATUS_OPTIONS.find((s) => s.value === company.status || (s.value === "customer" && company.status === "kunde")) ||
+    STATUS_OPTIONS[0];
   const ownerFullName = (company as any).profiles?.full_name || null;
 
   const effectiveSignal = getEffectiveSignal(
     activities.map((a) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
-    tasks.map((t) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date }))
+    tasks.map((t) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date })),
   );
-  const signalBadgeColor = effectiveSignal ?
-  SIGNAL_CATEGORIES.find((c) => c.label === effectiveSignal)?.badgeColor ||
-  "bg-gray-100 text-gray-600 border-gray-200" :
-  "bg-gray-100 text-gray-600 border-gray-200";
+  const signalBadgeColor = effectiveSignal
+    ? SIGNAL_CATEGORIES.find((c) => c.label === effectiveSignal)?.badgeColor ||
+      "bg-gray-100 text-gray-600 border-gray-200"
+    : "bg-gray-100 text-gray-600 border-gray-200";
 
   const handleFinnKonsulenter = async () => {
     setMatchingKonsulenter(true);
     setKonsulentResults(null);
     try {
       const [{ data: foresporslerData }, { data: interne }, { data: eksterne }] = await Promise.all([
-      supabase.
-      from("foresporsler").
-      select("teknologier").
-      eq("selskap_id", companyId).
-      gte("mottatt_dato", new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)),
-      supabase.
-      from("stacq_ansatte").
-      select("id, navn, kompetanse, geografi, erfaring_aar, status").
-      in("status", ["AKTIV/SIGNERT"]),
-      supabase.from("external_consultants").select("id, navn, teknologier, status").in("status", ["ledig", "aktiv"])]
-      );
+        supabase
+          .from("foresporsler")
+          .select("teknologier")
+          .eq("selskap_id", companyId)
+          .gte("mottatt_dato", new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)),
+        supabase
+          .from("stacq_ansatte")
+          .select("id, navn, kompetanse, geografi, erfaring_aar, status")
+          .in("status", ["AKTIV/SIGNERT"]),
+        supabase.from("external_consultants").select("id, navn, teknologier, status").in("status", ["ledig", "aktiv"]),
+      ]);
       const alleTags: string[] = [];
       // From techProfile
       if (techProfile?.teknologier) {
@@ -508,10 +508,10 @@ export function CompanyCardContent({
       alleTags.forEach((t) => {
         freq[t] = (freq[t] || 0) + 1;
       });
-      const teknologier = Object.entries(freq).
-      sort((a, b) => b[1] - a[1]).
-      map(([tag]) => tag).
-      slice(0, 15);
+      const teknologier = Object.entries(freq)
+        .sort((a, b) => b[1] - a[1])
+        .map(([tag]) => tag)
+        .slice(0, 15);
       if (!teknologier.length) {
         toast("Ingen teknisk profil på selskapet ennå — legg til teknologier på forespørsler eller kontakter");
         setMatchingKonsulenter(false);
@@ -525,15 +525,15 @@ export function CompanyCardContent({
           eksterne: eksterne || [],
           kontakt_er_innkjoper: false,
           kontakt_signal: effectiveSignal || "Ukjent om behov",
-          siste_kontakt_dato: activities[0]?.created_at ?
-          new Date(activities[0].created_at).toLocaleDateString("nb-NO", {
-            day: "numeric",
-            month: "long",
-            year: "numeric"
-          }) :
-          null,
-          aktive_foresporsler: []
-        }
+          siste_kontakt_dato: activities[0]?.created_at
+            ? new Date(activities[0].created_at).toLocaleDateString("nb-NO", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })
+            : null,
+          aktive_foresporsler: [],
+        },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -551,7 +551,7 @@ export function CompanyCardContent({
     setIsAnalyzing(true);
     try {
       const { data, error } = await supabase.functions.invoke("extract-knowledge", {
-        body: { text: analyzeText, type: "teknologier" }
+        body: { text: analyzeText, type: "teknologier" },
       });
       if (error) throw error;
       const tags: string[] = data?.tags || data?.teknologier || [];
@@ -574,39 +574,44 @@ export function CompanyCardContent({
       {/* ── ZONE A: Header ── */}
       <div className="mb-5">
         <div className="flex items-center gap-3">
-          {editable ?
-          <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">
+          {editable ? (
+            <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">
               <InlineEdit value={company.name} onSave={updateField("name")} className="text-[1.5rem] font-bold" />
-            </h2> :
-
-          <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">{company.name}</h2>
-          }
+            </h2>
+          ) : (
+            <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">{company.name}</h2>
+          )}
           <div className="ml-auto flex items-center gap-2 flex-shrink-0">
             {/* Signal badge */}
-            {editable ?
-            <button
-              onClick={() => {
-                const defaultContact = activities.find((a) => a.contact_id)?.contact_id || contacts[0]?.id || "";
-                setSignalContactId(defaultContact);
-                setSignalPickerOpen(true);
-              }}
-              className={cn(
-                effectiveSignal ?
-                "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer" :
-                "inline-flex items-center rounded-full border border-dashed border-border px-2.5 py-0.5 text-[0.6875rem] text-muted-foreground/50 cursor-pointer hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors",
-                effectiveSignal ? signalBadgeColor : ""
-              )}>
-              
+            {editable ? (
+              <button
+                onClick={() => {
+                  const defaultContact = activities.find((a) => a.contact_id)?.contact_id || contacts[0]?.id || "";
+                  setSignalContactId(defaultContact);
+                  setSignalPickerOpen(true);
+                }}
+                className={cn(
+                  effectiveSignal
+                    ? "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer"
+                    : "inline-flex items-center rounded-full border border-dashed border-border px-2.5 py-0.5 text-[0.6875rem] text-muted-foreground/50 cursor-pointer hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors",
+                  effectiveSignal ? signalBadgeColor : "",
+                )}
+              >
                 {effectiveSignal || "Sett signal"}
-              </button> :
-            effectiveSignal ?
-            <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", signalBadgeColor)}>
+              </button>
+            ) : effectiveSignal ? (
+              <span
+                className={cn(
+                  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+                  signalBadgeColor,
+                )}
+              >
                 {effectiveSignal}
-              </span> :
-            null}
+              </span>
+            ) : null}
             {/* Type badge */}
-            {editable ?
-            <DropdownMenu>
+            {editable ? (
+              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="inline-flex items-center rounded-full border bg-gray-100 text-gray-600 border-gray-200 px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap cursor-pointer">
                     {currentStatus.label}
@@ -614,21 +619,21 @@ export function CompanyCardContent({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {STATUS_OPTIONS.map((s) =>
-                <DropdownMenuItem key={s.value} onClick={() => updateMutation.mutate({ status: s.value })}>
+                  {STATUS_OPTIONS.map((s) => (
+                    <DropdownMenuItem key={s.value} onClick={() => updateMutation.mutate({ status: s.value })}>
                       {s.label}
                     </DropdownMenuItem>
-                )}
+                  ))}
                 </DropdownMenuContent>
-              </DropdownMenu> :
-
-            <span className="inline-flex items-center rounded-full border bg-gray-100 text-gray-600 border-gray-200 px-2.5 py-0.5 text-xs font-semibold">
+              </DropdownMenu>
+            ) : (
+              <span className="inline-flex items-center rounded-full border bg-gray-100 text-gray-600 border-gray-200 px-2.5 py-0.5 text-xs font-semibold">
                 {currentStatus.label}
               </span>
-            }
+            )}
             {/* Owner badge */}
-            {editable ?
-            <DropdownMenu>
+            {editable ? (
+              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="inline-flex items-center rounded-full border bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap cursor-pointer">
                     {company.owner_id && profileMapFull[company.owner_id] ? profileMapFull[company.owner_id] : "Eier"}
@@ -636,20 +641,20 @@ export function CompanyCardContent({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {allProfiles.map((p) =>
-                <DropdownMenuItem key={p.id} onClick={() => updateMutation.mutate({ owner_id: p.id })}>
+                  {allProfiles.map((p) => (
+                    <DropdownMenuItem key={p.id} onClick={() => updateMutation.mutate({ owner_id: p.id })}>
                       <span className="inline-flex items-center rounded-full border bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold">
                         {p.full_name}
                       </span>
                     </DropdownMenuItem>
-                )}
+                  ))}
                 </DropdownMenuContent>
-              </DropdownMenu> :
-            ownerFullName ?
-            <span className="inline-flex items-center rounded-full border bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold">
+              </DropdownMenu>
+            ) : ownerFullName ? (
+              <span className="inline-flex items-center rounded-full border bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold">
                 {ownerFullName}
-              </span> :
-            null}
+              </span>
+            ) : null}
             {/* Signal picker dialog */}
             <Dialog open={signalPickerOpen} onOpenChange={setSignalPickerOpen}>
               <DialogContent className="sm:max-w-[360px] rounded-xl">
@@ -660,21 +665,21 @@ export function CompanyCardContent({
                   <div className="space-y-1.5">
                     <Label className="text-label">Signal</Label>
                     <div className="flex flex-wrap gap-2">
-                      {SIGNAL_CATEGORIES.map((c) =>
-                      <button
-                        key={c.label}
-                        type="button"
-                        onClick={() => setPendingSignal(c.label)}
-                        className={cn(
-                          "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer transition-all",
-                          pendingSignal === c.label ?
-                          c.badgeColor + " ring-2 ring-offset-1 ring-primary" :
-                          c.badgeColor + " opacity-50"
-                        )}>
-                        
+                      {SIGNAL_CATEGORIES.map((c) => (
+                        <button
+                          key={c.label}
+                          type="button"
+                          onClick={() => setPendingSignal(c.label)}
+                          className={cn(
+                            "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer transition-all",
+                            pendingSignal === c.label
+                              ? c.badgeColor + " ring-2 ring-offset-1 ring-primary"
+                              : c.badgeColor + " opacity-50",
+                          )}
+                        >
                           {c.label}
                         </button>
-                      )}
+                      ))}
                     </div>
                   </div>
                   <div className="space-y-1.5">
@@ -682,13 +687,13 @@ export function CompanyCardContent({
                     <select
                       value={signalContactId}
                       onChange={(e) => setSignalContactId(e.target.value)}
-                      className="w-full h-10 rounded-lg border border-input bg-background px-3 text-[0.8125rem]">
-                      
-                      {contacts.map((c) =>
-                      <option key={c.id} value={c.id}>
+                      className="w-full h-10 rounded-lg border border-input bg-background px-3 text-[0.8125rem]"
+                    >
+                      {contacts.map((c) => (
+                        <option key={c.id} value={c.id}>
                           {c.first_name} {c.last_name}
                         </option>
-                      )}
+                      ))}
                     </select>
                   </div>
                   <Button
@@ -700,8 +705,8 @@ export function CompanyCardContent({
                         setSignalPickerOpen(false);
                         setPendingSignal(null);
                       }
-                    }}>
-                    
+                    }}
+                  >
                     Lagre signal
                   </Button>
                 </div>
@@ -716,9 +721,9 @@ export function CompanyCardContent({
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
-                    const finalLocations = newLocation.trim() ?
-                    [...editForm.locations, newLocation.trim()] :
-                    editForm.locations;
+                    const finalLocations = newLocation.trim()
+                      ? [...editForm.locations, newLocation.trim()]
+                      : editForm.locations;
                     setNewLocation("");
                     const cityValue = finalLocations.length > 0 ? finalLocations.join(", ") : editForm.city;
                     updateMutation.mutate({
@@ -726,50 +731,50 @@ export function CompanyCardContent({
                       org_number: editForm.org_number || null,
                       city: cityValue || null,
                       website: editForm.website || null,
-                      linkedin: editForm.linkedin || null
+                      linkedin: editForm.linkedin || null,
                     });
                     setEditCompanyOpen(false);
                   }}
-                  className="space-y-4 mt-3">
-                  
+                  className="space-y-4 mt-3"
+                >
                   <div className="space-y-1.5">
                     <Label className="text-label">Selskapsnavn</Label>
                     <Input
                       value={editForm.name}
                       onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                       required
-                      className="h-10 rounded-lg" />
-                    
+                      className="h-10 rounded-lg"
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-label">Org.nr</Label>
                     <Input
                       value={editForm.org_number}
                       onChange={(e) => setEditForm({ ...editForm, org_number: e.target.value })}
-                      className="h-10 rounded-lg" />
-                    
+                      className="h-10 rounded-lg"
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-label">Avdelinger</Label>
                     <div className="flex flex-wrap gap-1.5 mb-2">
-                      {editForm.locations.map((loc, i) =>
-                      <span
-                        key={i}
-                        className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs font-medium text-foreground">
-                        
+                      {editForm.locations.map((loc, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs font-medium text-foreground"
+                        >
                           <MapPin className="h-3 w-3 text-muted-foreground" />
                           {loc}
                           <button
-                          type="button"
-                          onClick={() =>
-                          setEditForm({ ...editForm, locations: editForm.locations.filter((_, idx) => idx !== i) })
-                          }
-                          className="ml-0.5 text-muted-foreground hover:text-destructive">
-                          
+                            type="button"
+                            onClick={() =>
+                              setEditForm({ ...editForm, locations: editForm.locations.filter((_, idx) => idx !== i) })
+                            }
+                            className="ml-0.5 text-muted-foreground hover:text-destructive"
+                          >
                             ×
                           </button>
                         </span>
-                      )}
+                      ))}
                     </div>
                     <div className="flex gap-2">
                       <Input
@@ -783,8 +788,9 @@ export function CompanyCardContent({
                             setEditForm({ ...editForm, locations: [...editForm.locations, newLocation.trim()] });
                             setNewLocation("");
                           }
-                        }} />
-                      
+                        }}
+                      />
+
                       <Button
                         type="button"
                         variant="outline"
@@ -795,8 +801,8 @@ export function CompanyCardContent({
                             setEditForm({ ...editForm, locations: [...editForm.locations, newLocation.trim()] });
                             setNewLocation("");
                           }
-                        }}>
-                        
+                        }}
+                      >
                         <Plus className="h-3.5 w-3.5" />
                       </Button>
                     </div>
@@ -807,8 +813,8 @@ export function CompanyCardContent({
                       value={editForm.website}
                       onChange={(e) => setEditForm({ ...editForm, website: e.target.value })}
                       placeholder="https://..."
-                      className="h-10 rounded-lg" />
-                    
+                      className="h-10 rounded-lg"
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-label">LinkedIn</Label>
@@ -816,16 +822,16 @@ export function CompanyCardContent({
                       value={editForm.linkedin}
                       onChange={(e) => setEditForm({ ...editForm, linkedin: e.target.value })}
                       placeholder="https://linkedin.com/company/..."
-                      className="h-10 rounded-lg" />
-                    
+                      className="h-10 rounded-lg"
+                    />
                   </div>
                   <div className="flex gap-2">
                     <Button
                       type="button"
                       variant="outline"
                       className="flex-1 h-10 rounded-lg"
-                      onClick={() => setEditCompanyOpen(false)}>
-                      
+                      onClick={() => setEditCompanyOpen(false)}
+                    >
                       Avbryt
                     </Button>
                     <Button type="submit" className="flex-1 h-10 rounded-lg">
@@ -835,125 +841,166 @@ export function CompanyCardContent({
                 </form>
               </DialogContent>
             </Dialog>
-            {editable &&
-            <button
-              onClick={() => {
-                setEditForm({
-                  name: company.name || "",
-                  org_number: company.org_number || "",
-                  city: company.city || "",
-                  website: company.website || "",
-                  linkedin: company.linkedin || "",
-                  locations: company.city ?
-                  company.city.split(",").map((s: string) => s.trim()).filter(Boolean) :
-                  []
-                });
-                setNewLocation("");
-                setEditCompanyOpen(true);
-              }}
-              className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-secondary text-muted-foreground">
-              
+            {editable && (
+              <button
+                onClick={() => {
+                  setEditForm({
+                    name: company.name || "",
+                    org_number: company.org_number || "",
+                    city: company.city || "",
+                    website: company.website || "",
+                    linkedin: company.linkedin || "",
+                    locations: company.city
+                      ? company.city
+                          .split(",")
+                          .map((s: string) => s.trim())
+                          .filter(Boolean)
+                      : [],
+                  });
+                  setNewLocation("");
+                  setEditCompanyOpen(true);
+                }}
+                className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-secondary text-muted-foreground"
+              >
                 <Pencil className="h-3.5 w-3.5" />
               </button>
-            }
-            {!editable && onNavigateToFullPage &&
-            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={onNavigateToFullPage}>
+            )}
+            {!editable && onNavigateToFullPage && (
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={onNavigateToFullPage}>
                 <ExternalLink className="h-3.5 w-3.5" />
               </Button>
-            }
+            )}
           </div>
         </div>
 
-        {/* Org.nr · city · phone · links */}
-        <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap mt-0.5">
+        {/* Org.nr · city */}
+        <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap mt-0.5">
           {company.org_number && <span>Org.nr {company.org_number}</span>}
           {company.city &&
-          company.city.
-          split(",").
-          map((loc: string) => loc.trim()).
-          filter(Boolean).
-          map((loc: string, i: number) =>
-          <a
-            key={i}
-            href={`https://maps.google.com/?q=${encodeURIComponent(loc)},Norge`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
+            company.city
+              .split(",")
+              .map((loc: string) => loc.trim())
+              .filter(Boolean)
+              .map((loc: string, i: number) => (
+                <a
+                  key={i}
+                  href={`https://maps.google.com/?q=${encodeURIComponent(loc)},Norge`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                >
                   <MapPin className="h-3.5 w-3.5" />
                   {loc}
                 </a>
-          )}
-          {company.phone &&
-          <a href={`tel:${company.phone}`} className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
-              <Phone className="h-3 w-3" />{company.phone}
+              ))}
+        </div>
+
+        {/* Phone · links */}
+        <div className="flex items-center gap-2 flex-wrap text-[0.9375rem] text-foreground/70 mt-1">
+          {company.phone && (
+            <a href={`tel:${company.phone}`} className="inline-flex items-center gap-1 hover:text-foreground">
+              <Phone className="h-3 w-3" />
+              {company.phone}
             </a>
-          }
-          {company.website &&
-          <>
-              {(company.city || company.phone) && <span className="text-muted-foreground/40">·</span>}
-              <a href={company.website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
-                <Globe className="h-3 w-3" />{company.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
+          )}
+          {company.website && (
+            <>
+              {company.phone && <span className="text-muted-foreground/40">·</span>}
+              <a
+                href={company.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-primary hover:underline"
+              >
+                <Globe className="h-3 w-3" />
+                {company.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
               </a>
             </>
-          }
-          {company.linkedin &&
-          <>
+          )}
+          {company.linkedin && (
+            <>
               <span className="text-muted-foreground/40">·</span>
-              <a href={company.linkedin} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
-                <Linkedin className="h-3 w-3" />LinkedIn
+              <a
+                href={company.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-primary hover:underline"
+              >
+                <Linkedin className="h-3 w-3" />
+                LinkedIn
               </a>
             </>
-          }
-          {company.email &&
-          <>
+          )}
+          {company.email && (
+            <>
               <span className="text-muted-foreground/40">·</span>
-              <a href={`mailto:${company.email}`} className="inline-flex items-center gap-1 text-primary hover:underline">
-                <Mail className="h-3 w-3" />{company.email}
+              <a
+                href={`mailto:${company.email}`}
+                className="inline-flex items-center gap-1 text-primary hover:underline"
+              >
+                <Mail className="h-3 w-3" />
+                {company.email}
               </a>
             </>
-          }
+          )}
         </div>
       </div>
 
       {/* Notat — kun når det finnes innhold eller redigeres */}
-      {editable && editingNotes ?
-      <div className="mb-5">
+      {editable && editingNotes ? (
+        <div className="mb-5">
           <Textarea
-          value={notesDraft}
-          onChange={(e) => setNotesDraft(e.target.value)}
-          rows={3}
-          autoFocus
-          className="text-[0.875rem] rounded-md"
-          onKeyDown={(e) => {
-            if (e.key === "Escape") setEditingNotes(false);
-            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-              updateField("notes")(notesDraft);
-              setEditingNotes(false);
-            }
-          }} />
-        
+            value={notesDraft}
+            onChange={(e) => setNotesDraft(e.target.value)}
+            rows={3}
+            autoFocus
+            className="text-[0.875rem] rounded-md"
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setEditingNotes(false);
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                updateField("notes")(notesDraft);
+                setEditingNotes(false);
+              }
+            }}
+          />
+
           <div className="flex gap-2 mt-1.5">
-            <Button size="sm" className="h-7 text-[0.75rem] px-3 rounded-md" onClick={() => {updateField("notes")(notesDraft);setEditingNotes(false);}}>
+            <Button
+              size="sm"
+              className="h-7 text-[0.75rem] px-3 rounded-md"
+              onClick={() => {
+                updateField("notes")(notesDraft);
+                setEditingNotes(false);
+              }}
+            >
               Lagre
             </Button>
-            <Button variant="ghost" size="sm" className="h-7 text-[0.75rem] px-3 rounded-md" onClick={() => setEditingNotes(false)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-[0.75rem] px-3 rounded-md"
+              onClick={() => setEditingNotes(false)}
+            >
               Avbryt
             </Button>
           </div>
-        </div> :
-      company.notes ?
-      <div className="group relative mb-5">
+        </div>
+      ) : company.notes ? (
+        <div className="group relative mb-5">
           <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{company.notes}</p>
-          {editable &&
-        <button
-          onClick={() => {setNotesDraft(company.notes || "");setEditingNotes(true);}}
-          className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-secondary">
-          
+          {editable && (
+            <button
+              onClick={() => {
+                setNotesDraft(company.notes || "");
+                setEditingNotes(true);
+              }}
+              className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-secondary"
+            >
               <Pencil className="h-3 w-3 text-muted-foreground" />
             </button>
-        }
-        </div> :
-      null}
+          )}
+        </div>
+      ) : null}
 
       {/* ── Snapshot-rad ── */}
       {(() => {
@@ -961,53 +1008,17 @@ export function CompanyCardContent({
         const nesteOppf = tasks.filter((t) => t.due_date)[0] ?? null;
         if (!sisteAkt && !nesteOppf) return null;
         return;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       })()}
 
       {/* ── To-kolonne layout ── */}
       <div className="grid grid-cols-1 md:grid-cols-[1fr_minmax(0,260px)] gap-6">
-
         {/* Venstre: Teknisk DNA + Oppfølginger + Aktiviteter */}
         <div className="space-y-5">
-
           {/* ── Teknisk DNA ── */}
           {(() => {
-            const techTags = techProfile?.teknologier ?
-            Object.entries(techProfile.teknologier as Record<string, number>).sort((a, b) => b[1] - a[1]) :
-            [];
+            const techTags = techProfile?.teknologier
+              ? Object.entries(techProfile.teknologier as Record<string, number>).sort((a, b) => b[1] - a[1])
+              : [];
             const contactTechTags = [...new Set(contacts.flatMap((c) => (c as any).teknologier || []))];
             const hasTech = techTags.length > 0 || contactTechTags.length > 0;
 
@@ -1015,178 +1026,225 @@ export function CompanyCardContent({
               <div className="mb-2">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                    Teknisk DNA
-                    {techProfile?.konsulent_hyppighet ?
-                    <span className="ml-2 text-muted-foreground/50 font-normal normal-case tracking-normal">
+                    Tekniske behov
+                    {techProfile?.konsulent_hyppighet ? (
+                      <span className="ml-2 text-muted-foreground/50 font-normal normal-case tracking-normal">
                         · {techProfile.konsulent_hyppighet} annonser
-                      </span> :
-                    null}
+                      </span>
+                    ) : null}
                   </h3>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setShowAnalyze(!showAnalyze)}
-                      className="inline-flex items-center gap-1 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                      
-                      <Sparkles className="h-3 w-3" /> Analyser tekst
+                      className="inline-flex items-center gap-1 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                    >
+                      <Sparkles className="h-3 w-3" /> Legg til tekniske tags fra tekst
                     </button>
-                    {hasTech &&
-                    <button
-                      onClick={handleFinnKonsulenter}
-                      disabled={matchingKonsulenter}
-                      className="inline-flex items-center gap-1.5 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors disabled:opacity-50">
-                      
-                        {matchingKonsulenter ?
-                      <><Loader2 className="h-3 w-3 animate-spin" /> Matcher...</> :
-
-                      <><Target className="h-3.5 w-3.5 text-primary" /> Finn konsulenter</>
-                      }
+                    {hasTech && (
+                      <button
+                        onClick={handleFinnKonsulenter}
+                        disabled={matchingKonsulenter}
+                        className="inline-flex items-center gap-1.5 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+                      >
+                        {matchingKonsulenter ? (
+                          <>
+                            <Loader2 className="h-3 w-3 animate-spin" /> Matcher...
+                          </>
+                        ) : (
+                          <>
+                            <Target className="h-3.5 w-3.5 text-primary" /> Finn konsulenter som matcher teknisk behov
+                          </>
+                        )}
                       </button>
-                    }
+                    )}
                   </div>
                 </div>
 
-                {showAnalyze &&
-                <div className="mb-3 p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-2">
+                {showAnalyze && (
+                  <div className="mb-3 p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-2">
                     <p className="text-[0.75rem] text-muted-foreground">
-                      Lim inn stillingsbeskrivelse, e-post eller kravspesifikasjon — AI finner relevante teknologier automatisk.
+                      Lim inn stillingsbeskrivelse, e-post eller kravspesifikasjon — AI finner relevante teknologier
+                      automatisk.
                     </p>
                     <textarea
-                    value={analyzeText}
-                    onChange={(e) => setAnalyzeText(e.target.value)}
-                    placeholder="Lim inn tekst her..."
-                    rows={4}
-                    className="w-full text-[0.875rem] rounded-md border border-border bg-background px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary/30" />
-                  
+                      value={analyzeText}
+                      onChange={(e) => setAnalyzeText(e.target.value)}
+                      placeholder="Lim inn tekst her..."
+                      rows={4}
+                      className="w-full text-[0.875rem] rounded-md border border-border bg-background px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    />
+
                     <div className="flex items-center gap-2">
                       <button
-                      onClick={handleAnalyzeText}
-                      disabled={!analyzeText.trim() || isAnalyzing}
-                      className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.75rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-colors">
-                      
+                        onClick={handleAnalyzeText}
+                        disabled={!analyzeText.trim() || isAnalyzing}
+                        className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.75rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-colors"
+                      >
                         <Sparkles className="h-3.5 w-3.5" />
                         {isAnalyzing ? "Analyserer..." : "Finn teknologier"}
                       </button>
-                      <button onClick={() => {setShowAnalyze(false);setAnalyzeText("");}}
-                    className="text-[0.75rem] text-muted-foreground hover:text-foreground">
+                      <button
+                        onClick={() => {
+                          setShowAnalyze(false);
+                          setAnalyzeText("");
+                        }}
+                        className="text-[0.75rem] text-muted-foreground hover:text-foreground"
+                      >
                         Avbryt
                       </button>
                     </div>
                   </div>
-                }
+                )}
 
                 {/* Konsulentmatch-resultater */}
-                {konsulentResults !== null &&
-                <div className="mb-3 space-y-2">
+                {konsulentResults !== null && (
+                  <div className="mb-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                         Konsulentmatch · {konsulentResults.length}
                       </span>
-                      <button onClick={handleFinnKonsulenter} className="text-[0.6875rem] text-muted-foreground hover:text-foreground">
+                      <button
+                        onClick={handleFinnKonsulenter}
+                        className="text-[0.6875rem] text-muted-foreground hover:text-foreground"
+                      >
                         Kjør på nytt
                       </button>
                     </div>
                     <div className="flex gap-1.5">
-                      {(["Alle", "Ansatte", "Eksterne"] as const).map((f) =>
-                    <button
-                      key={f}
-                      onClick={() => setKonsulentFilter(f)}
-                      className={cn(
-                        "h-6 px-2.5 text-[0.6875rem] rounded-full border transition-colors font-medium",
-                        konsulentFilter === f ?
-                        "bg-foreground text-background border-foreground" :
-                        "border-border text-muted-foreground hover:bg-secondary"
-                      )}>
-                      
+                      {(["Alle", "Ansatte", "Eksterne"] as const).map((f) => (
+                        <button
+                          key={f}
+                          onClick={() => setKonsulentFilter(f)}
+                          className={cn(
+                            "h-6 px-2.5 text-[0.6875rem] rounded-full border transition-colors font-medium",
+                            konsulentFilter === f
+                              ? "bg-foreground text-background border-foreground"
+                              : "border-border text-muted-foreground hover:bg-secondary",
+                          )}
+                        >
                           {f}
                         </button>
-                    )}
+                      ))}
                     </div>
                     {konsulentResults.filter((m: any) =>
-                  konsulentFilter === "Alle" ? true : konsulentFilter === "Ansatte" ? m.type === "intern" : m.type === "ekstern"
-                  ).length === 0 ?
-                  <p className="text-[0.8125rem] text-muted-foreground">Ingen treff</p> :
-
-                  konsulentResults.
-                  filter((m: any) =>
-                  konsulentFilter === "Alle" ? true : konsulentFilter === "Ansatte" ? m.type === "intern" : m.type === "ekstern"
-                  ).
-                  map((m: any, i: number) =>
-                  <div key={`${m.type}-${m.id}`} className="rounded-lg border border-border bg-card p-2.5">
+                      konsulentFilter === "Alle"
+                        ? true
+                        : konsulentFilter === "Ansatte"
+                          ? m.type === "intern"
+                          : m.type === "ekstern",
+                    ).length === 0 ? (
+                      <p className="text-[0.8125rem] text-muted-foreground">Ingen treff</p>
+                    ) : (
+                      konsulentResults
+                        .filter((m: any) =>
+                          konsulentFilter === "Alle"
+                            ? true
+                            : konsulentFilter === "Ansatte"
+                              ? m.type === "intern"
+                              : m.type === "ekstern",
+                        )
+                        .map((m: any, i: number) => (
+                          <div key={`${m.type}-${m.id}`} className="rounded-lg border border-border bg-card p-2.5">
                             <div className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
-                                <span className="text-[0.8125rem] font-semibold text-foreground truncate">{m.navn}</span>
-                                <span className={cn("inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold shrink-0",
-                        m.type === "intern" ? "bg-foreground text-background" : "bg-blue-100 text-blue-700")}>
+                                <span className="text-[0.8125rem] font-semibold text-foreground truncate">
+                                  {m.navn}
+                                </span>
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold shrink-0",
+                                    m.type === "intern" ? "bg-foreground text-background" : "bg-blue-100 text-blue-700",
+                                  )}
+                                >
                                   {m.type === "intern" ? "Ansatt" : "Ekstern"}
                                 </span>
                               </div>
                               <div className="flex items-center gap-1 shrink-0">
-                                <span className={cn("inline-block h-2 w-2 rounded-full",
-                        m.score >= 8 ? "bg-emerald-500" : m.score >= 6 ? "bg-amber-500" : "bg-red-500")} />
+                                <span
+                                  className={cn(
+                                    "inline-block h-2 w-2 rounded-full",
+                                    m.score >= 8 ? "bg-emerald-500" : m.score >= 6 ? "bg-amber-500" : "bg-red-500",
+                                  )}
+                                />
                                 <span className="text-[0.75rem] font-bold">{m.score}/10</span>
                               </div>
                             </div>
                             <div className="flex flex-wrap gap-1 mt-1.5">
-                              {(m.match_tags || []).map((t: string) =>
-                      <span key={t} className="inline-flex items-center rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[0.625rem] font-medium">
+                              {(m.match_tags || []).map((t: string) => (
+                                <span
+                                  key={t}
+                                  className="inline-flex items-center rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[0.625rem] font-medium"
+                                >
                                   {t}
                                 </span>
-                      )}
+                              ))}
                             </div>
                             <p className="text-[0.75rem] text-muted-foreground mt-1 italic">{m.begrunnelse}</p>
                           </div>
-                  )
-                  }
+                        ))
+                    )}
                   </div>
-                }
+                )}
 
-                {techTags.length > 0 ?
-                <div className="space-y-3">
+                {techTags.length > 0 ? (
+                  <div className="space-y-3">
                     <div>
                       <p className="text-[0.6875rem] text-muted-foreground/60 mb-1.5">Fra Finn.no</p>
                       <div className="flex flex-wrap gap-1">
-                        {techTags.slice(0, 20).map(([tech, count]) =>
-                      <span key={tech} className="inline-flex items-center rounded-full bg-secondary text-foreground px-2 py-0.5 text-[0.6875rem] font-mono border border-border">
-                            {tech}{count > 1 ? <span className="ml-1 text-muted-foreground/60">×{count}</span> : null}
+                        {techTags.slice(0, 20).map(([tech, count]) => (
+                          <span
+                            key={tech}
+                            className="inline-flex items-center rounded-full bg-secondary text-foreground px-2 py-0.5 text-[0.6875rem] font-mono border border-border"
+                          >
+                            {tech}
+                            {count > 1 ? <span className="ml-1 text-muted-foreground/60">×{count}</span> : null}
                           </span>
-                      )}
+                        ))}
                       </div>
-                      {techProfile?.sist_fra_finn &&
-                    <p className="text-[0.6875rem] text-muted-foreground/40 mt-1.5">
-                          Oppdatert {new Date(techProfile.sist_fra_finn).toLocaleDateString("nb-NO", { day: "numeric", month: "short", year: "numeric" })}
+                      {techProfile?.sist_fra_finn && (
+                        <p className="text-[0.6875rem] text-muted-foreground/40 mt-1.5">
+                          Oppdatert{" "}
+                          {new Date(techProfile.sist_fra_finn).toLocaleDateString("nb-NO", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
                         </p>
-                    }
+                      )}
                     </div>
-                    {contactTechTags.length > 0 &&
-                  <>
+                    {contactTechTags.length > 0 && (
+                      <>
                         <div className="border-t border-border/50" />
                         <div>
                           <p className="text-[0.6875rem] text-muted-foreground/60 mb-1.5">Fra kontakter</p>
                           <div className="flex flex-wrap gap-1">
-                            {contactTechTags.slice(0, 10).map((tech: string) =>
-                        <span key={tech} className="inline-flex items-center rounded-full bg-secondary text-foreground px-2 py-0.5 text-[0.6875rem] font-mono border border-border">
+                            {contactTechTags.slice(0, 10).map((tech: string) => (
+                              <span
+                                key={tech}
+                                className="inline-flex items-center rounded-full bg-secondary text-foreground px-2 py-0.5 text-[0.6875rem] font-mono border border-border"
+                              >
                                 {tech}
                               </span>
-                        )}
+                            ))}
                           </div>
                         </div>
                       </>
-                  }
-                  </div> :
-
-                <p className="text-[0.8125rem] text-muted-foreground/50">Ingen teknisk data ennå</p>
-                }
-              </div>);
-
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[0.8125rem] text-muted-foreground/50">Ingen teknisk data ennå</p>
+                )}
+              </div>
+            );
           })()}
 
           {/* Separator */}
           <div className="border-t border-border/50" />
 
           {/* ── Oppfølginger ── */}
-          {tasks.length > 0 &&
-          <div className="bg-card border border-border rounded-lg shadow-card p-4">
+          {tasks.length > 0 && (
+            <div className="bg-card border border-border rounded-lg shadow-card p-4">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
                   Oppfølginger · {tasks.length}
@@ -1194,75 +1252,81 @@ export function CompanyCardContent({
               </div>
               <div className="space-y-px">
                 {tasks.map((task) => {
-                const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
-                const today = task.due_date && isToday(new Date(task.due_date));
-                const contactName = (task.contacts as any)?.first_name ?
-                `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}` :
-                null;
-                const {
-                  title: displayTitle,
-                  category: displayCategory,
-                  cleanDesc: displayDesc
-                } = extractTitleAndCategory(task.title, task.description);
-                return (
-                  <div
-                    key={task.id}
-                    className="flex items-start gap-2.5 py-2.5 px-1 rounded-md transition-all duration-200 group hover:bg-background/60 cursor-pointer"
-                    onClick={() => {if (task.contact_id) navigate(`/kontakter/${task.contact_id}`);}}>
-                    
+                  const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
+                  const today = task.due_date && isToday(new Date(task.due_date));
+                  const contactName = (task.contacts as any)?.first_name
+                    ? `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}`
+                    : null;
+                  const {
+                    title: displayTitle,
+                    category: displayCategory,
+                    cleanDesc: displayDesc,
+                  } = extractTitleAndCategory(task.title, task.description);
+                  return (
+                    <div
+                      key={task.id}
+                      className="flex items-start gap-2.5 py-2.5 px-1 rounded-md transition-all duration-200 group hover:bg-background/60 cursor-pointer"
+                      onClick={() => {
+                        if (task.contact_id) navigate(`/kontakter/${task.contact_id}`);
+                      }}
+                    >
                       <div onClick={(e) => e.stopPropagation()}>
                         <Checkbox
-                        checked={false}
-                        onCheckedChange={() => toggleTaskMutation.mutate(task.id)}
-                        className="h-4 w-4 rounded-[4px] border-2 border-muted-foreground/40 flex-shrink-0 mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
-                      
+                          checked={false}
+                          onCheckedChange={() => toggleTaskMutation.mutate(task.id)}
+                          className="h-4 w-4 rounded-[4px] border-2 border-muted-foreground/40 flex-shrink-0 mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                        />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</div>
-                        {contactName &&
-                      <a
-                        href={`/kontakter/${task.contact_id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-[0.8125rem] font-semibold text-blue-600 hover:underline block mt-0.5">
-                        
+                        {contactName && (
+                          <a
+                            href={`/kontakter/${task.contact_id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-[0.8125rem] font-semibold text-blue-600 hover:underline block mt-0.5"
+                          >
                             → {contactName}
                           </a>
-                      }
-                        {displayDesc && !/^\[.+\]$/.test(displayDesc.trim()) &&
-                      <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{displayDesc}</p>
-                      }
+                        )}
+                        {displayDesc && !/^\[.+\]$/.test(displayDesc.trim()) && (
+                          <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{displayDesc}</p>
+                        )}
                         <div className="flex items-center gap-1.5 mt-1">
-                          {task.assigned_to && profileMapFull[task.assigned_to] &&
-                        <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+                          {task.assigned_to && profileMapFull[task.assigned_to] && (
+                            <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
                               {profileMapFull[task.assigned_to]}
                             </span>
-                        }
+                          )}
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
-                        {task.due_date &&
-                      <Tooltip>
+                        {task.due_date && (
+                          <Tooltip>
                             <TooltipTrigger asChild>
                               <span
-                            className={cn(
-                              "text-[0.8125rem] font-medium",
-                              overdue ? "text-destructive" : today ? "text-[hsl(var(--warning))]" : "text-muted-foreground"
-                            )}>
-                            
+                                className={cn(
+                                  "text-[0.8125rem] font-medium",
+                                  overdue
+                                    ? "text-destructive"
+                                    : today
+                                      ? "text-[hsl(var(--warning))]"
+                                      : "text-muted-foreground",
+                                )}
+                              >
                                 {format(new Date(task.due_date), "d. MMM yyyy", { locale: nb })}
                               </span>
                             </TooltipTrigger>
                             <TooltipContent>{fullDate(task.due_date)}</TooltipContent>
                           </Tooltip>
-                      }
+                        )}
                         {displayCategory && <CategoryBadge label={displayCategory} />}
                       </div>
-                    </div>);
-
-              })}
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          }
+          )}
 
           {/* ── Activities Timeline ── */}
           <CompanyActivityTimeline activities={activities} profileMap={profileMapFull} companyId={companyId} />
@@ -1271,112 +1335,178 @@ export function CompanyCardContent({
         {/* Høyre: Kun kontakter */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">Kontakter · {contacts.length}</h3>
-            {editable &&
-            <Dialog open={newContactOpen} onOpenChange={setNewContactOpen}>
+            <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+              Kontakter · {contacts.length}
+            </h3>
+            {editable && (
+              <Dialog open={newContactOpen} onOpenChange={setNewContactOpen}>
                 <DialogTrigger asChild>
                   <Button className="rounded-lg h-7 px-2.5 text-[0.75rem] font-medium gap-1">
-                    <Plus className="h-3 w-3" />Ny kontakt
+                    <Plus className="h-3 w-3" />
+                    Ny kontakt
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[440px] rounded-xl">
-                  <DialogHeader><DialogTitle>Ny kontakt</DialogTitle></DialogHeader>
-                  <form onSubmit={async (e) => {
-                  e.preventDefault();
-                  const { error } = await supabase.from("contacts").insert({
-                    first_name: contactForm.first_name, last_name: contactForm.last_name,
-                    email: contactForm.email || null, phone: contactForm.phone || null,
-                    title: contactForm.title || null, linkedin: contactForm.linkedin || null,
-                    company_id: companyId, created_by: user?.id, owner_id: user?.id
-                  });
-                  if (error) {toast.error("Kunne ikke opprette kontakt");return;}
-                  queryClient.invalidateQueries({ queryKey: ["company-contacts", companyId] });
-                  queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
-                  setNewContactOpen(false);
-                  setContactForm({ first_name: "", last_name: "", email: "", phone: "", title: "", linkedin: "", location: "" });
-                  toast.success("Kontakt opprettet");
-                }} className="space-y-4 mt-3">
+                  <DialogHeader>
+                    <DialogTitle>Ny kontakt</DialogTitle>
+                  </DialogHeader>
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const { error } = await supabase.from("contacts").insert({
+                        first_name: contactForm.first_name,
+                        last_name: contactForm.last_name,
+                        email: contactForm.email || null,
+                        phone: contactForm.phone || null,
+                        title: contactForm.title || null,
+                        linkedin: contactForm.linkedin || null,
+                        company_id: companyId,
+                        created_by: user?.id,
+                        owner_id: user?.id,
+                      });
+                      if (error) {
+                        toast.error("Kunne ikke opprette kontakt");
+                        return;
+                      }
+                      queryClient.invalidateQueries({ queryKey: ["company-contacts", companyId] });
+                      queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
+                      setNewContactOpen(false);
+                      setContactForm({
+                        first_name: "",
+                        last_name: "",
+                        email: "",
+                        phone: "",
+                        title: "",
+                        linkedin: "",
+                        location: "",
+                      });
+                      toast.success("Kontakt opprettet");
+                    }}
+                    className="space-y-4 mt-3"
+                  >
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
                         <Label className="text-label">Fornavn</Label>
-                        <Input value={contactForm.first_name} onChange={(e) => setContactForm({ ...contactForm, first_name: e.target.value })} required className="h-10 rounded-lg" />
+                        <Input
+                          value={contactForm.first_name}
+                          onChange={(e) => setContactForm({ ...contactForm, first_name: e.target.value })}
+                          required
+                          className="h-10 rounded-lg"
+                        />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-label">Etternavn</Label>
-                        <Input value={contactForm.last_name} onChange={(e) => setContactForm({ ...contactForm, last_name: e.target.value })} required className="h-10 rounded-lg" />
+                        <Input
+                          value={contactForm.last_name}
+                          onChange={(e) => setContactForm({ ...contactForm, last_name: e.target.value })}
+                          required
+                          className="h-10 rounded-lg"
+                        />
                       </div>
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-label">Stilling</Label>
-                      <Input value={contactForm.title} onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })} className="h-10 rounded-lg" />
+                      <Input
+                        value={contactForm.title}
+                        onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })}
+                        className="h-10 rounded-lg"
+                      />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
                         <Label className="text-label">E-post</Label>
-                        <Input value={contactForm.email} onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })} type="email" className="h-10 rounded-lg" />
+                        <Input
+                          value={contactForm.email}
+                          onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                          type="email"
+                          className="h-10 rounded-lg"
+                        />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-label">Telefon</Label>
-                        <Input value={contactForm.phone} onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })} className="h-10 rounded-lg" />
+                        <Input
+                          value={contactForm.phone}
+                          onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                          className="h-10 rounded-lg"
+                        />
                       </div>
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-label">LinkedIn</Label>
-                      <Input value={contactForm.linkedin} onChange={(e) => setContactForm({ ...contactForm, linkedin: e.target.value })} placeholder="https://linkedin.com/in/..." className="h-10 rounded-lg" />
+                      <Input
+                        value={contactForm.linkedin}
+                        onChange={(e) => setContactForm({ ...contactForm, linkedin: e.target.value })}
+                        placeholder="https://linkedin.com/in/..."
+                        className="h-10 rounded-lg"
+                      />
                     </div>
-                    <Button type="submit" className="w-full h-10 rounded-lg">Opprett</Button>
+                    <Button type="submit" className="w-full h-10 rounded-lg">
+                      Opprett
+                    </Button>
                   </form>
                 </DialogContent>
               </Dialog>
-            }
+            )}
           </div>
-          {contacts.length === 0 ?
-          <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen kontakter</p> :
-
-          <div className="divide-y divide-border">
+          {contacts.length === 0 ? (
+            <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen kontakter</p>
+          ) : (
+            <div className="divide-y divide-border">
               {contacts.map((c) => {
-              const contactOwner = (c as any).profiles?.full_name || null;
-              return (
-                <button key={c.id}
-                className="w-full flex items-center gap-2 py-2.5 hover:bg-secondary/50 transition-colors duration-75 text-left group rounded-md"
-                onClick={() => onOpenContact ? onOpenContact(c.id) : navigate(`/kontakter/${c.id}`)}>
+                const contactOwner = (c as any).profiles?.full_name || null;
+                return (
+                  <button
+                    key={c.id}
+                    className="w-full flex items-center gap-2 py-2.5 hover:bg-secondary/50 transition-colors duration-75 text-left group rounded-md"
+                    onClick={() => (onOpenContact ? onOpenContact(c.id) : navigate(`/kontakter/${c.id}`))}
+                  >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <p className="text-[0.8125rem] font-medium truncate group-hover:text-primary transition-colors">{c.first_name} {c.last_name}</p>
-                        {c.cv_email && <span className="rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">CV</span>}
-                        {c.call_list && <span className="rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">INN</span>}
+                        <p className="text-[0.8125rem] font-medium truncate group-hover:text-primary transition-colors">
+                          {c.first_name} {c.last_name}
+                        </p>
+                        {c.cv_email && (
+                          <span className="rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">
+                            CV
+                          </span>
+                        )}
+                        {c.call_list && (
+                          <span className="rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">
+                            INN
+                          </span>
+                        )}
                       </div>
                       <p className="text-[0.6875rem] text-muted-foreground truncate">
                         {[c.title, contactOwner].filter(Boolean).join(" · ") || ""}
                       </p>
                     </div>
                     <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/20 group-hover:text-muted-foreground/60 flex-shrink-0" />
-                  </button>);
-
-            })}
+                  </button>
+                );
+              })}
             </div>
-          }
+          )}
         </div>
       </div>
-    </div>);
-
+    </div>
+  );
 }
 
 /* ── Company Activity Timeline ── */
 function CompanyActivityTimeline({
   activities,
   profileMap,
-  companyId
-
-
-
-
-}: {activities: any[];profileMap: Record<string, string>;companyId: string;}) {
+  companyId,
+}: {
+  activities: any[];
+  profileMap: Record<string, string>;
+  companyId: string;
+}) {
   const navigate = useNavigate();
   const currentYear = getYear(new Date());
 
   const grouped = useMemo(() => {
-    const groups: {key: string;label: string;period: string;items: any[];}[] = [];
+    const groups: { key: string; label: string; period: string; items: any[] }[] = [];
     let currentKey = "";
     for (const act of activities) {
       const d = new Date(act.created_at);
@@ -1386,8 +1516,8 @@ function CompanyActivityTimeline({
         const label = format(d, "MMMM yyyy", { locale: nb }).toUpperCase();
         const yr = getYear(d);
         let period = "";
-        if (yr === currentYear - 1) period = "I fjor";else
-        if (yr < currentYear - 1) period = `${currentYear - yr} år siden`;
+        if (yr === currentYear - 1) period = "I fjor";
+        else if (yr < currentYear - 1) period = `${currentYear - yr} år siden`;
         groups.push({ key: monthKey, label, period, items: [] });
       }
       groups[groups.length - 1].items.push(act);
@@ -1402,8 +1532,8 @@ function CompanyActivityTimeline({
           Aktiviteter · 0
         </h3>
         <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen aktiviteter</p>
-      </div>);
-
+      </div>
+    );
   }
 
   return (
@@ -1412,8 +1542,8 @@ function CompanyActivityTimeline({
         Aktiviteter · {activities.length}
       </h3>
 
-      {grouped.map((group, gi) =>
-      <div key={group.key}>
+      {grouped.map((group, gi) => (
+        <div key={group.key}>
           <div className={cn("flex items-center gap-3 mb-3", gi > 0 && "mt-6")}>
             <span className="text-[0.8125rem] font-bold tracking-[0.04em] text-foreground whitespace-nowrap">
               {group.label}
@@ -1425,21 +1555,21 @@ function CompanyActivityTimeline({
           <div className="relative pl-7">
             <div className="absolute left-[5px] top-[5px] bottom-0 w-[2px] bg-border" />
             <div className="space-y-6">
-              {group.items.map((activity) =>
-            <CompanyActivityRow
-              key={activity.id}
-              activity={activity}
-              profileMap={profileMap}
-              companyId={companyId}
-              navigate={navigate} />
-
-            )}
+              {group.items.map((activity) => (
+                <CompanyActivityRow
+                  key={activity.id}
+                  activity={activity}
+                  profileMap={profileMap}
+                  companyId={companyId}
+                  navigate={navigate}
+                />
+              ))}
             </div>
           </div>
         </div>
-      )}
-    </div>);
-
+      ))}
+    </div>
+  );
 }
 
 /* ── Company Activity Row (with inline edit) ── */
@@ -1447,13 +1577,13 @@ function CompanyActivityRow({
   activity,
   profileMap,
   companyId,
-  navigate
-
-
-
-
-
-}: {activity: any;profileMap: Record<string, string>;companyId: string;navigate: (path: string) => void;}) {
+  navigate,
+}: {
+  activity: any;
+  profileMap: Record<string, string>;
+  companyId: string;
+  navigate: (path: string) => void;
+}) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
@@ -1465,20 +1595,20 @@ function CompanyActivityRow({
   const {
     title: displayTitle,
     category: displayCategory,
-    cleanDesc
+    cleanDesc,
   } = extractTitleAndCategory(activity.subject, activity.description);
   const ownerName = activity.created_by ? profileMap[activity.created_by] : null;
   const d = new Date(activity.created_at);
-  const contactName = (activity.contacts as any)?.first_name ?
-  `${(activity.contacts as any).first_name} ${(activity.contacts as any).last_name}` :
-  null;
+  const contactName = (activity.contacts as any)?.first_name
+    ? `${(activity.contacts as any).first_name} ${(activity.contacts as any).last_name}`
+    : null;
 
   const typeIcon =
-  activity.type === "call" || activity.type === "phone" ?
-  <MessageCircle className="h-3.5 w-3.5 text-[hsl(var(--success))]" /> :
-
-  <FileText className="h-3.5 w-3.5 text-primary" />;
-
+    activity.type === "call" || activity.type === "phone" ? (
+      <MessageCircle className="h-3.5 w-3.5 text-[hsl(var(--success))]" />
+    ) : (
+      <FileText className="h-3.5 w-3.5 text-primary" />
+    );
 
   const handleRowClick = () => {
     if (editing) return;
@@ -1523,18 +1653,18 @@ function CompanyActivityRow({
       </div>
 
       <div className="min-w-0">
-        {editing ?
-        <div className="space-y-2 animate-in fade-in duration-150">
+        {editing ? (
+          <div className="space-y-2 animate-in fade-in duration-150">
             <div>
               <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">
                 Tittel
               </span>
               <Input
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              className="text-[0.9375rem] rounded-md"
-              autoFocus />
-            
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="text-[0.9375rem] rounded-md"
+                autoFocus
+              />
             </div>
             <div>
               <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">
@@ -1543,102 +1673,103 @@ function CompanyActivityRow({
               <CategoryPicker selected={editCategory} onSelect={setEditCategory} />
             </div>
             <Textarea
-            value={editDesc}
-            onChange={(e) => setEditDesc(e.target.value)}
-            rows={3}
-            placeholder="Beskrivelse (valgfritt)"
-            className="text-[0.875rem] rounded-md"
-            onKeyDown={(e) => {
-              if (e.key === "Escape") setEditing(false);
-              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") handleSave();
-            }} />
-          
+              value={editDesc}
+              onChange={(e) => setEditDesc(e.target.value)}
+              rows={3}
+              placeholder="Beskrivelse (valgfritt)"
+              className="text-[0.875rem] rounded-md"
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setEditing(false);
+                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") handleSave();
+              }}
+            />
+
             <div className="flex items-center gap-2">
               <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 Dato:
               </span>
               <input
-              type="date"
-              value={editDate}
-              onChange={(e) => setEditDate(e.target.value)}
-              className="h-7 px-2 text-[0.75rem] rounded-full border border-border text-muted-foreground bg-background" />
-            
+                type="date"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+                className="h-7 px-2 text-[0.75rem] rounded-full border border-border text-muted-foreground bg-background"
+              />
             </div>
             <div className="flex items-center gap-2">
               <Button
-              size="sm"
-              className="h-6 text-[0.6875rem] px-2 rounded"
-              disabled={!editTitle.trim() || !editCategory}
-              onClick={handleSave}>
-              
+                size="sm"
+                className="h-6 text-[0.6875rem] px-2 rounded"
+                disabled={!editTitle.trim() || !editCategory}
+                onClick={handleSave}
+              >
                 Lagre
               </Button>
               <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 text-[0.6875rem] px-2 rounded"
-              onClick={() => setEditing(false)}>
-              
+                variant="ghost"
+                size="sm"
+                className="h-6 text-[0.6875rem] px-2 rounded"
+                onClick={() => setEditing(false)}
+              >
                 Avbryt
               </Button>
               <div className="ml-auto">
-                {confirmDelete ?
-              <span className="text-[0.75rem] animate-in fade-in duration-150">
+                {confirmDelete ? (
+                  <span className="text-[0.75rem] animate-in fade-in duration-150">
                     <span className="text-destructive mr-1">Er du sikker?</span>
                     <button
-                  onClick={() => {
-                    handleDelete();
-                    setConfirmDelete(false);
-                  }}
-                  className="text-destructive font-medium hover:underline mr-1">
-                  
+                      onClick={() => {
+                        handleDelete();
+                        setConfirmDelete(false);
+                      }}
+                      className="text-destructive font-medium hover:underline mr-1"
+                    >
                       Ja, slett
                     </button>
                     <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="text-muted-foreground hover:text-foreground">
-                  
+                      onClick={() => setConfirmDelete(false)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
                       Avbryt
                     </button>
-                  </span> :
-
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
-                
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDelete(true)}
+                    className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                  >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
-              }
+                )}
               </div>
             </div>
-          </div> :
-
-        <div onClick={handleRowClick} className="cursor-pointer flex items-start gap-3">
+          </div>
+        ) : (
+          <div onClick={handleRowClick} className="cursor-pointer flex items-start gap-3">
             <div className="flex-1 min-w-0">
               <span className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</span>
 
-              {contactName &&
-            <a
-              href={`/kontakter/${activity.contact_id}`}
-              onClick={(e) => e.stopPropagation()}
-              className="text-[0.8125rem] font-semibold text-blue-600 hover:underline block mt-0.5">
-              
+              {contactName && (
+                <a
+                  href={`/kontakter/${activity.contact_id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-[0.8125rem] font-semibold text-blue-600 hover:underline block mt-0.5"
+                >
                   → {contactName}
                 </a>
-            }
+              )}
 
-              {cleanDesc &&
-            <div className="mt-0.5">
+              {cleanDesc && (
+                <div className="mt-0.5">
                   <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70">{cleanDesc}</p>
                 </div>
-            }
+              )}
 
               <div className="flex items-center gap-2 mt-1">
-                {ownerName &&
-              <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+                {ownerName && (
+                  <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
                     {ownerName}
                   </span>
-              }
+                )}
               </div>
             </div>
 
@@ -1654,14 +1785,14 @@ function CompanyActivityRow({
               {displayCategory && <CategoryBadge label={displayCategory} />}
             </div>
           </div>
-        }
+        )}
       </div>
-    </div>);
-
+    </div>
+  );
 }
 
 /* ── Company DNA Panel ── */
-function CompanyDnaPanel({ companyId }: {companyId: string;}) {
+function CompanyDnaPanel({ companyId }: { companyId: string }) {
   const queryClient = useQueryClient();
 
   const { data: dnaProfile } = useQuery({
@@ -1670,7 +1801,7 @@ function CompanyDnaPanel({ companyId }: {companyId: string;}) {
       const { data } = await supabase.from("company_tech_profile").select("*").eq("company_id", companyId).single();
       return data || null;
     },
-    enabled: !!companyId
+    enabled: !!companyId,
   });
 
   // Hent teknologier fra forespørsler for dette selskapet
@@ -1688,11 +1819,11 @@ function CompanyDnaPanel({ companyId }: {companyId: string;}) {
       all.forEach((t) => {
         freq[t] = (freq[t] || 0) + 1;
       });
-      return Object.entries(freq).
-      sort((a, b) => b[1] - a[1]).
-      map(([tag, count]) => ({ tag, count }));
+      return Object.entries(freq)
+        .sort((a, b) => b[1] - a[1])
+        .map(([tag, count]) => ({ tag, count }));
     },
-    enabled: !!companyId
+    enabled: !!companyId,
   });
 
   // Hent teknologier fra kontakter på dette selskapet
@@ -1707,58 +1838,58 @@ function CompanyDnaPanel({ companyId }: {companyId: string;}) {
       });
       return [...new Set(all)];
     },
-    enabled: !!companyId
+    enabled: !!companyId,
   });
 
   const hasDna =
-  foresporslerTags.length > 0 ||
-  contactTags.length > 0 ||
-  dnaProfile?.teknologier && Object.keys(dnaProfile.teknologier).length > 0;
+    foresporslerTags.length > 0 ||
+    contactTags.length > 0 ||
+    (dnaProfile?.teknologier && Object.keys(dnaProfile.teknologier).length > 0);
 
   if (!hasDna) {
     return (
       <p className="text-[0.8125rem] text-muted-foreground/60 italic">
         Ingen teknisk profil ennå — legges til automatisk fra forespørsler og kontakter.
-      </p>);
-
+      </p>
+    );
   }
 
   return (
     <div className="space-y-3">
       {/* Fra forespørsler */}
-      {foresporslerTags.length > 0 &&
-      <div>
+      {foresporslerTags.length > 0 && (
+        <div>
           <p className="text-[0.6875rem] font-medium text-muted-foreground mb-1.5">Fra forespørsler</p>
           <div className="flex flex-wrap gap-1.5">
-            {foresporslerTags.map(({ tag, count }) =>
-          <span
-            key={tag}
-            className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.75rem] font-medium text-foreground">
-            
+            {foresporslerTags.map(({ tag, count }) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.75rem] font-medium text-foreground"
+              >
                 {tag}
                 {count > 1 && <span className="text-[0.625rem] text-muted-foreground font-normal">×{count}</span>}
               </span>
-          )}
+            ))}
           </div>
         </div>
-      }
+      )}
 
       {/* Fra kontakter */}
-      {contactTags.length > 0 &&
-      <div>
+      {contactTags.length > 0 && (
+        <div>
           <p className="text-[0.6875rem] font-medium text-muted-foreground mb-1.5">Fra kontakter</p>
           <div className="flex flex-wrap gap-1.5">
-            {contactTags.map((tag: string) =>
-          <span
-            key={tag}
-            className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-[0.75rem] font-medium text-primary">
-            
+            {contactTags.map((tag: string) => (
+              <span
+                key={tag}
+                className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-[0.75rem] font-medium text-primary"
+              >
                 {tag}
               </span>
-          )}
+            ))}
           </div>
         </div>
-      }
-    </div>);
-
+      )}
+    </div>
+  );
 }
