@@ -266,14 +266,11 @@ const DailyBrief = () => {
   });
 
   const filterOptions = useMemo(() => {
-    const myProfile = allProfiles.find(p => p.id === user?.id);
-    const myLabel = myProfile?.full_name || "Mine";
-    const others = allProfiles.filter(p => p.id !== user?.id).map(p => ({
+    const others = allProfiles.map(p => ({
       id: p.id,
       label: p.full_name,
     }));
     return [
-      { id: user?.id || "", label: myLabel },
       { id: "alle", label: "Alle" },
       ...others,
     ];
