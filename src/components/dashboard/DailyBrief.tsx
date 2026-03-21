@@ -235,22 +235,29 @@ const DailyBrief = () => {
     if (isAnimating) return;
     setIsAnimating(true);
     const card = cardRef.current;
+
     if (card) {
       const outX = dir === "left" ? -70 : 70;
       card.style.transition = "transform 220ms cubic-bezier(0.4, 0, 1, 1), opacity 200ms cubic-bezier(0.4, 0, 1, 1)";
       card.style.transform = `translateX(${outX}px) scale(0.96)`;
       card.style.opacity = "0";
     }
+
     setTimeout(() => {
       setActiveForm(null);
-      if (dir === "left") setCurrentIndex(i => Math.min(i + 1, queue.length - 1));
-      else setCurrentIndex(i => Math.max(i - 1, 0));
+      if (dir === "left") {
+        setCurrentIndex(i => Math.min(i + 1, queue.length - 1));
+      } else {
+        setCurrentIndex(i => Math.max(i - 1, 0));
+      }
+
       if (card) {
         const inX = dir === "left" ? 70 : -70;
         card.style.transition = "none";
         card.style.transform = `translateX(${inX}px) scale(0.96)`;
         card.style.opacity = "0";
       }
+
       requestAnimationFrame(() => requestAnimationFrame(() => {
         if (card) {
           card.style.transition = "transform 380ms cubic-bezier(0.32, 0.72, 0, 1), opacity 280ms cubic-bezier(0.32, 0.72, 0, 1)";
