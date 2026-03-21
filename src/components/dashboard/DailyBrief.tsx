@@ -6,7 +6,7 @@ import { differenceInDays, isPast, isToday, format, addWeeks, addMonths } from "
 import { nb } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { getEffectiveSignal, CATEGORIES } from "@/lib/categoryUtils";
-import { Loader2, ExternalLink, ChevronDown, ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { Loader2, ExternalLink, ChevronDown, ChevronLeft, ChevronRight, Check, Flame, List } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { ContactCardContent } from "@/components/ContactCardContent";
@@ -74,25 +74,40 @@ const DailyBrief = () => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [localSignals, setLocalSignals] = useState<Record<string, string>>({});
   const [sheetContactId, setSheetContactId] = useState<string | null>(null);
+  const [ownerFilter, setOwnerFilter] = useState("all");
+  const [viewMode, setViewMode] = useState<"kort" | "liste">("kort");
 
   // ── Data queries ──
-  const ownerFilter = "all"; // placeholder for future owner filtering
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["salgssenter-profiles"],
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("id, full_name");
+      return data || [];
+    },
+  });
+
+  const filterOptions = useMemo(() => {
+    const opts = profiles.map((p: any) => ({ id: p.id, label: p.full_name }));
+    return [{ id: "all", label: "Alle" }, ...opts];
+  }, [profiles]);
 
   const { data: contacts = [], isLoading } = useQuery({
     queryKey: ["salgssenter-contacts", ownerFilter],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("contacts")
         .select(`
-          id, first_name, last_name, title, company_id,
+          id, first_name, last_name, title, company_id, owner_id,
           cv_email, call_list, ikke_aktuell_kontakt,
           companies(id, name, city),
           activities(created_at, subject, description),
           tasks(id, created_at, title, description, due_date, status)
         `)
-        .or("ikke_aktuell_kontakt.is.null,ikke_aktuell_kontakt.eq.false")
-        .order("created_at", { ascending: false })
-        .limit(100);
+        .or("ikke_aktuell_kontakt.is.null,ikke_aktuell_kontakt.eq.false");
+      if (ownerFilter !== "all") {
+        q = q.eq("owner_id", ownerFilter);
+      }
+      const { data, error } = await q.order("created_at", { ascending: false }).limit(100);
       if (error) throw error;
       return data || [];
     },
@@ -225,6 +240,53 @@ const DailyBrief = () => {
 
   return (
     <div className="space-y-3">
+      {/* ── Filter row ── */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        {/* Eier-filter */}
+        <div className="flex items-center gap-1.5">
+          {filterOptions.map(opt => (
+            <button
+              key={opt.id}
+              onClick={() => { setOwnerFilter(opt.id); setIdx(0); setTreated(new Set()); }}
+              className={cn(
+                "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
+                ownerFilter === opt.id
+                  ? "bg-foreground text-background border-foreground font-medium"
+                  : "border-border text-muted-foreground hover:bg-secondary"
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Kort / Liste toggle */}
+        <div className="flex items-center">
+          <button
+            onClick={() => setViewMode("kort")}
+            className={cn(
+              "h-8 px-3 text-[0.8125rem] rounded-l-full border transition-colors inline-flex items-center gap-1.5",
+              viewMode === "kort"
+                ? "bg-foreground text-background border-foreground font-medium"
+                : "border-border text-muted-foreground hover:bg-secondary"
+            )}
+          >
+            <Flame className="h-3.5 w-3.5" /> Kort
+          </button>
+          <button
+            onClick={() => setViewMode("liste")}
+            className={cn(
+              "h-8 px-3 text-[0.8125rem] rounded-r-full border-t border-b border-r transition-colors inline-flex items-center gap-1.5",
+              viewMode === "liste"
+                ? "bg-foreground text-background border-foreground font-medium"
+                : "border-border text-muted-foreground hover:bg-secondary"
+            )}
+          >
+            <List className="h-3.5 w-3.5" /> Liste
+          </button>
+        </div>
+      </div>
+
       {/* ── Counter row ── */}
       <div className="flex justify-between text-[0.75rem] text-muted-foreground" style={{ padding: "0 42px" }}>
         <span>{treated.size} behandlet i dag</span>
@@ -483,14 +545,13 @@ const DailyBrief = () => {
                 <button
                   onClick={() => {
                     supabase.from("contacts")
-                      .update({ ikke_aktuell_kontakt: true })
+                      .update({ ikke_aktuell_kontakt: !current.contact.ikke_aktuell_kontakt })
                       .eq("id", current.contact.id)
                       .then(() => {
                         queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
-                          old?.map((c: any) => c.id === current.contact.id ? { ...c, ikke_aktuell_kontakt: true } : c)
+                          old?.map((c: any) => c.id === current.contact.id ? { ...c, ikke_aktuell_kontakt: !current.contact.ikke_aktuell_kontakt } : c)
                         );
                       });
-                    toast.success("Merket som ikke relevant — trykk Ok, neste for å gå videre");
                   }}
                   className={cn(
                     "inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
