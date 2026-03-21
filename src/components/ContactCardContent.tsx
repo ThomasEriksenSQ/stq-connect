@@ -1087,7 +1087,7 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
 
         {/* ── Separator + Action Bar ── */}
         {editable &&
-        <div className="border-t border-border pt-5 mb-8">
+        <div className="border-t border-border pt-4 pb-6">
             <div className="flex items-center gap-2 flex-wrap">
               <button
               onClick={() => openForm("call")}
@@ -1542,7 +1542,7 @@ function ActivityTimeline({
 
   return (
     <div>
-      <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4">
+      <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4 mt-8">
         Aktiviteter · {activities.length}
       </h3>
 
