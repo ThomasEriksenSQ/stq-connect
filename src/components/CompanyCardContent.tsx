@@ -194,7 +194,9 @@ export function CompanyCardContent({
     phone: "",
     title: "",
     linkedin: "",
-    location: ""
+    location: "",
+    cv_email: false,
+    call_list: false
   });
   const [editCompanyOpen, setEditCompanyOpen] = useState(false);
   const [editForm, setEditForm] = useState({
