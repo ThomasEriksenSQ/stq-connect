@@ -959,8 +959,8 @@ const DailyBrief = () => {
               <div className="mb-6">
                 <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-3">
                   {harEksisterendeTask
-                    ? `Oppdater oppfølging — "${current.nextTask.title}"`
-                    : "Opprett oppfølging — Følg opp om behov"}
+                    ? (nudgeScenario === "forfalt" ? `Forfalt: "${current.nextTask?.title}"` : `Oppdater oppfølging`)
+                    : "Ny oppfølging — Følg opp om behov"}
                 </p>
                 <div className="grid grid-cols-3 gap-2">
                   {NUDGE_DATE_CHIPS.map(chip => (
