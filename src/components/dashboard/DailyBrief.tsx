@@ -952,11 +952,7 @@ const DailyBrief = () => {
                 <X className="h-4 w-4" />
               </button>
 
-              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1">
-                Før du går videre
-              </p>
-              <p className="text-[0.875rem] text-muted-foreground mb-1">Hold kontakten oppdatert</p>
-              <p className="text-[1.125rem] font-bold text-foreground mb-6">{navn}</p>
+              <p className="text-[1.5rem] font-bold text-foreground mb-6">Hva er status på {navn}?</p>
 
               {/* Oppfølging */}
               <div className="mb-6">
