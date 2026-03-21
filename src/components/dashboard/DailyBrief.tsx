@@ -205,7 +205,7 @@ const DailyBrief = () => {
       const { error } = await supabase.from("tasks").update({ due_date: dueDate, updated_at: new Date().toISOString() }).eq("id", taskId);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["dailybrief-contacts"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["salgssenter-contacts"] }),
   });
 
   const toggleContactField = useCallback(async (contactId: string, field: "call_list" | "cv_email" | "ikke_aktuell_kontakt", currentVal: boolean) => {
