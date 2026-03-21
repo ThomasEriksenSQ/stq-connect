@@ -103,9 +103,11 @@ const DailyBrief = () => {
           activities(created_at, subject, description),
           tasks(id, created_at, title, description, due_date, status)
         `)
-        .or("ikke_aktuell_kontakt.is.null,ikke_aktuell_kontakt.eq.false")
-        .order("created_at", { ascending: false })
-        .limit(100);
+        .or("ikke_aktuell_kontakt.is.null,ikke_aktuell_kontakt.eq.false");
+      if (ownerFilter !== "all") {
+        q = q.eq("owner_id", ownerFilter);
+      }
+      const { data, error } = await q.order("created_at", { ascending: false }).limit(100);
       if (error) throw error;
       return data || [];
     },
