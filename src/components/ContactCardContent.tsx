@@ -1119,7 +1119,7 @@ export function ContactCardContent({
         )}
 
         {/* Line 4: Toggle pills */}
-        <div className="flex items-center gap-2 flex-wrap mt-2">
+        <div className="flex items-center gap-2 flex-wrap mt-3">
           {/* CV-Epost */}
           <button
             onClick={() => {
