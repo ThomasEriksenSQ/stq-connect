@@ -430,14 +430,16 @@ function TechTagEditor({
 }
 
 const DATE_CHIPS = [
-{ label: "I dag", fn: () => new Date() },
-{ label: "1 uke", fn: () => addWeeks(new Date(), 1) },
-{ label: "2 uker", fn: () => addWeeks(new Date(), 2) },
-{ label: "3 uker", fn: () => addWeeks(new Date(), 3) },
-{ label: "1 måned", fn: () => addMonths(new Date(), 1) },
-{ label: "3 måneder", fn: () => addMonths(new Date(), 3) },
-{ label: "6 måneder", fn: () => addMonths(new Date(), 6) },
-{ label: "1 år", fn: () => addYears(new Date(), 1) }];
+  { label: "Følg opp på sikt", fn: (): Date | null => null },
+  { label: "I dag", fn: () => new Date() },
+  { label: "1 uke", fn: () => addWeeks(new Date(), 1) },
+  { label: "2 uker", fn: () => addWeeks(new Date(), 2) },
+  { label: "3 uker", fn: () => addWeeks(new Date(), 3) },
+  { label: "1 måned", fn: () => addMonths(new Date(), 1) },
+  { label: "3 måneder", fn: () => addMonths(new Date(), 3) },
+  { label: "6 måneder", fn: () => addMonths(new Date(), 6) },
+  { label: "1 år", fn: () => addYears(new Date(), 1) },
+];
 
 
 export function ContactCardContent({
@@ -563,7 +565,7 @@ export function ContactCardContent({
         title: title.trim(),
         description: description?.trim() || null,
         priority: "medium",
-        due_date: formDate || null,
+        due_date: formDate === "someday" ? null : (formDate || null),
         contact_id: contactId,
         company_id: contact?.company_id || null,
         assigned_to: user?.id,
@@ -733,7 +735,10 @@ export function ContactCardContent({
     if (!formTitle || !formCategory) return;
     if (activeForm === "task") {
       const descWithCat = buildDescriptionWithCategory(formCategory, formDescription);
-      createTaskMutation.mutate({ title: formTitle.trim(), description: descWithCat || null });
+      const finalDesc = formDate === "someday"
+        ? (descWithCat ? descWithCat + "\n[someday]" : "[someday]")
+        : descWithCat || null;
+      createTaskMutation.mutate({ title: formTitle.trim(), description: finalDesc });
     } else {
       const descWithCat = buildDescriptionWithCategory(formCategory, formDescription);
       createActivityMutation.mutate({
@@ -1406,11 +1411,16 @@ export function ContactCardContent({
                 <button
                   key={chip.label}
                   type="button"
-                  onClick={() => {
-                    const d = chip.fn();
-                    setFormDate(format(d, "yyyy-MM-dd"));
-                    setSelectedChipIdx(i);
-                  }}
+                   onClick={() => {
+                     const d = chip.fn();
+                     if (d === null) {
+                       setFormDate("someday");
+                       setSelectedChipIdx(i);
+                     } else {
+                       setFormDate(format(d, "yyyy-MM-dd"));
+                       setSelectedChipIdx(i);
+                     }
+                   }}
                   className={cn(
                     "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors",
                     selectedChipIdx === i ?
@@ -1431,11 +1441,15 @@ export function ContactCardContent({
                   className="h-7 px-2 text-[0.75rem] rounded-full border border-border text-muted-foreground bg-background" />
                 
                     </div>
-                    {formDate &&
-              <p className="text-[0.75rem] text-muted-foreground mt-2">
+                    {formDate === "someday" ? (
+                      <p className="text-[0.75rem] text-muted-foreground mt-2">
+                        Ingen fast dato — legges i "Følg opp på sikt"-listen
+                      </p>
+                    ) : formDate ? (
+                      <p className="text-[0.75rem] text-muted-foreground mt-2">
                         Frist: {format(new Date(formDate), "d. MMMM yyyy", { locale: nb })}
                       </p>
-              }
+                    ) : null}
                   </div> :
 
             <div className="mt-2">
@@ -1637,7 +1651,7 @@ function TaskRow({
   const handleSave = () => {
     if (!editTitle || !editCategory) return;
     const descWithCat = buildDescriptionWithCategory(editCategory, editDesc.trim());
-    onUpdate(task.id, { title: editTitle.trim(), description: descWithCat || null, due_date: editDate || null });
+    onUpdate(task.id, { title: editTitle.trim(), description: descWithCat || null, due_date: editDate === "someday" ? null : (editDate || null) });
     setEditing(false);
   };
 
@@ -1680,11 +1694,16 @@ function TaskRow({
             <button
               key={chip.label}
               type="button"
-              onClick={() => {
-                const d = chip.fn();
-                setEditDate(format(d, "yyyy-MM-dd"));
-                setEditChipIdx(i);
-              }}
+               onClick={() => {
+                 const d = chip.fn();
+                 if (d === null) {
+                   setEditDate("someday");
+                   setEditChipIdx(i);
+                 } else {
+                   setEditDate(format(d, "yyyy-MM-dd"));
+                   setEditChipIdx(i);
+                 }
+               }}
               className={cn(
                 "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors",
                 editChipIdx === i ?
