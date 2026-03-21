@@ -257,14 +257,13 @@ const DailyBrief = () => {
         </div>
       ) : current ? (
         <div className="flex items-center gap-2">
-          {/* Left nav grip */}
+          {/* Left nav chevron */}
           <button
             onClick={() => goNext("right")}
             disabled={idx === 0}
-            className="shrink-0 flex gap-[3px] items-center justify-center w-6 h-12 cursor-pointer disabled:opacity-20 disabled:pointer-events-none group"
+            className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-20 disabled:pointer-events-none transition-all"
           >
-            <div className="w-[2px] h-[18px] rounded-full bg-muted-foreground/30 group-hover:bg-muted-foreground/70 transition-colors" />
-            <div className="w-[2px] h-[18px] rounded-full bg-muted-foreground/30 group-hover:bg-muted-foreground/70 transition-colors" />
+            <ChevronLeft className="h-5 w-5" />
           </button>
 
           {/* Card */}
