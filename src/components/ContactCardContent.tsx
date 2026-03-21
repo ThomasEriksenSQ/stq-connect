@@ -1695,8 +1695,13 @@ function TaskRow({
               type="button"
               onClick={() => {
                 const d = chip.fn();
-                setEditDate(format(d, "yyyy-MM-dd"));
-                setEditChipIdx(i);
+                if (d === null) {
+                  setEditDate("someday");
+                  setEditChipIdx(i);
+                } else {
+                  setEditDate(format(d, "yyyy-MM-dd"));
+                  setEditChipIdx(i);
+                }
               }}
               className={cn(
                 "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors",
