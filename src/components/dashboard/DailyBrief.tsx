@@ -491,7 +491,7 @@ const DailyBrief = () => {
                       .slice(0, 5).map(([t]) => t);
                     if (topTech.length === 0) return null;
                     return (
-                      <div className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-50 border border-blue-100">
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-50 border border-blue-100">
                         <Radio className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
                         <span className="text-[0.8125rem] text-blue-800 font-medium">Finn.no</span>
                         <span className="text-[0.75rem] text-blue-600">Søker: {topTech.join(", ")}</span>
