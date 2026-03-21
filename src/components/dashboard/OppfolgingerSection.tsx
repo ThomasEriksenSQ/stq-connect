@@ -388,6 +388,30 @@ const OppfolgingerSection = () => {
 
       })()}
 
+      {/* Someday tasks */}
+      {filteredSomeday.length > 0 && (
+        <div className="mt-6">
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">
+            Følg opp på sikt · {filteredSomeday.length}
+          </p>
+          <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+            {filteredSomeday.map((task, i) =>
+              <TaskRow
+                key={task.id}
+                task={task}
+                isLast={i === filteredSomeday.length - 1}
+                profiles={profiles}
+                signal={getContactSignal(task.contact_id)}
+                fadingIds={fadingIds}
+                onComplete={handleComplete}
+                onChangeOwner={handleChangeOwner}
+                onChangeSignal={handleChangeSignal}
+                onPostpone={handlePostpone} />
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Follow-up modal */}
       <FollowUpModal
         open={modalOpen}
