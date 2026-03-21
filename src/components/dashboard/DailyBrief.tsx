@@ -996,16 +996,16 @@ const DailyBrief = () => {
               {/* Signal */}
               <div className="mb-8">
                 <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">Signal</p>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {SIGNAL_CATEGORIES.filter(c => c.label !== "Ikke aktuelt").map(cat => (
                     <button
                       key={cat.label}
                       onClick={() => setNudgeSignal(cat.label)}
                       className={cn(
-                        "h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+                        "h-10 px-3 rounded-xl border text-[0.8125rem] font-medium transition-all",
                         nudgeSignal === cat.label
-                          ? cat.badgeColor
-                          : "border-border text-muted-foreground hover:bg-secondary"
+                          ? cat.badgeColor + " shadow-sm"
+                          : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
                       )}
                     >
                       {cat.label}
