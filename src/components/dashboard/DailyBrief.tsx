@@ -996,15 +996,18 @@ const DailyBrief = () => {
               <div className="mb-8">
                 <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">Hva er signalet nå?</p>
                 <div className="grid grid-cols-2 gap-2">
-                  {SIGNAL_CATEGORIES.filter(c => c.label !== "Ikke aktuelt").map(cat => (
+                  {[
+                    { label: "Behov nå",            active: "bg-emerald-500 text-white border-emerald-500", inactive: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" },
+                    { label: "Får fremtidig behov", active: "bg-blue-500 text-white border-blue-500",       inactive: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"           },
+                    { label: "Får kanskje behov",   active: "bg-amber-500 text-white border-amber-500",     inactive: "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"       },
+                    { label: "Ukjent om behov",     active: "bg-gray-400 text-white border-gray-400",       inactive: "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"           },
+                  ].map(cat => (
                     <button
                       key={cat.label}
                       onClick={() => setNudgeSignal(cat.label)}
                       className={cn(
                         "h-10 px-3 rounded-xl border text-[0.8125rem] font-medium transition-all",
-                        nudgeSignal === cat.label
-                          ? cat.badgeColor + " shadow-sm"
-                          : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
+                        nudgeSignal === cat.label ? cat.active + " shadow-sm" : cat.inactive
                       )}
                     >
                       {cat.label}
