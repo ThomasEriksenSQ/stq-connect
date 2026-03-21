@@ -430,7 +430,6 @@ function TechTagEditor({
 }
 
 const DATE_CHIPS = [
-{ label: "Følg opp på sikt", fn: (): Date | null => null },
 { label: "I dag", fn: () => new Date() },
 { label: "1 uke", fn: () => addWeeks(new Date(), 1) },
 { label: "2 uker", fn: () => addWeeks(new Date(), 2) },
@@ -564,7 +563,7 @@ export function ContactCardContent({
         title: title.trim(),
         description: description?.trim() || null,
         priority: "medium",
-        due_date: formDate === "someday" ? null : (formDate || null),
+        due_date: formDate || null,
         contact_id: contactId,
         company_id: contact?.company_id || null,
         assigned_to: user?.id,
@@ -734,10 +733,7 @@ export function ContactCardContent({
     if (!formTitle || !formCategory) return;
     if (activeForm === "task") {
       const descWithCat = buildDescriptionWithCategory(formCategory, formDescription);
-      const finalDesc = formDate === "someday"
-        ? (descWithCat ? descWithCat + "\n[someday]" : "[someday]")
-        : descWithCat || null;
-      createTaskMutation.mutate({ title: formTitle.trim(), description: finalDesc });
+      createTaskMutation.mutate({ title: formTitle.trim(), description: descWithCat || null });
     } else {
       const descWithCat = buildDescriptionWithCategory(formCategory, formDescription);
       createActivityMutation.mutate({
@@ -1081,9 +1077,9 @@ export function ContactCardContent({
             }}
             className={cn(
               "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
-              (contact as any).cv_email
-                ? "bg-green-100 text-green-800 border-green-200"
-                : "bg-background text-muted-foreground border-border hover:bg-secondary"
+              (contact as any).cv_email ?
+              "bg-green-100 text-green-800 border-green-200" :
+              "bg-background text-muted-foreground border-border hover:bg-secondary"
             )}>
             {(contact as any).cv_email ? "✓ CV-Epost" : "CV-Epost"}
           </button>
@@ -1092,9 +1088,9 @@ export function ContactCardContent({
             onClick={() => updateMutation.mutate({ call_list: !(contact as any).call_list })}
             className={cn(
               "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
-              (contact as any).call_list
-                ? "bg-amber-100 text-amber-800 border-amber-200"
-                : "bg-background text-muted-foreground border-border hover:bg-secondary"
+              (contact as any).call_list ?
+              "bg-amber-100 text-amber-800 border-amber-200" :
+              "bg-background text-muted-foreground border-border hover:bg-secondary"
             )}>
             {(contact as any).call_list ? "✓ Innkjøper" : "Innkjøper"}
           </button>
@@ -1103,9 +1099,9 @@ export function ContactCardContent({
             onClick={() => updateMutation.mutate({ ikke_aktuell_kontakt: !(contact as any).ikke_aktuell_kontakt })}
             className={cn(
               "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
-              (contact as any).ikke_aktuell_kontakt
-                ? "bg-destructive/10 text-destructive border-destructive/30"
-                : "bg-background text-muted-foreground border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+              (contact as any).ikke_aktuell_kontakt ?
+              "bg-destructive/10 text-destructive border-destructive/30" :
+              "bg-background text-muted-foreground border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
             )}>
             {(contact as any).ikke_aktuell_kontakt ? "✕ Ikke aktuell å kontakte" : "Ikke aktuell å kontakte"}
           </button>
@@ -1300,16 +1296,16 @@ export function ContactCardContent({
               <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">
                 {contact.notes}
               </p>
-              {editable &&
-            <button
-              onClick={() => {
-                setNotesDraft(contact.notes || "");
-                setEditingNotes(true);
-              }}
-              className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-secondary">
-              
-                  <Pencil className="h-3 w-3 text-muted-foreground" />
-                </button>
+              {editable
+
+
+
+
+
+
+
+
+
             }
             </div> :
           editable ?
@@ -1412,13 +1408,8 @@ export function ContactCardContent({
                   type="button"
                   onClick={() => {
                     const d = chip.fn();
-                    if (d === null) {
-                      setFormDate("someday");
-                      setSelectedChipIdx(i);
-                    } else {
-                      setFormDate(format(d, "yyyy-MM-dd"));
-                      setSelectedChipIdx(i);
-                    }
+                    setFormDate(format(d, "yyyy-MM-dd"));
+                    setSelectedChipIdx(i);
                   }}
                   className={cn(
                     "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors",
@@ -1440,15 +1431,11 @@ export function ContactCardContent({
                   className="h-7 px-2 text-[0.75rem] rounded-full border border-border text-muted-foreground bg-background" />
                 
                     </div>
-                    {formDate === "someday" ? (
-              <p className="text-[0.75rem] text-muted-foreground mt-2">
-                        Ingen fast dato — legges i "Følg opp på sikt"-listen
-                      </p>
-              ) : formDate ? (
+                    {formDate &&
               <p className="text-[0.75rem] text-muted-foreground mt-2">
                         Frist: {format(new Date(formDate), "d. MMMM yyyy", { locale: nb })}
                       </p>
-              ) : null}
+              }
                   </div> :
 
             <div className="mt-2">
@@ -1650,10 +1637,7 @@ function TaskRow({
   const handleSave = () => {
     if (!editTitle || !editCategory) return;
     const descWithCat = buildDescriptionWithCategory(editCategory, editDesc.trim());
-    const finalDesc = editDate === "someday"
-      ? (descWithCat ? descWithCat + "\n[someday]" : "[someday]")
-      : descWithCat || null;
-    onUpdate(task.id, { title: editTitle.trim(), description: finalDesc, due_date: editDate === "someday" ? null : (editDate || null) });
+    onUpdate(task.id, { title: editTitle.trim(), description: descWithCat || null, due_date: editDate || null });
     setEditing(false);
   };
 
@@ -1698,13 +1682,8 @@ function TaskRow({
               type="button"
               onClick={() => {
                 const d = chip.fn();
-                if (d === null) {
-                  setEditDate("someday");
-                  setEditChipIdx(i);
-                } else {
-                  setEditDate(format(d, "yyyy-MM-dd"));
-                  setEditChipIdx(i);
-                }
+                setEditDate(format(d, "yyyy-MM-dd"));
+                setEditChipIdx(i);
               }}
               className={cn(
                 "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors",
