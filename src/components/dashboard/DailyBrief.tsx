@@ -224,7 +224,17 @@ const DailyBrief = () => {
   }, [rawContacts, allActivities, allTasks, techProfiles, foresporsler]);
 
   const queue = useMemo(() => scoredLeads.filter(l => !treated.has(l.contact.id)), [scoredLeads, treated]);
-  const current = queue[currentIndex];
+
+  const current = useMemo(() => {
+    if (currentContactId) {
+      return scoredLeads.find(l => l.contact.id === currentContactId) ?? queue[0] ?? null;
+    }
+    return queue[0] ?? null;
+  }, [currentContactId, scoredLeads, queue]);
+
+  const currentIndexInScored = currentContactId
+    ? scoredLeads.findIndex(l => l.contact.id === currentContactId)
+    : 0;
   const treatedCount = treated.size;
 
   const daysSinceLast = current?.lastAct ? differenceInDays(new Date(), new Date(current.lastAct.created_at)) : 999;
