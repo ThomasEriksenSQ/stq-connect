@@ -735,7 +735,10 @@ export function ContactCardContent({
     if (!formTitle || !formCategory) return;
     if (activeForm === "task") {
       const descWithCat = buildDescriptionWithCategory(formCategory, formDescription);
-      createTaskMutation.mutate({ title: formTitle.trim(), description: descWithCat || null });
+      const finalDesc = formDate === "someday"
+        ? (descWithCat ? descWithCat + "\n[someday]" : "[someday]")
+        : descWithCat || null;
+      createTaskMutation.mutate({ title: formTitle.trim(), description: finalDesc });
     } else {
       const descWithCat = buildDescriptionWithCategory(formCategory, formDescription);
       createActivityMutation.mutate({
