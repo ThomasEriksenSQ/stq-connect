@@ -1724,7 +1724,12 @@ function TaskRow({
                 setEditChipIdx(null);
               }}
               className="h-7 px-2 text-[0.75rem] rounded-full border border-border text-muted-foreground bg-background" />
-            
+            {editDate === "someday" && (
+              <p className="text-[0.75rem] text-muted-foreground mt-2">
+                Ingen fast dato — legges i "Følg opp på sikt"-listen
+              </p>
+            )}
+
           </div>
         </div>
         <div className="flex items-center gap-2">
