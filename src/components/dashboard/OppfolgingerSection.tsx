@@ -236,9 +236,9 @@ const OppfolgingerSection = () => {
     <div className="space-y-4">
       <div className="flex items-center gap-2.5">
         
-        <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-primary/10 text-primary text-[0.6875rem] font-semibold">
-          {visible.length}{hiddenCount > 0 ? "+" : ""}
-        </span>
+        
+
+        
       </div>
 
       {/* Filters */}
