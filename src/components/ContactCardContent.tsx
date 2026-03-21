@@ -805,7 +805,10 @@ export function ContactCardContent({ contactId, editable = false, onOpenCompany,
           <InlineField value={contact.title || ""} onSave={updateField("title")} placeholder="Stilling" className="text-[0.9375rem]" /> :
           contact.title ? <span>{contact.title}</span> : null
           }
-          {/* Kontaktinfo-piller */}
+        </div>
+
+        {/* Line 3: Telefon · E-post · LinkedIn */}
+        <div className="flex items-center gap-1.5 flex-wrap mt-1">
           {contact.phone ? (
             <a
               href={`tel:${contact.phone}`}
