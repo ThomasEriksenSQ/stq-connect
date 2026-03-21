@@ -1646,7 +1646,20 @@ function TaskRow({
     setEditDesc(parsed.cleanDesc);
     const isSomeday = !task.due_date && !!task.description?.includes("[someday]");
     setEditDate(isSomeday ? "someday" : (task.due_date || ""));
-    setEditChipIdx(isSomeday ? 0 : null);
+    if (isSomeday) {
+      setEditChipIdx(0);
+    } else if (task.due_date) {
+      const dueDateStr = task.due_date;
+      const matchIdx = DATE_CHIPS.findIndex((chip, i) => {
+        if (i === 0) return false;
+        const d = chip.fn();
+        if (!d) return false;
+        return format(d, "yyyy-MM-dd") === dueDateStr;
+      });
+      setEditChipIdx(matchIdx >= 0 ? matchIdx : null);
+    } else {
+      setEditChipIdx(null);
+    }
     setEditing(true);
   };
 
