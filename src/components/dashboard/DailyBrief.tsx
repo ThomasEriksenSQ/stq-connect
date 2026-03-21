@@ -6,7 +6,7 @@ import { differenceInDays, isPast, isToday, format, addWeeks, addMonths } from "
 import { nb } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { getEffectiveSignal, CATEGORIES } from "@/lib/categoryUtils";
-import { Loader2, ExternalLink, ChevronDown } from "lucide-react";
+import { Loader2, ExternalLink, ChevronDown, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { ContactCardContent } from "@/components/ContactCardContent";
@@ -69,7 +69,8 @@ const DailyBrief = () => {
   const cardRef = useRef<HTMLDivElement>(null);
 
   const [idx, setIdx] = useState(0);
-  const [treated, setTreated] = useState(0);
+  const [treated, setTreated] = useState<Set<string>>(new Set());
+  const [signalOpen, setSignalOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [sheetContactId, setSheetContactId] = useState<string | null>(null);
 
@@ -164,7 +165,6 @@ const DailyBrief = () => {
     }
     setTimeout(() => {
       setIdx(nextIdx);
-      if (dir === "left") setTreated(t => t + 1);
       if (card) {
         card.style.transition = "none";
         card.style.transform = dir === "left" ? "translateX(52px)" : "translateX(-52px)";
@@ -225,7 +225,7 @@ const DailyBrief = () => {
     goNext("left");
   }, [current, toggleContactField, goNext]);
 
-  const progress = total > 0 ? (treated / total) * 100 : 0;
+  const progress = total > 0 ? (treated.size / total) * 100 : 0;
 
   // ── Done state ──
   if (!isLoading && idx >= total && total > 0) {
@@ -233,7 +233,7 @@ const DailyBrief = () => {
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <p className="text-3xl mb-3">🎉</p>
         <p className="text-[1.125rem] font-semibold text-foreground">Alt gjennomgått for i dag</p>
-        <p className="text-[0.8125rem] text-muted-foreground mt-1">{treated} kontakter behandlet.</p>
+        <p className="text-[0.8125rem] text-muted-foreground mt-1">{treated.size} kontakter behandlet.</p>
       </div>
     );
   }
@@ -242,7 +242,7 @@ const DailyBrief = () => {
     <div className="space-y-3">
       {/* ── Counter row ── */}
       <div className="flex justify-between text-[0.75rem] text-muted-foreground" style={{ padding: "0 42px" }}>
-        <span>{treated} behandlet i dag</span>
+        <span>{treated.size} behandlet i dag</span>
         <span>{Math.max(0, total - idx)} igjen</span>
       </div>
 
@@ -257,14 +257,13 @@ const DailyBrief = () => {
         </div>
       ) : current ? (
         <div className="flex items-center gap-2">
-          {/* Left nav grip */}
+          {/* Left nav chevron */}
           <button
             onClick={() => goNext("right")}
             disabled={idx === 0}
-            className="shrink-0 flex gap-[3px] items-center justify-center w-6 h-12 cursor-pointer disabled:opacity-20 disabled:pointer-events-none group"
+            className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-20 disabled:pointer-events-none transition-all"
           >
-            <div className="w-[2px] h-[18px] rounded-full bg-muted-foreground/30 group-hover:bg-muted-foreground/70 transition-colors" />
-            <div className="w-[2px] h-[18px] rounded-full bg-muted-foreground/30 group-hover:bg-muted-foreground/70 transition-colors" />
+            <ChevronLeft className="h-5 w-5" />
           </button>
 
           {/* Card */}
@@ -399,36 +398,41 @@ const DailyBrief = () => {
               </div>
             )}
 
-            {/* 6. Toggle row */}
             <div className="mt-[10px] border-t border-border" style={{ padding: "10px 18px 0" }}>
               <div className="flex flex-wrap items-center gap-1.5">
                 {/* Signal dropdown */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button className={cn(
+                <div className="relative" onClick={e => e.stopPropagation()}>
+                  <button
+                    onClick={() => setSignalOpen(!signalOpen)}
+                    className={cn(
                       "inline-flex items-center gap-1 rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors",
                       current.signal
                         ? CATEGORIES.find(c => c.label === current.signal)?.badgeColor || "border-border bg-secondary text-muted-foreground"
                         : "border-border bg-secondary text-muted-foreground"
-                    )}>
-                      {current.signal || "Signal"} <ChevronDown className="h-3 w-3" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-1.5 space-y-0.5" align="start">
-                    {CATEGORIES.map(cat => (
-                      <button
-                        key={cat.label}
-                        onClick={() => handleSignalChange(cat.label)}
-                        className={cn(
-                          "w-full text-left rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors hover:bg-secondary",
-                          cat.badgeColor
-                        )}
-                      >
-                        {cat.label}
-                      </button>
-                    ))}
-                  </PopoverContent>
-                </Popover>
+                    )}
+                  >
+                    {current.signal || "Signal"} <ChevronDown className="h-3 w-3 opacity-50" />
+                  </button>
+                  {signalOpen && (
+                    <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-lg shadow-md overflow-hidden min-w-[190px]">
+                      {CATEGORIES.map(cat => (
+                        <button
+                          key={cat.label}
+                          onClick={() => {
+                            handleSignalChange(cat.label);
+                            setSignalOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors text-left"
+                        >
+                          <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold", cat.badgeColor)}>
+                            {cat.label}
+                          </span>
+                          {current.signal === cat.label && <Check className="ml-auto h-3.5 w-3.5 text-muted-foreground" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 {/* Innkjøper toggle */}
                 <button
@@ -436,7 +440,7 @@ const DailyBrief = () => {
                   className={cn(
                     "rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors",
                     current.contact.call_list
-                      ? "bg-blue-50 text-blue-800 border-blue-200"
+                      ? "bg-amber-100 text-amber-800 border-amber-200"
                       : "border-border bg-secondary text-muted-foreground"
                   )}
                 >
@@ -449,7 +453,7 @@ const DailyBrief = () => {
                   className={cn(
                     "rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors",
                     current.contact.cv_email
-                      ? "bg-green-50 text-green-800 border-green-200"
+                      ? "bg-blue-100 text-blue-800 border-blue-200"
                       : "border-border bg-secondary text-muted-foreground"
                   )}
                 >
@@ -459,22 +463,20 @@ const DailyBrief = () => {
                 {/* Ikke relevant person */}
                 <button
                   onClick={handleIkkeRelevant}
-                  className={cn(
-                    "rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors",
-                    current.contact.ikke_aktuell_kontakt
-                      ? "bg-red-50 text-red-800 border-red-200"
-                      : "border-border bg-secondary text-muted-foreground"
-                  )}
+                  className="rounded-full border px-[10px] py-[4px] text-[11px] font-medium cursor-pointer transition-colors border-border bg-secondary text-muted-foreground hover:bg-red-50 hover:text-red-700 hover:border-red-200"
                 >
-                  {current.contact.ikke_aktuell_kontakt ? "✕ " : ""}Ikke relevant person
+                  Ikke relevant person
                 </button>
               </div>
             </div>
 
             {/* 7. CTA */}
-            <div style={{ padding: "10px 18px 14px" }}>
+            <div style={{ padding: "10px 18px 0" }}>
               <button
-                onClick={() => goNext("left")}
+                onClick={() => {
+                  setTreated(prev => new Set([...prev, current.contact.id]));
+                  setTimeout(() => goNext("left"), 100);
+                }}
                 disabled={idx >= total - 1 || isAnimating}
                 className="w-full h-[46px] bg-foreground text-background rounded-xl text-[14px] font-medium hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-40"
               >
@@ -483,18 +485,16 @@ const DailyBrief = () => {
             </div>
 
             {/* 8. Dots */}
-            <div className="flex items-center justify-center gap-[3px] pb-3">
-              {scoredLeads.slice(Math.max(0, idx - 3), idx + 6).map((_, i) => {
-                const dotIdx = Math.max(0, idx - 3) + i;
+            <div className="flex items-center justify-center gap-1 pt-2 pb-3">
+              {scoredLeads.slice(Math.max(0, idx - 2), idx + 5).map((_, i) => {
+                const dotIdx = Math.max(0, idx - 2) + i;
                 return (
                   <button
                     key={dotIdx}
-                    onClick={() => setIdx(dotIdx)}
+                    onClick={() => { setIdx(dotIdx); setSignalOpen(false); }}
                     className={cn(
-                      "h-[5px] rounded-full transition-all",
-                      dotIdx === idx
-                        ? "w-[16px] bg-amber-400 rounded-[3px]"
-                        : "w-[5px] bg-border"
+                      "rounded-full transition-all",
+                      dotIdx === idx ? "w-4 h-2 bg-amber-400" : "w-2 h-2 bg-border hover:bg-muted-foreground/40"
                     )}
                   />
                 );
@@ -502,22 +502,25 @@ const DailyBrief = () => {
             </div>
           </div>
 
-          {/* Right nav grip */}
+          {/* Right nav chevron */}
           <button
             onClick={() => goNext("left")}
             disabled={idx >= total - 1}
-            className="shrink-0 flex gap-[3px] items-center justify-center w-6 h-12 cursor-pointer disabled:opacity-20 disabled:pointer-events-none group"
+            className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-20 disabled:pointer-events-none transition-all"
           >
-            <div className="w-[2px] h-[18px] rounded-full bg-muted-foreground/30 group-hover:bg-muted-foreground/70 transition-colors" />
-            <div className="w-[2px] h-[18px] rounded-full bg-muted-foreground/30 group-hover:bg-muted-foreground/70 transition-colors" />
+            <ChevronRight className="h-5 w-5" />
           </button>
         </div>
       ) : null}
 
       {/* ── Side panel (Sheet) ── */}
       <Sheet open={!!sheetContactId} onOpenChange={open => !open && setSheetContactId(null)}>
-        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto p-0">
-          {sheetContactId && <ContactCardContent contactId={sheetContactId} editable />}
+        <SheetContent className="w-full sm:max-w-2xl p-0 overflow-y-auto">
+          {sheetContactId && (
+            <div className="p-6">
+              <ContactCardContent contactId={sheetContactId} editable />
+            </div>
+          )}
         </SheetContent>
       </Sheet>
     </div>
