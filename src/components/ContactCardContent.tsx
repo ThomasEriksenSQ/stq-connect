@@ -968,35 +968,32 @@ export function ContactCardContent({
               
             </>
           }
-        </div>
-
-        {/* Line 3: Avdeling · Stilling */}
-        <div className="flex items-center gap-1.5 flex-wrap text-[0.875rem] text-foreground/70 mt-0.5">
+          {/* Avdeling · Stilling — same line */}
           {showAvdeling &&
           <>
+              <span className="text-muted-foreground/40">·</span>
               {editable ?
             <InlineField
               value={(contact as any).department || ""}
               onSave={updateField("department")}
               placeholder="Avdeling"
               className="text-[0.875rem]" /> :
-
-
             (contact as any).department && <span>{(contact as any).department}</span>
             }
-              <span className="text-muted-foreground/40">·</span>
             </>
           }
-          {editable ?
-          <InlineField
-            value={contact.title || ""}
-            onSave={updateField("title")}
-            placeholder="Stilling"
-            className="text-[0.875rem]" /> :
-
-          contact.title ?
-          <span>{contact.title}</span> :
-          null}
+          {(contact.title || editable) &&
+          <>
+              <span className="text-muted-foreground/40">·</span>
+              {editable ?
+            <InlineField
+              value={contact.title || ""}
+              onSave={updateField("title")}
+              placeholder="Stilling"
+              className="text-[0.875rem]" /> :
+            <span>{contact.title}</span>}
+            </>
+          }
         </div>
 
         {/* Line 3: Telefon · E-post · LinkedIn */}
