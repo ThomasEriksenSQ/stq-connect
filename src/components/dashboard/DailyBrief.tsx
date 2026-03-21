@@ -369,7 +369,7 @@ const DailyBrief = () => {
             <div className="space-y-2">
               <div
                 ref={cardRef}
-                className="w-full bg-card border border-border rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden select-none"
+                className="w-full bg-card border border-border rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-visible select-none"
                 style={{ cursor: isDragging ? "grabbing" : "grab" }}
                 onMouseDown={(e) => {
                   setDragStartX(e.clientX);
@@ -447,7 +447,9 @@ const DailyBrief = () => {
                 }}
               >
                 {/* Temperaturstrek øverst */}
-                <div className={cn("h-1", TEMP_CONFIG[current.temperature].bar)} />
+                <div className="rounded-t-2xl overflow-hidden">
+                  <div className={cn("h-1", TEMP_CONFIG[current.temperature].bar)} />
+                </div>
 
                 <div className="flex justify-end px-5 pt-4">
                   <button
