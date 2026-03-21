@@ -1470,6 +1470,35 @@ export function CompanyCardContent({
                         </div>
                       );
                     })()}
+                    <div className="space-y-1.5">
+                      <Label className="text-label">Egenskaper</Label>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setContactForm({ ...contactForm, cv_email: !contactForm.cv_email })}
+                          className={cn(
+                            "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+                            contactForm.cv_email
+                              ? "bg-green-100 text-green-800 border-green-200"
+                              : "bg-background text-muted-foreground border-border hover:bg-secondary"
+                          )}
+                        >
+                          {contactForm.cv_email ? "✓ CV-Epost" : "CV-Epost"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setContactForm({ ...contactForm, call_list: !contactForm.call_list })}
+                          className={cn(
+                            "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+                            contactForm.call_list
+                              ? "bg-amber-100 text-amber-800 border-amber-200"
+                              : "bg-background text-muted-foreground border-border hover:bg-secondary"
+                          )}
+                        >
+                          {contactForm.call_list ? "✓ Innkjøper" : "Innkjøper"}
+                        </button>
+                      </div>
+                    </div>
                     <Button type="submit" className="w-full h-10 rounded-lg">
                       Opprett
                     </Button>
