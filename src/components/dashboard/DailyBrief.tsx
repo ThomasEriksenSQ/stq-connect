@@ -225,7 +225,7 @@ const DailyBrief = () => {
     goNext("left");
   }, [current, toggleContactField, goNext]);
 
-  const progress = total > 0 ? (treated / total) * 100 : 0;
+  const progress = total > 0 ? (treated.size / total) * 100 : 0;
 
   // ── Done state ──
   if (!isLoading && idx >= total && total > 0) {
