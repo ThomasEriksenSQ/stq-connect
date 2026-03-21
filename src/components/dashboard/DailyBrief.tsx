@@ -831,8 +831,8 @@ const DailyBrief = () => {
       {current && (
         <Sheet open={panelOpen} onOpenChange={setPanelOpen}>
           <SheetContent side="right" className="overflow-y-auto">
-            <div className="pt-6">
-              <ContactCardContent contactId={current.contact.id} />
+            <div className="p-6 max-w-2xl">
+              <ContactCardContent contactId={current.contact.id} editable={true} />
             </div>
           </SheetContent>
         </Sheet>
