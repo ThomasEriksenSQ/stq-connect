@@ -231,43 +231,40 @@ const DailyBrief = () => {
   const reasonLine = current ? buildReasonLine(current, daysSinceLast) : "";
   const currentSignal = current ? (localSignals[current.contact.id] ?? current.signal) : "";
 
-  const goNext = useCallback((dir: "left" | "right" = "left") => {
+  const goNext = useCallback((dir: "left" | "right" = "left", markCurrent = false) => {
     if (isAnimating) return;
     setIsAnimating(true);
+    setIsDragging(false);
+    if (markCurrent && current) {
+      setTreated(prev => new Set([...prev, current.contact.id]));
+    }
     const card = cardRef.current;
-
     if (card) {
-      const outX = dir === "left" ? -70 : 70;
-      card.style.transition = "transform 220ms cubic-bezier(0.4, 0, 1, 1), opacity 200ms cubic-bezier(0.4, 0, 1, 1)";
-      card.style.transform = `translateX(${outX}px) scale(0.96)`;
+      const outX = dir === "left" ? -80 : 80;
+      card.style.transition = "transform 240ms cubic-bezier(0.4, 0, 1, 1), opacity 220ms cubic-bezier(0.4, 0, 1, 1)";
+      card.style.transform = `translateX(${outX}px) scale(0.94)`;
       card.style.opacity = "0";
     }
-
     setTimeout(() => {
       setActiveForm(null);
-      if (dir === "left") {
-        setCurrentIndex(i => Math.min(i + 1, queue.length - 1));
-      } else {
-        setCurrentIndex(i => Math.max(i - 1, 0));
-      }
-
+      if (dir === "left") setCurrentIndex(i => Math.min(i + 1, queue.length - 1));
+      else setCurrentIndex(i => Math.max(i - 1, 0));
       if (card) {
-        const inX = dir === "left" ? 70 : -70;
+        const inX = dir === "left" ? 80 : -80;
         card.style.transition = "none";
-        card.style.transform = `translateX(${inX}px) scale(0.96)`;
+        card.style.transform = `translateX(${inX}px) scale(0.94)`;
         card.style.opacity = "0";
       }
-
       requestAnimationFrame(() => requestAnimationFrame(() => {
         if (card) {
-          card.style.transition = "transform 380ms cubic-bezier(0.32, 0.72, 0, 1), opacity 280ms cubic-bezier(0.32, 0.72, 0, 1)";
+          card.style.transition = "transform 420ms cubic-bezier(0.22, 1, 0.36, 1), opacity 300ms cubic-bezier(0.22, 1, 0.36, 1)";
           card.style.transform = "translateX(0) scale(1)";
           card.style.opacity = "1";
         }
-        setIsAnimating(false);
+        setTimeout(() => setIsAnimating(false), 420);
       }));
-    }, 220);
-  }, [isAnimating, queue.length]);
+    }, 240);
+  }, [isAnimating, queue.length, current]);
 
   const updateTaskMutation = useMutation({
     mutationFn: async ({ taskId, dueDate }: { taskId: string; dueDate: string }) => {
@@ -384,6 +381,7 @@ const DailyBrief = () => {
                     const resistance = 0.4;
                     cardRef.current.style.transition = "none";
                     cardRef.current.style.transform = `translateX(${delta * resistance}px) scale(${1 - Math.abs(delta) * 0.0003})`;
+                    cardRef.current.style.opacity = `${Math.max(0.6, 1 - Math.abs(delta) * 0.003)}`;
                   }
                 }}
                 onMouseUp={(e) => {
@@ -397,8 +395,9 @@ const DailyBrief = () => {
                     goNext("right");
                   } else {
                     if (cardRef.current) {
-                      cardRef.current.style.transition = "transform 300ms cubic-bezier(0.32, 0.72, 0, 1)";
+                      cardRef.current.style.transition = "transform 380ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease";
                       cardRef.current.style.transform = "translateX(0) scale(1)";
+                      cardRef.current.style.opacity = "1";
                     }
                   }
                   setDragStartX(null);
@@ -410,8 +409,9 @@ const DailyBrief = () => {
                     setDragStartX(null);
                     setDragDeltaX(0);
                     if (cardRef.current) {
-                      cardRef.current.style.transition = "transform 300ms cubic-bezier(0.32, 0.72, 0, 1)";
+                      cardRef.current.style.transition = "transform 380ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease";
                       cardRef.current.style.transform = "translateX(0) scale(1)";
+                      cardRef.current.style.opacity = "1";
                     }
                   }
                 }}
@@ -426,6 +426,7 @@ const DailyBrief = () => {
                   if (cardRef.current) {
                     cardRef.current.style.transition = "none";
                     cardRef.current.style.transform = `translateX(${delta * 0.4}px) scale(${1 - Math.abs(delta) * 0.0003})`;
+                    cardRef.current.style.opacity = `${Math.max(0.6, 1 - Math.abs(delta) * 0.003)}`;
                   }
                 }}
                 onTouchEnd={() => {
@@ -438,8 +439,9 @@ const DailyBrief = () => {
                     goNext("right");
                   } else {
                     if (cardRef.current) {
-                      cardRef.current.style.transition = "transform 300ms cubic-bezier(0.32, 0.72, 0, 1)";
+                      cardRef.current.style.transition = "transform 380ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease";
                       cardRef.current.style.transform = "translateX(0) scale(1)";
+                      cardRef.current.style.opacity = "1";
                     }
                   }
                   setDragStartX(null);
@@ -727,25 +729,7 @@ const DailyBrief = () => {
                   {/* ── Sone 5: CTA ── */}
                   <div className="pt-1 pb-2">
                     <button
-                      onClick={() => {
-                        setTreated(prev => new Set([...prev, current.contact.id]));
-                        setTimeout(() => {
-                          setCurrentIndex(i => Math.min(i + 1, queue.length - 1));
-                          const card = cardRef.current;
-                          if (card) {
-                            card.style.transition = "none";
-                            card.style.transform = "translateX(70px)";
-                            card.style.opacity = "0";
-                            requestAnimationFrame(() => requestAnimationFrame(() => {
-                              if (card) {
-                                card.style.transition = "transform 380ms cubic-bezier(0.32, 0.72, 0, 1), opacity 280ms cubic-bezier(0.32, 0.72, 0, 1)";
-                                card.style.transform = "translateX(0) scale(1)";
-                                card.style.opacity = "1";
-                              }
-                            }));
-                          }
-                        }, 100);
-                      }}
+                      onClick={() => goNext("left", true)}
                       className="w-full h-[46px] rounded-xl bg-foreground text-background text-[0.9375rem] font-medium hover:opacity-90 active:scale-[0.99] transition-all"
                     >
                       Ok, neste →
