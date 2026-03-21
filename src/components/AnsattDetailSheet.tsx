@@ -314,7 +314,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
 
             <div className="space-y-4">
               {/* Intern section label */}
-              <p className={LABEL}>Intern (CRM)</p>
+              
 
               <div>
                 <label className={LABEL}>Navn</label>
