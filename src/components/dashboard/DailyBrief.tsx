@@ -724,25 +724,7 @@ const DailyBrief = () => {
                   {/* ── Sone 5: CTA ── */}
                   <div className="pt-1 pb-2">
                     <button
-                      onClick={() => {
-                        setTreated(prev => new Set([...prev, current.contact.id]));
-                        setTimeout(() => {
-                          setCurrentIndex(i => Math.min(i + 1, queue.length - 1));
-                          const card = cardRef.current;
-                          if (card) {
-                            card.style.transition = "none";
-                            card.style.transform = "translateX(70px)";
-                            card.style.opacity = "0";
-                            requestAnimationFrame(() => requestAnimationFrame(() => {
-                              if (card) {
-                                card.style.transition = "transform 380ms cubic-bezier(0.32, 0.72, 0, 1), opacity 280ms cubic-bezier(0.32, 0.72, 0, 1)";
-                                card.style.transform = "translateX(0) scale(1)";
-                                card.style.opacity = "1";
-                              }
-                            }));
-                          }
-                        }, 100);
-                      }}
+                      onClick={() => goNext("left", true)}
                       className="w-full h-[46px] rounded-xl bg-foreground text-background text-[0.9375rem] font-medium hover:opacity-90 active:scale-[0.99] transition-all"
                     >
                       Ok, neste →
