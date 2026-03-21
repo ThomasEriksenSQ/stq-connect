@@ -381,6 +381,7 @@ const DailyBrief = () => {
                     const resistance = 0.4;
                     cardRef.current.style.transition = "none";
                     cardRef.current.style.transform = `translateX(${delta * resistance}px) scale(${1 - Math.abs(delta) * 0.0003})`;
+                    cardRef.current.style.opacity = `${Math.max(0.6, 1 - Math.abs(delta) * 0.003)}`;
                   }
                 }}
                 onMouseUp={(e) => {
