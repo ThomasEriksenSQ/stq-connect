@@ -413,7 +413,7 @@ const Contacts = () => {
                         ? "rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
                         : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
                       }
-                    >INN</button>
+                    >Innkjøper</button>
                   </div>
                   {/* SISTE AKT */}
                   <span className="text-[0.75rem] text-muted-foreground text-right">
