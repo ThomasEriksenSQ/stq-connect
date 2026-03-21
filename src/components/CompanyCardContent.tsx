@@ -1528,7 +1528,7 @@ export function CompanyCardContent({
               return (
                 <button
                   key={c.id}
-                  className="w-full flex items-center gap-2 py-2.5 hover:bg-secondary/50 transition-colors duration-75 text-left group rounded-md"
+                  className="w-full flex items-center gap-2 py-3 hover:bg-secondary/50 transition-colors duration-75 text-left group rounded-md"
                   onClick={() => onOpenContact ? onOpenContact(c.id) : navigate(`/kontakter/${c.id}`)}>
                   
                     <div className="min-w-0 flex-1">
