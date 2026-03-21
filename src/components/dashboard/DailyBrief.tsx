@@ -74,7 +74,7 @@ const DailyBrief = () => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [localSignals, setLocalSignals] = useState<Record<string, string>>({});
   const [sheetContactId, setSheetContactId] = useState<string | null>(null);
-  const [ownerFilter, setOwnerFilter] = useState("all");
+  const [ownerFilter, setOwnerFilter] = useState(user?.id || "");
   const [viewMode, setViewMode] = useState<"kort" | "liste">("kort");
 
   // ── Data queries ──
