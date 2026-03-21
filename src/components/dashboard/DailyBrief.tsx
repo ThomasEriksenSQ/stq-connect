@@ -76,6 +76,7 @@ interface ScoredLead {
   temperature: "hett" | "lovende" | "mulig" | "sovende";
   lastAct: any; nextTask: any; hasOverdue: boolean;
   hasMarkedsradar: boolean; isInnkjoper: boolean; hasAktivForespørsel: boolean;
+  hasTidligereForespørsel: boolean;
 }
 
 function buildReasonLine(lead: ScoredLead, daysSince: number): string {
@@ -95,6 +96,7 @@ function buildReasonLine(lead: ScoredLead, daysSince: number): string {
   }
   if (lead.isInnkjoper) parts.push("innkjøper");
   if (lead.hasAktivForespørsel) parts.push("aktiv forespørsel");
+  else if (lead.hasTidligereForespørsel) parts.push("tidligere forespørsel");
   if (lead.hasOverdue) {
     parts.push("forfalt oppfølging");
   } else if (daysSince === 999) {
@@ -190,7 +192,7 @@ const DailyBrief = () => {
   const { data: foresporsler = [] } = useQuery({
     queryKey: ["salgssenter-foresporsler"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("foresporsler").select("id, selskap_id, status").not("status", "in", '("avsluttet","tapt")');
+      const { data, error } = await supabase.from("foresporsler").select("id, selskap_id, status, mottatt_dato").not("status", "in", '("avsluttet","tapt")');
       if (error) throw error;
       return data;
     },
@@ -211,11 +213,19 @@ const DailyBrief = () => {
       const hasOverdue = nextTask ? isPast(new Date(nextTask.due_date)) && !isToday(new Date(nextTask.due_date)) : false;
       const techProfile = techProfiles.find((tp: any) => tp.company_id === contact.company_id);
       const hasMarkedsradar = !!(techProfile?.sist_fra_finn && differenceInDays(new Date(), new Date(techProfile.sist_fra_finn)) <= 90);
-      const hasAktivForespørsel = foresporsler.some((f: any) => f.selskap_id === contact.company_id);
+      const hasAktivForespørsel = foresporsler.some((f: any) =>
+        f.selskap_id === contact.company_id &&
+        f.mottatt_dato &&
+        differenceInDays(new Date(), new Date(f.mottatt_dato)) <= 90
+      );
+      const hasTidligereForespørsel = foresporsler.some((f: any) =>
+        f.selskap_id === contact.company_id &&
+        (!f.mottatt_dato || differenceInDays(new Date(), new Date(f.mottatt_dato)) > 90)
+      );
       const isInnkjoper = !!contact.call_list;
       const score = calcHeatScore({ signal, isInnkjoper, hasMarkedsradar, hasAktivForespørsel, hasOverdue, daysSinceLastContact: daysSince });
       const temperature = getTemperature({ score, signal, hasOverdue, hasMarkedsradar, isInnkjoper });
-      return { contact, signal, score, temperature, lastAct, nextTask, hasOverdue, hasMarkedsradar, isInnkjoper, hasAktivForespørsel };
+      return { contact, signal, score, temperature, lastAct, nextTask, hasOverdue, hasMarkedsradar, isInnkjoper, hasAktivForespørsel, hasTidligereForespørsel };
     }).filter(Boolean).sort((a: any, b: any) => {
       const tempOrder = { hett: 0, lovende: 1, mulig: 2, sovende: 3 };
       if (tempOrder[a.temperature] !== tempOrder[b.temperature]) return tempOrder[a.temperature] - tempOrder[b.temperature];
