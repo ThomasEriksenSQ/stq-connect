@@ -437,7 +437,8 @@ const DATE_CHIPS = [
 { label: "1 måned", fn: () => addMonths(new Date(), 1) },
 { label: "3 måneder", fn: () => addMonths(new Date(), 3) },
 { label: "6 måneder", fn: () => addMonths(new Date(), 6) },
-{ label: "1 år", fn: () => addYears(new Date(), 1) }];
+{ label: "1 år", fn: () => addYears(new Date(), 1) },
+{ label: "Følg opp på sikt", fn: (): Date | null => null }];
 
 
 export function ContactCardContent({
