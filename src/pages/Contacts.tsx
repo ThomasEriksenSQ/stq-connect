@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Search, Building2, ArrowUpDown, ChevronDown, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { BulkSignalModal } from "@/components/BulkSignalModal";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 
-type SortField = "name" | "company" | "title" | "signal" | "owner" | "last_activity";
+type SortField = "name" | "company" | "title" | "signal" | "owner" | "last_activity" | "priority";
 type SortDir = "asc" | "desc";
 
 import { CATEGORIES, getEffectiveSignal } from "@/lib/categoryUtils";
@@ -35,7 +36,8 @@ const Contacts = () => {
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [signalFilter, setSignalFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "signal", dir: "asc" });
+  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "priority", dir: "desc" });
+  const [hotListActive, setHotListActive] = useState(true);
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -224,6 +226,28 @@ const Contacts = () => {
     return matchSearch && matchOwner && matchSignal && matchType;
   });
 
+function calcContactHeatScore(contact: any): number {
+  const signal = contact.signal as string | null;
+  if (signal === "Ikke aktuelt") return -1000;
+  let score = 0;
+  if (signal === "Behov nå") score += 100;
+  else if (signal === "Får fremtidig behov") score += 60;
+  else if (signal === "Får kanskje behov") score += 30;
+  else if (signal === "Ukjent om behov") score += 10;
+  else score += 5;
+  if (contact.call_list) score += 20;
+  if (contact.openTasks?.overdue) score += 15;
+  if (contact.openTasks?.count > 0) score += 5;
+  if (contact.cv_email) score += 5;
+  if (!contact.lastActivity) score -= 10;
+  else {
+    const days = Math.floor((Date.now() - new Date(contact.lastActivity).getTime()) / 86400000);
+    if (days > 180) score -= 5;
+    else if (days > 90) score -= 2;
+  }
+  return score;
+}
+
   const SIGNAL_ORDER: Record<string, number> = {
     "Behov nå": 0,
     "Får fremtidig behov": 1,
@@ -251,6 +275,8 @@ const Contacts = () => {
         if (!(a as any).lastActivity) return 1;
         if (!(b as any).lastActivity) return -1;
         return dir * (a as any).lastActivity.localeCompare((b as any).lastActivity);
+      case "priority":
+        return dir * (calcContactHeatScore(b) - calcContactHeatScore(a));
       default: return 0;
     }
   });
@@ -309,6 +335,25 @@ const Contacts = () => {
             {SIGNAL_OPTIONS.map((s) => (
               <Chip key={s.label} label={s.label} value={s.label} current={signalFilter} onSelect={setSignalFilter} />
             ))}
+            <div className="w-px h-5 bg-border mx-1" />
+            <button
+              onClick={() => {
+                const next = !hotListActive;
+                setHotListActive(next);
+                setSort(next
+                  ? { field: "priority", dir: "desc" }
+                  : { field: "signal", dir: "asc" }
+                );
+              }}
+              className={cn(
+                "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer inline-flex items-center gap-1.5",
+                hotListActive
+                  ? "bg-red-500 text-white border-red-500 font-medium"
+                  : "border-border text-muted-foreground hover:bg-secondary"
+              )}
+            >
+              🔥 Hot list
+            </button>
           </div>
           {/* TYPE */}
           <div className="flex items-center gap-2 flex-wrap">
@@ -356,7 +401,12 @@ const Contacts = () => {
               return (
                 <div key={contact.id} className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)_90px_90px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75">
                   {/* NAME - clickable */}
-                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="min-w-0 text-left cursor-pointer">
+                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="min-w-0 text-left cursor-pointer flex items-center gap-2">
+                    {hotListActive && (() => {
+                      const score = calcContactHeatScore(contact);
+                      const dotColor = score >= 80 ? "bg-red-500" : score >= 40 ? "bg-orange-400" : score >= 20 ? "bg-amber-400" : score <= -100 ? "bg-gray-200" : "bg-gray-300";
+                      return <span className={cn("w-2 h-2 rounded-full flex-shrink-0", dotColor)} />;
+                    })()}
                     <p className="text-[0.8125rem] font-medium text-foreground truncate">
                       {contact.first_name} {contact.last_name}
                     </p>
