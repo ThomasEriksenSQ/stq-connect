@@ -851,6 +851,117 @@ const DailyBrief = () => {
         </div>
       )}
 
+      {/* ── Nudge modal ── */}
+      {nudgeOpen && current && (() => {
+        const navn = `${current.contact.first_name} ${current.contact.last_name}`;
+        const title =
+          nudgeScenario === "forfalt" ? "Forfalt oppfølging" :
+          nudgeScenario === "ingen_signal_ingen_task" ? "Ingen signal eller oppfølging" :
+          "Ingen oppfølging satt";
+        const desc =
+          nudgeScenario === "forfalt"
+            ? `${navn} har en forfalt oppfølging. Hva gjør vi?`
+            : nudgeScenario === "ingen_signal_ingen_task"
+            ? `Du har ikke satt signal eller oppfølging på ${navn}. Ta et raskt standpunkt.`
+            : `${navn} mangler en oppfølging. Legg til en?`;
+
+        const handleSomeDayTask = async () => {
+          await supabase.from("tasks").insert({
+            title: "Følg opp på sikt",
+            description: "[someday]",
+            priority: "medium",
+            due_date: null,
+            contact_id: current.contact.id,
+            company_id: current.contact.company_id,
+            assigned_to: user?.id,
+            created_by: user?.id,
+          });
+          queryClient.invalidateQueries({ queryKey: ["salgssenter-tasks"] });
+          setNudgeOpen(false);
+          goNext("left", true);
+        };
+
+        const handleSetSignal = async (signal: string) => {
+          setLocalSignals(prev => ({ ...prev, [current.contact.id]: signal }));
+          await supabase.from("activities").insert({
+            type: "note", subject: signal, description: `[${signal}]`,
+            contact_id: current.contact.id, company_id: current.contact.company_id, created_by: user?.id,
+          });
+          queryClient.invalidateQueries({ queryKey: ["salgssenter-activities"] });
+          setNudgeOpen(false);
+          goNext("left", true);
+        };
+
+        const handleIkkeRelevant = async () => {
+          await supabase.from("contacts").update({ ikke_aktuell_kontakt: true }).eq("id", current.contact.id);
+          queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
+            old?.map((c: any) => c.id === current.contact.id ? { ...c, ikke_aktuell_kontakt: true } : c)
+          );
+          setNudgeOpen(false);
+          goNext("left", true);
+        };
+
+        const handleSkip = () => {
+          setNudgeOpen(false);
+          goNext("left", true);
+        };
+
+        return (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setNudgeOpen(false)} />
+            <div
+              className="relative w-full max-w-md mx-4 bg-card border border-border rounded-2xl shadow-xl p-6"
+              style={{ animation: "shake 0.5s ease-in-out" }}
+            >
+              <button
+                onClick={() => setNudgeOpen(false)}
+                className="absolute top-3 right-3 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1">
+                Før du går videre
+              </p>
+              <p className="text-[1.125rem] font-bold text-foreground mb-1">{title}</p>
+              <p className="text-[0.875rem] text-muted-foreground mb-5">{desc}</p>
+
+              <div className="space-y-2">
+                <button
+                  onClick={handleSomeDayTask}
+                  className="w-full h-10 rounded-xl bg-foreground text-background text-[0.875rem] font-medium hover:opacity-90 transition-all"
+                >
+                  Legg til &ldquo;Følg opp på sikt&rdquo;
+                </button>
+
+                {(nudgeScenario === "ingen_signal_ingen_task" || nudgeScenario === "forfalt") && (
+                  <button
+                    onClick={() => handleSetSignal("Ukjent om behov")}
+                    className="w-full h-10 rounded-xl border border-border text-[0.875rem] font-medium text-foreground hover:bg-secondary transition-all"
+                  >
+                    Sett &ldquo;Ukjent om behov&rdquo;
+                  </button>
+                )}
+
+                <button
+                  onClick={handleIkkeRelevant}
+                  className="w-full h-10 rounded-xl border border-destructive/30 text-[0.875rem] font-medium text-destructive hover:bg-destructive/5 transition-all"
+                >
+                  Ikke relevant person
+                </button>
+
+                <button
+                  onClick={handleSkip}
+                  className="w-full h-9 text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Hopp over likevel
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── Side panel ── */}
       {current && (
         <Sheet open={panelOpen} onOpenChange={setPanelOpen}>
