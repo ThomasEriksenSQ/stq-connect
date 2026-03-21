@@ -1650,7 +1650,10 @@ function TaskRow({
   const handleSave = () => {
     if (!editTitle || !editCategory) return;
     const descWithCat = buildDescriptionWithCategory(editCategory, editDesc.trim());
-    onUpdate(task.id, { title: editTitle.trim(), description: descWithCat || null, due_date: editDate || null });
+    const finalDesc = editDate === "someday"
+      ? (descWithCat ? descWithCat + "\n[someday]" : "[someday]")
+      : descWithCat || null;
+    onUpdate(task.id, { title: editTitle.trim(), description: finalDesc, due_date: editDate === "someday" ? null : (editDate || null) });
     setEditing(false);
   };
 
