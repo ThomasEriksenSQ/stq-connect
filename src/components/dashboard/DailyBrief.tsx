@@ -252,7 +252,7 @@ const DailyBrief = () => {
           </button>
 
           {/* Card */}
-          <div ref={cardRef} className="flex-1 max-w-[480px] rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+          <div ref={cardRef} className="flex-1 min-w-0 rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
             {/* 1. Progressbar */}
             <div className="h-[3px] bg-border">
               <div className="h-full bg-amber-400 transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
