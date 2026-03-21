@@ -457,7 +457,7 @@ const DailyBrief = () => {
                 </div>
 
                 {/* ── Temperatur + Finn.no strips ── */}
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   {/* Lovende-strip */}
                   {(() => {
                     const tempColors = {
