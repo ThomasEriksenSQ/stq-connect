@@ -565,7 +565,7 @@ export function ContactCardContent({
         title: title.trim(),
         description: description?.trim() || null,
         priority: "medium",
-        due_date: formDate || null,
+        due_date: formDate === "someday" ? null : (formDate || null),
         contact_id: contactId,
         company_id: contact?.company_id || null,
         assigned_to: user?.id,
