@@ -95,7 +95,18 @@ const OppfolgingerSection = () => {
   let filtered = tasks.filter((t) => {
     if (fadingIds.has(t.id)) return false;
     const sig = getContactSignal(t.contact_id);
-    return sig !== "Ikke aktuelt";
+    if (sig === "Ikke aktuelt") return false;
+    // Exclude someday tasks from main list
+    if (!t.due_date && t.description?.includes("[someday]")) return false;
+    return true;
+  });
+
+  // Someday tasks — separate group
+  const somedayTasks = tasks.filter((t) => {
+    if (fadingIds.has(t.id)) return false;
+    const sig = getContactSignal(t.contact_id);
+    if (sig === "Ikke aktuelt") return false;
+    return !t.due_date && t.description?.includes("[someday]");
   });
 
   // 2. Owner filter
