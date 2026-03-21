@@ -469,7 +469,7 @@ const DailyBrief = () => {
                     const tc = tempColors[current.temperature];
                     const emoji = current.temperature === "hett" ? "🔥" : current.temperature === "lovende" ? "⚡" : current.temperature === "mulig" ? "💡" : "💤";
                     return (
-                      <div className={cn("inline-flex items-center gap-2 px-3 py-2 rounded-xl border", tc.strip)}>
+                      <div className={cn("flex items-center gap-2 px-3 py-2 rounded-xl border", tc.strip)}>
                         <span className="text-[0.875rem]">{emoji}</span>
                         <span className={cn("text-[0.8125rem]", tc.label)}>{TEMP_CONFIG[current.temperature].label}</span>
                         {reasonLine && (
