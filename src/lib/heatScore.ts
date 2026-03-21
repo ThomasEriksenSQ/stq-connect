@@ -1,44 +1,53 @@
-import { differenceInDays, isPast, isToday } from "date-fns";
-import { getEffectiveSignal } from "@/lib/categoryUtils";
+import { differenceInDays } from "date-fns";
 
-export function calcHeatScore(
-  contact: any,
-  activities: any[],
-  tasks: any[],
-  foresporsler: any[]
-): number {
-  const signal = getEffectiveSignal(
-    activities.map(a => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
-    tasks.map(t => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date }))
-  );
+export const TEMP_CONFIG = {
+  hett:    { label: "Hett",    bg: "bg-red-500",    text: "text-white",      dot: "bg-red-500",    bar: "bg-red-500"    },
+  lovende: { label: "Lovende", bg: "bg-orange-400", text: "text-white",      dot: "bg-orange-400", bar: "bg-orange-400" },
+  mulig:   { label: "Mulig",   bg: "bg-amber-400",  text: "text-amber-900",  dot: "bg-amber-400",  bar: "bg-amber-400"  },
+  sovende: { label: "Sovende", bg: "bg-gray-200",   text: "text-gray-600",   dot: "bg-gray-400",   bar: "bg-gray-300"   },
+};
 
-  if (signal === "Ikke aktuelt") return 0;
-
+export function calcHeatScore(params: {
+  signal: string;
+  isInnkjoper: boolean;
+  hasMarkedsradar: boolean;
+  hasAktivForespørsel: boolean;
+  hasOverdue: boolean;
+  daysSinceLastContact: number;
+}): number {
   let score = 0;
+  if (params.signal === "Behov nå") score += 40;
+  else if (params.signal === "Får fremtidig behov") score += 20;
+  else if (params.signal === "Får kanskje behov") score += 8;
+  else if (params.signal === "Ukjent om behov") score += 2;
+  if (params.isInnkjoper) score += 15;
+  if (params.hasMarkedsradar) score += 12;
+  if (params.hasMarkedsradar && params.signal === "Behov nå") score += 8;
+  if (params.hasAktivForespørsel) score += 15;
+  if (params.hasOverdue) score += 10;
+  if (params.daysSinceLastContact > 90) score += 5;
+  if (params.daysSinceLastContact > 180) score += 5;
+  return score;
+}
 
-  if (signal === "Behov nå") score += 40;
-  else if (signal === "Får fremtidig behov") score += 20;
-  else if (signal === "Får kanskje behov") score += 8;
-
-  if (contact.call_list) score += 20;
-
-  const harForesp = foresporsler.some((f: any) => f.selskap_id === contact.company_id);
-  if (harForesp) score += 15;
-
-  const sisteAkt = activities[0]?.created_at;
-  if (sisteAkt) {
-    const dager = differenceInDays(new Date(), new Date(sisteAkt));
-    if (dager <= 7) score += 10;
-    else if (dager <= 30) score += 5;
-    else if (dager > 90) score -= 10;
-  } else {
-    score -= 15;
-  }
-
-  const harForfalt = tasks.some(t =>
-    t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date))
-  );
-  if (harForfalt) score += 10;
-
-  return Math.max(0, score);
+export function getTemperature(params: {
+  score: number;
+  signal: string;
+  hasOverdue: boolean;
+  hasMarkedsradar: boolean;
+  isInnkjoper: boolean;
+}): "hett" | "lovende" | "mulig" | "sovende" {
+  const { signal, hasOverdue, hasMarkedsradar, isInnkjoper, score } = params;
+  if (signal === "Behov nå" && hasOverdue) return "hett";
+  if (signal === "Behov nå" && hasMarkedsradar) return "hett";
+  if (isInnkjoper && signal === "Behov nå") return "hett";
+  if (signal === "Behov nå") return "lovende";
+  if (hasMarkedsradar && signal === "Får fremtidig behov") return "lovende";
+  if (isInnkjoper && signal === "Får fremtidig behov") return "lovende";
+  if (score >= 35) return "lovende";
+  if (signal === "Får fremtidig behov") return "mulig";
+  if (signal === "Får kanskje behov") return "mulig";
+  if (hasMarkedsradar) return "mulig";
+  if (isInnkjoper) return "mulig";
+  return "sovende";
 }
