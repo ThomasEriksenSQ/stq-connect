@@ -115,7 +115,7 @@ const DailyBrief = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<"kort" | "liste">("kort");
-  const [ownerFilter, setOwnerFilter] = useState("alle");
+  const [ownerFilter, setOwnerFilter] = useState(user?.id || "alle");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [treated, setTreated] = useState<Set<string>>(new Set());
   const [activeForm, setActiveForm] = useState<"snooze" | "signal" | null>(null);
@@ -271,12 +271,14 @@ const DailyBrief = () => {
   });
 
   const filterOptions = useMemo(() => {
-    const others = allProfiles.map(p => ({
+    const me = allProfiles.find(p => p.id === user?.id);
+    const others = allProfiles.filter(p => p.id !== user?.id).map(p => ({
       id: p.id,
       label: p.full_name,
     }));
     return [
       { id: "alle", label: "Alle" },
+      ...(me ? [{ id: me.id, label: me.full_name }] : []),
       ...others,
     ];
   }, [allProfiles, user?.id]);
