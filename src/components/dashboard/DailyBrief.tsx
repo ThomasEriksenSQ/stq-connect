@@ -959,7 +959,7 @@ const DailyBrief = () => {
               {/* Oppfølging */}
               <div className="mb-6">
                 <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-3">
-                  {harEksisterendeTask
+                  {nudgeHarEksisterendeTask
                     ? (nudgeScenario === "forfalt" ? `Forfalt: "${current.nextTask?.title}"` : `Oppdater oppfølging`)
                     : "Ny oppfølging — Følg opp om behov"}
                 </p>
