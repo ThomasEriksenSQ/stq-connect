@@ -1109,39 +1109,52 @@ export function ContactCardContent({
           </div>
         )}
 
-        {/* Line 4: Checkboxes */}
-        <div className="flex items-center gap-4 mt-2">
-          <label className="inline-flex items-center gap-1.5 cursor-pointer">
-            <Checkbox
-              checked={(contact as any).cv_email ?? false}
-              onCheckedChange={(checked) => updateMutation.mutate({ cv_email: checked as any })}
-              className="h-3.5 w-3.5 rounded-[3px]"
-            />
-            <span className="text-[0.75rem] text-foreground">CV-Epost</span>
-          </label>
-          <label className="inline-flex items-center gap-1.5 cursor-pointer">
-            <Checkbox
-              checked={(contact as any).call_list ?? false}
-              onCheckedChange={(checked) => updateMutation.mutate({ call_list: checked as any })}
-              className="h-3.5 w-3.5 rounded-[3px]"
-            />
-            <span className="text-[0.75rem] text-foreground">Innkjøper</span>
-          </label>
-          <label className="inline-flex items-center gap-1.5 cursor-pointer">
-            <Checkbox
-              checked={(contact as any).ikke_aktuell_kontakt ?? false}
-              onCheckedChange={(checked) => updateMutation.mutate({ ikke_aktuell_kontakt: checked as any })}
-              className="h-3.5 w-3.5 rounded-[3px] data-[state=checked]:bg-destructive data-[state=checked]:border-destructive"
-            />
-            <span
-              className={cn(
-                "text-[0.75rem]",
-                (contact as any).ikke_aktuell_kontakt ? "text-destructive font-medium" : "text-foreground",
-              )}
-            >
-              Ikke aktuelt å kontakte igjen
-            </span>
-          </label>
+        {/* Line 4: Toggle pills */}
+        <div className="flex items-center gap-2 flex-wrap mt-2">
+          {/* CV-Epost */}
+          <button
+            onClick={() => {
+              if (!contact.cv_email && !(contact as any).email) {
+                toast.error("Legg til e-postadresse før du aktiverer CV-Epost-listen");
+                return;
+              }
+              updateMutation.mutate({ cv_email: !(contact as any).cv_email });
+            }}
+            className={cn(
+              "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+              (contact as any).cv_email
+                ? "bg-green-100 text-green-800 border-green-200"
+                : "bg-background text-muted-foreground border-border hover:bg-secondary"
+            )}
+          >
+            {(contact as any).cv_email ? "✓ CV-Epost" : "CV-Epost"}
+          </button>
+
+          {/* Innkjøper */}
+          <button
+            onClick={() => updateMutation.mutate({ call_list: !(contact as any).call_list })}
+            className={cn(
+              "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+              (contact as any).call_list
+                ? "bg-amber-100 text-amber-800 border-amber-200"
+                : "bg-background text-muted-foreground border-border hover:bg-secondary"
+            )}
+          >
+            {(contact as any).call_list ? "✓ Innkjøper" : "Innkjøper"}
+          </button>
+
+          {/* Ikke aktuelt å kontakte igjen */}
+          <button
+            onClick={() => updateMutation.mutate({ ikke_aktuell_kontakt: !(contact as any).ikke_aktuell_kontakt })}
+            className={cn(
+              "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+              (contact as any).ikke_aktuell_kontakt
+                ? "bg-destructive/10 text-destructive border-destructive/30"
+                : "bg-background text-muted-foreground border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+            )}
+          >
+            {(contact as any).ikke_aktuell_kontakt ? "✕ Ikke aktuell å kontakte" : "Ikke aktuell å kontakte"}
+          </button>
         </div>
       </div>
 
