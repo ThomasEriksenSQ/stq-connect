@@ -1597,6 +1597,7 @@ export function ContactCardContent({
 }
 
 /* ── Task Row ── */
+
 function TaskRow({
   task,
   overdue,
