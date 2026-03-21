@@ -215,7 +215,7 @@ const DailyBrief = () => {
       const lastAct = contactActs[0];
       const daysSince = lastAct ? differenceInDays(new Date(), new Date(lastAct.created_at)) : 999;
       const nextTask = contactTasks.find((t: any) => t.due_date) ?? contactTasks[0] ?? null;
-      const hasOverdue = nextTask ? isPast(new Date(nextTask.due_date)) && !isToday(new Date(nextTask.due_date)) : false;
+      const hasOverdue = nextTask?.due_date ? isPast(new Date(nextTask.due_date)) && !isToday(new Date(nextTask.due_date)) : false;
       const techProfile = techProfiles.find((tp: any) => tp.company_id === contact.company_id);
       const hasMarkedsradar = !!(techProfile?.sist_fra_finn && differenceInDays(new Date(), new Date(techProfile.sist_fra_finn)) <= 90);
       const hasAktivForespørsel = foresporsler.some((f: any) =>
