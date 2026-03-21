@@ -409,8 +409,9 @@ const DailyBrief = () => {
                     setDragStartX(null);
                     setDragDeltaX(0);
                     if (cardRef.current) {
-                      cardRef.current.style.transition = "transform 300ms cubic-bezier(0.32, 0.72, 0, 1)";
+                      cardRef.current.style.transition = "transform 380ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease";
                       cardRef.current.style.transform = "translateX(0) scale(1)";
+                      cardRef.current.style.opacity = "1";
                     }
                   }
                 }}
