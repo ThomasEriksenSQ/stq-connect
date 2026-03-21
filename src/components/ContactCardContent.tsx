@@ -1644,8 +1644,9 @@ function TaskRow({
     setEditTitle(parsed.title);
     setEditCategory(parsed.category);
     setEditDesc(parsed.cleanDesc);
-    setEditDate(task.due_date || "");
-    setEditChipIdx(null);
+    const isSomeday = !task.due_date && task.description?.includes("[someday]");
+    setEditDate(isSomeday ? "someday" : (task.due_date || ""));
+    setEditChipIdx(isSomeday ? 0 : null);
     setEditing(true);
   };
 
