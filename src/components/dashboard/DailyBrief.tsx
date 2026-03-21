@@ -766,9 +766,16 @@ const DailyBrief = () => {
                         const harSignal = !!currentSignal && currentSignal !== "Ukjent om behov";
                         const harTask = !!current.nextTask;
                         const harForfalt = current.hasOverdue;
-                        if (harForfalt) { setNudgeScenario("forfalt"); setNudgeOpen(true); return; }
-                        if (!harSignal && !harTask) { setNudgeScenario("ingen_signal_ingen_task"); setNudgeOpen(true); return; }
-                        if (harSignal && !harTask) { setNudgeScenario("signal_ingen_task"); setNudgeOpen(true); return; }
+                        const openNudge = (scenario: typeof nudgeScenario) => {
+                          setNudgeScenario(scenario);
+                          setNudgeSignal(currentSignal || "Ukjent om behov");
+                          setNudgeDate("someday");
+                          setNudgeCustomDate("");
+                          setNudgeOpen(true);
+                        };
+                        if (harForfalt) { openNudge("forfalt"); return; }
+                        if (!harSignal && !harTask) { openNudge("ingen_signal_ingen_task"); return; }
+                        if (harSignal && !harTask) { openNudge("signal_ingen_task"); return; }
                         goNext("left", true);
                       }}
                       className="w-full h-[46px] rounded-xl bg-foreground text-background text-[0.9375rem] font-medium hover:opacity-90 active:scale-[0.99] transition-all"
