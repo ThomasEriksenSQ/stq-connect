@@ -758,7 +758,16 @@ const DailyBrief = () => {
                   {/* ── Sone 5: CTA ── */}
                   <div className="pt-1 pb-2">
                     <button
-                      onClick={() => goNext("left", true)}
+                      onClick={() => {
+                        if (!current) return;
+                        const harSignal = !!currentSignal && currentSignal !== "Ukjent om behov";
+                        const harTask = !!current.nextTask;
+                        const harForfalt = current.hasOverdue;
+                        if (harForfalt) { setNudgeScenario("forfalt"); setNudgeOpen(true); return; }
+                        if (!harSignal && !harTask) { setNudgeScenario("ingen_signal_ingen_task"); setNudgeOpen(true); return; }
+                        if (harSignal && !harTask) { setNudgeScenario("signal_ingen_task"); setNudgeOpen(true); return; }
+                        goNext("left", true);
+                      }}
                       className="w-full h-[46px] rounded-xl bg-foreground text-background text-[0.9375rem] font-medium hover:opacity-90 active:scale-[0.99] transition-all"
                     >
                       Ok, neste →
