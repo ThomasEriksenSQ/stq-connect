@@ -94,10 +94,10 @@ const DailyBrief = () => {
   const { data: contacts = [], isLoading } = useQuery({
     queryKey: ["salgssenter-contacts", ownerFilter],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("contacts")
         .select(`
-          id, first_name, last_name, title, company_id,
+          id, first_name, last_name, title, company_id, owner_id,
           cv_email, call_list, ikke_aktuell_kontakt,
           companies(id, name, city),
           activities(created_at, subject, description),
