@@ -867,30 +867,39 @@ const DailyBrief = () => {
         const harEksisterendeTask = !!current.nextTask;
 
         const handleOkNeste = async () => {
-          // 1. Oppdater eller opprett oppfølging
+          const isSomeday = nudgeDate === "someday";
+          const newDate = isSomeday ? null : (nudgeDate === "custom" ? nudgeCustomDate : nudgeDate);
+
           if (harEksisterendeTask) {
             const contactTasks = allTasks.filter((t: any) => t.contact_id === current.contact.id);
             for (const task of contactTasks) {
-              const isSomeday = nudgeDate === "someday";
-              const newDate = isSomeday ? null : (nudgeDate === "custom" ? nudgeCustomDate : nudgeDate);
-              let newDesc = task.description || "";
-              if (isSomeday && !newDesc.includes("[someday]")) {
-                newDesc = newDesc ? newDesc + "\n[someday]" : "[someday]";
-              } else if (!isSomeday) {
-                newDesc = newDesc.replace("\n[someday]", "").replace("[someday]", "").trim();
-              }
+              const rawDesc = (task.description || "")
+                .replace(/^\[[^\]]+\]\n?/, "")
+                .replace(/\[someday\]/g, "")
+                .trim();
+
+              const newDesc = nudgeSignal
+                ? (rawDesc ? `[${nudgeSignal}]\n${rawDesc}` : `[${nudgeSignal}]`)
+                : (rawDesc || null);
+
+              const finalDesc = isSomeday
+                ? (newDesc ? newDesc + "\n[someday]" : "[someday]")
+                : newDesc;
+
               await supabase.from("tasks").update({
                 due_date: newDate,
-                description: newDesc || null,
+                description: finalDesc || null,
                 updated_at: new Date().toISOString(),
               }).eq("id", task.id);
             }
           } else {
-            const isSomeday = nudgeDate === "someday";
-            const newDate = isSomeday ? null : (nudgeDate === "custom" ? nudgeCustomDate : nudgeDate);
+            const newDesc = nudgeSignal
+              ? (isSomeday ? `[${nudgeSignal}]\n[someday]` : `[${nudgeSignal}]`)
+              : (isSomeday ? "[someday]" : null);
+
             await supabase.from("tasks").insert({
               title: "Følg opp om behov",
-              description: isSomeday ? "[someday]" : null,
+              description: newDesc,
               priority: "medium",
               due_date: newDate,
               contact_id: current.contact.id,
@@ -900,12 +909,15 @@ const DailyBrief = () => {
             });
           }
 
-          // 2. Oppdater signal hvis endret
           if (nudgeSignal && nudgeSignal !== currentSignal) {
             setLocalSignals(prev => ({ ...prev, [current.contact.id]: nudgeSignal }));
             await supabase.from("activities").insert({
-              type: "note", subject: nudgeSignal, description: `[${nudgeSignal}]`,
-              contact_id: current.contact.id, company_id: current.contact.company_id, created_by: user?.id,
+              type: "note",
+              subject: nudgeSignal,
+              description: `[${nudgeSignal}]`,
+              contact_id: current.contact.id,
+              company_id: current.contact.company_id,
+              created_by: user?.id,
             });
             queryClient.invalidateQueries({ queryKey: ["salgssenter-activities"] });
           }
