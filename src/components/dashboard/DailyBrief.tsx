@@ -276,10 +276,10 @@ const DailyBrief = () => {
 
             {/* 3. Name + meta */}
             <div style={{ padding: "10px 18px 0" }}>
-              <p className="text-[19px] font-medium text-foreground">
+              <p className="text-[1.5rem] font-bold text-foreground">
                 {current.contact.first_name} {current.contact.last_name}
               </p>
-              <p className="text-[12px] text-muted-foreground mt-0.5">
+              <p className="flex items-center gap-1.5 text-[0.875rem] text-muted-foreground flex-wrap mt-0.5">
                 {current.contact.title && <>{current.contact.title} · </>}
                 {current.contact.companies?.name && (
                   <button
