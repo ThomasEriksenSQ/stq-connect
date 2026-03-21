@@ -959,19 +959,19 @@ const DailyBrief = () => {
 
               {/* Oppfølging */}
               <div className="mb-6">
-                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">
+                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-3">
                   {nudgeScenario === "forfalt" ? `Forfalt: "${forfaltTitle}"` : "Oppfølging"}
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {NUDGE_DATE_CHIPS.map(chip => (
                     <button
                       key={chip.value}
                       onClick={() => setNudgeDate(chip.value)}
                       className={cn(
-                        "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
+                        "h-10 px-3 text-[0.8125rem] rounded-xl border transition-all font-medium",
                         nudgeDate === chip.value
-                          ? "bg-foreground text-background border-foreground font-medium"
-                          : "border-border text-muted-foreground hover:bg-secondary"
+                          ? "bg-foreground text-background border-foreground shadow-sm"
+                          : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
                       )}
                     >
                       {chip.label}
@@ -981,7 +981,12 @@ const DailyBrief = () => {
                     type="date"
                     value={nudgeCustomDate}
                     onChange={(e) => { setNudgeCustomDate(e.target.value); setNudgeDate("custom"); }}
-                    className="h-8 px-2 text-[0.75rem] rounded-full border border-border text-muted-foreground bg-background"
+                    className={cn(
+                      "h-10 px-3 text-[0.8125rem] rounded-xl border transition-all col-span-1",
+                      nudgeDate === "custom"
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border text-muted-foreground bg-background"
+                    )}
                   />
                 </div>
               </div>
