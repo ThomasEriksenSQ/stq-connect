@@ -123,6 +123,9 @@ const DailyBrief = () => {
   const [panelOpen, setPanelOpen] = useState(false);
   const [localSignals, setLocalSignals] = useState<Record<string, string>>({});
   const cardRef = useRef<HTMLDivElement>(null);
+  const [dragStartX, setDragStartX] = useState<number | null>(null);
+  const [dragDeltaX, setDragDeltaX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
 
   const { data: allProfiles = [] } = useQuery({
