@@ -646,7 +646,7 @@ const DailyBrief = () => {
                         )}>
                           {lead.signal || "—"}
                         </span>
-                        {lead.hasMarkedsradar && (
+                        {lead.hasFinnAd && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 text-[0.6875rem] font-semibold flex-shrink-0">
                             <Radio className="h-3 w-3" /> Finn.no
                           </span>
