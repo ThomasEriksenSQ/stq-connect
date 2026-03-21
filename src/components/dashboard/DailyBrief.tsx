@@ -588,16 +588,6 @@ const DailyBrief = () => {
                     );
                   })}
                 </div>
-              </div>
-
-              {/* Right nav chevron */}
-              <button
-                onClick={() => goNext("left")}
-                disabled={idx >= total - 1}
-                className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-20 disabled:pointer-events-none transition-all"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
             </div>
           ) : null}
         </>
