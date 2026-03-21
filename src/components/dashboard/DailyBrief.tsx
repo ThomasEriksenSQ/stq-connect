@@ -864,65 +864,55 @@ const DailyBrief = () => {
       {/* ── Nudge modal ── */}
       {nudgeOpen && current && (() => {
         const navn = `${current.contact.first_name} ${current.contact.last_name}`;
+        const harEksisterendeTask = !!current.nextTask;
 
-        const handleSomeDayTask = async () => {
-          await supabase.from("tasks").insert({
-            title: "Følg opp på sikt",
-            description: "[someday]",
-            priority: "medium",
-            due_date: null,
-            contact_id: current.contact.id,
-            company_id: current.contact.company_id,
-            assigned_to: user?.id,
-            created_by: user?.id,
-          });
-          queryClient.invalidateQueries({ queryKey: ["salgssenter-tasks"] });
-          setNudgeOpen(false);
-          goNext("left", true);
-        };
-
-        const handleTaskWithDate = async (date: string | null) => {
-          if (nudgeScenario === "forfalt" && current.nextTask) {
-            await supabase.from("tasks").update({
-              due_date: date,
-              updated_at: new Date().toISOString(),
-            }).eq("id", current.nextTask.id);
+        const handleOkNeste = async () => {
+          // 1. Oppdater eller opprett oppfølging
+          if (harEksisterendeTask) {
+            const contactTasks = allTasks.filter((t: any) => t.contact_id === current.contact.id);
+            for (const task of contactTasks) {
+              const isSomeday = nudgeDate === "someday";
+              const newDate = isSomeday ? null : (nudgeDate === "custom" ? nudgeCustomDate : nudgeDate);
+              let newDesc = task.description || "";
+              if (isSomeday && !newDesc.includes("[someday]")) {
+                newDesc = newDesc ? newDesc + "\n[someday]" : "[someday]";
+              } else if (!isSomeday) {
+                newDesc = newDesc.replace("\n[someday]", "").replace("[someday]", "").trim();
+              }
+              await supabase.from("tasks").update({
+                due_date: newDate,
+                description: newDesc || null,
+                updated_at: new Date().toISOString(),
+              }).eq("id", task.id);
+            }
           } else {
+            const isSomeday = nudgeDate === "someday";
+            const newDate = isSomeday ? null : (nudgeDate === "custom" ? nudgeCustomDate : nudgeDate);
             await supabase.from("tasks").insert({
               title: "Følg opp om behov",
+              description: isSomeday ? "[someday]" : null,
               priority: "medium",
-              due_date: date,
+              due_date: newDate,
               contact_id: current.contact.id,
               company_id: current.contact.company_id,
               assigned_to: user?.id,
               created_by: user?.id,
             });
           }
+
+          // 2. Oppdater signal hvis endret
+          if (nudgeSignal && nudgeSignal !== currentSignal) {
+            setLocalSignals(prev => ({ ...prev, [current.contact.id]: nudgeSignal }));
+            await supabase.from("activities").insert({
+              type: "note", subject: nudgeSignal, description: `[${nudgeSignal}]`,
+              contact_id: current.contact.id, company_id: current.contact.company_id, created_by: user?.id,
+            });
+            queryClient.invalidateQueries({ queryKey: ["salgssenter-activities"] });
+          }
+
           queryClient.invalidateQueries({ queryKey: ["salgssenter-tasks"] });
           setNudgeOpen(false);
           goNext("left", true);
-        };
-
-        const handleSetSignal = async (signal: string) => {
-          setLocalSignals(prev => ({ ...prev, [current.contact.id]: signal }));
-          await supabase.from("activities").insert({
-            type: "note", subject: signal, description: `[${signal}]`,
-            contact_id: current.contact.id, company_id: current.contact.company_id, created_by: user?.id,
-          });
-          queryClient.invalidateQueries({ queryKey: ["salgssenter-activities"] });
-        };
-
-
-        const handleOkNeste = async () => {
-          if (nudgeSignal && nudgeSignal !== currentSignal) {
-            await handleSetSignal(nudgeSignal);
-          }
-          if (nudgeDate === "someday") {
-            await handleSomeDayTask();
-          } else {
-            const date = nudgeDate === "custom" ? nudgeCustomDate : nudgeDate;
-            await handleTaskWithDate(date || null);
-          }
         };
 
         const NUDGE_DATE_CHIPS = [
@@ -933,10 +923,6 @@ const DailyBrief = () => {
           { label: "3 måneder", value: format(addMonths(new Date(), 3), "yyyy-MM-dd") },
         ];
 
-        const forfaltTitle = nudgeScenario === "forfalt" && current.nextTask
-          ? current.nextTask.title
-          : "Følg opp om behov";
-
         return (
           <div className="fixed inset-0 z-[100] flex items-center justify-center">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setNudgeOpen(false)} />
@@ -946,7 +932,7 @@ const DailyBrief = () => {
             >
               <button
                 onClick={() => setNudgeOpen(false)}
-                className="absolute top-3 right-3 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                className="absolute top-4 right-4 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -955,12 +941,14 @@ const DailyBrief = () => {
                 Før du går videre
               </p>
               <p className="text-[0.875rem] text-muted-foreground mb-1">Hold kontakten oppdatert</p>
-              <p className="text-[1rem] font-semibold text-foreground mb-6">{navn}</p>
+              <p className="text-[1.125rem] font-bold text-foreground mb-6">{navn}</p>
 
               {/* Oppfølging */}
               <div className="mb-6">
                 <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-3">
-                  {nudgeScenario === "forfalt" ? `Forfalt: "${forfaltTitle}"` : "Oppfølging"}
+                  {harEksisterendeTask
+                    ? `Oppdater oppfølging — "${current.nextTask.title}"`
+                    : "Opprett oppfølging — Følg opp om behov"}
                 </p>
                 <div className="grid grid-cols-3 gap-2">
                   {NUDGE_DATE_CHIPS.map(chip => (
@@ -982,9 +970,9 @@ const DailyBrief = () => {
                     value={nudgeCustomDate}
                     onChange={(e) => { setNudgeCustomDate(e.target.value); setNudgeDate("custom"); }}
                     className={cn(
-                      "h-10 px-3 text-[0.8125rem] rounded-xl border transition-all col-span-1",
+                      "h-10 px-3 text-[0.8125rem] rounded-xl border transition-all",
                       nudgeDate === "custom"
-                        ? "border-foreground bg-foreground text-background"
+                        ? "border-foreground bg-secondary"
                         : "border-border text-muted-foreground bg-background"
                     )}
                   />
