@@ -1409,8 +1409,13 @@ export function ContactCardContent({
                   type="button"
                   onClick={() => {
                     const d = chip.fn();
-                    setFormDate(format(d, "yyyy-MM-dd"));
-                    setSelectedChipIdx(i);
+                    if (d === null) {
+                      setFormDate("someday");
+                      setSelectedChipIdx(i);
+                    } else {
+                      setFormDate(format(d, "yyyy-MM-dd"));
+                      setSelectedChipIdx(i);
+                    }
                   }}
                   className={cn(
                     "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors",
