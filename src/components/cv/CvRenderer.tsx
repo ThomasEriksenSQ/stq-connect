@@ -1,1519 +1,1663 @@
-import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from "react";
-import {
-  ADDITIONAL_SECTION_TITLE_OPTIONS,
-  CvRendererPreview,
-  openCvPrintDialog,
-  formatProjectPeriod,
-  PROJECT_MONTH_OPTIONS,
-  type CVDocument,
-  type AdditionalSection,
-  type ProjectEntry,
-  type CompetenceGroup,
-  type TimelineEntry,
-  type SidebarSection,
-} from "./CvRenderer";
-import { supabase } from "@/integrations/supabase/client";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Plus, Trash2, GripVertical, Download, Check, Loader2, Upload, Move } from "lucide-react";
-import { toast } from "sonner";
-import { getInitials } from "@/lib/utils";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-  useSortable,
-  arrayMove,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
-interface CvEditorPanelProps {
-  cvData: CVDocument;
-  onSave: (data: CVDocument, savedBy: string) => Promise<void>;
-  savedBy: string;
-  imageUrl?: string;
-  headerLabel?: string;
-  toolbarStart?: ReactNode;
-  toolbarEnd?: ReactNode;
-  onDownloadPdf?: (doc: CVDocument) => Promise<void> | void;
-  /** When provided, the internal toolbar is hidden and this render prop is called instead */
-  renderToolbar?: (opts: { saveStatus: SaveStatus; onDownload: () => Promise<void> }) => ReactNode;
+// ═══════════════════════════════════════
+// Types
+// ═══════════════════════════════════════
+
+export type SidebarSection = {
+  heading: string;
+  items: string[];
+};
+
+export type CompetenceGroup = {
+  label: string;
+  content: string;
+};
+
+export type ProjectEntry = {
+  company: string;
+  subtitle: string;
+  role: string;
+  period: string;
+  startMonth?: number | null;
+  startYear?: number | null;
+  endMonth?: number | null;
+  endYear?: number | null;
+  isCurrent?: boolean;
+  paragraphs: string[];
+  technologies: string;
+  pageBreakBefore?: boolean;
+};
+
+export const ADDITIONAL_SECTION_TITLE_OPTIONS = [
+  "SERTIFISERINGER",
+  "KURS",
+  "PUBLIKASJONER",
+  "UTMERKELSER",
+  "FOREDRAG",
+  "KONFERANSER",
+  "OPEN SOURCE BIDRAG",
+  "FAGLIGE BIDRAG",
+  "FRIVILLIG ARBEID",
+  "STYREVERV",
+  "VERV",
+  "MENTORROLLER",
+] as const;
+
+export type AdditionalSectionTitle = (typeof ADDITIONAL_SECTION_TITLE_OPTIONS)[number];
+export type AdditionalSectionFormat = "timeline" | "bullet";
+
+export type AdditionalSectionItem = {
+  period: string;
+  primary: string;
+};
+
+export type AdditionalSection = {
+  title: AdditionalSectionTitle;
+  format: AdditionalSectionFormat;
+  items: AdditionalSectionItem[];
+};
+
+export type TimelineEntry = {
+  period: string;
+  primary: string;
+  secondary?: string;
+};
+
+export type HeroContact = {
+  title: string;
+  name: string;
+  phone: string;
+  email: string;
+};
+
+export type HeroContent = {
+  name: string;
+  title: string;
+  contact: HeroContact;
+  portrait_url?: string;
+  portrait_position?: string;
+};
+
+export type CVDocument = {
+  hero: HeroContent;
+  sidebarSections: SidebarSection[];
+  introParagraphs: string[];
+  competenceGroups: CompetenceGroup[];
+  projects: ProjectEntry[];
+  additionalSections: AdditionalSection[];
+  education: TimelineEntry[];
+  workExperience: TimelineEntry[];
+};
+
+// ═══════════════════════════════════════
+// Layout constants
+// ═══════════════════════════════════════
+
+const mm = (value: number) => `${value}mm`;
+const pt = (value: number) => `${value}pt`;
+const px = (value: number) => `${value}px`;
+const paddingMm = (top: number, right: number, bottom: number, left: number) =>
+  `${mm(top)} ${mm(right)} ${mm(bottom)} ${mm(left)}`;
+
+export const CV_LAYOUT = {
+  pageWidthMm: 210,
+  pageHeightMm: 297,
+  sidebarWidthMm: 55,
+  measureContentWidthMm: 155,
+  firstPageHeroHeightMm: 71.4,
+  continuationTopPaddingMm: 25.5,
+  sidebarPadding: { topMm: 8.8, rightMm: 4.8, bottomMm: 10.5, leftMm: 6.8 },
+  mainPadding: { topMm: 8.8, rightMm: 8.9, bottomMm: 10.2, leftMm: 8.9 },
+  hero: {
+    topRowHeightMm: 31.25,
+    grayBandHeightMm: 34.2,
+    logoBoxHeightMm: 24.8,
+    portraitLeftMm: 6.8,
+    portraitWidthMm: 41.4,
+    portraitHeightMm: 46.75,
+    firstPagePortraitTopMm: 24.8,
+    continuationPortraitTopMm: 26.5,
+    textTopMm: 39.9,
+    textLeftMm: 63.9,
+    textWidthMm: 136,
+    contactRightMm: 7.8,
+    contactHeightMm: 31.25,
+    contactWidthMm: 41.5,
+    contactSeparatorHeightMm: 16.9,
+    contactSeparatorOffsetMm: 1.2,
+  },
+  screen: { pageGapPx: 16, topPaddingPx: 24, bottomPaddingPx: 40, controlsGapPx: 12 },
+} as const;
+
+export const CV_PRINT = {
+  documentTitle: "CV",
+  previewBackground: "#d7d7d7",
+  helperText: 'For beste PDF-kvalitet, velg "Lagre som PDF" i print-dialogen.',
+} as const;
+
+const CONTINUATION_BOTTOM_PADDING_MM = 10.2;
+const CONTINUATION_TARGET_BOTTOM_MARGIN_MM = 14.5;
+const CONTINUATION_BOTTOM_BUFFER_MM = CONTINUATION_TARGET_BOTTOM_MARGIN_MM - CONTINUATION_BOTTOM_PADDING_MM;
+const PROJECT_BLOCK_MARGIN_BOTTOM_MM = 6.4;
+const PROJECT_FRAGMENT_FIT_SAFETY_MM = 0.8;
+
+// ═══════════════════════════════════════
+// Print CSS
+// ═══════════════════════════════════════
+
+export const PRINT_DOCUMENT_CSS = `
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
+  html, body { margin: 0; padding: 0; background: white; }
+  body { font-family: "Calibri", "Carlito", Arial, sans-serif; }
+  .cv-pages { display: block !important; }
+  .cv-page {
+    width: ${mm(CV_LAYOUT.pageWidthMm)} !important;
+    height: ${mm(CV_LAYOUT.pageHeightMm)} !important;
+    min-height: ${mm(CV_LAYOUT.pageHeightMm)} !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+    page-break-after: always;
+    break-after: page;
+  }
+  .cv-page:last-child { page-break-after: auto; break-after: auto; }
+  .cv-project-block { page-break-inside: avoid; break-inside: avoid; }
+  .no-print { display: none !important; }
+  @media screen {
+    body {
+      background: ${CV_PRINT.previewBackground};
+      padding: ${px(CV_LAYOUT.screen.topPaddingPx)} 0 ${px(CV_LAYOUT.screen.bottomPaddingPx)};
+    }
+    .cv-pages { display: flex !important; flex-direction: column; gap: ${px(CV_LAYOUT.screen.pageGapPx)}; }
+  }
+`;
+
+// ═══════════════════════════════════════
+// Styles
+// ═══════════════════════════════════════
+
+const pageStyle = {
+  width: mm(CV_LAYOUT.pageWidthMm),
+  height: mm(CV_LAYOUT.pageHeightMm),
+  minHeight: mm(CV_LAYOUT.pageHeightMm),
+  margin: "0 auto",
+  background: "#fff",
+  color: "#222",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.14)",
+  position: "relative",
+  overflow: "hidden",
+} satisfies React.CSSProperties;
+
+const gridStyle = {
+  display: "grid",
+  gridTemplateColumns: `${mm(CV_LAYOUT.sidebarWidthMm)} 1fr`,
+  height: mm(CV_LAYOUT.pageHeightMm),
+  minHeight: mm(CV_LAYOUT.pageHeightMm),
+  position: "relative",
+} satisfies React.CSSProperties;
+
+const firstPageGridStyle = {
+  ...gridStyle,
+  gridTemplateRows: `${mm(CV_LAYOUT.firstPageHeroHeightMm)} 1fr`,
+} satisfies React.CSSProperties;
+
+const leftRailStyle = {
+  background: "#000",
+  color: "rgba(255,255,255,0.92)",
+  padding: paddingMm(
+    CV_LAYOUT.sidebarPadding.topMm,
+    CV_LAYOUT.sidebarPadding.rightMm,
+    CV_LAYOUT.sidebarPadding.bottomMm,
+    CV_LAYOUT.sidebarPadding.leftMm,
+  ),
+  fontSize: pt(9.1),
+  lineHeight: 1.46,
+} satisfies React.CSSProperties;
+
+const mainStyle = {
+  padding: paddingMm(
+    CV_LAYOUT.mainPadding.topMm,
+    CV_LAYOUT.mainPadding.rightMm,
+    CV_LAYOUT.mainPadding.bottomMm,
+    CV_LAYOUT.mainPadding.leftMm,
+  ),
+  fontSize: pt(10.3),
+  lineHeight: 1.42,
+  color: "#1f1f1f",
+  fontFamily: '"Calibri", "Carlito", Arial, sans-serif',
+} satisfies React.CSSProperties;
+
+const continuationMainStyle = {
+  ...mainStyle,
+  padding: paddingMm(
+    CV_LAYOUT.continuationTopPaddingMm,
+    CV_LAYOUT.mainPadding.rightMm,
+    CV_LAYOUT.mainPadding.bottomMm,
+    CV_LAYOUT.mainPadding.leftMm,
+  ),
+} satisfies React.CSSProperties;
+
+const continuationMeasureContentStyle = {
+  width: mm(CV_LAYOUT.measureContentWidthMm),
+  boxSizing: "border-box",
+  padding: paddingMm(0, CV_LAYOUT.mainPadding.rightMm, 0, CV_LAYOUT.mainPadding.leftMm),
+  fontSize: pt(10.3),
+  lineHeight: 1.42,
+  color: "#1f1f1f",
+  fontFamily: '"Calibri", "Carlito", Arial, sans-serif',
+} satisfies React.CSSProperties;
+
+const hiddenMeasureRootStyle = {
+  position: "absolute",
+  top: 0,
+  left: "-10000px",
+  visibility: "hidden",
+  pointerEvents: "none",
+  zIndex: -1,
+} satisfies React.CSSProperties;
+
+// ═══════════════════════════════════════
+// Helpers
+// ═══════════════════════════════════════
+
+export function waitForFontsReady(targetDocument: Document) {
+  return "fonts" in targetDocument && "ready" in targetDocument.fonts
+    ? targetDocument.fonts.ready.catch(() => undefined)
+    : Promise.resolve();
 }
 
-type SaveStatus = "idle" | "saving" | "saved";
+export function waitForDoubleFrame(win: Window) {
+  return new Promise<void>((resolve) => {
+    win.requestAnimationFrame(() => {
+      win.requestAnimationFrame(() => resolve());
+    });
+  });
+}
 
-function SortableItem({ id, children }: { id: string; children: React.ReactNode }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
-  const style = { transform: CSS.Transform.toString(transform), transition };
+function measureOuterHeight(element: HTMLElement | null) {
+  if (!element) return 0;
+  const computed = window.getComputedStyle(element);
+  return element.getBoundingClientRect().height + parseFloat(computed.marginTop) + parseFloat(computed.marginBottom);
+}
+
+export const PROJECT_MONTH_OPTIONS = [
+  { value: 1, label: "jan." },
+  { value: 2, label: "feb." },
+  { value: 3, label: "mar." },
+  { value: 4, label: "apr." },
+  { value: 5, label: "mai" },
+  { value: 6, label: "jun." },
+  { value: 7, label: "jul." },
+  { value: 8, label: "aug." },
+  { value: 9, label: "sep." },
+  { value: 10, label: "okt." },
+  { value: 11, label: "nov." },
+  { value: 12, label: "des." },
+] as const;
+
+const PROJECT_MONTH_LABELS = new Map(PROJECT_MONTH_OPTIONS.map((entry) => [entry.value, entry.label]));
+
+type MonthNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
+
+function normalizeProjectMonth(value: number | null | undefined): MonthNumber | null {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 12
+    ? (value as MonthNumber)
+    : null;
+}
+
+function normalizeProjectYear(value: number | null | undefined) {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : null;
+}
+
+function formatProjectMonthYear(month: number | null | undefined, year: number | null | undefined) {
+  const safeMonth = normalizeProjectMonth(month);
+  const safeYear = normalizeProjectYear(year);
+  if (!safeMonth || !safeYear) return "";
+  const monthLabel = PROJECT_MONTH_LABELS.get(safeMonth);
+  return monthLabel ? `${monthLabel} ${safeYear}` : "";
+}
+
+export function formatProjectPeriod(
+  project: Pick<ProjectEntry, "period" | "startMonth" | "startYear" | "endMonth" | "endYear" | "isCurrent">,
+) {
+  const startLabel = formatProjectMonthYear(project.startMonth, project.startYear);
+  const endLabel = formatProjectMonthYear(project.endMonth, project.endYear);
+  const fallback = (project.period || "").trim();
+
+  if (!startLabel) return fallback;
+  if (project.isCurrent) return `${startLabel} - nåværende`;
+  if (endLabel) return `${startLabel} - ${endLabel}`;
+  return startLabel;
+}
+
+function getProjectKey(project: ProjectEntry) {
+  const formattedPeriod = formatProjectPeriod(project);
+  return [
+    project.company,
+    project.subtitle,
+    formattedPeriod,
+    project.role,
+    project.paragraphs.length.toString(),
+    project.technologies,
+  ]
+    .map((part) => (part || "").trim())
+    .join("::");
+}
+
+function getAdditionalSectionKey(section: AdditionalSection) {
+  return [section.title, section.format, section.items.map((item) => `${item.period}::${item.primary}`).join("||")]
+    .map((part) => (part || "").trim())
+    .join("::");
+}
+
+function splitParagraphForFlow(text: string, targetChars = 220) {
+  const trimmed = text.trim();
+  void targetChars;
+  // Keep original paragraphs atomic in the paginator. This matches the editor
+  // model better and avoids false whitespace caused by measuring synthetic chunks.
+  return [trimmed];
+}
+
+function buildProjectFragments(project: ProjectEntry): ProjectFragment[] {
+  const fragments: ProjectFragment[] = [];
+  const projectKey = getProjectKey(project);
+  const formattedPeriod = formatProjectPeriod(project);
+  const baseMeta = {
+    projectKey,
+    company: project.company,
+    subtitle: project.subtitle,
+    role: project.role,
+    period: formattedPeriod,
+  };
+
+  if (project.paragraphs.length === 0) {
+    fragments.push({
+      key: `${projectKey}-chunk-header`,
+      showHeader: true,
+      forcePageBreakBefore: Boolean(project.pageBreakBefore),
+      ...baseMeta,
+      paragraphs: [],
+      spacingAfterMm: project.technologies ? 0 : PROJECT_BLOCK_MARGIN_BOTTOM_MM,
+    });
+
+    if (project.technologies) {
+      fragments.push({
+        key: `${projectKey}-chunk-technologies`,
+        showHeader: false,
+        ...baseMeta,
+        paragraphs: [],
+        technologies: project.technologies,
+        spacingAfterMm: PROJECT_BLOCK_MARGIN_BOTTOM_MM,
+      });
+    }
+
+    return fragments;
+  }
+
+  project.paragraphs.forEach((paragraph, paragraphIndex) => {
+    const segments = splitParagraphForFlow(paragraph);
+    segments.forEach((segment, segmentIndex) => {
+      const isFirstChunk = paragraphIndex === 0 && segmentIndex === 0;
+      const isLastSegmentOfParagraph = segmentIndex === segments.length - 1;
+      const isLastParagraph = paragraphIndex === project.paragraphs.length - 1;
+      const isLastChunkOfProject = isLastParagraph && isLastSegmentOfParagraph;
+
+      fragments.push({
+        key: `${projectKey}-chunk-${paragraphIndex + 1}-${segmentIndex + 1}`,
+        showHeader: isFirstChunk,
+        forcePageBreakBefore: isFirstChunk ? Boolean(project.pageBreakBefore) : false,
+        ...baseMeta,
+        paragraphs: [{ text: segment, endsParagraph: isLastSegmentOfParagraph }],
+        spacingAfterMm: isLastChunkOfProject && !project.technologies ? PROJECT_BLOCK_MARGIN_BOTTOM_MM : 0,
+      });
+    });
+  });
+
+  if (project.technologies) {
+    fragments.push({
+      key: `${projectKey}-chunk-technologies`,
+      showHeader: false,
+      ...baseMeta,
+      paragraphs: [],
+      technologies: project.technologies,
+      spacingAfterMm: PROJECT_BLOCK_MARGIN_BOTTOM_MM,
+    });
+  }
+
+  return fragments;
+}
+
+function buildAdditionalSectionFragments(section: AdditionalSection): AdditionalSectionFragment[] {
+  const sectionKey = getAdditionalSectionKey(section);
+
+  if (section.items.length === 0) {
+    return [
+      {
+        key: `${sectionKey}-empty`,
+        sectionKey,
+        title: section.title,
+        format: section.format,
+        items: [],
+        spacingAfterMm: PROJECT_BLOCK_MARGIN_BOTTOM_MM,
+      },
+    ];
+  }
+
+  return section.items.map((item, index) => ({
+    key: `${sectionKey}-row-${index + 1}`,
+    sectionKey,
+    title: section.title,
+    format: section.format,
+    items: [item],
+    spacingAfterMm: index === section.items.length - 1 ? PROJECT_BLOCK_MARGIN_BOTTOM_MM : 0,
+  }));
+}
+
+function mergeProjectFragmentsForPage(fragments: ProjectFragment[]) {
+  const merged: ProjectFragment[] = [];
+
+  for (const fragment of fragments) {
+    const previous = merged[merged.length - 1];
+    const canMerge =
+      previous && previous.projectKey === fragment.projectKey && !fragment.showHeader && !previous.technologies;
+
+    if (!canMerge) {
+      merged.push({
+        ...fragment,
+        paragraphs: [...fragment.paragraphs],
+      });
+      continue;
+    }
+
+    previous.paragraphs = [...previous.paragraphs, ...fragment.paragraphs];
+    previous.technologies = fragment.technologies ?? previous.technologies;
+    previous.spacingAfterMm = fragment.spacingAfterMm ?? previous.spacingAfterMm;
+  }
+
+  return merged;
+}
+
+function mergeAdditionalSectionFragmentsForPage(fragments: AdditionalSectionFragment[]) {
+  const merged: AdditionalSectionFragment[] = [];
+
+  for (const fragment of fragments) {
+    const previous = merged[merged.length - 1];
+    const canMerge = previous && previous.sectionKey === fragment.sectionKey;
+
+    if (!canMerge) {
+      merged.push({
+        ...fragment,
+        items: [...fragment.items],
+      });
+      continue;
+    }
+
+    previous.items = [...previous.items, ...fragment.items];
+    previous.spacingAfterMm = fragment.spacingAfterMm ?? previous.spacingAfterMm;
+  }
+
+  return merged;
+}
+
+function reconstructParagraphs(chunks: ProjectParagraphChunk[]) {
+  const paragraphs: string[] = [];
+  let current = "";
+
+  for (const chunk of chunks) {
+    current = current ? `${current} ${chunk.text}` : chunk.text;
+    if (chunk.endsParagraph) {
+      paragraphs.push(current);
+      current = "";
+    }
+  }
+
+  if (current) paragraphs.push(current);
+  return paragraphs;
+}
+
+// ═══════════════════════════════════════
+// Pagination
+// ═══════════════════════════════════════
+
+type ContinuationSectionId = "education" | "work";
+
+type FlowBlock =
+  | {
+      key: string;
+      kind: "intro";
+      text: string;
+    }
+  | {
+      key: string;
+      kind: "competence";
+      label: string;
+      content: string;
+    };
+
+type ProjectParagraphChunk = {
+  text: string;
+  endsParagraph: boolean;
+};
+
+type ProjectFragment = {
+  key: string;
+  projectKey: string;
+  showHeader: boolean;
+  forcePageBreakBefore?: boolean;
+  company: string;
+  subtitle: string;
+  role: string;
+  period: string;
+  paragraphs: ProjectParagraphChunk[];
+  technologies?: string;
+  spacingAfterMm?: number;
+};
+
+type AdditionalSectionFragment = {
+  key: string;
+  sectionKey: string;
+  title: AdditionalSectionTitle;
+  format: AdditionalSectionFormat;
+  items: AdditionalSectionItem[];
+  spacingAfterMm?: number;
+};
+
+type ContinuationPageModel = {
+  key: string;
+  projects: ProjectFragment[];
+  additionalSections: AdditionalSectionFragment[];
+  sections: ContinuationSectionId[];
+};
+
+function buildContinuationPages({
+  flowBlocks,
+  flowHeights,
+  firstPageAvailableHeight,
+  projectFragments,
+  projectFragmentHeights,
+  additionalSectionFragments,
+  additionalSectionFragmentHeights,
+  projectFitSafety,
+  projectsTitleTopHeight,
+  projectsTitleAfterHeight,
+  additionalSectionTitleTopHeight,
+  additionalSectionTitleAfterHeight,
+  educationTopHeight,
+  educationAfterHeight,
+  workTopHeight,
+  workAfterHeight,
+  continuationAvailableHeight,
+  bottomBuffer,
+}: {
+  flowBlocks: FlowBlock[];
+  flowHeights: number[];
+  firstPageAvailableHeight: number;
+  projectFragments: ProjectFragment[][];
+  projectFragmentHeights: number[][];
+  additionalSectionFragments: AdditionalSectionFragment[][];
+  additionalSectionFragmentHeights: number[][];
+  projectFitSafety: number;
+  projectsTitleTopHeight: number;
+  projectsTitleAfterHeight: number;
+  additionalSectionTitleTopHeight: number;
+  additionalSectionTitleAfterHeight: number;
+  educationTopHeight: number;
+  educationAfterHeight: number;
+  workTopHeight: number;
+  workAfterHeight: number;
+  continuationAvailableHeight: number;
+  bottomBuffer: number;
+}): { firstPageFlowBlocks: FlowBlock[]; continuationPages: ContinuationPageModel[] } {
+  const firstPageCapacity = Math.max(firstPageAvailableHeight - bottomBuffer, 0);
+  const continuationCapacity = Math.max(continuationAvailableHeight - bottomBuffer, 0);
+
+  const firstPageFlowBlocks: FlowBlock[] = [];
+  let firstPageUsed = 0;
+
+  for (let index = 0; index < flowBlocks.length; index += 1) {
+    const blockHeight = flowHeights[index];
+    const canFit = firstPageUsed + blockHeight <= firstPageCapacity;
+    if (index > 0 && !canFit) {
+      break;
+    }
+    firstPageFlowBlocks.push(flowBlocks[index]);
+    firstPageUsed += blockHeight;
+  }
+
+  type MutablePageModel = {
+    key: string;
+    projects: ProjectFragment[];
+    additionalSections: AdditionalSectionFragment[];
+    sections: ContinuationSectionId[];
+    usedHeight: number;
+  };
+
+  const models: MutablePageModel[] = [];
+  let projectsTitlePlaced = false;
+
+  const ensurePage = () => {
+    let current = models[models.length - 1];
+    if (!current) {
+      current = {
+        key: `continuation-${models.length + 1}`,
+        projects: [],
+        additionalSections: [],
+        sections: [],
+        usedHeight: 0,
+      };
+      models.push(current);
+    }
+    return current;
+  };
+
+  const startNewPage = () => {
+    const next: MutablePageModel = {
+      key: `continuation-${models.length + 1}`,
+      projects: [],
+      additionalSections: [],
+      sections: [],
+      usedHeight: 0,
+    };
+    models.push(next);
+    return next;
+  };
+
+  const addProjectFragment = (fragment: ProjectFragment, height: number) => {
+    let page = ensurePage();
+    const titleHeight =
+      !projectsTitlePlaced && page.projects.length === 0 && page.usedHeight === 0 ? projectsTitleTopHeight : 0;
+    if (page.usedHeight > 0 && page.usedHeight + titleHeight + height + projectFitSafety > continuationCapacity) {
+      page = startNewPage();
+    }
+    const appliedTitleHeight =
+      !projectsTitlePlaced && page.projects.length === 0 && page.usedHeight === 0 ? projectsTitleTopHeight : 0;
+    page.projects.push(fragment);
+    page.usedHeight += appliedTitleHeight + height;
+    if (appliedTitleHeight > 0) projectsTitlePlaced = true;
+  };
+
+  const addAdditionalSectionFragment = (fragment: AdditionalSectionFragment, height: number) => {
+    let page = ensurePage();
+    const pageHasSection = page.additionalSections.some((entry) => entry.sectionKey === fragment.sectionKey);
+    const titleHeight = pageHasSection
+      ? 0
+      : page.usedHeight === 0
+        ? additionalSectionTitleTopHeight
+        : additionalSectionTitleAfterHeight;
+
+    if (page.usedHeight > 0 && page.usedHeight + titleHeight + height > continuationCapacity) {
+      page = startNewPage();
+    }
+
+    const pageHasSectionAfterBreak = page.additionalSections.some((entry) => entry.sectionKey === fragment.sectionKey);
+    const appliedTitleHeight = pageHasSectionAfterBreak
+      ? 0
+      : page.usedHeight === 0
+        ? additionalSectionTitleTopHeight
+        : additionalSectionTitleAfterHeight;
+
+    page.additionalSections.push(fragment);
+    page.usedHeight += appliedTitleHeight + height;
+  };
+
+  const addSection = (sectionId: ContinuationSectionId, topHeight: number, afterHeight: number) => {
+    let page = ensurePage();
+    const sectionHeight = page.usedHeight === 0 ? topHeight : afterHeight;
+    if (page.usedHeight > 0 && page.usedHeight + sectionHeight > continuationCapacity) {
+      page = startNewPage();
+    }
+    const appliedHeight = page.usedHeight === 0 ? topHeight : afterHeight;
+    page.sections.push(sectionId);
+    page.usedHeight += appliedHeight;
+  };
+
+  const projectChunks = projectFragments.flatMap((fragments, projectIndex) =>
+    fragments.map((fragment, fragmentIndex) => ({
+      fragment,
+      height: projectFragmentHeights[projectIndex]?.[fragmentIndex] ?? 0,
+    })),
+  );
+
+  for (const chunk of projectChunks) {
+    let page = ensurePage();
+    if (chunk.fragment.forcePageBreakBefore && page.usedHeight > 0) {
+      page = startNewPage();
+    }
+    const titleHeight =
+      !projectsTitlePlaced && page.projects.length === 0 && page.usedHeight === 0 ? projectsTitleTopHeight : 0;
+
+    if (page.usedHeight > 0 && page.usedHeight + titleHeight + chunk.height + projectFitSafety > continuationCapacity) {
+      page = startNewPage();
+    }
+
+    addProjectFragment(chunk.fragment, chunk.height);
+  }
+
+  const additionalChunks = additionalSectionFragments.flatMap((fragments, sectionIndex) =>
+    fragments.map((fragment, fragmentIndex) => ({
+      fragment,
+      height: additionalSectionFragmentHeights[sectionIndex]?.[fragmentIndex] ?? 0,
+    })),
+  );
+
+  for (const chunk of additionalChunks) {
+    addAdditionalSectionFragment(chunk.fragment, chunk.height);
+  }
+
+  addSection("education", educationTopHeight, educationAfterHeight);
+  addSection("work", workTopHeight, workAfterHeight);
+
+  return {
+    firstPageFlowBlocks,
+    continuationPages: models.map((page) => ({
+      key: page.key,
+      projects: page.projects,
+      additionalSections: page.additionalSections,
+      sections: page.sections,
+    })),
+  };
+}
+
+// ═══════════════════════════════════════
+// Sub-components
+// ═══════════════════════════════════════
+
+export function SectionTitle({ children, marginTop = "6mm" }: { children: string; marginTop?: string }) {
   return (
-    <div ref={setNodeRef} style={style} className="flex items-start gap-1">
-      <button
-        {...attributes}
-        {...listeners}
-        className="mt-3 p-1 cursor-grab text-muted-foreground hover:text-foreground shrink-0"
+    <div style={{ display: "flex", alignItems: "center", gap: "3mm", marginTop, marginBottom: "3mm" }}>
+      <div
+        style={{
+          fontFamily:
+            '"Myriad Pro Light", "Arial Narrow", "Avenir Next Condensed", "Helvetica Neue", Arial, sans-serif',
+          fontSize: "13.1pt",
+          fontWeight: 700,
+          letterSpacing: "0.012em",
+          textTransform: "uppercase",
+          color: "#101010",
+          whiteSpace: "nowrap",
+        }}
       >
-        <GripVertical className="h-4 w-4" />
-      </button>
-      <div className="flex-1 min-w-0">{children}</div>
+        {children}
+      </div>
+      <div style={{ flex: 1, height: "1px", background: "#bfc2c5" }} />
     </div>
   );
 }
 
-const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
-const CLEAR_SELECT = "__none__";
-const CURRENT_YEAR = new Date().getFullYear();
-const PROJECT_YEAR_OPTIONS = Array.from({ length: CURRENT_YEAR - 1977 }, (_, index) => CURRENT_YEAR + 2 - index);
-const CONTACT_PERSON_PRESETS = {
-  jon_richard: {
-    title: "Kontaktperson",
-    name: "Jon Richard Nygaard",
-    phone: "932 87 267",
-    email: "jr@stacq.no",
-  },
-  thomas_eriksen: {
-    title: "Kontaktperson",
-    name: "Thomas Eriksen",
-    phone: "97 500 321",
-    email: "thomas@stacq.no",
-  },
-} as const;
-
-function normalizeProjectDateValue(value: string) {
-  if (value === CLEAR_SELECT) return null;
-  const parsed = Number(value);
-  return Number.isInteger(parsed) ? parsed : null;
-}
-
-function syncProjectPeriod(project: ProjectEntry): ProjectEntry {
-  const formattedPeriod = formatProjectPeriod({ ...project, period: "" });
-  return { ...project, period: formattedPeriod || project.period || "" };
-}
-
-function getSelectedContactPresetId(contact: CVDocument["hero"]["contact"]) {
-  const entry = Object.entries(CONTACT_PERSON_PRESETS).find(([, preset]) => {
-    return (
-      preset.title === contact.title &&
-      preset.name === contact.name &&
-      preset.phone === contact.phone &&
-      preset.email === contact.email
-    );
-  });
-
-  return entry?.[0] ?? CLEAR_SELECT;
-}
-
-function createAdditionalSection(format: AdditionalSection["format"]): AdditionalSection {
-  return {
-    title: ADDITIONAL_SECTION_TITLE_OPTIONS[0],
-    format,
-    items: [{ period: "", primary: "" }],
-  };
-}
-
-function PortraitFocalPicker({
-  imageUrl,
-  position,
-  onChange,
+function Sidebar({
+  sections,
+  transparentBackground = false,
 }: {
-  imageUrl: string;
-  position: string;
-  onChange: (pos: string) => void;
+  sections: SidebarSection[];
+  transparentBackground?: boolean;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dragging, setDragging] = useState(false);
-
-  const [xPct, yPct] = useMemo(() => {
-    const parts = position.split(/\s+/).map((s) => parseFloat(s));
-    return [isNaN(parts[0]) ? 50 : parts[0], isNaN(parts[1]) ? 50 : parts[1]];
-  }, [position]);
-
-  const handlePointer = useCallback(
-    (e: React.PointerEvent | PointerEvent) => {
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
-      const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
-      onChange(`${Math.round(x)}% ${Math.round(y)}%`);
-    },
-    [onChange],
-  );
-
-  useEffect(() => {
-    if (!dragging) return;
-    const move = (e: PointerEvent) => handlePointer(e);
-    const up = () => setDragging(false);
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    return () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-    };
-  }, [dragging, handlePointer]);
-
   return (
-    <div className="flex flex-col items-start gap-1">
+    <div style={{ ...leftRailStyle, background: transparentBackground ? "transparent" : leftRailStyle.background }}>
+      {sections.map((section) => (
+        <div key={section.heading} style={{ marginBottom: "5.8mm" }}>
+          <div
+            style={{
+              fontWeight: 800,
+              fontSize: "11.3pt",
+              textTransform: "uppercase",
+              letterSpacing: "0.04em",
+              marginBottom: "2.2mm",
+              color: "#fff",
+              fontFamily: '"Myriad Pro Light", "Avenir Next Condensed", "Helvetica Neue", Arial, sans-serif',
+            }}
+          >
+            {section.heading}
+          </div>
+          {section.items.map((item) => (
+            <div key={item} style={{ display: "flex", gap: "1.8mm", marginBottom: "1.05mm" }}>
+              <span style={{ flexShrink: 0, color: "rgba(255,255,255,0.7)" }}>•</span>
+              <span>{item}</span>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EmptySidebar({ imageUrl, portraitPosition }: { imageUrl?: string; portraitPosition?: string }) {
+  return (
+    <div style={{ background: "#000", position: "relative" }}>
       <div
-        ref={containerRef}
-        className="relative w-[160px] h-[100px] rounded-md border border-border overflow-hidden cursor-move select-none"
-        onPointerDown={(e) => {
-          setDragging(true);
-          handlePointer(e);
-          e.preventDefault();
+        style={{
+          position: "absolute",
+          top: mm(CV_LAYOUT.hero.topRowHeightMm),
+          left: 0,
+          width: mm(CV_LAYOUT.sidebarWidthMm),
+          height: mm(CV_LAYOUT.hero.grayBandHeightMm),
+          background: "#f2f2f2",
         }}
-      >
-        <img src={imageUrl} alt="" className="w-full h-full object-cover pointer-events-none" draggable={false} />
-        {/* Crosshair */}
-        <div
-          className="absolute w-5 h-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-md pointer-events-none"
+      />
+      <Portrait
+        topMm={CV_LAYOUT.hero.continuationPortraitTopMm}
+        imageUrl={imageUrl}
+        portraitPosition={portraitPosition}
+      />
+    </div>
+  );
+}
+
+function LogoMark() {
+  return (
+    <img
+      src="/STACQ_logo_black.png"
+      alt="STACQ"
+      style={{ width: mm(39.3), display: "block", filter: "brightness(0) invert(1)" }}
+    />
+  );
+}
+
+function Portrait({
+  topMm,
+  imageUrl,
+  portraitPosition,
+}: {
+  topMm: number;
+  imageUrl?: string;
+  portraitPosition?: string;
+}) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: mm(topMm),
+        left: mm(CV_LAYOUT.hero.portraitLeftMm),
+        width: mm(CV_LAYOUT.hero.portraitWidthMm),
+        height: mm(CV_LAYOUT.hero.portraitHeightMm),
+        overflow: "hidden",
+        background: "#000",
+        zIndex: 2,
+      }}
+    >
+      {imageUrl && (
+        <img
+          src={imageUrl}
+          alt=""
           style={{
-            left: `${xPct}%`,
-            top: `${yPct}%`,
-            background: "rgba(255,255,255,0.3)",
-            boxShadow: "0 0 0 1px rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.3)",
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: portraitPosition || "50% 50%",
+            display: "block",
           }}
         />
-        <Move className="absolute bottom-1 right-1 h-3 w-3 text-white/70 pointer-events-none" />
+      )}
+    </div>
+  );
+}
+
+function ContactBlock({ contact }: { contact: HeroContact }) {
+  const hasVisibleContent = [contact.title, contact.name, contact.phone, contact.email].some((value) => value.trim());
+  if (!hasVisibleContent) return null;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: 0,
+        right: mm(CV_LAYOUT.hero.contactRightMm),
+        height: mm(CV_LAYOUT.hero.contactHeightMm),
+        display: "flex",
+        alignItems: "center",
+        zIndex: 2,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: px(12), fontFamily: '"Verdana", Arial, sans-serif' }}>
+        <div
+          style={{
+            width: "1.15px",
+            height: mm(CV_LAYOUT.hero.contactSeparatorHeightMm),
+            marginTop: mm(CV_LAYOUT.hero.contactSeparatorOffsetMm),
+            background: "#d5d5d5",
+            flexShrink: 0,
+          }}
+        />
+        <div
+          style={{ width: mm(CV_LAYOUT.hero.contactWidthMm), fontSize: pt(9.3), lineHeight: 1.28, color: "#848484" }}
+        >
+          <div style={{ fontWeight: 700, fontSize: pt(9.4), color: "#767676", marginBottom: "0.7mm" }}>
+            {contact.title}
+          </div>
+          <div style={{ color: "#7e7e7e" }}>{contact.name}</div>
+          <div style={{ whiteSpace: "nowrap" }}>{contact.phone}</div>
+          <div style={{ whiteSpace: "nowrap" }}>{contact.email}</div>
+        </div>
       </div>
-      <span className="text-[0.6875rem] text-muted-foreground">
-        Dra for å justere · {Math.round(xPct)}% {Math.round(yPct)}%
+    </div>
+  );
+}
+
+function ProjectBlockHeader({
+  company,
+  subtitle,
+  role,
+  period,
+}: Pick<ProjectEntry, "company" | "subtitle" | "role" | "period">) {
+  return (
+    <>
+      <div
+        style={{ fontWeight: 700, fontSize: "9.9pt", color: "#111", letterSpacing: "0.006em", marginBottom: "1.8mm" }}
+      >
+        {company}
+      </div>
+      <div style={{ fontWeight: 600, fontSize: "9.6pt", marginBottom: "2.9mm", color: "#242424", lineHeight: 1.28 }}>
+        {subtitle}
+      </div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "baseline",
+          gap: "6mm",
+          fontSize: "8.8pt",
+          color: "#666",
+          marginBottom: "3.1mm",
+        }}
+      >
+        <span style={{ color: "#4f4f4f" }}>{role}</span>
+        <span style={{ flexShrink: 0, color: "#4f4f4f" }}>{period}</span>
+      </div>
+    </>
+  );
+}
+
+function TechnologiesLine({ technologies }: { technologies: string }) {
+  return (
+    <p style={{ margin: "1.2mm 0 0 0", lineHeight: 1.42, color: "#1f1f1f" }}>
+      <strong>Teknologier:</strong> {technologies}
+    </p>
+  );
+}
+
+export function ProjectBlock({
+  showHeader = true,
+  company,
+  subtitle,
+  role,
+  period,
+  paragraphs,
+  technologies,
+  spacingAfterMm = PROJECT_BLOCK_MARGIN_BOTTOM_MM,
+}: Omit<ProjectEntry, "paragraphs" | "technologies"> & {
+  paragraphs: ProjectParagraphChunk[];
+  technologies?: string;
+  showHeader?: boolean;
+  spacingAfterMm?: number;
+}) {
+  const reconstructedParagraphs = reconstructParagraphs(paragraphs);
+
+  return (
+    <div className="cv-project-block" style={{ marginBottom: mm(spacingAfterMm) }}>
+      {showHeader ? <ProjectBlockHeader company={company} subtitle={subtitle} role={role} period={period} /> : null}
+      {reconstructedParagraphs.map((paragraph, i) => (
+        <p key={i} style={{ margin: "0 0 2.35mm 0", lineHeight: 1.36 }}>
+          {paragraph}
+        </p>
+      ))}
+      {technologies ? <TechnologiesLine technologies={technologies} /> : null}
+    </div>
+  );
+}
+
+function TimelineRow({
+  period,
+  primary,
+  secondary,
+  marginBottom = "2.5mm",
+}: {
+  period: string;
+  primary: string;
+  secondary?: string;
+  marginBottom?: string;
+}) {
+  return (
+    <div style={{ display: "flex", gap: "7mm", marginBottom, alignItems: "flex-start" }}>
+      <span
+        style={{
+          minWidth: "29mm",
+          flexShrink: 0,
+          color: "#3d3d3d",
+          fontSize: "9.4pt",
+          lineHeight: 1.3,
+          fontVariantNumeric: "tabular-nums",
+          letterSpacing: "0.01em",
+        }}
+      >
+        {period}
+      </span>
+      <span style={{ display: "flex", flexDirection: "column", gap: "0.55mm" }}>
+        <span style={{ fontSize: "9.8pt", lineHeight: 1.28, color: "#202020", fontWeight: 600 }}>{primary}</span>
+        {secondary ? <span style={{ fontSize: "9.2pt", lineHeight: 1.28, color: "#555" }}>{secondary}</span> : null}
       </span>
     </div>
   );
 }
 
-export function CvEditorPanel({
-  cvData: initialData,
-  onSave,
-  savedBy,
-  imageUrl,
-  headerLabel,
-  toolbarStart,
-  toolbarEnd,
-  onDownloadPdf,
-  renderToolbar,
-}: CvEditorPanelProps) {
-  const [doc, setDoc] = useState<CVDocument>(initialData);
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
-  const [portraitUploading, setPortraitUploading] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
-  const splitLayoutRef = useRef<HTMLDivElement>(null);
-  const previewContainerRef = useRef<HTMLDivElement>(null);
-  const portraitInputRef = useRef<HTMLInputElement>(null);
-  const [previewScale, setPreviewScale] = useState(0.5);
-  const [pendingDeletes, setPendingDeletes] = useState<Record<string, ReturnType<typeof setTimeout>>>({});
-  const [editorWidth, setEditorWidth] = useState(480);
-  const [isResizingEditor, setIsResizingEditor] = useState(false);
-  const [expandedAdditionalSection, setExpandedAdditionalSection] = useState<string>("");
-  const resizeBoundsRef = useRef({ right: 0, width: 0 });
-
-  const EDITOR_MIN_WIDTH = 440;
-  const EDITOR_MAX_WIDTH = 860;
-  const PREVIEW_MIN_WIDTH = 420;
-
-  // Sync if initialData changes externally (e.g. version restore)
-  useEffect(() => {
-    setDoc(initialData);
-  }, [initialData]);
-
-  // Compute preview scale
-  useEffect(() => {
-    const container = previewContainerRef.current;
-    if (!container) return;
-    const observer = new ResizeObserver((entries) => {
-      const width = entries[0]?.contentRect.width || 600;
-      // A4 in mm = 210mm, in px at 96dpi ≈ 793px
-      setPreviewScale(Math.min(width / 793, 1));
-    });
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!isResizingEditor) return;
-
-    const handlePointerMove = (event: PointerEvent) => {
-      const { right, width } = resizeBoundsRef.current;
-      if (width <= 0) return;
-
-      const maxWidth = Math.min(EDITOR_MAX_WIDTH, Math.max(EDITOR_MIN_WIDTH, width - PREVIEW_MIN_WIDTH));
-      const nextWidth = Math.max(EDITOR_MIN_WIDTH, Math.min(maxWidth, right - event.clientX));
-      setEditorWidth(nextWidth);
-    };
-
-    const stopResize = () => {
-      setIsResizingEditor(false);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", stopResize);
-    window.addEventListener("pointercancel", stopResize);
-
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", stopResize);
-      window.removeEventListener("pointercancel", stopResize);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-  }, [isResizingEditor]);
-
-  // Autosave debounce
-  const scheduleAutosave = useCallback(
-    (newDoc: CVDocument) => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(async () => {
-        setSaveStatus("saving");
-        try {
-          await onSave(newDoc, savedBy);
-          setSaveStatus("saved");
-          setTimeout(() => setSaveStatus("idle"), 2000);
-        } catch {
-          setSaveStatus("idle");
-        }
-      }, 2000);
-    },
-    [onSave, savedBy],
+function AdditionalSectionBulletRow({ primary, marginBottom = "2.8mm" }: { primary: string; marginBottom?: string }) {
+  return (
+    <div style={{ display: "flex", gap: "3.8mm", marginBottom, alignItems: "flex-start" }}>
+      <span
+        style={{
+          width: "3.6mm",
+          flexShrink: 0,
+          color: "#3d3d3d",
+          fontSize: "12pt",
+          lineHeight: 1,
+          textAlign: "center",
+          paddingTop: "0.35mm",
+        }}
+      >
+        •
+      </span>
+      <span style={{ fontSize: "9.8pt", lineHeight: 1.28, color: "#202020", fontWeight: 600, flex: 1 }}>{primary}</span>
+    </div>
   );
+}
 
-  const update = useCallback(
-    (updater: (prev: CVDocument) => CVDocument) => {
-      setDoc((prev) => {
-        const next = updater(prev);
-        scheduleAutosave(next);
-        return next;
-      });
-    },
-    [scheduleAutosave],
+function AdditionalSectionRows({ format, items }: { format: AdditionalSectionFormat; items: AdditionalSectionItem[] }) {
+  return (
+    <>
+      {items.map((item, index) =>
+        format === "bullet" ? (
+          <AdditionalSectionBulletRow key={`${item.primary}-${index}`} primary={item.primary} marginBottom="2.8mm" />
+        ) : (
+          <TimelineRow
+            key={`${item.period}-${item.primary}-${index}`}
+            period={item.period}
+            primary={item.primary}
+            marginBottom="2.6mm"
+          />
+        ),
+      )}
+    </>
   );
+}
 
-  const scheduleDelete = useCallback(
-    (key: string, label: string, applyDelete: (prev: CVDocument) => CVDocument) => {
-      const toastId = `delete-${key}-${Date.now()}`;
-      let undone = false;
-
-      const timerId = setTimeout(() => {
-        if (!undone) {
-          update(applyDelete);
-        }
-        setPendingDeletes((prev) => {
-          const next = { ...prev };
-          delete next[toastId];
-          return next;
-        });
-      }, 10000);
-
-      setPendingDeletes((prev) => ({ ...prev, [toastId]: timerId }));
-
-      toast(`${label} slettes om 10 sekunder`, {
-        id: toastId,
-        duration: 10000,
-        action: {
-          label: "Angre",
-          onClick: () => {
-            undone = true;
-            clearTimeout(timerId);
-            setPendingDeletes((prev) => {
-              const next = { ...prev };
-              delete next[toastId];
-              return next;
-            });
-            toast.dismiss(toastId);
-          },
-        },
-      });
-    },
-    [update],
+function AdditionalSectionBlock({
+  title,
+  format,
+  items,
+  showTitle = true,
+  marginTop = "6mm",
+  spacingAfterMm = PROJECT_BLOCK_MARGIN_BOTTOM_MM,
+}: {
+  title: AdditionalSectionTitle;
+  format: AdditionalSectionFormat;
+  items: AdditionalSectionItem[];
+  showTitle?: boolean;
+  marginTop?: string;
+  spacingAfterMm?: number;
+}) {
+  return (
+    <div style={{ marginBottom: mm(spacingAfterMm) }}>
+      {showTitle ? <SectionTitle marginTop={marginTop}>{title}</SectionTitle> : null}
+      <AdditionalSectionRows format={format} items={items} />
+    </div>
   );
+}
 
-  const updateProjectAt = useCallback(
-    (projectIndex: number, updater: (project: ProjectEntry) => ProjectEntry) => {
-      update((prev) => {
-        const projects = [...prev.projects];
-        projects[projectIndex] = syncProjectPeriod(updater(projects[projectIndex]));
-        return { ...prev, projects };
-      });
-    },
-    [update],
+function EducationSection({ education, marginTop = "6mm" }: { education: TimelineEntry[]; marginTop?: string }) {
+  return (
+    <>
+      <SectionTitle marginTop={marginTop}>Utdannelse</SectionTitle>
+      {education.map((entry, i) => (
+        <TimelineRow
+          key={i}
+          period={entry.period}
+          primary={entry.primary}
+          secondary={entry.secondary}
+          marginBottom="3.4mm"
+        />
+      ))}
+    </>
   );
+}
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+function WorkExperienceSection({
+  workExperience,
+  marginTop = "6mm",
+}: {
+  workExperience: TimelineEntry[];
+  marginTop?: string;
+}) {
+  return (
+    <>
+      <SectionTitle marginTop={marginTop}>Arbeidserfaring</SectionTitle>
+      {workExperience.map((entry, i) => (
+        <TimelineRow key={i} period={entry.period} primary={entry.primary} marginBottom="2.6mm" />
+      ))}
+    </>
   );
+}
 
-  const handleProjectDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    update((prev) => {
-      const oldIndex = prev.projects.findIndex((_, i) => `project-${i}` === active.id);
-      const newIndex = prev.projects.findIndex((_, i) => `project-${i}` === over.id);
-      return { ...prev, projects: arrayMove(prev.projects, oldIndex, newIndex) };
-    });
-  };
-
-  const handleCompetenceDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    update((prev) => {
-      const oldIndex = prev.competenceGroups.findIndex((_, i) => `comp-${i}` === active.id);
-      const newIndex = prev.competenceGroups.findIndex((_, i) => `comp-${i}` === over.id);
-      return { ...prev, competenceGroups: arrayMove(prev.competenceGroups, oldIndex, newIndex) };
-    });
-  };
-
-  const handleAdditionalSectionDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    update((prev) => {
-      const oldIndex = prev.additionalSections.findIndex((_, i) => `additional-${i}` === active.id);
-      const newIndex = prev.additionalSections.findIndex((_, i) => `additional-${i}` === over.id);
-      return { ...prev, additionalSections: arrayMove(prev.additionalSections, oldIndex, newIndex) };
-    });
-  };
-
-  const setHero = (key: string, val: string) => update((p) => ({ ...p, hero: { ...p.hero, [key]: val } }));
-  const setHeroContact = (key: string, val: string) =>
-    update((p) => ({
-      ...p,
-      hero: { ...p.hero, contact: { ...p.hero.contact, [key]: val } },
-    }));
-
-  const handlePortraitUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setPortraitUploading(true);
-    try {
-      const ext = file.name.split(".").pop() || "png";
-      const path = `cv-portraits/${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("ansatte-bilder").upload(path, file, { upsert: true });
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from("ansatte-bilder").getPublicUrl(path);
-      update((p) => ({ ...p, hero: { ...p.hero, portrait_url: urlData.publicUrl } }));
-      toast.success("Bilde lastet opp");
-    } catch (err: any) {
-      toast.error("Kunne ikke laste opp bilde: " + (err.message || "Ukjent feil"));
-    } finally {
-      setPortraitUploading(false);
-      if (portraitInputRef.current) portraitInputRef.current.value = "";
-    }
-  };
-
-  const handleDownloadClick = async () => {
-    if (onDownloadPdf) {
-      await onDownloadPdf(doc);
-      return;
-    }
-
-    await openCvPrintDialog(doc.hero.name ? `CV - ${doc.hero.name} - STACQ` : "CV - STACQ");
-  };
-
-  const handleResizeStart = (event: React.PointerEvent<HTMLDivElement>) => {
-    const container = splitLayoutRef.current;
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    resizeBoundsRef.current = { right: rect.right, width: rect.width };
-    setIsResizingEditor(true);
-    event.preventDefault();
-  };
+function FlowBlockView({ block }: { block: FlowBlock }) {
+  if (block.kind === "intro") {
+    return <p style={{ margin: "0 0 3mm 0" }}>{block.text}</p>;
+  }
 
   return (
-    <div className="flex flex-col h-full bg-background">
-      {/* External toolbar if provided */}
-      {renderToolbar ? (
-        renderToolbar({ saveStatus, onDownload: handleDownloadClick })
-      ) : (
-        <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2 text-[0.8125rem]">
-            {toolbarStart}
-            {saveStatus === "saving" && (
-              <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                <span className="text-muted-foreground">Lagrer...</span>
-              </>
-            )}
-            {saveStatus === "saved" && (
-              <>
-                <Check className="h-3.5 w-3.5 text-emerald-600" />
-                <span className="text-emerald-600">Lagret</span>
-              </>
-            )}
-            {saveStatus === "idle" && <span className="text-muted-foreground">{headerLabel || "CV Editor"}</span>}
-          </div>
-          <div className="flex items-center gap-2">
-            {toolbarEnd}
-            <Button size="sm" variant="outline" onClick={handleDownloadClick}>
-              <Download className="h-3.5 w-3.5 mr-1" /> Last ned PDF
-            </Button>
-          </div>
-        </div>
-      )}
+    <p style={{ margin: "0 0 2.5mm 0" }}>
+      <strong>{block.label}:</strong> {block.content}
+    </p>
+  );
+}
 
-      <div ref={splitLayoutRef} className="flex flex-1 min-h-0">
-        {/* LEFT PANEL — Live Preview */}
-        <div ref={previewContainerRef} className="flex-1 min-w-0 overflow-y-auto bg-[#d7d7d7] p-4">
-          <CvRendererPreview doc={doc} imageUrl={doc.hero.portrait_url || imageUrl} scale={previewScale} />
-        </div>
+function ContinuationPage({
+  showProjectsTitle,
+  pageProjects,
+  pageAdditionalSections,
+  sections,
+  doc,
+  imageUrl,
+  portraitPosition,
+}: {
+  showProjectsTitle: boolean;
+  pageProjects: ProjectFragment[];
+  pageAdditionalSections: AdditionalSectionFragment[];
+  sections: ContinuationSectionId[];
+  doc: CVDocument;
+  imageUrl?: string;
+  portraitPosition?: string;
+}) {
+  const mergedProjects = mergeProjectFragmentsForPage(pageProjects);
+  const mergedAdditionalSections = mergeAdditionalSectionFragmentsForPage(pageAdditionalSections);
 
-        <div
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="Juster bredde på editor"
-          onPointerDown={handleResizeStart}
-          className={`shrink-0 w-2 cursor-col-resize touch-none transition-colors ${
-            isResizingEditor ? "bg-border" : "bg-transparent hover:bg-border/70"
-          }`}
-        />
-
-        {/* RIGHT PANEL — Editor */}
-        <div
-          style={{ width: `${editorWidth}px` }}
-          className="shrink-0 border-l border-border overflow-y-auto bg-background"
-        >
-          <div className="p-4 space-y-1">
-            <Accordion type="multiple" defaultValue={["profil", "prosjekter"]} className="space-y-0">
-              {/* PROFIL */}
-              <AccordionItem value="profil">
-                <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
-                  Profil
-                </AccordionTrigger>
-                <AccordionContent className="space-y-3 pt-2">
-                  <div>
-                    <label className={LABEL}>Navn</label>
-                    <Input
-                      value={doc.hero.name}
-                      onChange={(e) => setHero("name", e.target.value)}
-                      className="mt-1 text-[0.875rem]"
-                    />
-                  </div>
-                  <div>
-                    <label className={LABEL}>Profilbilde</label>
-                    <div className="flex flex-col gap-2 mt-1">
-                      <button
-                        onClick={() => portraitInputRef.current?.click()}
-                        disabled={portraitUploading}
-                        className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.75rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50 self-start"
-                      >
-                        {portraitUploading ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Upload className="h-3.5 w-3.5" />
-                        )}
-                        {portraitUploading ? "Laster opp..." : "Last opp bilde"}
-                      </button>
-                      <input
-                        ref={portraitInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handlePortraitUpload}
-                      />
-                      {doc.hero.portrait_url && (
-                        <PortraitFocalPicker
-                          imageUrl={doc.hero.portrait_url}
-                          position={doc.hero.portrait_position || "50% 50%"}
-                          onChange={(pos) => update((p) => ({ ...p, hero: { ...p.hero, portrait_position: pos } }))}
-                        />
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <label className={LABEL}>Tittel / ingress</label>
-                    <Input
-                      value={doc.hero.title}
-                      onChange={(e) => setHero("title", e.target.value)}
-                      className="mt-1 text-[0.875rem]"
-                    />
-                  </div>
-                  {/* Intro paragraphs */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className={LABEL}>Intro-avsnitt</label>
-                      <button
-                        onClick={() => update((p) => ({ ...p, introParagraphs: [...p.introParagraphs, ""] }))}
-                        className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
-                      >
-                        <Plus className="h-3 w-3" /> Legg til
-                      </button>
-                    </div>
-                    {doc.introParagraphs.map((para, i) => (
-                      <div key={i} className="flex gap-1 mb-2">
-                        <Textarea
-                          value={para}
-                          rows={3}
-                          onChange={(e) =>
-                            update((p) => {
-                              const arr = [...p.introParagraphs];
-                              arr[i] = e.target.value;
-                              return { ...p, introParagraphs: arr };
-                            })
-                          }
-                          className="text-[0.8125rem]"
-                        />
-                        <button
-                          onClick={() =>
-                            scheduleDelete(`intro-${i}`, "Intro-avsnitt", (p) => ({
-                              ...p,
-                              introParagraphs: p.introParagraphs.filter((_, j) => j !== i),
-                            }))
-                          }
-                          className="text-muted-foreground hover:text-destructive shrink-0 p-1"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              {/* KOMPETANSEGRUPPER */}
-              <AccordionItem value="kompetanse">
-                <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
-                  Kompetansegrupper
-                </AccordionTrigger>
-                <AccordionContent className="space-y-2 pt-2">
-                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleCompetenceDragEnd}>
-                    <SortableContext
-                      items={doc.competenceGroups.map((_, i) => `comp-${i}`)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      {doc.competenceGroups.map((group, i) => (
-                        <SortableItem key={`comp-${i}`} id={`comp-${i}`}>
-                          <div className="border border-border rounded-lg p-3 bg-card space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Input
-                                value={group.label}
-                                placeholder="Label"
-                                onChange={(e) =>
-                                  update((p) => {
-                                    const arr = [...p.competenceGroups];
-                                    arr[i] = { ...arr[i], label: e.target.value };
-                                    return { ...p, competenceGroups: arr };
-                                  })
-                                }
-                                className="text-[0.8125rem] font-medium"
-                              />
-                              <button
-                                onClick={() =>
-                                  scheduleDelete(
-                                    `comp-${i}`,
-                                    `Kompetansegruppe "${doc.competenceGroups[i]?.label || i + 1}"`,
-                                    (p) => ({ ...p, competenceGroups: p.competenceGroups.filter((_, j) => j !== i) }),
-                                  )
-                                }
-                                className="text-muted-foreground hover:text-destructive shrink-0 p-1"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                            <Textarea
-                              value={group.content}
-                              rows={2}
-                              onChange={(e) =>
-                                update((p) => {
-                                  const arr = [...p.competenceGroups];
-                                  arr[i] = { ...arr[i], content: e.target.value };
-                                  return { ...p, competenceGroups: arr };
-                                })
-                              }
-                              className="text-[0.8125rem]"
-                            />
-                          </div>
-                        </SortableItem>
-                      ))}
-                    </SortableContext>
-                  </DndContext>
-                  <button
-                    onClick={() =>
-                      update((p) => ({ ...p, competenceGroups: [...p.competenceGroups, { label: "", content: "" }] }))
-                    }
-                    className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
-                  >
-                    <Plus className="h-3 w-3" /> Ny gruppe
-                  </button>
-                </AccordionContent>
-              </AccordionItem>
-
-              {/* PROSJEKTER */}
-              <AccordionItem value="prosjekter">
-                <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
-                  Prosjekter
-                </AccordionTrigger>
-                <AccordionContent className="space-y-2 pt-2">
-                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleProjectDragEnd}>
-                    <SortableContext
-                      items={doc.projects.map((_, i) => `project-${i}`)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      {doc.projects.map((project, i) => {
-                        const projectPeriodLabel = formatProjectPeriod(project);
-
-                        return (
-                          <SortableItem key={`project-${i}`} id={`project-${i}`}>
-                            <Accordion type="single" collapsible>
-                              <AccordionItem value={`proj-${i}`} className="border border-border rounded-lg bg-card">
-                                <AccordionTrigger className="px-3 py-2 text-[0.8125rem] font-medium">
-                                  {project.company || "Nytt prosjekt"} {projectPeriodLabel && `(${projectPeriodLabel})`}
-                                </AccordionTrigger>
-                                <AccordionContent className="px-3 pb-3 space-y-2">
-                                  <div>
-                                    <label className={LABEL}>Selskap</label>
-                                    <Input
-                                      value={project.company}
-                                      onChange={(e) =>
-                                        updateProjectAt(i, (current) => ({ ...current, company: e.target.value }))
-                                      }
-                                      className="mt-1 text-[0.8125rem]"
-                                    />
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div className="space-y-1">
-                                      <label className={LABEL}>Fra</label>
-                                      <div className="grid grid-cols-2 gap-2">
-                                        <Select
-                                          value={project.startMonth ? String(project.startMonth) : undefined}
-                                          onValueChange={(value) =>
-                                            updateProjectAt(i, (current) => ({
-                                              ...current,
-                                              startMonth: normalizeProjectDateValue(value),
-                                            }))
-                                          }
-                                        >
-                                          <SelectTrigger className="h-10 text-[0.8125rem]">
-                                            <SelectValue placeholder="Måned" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value={CLEAR_SELECT}>Ingen</SelectItem>
-                                            {PROJECT_MONTH_OPTIONS.map((month) => (
-                                              <SelectItem key={month.value} value={String(month.value)}>
-                                                {month.label}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                        <Select
-                                          value={project.startYear ? String(project.startYear) : undefined}
-                                          onValueChange={(value) =>
-                                            updateProjectAt(i, (current) => ({
-                                              ...current,
-                                              startYear: normalizeProjectDateValue(value),
-                                            }))
-                                          }
-                                        >
-                                          <SelectTrigger className="h-10 text-[0.8125rem]">
-                                            <SelectValue placeholder="År" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value={CLEAR_SELECT}>Ingen</SelectItem>
-                                            {PROJECT_YEAR_OPTIONS.map((year) => (
-                                              <SelectItem key={year} value={String(year)}>
-                                                {year}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                      </div>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className={LABEL}>Til</label>
-                                      <div className="grid grid-cols-2 gap-2">
-                                        <Select
-                                          value={
-                                            project.isCurrent
-                                              ? CLEAR_SELECT
-                                              : project.endMonth
-                                                ? String(project.endMonth)
-                                                : CLEAR_SELECT
-                                          }
-                                          onValueChange={(value) =>
-                                            updateProjectAt(i, (current) => ({
-                                              ...current,
-                                              isCurrent: false,
-                                              endMonth: normalizeProjectDateValue(value),
-                                            }))
-                                          }
-                                          disabled={Boolean(project.isCurrent)}
-                                        >
-                                          <SelectTrigger className="h-10 text-[0.8125rem]">
-                                            <SelectValue placeholder="Måned" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value={CLEAR_SELECT}>Ingen</SelectItem>
-                                            {PROJECT_MONTH_OPTIONS.map((month) => (
-                                              <SelectItem key={month.value} value={String(month.value)}>
-                                                {month.label}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                        <Select
-                                          value={
-                                            project.isCurrent
-                                              ? CLEAR_SELECT
-                                              : project.endYear
-                                                ? String(project.endYear)
-                                                : CLEAR_SELECT
-                                          }
-                                          onValueChange={(value) =>
-                                            updateProjectAt(i, (current) => ({
-                                              ...current,
-                                              isCurrent: false,
-                                              endYear: normalizeProjectDateValue(value),
-                                            }))
-                                          }
-                                          disabled={Boolean(project.isCurrent)}
-                                        >
-                                          <SelectTrigger className="h-10 text-[0.8125rem]">
-                                            <SelectValue placeholder="År" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value={CLEAR_SELECT}>Ingen</SelectItem>
-                                            {PROJECT_YEAR_OPTIONS.map((year) => (
-                                              <SelectItem key={year} value={String(year)}>
-                                                {year}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                      </div>
-                                      <div className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2">
-                                        <div className="text-[0.75rem] font-medium text-foreground">Nåværende</div>
-                                        <Switch
-                                          checked={Boolean(project.isCurrent)}
-                                          onCheckedChange={(checked) =>
-                                            updateProjectAt(i, (current) => ({
-                                              ...current,
-                                              isCurrent: checked,
-                                              endMonth: checked ? null : current.endMonth,
-                                              endYear: checked ? null : current.endYear,
-                                            }))
-                                          }
-                                        />
-                                      </div>
-                                    </div>
-                                  </div>
-                                  {!project.startMonth &&
-                                  !project.startYear &&
-                                  !project.endMonth &&
-                                  !project.endYear &&
-                                  !project.isCurrent &&
-                                  project.period ? (
-                                    <p className="text-[0.6875rem] text-muted-foreground">
-                                      Eksisterende periode: {project.period}. Velg{" "}
-                                      <span className="font-medium">Fra</span> og{" "}
-                                      <span className="font-medium">Til</span> for å strukturere den.
-                                    </p>
-                                  ) : null}
-                                  <div>
-                                    <label className={LABEL}>Undertittel</label>
-                                    <Input
-                                      value={project.subtitle}
-                                      onChange={(e) =>
-                                        updateProjectAt(i, (current) => ({ ...current, subtitle: e.target.value }))
-                                      }
-                                      className="mt-1 text-[0.8125rem]"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className={LABEL}>Rolle</label>
-                                    <Input
-                                      value={project.role}
-                                      onChange={(e) =>
-                                        updateProjectAt(i, (current) => ({ ...current, role: e.target.value }))
-                                      }
-                                      className="mt-1 text-[0.8125rem]"
-                                    />
-                                  </div>
-                                  <div className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2">
-                                    <div>
-                                      <div className="text-[0.75rem] font-medium text-foreground">
-                                        Start prosjekt på ny side
-                                      </div>
-                                      <div className="text-[0.6875rem] text-muted-foreground">
-                                        Valgfri override hvis dette prosjektet skal starte på neste side.
-                                      </div>
-                                    </div>
-                                    <Switch
-                                      checked={Boolean(project.pageBreakBefore)}
-                                      onCheckedChange={(checked) =>
-                                        updateProjectAt(i, (current) => ({ ...current, pageBreakBefore: checked }))
-                                      }
-                                    />
-                                  </div>
-                                  <div>
-                                    <div className="flex items-center justify-between mb-1">
-                                      <label className={LABEL}>Avsnitt</label>
-                                      <button
-                                        onClick={() =>
-                                          update((p) => {
-                                            const arr = [...p.projects];
-                                            arr[i] = { ...arr[i], paragraphs: [...arr[i].paragraphs, ""] };
-                                            return { ...p, projects: arr };
-                                          })
-                                        }
-                                        className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
-                                      >
-                                        <Plus className="h-3 w-3" /> Legg til
-                                      </button>
-                                    </div>
-                                    {project.paragraphs.map((para, pi) => (
-                                      <div key={pi} className="flex gap-1 mb-2">
-                                        <Textarea
-                                          value={para}
-                                          rows={3}
-                                          onChange={(e) =>
-                                            update((p) => {
-                                              const arr = [...p.projects];
-                                              const paras = [...arr[i].paragraphs];
-                                              paras[pi] = e.target.value;
-                                              arr[i] = { ...arr[i], paragraphs: paras };
-                                              return { ...p, projects: arr };
-                                            })
-                                          }
-                                          className="text-[0.8125rem]"
-                                        />
-                                        <button
-                                          onClick={() =>
-                                            scheduleDelete(`proj-${i}-para-${pi}`, "Avsnitt", (p) => {
-                                              const arr = [...p.projects];
-                                              arr[i] = {
-                                                ...arr[i],
-                                                paragraphs: arr[i].paragraphs.filter((_, j) => j !== pi),
-                                              };
-                                              return { ...p, projects: arr };
-                                            })
-                                          }
-                                          className="text-muted-foreground hover:text-destructive shrink-0 p-1"
-                                        >
-                                          <Trash2 className="h-3.5 w-3.5" />
-                                        </button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                  <div>
-                                    <label className={LABEL}>Teknologier</label>
-                                    <Textarea
-                                      value={project.technologies}
-                                      rows={2}
-                                      onChange={(e) =>
-                                        updateProjectAt(i, (current) => ({ ...current, technologies: e.target.value }))
-                                      }
-                                      className="mt-1 text-[0.8125rem]"
-                                    />
-                                  </div>
-                                  <button
-                                    onClick={() =>
-                                      scheduleDelete(
-                                        `project-${i}`,
-                                        `Prosjekt "${doc.projects[i]?.company || "Uten navn"}"`,
-                                        (p) => ({ ...p, projects: p.projects.filter((_, j) => j !== i) }),
-                                      )
-                                    }
-                                    className="text-destructive text-[0.75rem] font-medium hover:underline flex items-center gap-0.5 mt-2"
-                                  >
-                                    <Trash2 className="h-3 w-3" /> Slett prosjekt
-                                  </button>
-                                </AccordionContent>
-                              </AccordionItem>
-                            </Accordion>
-                          </SortableItem>
-                        );
-                      })}
-                    </SortableContext>
-                  </DndContext>
-                  <button
-                    onClick={() =>
-                      update((p) => ({
-                        ...p,
-                        projects: [
-                          ...p.projects,
-                          {
-                            company: "",
-                            subtitle: "",
-                            role: "",
-                            period: "",
-                            startMonth: null,
-                            startYear: null,
-                            endMonth: null,
-                            endYear: null,
-                            isCurrent: false,
-                            paragraphs: [""],
-                            technologies: "",
-                            pageBreakBefore: false,
-                          },
-                        ],
-                      }))
-                    }
-                    className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
-                  >
-                    <Plus className="h-3 w-3" /> Nytt prosjekt
-                  </button>
-                </AccordionContent>
-              </AccordionItem>
-
-              {/* EKSTRA HOVEDSEKSJONER */}
-              <AccordionItem value="additional-sections">
-                <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
-                  Ekstra hovedseksjoner
-                </AccordionTrigger>
-                <AccordionContent className="space-y-2 pt-2">
-                  <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleAdditionalSectionDragEnd}
-                  >
-                    <SortableContext
-                      items={doc.additionalSections.map((_, i) => `additional-${i}`)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      {doc.additionalSections.map((section, i) => (
-                        <SortableItem key={`additional-${i}`} id={`additional-${i}`}>
-                          <Accordion
-                            type="single"
-                            collapsible
-                            value={
-                              expandedAdditionalSection === `additional-section-${i}` ? expandedAdditionalSection : ""
-                            }
-                            onValueChange={(value) => setExpandedAdditionalSection(value)}
-                          >
-                            <AccordionItem
-                              value={`additional-section-${i}`}
-                              className="border border-border rounded-lg bg-card"
-                            >
-                              <AccordionTrigger className="px-3 py-2 text-[0.8125rem] font-medium">
-                                {section.title}
-                              </AccordionTrigger>
-                              <AccordionContent className="px-3 pb-3 space-y-3">
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div>
-                                    <label className={LABEL}>Hovedseksjon</label>
-                                    <Select
-                                      value={section.title}
-                                      onValueChange={(value) =>
-                                        update((p) => {
-                                          const arr = [...p.additionalSections];
-                                          arr[i] = {
-                                            ...arr[i],
-                                            title: value as AdditionalSection["title"],
-                                          };
-                                          return { ...p, additionalSections: arr };
-                                        })
-                                      }
-                                    >
-                                      <SelectTrigger className="mt-1 h-10 text-[0.8125rem]">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {ADDITIONAL_SECTION_TITLE_OPTIONS.map((option) => (
-                                          <SelectItem key={option} value={option}>
-                                            {option}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div>
-                                    <label className={LABEL}>Format</label>
-                                    <Select
-                                      value={section.format}
-                                      onValueChange={(value) =>
-                                        update((p) => {
-                                          const arr = [...p.additionalSections];
-                                          arr[i] = {
-                                            ...arr[i],
-                                            format: value as AdditionalSection["format"],
-                                          };
-                                          return { ...p, additionalSections: arr };
-                                        })
-                                      }
-                                    >
-                                      <SelectTrigger className="mt-1 h-10 text-[0.8125rem]">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="timeline">Dato</SelectItem>
-                                        <SelectItem value="bullet">Punktliste</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                </div>
-
-                                <div>
-                                  <div className="flex items-center justify-between mb-1">
-                                    <label className={LABEL}>Rader</label>
-                                    <button
-                                      onClick={() =>
-                                        update((p) => {
-                                          const arr = [...p.additionalSections];
-                                          arr[i] = {
-                                            ...arr[i],
-                                            items: [...arr[i].items, { period: "", primary: "" }],
-                                          };
-                                          return { ...p, additionalSections: arr };
-                                        })
-                                      }
-                                      className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
-                                    >
-                                      <Plus className="h-3 w-3" /> Legg til
-                                    </button>
-                                  </div>
-
-                                  {section.items.map((item, itemIndex) => (
-                                    <div key={`${i}-${itemIndex}`} className="mb-2 rounded-lg border border-border p-2">
-                                      {section.format === "timeline" ? (
-                                        <div className="flex items-start gap-2">
-                                          <Input
-                                            value={item.period}
-                                            placeholder="Periode"
-                                            onChange={(e) =>
-                                              update((p) => {
-                                                const arr = [...p.additionalSections];
-                                                const items = [...arr[i].items];
-                                                items[itemIndex] = { ...items[itemIndex], period: e.target.value };
-                                                arr[i] = { ...arr[i], items };
-                                                return { ...p, additionalSections: arr };
-                                              })
-                                            }
-                                            className="text-[0.8125rem] w-36"
-                                          />
-                                          <Input
-                                            value={item.primary}
-                                            placeholder="Tekst"
-                                            onChange={(e) =>
-                                              update((p) => {
-                                                const arr = [...p.additionalSections];
-                                                const items = [...arr[i].items];
-                                                items[itemIndex] = { ...items[itemIndex], primary: e.target.value };
-                                                arr[i] = { ...arr[i], items };
-                                                return { ...p, additionalSections: arr };
-                                              })
-                                            }
-                                            className="text-[0.8125rem] flex-1"
-                                          />
-                                          <button
-                                            onClick={() =>
-                                              scheduleDelete(`additional-${i}-item-${itemIndex}`, "Rad", (p) => {
-                                                const arr = [...p.additionalSections];
-                                                arr[i] = {
-                                                  ...arr[i],
-                                                  items: arr[i].items.filter((_, j) => j !== itemIndex),
-                                                };
-                                                return { ...p, additionalSections: arr };
-                                              })
-                                            }
-                                            className="text-muted-foreground hover:text-destructive shrink-0 p-1"
-                                          >
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                          </button>
-                                        </div>
-                                      ) : (
-                                        <div className="flex items-start gap-2">
-                                          <Input
-                                            value={item.primary}
-                                            placeholder="Tekst"
-                                            onChange={(e) =>
-                                              update((p) => {
-                                                const arr = [...p.additionalSections];
-                                                const items = [...arr[i].items];
-                                                items[itemIndex] = { ...items[itemIndex], primary: e.target.value };
-                                                arr[i] = { ...arr[i], items };
-                                                return { ...p, additionalSections: arr };
-                                              })
-                                            }
-                                            className="text-[0.8125rem] flex-1"
-                                          />
-                                          <button
-                                            onClick={() =>
-                                              scheduleDelete(`additional-${i}-item-${itemIndex}`, "Punkt", (p) => {
-                                                const arr = [...p.additionalSections];
-                                                arr[i] = {
-                                                  ...arr[i],
-                                                  items: arr[i].items.filter((_, j) => j !== itemIndex),
-                                                };
-                                                return { ...p, additionalSections: arr };
-                                              })
-                                            }
-                                            className="text-muted-foreground hover:text-destructive shrink-0 p-1"
-                                          >
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                          </button>
-                                        </div>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-
-                                <button
-                                  onClick={() =>
-                                    scheduleDelete(
-                                      `additional-section-${i}`,
-                                      `Hovedseksjon "${doc.additionalSections[i]?.title || i + 1}"`,
-                                      (p) => ({
-                                        ...p,
-                                        additionalSections: p.additionalSections.filter((_, j) => j !== i),
-                                      }),
-                                    )
-                                  }
-                                  className="text-destructive text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
-                                >
-                                  <Trash2 className="h-3 w-3" /> Slett hovedseksjon
-                                </button>
-                              </AccordionContent>
-                            </AccordionItem>
-                          </Accordion>
-                        </SortableItem>
-                      ))}
-                    </SortableContext>
-                  </DndContext>
-
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      onClick={() =>
-                        update((p) => {
-                          const nextSections = [...p.additionalSections, createAdditionalSection("timeline")];
-                          setExpandedAdditionalSection(`additional-section-${nextSections.length - 1}`);
-                          return {
-                            ...p,
-                            additionalSections: nextSections,
-                          };
-                        })
-                      }
-                      className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
-                    >
-                      <Plus className="h-3 w-3" /> Ny hovedseksjon
-                    </button>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              {/* UTDANNELSE */}
-              <AccordionItem value="utdannelse">
-                <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
-                  Utdannelse
-                </AccordionTrigger>
-                <AccordionContent className="space-y-2 pt-2">
-                  {doc.education.map((entry, i) => (
-                    <div key={i} className="border border-border rounded-lg p-3 bg-card space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Input
-                          value={entry.period}
-                          placeholder="Periode"
-                          onChange={(e) =>
-                            update((p) => {
-                              const arr = [...p.education];
-                              arr[i] = { ...arr[i], period: e.target.value };
-                              return { ...p, education: arr };
-                            })
-                          }
-                          className="text-[0.8125rem] w-32"
-                        />
-                        <Input
-                          value={entry.primary}
-                          placeholder="Grad / tittel"
-                          onChange={(e) =>
-                            update((p) => {
-                              const arr = [...p.education];
-                              arr[i] = { ...arr[i], primary: e.target.value };
-                              return { ...p, education: arr };
-                            })
-                          }
-                          className="text-[0.8125rem] flex-1"
-                        />
-                        <button
-                          onClick={() =>
-                            scheduleDelete(`edu-${i}`, `Utdannelse "${doc.education[i]?.primary || i + 1}"`, (p) => ({
-                              ...p,
-                              education: p.education.filter((_, j) => j !== i),
-                            }))
-                          }
-                          className="text-muted-foreground hover:text-destructive shrink-0 p-1"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      <Input
-                        value={entry.secondary || ""}
-                        placeholder="Detaljer (valgfritt)"
-                        onChange={(e) =>
-                          update((p) => {
-                            const arr = [...p.education];
-                            arr[i] = { ...arr[i], secondary: e.target.value };
-                            return { ...p, education: arr };
-                          })
-                        }
-                        className="text-[0.8125rem]"
-                      />
-                    </div>
-                  ))}
-                  <button
-                    onClick={() =>
-                      update((p) => ({ ...p, education: [...p.education, { period: "", primary: "", secondary: "" }] }))
-                    }
-                    className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
-                  >
-                    <Plus className="h-3 w-3" /> Legg til
-                  </button>
-                </AccordionContent>
-              </AccordionItem>
-
-              {/* ARBEIDSERFARING */}
-              <AccordionItem value="arbeidserfaring">
-                <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
-                  Arbeidserfaring
-                </AccordionTrigger>
-                <AccordionContent className="space-y-2 pt-2">
-                  {doc.workExperience.map((entry, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <Input
-                        value={entry.period}
-                        placeholder="Periode"
-                        onChange={(e) =>
-                          update((p) => {
-                            const arr = [...p.workExperience];
-                            arr[i] = { ...arr[i], period: e.target.value };
-                            return { ...p, workExperience: arr };
-                          })
-                        }
-                        className="text-[0.8125rem] w-32"
-                      />
-                      <Input
-                        value={entry.primary}
-                        placeholder="Selskap"
-                        onChange={(e) =>
-                          update((p) => {
-                            const arr = [...p.workExperience];
-                            arr[i] = { ...arr[i], primary: e.target.value };
-                            return { ...p, workExperience: arr };
-                          })
-                        }
-                        className="text-[0.8125rem] flex-1"
-                      />
-                      <button
-                        onClick={() =>
-                          scheduleDelete(
-                            `work-${i}`,
-                            `Arbeidserfaring "${doc.workExperience[i]?.primary || i + 1}"`,
-                            (p) => ({ ...p, workExperience: p.workExperience.filter((_, j) => j !== i) }),
-                          )
-                        }
-                        className="text-muted-foreground hover:text-destructive shrink-0 p-1"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    onClick={() =>
-                      update((p) => ({ ...p, workExperience: [...p.workExperience, { period: "", primary: "" }] }))
-                    }
-                    className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
-                  >
-                    <Plus className="h-3 w-3" /> Legg til
-                  </button>
-                </AccordionContent>
-              </AccordionItem>
-
-              {/* SIDEBAR */}
-              <AccordionItem value="sidebar">
-                <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
-                  Sidebar
-                </AccordionTrigger>
-                <AccordionContent className="space-y-3 pt-2">
-                  {doc.sidebarSections.map((section, si) => (
-                    <div key={si} className="border border-border rounded-lg p-3 bg-card space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Input
-                          value={section.heading}
-                          placeholder="Overskrift"
-                          onChange={(e) =>
-                            update((p) => {
-                              const arr = [...p.sidebarSections];
-                              arr[si] = { ...arr[si], heading: e.target.value };
-                              return { ...p, sidebarSections: arr };
-                            })
-                          }
-                          className="text-[0.8125rem] font-medium"
-                        />
-                        <button
-                          onClick={() =>
-                            scheduleDelete(
-                              `sidebar-${si}`,
-                              `Sidebar-seksjon "${doc.sidebarSections[si]?.heading || si + 1}"`,
-                              (p) => ({ ...p, sidebarSections: p.sidebarSections.filter((_, j) => j !== si) }),
-                            )
-                          }
-                          className="text-muted-foreground hover:text-destructive shrink-0 p-1"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      {section.items.map((item, ii) => (
-                        <div key={ii} className="flex gap-1">
-                          <Input
-                            value={item}
-                            onChange={(e) =>
-                              update((p) => {
-                                const arr = [...p.sidebarSections];
-                                const items = [...arr[si].items];
-                                items[ii] = e.target.value;
-                                arr[si] = { ...arr[si], items };
-                                return { ...p, sidebarSections: arr };
-                              })
-                            }
-                            className="text-[0.8125rem]"
-                          />
-                          <button
-                            onClick={() =>
-                              scheduleDelete(`sidebar-${si}-item-${ii}`, "Sidebar-punkt", (p) => {
-                                const arr = [...p.sidebarSections];
-                                arr[si] = { ...arr[si], items: arr[si].items.filter((_, j) => j !== ii) };
-                                return { ...p, sidebarSections: arr };
-                              })
-                            }
-                            className="text-muted-foreground hover:text-destructive shrink-0 p-1"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                      <button
-                        onClick={() =>
-                          update((p) => {
-                            const arr = [...p.sidebarSections];
-                            arr[si] = { ...arr[si], items: [...arr[si].items, ""] };
-                            return { ...p, sidebarSections: arr };
-                          })
-                        }
-                        className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
-                      >
-                        <Plus className="h-3 w-3" /> Legg til punkt
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    onClick={() =>
-                      update((p) => ({
-                        ...p,
-                        sidebarSections: [...p.sidebarSections, { heading: "", items: [""] }],
-                      }))
-                    }
-                    className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
-                  >
-                    <Plus className="h-3 w-3" /> Ny seksjon
-                  </button>
-                </AccordionContent>
-              </AccordionItem>
-
-              {/* KONTAKTPERSON */}
-              <AccordionItem value="kontaktperson">
-                <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
-                  Kontaktperson
-                </AccordionTrigger>
-                <AccordionContent className="space-y-3 pt-2">
-                  <div>
-                    <label className={LABEL}>Velg ferdig kontaktperson</label>
-                    <Select
-                      value={getSelectedContactPresetId(doc.hero.contact)}
-                      onValueChange={(value) => {
-                        if (value === CLEAR_SELECT) {
-                          update((p) => ({
-                            ...p,
-                            hero: {
-                              ...p.hero,
-                              contact: {
-                                ...p.hero.contact,
-                                title: "",
-                                name: "",
-                                phone: "",
-                                email: "",
-                              },
-                            },
-                          }));
-                          return;
-                        }
-
-                        const preset = CONTACT_PERSON_PRESETS[value as keyof typeof CONTACT_PERSON_PRESETS];
-                        update((p) => ({
-                          ...p,
-                          hero: {
-                            ...p.hero,
-                            contact: {
-                              ...p.hero.contact,
-                              ...preset,
-                            },
-                          },
-                        }));
-                      }}
-                    >
-                      <SelectTrigger className="mt-1 h-10 text-[0.875rem]">
-                        <SelectValue placeholder="Velg kontaktperson" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={CLEAR_SELECT}>Ingen valgt</SelectItem>
-                        <SelectItem value="jon_richard">Jon Richard Nygaard</SelectItem>
-                        <SelectItem value="thomas_eriksen">Thomas Eriksen</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className={LABEL}>Navn</label>
-                      <Input
-                        value={doc.hero.contact.name}
-                        onChange={(e) => setHeroContact("name", e.target.value)}
-                        className="mt-1 text-[0.875rem]"
-                      />
-                    </div>
-                    <div>
-                      <label className={LABEL}>Tittel</label>
-                      <Input
-                        value={doc.hero.contact.title}
-                        onChange={(e) => setHeroContact("title", e.target.value)}
-                        className="mt-1 text-[0.875rem]"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className={LABEL}>Telefon</label>
-                      <Input
-                        value={doc.hero.contact.phone}
-                        onChange={(e) => setHeroContact("phone", e.target.value)}
-                        className="mt-1 text-[0.875rem]"
-                      />
-                    </div>
-                    <div>
-                      <label className={LABEL}>Epost</label>
-                      <Input
-                        value={doc.hero.contact.email}
-                        onChange={(e) => setHeroContact("email", e.target.value)}
-                        className="mt-1 text-[0.875rem]"
-                      />
-                    </div>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </div>
+  return (
+    <div className="cv-page" style={pageStyle}>
+      <div style={gridStyle}>
+        <EmptySidebar imageUrl={imageUrl} portraitPosition={portraitPosition} />
+        <div style={continuationMainStyle}>
+          {mergedProjects.length > 0 && (
+            <>
+              {showProjectsTitle ? <SectionTitle marginTop="0">Prosjekter</SectionTitle> : null}
+              {mergedProjects.map((project) => (
+                <ProjectBlock key={project.key} {...project} />
+              ))}
+            </>
+          )}
+          {mergedAdditionalSections.map((section, index) => {
+            const hasPreviousContent = mergedProjects.length > 0 || index > 0;
+            return (
+              <AdditionalSectionBlock
+                key={section.key}
+                title={section.title}
+                format={section.format}
+                items={section.items}
+                showTitle
+                marginTop={hasPreviousContent ? "6mm" : "0"}
+                spacingAfterMm={section.spacingAfterMm}
+              />
+            );
+          })}
+          {sections.map((section, index) => {
+            const hasPreviousContent = mergedProjects.length > 0 || mergedAdditionalSections.length > 0 || index > 0;
+            const mt = hasPreviousContent ? "6mm" : "0";
+            if (section === "education")
+              return <EducationSection key={section} education={doc.education} marginTop={mt} />;
+            return <WorkExperienceSection key={section} workExperience={doc.workExperience} marginTop={mt} />;
+          })}
         </div>
       </div>
     </div>
   );
+}
+
+// ═══════════════════════════════════════
+// Main Renderer
+// ═══════════════════════════════════════
+
+interface CvRendererProps {
+  doc: CVDocument;
+  imageUrl?: string;
+  scale?: number;
+}
+
+export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps) {
+  const [firstPageFlowBlocks, setFirstPageFlowBlocks] = useState<FlowBlock[]>([]);
+  const [continuationPages, setContinuationPages] = useState<ContinuationPageModel[]>([]);
+  const firstPageCapacityRef = useRef<HTMLDivElement | null>(null);
+  const measureCapacityRef = useRef<HTMLDivElement | null>(null);
+  const projectsTitleTopMeasureRef = useRef<HTMLDivElement | null>(null);
+  const projectsTitleAfterMeasureRef = useRef<HTMLDivElement | null>(null);
+  const additionalSectionTitleTopMeasureRef = useRef<HTMLDivElement | null>(null);
+  const additionalSectionTitleAfterMeasureRef = useRef<HTMLDivElement | null>(null);
+  const educationTopMeasureRef = useRef<HTMLDivElement | null>(null);
+  const educationAfterMeasureRef = useRef<HTMLDivElement | null>(null);
+  const workTopMeasureRef = useRef<HTMLDivElement | null>(null);
+  const workAfterMeasureRef = useRef<HTMLDivElement | null>(null);
+  const projectFragmentMeasureRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const additionalSectionFragmentMeasureRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const flowMeasureRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const flowBlocks: FlowBlock[] = [
+    ...doc.introParagraphs.map((text, index) => ({
+      key: `intro-${index}`,
+      kind: "intro" as const,
+      text,
+    })),
+    ...doc.competenceGroups.map((group, index) => ({
+      key: `competence-${index}`,
+      kind: "competence" as const,
+      label: group.label,
+      content: group.content,
+    })),
+  ];
+
+  const projectFragments = useMemo(() => doc.projects.map((project) => buildProjectFragments(project)), [doc.projects]);
+  const additionalSectionFragments = useMemo(
+    () => doc.additionalSections.map((section) => buildAdditionalSectionFragments(section)),
+    [doc.additionalSections],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    const updatePagination = async () => {
+      await waitForFontsReady(document);
+      await waitForDoubleFrame(window);
+      if (cancelled) return;
+      const firstPageCapacity = firstPageCapacityRef.current;
+      const measureCapacity = measureCapacityRef.current;
+      const projectsTitleTop = projectsTitleTopMeasureRef.current;
+      const projectsTitleAfter = projectsTitleAfterMeasureRef.current;
+      const additionalSectionTitleTop = additionalSectionTitleTopMeasureRef.current;
+      const additionalSectionTitleAfter = additionalSectionTitleAfterMeasureRef.current;
+      const educationTop = educationTopMeasureRef.current;
+      const educationAfter = educationAfterMeasureRef.current;
+      const workTop = workTopMeasureRef.current;
+      const workAfter = workAfterMeasureRef.current;
+      if (
+        !firstPageCapacity ||
+        !measureCapacity ||
+        !projectsTitleTop ||
+        !projectsTitleAfter ||
+        !additionalSectionTitleTop ||
+        !additionalSectionTitleAfter ||
+        !educationTop ||
+        !educationAfter ||
+        !workTop ||
+        !workAfter
+      ) {
+        return;
+      }
+      const pageHeightPx = measureCapacity.getBoundingClientRect().height;
+      const mmToPx = pageHeightPx / 297;
+      const bottomBuffer = Math.max(CONTINUATION_BOTTOM_BUFFER_MM, 0) * mmToPx;
+      const projectFitSafety = PROJECT_FRAGMENT_FIT_SAFETY_MM * mmToPx;
+      const firstPageAvailableHeight =
+        firstPageCapacity.clientHeight - (CV_LAYOUT.mainPadding.topMm + CV_LAYOUT.mainPadding.bottomMm) * mmToPx;
+      const continuationAvailableHeight =
+        measureCapacity.clientHeight - (CV_LAYOUT.continuationTopPaddingMm + CV_LAYOUT.mainPadding.bottomMm) * mmToPx;
+      const flowHeights = flowBlocks.map((block) => measureOuterHeight(flowMeasureRefs.current[block.key]));
+      const projectFragmentHeights = projectFragments.map((fragments) =>
+        fragments.map((fragment) => measureOuterHeight(projectFragmentMeasureRefs.current[fragment.key])),
+      );
+      const additionalSectionFragmentHeights = additionalSectionFragments.map((fragments) =>
+        fragments.map((fragment) => measureOuterHeight(additionalSectionFragmentMeasureRefs.current[fragment.key])),
+      );
+      const nextPagination = buildContinuationPages({
+        flowBlocks,
+        flowHeights,
+        firstPageAvailableHeight,
+        projectFragments,
+        projectFragmentHeights,
+        additionalSectionFragments,
+        additionalSectionFragmentHeights,
+        projectFitSafety,
+        projectsTitleTopHeight: measureOuterHeight(projectsTitleTop),
+        projectsTitleAfterHeight: measureOuterHeight(projectsTitleAfter),
+        additionalSectionTitleTopHeight: measureOuterHeight(additionalSectionTitleTop),
+        additionalSectionTitleAfterHeight: measureOuterHeight(additionalSectionTitleAfter),
+        educationTopHeight: measureOuterHeight(educationTop),
+        educationAfterHeight: measureOuterHeight(educationAfter),
+        workTopHeight: measureOuterHeight(workTop),
+        workAfterHeight: measureOuterHeight(workAfter),
+        continuationAvailableHeight,
+        bottomBuffer,
+      });
+      if (cancelled) return;
+      setFirstPageFlowBlocks((current) =>
+        JSON.stringify(current) === JSON.stringify(nextPagination.firstPageFlowBlocks)
+          ? current
+          : nextPagination.firstPageFlowBlocks,
+      );
+      setContinuationPages((current) =>
+        JSON.stringify(current) === JSON.stringify(nextPagination.continuationPages)
+          ? current
+          : nextPagination.continuationPages,
+      );
+    };
+    updatePagination();
+    window.addEventListener("resize", updatePagination);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("resize", updatePagination);
+    };
+  }, [doc, flowBlocks, projectFragments, additionalSectionFragments]);
+  const { hero, sidebarSections, education, workExperience } = doc;
+
+  return (
+    <div style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: `${100 / scale}%` }}>
+      {/* Hidden measure elements */}
+      <div aria-hidden="true" className="no-print" style={hiddenMeasureRootStyle}>
+        <div
+          style={{
+            width: mm(CV_LAYOUT.pageWidthMm),
+            display: "grid",
+            gridTemplateColumns: `${mm(CV_LAYOUT.sidebarWidthMm)} 1fr`,
+            gridTemplateRows: `${mm(CV_LAYOUT.firstPageHeroHeightMm)} 1fr`,
+            height: mm(CV_LAYOUT.pageHeightMm),
+          }}
+        >
+          <div />
+          <div ref={firstPageCapacityRef} style={{ ...mainStyle, gridColumn: 2, gridRow: 2 }} />
+        </div>
+        <div
+          style={{
+            width: mm(CV_LAYOUT.pageWidthMm),
+            display: "grid",
+            gridTemplateColumns: `${mm(CV_LAYOUT.sidebarWidthMm)} 1fr`,
+            height: mm(CV_LAYOUT.pageHeightMm),
+          }}
+        >
+          <div />
+          <div ref={measureCapacityRef} style={continuationMainStyle} />
+        </div>
+        <div style={continuationMeasureContentStyle}>
+          {flowBlocks.map((block) => (
+            <div
+              key={`measure-flow-${block.key}`}
+              style={{ display: "flow-root" }}
+              ref={(el) => {
+                flowMeasureRefs.current[block.key] = el;
+              }}
+            >
+              <FlowBlockView block={block} />
+            </div>
+          ))}
+          <div ref={projectsTitleTopMeasureRef} style={{ display: "flow-root" }}>
+            <SectionTitle marginTop="0">Prosjekter</SectionTitle>
+          </div>
+          <div ref={projectsTitleAfterMeasureRef} style={{ display: "flow-root" }}>
+            <SectionTitle marginTop="6mm">Prosjekter</SectionTitle>
+          </div>
+          {projectFragments.flat().map((fragment) => (
+            <div
+              key={`measure-${fragment.key}`}
+              style={{ display: "flow-root" }}
+              ref={(el) => {
+                projectFragmentMeasureRefs.current[fragment.key] = el;
+              }}
+            >
+              <ProjectBlock {...fragment} />
+            </div>
+          ))}
+          <div ref={additionalSectionTitleTopMeasureRef} style={{ display: "flow-root" }}>
+            <SectionTitle marginTop="0">{ADDITIONAL_SECTION_TITLE_OPTIONS[0]}</SectionTitle>
+          </div>
+          <div ref={additionalSectionTitleAfterMeasureRef} style={{ display: "flow-root" }}>
+            <SectionTitle marginTop="6mm">{ADDITIONAL_SECTION_TITLE_OPTIONS[0]}</SectionTitle>
+          </div>
+          {additionalSectionFragments.flat().map((fragment) => (
+            <div
+              key={`measure-additional-${fragment.key}`}
+              style={{ display: "flow-root" }}
+              ref={(el) => {
+                additionalSectionFragmentMeasureRefs.current[fragment.key] = el;
+              }}
+            >
+              <AdditionalSectionBlock
+                title={fragment.title}
+                format={fragment.format}
+                items={fragment.items}
+                showTitle={false}
+                spacingAfterMm={fragment.spacingAfterMm}
+              />
+            </div>
+          ))}
+          <div ref={educationTopMeasureRef} style={{ display: "flow-root" }}>
+            <EducationSection education={education} marginTop="0" />
+          </div>
+          <div ref={educationAfterMeasureRef} style={{ display: "flow-root" }}>
+            <EducationSection education={education} marginTop="6mm" />
+          </div>
+          <div ref={workTopMeasureRef} style={{ display: "flow-root" }}>
+            <WorkExperienceSection workExperience={workExperience} marginTop="0" />
+          </div>
+          <div ref={workAfterMeasureRef} style={{ display: "flow-root" }}>
+            <WorkExperienceSection workExperience={workExperience} marginTop="6mm" />
+          </div>
+        </div>
+      </div>
+
+      {/* Pages */}
+      <div className="cv-print-root">
+        <div
+          className="cv-pages"
+          style={{
+            fontFamily: '"Calibri", "Carlito", Arial, sans-serif',
+            display: "flex",
+            flexDirection: "column",
+            gap: px(CV_LAYOUT.screen.pageGapPx),
+          }}
+        >
+          {/* First page */}
+          <div className="cv-page cv-document" style={pageStyle}>
+            <div style={firstPageGridStyle}>
+              <div
+                style={{
+                  gridColumn: "1 / -1",
+                  gridRow: 1,
+                  position: "relative",
+                  overflow: "hidden",
+                  background: "transparent",
+                  zIndex: 1,
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: mm(CV_LAYOUT.sidebarWidthMm),
+                    right: 0,
+                    height: mm(CV_LAYOUT.hero.topRowHeightMm),
+                    background: "#fff",
+                  }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    top: mm(CV_LAYOUT.hero.topRowHeightMm),
+                    left: 0,
+                    right: 0,
+                    height: mm(CV_LAYOUT.hero.grayBandHeightMm),
+                    background: "#f2f2f2",
+                  }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: mm(CV_LAYOUT.sidebarWidthMm),
+                    height: mm(CV_LAYOUT.hero.logoBoxHeightMm),
+                  }}
+                >
+                  <div
+                    style={{
+                      width: mm(CV_LAYOUT.sidebarWidthMm),
+                      height: mm(CV_LAYOUT.hero.logoBoxHeightMm),
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    <LogoMark />
+                  </div>
+                </div>
+                <Portrait
+                  topMm={CV_LAYOUT.hero.firstPagePortraitTopMm}
+                  imageUrl={imageUrl}
+                  portraitPosition={doc.hero.portrait_position}
+                />
+                <ContactBlock contact={hero.contact} />
+                <div
+                  style={{
+                    position: "absolute",
+                    top: mm(CV_LAYOUT.hero.textTopMm),
+                    left: mm(CV_LAYOUT.hero.textLeftMm),
+                    width: mm(CV_LAYOUT.hero.textWidthMm),
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "flex-start",
+                    zIndex: 2,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: '"Carlito", "Calibri", Arial, sans-serif',
+                      fontSize: "32.3pt",
+                      fontWeight: 700,
+                      marginLeft: "-1mm",
+                      letterSpacing: "-0.014em",
+                      lineHeight: 0.99,
+                      color: "#000",
+                    }}
+                  >
+                    {hero.name}
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: '"Raleway", "Helvetica Neue", Arial, sans-serif',
+                      fontSize: "11.2pt",
+                      fontWeight: 500,
+                      marginTop: "3.3mm",
+                      letterSpacing: "0.05em",
+                      color: "#383838",
+                    }}
+                  >
+                    {hero.title}
+                  </div>
+                </div>
+              </div>
+              <div style={{ gridColumn: 1, gridRow: "1 / -1", background: "#000", zIndex: 0 }} />
+              <div style={{ gridColumn: 1, gridRow: 2, position: "relative", zIndex: 1 }}>
+                <Sidebar sections={sidebarSections} transparentBackground />
+              </div>
+              <div style={{ ...mainStyle, gridColumn: 2, gridRow: 2 }}>
+                {firstPageFlowBlocks.map((block) => (
+                  <FlowBlockView key={block.key} block={block} />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {continuationPages.map((page, index) => (
+            <ContinuationPage
+              key={page.key}
+              showProjectsTitle={index === 0 && page.projects.length > 0}
+              pageProjects={page.projects}
+              pageAdditionalSections={page.additionalSections}
+              sections={page.sections}
+              doc={doc}
+              imageUrl={imageUrl}
+              portraitPosition={doc.hero.portrait_position}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════
+// Print dialog helper
+// ═══════════════════════════════════════
+
+export async function openCvPrintDialog(documentTitle?: string) {
+  const sourceRoot = document.querySelector(".cv-print-root") as HTMLElement | null;
+  if (!sourceRoot) return;
+
+  const clonedRoot = sourceRoot.cloneNode(true) as HTMLElement;
+  Array.from(clonedRoot.querySelectorAll<HTMLImageElement>("img")).forEach((image) => {
+    const rawSrc = image.getAttribute("src") ?? image.src;
+    image.src = new URL(rawSrc, window.location.href).toString();
+  });
+
+  const printFrame = document.createElement("iframe");
+  printFrame.setAttribute("aria-hidden", "true");
+  Object.assign(printFrame.style, {
+    position: "fixed",
+    right: "0",
+    bottom: "0",
+    width: "0",
+    height: "0",
+    border: "0",
+    opacity: "0",
+    pointerEvents: "none",
+  });
+  document.body.appendChild(printFrame);
+
+  const printWindow = printFrame.contentWindow;
+  const printDocument = printFrame.contentDocument;
+  if (!printWindow || !printDocument) {
+    printFrame.remove();
+    return;
+  }
+
+  printDocument.open();
+  printDocument.write(`<!doctype html>
+<html lang="no">
+  <head>
+    <meta charset="utf-8" />
+    <title>${documentTitle || CV_PRINT.documentTitle}</title>
+    <style>${PRINT_DOCUMENT_CSS}</style>
+  </head>
+  <body>${clonedRoot.outerHTML}</body>
+</html>`);
+  printDocument.close();
+
+  const readyImages = Array.from(printDocument.querySelectorAll<HTMLImageElement>("img"));
+  const imagePromises = readyImages.map(
+    (image) =>
+      new Promise<void>((resolve) => {
+        if (image.complete) {
+          resolve();
+          return;
+        }
+        const done = () => {
+          image.removeEventListener("load", done);
+          image.removeEventListener("error", done);
+          resolve();
+        };
+        image.addEventListener("load", done);
+        image.addEventListener("error", done);
+      }),
+  );
+
+  await Promise.all([waitForFontsReady(printDocument), ...imagePromises]);
+  await waitForDoubleFrame(printWindow);
+
+  const cleanupPrintFrame = () => {
+    printWindow.removeEventListener("afterprint", cleanupPrintFrame);
+    printFrame.remove();
+  };
+  const originalTitle = document.title;
+  if (documentTitle) document.title = documentTitle;
+  printWindow.focus();
+  printWindow.addEventListener("afterprint", cleanupPrintFrame, { once: true });
+  window.setTimeout(cleanupPrintFrame, 60000);
+  printWindow.print();
+  if (documentTitle) {
+    // Restore after a short delay so the print dialog has time to read the title
+    window.setTimeout(() => {
+      document.title = originalTitle;
+    }, 2000);
+  }
 }
