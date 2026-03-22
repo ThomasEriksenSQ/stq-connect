@@ -243,7 +243,9 @@ export default function KonsulenterOppdrag() {
         const marginPerTime = utpris - tilKons;
         const margin = marginPerTime * TIMER_PER_DAG;
         const marginPct = utpris > 0 ? (marginPerTime / utpris) * 100 : 0;
-        const daysUntilForny = o.forny_dato
+        const daysUntilForny = o.lopende_30_dager
+          ? 30
+          : o.forny_dato
           ? differenceInDays(new Date(o.forny_dato), today)
           : null;
         return { ...o, status: computedStatus, margin, marginPerTime, marginPct, daysUntilForny };

@@ -1,0 +1,1 @@
+ALTER TABLE stacq_oppdrag ADD COLUMN IF NOT EXISTS lopende_30_dager boolean DEFAULT false;

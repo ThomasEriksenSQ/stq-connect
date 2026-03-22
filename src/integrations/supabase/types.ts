@@ -925,6 +925,7 @@ export type Database = {
           kandidat: string
           kommentar: string | null
           kunde: string | null
+          lopende_30_dager: boolean | null
           oppdrag_id: number | null
           selskap_id: string | null
           slutt_dato: string | null
@@ -944,6 +945,7 @@ export type Database = {
           kandidat: string
           kommentar?: string | null
           kunde?: string | null
+          lopende_30_dager?: boolean | null
           oppdrag_id?: number | null
           selskap_id?: string | null
           slutt_dato?: string | null
@@ -963,6 +965,7 @@ export type Database = {
           kandidat?: string
           kommentar?: string | null
           kunde?: string | null
+          lopende_30_dager?: boolean | null
           oppdrag_id?: number | null
           selskap_id?: string | null
           slutt_dato?: string | null

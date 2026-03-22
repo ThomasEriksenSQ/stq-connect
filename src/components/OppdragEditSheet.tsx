@@ -426,7 +426,7 @@ export function OppdragEditSheet({
               className="h-4 w-4 rounded border-border"
             />
             <label htmlFor="lopende" className="text-[0.8125rem] text-muted-foreground cursor-pointer select-none">
-              Løpende 30 dager (fornyes automatisk fra i dag)
+              Løpende 30 dager — oppsigelsestid fra dagens dato
             </label>
           </div>
           {isLopende && fornyDato && (
