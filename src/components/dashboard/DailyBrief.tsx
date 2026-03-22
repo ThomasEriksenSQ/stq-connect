@@ -1103,6 +1103,9 @@ const DailyBrief = () => {
                     queryClient.invalidateQueries({ queryKey: ["salgssenter-activities"] });
                   }
 
+                  const actionTaken = (nudgeSignal && nudgeSignal !== currentSignal) ? "signal_updated" : "task_created";
+                  await saveReview(current.contact.id, actionTaken, current);
+
                   queryClient.invalidateQueries({ queryKey: ["salgssenter-tasks"] });
                   setNudgeOpen(false);
                   goNext("left", true);
