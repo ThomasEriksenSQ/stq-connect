@@ -275,10 +275,17 @@ const DailyBrief = () => {
   currentRef.current = current;
 
   useEffect(() => {
-    if (!completedAll && currentContactId === null && queue.length > 0) {
-      setCurrentContactId(queue[0].contact.id);
+    if (!isLoading && !completedAll && currentContactId === null) {
+      const firstInQueue = scoredLeadsRef.current.find(l => {
+        const nextReview = l.contact.next_review_at;
+        if (!nextReview) return true;
+        return new Date(nextReview) <= new Date();
+      });
+      if (firstInQueue) {
+        setCurrentContactId(firstInQueue.contact.id);
+      }
     }
-  }, [queue, completedAll, currentContactId]);
+  }, [isLoading, completedAll]);
 
   const treatedCount = treated.size;
 
@@ -755,7 +762,8 @@ const DailyBrief = () => {
                                       onClick={async (e) => {
                                         e.stopPropagation();
                                         const newDate = chip.value;
-                                        const taskId = current.nextTask.id;
+                                        const taskId = current.nextTask?.id;
+                                        if (!taskId) return;
                                         queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
                                           ...old,
                                           allTasks: old?.allTasks?.map((t: any) =>
