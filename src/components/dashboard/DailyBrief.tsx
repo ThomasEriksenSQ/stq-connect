@@ -704,53 +704,88 @@ const DailyBrief = () => {
 
                       {/* Neste */}
                       <div className="space-y-1.5">
-                        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Neste oppfølging</p>
+                        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                          Neste oppfølging
+                        </p>
                         {current.nextTask ? (() => {
-                          const overdue = current.hasOverdue || (current.nextTask.due_date ? isPast(new Date(current.nextTask.due_date)) && !isToday(new Date(current.nextTask.due_date)) : false);
+                          const taskId = current.nextTask?.id;
+                          const chipOptions = [
+                            { label: "Følg opp på sikt", value: null },
+                            { label: "1 uke", value: format(addWeeks(new Date(), 1), "yyyy-MM-dd") },
+                            { label: "2 uker", value: format(addWeeks(new Date(), 2), "yyyy-MM-dd") },
+                            { label: "1 måned", value: format(addMonths(new Date(), 1), "yyyy-MM-dd") },
+                            { label: "3 måneder", value: format(addMonths(new Date(), 3), "yyyy-MM-dd") },
+                          ];
+                          const dueDateValue = current.nextTask?.due_date
+                            ? format(new Date(current.nextTask.due_date), "yyyy-MM-dd")
+                            : null;
+                          const activeChipValue =
+                            (taskId ? selectedChipDate[taskId] : undefined) ?? dueDateValue;
+                          const overdue =
+                            current.hasOverdue ||
+                            (current.nextTask.due_date
+                              ? isPast(new Date(current.nextTask.due_date)) &&
+                                !isToday(new Date(current.nextTask.due_date))
+                              : false);
+                          const showChips =
+                            overdue ||
+                            chipOptions.some(chip => chip.value === activeChipValue);
                           return (
                             <>
-                              <p className="text-[0.9375rem] font-medium text-foreground leading-snug">{current.nextTask.title}</p>
-                              <span className={cn(
-                                "text-[0.75rem]",
-                                overdue ? "text-destructive font-medium" : "text-muted-foreground italic"
-                              )}>
+                              <p className="text-[0.9375rem] font-medium text-foreground leading-snug">
+                                {current.nextTask.title}
+                              </p>
+                              <span
+                                className={cn(
+                                  "text-[0.75rem]",
+                                  overdue ? "text-destructive font-medium" : "text-muted-foreground italic"
+                                )}
+                              >
                                 {current.nextTask.due_date
                                   ? format(new Date(current.nextTask.due_date), "d. MMM yyyy", { locale: nb })
                                   : "Følg opp på sikt"}
                               </span>
-                              {overdue && (
+                              {showChips && (
                                 <div className="mt-2 flex flex-wrap gap-1.5">
-                                  {[
-                                    { label: "Følg opp på sikt", value: null },
-                                    { label: "1 uke", value: format(addWeeks(new Date(), 1), "yyyy-MM-dd") },
-                                    { label: "2 uker", value: format(addWeeks(new Date(), 2), "yyyy-MM-dd") },
-                                    { label: "1 måned", value: format(addMonths(new Date(), 1), "yyyy-MM-dd") },
-                                    { label: "3 måneder", value: format(addMonths(new Date(), 3), "yyyy-MM-dd") },
-                                  ].map(chip => (
-                                    <button
-                                      key={chip.label}
-                                      onClick={async (e) => {
-                                        e.stopPropagation();
-                                        const newDate = chip.value;
-                                        const taskId = current.nextTask?.id;
-                                        if (!taskId) return;
-                                        queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
-                                          ...old,
-                                          allTasks: old?.allTasks?.map((t: any) =>
-                                            t.id === taskId ? { ...t, due_date: newDate } : t
-                                          ),
-                                        }));
-                                        if (newDate === null) {
-                                          await supabase.from("tasks").update({ due_date: null as any, updated_at: new Date().toISOString() }).eq("id", taskId);
-                                        } else {
-                                          await supabase.from("tasks").update({ due_date: newDate, updated_at: new Date().toISOString() }).eq("id", taskId);
-                                        }
-                                      }}
-                                      className="h-7 px-3 text-[0.75rem] rounded-full border border-border text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors"
-                                    >
-                                      {chip.label}
-                                    </button>
-                                  ))}
+                                  {chipOptions.map(chip => {
+                                    const isActive = chip.value === activeChipValue;
+                                    return (
+                                      <button
+                                        key={chip.label}
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          const newDate = chip.value;
+                                          const taskId = current.nextTask?.id;
+                                          if (!taskId) return;
+                                          setSelectedChipDate(prev => ({
+                                            ...prev,
+                                            [taskId]: newDate,
+                                          }));
+                                          queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
+                                            ...old,
+                                            allTasks: old?.allTasks?.map((t: any) =>
+                                              t.id === taskId ? { ...t, due_date: newDate } : t
+                                            ),
+                                          }));
+                                          await supabase
+                                            .from("tasks")
+                                            .update({
+                                              due_date: newDate,
+                                              updated_at: new Date().toISOString(),
+                                            })
+                                            .eq("id", taskId);
+                                        }}
+                                        className={cn(
+                                          "h-7 px-3 text-[0.75rem] rounded-full border transition-colors",
+                                          isActive
+                                            ? "bg-primary/10 text-primary border-primary/30 font-medium"
+                                            : "border-border text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+                                        )}
+                                      >
+                                        {chip.label}
+                                      </button>
+                                    );
+                                  })}
                                 </div>
                               )}
                             </>
