@@ -854,7 +854,11 @@ const DailyBrief = () => {
                           const currentVal = localIkkeAktuell[current.contact.id] ?? !!current.contact.ikke_aktuell_kontakt;
                           const newVal = !currentVal;
                           setLocalIkkeAktuell(prev => ({ ...prev, [current.contact.id]: newVal }));
-                          supabase.from("contacts").update({ ikke_aktuell_kontakt: newVal }).eq("id", current.contact.id);
+                          const { error } = await supabase.from("contacts").update({ ikke_aktuell_kontakt: newVal }).eq("id", current.contact.id);
+                          if (error) {
+                            console.error("Feil ved oppdatering av ikke_aktuell_kontakt:", error);
+                            setLocalIkkeAktuell(prev => ({ ...prev, [current.contact.id]: currentVal }));
+                          }
                         }}
                         className={cn(
                           "inline-flex items-center h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors cursor-pointer",
