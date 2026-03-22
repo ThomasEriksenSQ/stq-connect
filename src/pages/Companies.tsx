@@ -1,12 +1,17 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Plus, Search, ArrowUpDown, Loader2, X, MapPin, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,9 +25,16 @@ import { nb } from "date-fns/locale";
 type SortField = "name" | "type" | "city" | "last_activity" | "tasks";
 type SortDir = "asc" | "desc";
 
-import { CATEGORIES, LEGACY_CATEGORY_MAP, normalizeCategoryLabel, extractCategory, SIGNAL_ORDER, getEffectiveSignal } from "@/lib/categoryUtils";
+import {
+  CATEGORIES,
+  LEGACY_CATEGORY_MAP,
+  normalizeCategoryLabel,
+  extractCategory,
+  SIGNAL_ORDER,
+  getEffectiveSignal,
+} from "@/lib/categoryUtils";
 
-const SIGNAL_OPTIONS = CATEGORIES.map(c => ({ label: c.label, color: c.badgeColor }));
+const SIGNAL_OPTIONS = CATEGORIES.map((c) => ({ label: c.label, color: c.badgeColor }));
 
 function getSignalBadge(category: string | null) {
   if (!category) return null;
@@ -40,12 +52,36 @@ const TYPE_BADGE_COLORS: Record<string, { label: string; badgeColor: string }> =
 };
 
 const statusLabels: Record<string, { label: string; className: string; badgeColor: string }> = {
-  lead: { label: "Lead", className: "bg-tag text-tag-foreground", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" },
-  prospect: { label: "Potensiell kunde", className: "bg-warning/10 text-warning", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
-  customer: { label: "Kunde", className: "bg-success/10 text-success", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-  kunde: { label: "Kunde", className: "bg-success/10 text-success", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-  churned: { label: "Ikke relevant selskap", className: "bg-destructive/10 text-destructive", badgeColor: "bg-red-50 text-red-700 border-red-200" },
-  partner: { label: "Partner", className: "bg-secondary text-muted-foreground", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" },
+  lead: {
+    label: "Lead",
+    className: "bg-tag text-tag-foreground",
+    badgeColor: "bg-gray-100 text-gray-600 border-gray-200",
+  },
+  prospect: {
+    label: "Potensiell kunde",
+    className: "bg-warning/10 text-warning",
+    badgeColor: "bg-amber-100 text-amber-800 border-amber-200",
+  },
+  customer: {
+    label: "Kunde",
+    className: "bg-success/10 text-success",
+    badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  },
+  kunde: {
+    label: "Kunde",
+    className: "bg-success/10 text-success",
+    badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  },
+  churned: {
+    label: "Ikke relevant selskap",
+    className: "bg-destructive/10 text-destructive",
+    badgeColor: "bg-red-50 text-red-700 border-red-200",
+  },
+  partner: {
+    label: "Partner",
+    className: "bg-secondary text-muted-foreground",
+    badgeColor: "bg-gray-100 text-gray-600 border-gray-200",
+  },
 };
 
 const TYPE_ORDER = ["prospect", "customer", "churned", "partner", "lead"];
@@ -54,7 +90,15 @@ const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colo
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
 const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground font-medium`;
 
-const OrgNrInput = ({ value, onChange, onLookup }: { value: string; onChange: (v: string) => void; onLookup: (name: string | null, city: string | null) => void }) => {
+const OrgNrInput = ({
+  value,
+  onChange,
+  onLookup,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onLookup: (name: string | null, city: string | null) => void;
+}) => {
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
   const [loading, setLoading] = useState(false);
 
@@ -73,8 +117,15 @@ const OrgNrInput = ({ value, onChange, onLookup }: { value: string; onChange: (v
 
   return (
     <div className="relative">
-      <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="923 456 789" className="h-10 rounded-lg" />
-      {loading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />}
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="923 456 789"
+        className="h-10 rounded-lg"
+      />
+      {loading && (
+        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
+      )}
     </div>
   );
 };
@@ -84,8 +135,16 @@ const Companies = () => {
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", org_number: "", city: "", website: "", linkedin: "", status: "prospect" });
+  const [form, setForm] = useState({
+    name: "",
+    org_number: "",
+    city: "",
+    website: "",
+    linkedin: "",
+    status: "prospect",
+  });
   const [locations, setLocations] = useState<string[]>([""]);
+  const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
     if (form.city && locations[0] === "") {
       setLocations((prev) => [form.city, ...prev.slice(1)]);
@@ -96,6 +155,18 @@ const Companies = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const prefillCompanyName = searchParams.get("ny")?.trim() || "";
+
+  useEffect(() => {
+    if (!prefillCompanyName) return;
+    setOpen(true);
+    setForm((prev) =>
+      prev.name === prefillCompanyName
+        ? prev
+        : { name: prefillCompanyName, org_number: "", city: "", website: "", linkedin: "", status: "prospect" },
+    );
+    setLocations([""]);
+  }, [prefillCompanyName]);
 
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ["companies-full"],
@@ -106,23 +177,47 @@ const Companies = () => {
         .order("name");
       if (error) throw error;
 
-      const companyIds = data.map(c => c.id);
+      const companyIds = data.map((c) => c.id);
       const companyIdSet = new Set(companyIds);
       // Get contact IDs for each company
-      const contactIds = data.flatMap(c => (c.contacts || []).map((ct: any) => ct.id));
+      const contactIds = data.flatMap((c) => (c.contacts || []).map((ct: any) => ct.id));
       const contactIdSet = new Set(contactIds);
 
       // Fetch ALL activities/tasks without .in() to avoid URL length limits (400 errors)
       const [actRes, taskRes, contactActRes, contactTaskRes] = await Promise.all([
-        supabase.from("activities").select("company_id, created_at, subject, description").not("company_id", "is", null).order("created_at", { ascending: false }).limit(2000),
-        supabase.from("tasks").select("company_id, due_date, title, description, status, created_at").not("company_id", "is", null).neq("status", "done").limit(2000),
-        supabase.from("activities").select("contact_id, created_at, subject, description").not("contact_id", "is", null).order("created_at", { ascending: false }).limit(2000),
-        supabase.from("tasks").select("contact_id, due_date, title, description, status, created_at").not("contact_id", "is", null).neq("status", "done").limit(2000),
+        supabase
+          .from("activities")
+          .select("company_id, created_at, subject, description")
+          .not("company_id", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(2000),
+        supabase
+          .from("tasks")
+          .select("company_id, due_date, title, description, status, created_at")
+          .not("company_id", "is", null)
+          .neq("status", "done")
+          .limit(2000),
+        supabase
+          .from("activities")
+          .select("contact_id, created_at, subject, description")
+          .not("contact_id", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(2000),
+        supabase
+          .from("tasks")
+          .select("contact_id, due_date, title, description, status, created_at")
+          .not("contact_id", "is", null)
+          .neq("status", "done")
+          .limit(2000),
       ]);
 
       // Build contact→company map
       const contactToCompany: Record<string, string> = {};
-      data.forEach(c => (c.contacts || []).forEach((ct: any) => { contactToCompany[ct.id] = c.id; }));
+      data.forEach((c) =>
+        (c.contacts || []).forEach((ct: any) => {
+          contactToCompany[ct.id] = c.id;
+        }),
+      );
 
       const now = new Date();
       const isPast = (d: string) => new Date(d) <= now;
@@ -135,7 +230,7 @@ const Companies = () => {
       const companyTasksMap: Record<string, any[]> = {};
 
       // Company-level activities: only for lastActivityMap (not signal)
-      (actRes.data || []).forEach(a => {
+      (actRes.data || []).forEach((a) => {
         if (!a.company_id || !companyIdSet.has(a.company_id)) return;
         if (isPast(a.created_at) && !lastActivityMap[a.company_id]) lastActivityMap[a.company_id] = a.created_at;
       });
@@ -144,13 +239,14 @@ const Companies = () => {
       ((contactActRes as any).data || []).forEach((a: any) => {
         const cid = contactToCompany[a.contact_id];
         if (!cid) return;
-        if (isPast(a.created_at) && (!lastActivityMap[cid] || a.created_at > lastActivityMap[cid])) lastActivityMap[cid] = a.created_at;
+        if (isPast(a.created_at) && (!lastActivityMap[cid] || a.created_at > lastActivityMap[cid]))
+          lastActivityMap[cid] = a.created_at;
         if (!companyActsMap[cid]) companyActsMap[cid] = [];
         companyActsMap[cid].push(a);
       });
 
       // Company-level tasks: only for taskCount/overdue (not signal)
-      (taskRes.data || []).forEach(t => {
+      (taskRes.data || []).forEach((t) => {
         if (!t.company_id || !companyIdSet.has(t.company_id)) return;
         taskCountMap[t.company_id] = (taskCountMap[t.company_id] || 0) + 1;
         if (t.due_date && new Date(t.due_date) < new Date()) overdueTaskMap[t.company_id] = true;
@@ -169,13 +265,22 @@ const Companies = () => {
       const signalMap: Record<string, string> = {};
       for (const c of data) {
         const sig = getEffectiveSignal(
-          (companyActsMap[c.id] || []).map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
-          (companyTasksMap[c.id] || []).map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date })),
+          (companyActsMap[c.id] || []).map((a: any) => ({
+            created_at: a.created_at,
+            subject: a.subject,
+            description: a.description,
+          })),
+          (companyTasksMap[c.id] || []).map((t: any) => ({
+            created_at: t.created_at,
+            title: t.title,
+            description: t.description,
+            due_date: t.due_date,
+          })),
         );
         signalMap[c.id] = sig || "";
       }
 
-      return data.map(c => ({
+      return data.map((c) => ({
         ...c,
         lastActivity: lastActivityMap[c.id] || null,
         taskCount: taskCountMap[c.id] || 0,
@@ -188,8 +293,12 @@ const Companies = () => {
   const createMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("companies").insert({
-        name: form.name, org_number: form.org_number || null, city: form.city || null,
-        website: form.website || null, linkedin: form.linkedin || null, created_by: user?.id,
+        name: form.name,
+        org_number: form.org_number || null,
+        city: form.city || null,
+        website: form.website || null,
+        linkedin: form.linkedin || null,
+        created_by: user?.id,
         status: form.status,
       });
       if (error) throw error;
@@ -199,6 +308,11 @@ const Companies = () => {
       setOpen(false);
       setForm({ name: "", org_number: "", city: "", website: "", linkedin: "", status: "prospect" });
       setLocations([""]);
+      if (prefillCompanyName) {
+        const nextParams = new URLSearchParams(searchParams);
+        nextParams.delete("ny");
+        setSearchParams(nextParams, { replace: true });
+      }
       toast.success("Selskap opprettet");
     },
     onError: () => toast.error("Kunne ikke opprette selskap"),
@@ -207,7 +321,7 @@ const Companies = () => {
   const getOwnerId = (company: any) => (company.profiles as any)?.id || null;
 
   const ownerMap = new Map<string, string>();
-  companies.forEach(c => {
+  companies.forEach((c) => {
     const id = getOwnerId(c);
     const fullName = (c.profiles as any)?.full_name;
     if (id && fullName) ownerMap.set(id, fullName);
@@ -230,7 +344,7 @@ const Companies = () => {
     },
     onMutate: async ({ companyId, status }) => {
       queryClient.setQueryData(["companies-full"], (old: any[]) =>
-        old?.map(c => c.id === companyId ? { ...c, status } : c)
+        old?.map((c) => (c.id === companyId ? { ...c, status } : c)),
       );
     },
     onSuccess: () => {
@@ -245,7 +359,8 @@ const Companies = () => {
 
   const filtered = companies.filter((c) => {
     const q = search.toLowerCase();
-    const matchSearch = !q || c.name.toLowerCase().includes(q) || c.org_number?.includes(q) || c.industry?.toLowerCase().includes(q);
+    const matchSearch =
+      !q || c.name.toLowerCase().includes(q) || c.org_number?.includes(q) || c.industry?.toLowerCase().includes(q);
     const matchOwner = ownerFilter === "all" || getOwnerId(c) === ownerFilter;
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
     return matchSearch && matchOwner && matchStatus;
@@ -260,11 +375,11 @@ const Companies = () => {
   };
 
   const TYPE_PRIORITY: Record<string, number> = {
-    "customer": 0,
-    "kunde": 0,
-    "prospect": 1,
-    "partner": 2,
-    "churned": 3,
+    customer: 0,
+    kunde: 0,
+    prospect: 1,
+    partner: 2,
+    churned: 3,
   };
 
   const sorted = [...filtered].sort((a, b) => {
@@ -276,37 +391,69 @@ const Companies = () => {
     }
     const dir = sort.dir === "asc" ? 1 : -1;
     switch (sort.field) {
-      case "name": return dir * a.name.localeCompare(b.name, "nb");
+      case "name":
+        return dir * a.name.localeCompare(b.name, "nb");
       case "type": {
         const ai = TYPE_ORDER.indexOf(a.status);
         const bi = TYPE_ORDER.indexOf(b.status);
         return dir * ((ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi));
       }
-      case "city": return dir * (a.city || "").localeCompare(b.city || "", "nb");
+      case "city":
+        return dir * (a.city || "").localeCompare(b.city || "", "nb");
       case "last_activity":
         if (!a.lastActivity && !b.lastActivity) return 0;
         if (!a.lastActivity) return 1;
         if (!b.lastActivity) return -1;
         return dir * a.lastActivity.localeCompare(b.lastActivity);
-      case "tasks": return dir * ((a.taskCount || 0) - (b.taskCount || 0));
-      default: return 0;
+      case "tasks":
+        return dir * ((a.taskCount || 0) - (b.taskCount || 0));
+      default:
+        return 0;
     }
   });
 
   const toggleSort = (field: SortField) => {
     setUserHasSorted(true);
-    setSort((prev) => prev.field === field ? { field, dir: prev.dir === "asc" ? "desc" : "asc" } : { field, dir: field === "last_activity" ? "desc" : "asc" });
+    setSort((prev) =>
+      prev.field === field
+        ? { field, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { field, dir: field === "last_activity" ? "desc" : "asc" },
+    );
   };
 
-  const SortHeader = ({ field, children, className = "" }: { field: SortField; children: React.ReactNode; className?: string }) => (
-    <button onClick={() => toggleSort(field)}
-      className={`flex items-center gap-1 text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground hover:text-foreground transition-colors ${className}`}>
+  const SortHeader = ({
+    field,
+    children,
+    className = "",
+  }: {
+    field: SortField;
+    children: React.ReactNode;
+    className?: string;
+  }) => (
+    <button
+      onClick={() => toggleSort(field)}
+      className={`flex items-center gap-1 text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground hover:text-foreground transition-colors ${className}`}
+    >
       {children}
       <ArrowUpDown className={`h-3 w-3 ${sort.field === field ? "text-foreground" : "text-muted-foreground/20"}`} />
     </button>
   );
 
-  const getStatus = (status: string) => statusLabels[status] || { label: status, className: "bg-secondary text-muted-foreground", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" };
+  const getStatus = (status: string) =>
+    statusLabels[status] || {
+      label: status,
+      className: "bg-secondary text-muted-foreground",
+      badgeColor: "bg-gray-100 text-gray-600 border-gray-200",
+    };
+
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (!nextOpen && prefillCompanyName) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("ny");
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -316,18 +463,31 @@ const Companies = () => {
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-          <Input placeholder="Søk..." value={search} onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border" />
+          <Input
+            placeholder="Søk..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border"
+          />
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={handleDialogOpenChange}>
           <DialogTrigger asChild>
             <Button className="rounded-lg h-9 px-3.5 text-[0.8125rem] font-medium gap-1.5">
-              <Plus className="h-4 w-4" />Nytt selskap
+              <Plus className="h-4 w-4" />
+              Nytt selskap
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[440px] rounded-xl">
-            <DialogHeader><DialogTitle>Nytt selskap</DialogTitle></DialogHeader>
-            <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }} className="space-y-4 mt-3">
+            <DialogHeader>
+              <DialogTitle>Nytt selskap</DialogTitle>
+            </DialogHeader>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                createMutation.mutate();
+              }}
+              className="space-y-4 mt-3"
+            >
               <div className="space-y-1.5">
                 <Label className="text-label">Selskapsnavn</Label>
                 <BrregSearch
@@ -388,18 +548,38 @@ const Companies = () => {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-label">Nettside</Label>
-                <Input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://" className="h-10 rounded-lg" type="url" />
+                <Input
+                  value={form.website}
+                  onChange={(e) => setForm({ ...form, website: e.target.value })}
+                  placeholder="https://"
+                  className="h-10 rounded-lg"
+                  type="url"
+                />
               </div>
               {/* STATUS */}
               <div className="space-y-1.5">
                 <Label className="text-label">Status</Label>
                 <div className="flex gap-1.5">
-                  {([
-                    { value: "prospect", label: "Potensiell kunde", activeClass: "bg-blue-500 text-white border-blue-500" },
-                    { value: "customer", label: "Kunde", activeClass: "bg-emerald-500 text-white border-emerald-500" },
-                    { value: "partner", label: "Partner", activeClass: "bg-gray-400 text-white border-gray-400" },
-                    { value: "churned", label: "Ikke relevant selskap", activeClass: "bg-red-400 text-white border-red-400" },
-                  ] as const).map((opt) => (
+                  {(
+                    [
+                      {
+                        value: "prospect",
+                        label: "Potensiell kunde",
+                        activeClass: "bg-blue-500 text-white border-blue-500",
+                      },
+                      {
+                        value: "customer",
+                        label: "Kunde",
+                        activeClass: "bg-emerald-500 text-white border-emerald-500",
+                      },
+                      { value: "partner", label: "Partner", activeClass: "bg-gray-400 text-white border-gray-400" },
+                      {
+                        value: "churned",
+                        label: "Ikke relevant selskap",
+                        activeClass: "bg-red-400 text-white border-red-400",
+                      },
+                    ] as const
+                  ).map((opt) => (
                     <button
                       key={opt.value}
                       type="button"
@@ -427,26 +607,39 @@ const Companies = () => {
       <div className="flex items-start gap-3">
         <div className="space-y-2 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Eier</span>
-            {[{ id: "all", name: "Alle" }, ...ownerList.map(([id, name]) => ({ id: id as string, name: name as string }))].map(o => (
-              <button key={o.id} onClick={() => setOwnerFilter(o.id)}
-                className={ownerFilter === o.id ? CHIP_ON : CHIP_OFF}>
+            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+              Eier
+            </span>
+            {[
+              { id: "all", name: "Alle" },
+              ...ownerList.map(([id, name]) => ({ id: id as string, name: name as string })),
+            ].map((o) => (
+              <button
+                key={o.id}
+                onClick={() => setOwnerFilter(o.id)}
+                className={ownerFilter === o.id ? CHIP_ON : CHIP_OFF}
+              >
                 {o.name}
               </button>
             ))}
           </div>
           {/* Type chips */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Type</span>
+            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+              Type
+            </span>
             {[
               { value: "all", label: "Alle" },
               { value: "prospect", label: "Potensiell kunde" },
               { value: "customer", label: "Kunde" },
               { value: "partner", label: "Partner" },
               { value: "churned", label: "Ikke relevant selskap" },
-            ].map(o => (
-              <button key={o.value} onClick={() => setStatusFilter(o.value)}
-                className={statusFilter === o.value ? CHIP_ON : CHIP_OFF}>
+            ].map((o) => (
+              <button
+                key={o.value}
+                onClick={() => setStatusFilter(o.value)}
+                className={statusFilter === o.value ? CHIP_ON : CHIP_OFF}
+              >
                 {o.label}
               </button>
             ))}
@@ -463,7 +656,11 @@ const Companies = () => {
 
       {/* Table */}
       {isLoading ? (
-        <div className="space-y-px">{[1,2,3,4,5].map(i => <div key={i} className="h-[44px] bg-secondary/50 animate-pulse rounded" />)}</div>
+        <div className="space-y-px">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-[44px] bg-secondary/50 animate-pulse rounded" />
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <p className="text-sm text-muted-foreground py-12 text-center">Ingen selskaper funnet</p>
       ) : (
@@ -472,15 +669,19 @@ const Companies = () => {
             <SortHeader field="name">Selskap</SortHeader>
             <SortHeader field="type">Type</SortHeader>
             <SortHeader field="city">Sted</SortHeader>
-            <SortHeader field="last_activity" className="justify-end">Siste akt.</SortHeader>
+            <SortHeader field="last_activity" className="justify-end">
+              Siste akt.
+            </SortHeader>
           </div>
           <div className="divide-y divide-border">
             {sorted.map((company) => {
               const status = getStatus(company.status);
               return (
-                <div key={company.id}
+                <div
+                  key={company.id}
                   className="w-full grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer"
-                  onClick={() => navigate(`/selskaper/${company.id}`)}>
+                  onClick={() => navigate(`/selskaper/${company.id}`)}
+                >
                   <div className="min-w-0">
                     <span className="text-[0.8125rem] font-medium text-foreground truncate block">{company.name}</span>
                     {false && company.industry && (
@@ -492,7 +693,9 @@ const Companies = () => {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         {(() => {
-                          const t = TYPE_OPTIONS.find(o => o.value === company.status || (o.value === "customer" && company.status === "kunde"));
+                          const t = TYPE_OPTIONS.find(
+                            (o) => o.value === company.status || (o.value === "customer" && company.status === "kunde"),
+                          );
                           const label = t?.label || company.status;
                           return (
                             <button className="inline-flex items-center text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors text-left cursor-pointer">
@@ -503,7 +706,7 @@ const Companies = () => {
                         })()}
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start">
-                        {TYPE_OPTIONS.map(o => (
+                        {TYPE_OPTIONS.map((o) => (
                           <DropdownMenuItem
                             key={o.value}
                             onClick={() => setTypeMutation.mutate({ companyId: company.id, status: o.value })}
@@ -522,9 +725,13 @@ const Companies = () => {
                         <TooltipTrigger asChild>
                           <span>{relativeDate(company.lastActivity)}</span>
                         </TooltipTrigger>
-                        <TooltipContent>{format(new Date(company.lastActivity), "d. MMMM yyyy", { locale: nb })}</TooltipContent>
+                        <TooltipContent>
+                          {format(new Date(company.lastActivity), "d. MMMM yyyy", { locale: nb })}
+                        </TooltipContent>
                       </Tooltip>
-                    ) : ""}
+                    ) : (
+                      ""
+                    )}
                   </span>
                 </div>
               );
