@@ -104,7 +104,7 @@ export function FornyelsesVarsel() {
             Se alle →
           </button>
           <button
-            onClick={() => setDismissed(true)}
+            onClick={() => handleDismiss()}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="h-4 w-4" />
