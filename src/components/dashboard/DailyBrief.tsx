@@ -712,21 +712,17 @@ const DailyBrief = () => {
                                   ].map(chip => (
                                     <button
                                       key={chip.label}
-                                      onClick={() => {
-                                        if (chip.value === null) {
-                                          supabase.from("tasks").update({ due_date: null, updated_at: new Date().toISOString() }).eq("id", current.nextTask.id)
-                                            .then(() => {
-                                              queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
-                                                ...old,
-                                                allTasks: old?.allTasks?.map((t: any) =>
-                                                  t.id === current.nextTask.id ? { ...t, due_date: null } : t
-                                                ),
-                                              }));
-                                              queryClient.invalidateQueries({ queryKey: ["salgssenter-all", ownerFilter] });
-                                            });
-                                        } else {
-                                          updateTaskMutation.mutate({ taskId: current.nextTask.id, dueDate: chip.value });
-                                        }
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        const newDate = chip.value;
+                                        const taskId = current.nextTask.id;
+                                        queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
+                                          ...old,
+                                          allTasks: old?.allTasks?.map((t: any) =>
+                                            t.id === taskId ? { ...t, due_date: newDate } : t
+                                          ),
+                                        }));
+                                        await supabase.from("tasks").update({ due_date: newDate, updated_at: new Date().toISOString() }).eq("id", taskId);
                                       }}
                                       className="h-7 px-3 text-[0.75rem] rounded-full border border-border text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors"
                                     >
