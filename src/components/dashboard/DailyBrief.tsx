@@ -743,6 +743,7 @@ const DailyBrief = () => {
                                   ].map(chip => (
                                     <button
                                       key={chip.label}
+                                      onMouseDown={(e) => e.stopPropagation()}
                                       onClick={async (e) => {
                                         e.stopPropagation();
                                         const newDate = chip.value;
