@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, Building2, ArrowUpDown, ChevronDown, Sparkles } from "lucide-react";
+import { Search, ArrowUpDown, ChevronDown, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BulkSignalModal } from "@/components/BulkSignalModal";
 import { toast } from "sonner";
