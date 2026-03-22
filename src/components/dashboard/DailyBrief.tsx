@@ -829,9 +829,12 @@ const DailyBrief = () => {
                         onClick={() => {
                           const newVal = !current.contact.cv_email;
                           supabase.from("contacts").update({ cv_email: newVal }).eq("id", current.contact.id)
-                            .then(() => queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
-                              old?.map((c: any) => c.id === current.contact.id ? { ...c, cv_email: newVal } : c)
-                            ));
+                            .then(() => queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
+                              ...old,
+                              rawContacts: old?.rawContacts?.map((c: any) =>
+                                c.id === current.contact.id ? { ...c, cv_email: newVal } : c
+                              ),
+                            })));
                         }}
                         className={cn(
                           "inline-flex items-center h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors",
