@@ -304,7 +304,7 @@ const DailyBrief = () => {
       }
       if (dir === "left") {
         if (currentLead) {
-          const newHist = [...history, currentLead.contact.id];
+          const newHist = [...historyRef.current, currentLead.contact.id];
           historyRef.current = newHist;
           setHistory(newHist);
         }
