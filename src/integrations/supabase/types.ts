@@ -1066,6 +1066,33 @@ export type Database = {
         }
         Relationships: []
       }
+      varslingsinnstillinger: {
+        Row: {
+          aktiv: boolean
+          created_at: string | null
+          epost_mottakere: string[]
+          id: string
+          terskel_dager: number
+          updated_at: string | null
+        }
+        Insert: {
+          aktiv?: boolean
+          created_at?: string | null
+          epost_mottakere?: string[]
+          id?: string
+          terskel_dager?: number
+          updated_at?: string | null
+        }
+        Update: {
+          aktiv?: boolean
+          created_at?: string | null
+          epost_mottakere?: string[]
+          id?: string
+          terskel_dager?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       website_applications: {
         Row: {
           created_at: string | null
