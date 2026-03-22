@@ -376,17 +376,27 @@ export default function KonsulenterOppdrag() {
               <p className="text-2xl font-bold text-amber-600">{stats.oppstart}</p>
               <p className="text-[0.8125rem] text-muted-foreground">I oppstart</p>
             </div>
-            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-100 rounded-xl px-5 py-4 shadow-sm">
-              <TrendingUp className="h-4 w-4 text-blue-600 mb-1" />
-              <p className="text-xl font-bold text-blue-600">kr {formatNOK(stats.stacqMonthly)} <span className="text-xs font-normal text-muted-foreground">/ mnd</span></p>
-              <p className="text-[0.8125rem] text-muted-foreground">STACQ Prisen</p>
-              <p className="text-xs text-muted-foreground">{stats.workdays} arbeidsdager · {stats.monthLabel}</p>
+            <div className="bg-violet-50 dark:bg-violet-950/20 border border-violet-100 rounded-xl px-5 py-4 shadow-sm">
+              <CalendarCheck className="h-4 w-4 text-violet-600 mb-1" />
+              {stats.nesteFornyelse ? (
+                <>
+                  <p className="text-2xl font-bold text-violet-600">{stats.nesteFornyelse.dager}d</p>
+                  <p className="text-[0.8125rem] text-muted-foreground">Neste fornyelse</p>
+                  <p className="text-xs text-muted-foreground">{stats.nesteFornyelse.navn}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-2xl font-bold text-violet-600">—</p>
+                  <p className="text-[0.8125rem] text-muted-foreground">Neste fornyelse</p>
+                  <p className="text-xs text-muted-foreground">Ingen dato satt</p>
+                </>
+              )}
             </div>
             <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 rounded-xl px-5 py-4 shadow-sm">
               <BarChart2 className="h-4 w-4 text-amber-600 mb-1" />
-              <p className="text-xl font-bold text-amber-600">kr {formatNOK(stats.oppstartMarginPerTime)} <span className="text-xs font-normal text-muted-foreground">/ time</span></p>
-              <p className="text-[0.8125rem] text-muted-foreground">Snitt margin / time</p>
-              <p className="text-xs text-muted-foreground">{stats.oppstart} konsulenter kommer snart</p>
+              <p className="text-2xl font-bold text-amber-600">{stats.fornyelser90}</p>
+              <p className="text-[0.8125rem] text-muted-foreground">Fornyelser under 90 dager</p>
+              <p className="text-xs text-muted-foreground">Krever oppfølging</p>
             </div>
           </div>
 
