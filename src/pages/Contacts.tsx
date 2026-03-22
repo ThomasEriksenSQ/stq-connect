@@ -520,6 +520,7 @@ const Contacts = () => {
                   {/* TITLE */}
                   <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate text-left cursor-pointer">
                     {contact.title?.slice(0, 25) || ""}
+                  </button>
                   {/* TAGS */}
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                     <button
