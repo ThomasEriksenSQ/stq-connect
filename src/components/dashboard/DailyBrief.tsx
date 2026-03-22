@@ -207,9 +207,10 @@ const DailyBrief = () => {
         lastAct, nextTask, hasOverdue, hasMarkedsradar, isInnkjoper, hasAktivForespørsel, hasTidligereForespørsel,
       };
     }).filter(Boolean).sort((a: any, b: any) => {
-      const tempOrder = { hett: 0, lovende: 1, mulig: 2, sovende: 3 };
-      if (tempOrder[a.temperature] !== tempOrder[b.temperature]) return tempOrder[a.temperature] - tempOrder[b.temperature];
-      return b.score - a.score;
+      const ta = (a as any).tier ?? 4;
+      const tb = (b as any).tier ?? 4;
+      if (ta !== tb) return ta - tb;
+      return (b as any).score - (a as any).score;
     }) as ScoredLead[];
   }, [rawContacts, allActivities, allTasks, techProfiles, foresporsler]);
 
