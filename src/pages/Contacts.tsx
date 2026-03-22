@@ -503,9 +503,9 @@ const Contacts = () => {
                     {contact.title?.slice(0, 25) || ""}
                   </button>
                   {/* FINN.NO */}
-                  <div className="flex items-center justify-center">
+                  <div className="flex items-center justify-center" title="Annonserer på Finn.no">
                     {(contact as any).hasMarkedsradar && (
-                      <Radio className="h-3.5 w-3.5 text-blue-500" title="Annonserer på Finn.no" />
+                      <Radio className="h-3.5 w-3.5 text-blue-500" />
                     )}
                   </div>
                   {/* TAGS */}
