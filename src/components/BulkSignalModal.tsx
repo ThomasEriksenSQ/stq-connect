@@ -3,7 +3,7 @@ import { Sparkles, Check, SkipForward, Loader2, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { analyzeSignal, type AiSignalResult } from "@/lib/aiSignal";
-import { getEffectiveSignal } from "@/lib/categoryUtils";
+import { getEffectiveSignal, upsertTaskSignalDescription } from "@/lib/categoryUtils";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -100,17 +100,32 @@ export function BulkSignalModal({ open, onClose }: BulkSignalModalProps) {
       const c = contacts[i];
       const contactName = `${c.first_name} ${c.last_name}`;
       const contactActs = (actsMap[c.id] || []).map((a: any) => ({
-        type: a.type, subject: a.subject, created_at: a.created_at,
+        type: a.type,
+        subject: a.subject,
+        created_at: a.created_at,
       }));
       const contactTasks = tasksMap[c.id] || [];
       const currentSignal = getEffectiveSignal(
-        (actsMap[c.id] || []).map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
-        (contactTasks || []).map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date }))
+        (actsMap[c.id] || []).map((a: any) => ({
+          created_at: a.created_at,
+          subject: a.subject,
+          description: a.description,
+        })),
+        (contactTasks || []).map((t: any) => ({
+          created_at: t.created_at,
+          title: t.title,
+          description: t.description,
+          due_date: t.due_date,
+        })),
       );
 
-      const lastTaskDue = contactTasks.length > 0
-        ? contactTasks.reduce((best: string | null, t: any) => (!best || (t.due_date && t.due_date > best) ? t.due_date : best), null)
-        : null;
+      const lastTaskDue =
+        contactTasks.length > 0
+          ? contactTasks.reduce(
+              (best: string | null, t: any) => (!best || (t.due_date && t.due_date > best) ? t.due_date : best),
+              null,
+            )
+          : null;
 
       const result = await analyzeSignal({
         currentSignal,
@@ -145,20 +160,57 @@ export function BulkSignalModal({ open, onClose }: BulkSignalModalProps) {
   };
 
   const approveRow = async (row: ResultRow) => {
-    const { error } = await supabase.from("activities").insert({
-      type: "note",
-      subject: row.result.anbefalt_signal,
-      description: `[${row.result.anbefalt_signal}]`,
-      contact_id: row.contactId,
-      company_id: row.companyId,
-      created_by: user?.id,
-    });
-    if (error) { toast.error("Kunne ikke oppdatere"); return; }
-    setResults((prev) => prev.map((r) => r.contactId === row.contactId ? { ...r, status: "approved" } : r));
+    const { data: existingTasks, error: taskLookupError } = await supabase
+      .from("tasks")
+      .select("id, description, due_date")
+      .eq("contact_id", row.contactId)
+      .neq("status", "done")
+      .order("due_date", { ascending: true, nullsFirst: false })
+      .limit(1);
+    if (taskLookupError) {
+      toast.error("Kunne ikke oppdatere");
+      return;
+    }
+
+    const primaryTask = existingTasks?.[0];
+    if (primaryTask) {
+      const { error } = await supabase
+        .from("tasks")
+        .update({
+          description: upsertTaskSignalDescription(
+            primaryTask.description,
+            row.result.anbefalt_signal,
+            !primaryTask.due_date,
+          ),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", primaryTask.id);
+      if (error) {
+        toast.error("Kunne ikke oppdatere");
+        return;
+      }
+    } else {
+      const { error } = await supabase.from("tasks").insert({
+        title: "Følg opp om behov",
+        description: upsertTaskSignalDescription(null, row.result.anbefalt_signal, true),
+        priority: "medium",
+        due_date: null,
+        contact_id: row.contactId,
+        company_id: row.companyId,
+        assigned_to: user?.id,
+        created_by: user?.id,
+      });
+      if (error) {
+        toast.error("Kunne ikke oppdatere");
+        return;
+      }
+    }
+
+    setResults((prev) => prev.map((r) => (r.contactId === row.contactId ? { ...r, status: "approved" } : r)));
   };
 
   const skipRow = (contactId: string) => {
-    setResults((prev) => prev.map((r) => r.contactId === contactId ? { ...r, status: "skipped" } : r));
+    setResults((prev) => prev.map((r) => (r.contactId === contactId ? { ...r, status: "skipped" } : r)));
   };
 
   const approveAll = async () => {
@@ -167,12 +219,18 @@ export function BulkSignalModal({ open, onClose }: BulkSignalModalProps) {
       await approveRow(row);
     }
     queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
+    queryClient.invalidateQueries({ queryKey: ["companies-full"] });
+    queryClient.invalidateQueries({ queryKey: ["oppfolginger-tasks-v1"] });
+    queryClient.invalidateQueries({ queryKey: ["oppfolginger-signal-v1"] });
     toast.success(`${pending.length} signaler oppdatert`);
   };
 
   const handleClose = () => {
     if (results.some((r) => r.status === "approved")) {
       queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
+      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
+      queryClient.invalidateQueries({ queryKey: ["oppfolginger-tasks-v1"] });
+      queryClient.invalidateQueries({ queryKey: ["oppfolginger-signal-v1"] });
     }
     onClose();
     // Reset state after animation
@@ -187,8 +245,16 @@ export function BulkSignalModal({ open, onClose }: BulkSignalModalProps) {
   const pendingCount = results.filter((r) => r.status === "pending").length;
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
-      <DialogContent className="max-w-lg rounded-xl p-6 gap-0 max-h-[80vh] flex flex-col" onInteractOutside={(e) => e.preventDefault()}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) handleClose();
+      }}
+    >
+      <DialogContent
+        className="max-w-lg rounded-xl p-6 gap-0 max-h-[80vh] flex flex-col"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <div className="flex items-center justify-between mb-4">
           <DialogTitle className="text-[1.125rem] font-bold text-foreground flex items-center gap-2">
             <Sparkles className="h-4.5 w-4.5 text-primary" />
@@ -237,19 +303,27 @@ export function BulkSignalModal({ open, onClose }: BulkSignalModalProps) {
                   "rounded-lg border px-3 py-2.5 transition-opacity",
                   row.status === "approved" && "opacity-50 border-emerald-200 bg-emerald-50/30",
                   row.status === "skipped" && "opacity-30",
-                  row.status === "pending" && "border-border bg-card"
+                  row.status === "pending" && "border-border bg-card",
                 )}
               >
                 <p className="text-[0.875rem] font-semibold text-foreground">{row.contactName}</p>
-                {row.companyName && (
-                  <p className="text-[0.75rem] text-muted-foreground">{row.companyName}</p>
-                )}
+                {row.companyName && <p className="text-[0.75rem] text-muted-foreground">{row.companyName}</p>}
                 <div className="flex items-center gap-1.5 mt-1">
-                  <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold", getBadgeColor(row.currentSignal || ""))}>
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold",
+                      getBadgeColor(row.currentSignal || ""),
+                    )}
+                  >
                     {row.currentSignal || "—"}
                   </span>
                   <span className="text-muted-foreground text-[0.75rem]">→</span>
-                  <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold", getBadgeColor(row.result.anbefalt_signal))}>
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold",
+                      getBadgeColor(row.result.anbefalt_signal),
+                    )}
+                  >
                     {row.result.anbefalt_signal}
                   </span>
                 </div>
@@ -301,7 +375,10 @@ export function BulkSignalModal({ open, onClose }: BulkSignalModalProps) {
 
         {finished && pendingCount === 0 && results.length > 0 && (
           <div className="flex justify-end mt-4 pt-3 border-t border-border">
-            <button onClick={handleClose} className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">
+            <button
+              onClick={handleClose}
+              className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors"
+            >
               Lukk
             </button>
           </div>
