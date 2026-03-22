@@ -271,18 +271,12 @@ export default function KonsulenterOppdrag() {
     const oppstartMarginPerTime = oppstart.length > 0
       ? oppstart.reduce((s: number, o: any) => s + o.marginPerTime, 0) / oppstart.length
       : 0;
-    const nesteFornyelse = (() => {
-      const alleAktive = enriched.filter((o: any) => o.status === "Aktiv" || o.status === "Oppstart");
-      const medDato = alleAktive
-        .filter((o: any) => o.daysUntilForny !== null && o.daysUntilForny >= 0)
-        .sort((a: any, b: any) => a.daysUntilForny - b.daysUntilForny);
-      if (medDato.length === 0) return null;
-      const first = medDato[0];
-      return {
-        navn: first.kandidat?.split(" ")[0] || "?",
-        dager: first.daysUntilForny,
-      };
-    })();
+    const fornyelser30 = enriched.filter((o: any) =>
+      (o.status === "Aktiv" || o.status === "Oppstart") &&
+      o.daysUntilForny !== null &&
+      o.daysUntilForny >= 0 &&
+      o.daysUntilForny <= 30
+    ).length;
 
     const fornyelser90 = enriched.filter((o: any) =>
       (o.status === "Aktiv" || o.status === "Oppstart") &&
@@ -300,7 +294,7 @@ export default function KonsulenterOppdrag() {
       workdays,
       monthLabel: format(now, "MMMM yyyy"),
       oppstartMarginPerTime,
-      nesteFornyelse,
+      fornyelser30,
       fornyelser90,
     };
   }, [enriched]);
