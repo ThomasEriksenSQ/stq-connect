@@ -208,7 +208,7 @@ const DailyBrief = () => {
         contactActs.map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
         contactTasks.map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date }))
       );
-      if (contact.id === 'd60a7ed2-298d-402e-9a04-6442c27f068c') console.log('VICTOR SIGNAL', signal);
+      
       if (signal === "Ikke aktuelt") return null;
       const lastAct = contactActs[0];
       const daysSince = lastAct ? differenceInDays(new Date(), new Date(lastAct.created_at)) : 999;
