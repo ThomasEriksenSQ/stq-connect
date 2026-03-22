@@ -1108,7 +1108,7 @@ export function ContactCardContent({
               "bg-destructive/10 text-destructive border-destructive/30" :
               "bg-background text-muted-foreground border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
             )}>
-            {(contact as any).ikke_aktuell_kontakt ? "✕ Ikke aktuell å kontakte" : "Ikke aktuell å kontakte"}
+            {(contact as any).ikke_aktuell_kontakt ? "✕ Ikke relevant person å kontakte igjen" : "Ikke relevant person å kontakte igjen"}
           </button>
         </div>
         {changingCompany &&
