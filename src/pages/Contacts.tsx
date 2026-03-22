@@ -502,6 +502,12 @@ const Contacts = () => {
                   <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate text-left cursor-pointer">
                     {contact.title?.slice(0, 25) || ""}
                   </button>
+                  {/* FINN.NO */}
+                  <div className="flex items-center justify-center">
+                    {(contact as any).hasMarkedsradar && (
+                      <Radio className="h-3.5 w-3.5 text-blue-500" title="Annonserer på Finn.no" />
+                    )}
+                  </div>
                   {/* TAGS */}
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                     <button
