@@ -65,6 +65,44 @@ export type Database = {
           },
         ]
       }
+      agent_contact_reviews: {
+        Row: {
+          action_taken: string
+          contact_id: string | null
+          created_at: string | null
+          id: string
+          reviewed_at: string
+          reviewed_by: string | null
+          signals_at_review: Json
+        }
+        Insert: {
+          action_taken: string
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string
+          reviewed_at?: string
+          reviewed_by?: string | null
+          signals_at_review?: Json
+        }
+        Update: {
+          action_taken?: string
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string
+          reviewed_at?: string
+          reviewed_by?: string | null
+          signals_at_review?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_contact_reviews_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           address: string | null
@@ -73,6 +111,7 @@ export type Database = {
           created_by: string | null
           email: string | null
           id: string
+          ikke_relevant: boolean | null
           industry: string | null
           linkedin: string | null
           name: string
@@ -93,6 +132,7 @@ export type Database = {
           created_by?: string | null
           email?: string | null
           id?: string
+          ikke_relevant?: boolean | null
           industry?: string | null
           linkedin?: string | null
           name: string
@@ -113,6 +153,7 @@ export type Database = {
           created_by?: string | null
           email?: string | null
           id?: string
+          ikke_relevant?: boolean | null
           industry?: string | null
           linkedin?: string | null
           name?: string

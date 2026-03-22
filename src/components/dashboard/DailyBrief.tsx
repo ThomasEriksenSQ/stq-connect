@@ -6,7 +6,7 @@ import { differenceInDays, isPast, isToday, format, addWeeks, addMonths } from "
 import { nb } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { getEffectiveSignal } from "@/lib/categoryUtils";
-import { calcHeatScore, getTemperature, TEMP_CONFIG } from "@/lib/heatScore";
+import { getHeatResult, TEMP_CONFIG } from "@/lib/heatScore";
 import { Flame, List, ChevronLeft, ChevronRight, Radio, Loader2, MapPin, ChevronDown, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -30,6 +30,9 @@ const SIGNAL_CATEGORIES = [
 interface ScoredLead {
   contact: any; signal: string; score: number;
   temperature: "hett" | "lovende" | "mulig" | "sovende";
+  tier: 1 | 2 | 3 | 4;
+  reasons: string[];
+  needsReview: boolean;
   lastAct: any; nextTask: any; hasOverdue: boolean;
   hasMarkedsradar: boolean; isInnkjoper: boolean; hasAktivForespørsel: boolean;
   hasTidligereForespørsel: boolean;
@@ -184,9 +187,25 @@ const DailyBrief = () => {
         (!f.mottatt_dato || differenceInDays(new Date(), new Date(f.mottatt_dato)) > 45)
       );
       const isInnkjoper = !!contact.call_list;
-      const score = calcHeatScore({ signal, isInnkjoper, hasMarkedsradar, hasAktivForespørsel, hasOverdue, daysSinceLastContact: daysSince });
-      const temperature = getTemperature({ score, signal, hasOverdue, hasMarkedsradar, isInnkjoper });
-      return { contact, signal, score, temperature, lastAct, nextTask, hasOverdue, hasMarkedsradar, isInnkjoper, hasAktivForespørsel, hasTidligereForespørsel };
+      const heatResult = getHeatResult({
+        signal,
+        isInnkjoper,
+        hasMarkedsradar,
+        hasAktivForespørsel,
+        hasOverdue,
+        daysSinceLastContact: daysSince,
+        hasTidligereForespørsel,
+        ikkeAktuellKontakt: !!(contact as any).ikke_aktuell_kontakt,
+      });
+      return {
+        contact, signal,
+        score: heatResult.score,
+        temperature: heatResult.temperature,
+        tier: heatResult.tier,
+        reasons: heatResult.reasons,
+        needsReview: heatResult.needsReview,
+        lastAct, nextTask, hasOverdue, hasMarkedsradar, isInnkjoper, hasAktivForespørsel, hasTidligereForespørsel,
+      };
     }).filter(Boolean).sort((a: any, b: any) => {
       const tempOrder = { hett: 0, lovende: 1, mulig: 2, sovende: 3 };
       if (tempOrder[a.temperature] !== tempOrder[b.temperature]) return tempOrder[a.temperature] - tempOrder[b.temperature];
@@ -860,16 +879,26 @@ const DailyBrief = () => {
                         {lead.isInnkjoper && (
                           <span className="inline-flex items-center rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 text-[0.6875rem] font-semibold flex-shrink-0">Innkjøper</span>
                         )}
+                        {lead.needsReview && (
+                          <span className="text-[0.6875rem]" title="Trenger oppfølging">⚠</span>
+                        )}
                       </div>
-                      <p className="text-[0.75rem] text-muted-foreground truncate">
-                        {lead.contact.companies?.name}
-                        {lead.contact.title && ` · ${lead.contact.title}`}
-                        {lead.contact.companies?.city && ` · ${lead.contact.companies.city}`}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-[0.75rem] text-muted-foreground truncate">
+                          {lead.contact.companies?.name}
+                          {lead.contact.title && ` · ${lead.contact.title}`}
+                        </p>
+                        {lead.reasons.length > 0 && (
+                          <span className="text-[0.6875rem] text-muted-foreground/60 flex-shrink-0">
+                            {lead.reasons.join(" · ")}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <span className={cn("text-[0.75rem] font-medium flex-shrink-0 px-2 py-0.5 rounded-full", temp.bg, temp.text)}>
                       {temp.label}
                     </span>
+                    <span className="text-[0.6875rem] text-muted-foreground flex-shrink-0">T{lead.tier}</span>
                   </button>
                 );
               })}
