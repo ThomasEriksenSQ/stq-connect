@@ -541,7 +541,7 @@ const DailyBrief = () => {
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : queue.length === 0 ? (
+          ) : (queue.length === 0 || completedAll) ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <p className="text-4xl mb-3">🎉</p>
               <p className="text-[1.125rem] font-semibold text-foreground">Køen er tom!</p>
