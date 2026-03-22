@@ -366,7 +366,15 @@ const DailyBrief = () => {
       const { error } = await supabase.from("tasks").update({ due_date: dueDate, updated_at: new Date().toISOString() }).eq("id", taskId);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["salgssenter-all", ownerFilter] }),
+    onSuccess: (_data, variables) => {
+      queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
+        ...old,
+        allTasks: old?.allTasks?.map((t: any) =>
+          t.id === variables.taskId ? { ...t, due_date: variables.dueDate } : t
+        ),
+      }));
+      queryClient.invalidateQueries({ queryKey: ["salgssenter-all", ownerFilter] });
+    },
   });
 
   const filterOptions = useMemo(() => {
@@ -707,7 +715,15 @@ const DailyBrief = () => {
                                       onClick={() => {
                                         if (chip.value === null) {
                                           supabase.from("tasks").update({ due_date: null, updated_at: new Date().toISOString() }).eq("id", current.nextTask.id)
-                                            .then(() => queryClient.invalidateQueries({ queryKey: ["salgssenter-all", ownerFilter] }));
+                                            .then(() => {
+                                              queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
+                                                ...old,
+                                                allTasks: old?.allTasks?.map((t: any) =>
+                                                  t.id === current.nextTask.id ? { ...t, due_date: null } : t
+                                                ),
+                                              }));
+                                              queryClient.invalidateQueries({ queryKey: ["salgssenter-all", ownerFilter] });
+                                            });
                                         } else {
                                           updateTaskMutation.mutate({ taskId: current.nextTask.id, dueDate: chip.value });
                                         }
