@@ -168,6 +168,26 @@ const DailyBrief = () => {
   const techProfiles = salgsData?.techProfiles ?? [];
   const foresporsler = salgsData?.foresporsler ?? [];
 
+  const { data: agentReviews = [] } = useQuery({
+    queryKey: ["agent-reviews"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("agent_contact_reviews")
+        .select("contact_id, reviewed_at, action_taken, signals_at_review")
+        .order("reviewed_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const reviewMap = useMemo(() => {
+    const map: Record<string, any> = {};
+    (agentReviews as any[]).forEach(r => {
+      if (!map[r.contact_id]) map[r.contact_id] = r;
+    });
+    return map;
+  }, [agentReviews]);
+
   const scoredLeads = useMemo(() => {
     return rawContacts.map((contact: any) => {
       const contactActs = allActivities.filter((a: any) => a.contact_id === contact.id);
