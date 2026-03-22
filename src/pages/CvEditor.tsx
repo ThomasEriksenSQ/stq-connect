@@ -38,6 +38,7 @@ const EMPTY_CV: CVDocument = {
   introParagraphs: [],
   competenceGroups: [],
   projects: [],
+  additionalSections: [],
   education: [],
   workExperience: [],
 };
@@ -55,6 +56,7 @@ function dbRowToCvDoc(row: any): CVDocument {
     introParagraphs: row.intro_paragraphs || [],
     competenceGroups: row.competence_groups || [],
     projects: row.projects || [],
+    additionalSections: row.additional_sections || [],
     education: row.education || [],
     workExperience: row.work_experience || [],
   };
@@ -69,6 +71,7 @@ function cvDocToDbRow(doc: CVDocument) {
     intro_paragraphs: doc.introParagraphs,
     competence_groups: doc.competenceGroups,
     projects: doc.projects,
+    additional_sections: doc.additionalSections,
     education: doc.education,
     work_experience: doc.workExperience,
     sidebar_sections: doc.sidebarSections,
@@ -312,11 +315,7 @@ export default function CvEditor() {
                     Lagrer...
                   </span>
                 )}
-                {saveStatus === "saved" && (
-                  <span className="text-[0.75rem] text-muted-foreground">
-                    ✓ Lagret
-                  </span>
-                )}
+                {saveStatus === "saved" && <span className="text-[0.75rem] text-muted-foreground">✓ Lagret</span>}
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={loadVersions}>
@@ -350,9 +349,7 @@ export default function CvEditor() {
                       <p className="text-[0.8125rem] font-medium text-foreground">
                         {format(new Date(version.created_at), "dd.MM.yyyy HH:mm", { locale: nb })}
                       </p>
-                      <p className="text-[0.75rem] text-muted-foreground">
-                        Lagret av: {version.saved_by || "ukjent"}
-                      </p>
+                      <p className="text-[0.75rem] text-muted-foreground">Lagret av: {version.saved_by || "ukjent"}</p>
                     </div>
                     <Button variant="outline" size="sm" onClick={() => restoreVersion(version.snapshot)}>
                       <RotateCcw className="h-3.5 w-3.5 mr-1" />
