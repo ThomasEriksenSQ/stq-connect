@@ -303,6 +303,7 @@ const DailyBrief = () => {
     }
     setTimeout(() => {
       setActiveForm(null);
+      setLocalIkkeAktuell({});
       if (contactIdToMark) {
         setTreated(prev => new Set([...prev, contactIdToMark]));
       }
