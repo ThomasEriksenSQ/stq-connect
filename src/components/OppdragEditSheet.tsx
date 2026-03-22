@@ -213,12 +213,14 @@ export function OppdragEditSheet({
       setSelskapId((row as any).selskap_id || null);
       setSelskapNavn(row.kunde || null);
 
-      // Auto-check løpende if forny_dato is 25-35 days from today
-      if (row.forny_dato) {
-        const diff = Math.round((new Date(row.forny_dato).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-        setIsLopende(diff >= 25 && diff <= 35);
+      // Read lopende flag from DB
+      setIsLopende((row as any).lopende_30_dager === true);
+      if ((row as any).lopende_30_dager) {
+        const d = new Date();
+        d.setDate(d.getDate() + 30);
+        setFornyDato(d);
       } else {
-        setIsLopende(false);
+        setFornyDato(row.forny_dato ? new Date(row.forny_dato) : undefined);
       }
     }
   }, [row?.id]);
