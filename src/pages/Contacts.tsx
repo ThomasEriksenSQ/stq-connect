@@ -123,30 +123,66 @@ const Contacts = () => {
         const signal = signalMap[c.id] || null;
         const openTasks = openTasksMap[c.id] || { count: 0, overdue: false };
         const isInnkjoper = !!c.call_list;
+        const ikkeAktuellKontakt = !!(c as any).ikke_aktuell_kontakt;
         const techProfile = (techProfiles || []).find((tp: any) => tp.company_id === c.company_id);
         const hasMarkedsradar = !!(techProfile?.sist_fra_finn && differenceInDays(new Date(), new Date(techProfile.sist_fra_finn)) <= 90);
+        const daysSince = lastActivity ? differenceInDays(new Date(), new Date(lastActivity)) : 999;
+
         const hasAktivForespørsel = (foresporsler || []).some((f: any) =>
           f.selskap_id === c.company_id &&
           f.mottatt_dato &&
           differenceInDays(new Date(), new Date(f.mottatt_dato)) <= 45
         );
-        const daysSince = lastActivity ? differenceInDays(new Date(), new Date(lastActivity)) : 999;
-        const heatScore = signal === "Ikke aktuelt" ? -1000 : calcHeatScore({
+        const hasTidligereForespørsel = (foresporsler || []).some((f: any) =>
+          f.selskap_id === c.company_id &&
+          f.mottatt_dato &&
+          differenceInDays(new Date(), new Date(f.mottatt_dato)) > 45
+        );
+
+        // KES: finnes det aktivitet etter at signalet ble satt?
+        const contactActs = (contactActsMap[c.id] || []);
+        const signalAct = contactActs.find((a: any) => {
+          const cat = a.subject || "";
+          return ["Behov nå","Får fremtidig behov","Får kanskje behov","Ukjent om behov","Ikke aktuelt"].includes(cat);
+        });
+        const signalSetAt = signalAct ? new Date(signalAct.created_at) : null;
+        const lastActDate = lastActivity ? new Date(lastActivity) : null;
+        const kes = !!(signalSetAt && lastActDate && lastActDate > signalSetAt);
+
+        // Task-status enum
+        const contactTaskList = (contactTasksMap[c.id] || []).map((t: any) => ({
+          due_date: t.due_date,
+          status: t.status,
+        }));
+        const taskStatus = getTaskStatus(contactTaskList);
+        const activityStatus = getActivityStatus(daysSince);
+
+        const heatResult = getHeatResult({
           signal: signal || "",
           isInnkjoper,
           hasMarkedsradar,
           hasAktivForespørsel,
           hasOverdue: openTasks.overdue,
           daysSinceLastContact: daysSince,
+          hasTidligereForespørsel,
+          ikkeAktuellKontakt,
+          taskStatus,
+          activityStatus,
+          kes,
         });
-        const temperature = signal === "Ikke aktuelt" ? "sovende" : getTemperature({
-          score: heatScore,
-          signal: signal || "",
-          hasOverdue: openTasks.overdue,
+
+        return {
+          ...c,
+          lastActivity,
+          signal,
+          openTasks,
+          heatScore: heatResult.score,
+          temperature: heatResult.temperature,
+          tier: heatResult.tier,
+          reasons: heatResult.reasons,
+          needsReview: heatResult.needsReview,
           hasMarkedsradar,
-          isInnkjoper,
-        });
-        return { ...c, lastActivity, signal, openTasks, heatScore, temperature, hasMarkedsradar };
+        };
       });
 
       return { rows, totalCount: count ?? data.length, capped: data.length < (count ?? 0) };
