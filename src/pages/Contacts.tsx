@@ -495,7 +495,7 @@ const Contacts = () => {
                   </div>
                   {/* COMPANY */}
                   <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate flex items-center gap-1 text-left cursor-pointer">
-                    {companyName ? <><Building2 className="h-3 w-3 flex-shrink-0" />{companyName}</> : ""}
+                    {companyName || ""}
                   </button>
                   {/* TITLE */}
                   <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate text-left cursor-pointer">
