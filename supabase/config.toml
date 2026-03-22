@@ -21,6 +21,9 @@ verify_jwt = false
 [functions.markedsradar-analyse]
 verify_jwt = false
 
+[functions.markedsradar-ukesmail]
+verify_jwt = false
+
 [functions.analyze-cv-consultant]
 verify_jwt = false
 
