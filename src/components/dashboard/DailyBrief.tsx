@@ -762,7 +762,8 @@ const DailyBrief = () => {
                                       onClick={async (e) => {
                                         e.stopPropagation();
                                         const newDate = chip.value;
-                                        const taskId = current.nextTask.id;
+                                        const taskId = current.nextTask?.id;
+                                        if (!taskId) return;
                                         queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
                                           ...old,
                                           allTasks: old?.allTasks?.map((t: any) =>
