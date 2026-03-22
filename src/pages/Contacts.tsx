@@ -452,7 +452,16 @@ const Contacts = () => {
               const openTasks = (contact as any).openTasks || { count: 0, overdue: false };
 
               return (
-                <div key={contact.id} className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)_44px_90px_90px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75">
+                <div key={contact.id} className={cn(
+                  "grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)_44px_90px_90px] gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 border-l-[3px]",
+                  hotListActive
+                    ? (contact as any).temperature === "hett"    ? "border-l-red-500"
+                    : (contact as any).temperature === "lovende" ? "border-l-orange-400"
+                    : (contact as any).temperature === "mulig"   ? "border-l-amber-400"
+                    : (contact as any).temperature === "sovende" ? "border-l-gray-200"
+                    : "border-l-transparent"
+                    : "border-l-transparent"
+                )}>
                   {/* NAME - clickable */}
                   <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="min-w-0 text-left cursor-pointer flex items-center gap-2">
                     {hotListActive && (
