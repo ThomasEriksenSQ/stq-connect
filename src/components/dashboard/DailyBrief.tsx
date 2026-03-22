@@ -108,6 +108,7 @@ const DailyBrief = () => {
   const [dragDeltaX, setDragDeltaX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
+  const historyRef = useRef<string[]>([]);
   const scoredLeadsRef = useRef<ScoredLead[]>([]);
   const treatedRef = useRef<Set<string>>(new Set());
   const currentRef = useRef<ScoredLead | null>(null);
@@ -303,7 +304,9 @@ const DailyBrief = () => {
       }
       if (dir === "left") {
         if (currentLead) {
-          setHistory(prev => [...prev, currentLead.contact.id]);
+          const newHist = [...history, currentLead.contact.id];
+          historyRef.current = newHist;
+          setHistory(newHist);
         }
         const currentIdx = freshScored.findIndex(l => l.contact.id === currentLead?.contact.id);
         const next = freshScored.slice(currentIdx + 1).find(l => !newTreatedSet.has(l.contact.id) && (!l.contact.next_review_at || new Date(l.contact.next_review_at) <= new Date()));
@@ -314,12 +317,11 @@ const DailyBrief = () => {
           setCurrentContactId(null);
         }
       } else {
-        setHistory(prev => {
-          const newHistory = [...prev];
-          const prevId = newHistory.pop();
-          setCurrentContactId(prevId ?? null);
-          return newHistory;
-        });
+        const newHistory = [...historyRef.current];
+        const prevId = newHistory.pop() ?? null;
+        historyRef.current = newHistory;
+        setHistory(newHistory);
+        setCurrentContactId(prevId);
       }
       if (card) {
         const inX = dir === "left" ? 80 : -80;
@@ -496,7 +498,7 @@ const DailyBrief = () => {
           {filterOptions.map(opt => (
             <button
               key={opt.id}
-              onClick={() => { setOwnerFilter(opt.id); setCurrentContactId(null); setTreated(new Set()); setHistory([]); setCompletedAll(false); }}
+              onClick={() => { setOwnerFilter(opt.id); setCurrentContactId(null); setTreated(new Set()); historyRef.current = []; setHistory([]); setCompletedAll(false); }}
               className={cn(
                 "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
                 ownerFilter === opt.id
@@ -754,7 +756,6 @@ const DailyBrief = () => {
                                           ),
                                         }));
                                         await supabase.from("tasks").update({ due_date: newDate, updated_at: new Date().toISOString() }).eq("id", taskId);
-                                        queryClient.invalidateQueries({ queryKey: ["salgssenter-all", ownerFilter] });
                                       }}
                                       className="h-7 px-3 text-[0.75rem] rounded-full border border-border text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors"
                                     >
