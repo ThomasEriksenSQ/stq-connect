@@ -880,6 +880,12 @@ const DailyBrief = () => {
                         const harSignal = !!currentSignal && currentSignal !== "Ukjent om behov";
                         const harTask = !!current.nextTask;
                         const harForfalt = current.hasOverdue;
+                        const erIkkeAktuell = localIkkeAktuell[current.contact.id] ?? !!current.contact.ikke_aktuell_kontakt;
+                        if (erIkkeAktuell) {
+                          saveReview(current.contact.id, "ikke_aktuell", current);
+                          goNext("left", true);
+                          return;
+                        }
                         const openNudge = (scenario: typeof nudgeScenario) => {
                           setNudgeScenario(scenario);
                           setNudgeSignal(currentSignal || "Ukjent om behov");
@@ -890,10 +896,7 @@ const DailyBrief = () => {
                         if (harForfalt) { openNudge("forfalt"); return; }
                         if (!harSignal && !harTask) { openNudge("ingen_signal_ingen_task"); return; }
                         if (harSignal && !harTask) { openNudge("signal_ingen_task"); return; }
-                        // Sjekk ikke_aktuell SIST — kun som action_taken, ikke som grunn til å hoppe
-                        const erIkkeAktuell = localIkkeAktuell[current.contact.id] ?? !!current.contact.ikke_aktuell_kontakt;
-                        const actionTaken = erIkkeAktuell ? "ikke_aktuell" : "beholdt";
-                        saveReview(current.contact.id, actionTaken, current);
+                        saveReview(current.contact.id, "beholdt", current);
                         goNext("left", true);
                       }}
                       className="w-full h-[46px] rounded-xl bg-foreground text-background text-[0.9375rem] font-medium hover:opacity-90 active:scale-[0.99] transition-all"
@@ -1069,10 +1072,11 @@ const DailyBrief = () => {
                       key={cat.label}
                       onClick={() => setNudgeSignal(cat.label)}
                       className={cn(
-                        "h-10 px-3 rounded-xl border text-[0.8125rem] font-medium transition-all",
+                        "h-10 px-3 rounded-xl border text-[0.8125rem] font-medium transition-all flex items-center justify-center gap-1.5",
                         nudgeSignal === cat.label ? cat.active + " shadow-sm" : cat.inactive
                       )}
                     >
+                      {nudgeSignal === cat.label && <span className="text-sm">✓</span>}
                       {cat.label}
                     </button>
                   ))}
