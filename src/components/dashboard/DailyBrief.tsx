@@ -362,6 +362,17 @@ const DailyBrief = () => {
   }, [isAnimating]);
 
   const saveReview = useCallback(async (contactId: string, actionTaken: string, lead: ScoredLead) => {
+    const newReview = {
+      contact_id: contactId,
+      reviewed_by: user?.id,
+      action_taken: actionTaken,
+      signals_at_review: buildSignalSnapshot(lead),
+      reviewed_at: new Date().toISOString(),
+    };
+    queryClient.setQueryData(["agent-reviews"], (old: any[]) => {
+      const filtered = (old || []).filter((r: any) => r.contact_id !== contactId);
+      return [newReview, ...filtered];
+    });
     await supabase.from("agent_contact_reviews").insert({
       contact_id: contactId,
       reviewed_by: user?.id,
