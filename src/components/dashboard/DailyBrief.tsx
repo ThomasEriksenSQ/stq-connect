@@ -733,7 +733,7 @@ const DailyBrief = () => {
                                   : "Følg opp på sikt"}
                               </span>
                               {overdue && (
-                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                <div className="mt-2 flex flex-wrap gap-1.5" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
                                   {[
                                     { label: "Følg opp på sikt", value: null },
                                     { label: "1 uke", value: format(addWeeks(new Date(), 1), "yyyy-MM-dd") },
@@ -743,7 +743,6 @@ const DailyBrief = () => {
                                   ].map(chip => (
                                     <button
                                       key={chip.label}
-                                      onMouseDown={(e) => e.stopPropagation()}
                                       onClick={async (e) => {
                                         e.stopPropagation();
                                         const newDate = chip.value;
