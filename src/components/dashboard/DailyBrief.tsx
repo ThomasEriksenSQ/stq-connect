@@ -93,6 +93,7 @@ const DailyBrief = () => {
   const [completedAll, setCompletedAll] = useState(false);
   const [treated, setTreated] = useState<Set<string>>(new Set());
   const [activeForm, setActiveForm] = useState<"snooze" | "signal" | null>(null);
+  const [reminderDismissed, setReminderDismissed] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [localSignals, setLocalSignals] = useState<Record<string, string>>({});
