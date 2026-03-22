@@ -893,7 +893,8 @@ const DailyBrief = () => {
                         if (!harSignal && !harTask) { openNudge("ingen_signal_ingen_task"); return; }
                         if (harSignal && !harTask) { openNudge("signal_ingen_task"); return; }
                         // Sjekk ikke_aktuell SIST — kun som action_taken, ikke som grunn til å hoppe
-                        const actionTaken = current.contact.ikke_aktuell_kontakt ? "ikke_aktuell" : "beholdt";
+                        const erIkkeAktuell = localIkkeAktuell[current.contact.id] ?? !!current.contact.ikke_aktuell_kontakt;
+                        const actionTaken = erIkkeAktuell ? "ikke_aktuell" : "beholdt";
                         saveReview(current.contact.id, actionTaken, current);
                         goNext("left", true);
                       }}
