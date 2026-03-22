@@ -384,7 +384,7 @@ const DailyBrief = () => {
       action_taken: actionTaken,
       signals_at_review: buildSignalSnapshot(lead),
     });
-    queryClient.invalidateQueries({ queryKey: ["agent-reviews"] });
+    
   }, [user?.id, queryClient]);
 
   const updateTaskMutation = useMutation({
