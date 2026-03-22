@@ -479,7 +479,7 @@ const DailyBrief = () => {
       dragStartXRef.current = e.clientX;
       dragDeltaXRef.current = 0;
       setIsDragging(true);
-      card.setPointerCapture(e.pointerId);
+      
     };
     const onPointerMove = (e: PointerEvent) => {
       if (dragStartXRef.current === null) return;
