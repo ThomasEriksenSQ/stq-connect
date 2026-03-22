@@ -30,6 +30,9 @@ const SIGNAL_CATEGORIES = [
 interface ScoredLead {
   contact: any; signal: string; score: number;
   temperature: "hett" | "lovende" | "mulig" | "sovende";
+  tier: 1 | 2 | 3 | 4;
+  reasons: string[];
+  needsReview: boolean;
   lastAct: any; nextTask: any; hasOverdue: boolean;
   hasMarkedsradar: boolean; isInnkjoper: boolean; hasAktivForespørsel: boolean;
   hasTidligereForespørsel: boolean;
