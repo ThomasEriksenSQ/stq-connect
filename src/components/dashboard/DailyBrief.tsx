@@ -935,7 +935,7 @@ const DailyBrief = () => {
                 </button>
                 <button
                   onClick={() => goNext("left")}
-                  disabled={queue.findIndex(l => l.contact.id === current?.contact.id) >= queue.length - 1}
+                  disabled={queue.filter(l => !treated.has(l.contact.id) && l.contact.id !== current?.contact.id).length === 0}
                   className="flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-15 disabled:pointer-events-none transition-all"
                 >
                   <ChevronRight className="h-4 w-4" />
