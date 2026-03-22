@@ -90,6 +90,7 @@ const DailyBrief = () => {
   const [viewMode, setViewMode] = useState<"kort" | "liste">("kort");
   const [ownerFilter, setOwnerFilter] = useState(user?.id || "alle");
   const [currentContactId, setCurrentContactId] = useState<string | null>(null);
+  const [completedAll, setCompletedAll] = useState(false);
   const [treated, setTreated] = useState<Set<string>>(new Set());
   const [activeForm, setActiveForm] = useState<"snooze" | "signal" | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
