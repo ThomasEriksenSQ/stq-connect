@@ -857,16 +857,12 @@ const DailyBrief = () => {
                               c.id === current.contact.id ? { ...c, ikke_aktuell_kontakt: newVal } : c
                             ),
                           }));
-                          if (newVal) {
-                            await saveReview(current.contact.id, "ikke_aktuell", current);
-                            goNext("left", true);
-                          }
                         }}
                         className={cn(
-                          "inline-flex items-center h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors",
+                          "inline-flex items-center h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors cursor-pointer",
                           current.contact.ikke_aktuell_kontakt
                             ? "bg-destructive/10 text-destructive border-destructive/30"
-                            : "bg-background text-muted-foreground border-border hover:bg-secondary"
+                            : "border-border text-muted-foreground hover:bg-secondary"
                         )}
                       >
                         Ikke relevant person
@@ -879,6 +875,12 @@ const DailyBrief = () => {
                     <button
                       onClick={() => {
                         if (!current) return;
+                        const erIkkeAktuell = !!current.contact.ikke_aktuell_kontakt;
+                        if (erIkkeAktuell) {
+                          saveReview(current.contact.id, "ikke_aktuell", current);
+                          goNext("left", true);
+                          return;
+                        }
                         const harSignal = !!currentSignal && currentSignal !== "Ukjent om behov";
                         const harTask = !!current.nextTask;
                         const harForfalt = current.hasOverdue;
@@ -892,7 +894,6 @@ const DailyBrief = () => {
                         if (harForfalt) { openNudge("forfalt"); return; }
                         if (!harSignal && !harTask) { openNudge("ingen_signal_ingen_task"); return; }
                         if (harSignal && !harTask) { openNudge("signal_ingen_task"); return; }
-                        // Har signal + task → beholdt
                         saveReview(current.contact.id, "beholdt", current);
                         goNext("left", true);
                       }}
