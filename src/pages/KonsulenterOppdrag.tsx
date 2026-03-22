@@ -271,18 +271,12 @@ export default function KonsulenterOppdrag() {
     const oppstartMarginPerTime = oppstart.length > 0
       ? oppstart.reduce((s: number, o: any) => s + o.marginPerTime, 0) / oppstart.length
       : 0;
-    const nesteFornyelse = (() => {
-      const alleAktive = enriched.filter((o: any) => o.status === "Aktiv" || o.status === "Oppstart");
-      const medDato = alleAktive
-        .filter((o: any) => o.daysUntilForny !== null && o.daysUntilForny >= 0)
-        .sort((a: any, b: any) => a.daysUntilForny - b.daysUntilForny);
-      if (medDato.length === 0) return null;
-      const first = medDato[0];
-      return {
-        navn: first.kandidat?.split(" ")[0] || "?",
-        dager: first.daysUntilForny,
-      };
-    })();
+    const fornyelser30 = enriched.filter((o: any) =>
+      (o.status === "Aktiv" || o.status === "Oppstart") &&
+      o.daysUntilForny !== null &&
+      o.daysUntilForny >= 0 &&
+      o.daysUntilForny <= 30
+    ).length;
 
     const fornyelser90 = enriched.filter((o: any) =>
       (o.status === "Aktiv" || o.status === "Oppstart") &&
@@ -300,7 +294,7 @@ export default function KonsulenterOppdrag() {
       workdays,
       monthLabel: format(now, "MMMM yyyy"),
       oppstartMarginPerTime,
-      nesteFornyelse,
+      fornyelser30,
       fornyelser90,
     };
   }, [enriched]);
@@ -376,21 +370,11 @@ export default function KonsulenterOppdrag() {
               <p className="text-2xl font-bold text-amber-600">{stats.oppstart}</p>
               <p className="text-[0.8125rem] text-muted-foreground">I oppstart</p>
             </div>
-            <div className="bg-violet-50 dark:bg-violet-950/20 border border-violet-100 rounded-xl px-5 py-4 shadow-sm">
-              <CalendarCheck className="h-4 w-4 text-violet-600 mb-1" />
-              {stats.nesteFornyelse ? (
-                <>
-                  <p className="text-2xl font-bold text-violet-600">{stats.nesteFornyelse.dager}d</p>
-                  <p className="text-[0.8125rem] text-muted-foreground">Neste fornyelse</p>
-                  <p className="text-xs text-muted-foreground">{stats.nesteFornyelse.navn}</p>
-                </>
-              ) : (
-                <>
-                  <p className="text-2xl font-bold text-violet-600">—</p>
-                  <p className="text-[0.8125rem] text-muted-foreground">Neste fornyelse</p>
-                  <p className="text-xs text-muted-foreground">Ingen dato satt</p>
-                </>
-              )}
+            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 rounded-xl px-5 py-4 shadow-sm">
+              <BarChart2 className="h-4 w-4 text-amber-600 mb-1" />
+              <p className="text-2xl font-bold text-amber-600">{stats.fornyelser30}</p>
+              <p className="text-[0.8125rem] text-muted-foreground">Fornyelser under 30 dager</p>
+              <p className="text-xs text-muted-foreground">Krever oppfølging</p>
             </div>
             <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 rounded-xl px-5 py-4 shadow-sm">
               <BarChart2 className="h-4 w-4 text-amber-600 mb-1" />
