@@ -435,12 +435,12 @@ const Contacts = () => {
         <p className="text-sm text-muted-foreground py-12 text-center">Ingen kontakter funnet</p>
       ) : (
         <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
-            <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)_44px_90px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+            <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_44px_minmax(0,1.2fr)_minmax(0,1fr)_90px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="name">Navn</SortHeader>
             <SortHeader field="signal">Signal</SortHeader>
+            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Finn</span>
             <SortHeader field="company">Selskap</SortHeader>
             <SortHeader field="title">Stilling</SortHeader>
-            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Finn</span>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Tags</span>
             <SortHeader field="last_activity" className="justify-end">Siste akt.</SortHeader>
           </div>
@@ -453,7 +453,7 @@ const Contacts = () => {
 
               return (
                 <div key={contact.id} className={cn(
-                  "grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)_44px_90px_90px] gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 border-l-[3px]",
+                  "grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_44px_minmax(0,1.2fr)_minmax(0,1fr)_90px_90px] gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 border-l-[3px]",
                   hotListActive
                     ? (contact as any).temperature === "hett"    ? "border-l-red-500"
                     : (contact as any).temperature === "lovende" ? "border-l-orange-400"
@@ -500,14 +500,6 @@ const Contacts = () => {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  {/* COMPANY */}
-                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate flex items-center gap-1 text-left cursor-pointer">
-                    {companyName || ""}
-                  </button>
-                  {/* TITLE */}
-                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate text-left cursor-pointer">
-                    {contact.title?.slice(0, 25) || ""}
-                  </button>
                   {/* FINN.NO */}
                   <div className="flex items-center justify-center">
                     {(contact as any).hasMarkedsradar && (
@@ -521,6 +513,14 @@ const Contacts = () => {
                       </Tooltip>
                     )}
                   </div>
+                  {/* COMPANY */}
+                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate flex items-center gap-1 text-left cursor-pointer">
+                    {companyName || ""}
+                  </button>
+                  {/* TITLE */}
+                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate text-left cursor-pointer">
+                    {contact.title?.slice(0, 25) || ""}
+                  </button>
                   {/* TAGS */}
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                     <button
