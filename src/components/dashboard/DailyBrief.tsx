@@ -839,12 +839,19 @@ const DailyBrief = () => {
 
                       {/* Ikke relevant person */}
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           const newVal = !current.contact.ikke_aktuell_kontakt;
-                          supabase.from("contacts").update({ ikke_aktuell_kontakt: newVal }).eq("id", current.contact.id)
-                            .then(() => queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
-                              old?.map((c: any) => c.id === current.contact.id ? { ...c, ikke_aktuell_kontakt: newVal } : c)
-                            ));
+                          await supabase.from("contacts").update({ ikke_aktuell_kontakt: newVal }).eq("id", current.contact.id);
+                          queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
+                            ...old,
+                            rawContacts: old?.rawContacts?.map((c: any) =>
+                              c.id === current.contact.id ? { ...c, ikke_aktuell_kontakt: newVal } : c
+                            ),
+                          }));
+                          if (newVal) {
+                            await saveReview(current.contact.id, "ikke_aktuell", current);
+                            goNext("left", true);
+                          }
                         }}
                         className={cn(
                           "inline-flex items-center h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors",
