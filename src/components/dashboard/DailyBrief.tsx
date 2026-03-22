@@ -309,6 +309,7 @@ const DailyBrief = () => {
     setTimeout(() => {
       setActiveForm(null);
       setLocalIkkeAktuell({});
+      setSelectedChipDate({});
       const freshTreated = treatedRef.current;
       const freshScored = scoredLeadsRef.current;
       const newTreatedSet = new Set([...freshTreated, ...(contactIdToMark ? [contactIdToMark] : [])]);
