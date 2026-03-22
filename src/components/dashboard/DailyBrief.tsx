@@ -337,7 +337,7 @@ const DailyBrief = () => {
     queryClient.invalidateQueries({ queryKey: ["agent-reviews"] });
   }, [user?.id, queryClient]);
 
-
+  const updateTaskMutation = useMutation({
     mutationFn: async ({ taskId, dueDate }: { taskId: string; dueDate: string }) => {
       const { error } = await supabase.from("tasks").update({ due_date: dueDate, updated_at: new Date().toISOString() }).eq("id", taskId);
       if (error) throw error;
