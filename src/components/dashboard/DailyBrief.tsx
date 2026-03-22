@@ -897,7 +897,6 @@ const DailyBrief = () => {
                         saveReview(current.contact.id, "beholdt", current);
                         goNext("left", true);
                       }}
-                      }}
                       className="w-full h-[46px] rounded-xl bg-foreground text-background text-[0.9375rem] font-medium hover:opacity-90 active:scale-[0.99] transition-all"
                     >
                       Ok, neste →
