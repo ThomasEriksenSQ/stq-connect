@@ -464,9 +464,6 @@ const Contacts = () => {
                 )}>
                   {/* NAME - clickable */}
                   <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="min-w-0 text-left cursor-pointer flex items-center gap-2">
-                    {hotListActive && (
-                      <span className={cn("w-2 h-2 rounded-full flex-shrink-0", TEMP_CONFIG[(contact as any).temperature as keyof typeof TEMP_CONFIG]?.dot || "bg-gray-300")} />
-                    )}
                     <p className="text-[0.8125rem] font-medium text-foreground truncate">
                       {contact.first_name} {contact.last_name}
                     </p>
