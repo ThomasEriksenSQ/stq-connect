@@ -733,7 +733,7 @@ const DailyBrief = () => {
                                   : "Følg opp på sikt"}
                               </span>
                               {overdue && (
-                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                <div className="mt-2 flex flex-wrap gap-1.5" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
                                   {[
                                     { label: "Følg opp på sikt", value: null },
                                     { label: "1 uke", value: format(addWeeks(new Date(), 1), "yyyy-MM-dd") },
@@ -743,7 +743,6 @@ const DailyBrief = () => {
                                   ].map(chip => (
                                     <button
                                       key={chip.label}
-                                      onMouseDown={(e) => e.stopPropagation()}
                                       onClick={async (e) => {
                                         e.stopPropagation();
                                         const newDate = chip.value;
@@ -983,7 +982,7 @@ const DailyBrief = () => {
                 </button>
                 <button
                   onClick={() => goNext("left")}
-                  disabled={queue.filter(l => !treated.has(l.contact.id) && l.contact.id !== current?.contact.id).length === 0}
+                  disabled={(() => { const idx = scoredLeads.findIndex(s => s.contact.id === current?.contact.id); return scoredLeads.slice(idx + 1).filter(l => !treated.has(l.contact.id) && (!l.contact.next_review_at || new Date(l.contact.next_review_at) <= new Date())).length === 0; })()}
                   className="flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-15 disabled:pointer-events-none transition-all"
                 >
                   <ChevronRight className="h-4 w-4" />
