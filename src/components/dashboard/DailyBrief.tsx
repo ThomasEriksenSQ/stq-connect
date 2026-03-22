@@ -174,30 +174,8 @@ const DailyBrief = () => {
   const techProfiles = salgsData?.techProfiles ?? [];
   const foresporsler = salgsData?.foresporsler ?? [];
 
-  const { data: agentReviews = [], isLoading: isLoadingReviews } = useQuery({
-    queryKey: ["agent-reviews"],
-    staleTime: 0,
-    refetchOnMount: "always",
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("agent_contact_reviews")
-        .select("contact_id, reviewed_at, action_taken, signals_at_review")
-        .order("reviewed_at", { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-  });
 
-  const reviewMap = useMemo(() => {
-    const map: Record<string, any> = {};
-    (agentReviews as any[]).forEach(r => {
-      const existing = map[r.contact_id];
-      if (!existing || r.reviewed_at > existing.reviewed_at) {
-        map[r.contact_id] = r;
-      }
-    });
-    return map;
-  }, [agentReviews]);
+
 
   const scoredLeads = useMemo(() => {
     return rawContacts.map((contact: any) => {
@@ -260,28 +238,21 @@ const DailyBrief = () => {
     }).sort((a, b) => {
       const ta = a.tier, tb = b.tier;
       if (ta !== tb) return ta - tb;
-      const ra = reviewMap[a.contact.id]?.reviewed_at ?? "1970-01-01T00:00:00Z";
-      const rb = reviewMap[b.contact.id]?.reviewed_at ?? "1970-01-01T00:00:00Z";
+      const ra = a.contact.next_review_at ?? "1970-01-01T00:00:00Z";
+      const rb = b.contact.next_review_at ?? "1970-01-01T00:00:00Z";
       if (ra !== rb) return ra.localeCompare(rb);
       return b.score - a.score;
     }) as ScoredLead[];
-  }, [rawContacts, allActivities, allTasks, techProfiles, foresporsler, reviewMap]);
+  }, [rawContacts, allActivities, allTasks, techProfiles, foresporsler]);
 
   const queue = useMemo(() => {
     return scoredLeads.filter(l => {
       if (treated.has(l.contact.id)) return false;
-      const lastReview = reviewMap[l.contact.id];
-      
-      if (!lastReview) return true;
-      const cooldownDays = COOLDOWN_DAYS[l.tier] ?? 90;
-      const daysSinceReview = differenceInDays(new Date(), new Date(lastReview.reviewed_at));
-      if (daysSinceReview >= cooldownDays) return true;
-      const prevSnapshot = lastReview.signals_at_review;
-      const currSnapshot = buildSignalSnapshot(l);
-      const changed = JSON.stringify(prevSnapshot) !== JSON.stringify(currSnapshot);
-      return changed;
+      const nextReview = l.contact.next_review_at;
+      if (!nextReview) return true;
+      return new Date(nextReview) <= new Date();
     });
-  }, [scoredLeads, treated, reviewMap]);
+  }, [scoredLeads, treated]);
 
   const current = useMemo(() => {
     if (completedAll) return null;
@@ -367,25 +338,28 @@ const DailyBrief = () => {
   }, [isAnimating]);
 
   const saveReview = useCallback(async (contactId: string, actionTaken: string, lead: ScoredLead) => {
-    const newReview = {
-      contact_id: contactId,
-      reviewed_by: user?.id,
-      action_taken: actionTaken,
-      signals_at_review: buildSignalSnapshot(lead),
-      reviewed_at: new Date().toISOString(),
-    };
-    queryClient.setQueryData(["agent-reviews"], (old: any[]) => {
-      const filtered = (old || []).filter((r: any) => r.contact_id !== contactId);
-      return [newReview, ...filtered];
-    });
+    const cooldownDays = COOLDOWN_DAYS[lead.tier] ?? 90;
+    const nextReviewAt = new Date();
+    nextReviewAt.setDate(nextReviewAt.getDate() + cooldownDays);
+    
+    queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
+      ...old,
+      rawContacts: old?.rawContacts?.map((c: any) =>
+        c.id === contactId ? { ...c, next_review_at: nextReviewAt.toISOString() } : c
+      ),
+    }));
+    
+    await supabase.from("contacts").update({ 
+      next_review_at: nextReviewAt.toISOString() 
+    }).eq("id", contactId);
+    
     await supabase.from("agent_contact_reviews").insert({
       contact_id: contactId,
       reviewed_by: user?.id,
       action_taken: actionTaken,
       signals_at_review: buildSignalSnapshot(lead),
     });
-    
-  }, [user?.id, queryClient]);
+  }, [user?.id, queryClient, ownerFilter]);
 
   const updateTaskMutation = useMutation({
     mutationFn: async ({ taskId, dueDate }: { taskId: string; dueDate: string }) => {
@@ -544,7 +518,7 @@ const DailyBrief = () => {
             </div>
           </div>
 
-          {(isLoading || isLoadingReviews || agentReviews.length === 0) ? (
+          {isLoading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
