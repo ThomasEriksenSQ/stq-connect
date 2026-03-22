@@ -43,7 +43,7 @@ export function AppLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <header className="sticky top-0 z-30 border-b border-border bg-card">
-        <div className="max-w-6xl mx-auto px-8 flex items-center h-[52px] gap-8">
+        <div className="max-w-6xl mx-auto px-8 flex items-center h-[52px] gap-4">
           <span className="text-[1.0625rem] font-bold tracking-tight text-foreground select-none">
             STACQ
           </span>
