@@ -177,7 +177,7 @@ const DailyBrief = () => {
   const { data: agentReviews = [], isLoading: isLoadingReviews } = useQuery({
     queryKey: ["agent-reviews"],
     staleTime: 0,
-    
+    refetchOnMount: true,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("agent_contact_reviews")
