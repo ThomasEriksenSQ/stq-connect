@@ -1109,12 +1109,13 @@ const DailyBrief = () => {
                       key={chip.value}
                       onClick={() => setNudgeDate(chip.value)}
                       className={cn(
-                        "h-10 px-3 text-[0.8125rem] rounded-xl border transition-all font-medium",
+                        "h-10 px-3 text-[0.8125rem] rounded-xl border transition-all font-medium flex items-center justify-center gap-1.5",
                         nudgeDate === chip.value
                           ? "bg-primary/10 border-primary/30 text-primary font-medium shadow-sm"
                           : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
                       )}
                     >
+                      {nudgeDate === chip.value && <span className="text-sm">✓</span>}
                       {chip.label}
                     </button>
                   ))}
