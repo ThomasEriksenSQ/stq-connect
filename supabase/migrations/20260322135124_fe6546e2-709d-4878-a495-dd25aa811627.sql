@@ -1,0 +1,1 @@
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS next_review_at timestamptz;
