@@ -321,8 +321,14 @@ const Contacts = () => {
         if (!(a as any).lastActivity) return 1;
         if (!(b as any).lastActivity) return -1;
         return dir * (a as any).lastActivity.localeCompare((b as any).lastActivity);
-      case "priority":
-        return dir * ((b as any).heatScore - (a as any).heatScore);
+      case "priority": {
+        const sa = (a as any).heatScore ?? -1000;
+        const sb = (b as any).heatScore ?? -1000;
+        const ta = (a as any).tier ?? 4;
+        const tb = (b as any).tier ?? 4;
+        if (ta !== tb) return ta - tb; // tier ASC (1 best)
+        return sb - sa; // score DESC innen tier
+      }
       default: return 0;
     }
   });
