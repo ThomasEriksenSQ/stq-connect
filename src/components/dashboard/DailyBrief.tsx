@@ -123,12 +123,17 @@ const DailyBrief = () => {
         { data: techProfiles },
         { data: foresporsler },
       ] = await Promise.all([
-        contactIds.length > 0
-          ? supabase.from("activities").select("*").in("contact_id", contactIds).order("created_at", { ascending: false })
-          : Promise.resolve({ data: [] }),
-        contactIds.length > 0
-          ? supabase.from("tasks").select("*").in("contact_id", contactIds).neq("status", "done").order("due_date", { ascending: true, nullsFirst: false })
-          : Promise.resolve({ data: [] }),
+        supabase.from("activities")
+          .select("contact_id, created_at, subject, description, type")
+          .not("contact_id", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(10000),
+        supabase.from("tasks")
+          .select("contact_id, created_at, due_date, status, description, title")
+          .not("contact_id", "is", null)
+          .neq("status", "done")
+          .order("due_date", { ascending: true, nullsFirst: false })
+          .limit(5000),
         companyIds.length > 0
           ? supabase.from("company_tech_profile").select("company_id, konsulent_hyppighet, sist_fra_finn, teknologier").in("company_id", companyIds)
           : Promise.resolve({ data: [] }),
