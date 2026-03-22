@@ -213,12 +213,14 @@ export function OppdragEditSheet({
       setSelskapId((row as any).selskap_id || null);
       setSelskapNavn(row.kunde || null);
 
-      // Auto-check løpende if forny_dato is 25-35 days from today
-      if (row.forny_dato) {
-        const diff = Math.round((new Date(row.forny_dato).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-        setIsLopende(diff >= 25 && diff <= 35);
+      // Read lopende flag from DB
+      setIsLopende((row as any).lopende_30_dager === true);
+      if ((row as any).lopende_30_dager) {
+        const d = new Date();
+        d.setDate(d.getDate() + 30);
+        setFornyDato(d);
       } else {
-        setIsLopende(false);
+        setFornyDato(row.forny_dato ? new Date(row.forny_dato) : undefined);
       }
     }
   }, [row?.id]);
@@ -246,7 +248,10 @@ export function OppdragEditSheet({
         deal_type: dealType,
         utpris: Number(utpris) || null,
         til_konsulent: Number(tilKonsulent) || null,
-        forny_dato: fornyDato ? format(fornyDato, "yyyy-MM-dd") : null,
+        lopende_30_dager: isLopende,
+        forny_dato: isLopende
+          ? (() => { const d = new Date(); d.setDate(d.getDate() + 30); return format(d, "yyyy-MM-dd"); })()
+          : (fornyDato ? format(fornyDato, "yyyy-MM-dd") : null),
         start_dato: startDato ? format(startDato, "yyyy-MM-dd") : null,
         kunde: selskapNavn || null,
         selskap_id: selskapId || null,
@@ -421,7 +426,7 @@ export function OppdragEditSheet({
               className="h-4 w-4 rounded border-border"
             />
             <label htmlFor="lopende" className="text-[0.8125rem] text-muted-foreground cursor-pointer select-none">
-              Løpende 30 dager (fornyes automatisk fra i dag)
+              Løpende 30 dager — oppsigelsestid fra dagens dato
             </label>
           </div>
           {isLopende && fornyDato && (
