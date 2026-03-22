@@ -271,7 +271,7 @@ const DailyBrief = () => {
     return scoredLeads.filter(l => {
       if (treated.has(l.contact.id)) return false;
       const lastReview = reviewMap[l.contact.id];
-      if (l.contact.id === 'd60a7ed2-298d-402e-9a04-6442c27f068c') console.log('VICTOR REVIEW', lastReview);
+      
       if (!lastReview) return true;
       const cooldownDays = COOLDOWN_DAYS[l.tier] ?? 90;
       const daysSinceReview = differenceInDays(new Date(), new Date(lastReview.reviewed_at));
