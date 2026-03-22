@@ -500,14 +500,6 @@ const Contacts = () => {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  {/* COMPANY */}
-                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate flex items-center gap-1 text-left cursor-pointer">
-                    {companyName || ""}
-                  </button>
-                  {/* TITLE */}
-                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate text-left cursor-pointer">
-                    {contact.title?.slice(0, 25) || ""}
-                  </button>
                   {/* FINN.NO */}
                   <div className="flex items-center justify-center">
                     {(contact as any).hasMarkedsradar && (
@@ -521,6 +513,13 @@ const Contacts = () => {
                       </Tooltip>
                     )}
                   </div>
+                  {/* COMPANY */}
+                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate flex items-center gap-1 text-left cursor-pointer">
+                    {companyName || ""}
+                  </button>
+                  {/* TITLE */}
+                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate text-left cursor-pointer">
+                    {contact.title?.slice(0, 25) || ""}
                   {/* TAGS */}
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                     <button
