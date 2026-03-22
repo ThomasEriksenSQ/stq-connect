@@ -177,7 +177,7 @@ const DailyBrief = () => {
   const { data: agentReviews = [], isLoading: isLoadingReviews } = useQuery({
     queryKey: ["agent-reviews"],
     staleTime: 0,
-    refetchOnMount: true,
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data, error } = await supabase
         .from("agent_contact_reviews")
@@ -203,12 +203,12 @@ const DailyBrief = () => {
     return rawContacts.map((contact: any) => {
       const contactActs = allActivities.filter((a: any) => a.contact_id === contact.id);
       const contactTasks = allTasks.filter((t: any) => t.contact_id === contact.id);
-      if (contact.id === 'd60a7ed2-298d-402e-9a04-6442c27f068c') console.log('VICTOR ACTS', contactActs.map(a => a.subject));
+      
       const signal = getEffectiveSignal(
         contactActs.map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
         contactTasks.map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date }))
       );
-      if (contact.id === 'd60a7ed2-298d-402e-9a04-6442c27f068c') console.log('VICTOR SIGNAL', signal);
+      
       if (signal === "Ikke aktuelt") return null;
       const lastAct = contactActs[0];
       const daysSince = lastAct ? differenceInDays(new Date(), new Date(lastAct.created_at)) : 999;
@@ -271,7 +271,7 @@ const DailyBrief = () => {
     return scoredLeads.filter(l => {
       if (treated.has(l.contact.id)) return false;
       const lastReview = reviewMap[l.contact.id];
-      if (l.contact.id === 'd60a7ed2-298d-402e-9a04-6442c27f068c') console.log('VICTOR REVIEW', lastReview);
+      
       if (!lastReview) return true;
       const cooldownDays = COOLDOWN_DAYS[l.tier] ?? 90;
       const daysSinceReview = differenceInDays(new Date(), new Date(lastReview.reviewed_at));
@@ -544,7 +544,7 @@ const DailyBrief = () => {
             </div>
           </div>
 
-          {(isLoading || isLoadingReviews) ? (
+          {(isLoading || isLoadingReviews || agentReviews.length === 0) ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
