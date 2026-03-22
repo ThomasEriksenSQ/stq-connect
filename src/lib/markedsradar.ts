@@ -20,6 +20,7 @@ export type FinnAnnonseInput = {
 export type RadarCompanyRef = {
   id: string;
   name: string;
+  status: string | null;
 };
 
 export type RadarTechnologyTrend = {
@@ -48,7 +49,9 @@ export type RadarCompany = {
   key: string;
   name: string;
   company: RadarCompanyRef | null;
+  crmStatus: string | null;
   inCrm: boolean;
+  isActionable: boolean;
   adCount: number;
   currentWeekCount: number;
   recent30Count: number;
@@ -237,6 +240,7 @@ type MutableCompany = {
   key: string;
   name: string;
   company: RadarCompanyRef | null;
+  crmStatus: string | null;
   ads: FinnAnnonseInput[];
   techCounts: Map<string, number>;
   locations: Set<string>;
@@ -252,6 +256,18 @@ function buildContactKey(ad: FinnAnnonseInput): string | null {
     .map((value) => (value || "").trim().toLowerCase())
     .filter(Boolean);
   return parts.length > 0 ? parts.join("|") : null;
+}
+
+function normalizeCompanyStatus(status: string | null | undefined): string | null {
+  if (!status) return null;
+  const normalized = status.trim().toLowerCase();
+  if (normalized === "kunde") return "customer";
+  return normalized;
+}
+
+function isActionableCompanyStatus(status: string | null | undefined): boolean {
+  const normalized = normalizeCompanyStatus(status);
+  return normalized !== "partner" && normalized !== "churned";
 }
 
 function scoreCompany(
@@ -371,6 +387,7 @@ export function buildMarketRadar(
         key: groupKey,
         name: companyName,
         company: crmCompany,
+        crmStatus: crmCompany?.status || null,
         ads: [],
         techCounts: new Map<string, number>(),
         locations: new Set<string>(),
@@ -439,7 +456,9 @@ export function buildMarketRadar(
         key: company.key,
         name: company.name,
         company: company.company,
+        crmStatus: company.crmStatus,
         inCrm: !!company.company,
+        isActionable: !company.company || isActionableCompanyStatus(company.crmStatus),
         adCount: company.ads.length,
         currentWeekCount: company.currentWeekCount,
         recent30Count: company.recent30Count,
@@ -463,10 +482,11 @@ export function buildMarketRadar(
       return a.name.localeCompare(b.name, "nb");
     });
 
-  const newCompaniesNotInCrm = finalizedCompanies.filter((company) => !company.inCrm).slice(0, 8);
-  const topHiringCompanies = finalizedCompanies.slice(0, 12);
+  const actionableCompanies = finalizedCompanies.filter((company) => company.isActionable);
+  const newCompaniesNotInCrm = actionableCompanies.filter((company) => !company.inCrm).slice(0, 8);
+  const topHiringCompanies = actionableCompanies.slice(0, 12);
   const topContactOpportunities = uniqueBy(
-    finalizedCompanies.flatMap((company) =>
+    actionableCompanies.flatMap((company) =>
       company.contacts.map((contact) => ({
         ...contact,
         score: contact.score + company.score,
@@ -493,7 +513,7 @@ export function buildMarketRadar(
     weekDiff: adsThisWeek - adsLastWeek,
     uniqueCompanies30d,
     hottestTech: technologyTrends[0]?.name || null,
-    companies: finalizedCompanies,
+    companies: actionableCompanies,
     newCompaniesNotInCrm,
     topHiringCompanies,
     topContactOpportunities,
