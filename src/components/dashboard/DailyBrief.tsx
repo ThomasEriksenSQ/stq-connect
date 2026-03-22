@@ -328,7 +328,7 @@ const DailyBrief = () => {
         setTimeout(() => setIsAnimating(false), 420);
       }));
     }, 240);
-  }, [isAnimating, scoredLeads, treated, current, currentIndexInScored]);
+  }, [isAnimating, scoredLeads, queue, treated, current, currentIndexInScored, currentIndexInQueue]);
 
   const saveReview = useCallback(async (contactId: string, actionTaken: string, lead: ScoredLead) => {
     await supabase.from("agent_contact_reviews").insert({
