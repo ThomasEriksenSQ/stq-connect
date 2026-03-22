@@ -276,11 +276,12 @@ const DailyBrief = () => {
   }, [scoredLeads, treated, reviewMap]);
 
   const current = useMemo(() => {
+    if (completedAll) return null;
     if (currentContactId) {
       return scoredLeads.find(l => l.contact.id === currentContactId) ?? queue[0] ?? null;
     }
     return queue[0] ?? null;
-  }, [currentContactId, scoredLeads, queue]);
+  }, [currentContactId, scoredLeads, queue, completedAll]);
 
   const currentIndexInQueue = currentContactId
     ? queue.findIndex(l => l.contact.id === currentContactId)
