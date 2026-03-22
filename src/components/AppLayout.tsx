@@ -58,17 +58,14 @@ export function AppLayout() {
                   to={item.url}
                   end={item.end}
                   className={cn(
-                    "relative flex items-center gap-2 px-3 py-1.5 text-[0.8125rem] font-medium transition-colors",
+                    "flex items-center gap-2 px-3 py-[14px] text-[0.8125rem] font-medium transition-colors border-b-2",
                     isActive
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "text-foreground border-primary"
+                      : "text-muted-foreground hover:text-foreground border-transparent"
                   )}
                 >
                   <item.icon className="h-4 w-4 stroke-[1.5]" />
                   <span className="hidden sm:inline">{item.title}</span>
-                  {isActive && (
-                    <span className="absolute bottom-[-13px] left-3 right-3 h-[2px] bg-primary rounded-full" />
-                  )}
                 </RouterNavLink>
               );
             })}
