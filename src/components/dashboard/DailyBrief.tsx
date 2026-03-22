@@ -854,13 +854,7 @@ const DailyBrief = () => {
                           const currentVal = localIkkeAktuell[current.contact.id] ?? !!current.contact.ikke_aktuell_kontakt;
                           const newVal = !currentVal;
                           setLocalIkkeAktuell(prev => ({ ...prev, [current.contact.id]: newVal }));
-                          await supabase.from("contacts").update({ ikke_aktuell_kontakt: newVal }).eq("id", current.contact.id);
-                          queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
-                            ...old,
-                            rawContacts: old?.rawContacts?.map((c: any) =>
-                              c.id === current.contact.id ? { ...c, ikke_aktuell_kontakt: newVal } : c
-                            ),
-                          }));
+                          supabase.from("contacts").update({ ikke_aktuell_kontakt: newVal }).eq("id", current.contact.id);
                         }}
                         className={cn(
                           "inline-flex items-center h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors cursor-pointer",
