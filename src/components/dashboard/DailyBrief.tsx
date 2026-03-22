@@ -111,7 +111,7 @@ const DailyBrief = () => {
         .select("*, companies(id, name, city)")
         .or("ikke_aktuell_kontakt.is.null,ikke_aktuell_kontakt.eq.false");
       if (ownerFilter && ownerFilter !== "alle") q = q.eq("owner_id", ownerFilter);
-      const { data, error } = await q.limit(500);
+      const { data, error } = await q.limit(2000);
       if (error) throw error;
       return data;
     },
