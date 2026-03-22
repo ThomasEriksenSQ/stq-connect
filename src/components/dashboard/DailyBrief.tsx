@@ -304,7 +304,9 @@ const DailyBrief = () => {
       }
       if (dir === "left") {
         if (currentLead) {
-          setHistory(prev => [...prev, currentLead.contact.id]);
+          const newHist = [...history, currentLead.contact.id];
+          historyRef.current = newHist;
+          setHistory(newHist);
         }
         const currentIdx = freshScored.findIndex(l => l.contact.id === currentLead?.contact.id);
         const next = freshScored.slice(currentIdx + 1).find(l => !newTreatedSet.has(l.contact.id) && (!l.contact.next_review_at || new Date(l.contact.next_review_at) <= new Date()));
@@ -315,12 +317,11 @@ const DailyBrief = () => {
           setCurrentContactId(null);
         }
       } else {
-        setHistory(prev => {
-          const newHistory = [...prev];
-          const prevId = newHistory.pop();
-          setCurrentContactId(prevId ?? null);
-          return newHistory;
-        });
+        const newHistory = [...historyRef.current];
+        const prevId = newHistory.pop() ?? null;
+        historyRef.current = newHistory;
+        setHistory(newHistory);
+        setCurrentContactId(prevId);
       }
       if (card) {
         const inX = dir === "left" ? 80 : -80;
