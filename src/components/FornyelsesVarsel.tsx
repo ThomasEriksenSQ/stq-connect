@@ -7,7 +7,26 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function FornyelsesVarsel() {
-  const [dismissed, setDismissed] = useState(false);
+  const STORAGE_KEY = "fornyelse_varsel_dismissed_until";
+
+  const [dismissed, setDismissed] = useState<boolean>(() => {
+    try {
+      const until = localStorage.getItem(STORAGE_KEY);
+      if (!until) return false;
+      return new Date(until) > new Date();
+    } catch {
+      return false;
+    }
+  });
+
+  const handleDismiss = () => {
+    try {
+      const nextWeek = new Date();
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      localStorage.setItem(STORAGE_KEY, nextWeek.toISOString());
+    } catch {}
+    setDismissed(true);
+  };
   const navigate = useNavigate();
   const location = useLocation();
 
