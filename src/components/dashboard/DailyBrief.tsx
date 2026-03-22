@@ -7,7 +7,7 @@ import { nb } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { getEffectiveSignal } from "@/lib/categoryUtils";
 import { getHeatResult, TEMP_CONFIG } from "@/lib/heatScore";
-import { Flame, List, ChevronLeft, ChevronRight, Radio, Loader2, MapPin, ChevronDown, X } from "lucide-react";
+import { Flame, List, ChevronLeft, ChevronRight, Radio, Loader2, MapPin, ChevronDown, X, Bell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ContactCardContent } from "@/components/ContactCardContent";
