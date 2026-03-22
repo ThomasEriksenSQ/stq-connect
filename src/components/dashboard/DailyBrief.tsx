@@ -305,28 +305,31 @@ const DailyBrief = () => {
     setTimeout(() => {
       setActiveForm(null);
       setLocalIkkeAktuell({});
-      const newTreated = contactIdToMark
-        ? new Set([...treated, contactIdToMark])
-        : treated;
       if (contactIdToMark) {
-        setTreated(newTreated);
+        setTreated(prev => new Set([...prev, contactIdToMark]));
       }
       if (dir === "left") {
-        // Finn neste kontakt i queue som ikke er treated
-        const nextLead = queue.find(l =>
-          !newTreated.has(l.contact.id) &&
-          l.contact.id !== contactIdToMark &&
+        // Legg nåværende til history før vi går videre
+        if (current) {
+          setHistory(prev => [...prev, current.contact.id]);
+        }
+        // Finn neste i queue som ikke er treated og ikke er markert nå
+        const newTreatedSet = contactIdToMark
+          ? new Set([...treated, contactIdToMark])
+          : treated;
+        const next = queue.find(l =>
+          !newTreatedSet.has(l.contact.id) &&
           l.contact.id !== current?.contact.id
         );
-        setCurrentContactId(nextLead?.contact.id ?? null);
+        setCurrentContactId(next?.contact.id ?? null);
       } else {
-        // Tilbake: finn forrige i queue basert på nåværende posisjon
-        const currentQueueIdx = queue.findIndex(l => l.contact.id === current?.contact.id);
-        const prevIdx = Math.max(currentQueueIdx - 1, 0);
-        const prevLead = queue[prevIdx];
-        if (prevLead && prevLead.contact.id !== current?.contact.id) {
-          setCurrentContactId(prevLead.contact.id);
-        }
+        // Gå tilbake i history
+        setHistory(prev => {
+          const newHistory = [...prev];
+          const prevId = newHistory.pop();
+          if (prevId) setCurrentContactId(prevId);
+          return newHistory;
+        });
       }
       if (card) {
         const inX = dir === "left" ? 80 : -80;
