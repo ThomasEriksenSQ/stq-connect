@@ -295,7 +295,7 @@ export default function KonsulenterOppdrag() {
       monthLabel: format(now, "MMMM yyyy"),
       oppstartMarginPerTime,
       fornyelser30,
-      fornyelser90,
+      fornyelser60,
     };
   }, [enriched]);
 
