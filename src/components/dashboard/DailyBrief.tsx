@@ -749,7 +749,7 @@ const DailyBrief = () => {
                                   : "Følg opp på sikt"}
                               </span>
                               {overdue && (
-                                <div className="mt-2 flex flex-wrap gap-1.5" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+                                <div className="mt-2 flex flex-wrap gap-1.5" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
                                   {[
                                     { label: "Følg opp på sikt", value: null },
                                     { label: "1 uke", value: format(addWeeks(new Date(), 1), "yyyy-MM-dd") },
