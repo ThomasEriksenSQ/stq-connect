@@ -411,6 +411,7 @@ export type Database = {
       }
       cv_documents: {
         Row: {
+          additional_sections: Json
           ansatt_id: number
           competence_groups: Json | null
           created_at: string | null
@@ -428,6 +429,7 @@ export type Database = {
           work_experience: Json | null
         }
         Insert: {
+          additional_sections?: Json
           ansatt_id: number
           competence_groups?: Json | null
           created_at?: string | null
@@ -445,6 +447,7 @@ export type Database = {
           work_experience?: Json | null
         }
         Update: {
+          additional_sections?: Json
           ansatt_id?: number
           competence_groups?: Json | null
           created_at?: string | null
