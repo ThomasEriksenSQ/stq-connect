@@ -108,6 +108,7 @@ const DailyBrief = () => {
   const [dragDeltaX, setDragDeltaX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
+  const historyRef = useRef<string[]>([]);
   const scoredLeadsRef = useRef<ScoredLead[]>([]);
   const treatedRef = useRef<Set<string>>(new Set());
   const currentRef = useRef<ScoredLead | null>(null);
