@@ -98,6 +98,7 @@ const DailyBrief = () => {
   const [panelOpen, setPanelOpen] = useState(false);
   const [localSignals, setLocalSignals] = useState<Record<string, string>>({});
   const [localIkkeAktuell, setLocalIkkeAktuell] = useState<Record<string, boolean>>({});
+  const [selectedChipDate, setSelectedChipDate] = useState<Record<string, string | null>>({});
   const [nudgeOpen, setNudgeOpen] = useState(false);
   const [nudgeScenario, setNudgeScenario] = useState<"ingen_signal_ingen_task" | "signal_ingen_task" | "forfalt" | null>(null);
   const [nudgeSignal, setNudgeSignal] = useState("Ukjent om behov");
