@@ -174,7 +174,7 @@ const DailyBrief = () => {
   const techProfiles = salgsData?.techProfiles ?? [];
   const foresporsler = salgsData?.foresporsler ?? [];
 
-  const { data: agentReviews = [] } = useQuery({
+  const { data: agentReviews = [], isLoading: isLoadingReviews } = useQuery({
     queryKey: ["agent-reviews"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -539,7 +539,7 @@ const DailyBrief = () => {
             </div>
           </div>
 
-          {isLoading ? (
+          {(isLoading || isLoadingReviews) ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
