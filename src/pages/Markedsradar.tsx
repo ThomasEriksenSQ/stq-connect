@@ -637,15 +637,6 @@ function PriorityCompanyCard({
                     {bestContact.phone}
                   </a>
                 )}
-                {bestContact.email && (
-                  <a
-                    href={`mailto:${bestContact.email}`}
-                    className="inline-flex items-center gap-1.5 text-[0.75rem] text-foreground hover:text-primary"
-                  >
-                    <Mail className="h-3.5 w-3.5" />
-                    {bestContact.email}
-                  </a>
-                )}
               </div>
             </div>
           )}
