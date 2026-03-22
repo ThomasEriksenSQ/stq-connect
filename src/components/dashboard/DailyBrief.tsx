@@ -969,30 +969,15 @@ const DailyBrief = () => {
                 </button>
               </div>
 
-              <div className="mt-4 rounded-2xl border border-border bg-card px-6 py-5">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center mt-0.5">
-                    <Flame className="h-4 w-4 text-amber-500" />
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-[0.875rem] font-semibold text-foreground">Jobb smartere, ikke hardere</p>
-                    <p className="text-[0.8125rem] text-muted-foreground leading-relaxed">
-                      Agenten viser deg hvem du bør ringe i dag — basert på signaler, Finn.no-annonsering og hvor lenge siden du sist fulgte opp. Ingen lister å sortere. Ingen leads som faller mellom stolene.
-                    </p>
-                    <div className="grid grid-cols-3 gap-3 pt-2">
-                      {[
-                        { emoji: "📞", title: "Ring riktig person", desc: "De varmeste leads — de som annonserer, har aktivt behov eller en åpen forespørsel — vises alltid øverst." },
-                        { emoji: "🗓️", title: "Aldri glem en oppfølging", desc: "Kontakter du har fulgt opp hviler automatisk og dukker opp igjen når det er tid for neste kontakt." },
-                        { emoji: "🏆", title: "Flere oppdrag i mål", desc: "Konsekvent oppfølging av de rette personene er det som skiller et godt salgsår fra et dårlig." },
-                      ].map(item => (
-                        <div key={item.title} className="rounded-xl bg-secondary/60 px-4 py-3 space-y-1">
-                          <p className="text-[0.875rem]">{item.emoji}</p>
-                          <p className="text-[0.75rem] font-semibold text-foreground">{item.title}</p>
-                          <p className="text-[0.6875rem] text-muted-foreground leading-relaxed">{item.desc}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+              <div className="mt-4 rounded-2xl border border-border bg-card px-6 py-4 flex items-start gap-3">
+                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center mt-0.5">
+                  <Flame className="h-3.5 w-3.5 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-[0.8125rem] font-semibold text-foreground mb-1">Skape den beste kontaktlisten som er mulig</p>
+                  <p className="text-[0.75rem] text-muted-foreground leading-relaxed">
+                    Agenten prioriterer kontaktene med høyest sannsynlighet for oppdrag – basert på timing, signaler, aktivitet og Finn.no-annonsering. Dette skaper en liste over det absolutt mest aktuelle å kontakte nå!
+                  </p>
                 </div>
               </div>
             </div>
