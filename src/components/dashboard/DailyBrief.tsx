@@ -1013,11 +1013,11 @@ const DailyBrief = () => {
       {/* ── LISTEVISNING ── */}
       {viewMode === "liste" && (
         <div className="bg-card border border-border rounded-xl overflow-hidden">
-          {queue.length === 0 ? (
+          {scoredLeads.length === 0 ? (
             <p className="text-center py-12 text-muted-foreground">Ingen leads å vise</p>
           ) : (
             <div className="divide-y divide-border">
-              {queue.map(lead => {
+              {scoredLeads.map(lead => {
                 const temp = TEMP_CONFIG[lead.temperature];
                 return (
                   <button
