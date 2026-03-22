@@ -1081,6 +1081,11 @@ export type Database = {
           created_at: string | null
           epost_mottakere: string[]
           id: string
+          markedsradar_aktiv: boolean
+          markedsradar_epost_mottakere: string[]
+          markedsradar_inkluder_ai: boolean
+          markedsradar_send_etter_import: boolean
+          markedsradar_sist_sendt_uke: string | null
           terskel_dager: number
           updated_at: string | null
         }
@@ -1089,6 +1094,11 @@ export type Database = {
           created_at?: string | null
           epost_mottakere?: string[]
           id?: string
+          markedsradar_aktiv?: boolean
+          markedsradar_epost_mottakere?: string[]
+          markedsradar_inkluder_ai?: boolean
+          markedsradar_send_etter_import?: boolean
+          markedsradar_sist_sendt_uke?: string | null
           terskel_dager?: number
           updated_at?: string | null
         }
@@ -1097,6 +1107,11 @@ export type Database = {
           created_at?: string | null
           epost_mottakere?: string[]
           id?: string
+          markedsradar_aktiv?: boolean
+          markedsradar_epost_mottakere?: string[]
+          markedsradar_inkluder_ai?: boolean
+          markedsradar_send_etter_import?: boolean
+          markedsradar_sist_sendt_uke?: string | null
           terskel_dager?: number
           updated_at?: string | null
         }
