@@ -75,6 +75,13 @@ type ProcessFinnImportResult = {
   dna_profiler_oppdatert: number;
   errors?: string[];
 };
+type MarkedsradarEmailResult = {
+  success?: boolean;
+  sent?: boolean;
+  skipped?: boolean;
+  reason?: string;
+  latestWeek?: string | null;
+};
 
 const CHART_COLORS = ["#0f766e", "#2563eb", "#ea580c", "#7c3aed", "#db2777", "#65a30d"];
 
@@ -1287,6 +1294,27 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
       if (error) throw error;
 
       toast({ title: "Importert", description: `${rows.length} annonser behandlet.` });
+
+      try {
+        const { data: emailResult, error: emailError } = await supabase.functions.invoke<MarkedsradarEmailResult>(
+          "markedsradar-ukesmail",
+          {
+            body: { source: "import" },
+          },
+        );
+        if (emailError) throw emailError;
+        if (emailResult?.sent) {
+          toast({
+            title: "Markedsradar sendt",
+            description: emailResult.latestWeek
+              ? `Ukentlig markedsradar ble sendt automatisk for ${emailResult.latestWeek}.`
+              : "Ukentlig markedsradar ble sendt automatisk.",
+          });
+        }
+      } catch (emailError) {
+        console.error("markedsradar-ukesmail after import failed", emailError);
+      }
+
       setRows([]);
       setFileName("");
       onClose();
