@@ -177,53 +177,6 @@ const DailyBrief = () => {
   const foresporsler = salgsData?.foresporsler ?? [];
 
 
-  useEffect(() => {
-    const card = cardRef.current;
-    if (!card) return;
-    const onPointerDown = (e: PointerEvent) => {
-      if ((e.target as HTMLElement).closest('button, input, a')) return;
-      dragStartXRef.current = e.clientX;
-      dragDeltaXRef.current = 0;
-      setIsDragging(true);
-      card.setPointerCapture(e.pointerId);
-    };
-    const onPointerMove = (e: PointerEvent) => {
-      if (dragStartXRef.current === null) return;
-      const delta = e.clientX - dragStartXRef.current;
-      dragDeltaXRef.current = delta;
-      const resistance = 0.4;
-      card.style.transition = "none";
-      card.style.transform = `translateX(${delta * resistance}px) scale(${1 - Math.abs(delta) * 0.0003})`;
-      card.style.opacity = `${Math.max(0.6, 1 - Math.abs(delta) * 0.003)}`;
-    };
-    const onPointerUp = (e: PointerEvent) => {
-      if (dragStartXRef.current === null) return;
-      const delta = dragDeltaXRef.current;
-      dragStartXRef.current = null;
-      dragDeltaXRef.current = 0;
-      setIsDragging(false);
-      const threshold = 80;
-      if (delta < -threshold && !isAnimating) {
-        goNext("left");
-      } else if (delta > threshold && !isAnimating) {
-        goNext("right");
-      } else {
-        card.style.transition = "transform 380ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease";
-        card.style.transform = "translateX(0) scale(1)";
-        card.style.opacity = "1";
-      }
-    };
-    card.addEventListener('pointerdown', onPointerDown);
-    card.addEventListener('pointermove', onPointerMove);
-    card.addEventListener('pointerup', onPointerUp);
-    card.addEventListener('pointercancel', onPointerUp);
-    return () => {
-      card.removeEventListener('pointerdown', onPointerDown);
-      card.removeEventListener('pointermove', onPointerMove);
-      card.removeEventListener('pointerup', onPointerUp);
-      card.removeEventListener('pointercancel', onPointerUp);
-    };
-  }, [isAnimating, goNext]);
 
   const scoredLeads = useMemo(() => {
     return rawContacts.map((contact: any) => {
