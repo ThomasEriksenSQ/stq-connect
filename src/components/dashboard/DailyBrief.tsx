@@ -807,9 +807,12 @@ const DailyBrief = () => {
                         onClick={() => {
                           const newVal = !current.contact.call_list;
                           supabase.from("contacts").update({ call_list: newVal }).eq("id", current.contact.id)
-                            .then(() => queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
-                              old?.map((c: any) => c.id === current.contact.id ? { ...c, call_list: newVal } : c)
-                            ));
+                            .then(() => queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
+                              ...old,
+                              rawContacts: old?.rawContacts?.map((c: any) =>
+                                c.id === current.contact.id ? { ...c, call_list: newVal } : c
+                              ),
+                            })));
                         }}
                         className={cn(
                           "inline-flex items-center h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors",
