@@ -103,64 +103,53 @@ const DailyBrief = () => {
     },
   });
 
-  const { data: rawContacts = [], isLoading } = useQuery({
-    queryKey: ["salgssenter-contacts", ownerFilter],
+  const { data: salgsData, isLoading } = useQuery({
+    queryKey: ["salgssenter-all", ownerFilter],
     queryFn: async () => {
       let q = supabase
         .from("contacts")
         .select("*, companies(id, name, city)")
         .or("ikke_aktuell_kontakt.is.null,ikke_aktuell_kontakt.eq.false");
       if (ownerFilter && ownerFilter !== "alle") q = q.eq("owner_id", ownerFilter);
-      const { data, error } = await q.limit(2000);
+      const { data: contacts, error } = await q.limit(2000);
       if (error) throw error;
-      return data;
+
+      const contactIds = contacts.map((c: any) => c.id);
+      const companyIds = [...new Set(contacts.map((c: any) => c.company_id).filter(Boolean))];
+
+      const [
+        { data: activities },
+        { data: tasks },
+        { data: techProfiles },
+        { data: foresporsler },
+      ] = await Promise.all([
+        contactIds.length > 0
+          ? supabase.from("activities").select("*").in("contact_id", contactIds).order("created_at", { ascending: false })
+          : Promise.resolve({ data: [] }),
+        contactIds.length > 0
+          ? supabase.from("tasks").select("*").in("contact_id", contactIds).neq("status", "done").order("due_date", { ascending: true, nullsFirst: false })
+          : Promise.resolve({ data: [] }),
+        companyIds.length > 0
+          ? supabase.from("company_tech_profile").select("company_id, konsulent_hyppighet, sist_fra_finn, teknologier").in("company_id", companyIds)
+          : Promise.resolve({ data: [] }),
+        supabase.from("foresporsler").select("id, selskap_id, status, mottatt_dato").not("status", "in", '("avsluttet","tapt")'),
+      ]);
+
+      return {
+        rawContacts: contacts,
+        allActivities: activities || [],
+        allTasks: tasks || [],
+        techProfiles: techProfiles || [],
+        foresporsler: foresporsler || [],
+      };
     },
   });
 
-  const contactIds = useMemo(() => rawContacts.map((c: any) => c.id), [rawContacts]);
-  const companyIds = useMemo(() => [...new Set(rawContacts.map((c: any) => c.company_id).filter(Boolean))], [rawContacts]);
-
-  const { data: allActivities = [] } = useQuery({
-    queryKey: ["salgssenter-activities", contactIds],
-    queryFn: async () => {
-      if (contactIds.length === 0) return [];
-      const { data, error } = await supabase.from("activities").select("*").in("contact_id", contactIds).order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: contactIds.length > 0,
-  });
-
-  const { data: allTasks = [] } = useQuery({
-    queryKey: ["salgssenter-tasks", contactIds],
-    queryFn: async () => {
-      if (contactIds.length === 0) return [];
-      const { data, error } = await supabase.from("tasks").select("*").in("contact_id", contactIds).neq("status", "done").order("due_date", { ascending: true, nullsFirst: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: contactIds.length > 0,
-  });
-
-  const { data: techProfiles = [] } = useQuery({
-    queryKey: ["salgssenter-tech", companyIds],
-    queryFn: async () => {
-      if (companyIds.length === 0) return [];
-      const { data, error } = await supabase.from("company_tech_profile").select("company_id, konsulent_hyppighet, sist_fra_finn, teknologier").in("company_id", companyIds);
-      if (error) throw error;
-      return data;
-    },
-    enabled: companyIds.length > 0,
-  });
-
-  const { data: foresporsler = [] } = useQuery({
-    queryKey: ["salgssenter-foresporsler"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("foresporsler").select("id, selskap_id, status, mottatt_dato").not("status", "in", '("avsluttet","tapt")');
-      if (error) throw error;
-      return data;
-    },
-  });
+  const rawContacts = salgsData?.rawContacts ?? [];
+  const allActivities = salgsData?.allActivities ?? [];
+  const allTasks = salgsData?.allTasks ?? [];
+  const techProfiles = salgsData?.techProfiles ?? [];
+  const foresporsler = salgsData?.foresporsler ?? [];
 
   const scoredLeads = useMemo(() => {
     return rawContacts.map((contact: any) => {
