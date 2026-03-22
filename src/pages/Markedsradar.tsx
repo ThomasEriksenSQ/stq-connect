@@ -660,14 +660,6 @@ function PriorityCompanyCard({
           >
             {actionText}
           </Button>
-          {bestContact?.email && (
-            <Button variant="outline" asChild>
-              <a href={`mailto:${bestContact.email}`}>
-                <Mail className="h-3.5 w-3.5 mr-1.5" />
-                E-post
-              </a>
-            </Button>
-          )}
           {company.latestLink && (
             <Button variant="ghost" asChild>
               <a href={company.latestLink} target="_blank" rel="noopener noreferrer">
