@@ -149,7 +149,7 @@ const DailyBrief = () => {
           .order("created_at", { ascending: false })
           .limit(10000),
         supabase.from("tasks")
-          .select("contact_id, created_at, due_date, status, description, title")
+          .select("id, contact_id, created_at, due_date, status, description, title")
           .not("contact_id", "is", null)
           .neq("status", "done")
           .order("due_date", { ascending: true, nullsFirst: false })
