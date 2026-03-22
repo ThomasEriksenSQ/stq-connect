@@ -704,7 +704,7 @@ const DailyBrief = () => {
                                       onClick={() => {
                                         if (chip.value === null) {
                                           supabase.from("tasks").update({ due_date: null, updated_at: new Date().toISOString() }).eq("id", current.nextTask.id)
-                                            .then(() => queryClient.invalidateQueries({ queryKey: ["salgssenter-tasks"] }));
+                                            .then(() => queryClient.invalidateQueries({ queryKey: ["salgssenter-all", ownerFilter] }));
                                         } else {
                                           updateTaskMutation.mutate({ taskId: current.nextTask.id, dueDate: chip.value });
                                         }
