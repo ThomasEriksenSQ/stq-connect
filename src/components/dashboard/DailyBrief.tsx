@@ -968,6 +968,33 @@ const DailyBrief = () => {
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
+
+              <div className="mt-4 rounded-2xl border border-border bg-card px-6 py-5">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mt-0.5">
+                    <Flame className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="space-y-2.5">
+                    <p className="text-[0.875rem] font-semibold text-foreground">Slik fungerer agenten</p>
+                    <p className="text-[0.8125rem] text-muted-foreground leading-relaxed">
+                      Agenten viser deg de varmeste leads først — basert på signal, Finn.no-annonsering, aktive forespørsler og hvor lenge siden du sist var i kontakt. Behandl ett kort om gangen: oppdater signal, sett oppfølgingsdato, og trykk <span className="font-medium text-foreground">Ok, neste</span>.
+                    </p>
+                    <div className="grid grid-cols-3 gap-3 pt-1">
+                      {[
+                        { emoji: "🔥", title: "Prioritert rekkefølge", desc: "De mest lovende kontaktene vises øverst — alltid." },
+                        { emoji: "⏱️", title: "Ingen dobbeltarbeid", desc: "Kontakter du har behandlet hviler i ro — og dukker opp igjen når det er tid." },
+                        { emoji: "📈", title: "Bygger seg opp", desc: "Jo mer du bruker den, desto smartere blir køen over tid." },
+                      ].map(item => (
+                        <div key={item.title} className="rounded-xl bg-secondary/60 px-4 py-3 space-y-1">
+                          <p className="text-[0.875rem]">{item.emoji}</p>
+                          <p className="text-[0.75rem] font-semibold text-foreground">{item.title}</p>
+                          <p className="text-[0.6875rem] text-muted-foreground leading-relaxed">{item.desc}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           ) : null}
         </div>
