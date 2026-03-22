@@ -10,7 +10,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AIChatPanel } from "@/components/AIChatPanel";
 
 const navItems = [
-  { title: "Hjem", url: "/", icon: LayoutDashboard, end: true },
+  { title: "Salgsagent", url: "/", icon: LayoutDashboard, end: true },
   { title: "Selskaper", url: "/selskaper", icon: Building2 },
   { title: "Kontakter", url: "/kontakter", icon: Users },
   { title: "Forespørsler", url: "/foresporsler", icon: Briefcase },
