@@ -896,10 +896,7 @@ const DailyBrief = () => {
                         if (harForfalt) { openNudge("forfalt"); return; }
                         if (!harSignal && !harTask) { openNudge("ingen_signal_ingen_task"); return; }
                         if (harSignal && !harTask) { openNudge("signal_ingen_task"); return; }
-                        // Sjekk ikke_aktuell SIST — kun som action_taken, ikke som grunn til å hoppe
-                        const erIkkeAktuell = localIkkeAktuell[current.contact.id] ?? !!current.contact.ikke_aktuell_kontakt;
-                        const actionTaken = erIkkeAktuell ? "ikke_aktuell" : "beholdt";
-                        saveReview(current.contact.id, actionTaken, current);
+                        saveReview(current.contact.id, "beholdt", current);
                         goNext("left", true);
                       }}
                       className="w-full h-[46px] rounded-xl bg-foreground text-background text-[0.9375rem] font-medium hover:opacity-90 active:scale-[0.99] transition-all"
