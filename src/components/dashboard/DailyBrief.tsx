@@ -90,6 +90,7 @@ const DailyBrief = () => {
   const [viewMode, setViewMode] = useState<"kort" | "liste">("kort");
   const [ownerFilter, setOwnerFilter] = useState(user?.id || "alle");
   const [currentContactId, setCurrentContactId] = useState<string | null>(null);
+  const [completedAll, setCompletedAll] = useState(false);
   const [treated, setTreated] = useState<Set<string>>(new Set());
   const [activeForm, setActiveForm] = useState<"snooze" | "signal" | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -275,11 +276,12 @@ const DailyBrief = () => {
   }, [scoredLeads, treated, reviewMap]);
 
   const current = useMemo(() => {
+    if (completedAll) return null;
     if (currentContactId) {
       return scoredLeads.find(l => l.contact.id === currentContactId) ?? queue[0] ?? null;
     }
     return queue[0] ?? null;
-  }, [currentContactId, scoredLeads, queue]);
+  }, [currentContactId, scoredLeads, queue, completedAll]);
 
   const currentIndexInQueue = currentContactId
     ? queue.findIndex(l => l.contact.id === currentContactId)
@@ -325,7 +327,12 @@ const DailyBrief = () => {
         }
         const currentIdx = freshScored.findIndex(l => l.contact.id === currentLead?.contact.id);
         const next = freshScored.slice(currentIdx + 1).find(l => !newTreatedSet.has(l.contact.id));
-        setCurrentContactId(next?.contact.id ?? null);
+        if (next) {
+          setCurrentContactId(next.contact.id);
+        } else {
+          setCompletedAll(true);
+          setCurrentContactId(null);
+        }
       } else {
         setHistory(prev => {
           const newHistory = [...prev];
@@ -477,7 +484,7 @@ const DailyBrief = () => {
           {filterOptions.map(opt => (
             <button
               key={opt.id}
-              onClick={() => { setOwnerFilter(opt.id); setCurrentContactId(null); setTreated(new Set()); setHistory([]); }}
+              onClick={() => { setOwnerFilter(opt.id); setCurrentContactId(null); setTreated(new Set()); setHistory([]); setCompletedAll(false); }}
               className={cn(
                 "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
                 ownerFilter === opt.id
@@ -534,7 +541,7 @@ const DailyBrief = () => {
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : queue.length === 0 ? (
+          ) : (queue.length === 0 || completedAll) ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <p className="text-4xl mb-3">🎉</p>
               <p className="text-[1.125rem] font-semibold text-foreground">Køen er tom!</p>
