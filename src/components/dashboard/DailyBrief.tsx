@@ -248,18 +248,11 @@ const DailyBrief = () => {
   const queue = useMemo(() => {
     return scoredLeads.filter(l => {
       if (treated.has(l.contact.id)) return false;
-      const lastReview = reviewMap[l.contact.id];
-      
-      if (!lastReview) return true;
-      const cooldownDays = COOLDOWN_DAYS[l.tier] ?? 90;
-      const daysSinceReview = differenceInDays(new Date(), new Date(lastReview.reviewed_at));
-      if (daysSinceReview >= cooldownDays) return true;
-      const prevSnapshot = lastReview.signals_at_review;
-      const currSnapshot = buildSignalSnapshot(l);
-      const changed = JSON.stringify(prevSnapshot) !== JSON.stringify(currSnapshot);
-      return changed;
+      const nextReview = l.contact.next_review_at;
+      if (!nextReview) return true;
+      return new Date(nextReview) <= new Date();
     });
-  }, [scoredLeads, treated, reviewMap]);
+  }, [scoredLeads, treated]);
 
   const current = useMemo(() => {
     if (completedAll) return null;
