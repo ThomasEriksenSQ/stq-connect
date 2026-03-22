@@ -300,6 +300,7 @@ export type Database = {
           linkedin: string | null
           location: string | null
           locations: string[] | null
+          next_review_at: string | null
           notes: string | null
           owner_id: string | null
           phone: string | null
@@ -323,6 +324,7 @@ export type Database = {
           linkedin?: string | null
           location?: string | null
           locations?: string[] | null
+          next_review_at?: string | null
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
@@ -346,6 +348,7 @@ export type Database = {
           linkedin?: string | null
           location?: string | null
           locations?: string[] | null
+          next_review_at?: string | null
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
