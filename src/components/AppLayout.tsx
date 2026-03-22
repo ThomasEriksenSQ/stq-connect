@@ -1,4 +1,5 @@
 import { Outlet, NavLink as RouterNavLink, useLocation } from "react-router-dom";
+import { FornyelsesVarsel } from "@/components/FornyelsesVarsel";
 import { useTheme } from "next-themes";
 import { Moon, Sun, LogOut, Building2, Users, LayoutDashboard, Sparkles, Briefcase, ChevronDown, Users2, TrendingUp, UserPlus, Radar, Globe, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -226,6 +227,7 @@ export function AppLayout() {
         </div>
       </header>
 
+      <FornyelsesVarsel />
       <main className="flex-1 overflow-auto">
         <div className="max-w-6xl mx-auto px-8 py-7 animate-fade-up">
           <Outlet />
