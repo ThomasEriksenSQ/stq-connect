@@ -704,7 +704,7 @@ const DailyBrief = () => {
                       <div className="space-y-1.5">
                         <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Neste oppfølging</p>
                         {current.nextTask ? (() => {
-                          const overdue = current.nextTask.due_date ? isPast(new Date(current.nextTask.due_date)) && !isToday(new Date(current.nextTask.due_date)) : false;
+                          const overdue = current.hasOverdue || (current.nextTask.due_date ? isPast(new Date(current.nextTask.due_date)) && !isToday(new Date(current.nextTask.due_date)) : false);
                           return (
                             <>
                               <p className="text-[0.9375rem] font-medium text-foreground leading-snug">{current.nextTask.title}</p>
