@@ -106,6 +106,9 @@ const DailyBrief = () => {
   const [dragDeltaX, setDragDeltaX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
+  const scoredLeadsRef = useRef<ScoredLead[]>([]);
+  const treatedRef = useRef<Set<string>>(new Set());
+  const currentRef = useRef<ScoredLead | null>(null);
 
 
   const { data: allProfiles = [] } = useQuery({
@@ -284,6 +287,9 @@ const DailyBrief = () => {
   const currentIndexInScored = currentContactId
     ? scoredLeads.findIndex(l => l.contact.id === currentContactId)
     : 0;
+  scoredLeadsRef.current = scoredLeads;
+  treatedRef.current = treated;
+  currentRef.current = current;
   const treatedCount = treated.size;
 
   const daysSinceLast = current?.lastAct ? differenceInDays(new Date(), new Date(current.lastAct.created_at)) : 999;
@@ -294,7 +300,8 @@ const DailyBrief = () => {
     if (isAnimating) return;
     setIsAnimating(true);
     setIsDragging(false);
-    const contactIdToMark = markCurrent && current ? current.contact.id : null;
+    const currentLead = currentRef.current;
+    const contactIdToMark = markCurrent && currentLead ? currentLead.contact.id : null;
     const card = cardRef.current;
     if (card) {
       const outX = dir === "left" ? -80 : 80;
@@ -305,16 +312,19 @@ const DailyBrief = () => {
     setTimeout(() => {
       setActiveForm(null);
       setLocalIkkeAktuell({});
-      const newTreatedSet = new Set([...treated, ...(contactIdToMark ? [contactIdToMark] : [])]);
+      const freshTreated = treatedRef.current;
+      const freshScored = scoredLeadsRef.current;
+      const newTreatedSet = new Set([...freshTreated, ...(contactIdToMark ? [contactIdToMark] : [])]);
       if (contactIdToMark) {
         setTreated(newTreatedSet);
+        treatedRef.current = newTreatedSet;
       }
       if (dir === "left") {
-        if (current) {
-          setHistory(prev => [...prev, current.contact.id]);
+        if (currentLead) {
+          setHistory(prev => [...prev, currentLead.contact.id]);
         }
-        const currentIdx = scoredLeads.findIndex(l => l.contact.id === current?.contact.id);
-        const next = scoredLeads.slice(currentIdx + 1).find(l => !newTreatedSet.has(l.contact.id));
+        const currentIdx = freshScored.findIndex(l => l.contact.id === currentLead?.contact.id);
+        const next = freshScored.slice(currentIdx + 1).find(l => !newTreatedSet.has(l.contact.id));
         setCurrentContactId(next?.contact.id ?? null);
       } else {
         setHistory(prev => {
@@ -339,7 +349,7 @@ const DailyBrief = () => {
         setTimeout(() => setIsAnimating(false), 420);
       }));
     }, 240);
-  }, [isAnimating, scoredLeads, treated, current]);
+  }, [isAnimating]);
 
   const saveReview = useCallback(async (contactId: string, actionTaken: string, lead: ScoredLead) => {
     await supabase.from("agent_contact_reviews").insert({
