@@ -189,7 +189,10 @@ const DailyBrief = () => {
   const reviewMap = useMemo(() => {
     const map: Record<string, any> = {};
     (agentReviews as any[]).forEach(r => {
-      if (!map[r.contact_id]) map[r.contact_id] = r;
+      const existing = map[r.contact_id];
+      if (!existing || r.reviewed_at > existing.reviewed_at) {
+        map[r.contact_id] = r;
+      }
     });
     return map;
   }, [agentReviews]);
