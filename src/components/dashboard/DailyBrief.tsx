@@ -754,6 +754,7 @@ const DailyBrief = () => {
                                           ),
                                         }));
                                         await supabase.from("tasks").update({ due_date: newDate, updated_at: new Date().toISOString() }).eq("id", taskId);
+                                        queryClient.invalidateQueries({ queryKey: ["salgssenter-all", ownerFilter] });
                                       }}
                                       className="h-7 px-3 text-[0.75rem] rounded-full border border-border text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors"
                                     >
