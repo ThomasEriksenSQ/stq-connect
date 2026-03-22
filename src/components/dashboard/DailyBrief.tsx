@@ -95,6 +95,7 @@ const DailyBrief = () => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [localSignals, setLocalSignals] = useState<Record<string, string>>({});
+  const [localIkkeAktuell, setLocalIkkeAktuell] = useState<Record<string, boolean>>({});
   const [nudgeOpen, setNudgeOpen] = useState(false);
   const [nudgeScenario, setNudgeScenario] = useState<"ingen_signal_ingen_task" | "signal_ingen_task" | "forfalt" | null>(null);
   const [nudgeSignal, setNudgeSignal] = useState("Ukjent om behov");
@@ -302,6 +303,7 @@ const DailyBrief = () => {
     }
     setTimeout(() => {
       setActiveForm(null);
+      setLocalIkkeAktuell({});
       if (contactIdToMark) {
         setTreated(prev => new Set([...prev, contactIdToMark]));
       }
@@ -849,7 +851,9 @@ const DailyBrief = () => {
                       {/* Ikke relevant person */}
                       <button
                         onClick={async () => {
-                          const newVal = !current.contact.ikke_aktuell_kontakt;
+                          const currentVal = localIkkeAktuell[current.contact.id] ?? !!current.contact.ikke_aktuell_kontakt;
+                          const newVal = !currentVal;
+                          setLocalIkkeAktuell(prev => ({ ...prev, [current.contact.id]: newVal }));
                           await supabase.from("contacts").update({ ikke_aktuell_kontakt: newVal }).eq("id", current.contact.id);
                           queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
                             ...old,
@@ -860,7 +864,7 @@ const DailyBrief = () => {
                         }}
                         className={cn(
                           "inline-flex items-center h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors cursor-pointer",
-                          current.contact.ikke_aktuell_kontakt
+                          (localIkkeAktuell[current.contact.id] ?? !!current.contact.ikke_aktuell_kontakt)
                             ? "bg-destructive/10 text-destructive border-destructive/30"
                             : "border-border text-muted-foreground hover:bg-secondary"
                         )}
@@ -889,7 +893,8 @@ const DailyBrief = () => {
                         if (!harSignal && !harTask) { openNudge("ingen_signal_ingen_task"); return; }
                         if (harSignal && !harTask) { openNudge("signal_ingen_task"); return; }
                         // Sjekk ikke_aktuell SIST — kun som action_taken, ikke som grunn til å hoppe
-                        const actionTaken = current.contact.ikke_aktuell_kontakt ? "ikke_aktuell" : "beholdt";
+                        const erIkkeAktuell = localIkkeAktuell[current.contact.id] ?? !!current.contact.ikke_aktuell_kontakt;
+                        const actionTaken = erIkkeAktuell ? "ikke_aktuell" : "beholdt";
                         saveReview(current.contact.id, actionTaken, current);
                         goNext("left", true);
                       }}
