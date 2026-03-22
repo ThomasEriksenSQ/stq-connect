@@ -755,7 +755,11 @@ const DailyBrief = () => {
                                             t.id === taskId ? { ...t, due_date: newDate } : t
                                           ),
                                         }));
-                                        await supabase.from("tasks").update({ due_date: newDate, updated_at: new Date().toISOString() }).eq("id", taskId);
+                                        if (newDate === null) {
+                                          await supabase.from("tasks").update({ due_date: null as any, updated_at: new Date().toISOString() }).eq("id", taskId);
+                                        } else {
+                                          await supabase.from("tasks").update({ due_date: newDate, updated_at: new Date().toISOString() }).eq("id", taskId);
+                                        }
                                       }}
                                       className="h-7 px-3 text-[0.75rem] rounded-full border border-border text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors"
                                     >
