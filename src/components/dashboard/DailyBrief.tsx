@@ -287,6 +287,9 @@ const DailyBrief = () => {
   const currentIndexInScored = currentContactId
     ? scoredLeads.findIndex(l => l.contact.id === currentContactId)
     : 0;
+  scoredLeadsRef.current = scoredLeads;
+  treatedRef.current = treated;
+  currentRef.current = current;
   const treatedCount = treated.size;
 
   const daysSinceLast = current?.lastAct ? differenceInDays(new Date(), new Date(current.lastAct.created_at)) : 999;
