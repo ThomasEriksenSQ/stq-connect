@@ -105,6 +105,7 @@ const DailyBrief = () => {
   const [dragStartX, setDragStartX] = useState<number | null>(null);
   const [dragDeltaX, setDragDeltaX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [history, setHistory] = useState<string[]>([]);
 
 
   const { data: allProfiles = [] } = useQuery({
