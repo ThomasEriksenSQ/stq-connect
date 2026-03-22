@@ -88,50 +88,73 @@ Deno.serve(async (req) => {
     const planlegg = enriched.filter((o) => o.daysUntilForny > 30);
 
     // 4. Subject
-    const first = enriched.sort((a, b) => a.daysUntilForny - b.daysUntilForny)[0];
-    const others = enriched.length - 1;
-    let subject = `${first.kandidat} (${first.kunde || "ukjent"}) forny om ${first.daysUntilForny}d`;
-    if (others > 0) subject += ` — og ${others} andre kontrakter`;
+    const mostCritical = enriched[0];
+    const antallAndre = enriched.length - 1;
+    const subject = antallAndre === 0
+      ? `${mostCritical.kandidat} (${mostCritical.kunde}) — forny om ${mostCritical.daysUntilForny} dager`
+      : `${mostCritical.kandidat} (${mostCritical.kunde}) forny om ${mostCritical.daysUntilForny}d — og ${antallAndre} andre kontrakter`;
 
     // 5. Build HTML
-    const renderSection = (
-      title: string,
-      color: string,
-      items: typeof enriched
-    ) => {
-      if (items.length === 0) return "";
+    const datoNorsk = today.toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    function oppdragRad(o: typeof enriched[0], badgeBg: string, badgeColor: string) {
+      const fornyDato = new Date(o.forny_dato!).toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric' });
       return `
-        <div style="margin-bottom:24px;">
-          <h2 style="font-size:14px;font-weight:700;color:${color};margin:0 0 12px;border-bottom:2px solid ${color};padding-bottom:6px;">${title}</h2>
-          ${items
-            .map(
-              (o) => `
-            <div style="padding:10px 0;border-bottom:1px solid #E5E7EB;">
-              <span style="font-weight:600;font-size:15px;color:#111827;">${o.kandidat}</span>
-              <span style="color:#6B7280;font-size:13px;margin-left:8px;">${o.kunde || ""}</span>
-              <div style="margin-top:4px;">
-                <span style="font-size:12px;color:#6B7280;">Forny: ${formatDateNorwegian(o.forny_dato!)}</span>
-                <span style="font-weight:600;color:${color};font-size:13px;margin-left:12px;">Om ${o.daysUntilForny} dager</span>
-              </div>
-            </div>`
-            )
-            .join("")}
+        <div style="padding:14px 0;border-top:1px solid #f5f5f5;display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <p style="font-size:15px;font-weight:600;color:#0a0a0a;margin:0 0 2px">${o.kandidat}</p>
+            <p style="font-size:13px;color:#888888;margin:0">${o.kunde} · Forny: ${fornyDato}</p>
+          </div>
+          <span style="display:inline-block;background:${badgeBg};color:${badgeColor};font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;white-space:nowrap;margin-left:16px">Om ${o.daysUntilForny} dager</span>
         </div>`;
-    };
+    }
+
+    function seksjon(tittel: string, farge: string, badgeBg: string, oppdragListe: typeof enriched) {
+      if (oppdragListe.length === 0) return '';
+      return `
+        <div style="padding:24px 40px 0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+            <div style="width:8px;height:8px;border-radius:50%;background:${farge};flex-shrink:0"></div>
+            <span style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:${farge}">${tittel}</span>
+          </div>
+          ${oppdragListe.map(o => oppdragRad(o, badgeBg, farge)).join('')}
+        </div>`;
+    }
 
     const html = `
-      <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
-        <h1 style="font-size:20px;font-weight:700;color:#111827;margin:0 0 4px;">Ukentlig fornyelsesrapport</h1>
-        <p style="font-size:13px;color:#6B7280;margin:0 0 24px;">${todayNorwegian()}</p>
-        ${renderSection(`Kritisk — under 7 dager`, "#DC2626", kritisk)}
-        ${renderSection(`Snart — 8 til 30 dager`, "#D97706", snart)}
-        ${renderSection(`Planlegg — 31 til ${settings.terskel_dager} dager`, "#CA8A04", planlegg)}
-        <div style="margin-top:32px;padding-top:16px;border-top:1px solid #E5E7EB;">
-          <a href="https://crm.stacq.no/konsulenter/i-oppdrag?filter=Aktiv" style="color:#2563EB;font-size:14px;font-weight:500;text-decoration:none;">
-            Åpne aktive oppdrag →
-          </a>
-        </div>
-      </div>`;
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#f5f4f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+<div style="padding:40px 20px">
+<div style="max-width:580px;margin:0 auto">
+<div style="background:#ffffff;border-radius:4px;overflow:hidden">
+  <div style="background:#0a0a0a;padding:28px 40px;display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <span style="font-size:20px;font-weight:700;letter-spacing:-0.5px;color:#ffffff">STACQ</span>
+      <span style="font-size:11px;color:#888888;margin-left:10px;letter-spacing:0.08em;text-transform:uppercase">CRM</span>
+    </div>
+    <span style="font-size:11px;color:#555555;letter-spacing:0.04em">${datoNorsk}</span>
+  </div>
+  <div style="padding:32px 40px 24px;border-bottom:1px solid #f0f0f0">
+    <p style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#999999;margin:0 0 8px">Ukentlig rapport</p>
+    <h1 style="font-size:22px;font-weight:700;color:#0a0a0a;margin:0 0 6px;letter-spacing:-0.3px">Kontraktfornyelse</h1>
+    <p style="font-size:14px;color:#777777;margin:0">${enriched.length} oppdrag krever oppfølging de neste 90 dagene</p>
+  </div>
+  ${seksjon('Kritisk — under 7 dager', '#DC2626', '#FEF2F2', kritisk)}
+  ${seksjon('Snart — under 30 dager', '#D97706', '#FFFBEB', snart)}
+  ${seksjon('Planlegg — under 90 dager', '#CA8A04', '#FEFCE8', planlegg)}
+  <div style="padding:32px 40px">
+    <a href="https://crm.stacq.no/konsulenter-oppdrag?filter=Aktiv" style="display:inline-block;background:#0a0a0a;color:#ffffff;font-size:13px;font-weight:600;padding:12px 24px;border-radius:4px;text-decoration:none;letter-spacing:0.02em">Åpne aktive oppdrag →</a>
+  </div>
+  <div style="padding:20px 40px;border-top:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:12px;color:#bbbbbb">STACQ CRM · Automatisk rapport</span>
+    <span style="font-size:12px;color:#bbbbbb">crm.stacq.no</span>
+  </div>
+</div>
+</div>
+</div>
+</body>
+</html>`;
 
     // 6. Send via Resend
     const recipients = isTest ? ["thomas@stacq.no"] : (settings.epost_mottakere as string[]);
