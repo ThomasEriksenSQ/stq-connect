@@ -278,11 +278,11 @@ export default function KonsulenterOppdrag() {
       o.daysUntilForny <= 30
     ).length;
 
-    const fornyelser90 = enriched.filter((o: any) =>
+    const fornyelser60 = enriched.filter((o: any) =>
       (o.status === "Aktiv" || o.status === "Oppstart") &&
       o.daysUntilForny !== null &&
       o.daysUntilForny >= 0 &&
-      o.daysUntilForny <= 90
+      o.daysUntilForny <= 60
     ).length;
 
     return {
@@ -295,7 +295,7 @@ export default function KonsulenterOppdrag() {
       monthLabel: format(now, "MMMM yyyy"),
       oppstartMarginPerTime,
       fornyelser30,
-      fornyelser90,
+      fornyelser60,
     };
   }, [enriched]);
 
@@ -378,8 +378,8 @@ export default function KonsulenterOppdrag() {
             </div>
             <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 rounded-xl px-5 py-4 shadow-sm">
               <BarChart2 className="h-4 w-4 text-amber-600 mb-1" />
-              <p className="text-2xl font-bold text-amber-600">{stats.fornyelser90}</p>
-              <p className="text-[0.8125rem] text-muted-foreground">Fornyelser under 90 dager</p>
+              <p className="text-2xl font-bold text-amber-600">{stats.fornyelser60}</p>
+              <p className="text-[0.8125rem] text-muted-foreground">Fornyelser under 60 dager</p>
               <p className="text-xs text-muted-foreground">Krever oppfølging</p>
             </div>
           </div>
