@@ -2,7 +2,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
-import { ArrowLeft, Check, Download, History, Link2, Loader2, Maximize2, Minimize2, RotateCcw, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Download,
+  History,
+  Link2,
+  Loader2,
+  Maximize2,
+  Minimize2,
+  RotateCcw,
+  Sparkles,
+} from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,6 +41,7 @@ const EMPTY_CV: CVDocument = {
   introParagraphs: [],
   competenceGroups: [{ label: "Programmeringsspråk", content: "" }],
   projects: [],
+  additionalSections: [],
   education: [],
   workExperience: [],
 };
@@ -47,6 +59,7 @@ function dbRowToCvDoc(row: any): CVDocument {
     introParagraphs: row.intro_paragraphs || [],
     competenceGroups: row.competence_groups || [],
     projects: row.projects || [],
+    additionalSections: row.additional_sections || [],
     education: row.education || [],
     workExperience: row.work_experience || [],
   };
@@ -61,6 +74,7 @@ function cvDocToDbRow(doc: CVDocument) {
     intro_paragraphs: doc.introParagraphs,
     competence_groups: doc.competenceGroups,
     projects: doc.projects,
+    additional_sections: doc.additionalSections,
     education: doc.education,
     work_experience: doc.workExperience,
     sidebar_sections: doc.sidebarSections,
@@ -201,70 +215,73 @@ export default function CvAdmin() {
     [cvId, user?.email],
   );
 
-  const handleCvUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
+  const handleCvUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      e.target.value = "";
 
-    setCvUploadParsing(true);
-    try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const result = reader.result as string;
-          resolve(result.split(",")[1]);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+      setCvUploadParsing(true);
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(",")[1]);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
 
-      const { data, error } = await supabase.functions.invoke("parse-cv", {
-        body: { base64, filename: file.name },
-      });
+        const { data, error } = await supabase.functions.invoke("parse-cv", {
+          body: { base64, filename: file.name },
+        });
 
-      if (error || !data) {
-        toast.error(data?.error || "Kunne ikke analysere CV — fyll inn manuelt");
-        return;
-      }
-
-      const currentCv = cvData || EMPTY_CV;
-
-      const newCvData: CVDocument = {
-        ...currentCv,
-        hero: {
-          ...currentCv.hero,
-          name: data.navn || currentCv.hero.name,
-          title: data.tittel || currentCv.hero.title,
-        },
-        introParagraphs: data.introParagraphs?.length ? data.introParagraphs : currentCv.introParagraphs,
-        competenceGroups: data.competenceGroups?.length ? data.competenceGroups : currentCv.competenceGroups,
-        projects: data.projects?.length ? data.projects : currentCv.projects,
-        education: data.education?.length ? data.education : currentCv.education,
-        workExperience: data.workExperience?.length ? data.workExperience : currentCv.workExperience,
-        sidebarSections: data.sidebarSections?.length ? data.sidebarSections : currentCv.sidebarSections,
-      };
-
-      setCvData(newCvData);
-
-      if (cvId) {
-        const { error: saveError } = await supabase
-          .from("cv_documents")
-          .update(cvDocToDbRow(newCvData) as any)
-          .eq("id", cvId);
-
-        if (saveError) {
-          toast.error("Kunne ikke lagre CV-data til databasen");
+        if (error || !data) {
+          toast.error(data?.error || "Kunne ikke analysere CV — fyll inn manuelt");
           return;
         }
-      }
 
-      toast.success("CV fullstendig analysert — alle seksjoner er fylt inn");
-    } catch {
-      toast.error("Kunne ikke analysere CV — fyll inn manuelt");
-    } finally {
-      setCvUploadParsing(false);
-    }
-  }, [cvData, cvId]);
+        const currentCv = cvData || EMPTY_CV;
+
+        const newCvData: CVDocument = {
+          ...currentCv,
+          hero: {
+            ...currentCv.hero,
+            name: data.navn || currentCv.hero.name,
+            title: data.tittel || currentCv.hero.title,
+          },
+          introParagraphs: data.introParagraphs?.length ? data.introParagraphs : currentCv.introParagraphs,
+          competenceGroups: data.competenceGroups?.length ? data.competenceGroups : currentCv.competenceGroups,
+          projects: data.projects?.length ? data.projects : currentCv.projects,
+          education: data.education?.length ? data.education : currentCv.education,
+          workExperience: data.workExperience?.length ? data.workExperience : currentCv.workExperience,
+          sidebarSections: data.sidebarSections?.length ? data.sidebarSections : currentCv.sidebarSections,
+        };
+
+        setCvData(newCvData);
+
+        if (cvId) {
+          const { error: saveError } = await supabase
+            .from("cv_documents")
+            .update(cvDocToDbRow(newCvData) as any)
+            .eq("id", cvId);
+
+          if (saveError) {
+            toast.error("Kunne ikke lagre CV-data til databasen");
+            return;
+          }
+        }
+
+        toast.success("CV fullstendig analysert — alle seksjoner er fylt inn");
+      } catch {
+        toast.error("Kunne ikke analysere CV — fyll inn manuelt");
+      } finally {
+        setCvUploadParsing(false);
+      }
+    },
+    [cvData, cvId],
+  );
 
   if (loading) {
     return (
@@ -355,7 +372,9 @@ export default function CvAdmin() {
                         .upsert({ ansatt_id: id, token, pin_hash: pinHash, expires_at }, { onConflict: "ansatt_id" });
                       if (error) throw error;
                       await navigator.clipboard.writeText("https://crm.stacq.no/cv/" + token);
-                      toast.success(`Link kopiert! PIN: ${pin} — del med ${cvData.hero.name || "konsulenten"}`, { duration: 10000 });
+                      toast.success(`Link kopiert! PIN: ${pin} — del med ${cvData.hero.name || "konsulenten"}`, {
+                        duration: 10000,
+                      });
                     } catch (err: any) {
                       toast.error("Kunne ikke generere link: " + (err.message || "Ukjent feil"));
                     }
