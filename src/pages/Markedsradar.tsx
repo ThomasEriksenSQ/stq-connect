@@ -112,7 +112,7 @@ export default function Markedsradar() {
   const { data: companies = [] } = useQuery({
     queryKey: ["companies_ref"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("companies").select("id, name");
+      const { data, error } = await supabase.from("companies").select("id, name, status");
       if (error) throw error;
       return (data || []) as CompanyRef[];
     },
