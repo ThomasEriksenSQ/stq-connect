@@ -718,37 +718,32 @@ const DailyBrief = () => {
                             { label: "1 måned", value: format(addMonths(new Date(), 1), "yyyy-MM-dd") },
                             { label: "3 måneder", value: format(addMonths(new Date(), 3), "yyyy-MM-dd") },
                           ];
-                          const dueDateValue = current.nextTask?.due_date
-                            ? format(new Date(current.nextTask.due_date), "yyyy-MM-dd")
-                            : null;
-                          const activeChipValue =
-                            (taskId ? selectedChipDate[taskId] : undefined) ?? dueDateValue;
-                          const overdue =
-                            current.hasOverdue ||
-                            (current.nextTask.due_date
-                              ? isPast(new Date(current.nextTask.due_date)) &&
-                                !isToday(new Date(current.nextTask.due_date))
-                              : false);
-                          const showChips =
-                            overdue ||
-                            chipOptions.some(chip => chip.value === activeChipValue);
+                          const dueDateValue = current.nextTask?.due_date ? format(new Date(current.nextTask.due_date), "yyyy-MM-dd") : null;
+                          const activeChipValue = (taskId ? selectedChipDate[taskId] : undefined) ?? dueDateValue;
+                          const overdue = current.hasOverdue || (current.nextTask.due_date ? isPast(new Date(current.nextTask.due_date)) && !isToday(new Date(current.nextTask.due_date)) : false);
+                          const showChips = overdue || chipOptions.some(chip => chip.value === activeChipValue) || !!activeChipValue;
+                          const isCustomSelected = !!activeChipValue && !chipOptions.some(chip => chip.value === activeChipValue);
+                          const customInputValue = taskId ? (customChipDate[taskId] ?? (isCustomSelected && activeChipValue ? activeChipValue : "")) : "";
+                          const updateTaskDueDate = async (newDate: string | null) => {
+                            if (!taskId) return;
+                            setSelectedChipDate(prev => ({ ...prev, [taskId]: newDate }));
+                            if (typeof newDate === "string") {
+                              setCustomChipDate(prev => ({ ...prev, [taskId]: newDate }));
+                            }
+                            queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
+                              ...old,
+                              allTasks: old?.allTasks?.map((t: any) => t.id === taskId ? { ...t, due_date: newDate } : t),
+                            }));
+                            await supabase.from("tasks").update({ due_date: newDate as any, updated_at: new Date().toISOString() }).eq("id", taskId);
+                          };
                           return (
                             <>
-                              <p className="text-[0.9375rem] font-medium text-foreground leading-snug">
-                                {current.nextTask.title}
-                              </p>
-                              <span
-                                className={cn(
-                                  "text-[0.75rem]",
-                                  overdue ? "text-destructive font-medium" : "text-muted-foreground italic"
-                                )}
-                              >
-                                {current.nextTask.due_date
-                                  ? format(new Date(current.nextTask.due_date), "d. MMM yyyy", { locale: nb })
-                                  : "Følg opp på sikt"}
+                              <p className="text-[0.9375rem] font-medium text-foreground leading-snug">{current.nextTask.title}</p>
+                              <span className={cn("text-[0.75rem]", overdue ? "text-destructive font-medium" : "text-muted-foreground italic")}>
+                                {current.nextTask.due_date ? format(new Date(current.nextTask.due_date), "d. MMM yyyy", { locale: nb }) : "Følg opp på sikt"}
                               </span>
                               {showChips && (
-                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                <div className="mt-2 flex flex-wrap items-center gap-1.5">
                                   {chipOptions.map(chip => {
                                     const isActive = chip.value === activeChipValue;
                                     return (
@@ -756,38 +751,33 @@ const DailyBrief = () => {
                                         key={chip.label}
                                         onClick={async (e) => {
                                           e.stopPropagation();
-                                          const newDate = chip.value;
-                                          const taskId = current.nextTask?.id;
-                                          if (!taskId) return;
-                                          setSelectedChipDate(prev => ({
-                                            ...prev,
-                                            [taskId]: newDate,
-                                          }));
-                                          queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
-                                            ...old,
-                                            allTasks: old?.allTasks?.map((t: any) =>
-                                              t.id === taskId ? { ...t, due_date: newDate } : t
-                                            ),
-                                          }));
-                                          await supabase
-                                            .from("tasks")
-                                            .update({
-                                              due_date: newDate,
-                                              updated_at: new Date().toISOString(),
-                                            })
-                                            .eq("id", taskId);
+                                          await updateTaskDueDate(chip.value);
                                         }}
                                         className={cn(
                                           "h-7 px-3 text-[0.75rem] rounded-full border transition-colors",
-                                          isActive
-                                            ? "bg-primary/10 text-primary border-primary/30 font-medium"
-                                            : "border-border text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+                                          isActive ? "bg-primary/10 text-primary border-primary/30 font-medium" : "border-border text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30"
                                         )}
                                       >
                                         {chip.label}
                                       </button>
                                     );
                                   })}
+                                  <input
+                                    type="date"
+                                    value={customInputValue}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={async (e) => {
+                                      e.stopPropagation();
+                                      const newDate = e.target.value;
+                                      if (!newDate) return;
+                                      if (taskId) setCustomChipDate(prev => ({ ...prev, [taskId]: newDate }));
+                                      await updateTaskDueDate(newDate);
+                                    }}
+                                    className={cn(
+                                      "h-7 px-2 text-[0.75rem] rounded-full border bg-background transition-colors",
+                                      isCustomSelected ? "bg-primary/10 text-primary border-primary/30 font-medium" : "border-border text-muted-foreground hover:border-primary/30"
+                                    )}
+                                  />
                                 </div>
                               )}
                             </>
