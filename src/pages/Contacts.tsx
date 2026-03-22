@@ -13,7 +13,7 @@ import { relativeDate } from "@/lib/relativeDate";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, differenceInDays } from "date-fns";
 import { nb } from "date-fns/locale";
-import { calcHeatScore, getTemperature, TEMP_CONFIG } from "@/lib/heatScore";
+import { calcHeatScore, getTemperature, getHeatResult, getTier, getTaskStatus, getActivityStatus, TEMP_CONFIG } from "@/lib/heatScore";
 
 type SortField = "name" | "company" | "title" | "signal" | "owner" | "last_activity" | "priority";
 type SortDir = "asc" | "desc";
