@@ -327,7 +327,17 @@ const DailyBrief = () => {
     }, 240);
   }, [isAnimating, scoredLeads, treated, current, currentIndexInScored]);
 
-  const updateTaskMutation = useMutation({
+  const saveReview = useCallback(async (contactId: string, actionTaken: string, lead: ScoredLead) => {
+    await supabase.from("agent_contact_reviews").insert({
+      contact_id: contactId,
+      reviewed_by: user?.id,
+      action_taken: actionTaken,
+      signals_at_review: buildSignalSnapshot(lead),
+    });
+    queryClient.invalidateQueries({ queryKey: ["agent-reviews"] });
+  }, [user?.id, queryClient]);
+
+
     mutationFn: async ({ taskId, dueDate }: { taskId: string; dueDate: string }) => {
       const { error } = await supabase.from("tasks").update({ due_date: dueDate, updated_at: new Date().toISOString() }).eq("id", taskId);
       if (error) throw error;
