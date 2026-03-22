@@ -276,6 +276,9 @@ const DailyBrief = () => {
     return queue[0] ?? null;
   }, [currentContactId, scoredLeads, queue]);
 
+  const currentIndexInQueue = currentContactId
+    ? queue.findIndex(l => l.contact.id === currentContactId)
+    : 0;
   const currentIndexInScored = currentContactId
     ? scoredLeads.findIndex(l => l.contact.id === currentContactId)
     : 0;
@@ -307,8 +310,8 @@ const DailyBrief = () => {
         const next = scoredLeads.slice(startIdx + 1).find(l => !treated.has(l.contact.id) && l.contact.id !== contactIdToMark);
         setCurrentContactId(next?.contact.id ?? null);
       } else {
-        const prevIdx = Math.max(currentIndexInScored - 1, 0);
-        setCurrentContactId(scoredLeads[prevIdx]?.contact.id ?? null);
+        const prevIdx = Math.max(currentIndexInQueue - 1, 0);
+        setCurrentContactId(queue[prevIdx]?.contact.id ?? null);
       }
       if (card) {
         const inX = dir === "left" ? 80 : -80;
@@ -325,7 +328,7 @@ const DailyBrief = () => {
         setTimeout(() => setIsAnimating(false), 420);
       }));
     }, 240);
-  }, [isAnimating, scoredLeads, treated, current, currentIndexInScored]);
+  }, [isAnimating, scoredLeads, queue, treated, current, currentIndexInScored, currentIndexInQueue]);
 
   const saveReview = useCallback(async (contactId: string, actionTaken: string, lead: ScoredLead) => {
     await supabase.from("agent_contact_reviews").insert({
@@ -804,9 +807,12 @@ const DailyBrief = () => {
                         onClick={() => {
                           const newVal = !current.contact.call_list;
                           supabase.from("contacts").update({ call_list: newVal }).eq("id", current.contact.id)
-                            .then(() => queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
-                              old?.map((c: any) => c.id === current.contact.id ? { ...c, call_list: newVal } : c)
-                            ));
+                            .then(() => queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
+                              ...old,
+                              rawContacts: old?.rawContacts?.map((c: any) =>
+                                c.id === current.contact.id ? { ...c, call_list: newVal } : c
+                              ),
+                            })));
                         }}
                         className={cn(
                           "inline-flex items-center h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors",
@@ -823,9 +829,12 @@ const DailyBrief = () => {
                         onClick={() => {
                           const newVal = !current.contact.cv_email;
                           supabase.from("contacts").update({ cv_email: newVal }).eq("id", current.contact.id)
-                            .then(() => queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
-                              old?.map((c: any) => c.id === current.contact.id ? { ...c, cv_email: newVal } : c)
-                            ));
+                            .then(() => queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
+                              ...old,
+                              rawContacts: old?.rawContacts?.map((c: any) =>
+                                c.id === current.contact.id ? { ...c, cv_email: newVal } : c
+                              ),
+                            })));
                         }}
                         className={cn(
                           "inline-flex items-center h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors",
@@ -900,7 +909,7 @@ const DailyBrief = () => {
               <div className="flex items-center justify-between px-2">
                 <button
                   onClick={() => goNext("right")}
-                  disabled={currentIndexInScored === 0}
+                  disabled={currentIndexInQueue === 0}
                   className="flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-15 disabled:pointer-events-none transition-all"
                 >
                   <ChevronLeft className="h-4 w-4" />
