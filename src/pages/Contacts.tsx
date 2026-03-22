@@ -461,7 +461,7 @@ const Contacts = () => {
                       : "3px solid rgb(229 231 235)"
                       : "3px solid transparent"
                   }}
-                  className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_44px_minmax(0,1.2fr)_minmax(0,1fr)_90px_90px] gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75">
+                  className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_36px_minmax(0,1.5fr)_minmax(0,1.2fr)_100px_90px] gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75">
                   {/* NAME - clickable */}
                   <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="min-w-0 text-left cursor-pointer flex items-center gap-2">
                     <p className="text-[0.8125rem] font-medium text-foreground truncate">
