@@ -310,8 +310,8 @@ const DailyBrief = () => {
         const next = scoredLeads.slice(startIdx + 1).find(l => !treated.has(l.contact.id) && l.contact.id !== contactIdToMark);
         setCurrentContactId(next?.contact.id ?? null);
       } else {
-        const prevIdx = Math.max(currentIndexInScored - 1, 0);
-        setCurrentContactId(scoredLeads[prevIdx]?.contact.id ?? null);
+        const prevIdx = Math.max(currentIndexInQueue - 1, 0);
+        setCurrentContactId(queue[prevIdx]?.contact.id ?? null);
       }
       if (card) {
         const inX = dir === "left" ? 80 : -80;
