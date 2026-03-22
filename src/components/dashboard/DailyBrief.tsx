@@ -306,7 +306,7 @@ const DailyBrief = () => {
           setHistory(prev => [...prev, currentLead.contact.id]);
         }
         const currentIdx = freshScored.findIndex(l => l.contact.id === currentLead?.contact.id);
-        const next = freshScored.slice(currentIdx + 1).find(l => !newTreatedSet.has(l.contact.id));
+        const next = freshScored.slice(currentIdx + 1).find(l => !newTreatedSet.has(l.contact.id) && (!l.contact.next_review_at || new Date(l.contact.next_review_at) <= new Date()));
         if (next) {
           setCurrentContactId(next.contact.id);
         } else {
