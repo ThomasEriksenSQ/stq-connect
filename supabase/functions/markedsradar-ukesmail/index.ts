@@ -266,7 +266,7 @@ function buildMarketSnapshot(annonser: FinnAnnonse[], companies: CompanyRef[]): 
         name: companyName,
         company: crmCompany,
         ads: [],
-        techCounts: new Map(),
+        techCounts: new Map<string, number>(),
         roles: [],
         contacts: new Map(),
         currentWeekCount: 0,
@@ -358,7 +358,9 @@ function buildMarketSnapshot(annonser: FinnAnnonse[], companies: CompanyRef[]): 
     })
     .sort((a, b) => b.score - a.score || b.adCount - a.adCount || a.name.localeCompare(b.name, "nb"));
 
-  const actionableCompanies = finalizedCompanies.filter((company) => !company.company || isActionableStatus(company.company.status));
+  const actionableCompanies = finalizedCompanies.filter(
+    (company) => !company.company || isActionableStatus(company.company.status),
+  );
 
   const techCounts = new Map<string, { current: number; previous: number }>();
   cleanedAds.forEach((ad) => {
@@ -397,7 +399,9 @@ function buildMarketSnapshot(annonser: FinnAnnonse[], companies: CompanyRef[]): 
   return {
     latestWeek,
     adsThisWeek: cleanedAds.filter((ad) => ad.uke === latestWeek).length,
-    uniqueCompanies30d: new Set(cleanedAds.filter((ad) => ad.dato >= current30).map((ad) => normalizeCompanyName(ad.selskap!))).size,
+    uniqueCompanies30d: new Set(
+      cleanedAds.filter((ad) => ad.dato >= current30).map((ad) => normalizeCompanyName(ad.selskap!)),
+    ).size,
     technologyTrends,
     topCompanies: actionableCompanies.slice(0, 5),
     topContacts,
@@ -409,8 +413,16 @@ async function generateAiSummary(snapshot: MarketSnapshot): Promise<string | nul
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) return null;
 
-  const topTechs = snapshot.technologyTrends.slice(0, 5).map((item) => `${item.name}: ${item.current} (${item.delta >= 0 ? "+" : ""}${item.delta})`).join(", ");
-  const topCompanies = snapshot.topCompanies.map((company) => `${company.name}: ${company.adCount} annonser, ${company.topTechnologies.slice(0, 3).join("/") || "ingen tech"}`).join(", ");
+  const topTechs = snapshot.technologyTrends
+    .slice(0, 5)
+    .map((item) => `${item.name}: ${item.current} (${item.delta >= 0 ? "+" : ""}${item.delta})`)
+    .join(", ");
+  const topCompanies = snapshot.topCompanies
+    .map(
+      (company) =>
+        `${company.name}: ${company.adCount} annonser, ${company.topTechnologies.slice(0, 3).join("/") || "ingen tech"}`,
+    )
+    .join(", ");
   const newCompanies = snapshot.newCompaniesNotInCrm.map((company) => company.name).join(", ");
 
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -443,14 +455,14 @@ async function generateAiSummary(snapshot: MarketSnapshot): Promise<string | nul
 
 function renderBulletRows(rows: string[]): string {
   if (rows.length === 0) {
-    return `<p style="font-size:14px;color:#999999;margin:0">Ingen funn denne uken.</p>`;
+    return `<p style="font-size:13px;color:#888888;margin:0">Ingen funn denne uken.</p>`;
   }
 
   return rows
     .map(
       (row) => `
-        <div style="padding:10px 0;border-top:1px solid #f5f5f5">
-          <p style="font-size:14px;color:#333333;margin:0;line-height:1.5">${row}</p>
+        <div style="padding:12px 0;border-top:1px solid #f5f5f5">
+          <p style="font-size:14px;color:#0a0a0a;margin:0;line-height:1.45">${row}</p>
         </div>`,
     )
     .join("");
@@ -459,8 +471,8 @@ function renderBulletRows(rows: string[]): string {
 function section(title: string, subtitle: string, body: string) {
   return `
     <div style="padding:24px 40px 0">
-      <p style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#999999;margin:0 0 4px">${title}</p>
-      <p style="font-size:13px;color:#777777;margin:0 0 16px">${subtitle}</p>
+      <p style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#999999;margin:0 0 6px">${title}</p>
+      <p style="font-size:13px;color:#777777;margin:0 0 10px">${subtitle}</p>
       ${body}
     </div>`;
 }
@@ -469,14 +481,14 @@ function buildHtml(snapshot: MarketSnapshot, aiSummary: string | null) {
   const dateLabel = new Date().toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" });
   const techRows = snapshot.technologyTrends.slice(0, 5).map((trend) => {
     const delta = trend.delta > 0 ? `+${trend.delta}` : `${trend.delta}`;
-    return `${trend.name} — ${trend.current} annonser siste 30 dager (${delta} mot forrige periode)`;
+    return `<strong>${trend.name}</strong> — ${trend.current} annonser siste 30 dager (${delta} mot forrige periode)`;
   });
   const companyRows = snapshot.topCompanies.map((company) => {
     const companyUrl = company.company
       ? `https://crm.stacq.no/selskaper/${company.company.id}`
       : `https://crm.stacq.no/selskaper?ny=${encodeURIComponent(company.name)}`;
     const label = company.company ? company.name : `${company.name} (ikke i CRM)`;
-    return `<a href="${companyUrl}" style="color:#0a0a0a;text-decoration:underline">${label}</a> — ${company.adCount} annonser · ${company.topTechnologies.slice(0, 3).join(", ") || "ingen teknologi"}${company.latestRole ? ` · ${company.latestRole}` : ""}`;
+    return `<a href="${companyUrl}" style="color:#0a0a0a;text-decoration:none"><strong>${label}</strong></a> — ${company.adCount} annonser · ${company.topTechnologies.slice(0, 3).join(", ") || "ingen teknologi"}${company.latestRole ? ` · ${company.latestRole}` : ""}`;
   });
   const contactRows = snapshot.topContacts.map((contact) => {
     const parts = [
@@ -488,13 +500,17 @@ function buildHtml(snapshot: MarketSnapshot, aiSummary: string | null) {
     ].filter(Boolean);
     return parts.join(" · ");
   });
-  const newCompanyRows = snapshot.newCompaniesNotInCrm.map((company) => `${company.name} — ${company.adCount} annonser · ${company.topTechnologies.slice(0, 3).join(", ") || "ingen teknologi"}`);
+  const newCompanyRows = snapshot.newCompaniesNotInCrm.map(
+    (company) =>
+      `<strong>${company.name}</strong> — ${company.adCount} annonser · ${company.topTechnologies.slice(0, 3).join(", ") || "ingen teknologi"}`,
+  );
 
-  return `<!DOCTYPE html>
+  return `
+<!DOCTYPE html>
 <html>
   <body style="margin:0;padding:0;background:#f5f4f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
     <div style="padding:40px 20px">
-      <div style="max-width:580px;margin:0 auto">
+      <div style="max-width:620px;margin:0 auto">
         <div style="background:#ffffff;border-radius:4px;overflow:hidden">
           <div style="background:#0a0a0a;padding:28px 40px;display:flex;align-items:center;justify-content:space-between">
             <div>
@@ -513,7 +529,7 @@ function buildHtml(snapshot: MarketSnapshot, aiSummary: string | null) {
               ? section(
                   "AI-oppsummering",
                   "Det viktigste markedsbildet for STACQ akkurat nå.",
-                  `<p style="font-size:14px;color:#333333;margin:0;line-height:1.6">${aiSummary}</p>`,
+                  `<div style="padding:14px 0;border-top:1px solid #f5f5f5"><p style="font-size:14px;color:#0a0a0a;margin:0;line-height:1.6">${aiSummary}</p></div>`,
                 )
               : ""
           }
@@ -574,17 +590,22 @@ Deno.serve(async (req) => {
     }
 
     if (source === "import" && !settings.markedsradar_send_etter_import && !isTest && !force) {
-      return new Response(JSON.stringify({ skipped: true, reason: "Automatisk utsending etter import er deaktivert" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ skipped: true, reason: "Automatisk utsending etter import er deaktivert" }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const ninetyDaysAgo = dateDaysAgo(new Date(), 90);
     const [{ data: annonser, error: annonserErr }, { data: companies, error: companiesErr }] = await Promise.all([
       supabase
         .from("finn_annonser")
-        .select("id, dato, uke, selskap, stillingsrolle, lokasjon, teknologier, lenke, kontaktnavn, kontakt_epost, kontakt_telefon")
+        .select(
+          "id, dato, uke, selskap, stillingsrolle, lokasjon, teknologier, lenke, kontaktnavn, kontakt_epost, kontakt_telefon",
+        )
         .gte("dato", ninetyDaysAgo)
         .order("dato", { ascending: false }),
       supabase.from("companies").select("id, name, status"),
@@ -610,20 +631,26 @@ Deno.serve(async (req) => {
     }
 
     if (!isTest && !force && settings.markedsradar_sist_sendt_uke === snapshot.latestWeek) {
-      return new Response(JSON.stringify({ skipped: true, reason: `Markedsradar for ${snapshot.latestWeek} er allerede sendt` }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ skipped: true, reason: `Markedsradar for ${snapshot.latestWeek} er allerede sendt` }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const aiSummary = settings.markedsradar_inkluder_ai ? await generateAiSummary(snapshot) : null;
     const html = buildHtml(snapshot, aiSummary);
-    const recipients = isTest ? ["thomas@stacq.no"] : ((settings.markedsradar_epost_mottakere as string[]) || []);
+    const recipients = isTest ? ["thomas@stacq.no"] : (settings.markedsradar_epost_mottakere as string[]) || [];
     if (recipients.length === 0) {
-      return new Response(JSON.stringify({ skipped: true, reason: "Ingen mottakere er konfigurert for markedsradar" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ skipped: true, reason: "Ingen mottakere er konfigurert for markedsradar" }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const subject = `Markedsradar ${snapshot.latestWeek} — ${snapshot.adsThisWeek} annonser, ${snapshot.newCompaniesNotInCrm.length} nye selskaper`;
