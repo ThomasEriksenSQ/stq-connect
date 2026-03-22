@@ -104,8 +104,8 @@ const DailyBrief = () => {
   const [nudgeDate, setNudgeDate] = useState("someday");
   const [nudgeCustomDate, setNudgeCustomDate] = useState("");
   const cardRef = useRef<HTMLDivElement>(null);
-  const [dragStartX, setDragStartX] = useState<number | null>(null);
-  const [dragDeltaX, setDragDeltaX] = useState(0);
+  const dragStartXRef = useRef<number | null>(null);
+  const dragDeltaXRef = useRef(0);
   const [isDragging, setIsDragging] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
   const historyRef = useRef<string[]>([]);
