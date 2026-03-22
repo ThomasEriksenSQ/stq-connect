@@ -857,16 +857,12 @@ const DailyBrief = () => {
                               c.id === current.contact.id ? { ...c, ikke_aktuell_kontakt: newVal } : c
                             ),
                           }));
-                          if (newVal) {
-                            await saveReview(current.contact.id, "ikke_aktuell", current);
-                            goNext("left", true);
-                          }
                         }}
                         className={cn(
-                          "inline-flex items-center h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors",
+                          "inline-flex items-center h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors cursor-pointer",
                           current.contact.ikke_aktuell_kontakt
                             ? "bg-destructive/10 text-destructive border-destructive/30"
-                            : "bg-background text-muted-foreground border-border hover:bg-secondary"
+                            : "border-border text-muted-foreground hover:bg-secondary"
                         )}
                       >
                         Ikke relevant person
