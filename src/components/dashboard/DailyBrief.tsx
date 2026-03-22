@@ -327,7 +327,12 @@ const DailyBrief = () => {
         }
         const currentIdx = freshScored.findIndex(l => l.contact.id === currentLead?.contact.id);
         const next = freshScored.slice(currentIdx + 1).find(l => !newTreatedSet.has(l.contact.id));
-        setCurrentContactId(next?.contact.id ?? null);
+        if (next) {
+          setCurrentContactId(next.contact.id);
+        } else {
+          setCompletedAll(true);
+          setCurrentContactId(null);
+        }
       } else {
         setHistory(prev => {
           const newHistory = [...prev];
