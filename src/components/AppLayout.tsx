@@ -75,10 +75,10 @@ export function AppLayout() {
               <button
                 onClick={() => setKonsDropOpen((v) => !v)}
                 className={cn(
-                  "relative flex items-center gap-2 px-3 py-1.5 text-[0.8125rem] font-medium transition-colors",
+                  "flex items-center gap-2 px-3 py-[14px] text-[0.8125rem] font-medium transition-colors border-b-2",
                   isKonsActive
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "text-foreground border-primary"
+                    : "text-muted-foreground hover:text-foreground border-transparent"
                 )}
               >
                 <Users2 className="h-4 w-4 stroke-[1.5]" />
@@ -89,9 +89,6 @@ export function AppLayout() {
                     konsDropOpen && "rotate-180"
                   )}
                 />
-                {isKonsActive && (
-                  <span className="absolute bottom-[-13px] left-3 right-3 h-[2px] bg-primary rounded-full" />
-                )}
               </button>
 
               {konsDropOpen && (
