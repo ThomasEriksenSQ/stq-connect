@@ -70,6 +70,18 @@ function buildReasonLine(lead: ScoredLead, daysSince: number): string {
   return joined.charAt(0).toUpperCase() + joined.slice(1);
 }
 
+const COOLDOWN_DAYS: Record<number, number> = { 1: 14, 2: 45, 3: 60, 4: 90 };
+
+function buildSignalSnapshot(lead: ScoredLead) {
+  return {
+    signal: lead.signal || null,
+    hasMarkedsradar: lead.hasMarkedsradar,
+    hasAktivForespørsel: lead.hasAktivForespørsel,
+    hasOverdue: lead.hasOverdue,
+    tier: lead.tier,
+  };
+}
+
 /* ── Main Component ── */
 const DailyBrief = () => {
   const { user } = useAuth();
@@ -156,6 +168,26 @@ const DailyBrief = () => {
   const techProfiles = salgsData?.techProfiles ?? [];
   const foresporsler = salgsData?.foresporsler ?? [];
 
+  const { data: agentReviews = [] } = useQuery({
+    queryKey: ["agent-reviews"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("agent_contact_reviews")
+        .select("contact_id, reviewed_at, action_taken, signals_at_review")
+        .order("reviewed_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const reviewMap = useMemo(() => {
+    const map: Record<string, any> = {};
+    (agentReviews as any[]).forEach(r => {
+      if (!map[r.contact_id]) map[r.contact_id] = r;
+    });
+    return map;
+  }, [agentReviews]);
+
   const scoredLeads = useMemo(() => {
     return rawContacts.map((contact: any) => {
       const contactActs = allActivities.filter((a: any) => a.contact_id === contact.id);
@@ -200,15 +232,42 @@ const DailyBrief = () => {
         needsReview: heatResult.needsReview,
         lastAct, nextTask, hasOverdue, hasMarkedsradar, isInnkjoper, hasAktivForespørsel, hasTidligereForespørsel,
       };
-    }).filter(Boolean).sort((a: any, b: any) => {
-      const ta = (a as any).tier ?? 4;
-      const tb = (b as any).tier ?? 4;
+    }).filter((lead): lead is ScoredLead => {
+      if (!lead) return false;
+      const daysSince = lead.lastAct ? differenceInDays(new Date(), new Date(lead.lastAct.created_at)) : 999;
+      const meetsMin = !!(
+        lead.signal ||
+        lead.nextTask ||
+        lead.isInnkjoper ||
+        lead.hasMarkedsradar ||
+        (daysSince !== 999 && daysSince <= 730)
+      );
+      if (!meetsMin) return false;
+      return true;
+    }).sort((a, b) => {
+      const ta = a.tier, tb = b.tier;
       if (ta !== tb) return ta - tb;
-      return (b as any).score - (a as any).score;
+      const ra = reviewMap[a.contact.id]?.reviewed_at ?? "1970-01-01T00:00:00Z";
+      const rb = reviewMap[b.contact.id]?.reviewed_at ?? "1970-01-01T00:00:00Z";
+      if (ra !== rb) return ra.localeCompare(rb);
+      return b.score - a.score;
     }) as ScoredLead[];
-  }, [rawContacts, allActivities, allTasks, techProfiles, foresporsler]);
+  }, [rawContacts, allActivities, allTasks, techProfiles, foresporsler, reviewMap]);
 
-  const queue = useMemo(() => scoredLeads.filter(l => !treated.has(l.contact.id)), [scoredLeads, treated]);
+  const queue = useMemo(() => {
+    return scoredLeads.filter(l => {
+      if (treated.has(l.contact.id)) return false;
+      const lastReview = reviewMap[l.contact.id];
+      if (!lastReview) return true;
+      const cooldownDays = COOLDOWN_DAYS[l.tier] ?? 90;
+      const daysSinceReview = differenceInDays(new Date(), new Date(lastReview.reviewed_at));
+      if (daysSinceReview >= cooldownDays) return true;
+      const prevSnapshot = lastReview.signals_at_review;
+      const currSnapshot = buildSignalSnapshot(l);
+      const changed = JSON.stringify(prevSnapshot) !== JSON.stringify(currSnapshot);
+      return changed;
+    });
+  }, [scoredLeads, treated, reviewMap]);
 
   const current = useMemo(() => {
     if (currentContactId) {
@@ -267,6 +326,16 @@ const DailyBrief = () => {
       }));
     }, 240);
   }, [isAnimating, scoredLeads, treated, current, currentIndexInScored]);
+
+  const saveReview = useCallback(async (contactId: string, actionTaken: string, lead: ScoredLead) => {
+    await supabase.from("agent_contact_reviews").insert({
+      contact_id: contactId,
+      reviewed_by: user?.id,
+      action_taken: actionTaken,
+      signals_at_review: buildSignalSnapshot(lead),
+    });
+    queryClient.invalidateQueries({ queryKey: ["agent-reviews"] });
+  }, [user?.id, queryClient]);
 
   const updateTaskMutation = useMutation({
     mutationFn: async ({ taskId, dueDate }: { taskId: string; dueDate: string }) => {
@@ -770,12 +839,19 @@ const DailyBrief = () => {
 
                       {/* Ikke relevant person */}
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           const newVal = !current.contact.ikke_aktuell_kontakt;
-                          supabase.from("contacts").update({ ikke_aktuell_kontakt: newVal }).eq("id", current.contact.id)
-                            .then(() => queryClient.setQueryData(["salgssenter-contacts", ownerFilter], (old: any[]) =>
-                              old?.map((c: any) => c.id === current.contact.id ? { ...c, ikke_aktuell_kontakt: newVal } : c)
-                            ));
+                          await supabase.from("contacts").update({ ikke_aktuell_kontakt: newVal }).eq("id", current.contact.id);
+                          queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
+                            ...old,
+                            rawContacts: old?.rawContacts?.map((c: any) =>
+                              c.id === current.contact.id ? { ...c, ikke_aktuell_kontakt: newVal } : c
+                            ),
+                          }));
+                          if (newVal) {
+                            await saveReview(current.contact.id, "ikke_aktuell", current);
+                            goNext("left", true);
+                          }
                         }}
                         className={cn(
                           "inline-flex items-center h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors",
@@ -807,6 +883,8 @@ const DailyBrief = () => {
                         if (harForfalt) { openNudge("forfalt"); return; }
                         if (!harSignal && !harTask) { openNudge("ingen_signal_ingen_task"); return; }
                         if (harSignal && !harTask) { openNudge("signal_ingen_task"); return; }
+                        // Har signal + task → beholdt
+                        saveReview(current.contact.id, "beholdt", current);
                         goNext("left", true);
                       }}
                       className="w-full h-[46px] rounded-xl bg-foreground text-background text-[0.9375rem] font-medium hover:opacity-90 active:scale-[0.99] transition-all"
@@ -1024,6 +1102,9 @@ const DailyBrief = () => {
                     });
                     queryClient.invalidateQueries({ queryKey: ["salgssenter-activities"] });
                   }
+
+                  const actionTaken = (nudgeSignal && nudgeSignal !== currentSignal) ? "signal_updated" : "task_created";
+                  await saveReview(current.contact.id, actionTaken, current);
 
                   queryClient.invalidateQueries({ queryKey: ["salgssenter-tasks"] });
                   setNudgeOpen(false);
