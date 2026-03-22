@@ -3,14 +3,18 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { isPast, isToday, startOfDay, addDays, addWeeks, addMonths, format, differenceInDays } from "date-fns";
-import { CATEGORIES, getEffectiveSignal, extractCategory } from "@/lib/categoryUtils";
+import { CATEGORIES, getEffectiveSignal, upsertTaskSignalDescription } from "@/lib/categoryUtils";
 import { Check, Calendar as CalendarIcon, ChevronDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from
-"@/components/ui/dropdown-menu";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import FollowUpModal from "./FollowUpModal";
@@ -23,7 +27,9 @@ type NaarFilter = "Forfalt + I dag" | "Forfalt" | "I dag" | "Denne uken" | "Alle
 type SignalFilter = "Alle" | string;
 
 const SIGNAL_PRIORITY: Record<string, number> = {};
-CATEGORIES.forEach((c, i) => {SIGNAL_PRIORITY[c.label] = i;});
+CATEGORIES.forEach((c, i) => {
+  SIGNAL_PRIORITY[c.label] = i;
+});
 SIGNAL_PRIORITY[""] = CATEGORIES.length;
 
 const SIGNAL_CATEGORIES_NO_IKKE = CATEGORIES.filter((c) => c.label !== "Ikke aktuelt");
@@ -44,21 +50,26 @@ const OppfolgingerSection = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTaskId, setModalTaskId] = useState<string | null>(null);
   const [modalData, setModalData] = useState<{
-    name: string;company: string;task: string;signal: string;
-    ownerProfileId: string;contactId: string | null;companyId: string | null;
+    name: string;
+    company: string;
+    task: string;
+    signal: string;
+    ownerProfileId: string;
+    contactId: string | null;
+    companyId: string | null;
   } | null>(null);
 
   const { data: tasks = [] } = useQuery({
     queryKey: ["oppfolginger-tasks-v1"],
     queryFn: async () => {
-      const { data, error } = await supabase.
-      from("tasks").
-      select("*, contacts(id, first_name, last_name, title, company_id, companies(name))").
-      in("status", ["open", "todo", "pending", "in_progress"]).
-      order("due_date", { ascending: true, nullsFirst: false });
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*, contacts(id, first_name, last_name, title, company_id, companies(name))")
+        .in("status", ["open", "todo", "pending", "in_progress"])
+        .order("due_date", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data || [];
-    }
+    },
   });
 
   const { data: profiles = [] } = useQuery({
@@ -67,26 +78,41 @@ const OppfolgingerSection = () => {
       const { data, error } = await supabase.from("profiles").select("id, full_name");
       if (error) throw error;
       return data || [];
-    }
+    },
   });
 
   const { data: signalData } = useQuery({
     queryKey: ["oppfolginger-signal-v1"],
     queryFn: async () => {
       const [{ data: acts }, { data: allTasks }] = await Promise.all([
-      supabase.from("activities").select("contact_id, created_at, subject, description").not("contact_id", "is", null),
-      supabase.from("tasks").select("contact_id, created_at, title, description, due_date").not("contact_id", "is", null)]
-      );
+        supabase
+          .from("activities")
+          .select("contact_id, created_at, subject, description")
+          .not("contact_id", "is", null),
+        supabase
+          .from("tasks")
+          .select("contact_id, created_at, updated_at, status, title, description, due_date")
+          .not("contact_id", "is", null),
+      ]);
       return { acts: acts || [], tasks: allTasks || [] };
-    }
+    },
   });
 
-  const getContactSignal = useCallback((contactId: string | null): string => {
-    if (!contactId || !signalData) return "";
-    const acts = signalData.acts.filter((a: any) => a.contact_id === contactId);
-    const tks = signalData.tasks.filter((t: any) => t.contact_id === contactId);
-    return getEffectiveSignal(acts as any, tks.map((t: any) => ({ ...t, title: t.title || "" })) as any);
-  }, [signalData]);
+  const getContactSignal = useCallback(
+    (contactId: string | null): string => {
+      if (!contactId || !signalData) return "";
+      const acts = signalData.acts.filter((a: any) => a.contact_id === contactId);
+      const tks = signalData.tasks.filter((t: any) => t.contact_id === contactId);
+      return getEffectiveSignal(
+        acts as any,
+        tks.map((t: any) => ({
+          ...t,
+          title: t.title || "",
+        })) as any,
+      );
+    },
+    [signalData],
+  );
 
   const today = startOfDay(new Date());
   const endOfWeek = addDays(today, 7);
@@ -113,7 +139,6 @@ const OppfolgingerSection = () => {
   if (ownerFilter !== "all") {
     filtered = filtered.filter((t) => t.assigned_to === ownerFilter || t.created_by === ownerFilter);
   }
-
 
   // 3. Når filter
   const applyNaarFilter = (arr: typeof filtered, f: NaarFilter) => {
@@ -156,24 +181,26 @@ const OppfolgingerSection = () => {
   const visible = isAllFilter ? sorted.slice(0, MAX_UNFILTERED) : sorted;
 
   // Someday filtered by owner + signal
-  const filteredSomeday = somedayTasks.filter((t) => {
-    if (ownerFilter !== "all" && t.assigned_to !== ownerFilter && t.created_by !== ownerFilter) return false;
-    if (signalFilter !== "Alle" && getContactSignal(t.contact_id) !== signalFilter) return false;
-    return true;
-  }).sort((a, b) => {
-    const sa = SIGNAL_PRIORITY[getContactSignal(a.contact_id)] ?? CATEGORIES.length;
-    const sb = SIGNAL_PRIORITY[getContactSignal(b.contact_id)] ?? CATEGORIES.length;
-    if (sa !== sb) return sa - sb;
-    return 0;
-  });
+  const filteredSomeday = somedayTasks
+    .filter((t) => {
+      if (ownerFilter !== "all" && t.assigned_to !== ownerFilter && t.created_by !== ownerFilter) return false;
+      if (signalFilter !== "Alle" && getContactSignal(t.contact_id) !== signalFilter) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const sa = SIGNAL_PRIORITY[getContactSignal(a.contact_id)] ?? CATEGORIES.length;
+      const sb = SIGNAL_PRIORITY[getContactSignal(b.contact_id)] ?? CATEGORIES.length;
+      if (sa !== sb) return sa - sb;
+      return 0;
+    });
 
   // Empty state for "Forfalt + I dag" — show this week fallback
   const showForfaltEmpty = naarFilter === "Forfalt + I dag" && visible.length === 0;
-  const weekFallback = showForfaltEmpty ?
-  applyNaarFilter(filtered, "Denne uken").
-  filter((t) => signalFilter === "Alle" || getContactSignal(t.contact_id) === signalFilter).
-  sort((a, b) => (a.due_date || "9999").localeCompare(b.due_date || "9999")) :
-  [];
+  const weekFallback = showForfaltEmpty
+    ? applyNaarFilter(filtered, "Denne uken")
+        .filter((t) => signalFilter === "Alle" || getContactSignal(t.contact_id) === signalFilter)
+        .sort((a, b) => (a.due_date || "9999").localeCompare(b.due_date || "9999"))
+    : [];
 
   // Handlers
   const handleComplete = async (e: React.MouseEvent, task: any) => {
@@ -183,7 +210,11 @@ const OppfolgingerSection = () => {
     await supabase.from("tasks").update({ status: "done", completed_at: new Date().toISOString() }).eq("id", task.id);
 
     setTimeout(() => {
-      setFadingIds((prev) => {const n = new Set(prev);n.delete(task.id);return n;});
+      setFadingIds((prev) => {
+        const n = new Set(prev);
+        n.delete(task.id);
+        return n;
+      });
       const contact = task.contacts as any;
       const sig = getContactSignal(task.contact_id);
       setModalTaskId(task.id);
@@ -194,7 +225,7 @@ const OppfolgingerSection = () => {
         signal: sig,
         ownerProfileId: task.assigned_to || user?.id || "",
         contactId: task.contact_id,
-        companyId: contact?.company_id || null
+        companyId: contact?.company_id || null,
       });
       setModalOpen(true);
     }, 400);
@@ -213,7 +244,7 @@ const OppfolgingerSection = () => {
     queryClient.invalidateQueries({ queryKey: ["oppfolginger-tasks-v1"] });
   };
 
-  const handleModalSubmit = async (data: {title: string;dueDate: Date;owner: string;}) => {
+  const handleModalSubmit = async (data: { title: string; dueDate: Date; owner: string }) => {
     setModalOpen(false);
     if (modalData) {
       await supabase.from("tasks").insert({
@@ -222,7 +253,7 @@ const OppfolgingerSection = () => {
         contact_id: modalData.contactId,
         company_id: modalData.companyId,
         assigned_to: data.owner,
-        created_by: user?.id
+        created_by: user?.id,
       });
       const firstName = modalData.name.split(" ")[0];
       toast.success(`Oppfølging opprettet for ${firstName}`);
@@ -236,20 +267,25 @@ const OppfolgingerSection = () => {
     queryClient.invalidateQueries({ queryKey: ["oppfolginger-tasks-v1"] });
   };
 
-  const handleChangeSignal = async (e: React.MouseEvent, contactId: string, signal: string) => {
+  const handleChangeSignal = async (e: React.MouseEvent, task: any, signal: string) => {
     e.stopPropagation();
-    await supabase.from("activities").insert({
-      contact_id: contactId,
-      subject: signal,
-      type: "note",
-      created_by: user?.id
-    });
+    await supabase
+      .from("tasks")
+      .update({
+        description: upsertTaskSignalDescription(task.description, signal, !task.due_date),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", task.id);
+    queryClient.invalidateQueries({ queryKey: ["oppfolginger-tasks-v1"] });
     queryClient.invalidateQueries({ queryKey: ["oppfolginger-signal-v1"] });
   };
 
   const handlePostpone = async (e: React.MouseEvent, taskId: string, newDate: Date) => {
     e.stopPropagation();
-    await supabase.from("tasks").update({ due_date: format(newDate, "yyyy-MM-dd") }).eq("id", taskId);
+    await supabase
+      .from("tasks")
+      .update({ due_date: format(newDate, "yyyy-MM-dd") })
+      .eq("id", taskId);
     queryClient.invalidateQueries({ queryKey: ["oppfolginger-tasks-v1"] });
   };
 
@@ -257,46 +293,66 @@ const OppfolgingerSection = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2.5">
-        
-        
-
-        
-      </div>
+      <div className="flex items-center gap-2.5"></div>
 
       {/* Filters */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-14 flex-shrink-0">Når</span>
+          <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-14 flex-shrink-0">
+            Når
+          </span>
           <div className="flex items-center gap-1.5">
-            {(["Forfalt + I dag", "Forfalt", "I dag", "Denne uken", "Alle"] as NaarFilter[]).map((f) =>
-            <button key={f} className={naarFilter === f ? CHIP_ON : CHIP_OFF} onClick={() => setNaarFilter(f)}>{f}</button>
-            )}
+            {(["Forfalt + I dag", "Forfalt", "I dag", "Denne uken", "Alle"] as NaarFilter[]).map((f) => (
+              <button key={f} className={naarFilter === f ? CHIP_ON : CHIP_OFF} onClick={() => setNaarFilter(f)}>
+                {f}
+              </button>
+            ))}
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-14 flex-shrink-0">Eier</span>
+          <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-14 flex-shrink-0">
+            Eier
+          </span>
           <div className="flex items-center gap-1.5">
-            <button className={ownerFilter === user?.id ? CHIP_ON : CHIP_OFF} onClick={() => setOwnerFilter(user?.id || "all")}>
+            <button
+              className={ownerFilter === user?.id ? CHIP_ON : CHIP_OFF}
+              onClick={() => setOwnerFilter(user?.id || "all")}
+            >
               {currentUserProfile?.full_name || "Mine"}
             </button>
-            {profiles.filter((p) => p.id !== user?.id).map((p) =>
-            <button key={p.id} className={ownerFilter === p.id ? CHIP_ON : CHIP_OFF} onClick={() => setOwnerFilter(p.id)}>
-                {p.full_name}
-              </button>
-            )}
-            <button className={ownerFilter === "all" ? CHIP_ON : CHIP_OFF} onClick={() => setOwnerFilter("all")}>Alle</button>
+            {profiles
+              .filter((p) => p.id !== user?.id)
+              .map((p) => (
+                <button
+                  key={p.id}
+                  className={ownerFilter === p.id ? CHIP_ON : CHIP_OFF}
+                  onClick={() => setOwnerFilter(p.id)}
+                >
+                  {p.full_name}
+                </button>
+              ))}
+            <button className={ownerFilter === "all" ? CHIP_ON : CHIP_OFF} onClick={() => setOwnerFilter("all")}>
+              Alle
+            </button>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-14 flex-shrink-0">Signal</span>
+          <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-14 flex-shrink-0">
+            Signal
+          </span>
           <div className="flex items-center gap-1.5 flex-wrap">
-            <button className={signalFilter === "Alle" ? CHIP_ON : CHIP_OFF} onClick={() => setSignalFilter("Alle")}>Alle</button>
-            {SIGNAL_CATEGORIES_NO_IKKE.map((c) =>
-            <button key={c.label} className={signalFilter === c.label ? CHIP_ON : CHIP_OFF} onClick={() => setSignalFilter(c.label)}>
+            <button className={signalFilter === "Alle" ? CHIP_ON : CHIP_OFF} onClick={() => setSignalFilter("Alle")}>
+              Alle
+            </button>
+            {SIGNAL_CATEGORIES_NO_IKKE.map((c) => (
+              <button
+                key={c.label}
+                className={signalFilter === c.label ? CHIP_ON : CHIP_OFF}
+                onClick={() => setSignalFilter(c.label)}
+              >
                 {c.label}
               </button>
-            )}
+            ))}
           </div>
         </div>
       </div>
@@ -305,87 +361,85 @@ const OppfolgingerSection = () => {
       {(() => {
         const totalCount = visible.length;
         const cappedVisible = showAll ? visible : visible.slice(0, 5);
-        const cappedWeekFallback = showAll ? weekFallback : weekFallback.slice(0, Math.max(0, 5 - cappedVisible.length));
+        const cappedWeekFallback = showAll
+          ? weekFallback
+          : weekFallback.slice(0, Math.max(0, 5 - cappedVisible.length));
 
         return (
           <>
-            {cappedVisible.length === 0 && !showForfaltEmpty ?
-            <div className="text-center py-12 text-muted-foreground">
-                Ingen oppfølginger å vise
-              </div> :
-
-            <>
-                {showForfaltEmpty &&
-              <p className="text-[0.9375rem] text-emerald-600 text-center py-4">
-                    Ingen forfalne i dag 🎉
-                  </p>
-              }
-
-                {cappedVisible.length > 0 &&
-              <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-                    {cappedVisible.map((task, i) =>
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  isLast={i === cappedVisible.length - 1}
-                  profiles={profiles}
-                  signal={getContactSignal(task.contact_id)}
-                  fadingIds={fadingIds}
-                  onComplete={handleComplete}
-                  onChangeOwner={handleChangeOwner}
-                  onChangeSignal={handleChangeSignal}
-                  onPostpone={handlePostpone} />
-
+            {cappedVisible.length === 0 && !showForfaltEmpty ? (
+              <div className="text-center py-12 text-muted-foreground">Ingen oppfølginger å vise</div>
+            ) : (
+              <>
+                {showForfaltEmpty && (
+                  <p className="text-[0.9375rem] text-emerald-600 text-center py-4">Ingen forfalne i dag 🎉</p>
                 )}
-                  </div>
-              }
 
-                {hiddenCount > 0 &&
-              <p className="text-center text-[0.8125rem] text-muted-foreground py-2">
+                {cappedVisible.length > 0 && (
+                  <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+                    {cappedVisible.map((task, i) => (
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        isLast={i === cappedVisible.length - 1}
+                        profiles={profiles}
+                        signal={getContactSignal(task.contact_id)}
+                        fadingIds={fadingIds}
+                        onComplete={handleComplete}
+                        onChangeOwner={handleChangeOwner}
+                        onChangeSignal={handleChangeSignal}
+                        onPostpone={handlePostpone}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {hiddenCount > 0 && (
+                  <p className="text-center text-[0.8125rem] text-muted-foreground py-2">
                     + {hiddenCount} oppfølginger til — bruk filter for å avgrense
                   </p>
-              }
+                )}
 
                 {/* Week fallback */}
-                {showForfaltEmpty && cappedWeekFallback.length > 0 &&
-              <>
-                    <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mt-4">Denne uken</p>
+                {showForfaltEmpty && cappedWeekFallback.length > 0 && (
+                  <>
+                    <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mt-4">
+                      Denne uken
+                    </p>
                     <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-                      {cappedWeekFallback.map((task, i) =>
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    isLast={i === cappedWeekFallback.length - 1}
-                    profiles={profiles}
-                    signal={getContactSignal(task.contact_id)}
-                    fadingIds={fadingIds}
-                    onComplete={handleComplete}
-                    onChangeOwner={handleChangeOwner}
-                    onChangeSignal={handleChangeSignal}
-                    onPostpone={handlePostpone} />
-
-                  )}
+                      {cappedWeekFallback.map((task, i) => (
+                        <TaskRow
+                          key={task.id}
+                          task={task}
+                          isLast={i === cappedWeekFallback.length - 1}
+                          profiles={profiles}
+                          signal={getContactSignal(task.contact_id)}
+                          fadingIds={fadingIds}
+                          onComplete={handleComplete}
+                          onChangeOwner={handleChangeOwner}
+                          onChangeSignal={handleChangeSignal}
+                          onPostpone={handlePostpone}
+                        />
+                      ))}
                     </div>
                   </>
-              }
+                )}
 
-                {showForfaltEmpty && weekFallback.length === 0 &&
-              <div className="text-center py-12 text-muted-foreground">
-                    Ingen oppfølginger å vise 🎉
-                  </div>
-              }
+                {showForfaltEmpty && weekFallback.length === 0 && (
+                  <div className="text-center py-12 text-muted-foreground">Ingen oppfølginger å vise 🎉</div>
+                )}
               </>
-            }
+            )}
 
-            {!showAll && (totalCount > 5 || showForfaltEmpty && weekFallback.length > 5) &&
-            <div className="flex justify-center">
+            {!showAll && (totalCount > 5 || (showForfaltEmpty && weekFallback.length > 5)) && (
+              <div className="flex justify-center">
                 <button onClick={() => setShowAll(true)} className="text-[0.8125rem] text-primary hover:underline">
                   Vis alle oppfølginger ({totalCount + (showForfaltEmpty ? weekFallback.length : 0)}) →
                 </button>
               </div>
-            }
-          </>);
-
+            )}
+          </>
+        );
       })()}
 
       {/* Someday tasks */}
@@ -395,7 +449,7 @@ const OppfolgingerSection = () => {
             Følg opp på sikt · {filteredSomeday.length}
           </p>
           <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-            {filteredSomeday.map((task, i) =>
+            {filteredSomeday.map((task, i) => (
               <TaskRow
                 key={task.id}
                 task={task}
@@ -406,8 +460,9 @@ const OppfolgingerSection = () => {
                 onComplete={handleComplete}
                 onChangeOwner={handleChangeOwner}
                 onChangeSignal={handleChangeSignal}
-                onPostpone={handlePostpone} />
-            )}
+                onPostpone={handlePostpone}
+              />
+            ))}
           </div>
         </div>
       )}
@@ -418,17 +473,21 @@ const OppfolgingerSection = () => {
         onCancel={handleModalCancel}
         onClose={handleModalSkip}
         onSubmit={handleModalSubmit}
-        data={modalData ? {
-          name: modalData.name,
-          company: modalData.company,
-          task: modalData.task,
-          signal: modalData.signal,
-          ownerProfileId: modalData.ownerProfileId
-        } : null}
-        profiles={profiles} />
-      
-    </div>);
-
+        data={
+          modalData
+            ? {
+                name: modalData.name,
+                company: modalData.company,
+                task: modalData.task,
+                signal: modalData.signal,
+                ownerProfileId: modalData.ownerProfileId,
+              }
+            : null
+        }
+        profiles={profiles}
+      />
+    </div>
+  );
 };
 
 // ─── TaskRow ───────────────────────────────────────────────
@@ -436,16 +495,26 @@ const OppfolgingerSection = () => {
 interface TaskRowProps {
   task: any;
   isLast: boolean;
-  profiles: Array<{id: string;full_name: string;}>;
+  profiles: Array<{ id: string; full_name: string }>;
   signal: string;
   fadingIds: Set<string>;
   onComplete: (e: React.MouseEvent, task: any) => void;
   onChangeOwner: (e: React.MouseEvent, taskId: string, profileId: string) => void;
-  onChangeSignal: (e: React.MouseEvent, contactId: string, signal: string) => void;
+  onChangeSignal: (e: React.MouseEvent, task: any, signal: string) => void;
   onPostpone: (e: React.MouseEvent, taskId: string, newDate: Date) => void;
 }
 
-function TaskRow({ task, isLast, profiles, signal, fadingIds, onComplete, onChangeOwner, onChangeSignal, onPostpone }: TaskRowProps) {
+function TaskRow({
+  task,
+  isLast,
+  profiles,
+  signal,
+  fadingIds,
+  onComplete,
+  onChangeOwner,
+  onChangeSignal,
+  onPostpone,
+}: TaskRowProps) {
   const contact = task.contacts as any;
   const contactName = contact?.first_name ? `${contact.first_name} ${contact.last_name}` : null;
   const contactId = contact?.id || null;
@@ -462,17 +531,22 @@ function TaskRow({ task, isLast, profiles, signal, fadingIds, onComplete, onChan
 
   const dateColor = isTodayDue ? "text-primary" : isOverdue ? "text-destructive" : "text-muted-foreground";
 
-  const relativeText = dueDate ?
-  isTodayDue ? "I dag" : isOverdue ? `Forfalt ${Math.abs(dueDiff!)} dager` : `Om ${dueDiff} dager` :
-  null;
+  const relativeText = dueDate
+    ? isTodayDue
+      ? "I dag"
+      : isOverdue
+        ? `Forfalt ${Math.abs(dueDiff!)} dager`
+        : `Om ${dueDiff} dager`
+    : null;
 
   const absoluteText = dueDate ? format(dueDate, "dd.MM.yyyy") : null;
 
   const signalCat = CATEGORIES.find((c) => c.label === signal);
 
-  const desc = task.description && !/^\[.+\]$/.test(task.description.trim()) ?
-  task.description.replace(/^\[[^\]]+\]\n?/, "").trim() :
-  null;
+  const desc =
+    task.description && !/^\[.+\]$/.test(task.description.trim())
+      ? task.description.replace(/^\[[^\]]+\]\n?/, "").trim()
+      : null;
 
   const isFading = fadingIds.has(task.id);
 
@@ -483,15 +557,15 @@ function TaskRow({ task, isLast, profiles, signal, fadingIds, onComplete, onChan
         !isLast && "border-b border-border",
         isOverdue && "border-l-[3px] border-l-destructive",
         !isOverdue && "border-l-[3px] border-l-transparent",
-        isFading && "opacity-0 scale-95"
+        isFading && "opacity-0 scale-95",
       )}
-      onClick={() => contactId && (window.location.href = `/kontakter/${contactId}`)}>
-      
+      onClick={() => contactId && (window.location.href = `/kontakter/${contactId}`)}
+    >
       {/* Checkbox */}
       <button
         className="h-[16px] w-[16px] rounded border border-border flex-shrink-0 flex items-center justify-center hover:border-primary hover:bg-primary/5 transition-colors mt-1"
-        onClick={(e) => onComplete(e, task)}>
-        
+        onClick={(e) => onComplete(e, task)}
+      >
         <Check className={cn("h-3 w-3", isFading ? "text-primary" : "text-transparent")} />
       </button>
 
@@ -499,19 +573,20 @@ function TaskRow({ task, isLast, profiles, signal, fadingIds, onComplete, onChan
       <div className="flex-1 min-w-0">
         {/* Line 1: Name · Company */}
         <div className="flex items-center gap-2 flex-wrap">
-          {contactName ?
-          <button
-            className="text-[0.9375rem] font-semibold text-foreground hover:text-primary hover:underline"
-            onClick={(e) => {e.stopPropagation();window.location.href = `/kontakter/${contactId}`;}}>
-            
+          {contactName ? (
+            <button
+              className="text-[0.9375rem] font-semibold text-foreground hover:text-primary hover:underline"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.location.href = `/kontakter/${contactId}`;
+              }}
+            >
               {contactName}
-            </button> :
-
-          <span className="text-[0.9375rem] font-semibold text-muted-foreground italic">Ukjent kontakt</span>
-          }
-          {companyName &&
-          <span className="text-[0.8125rem] text-muted-foreground">· {companyName}</span>
-          }
+            </button>
+          ) : (
+            <span className="text-[0.9375rem] font-semibold text-muted-foreground italic">Ukjent kontakt</span>
+          )}
+          {companyName && <span className="text-[0.8125rem] text-muted-foreground">· {companyName}</span>}
         </div>
 
         {/* Line 2: Task title */}
@@ -526,80 +601,95 @@ function TaskRow({ task, isLast, profiles, signal, fadingIds, onComplete, onChan
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[200px]" onClick={(e) => e.stopPropagation()}>
-              {profiles.map((p) =>
-              <DropdownMenuItem key={p.id} onClick={(e) => onChangeOwner(e as any, task.id, p.id)}>
+              {profiles.map((p) => (
+                <DropdownMenuItem key={p.id} onClick={(e) => onChangeOwner(e as any, task.id, p.id)}>
                   {p.full_name}
                   {p.id === task.assigned_to && <Check className="ml-auto h-4 w-4" />}
                 </DropdownMenuItem>
-              )}
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
 
         {/* Line 4: Description */}
-        {desc &&
-        <p className="text-xs text-muted-foreground/70 truncate mt-0.5">{desc}</p>
-        }
+        {desc && <p className="text-xs text-muted-foreground/70 truncate mt-0.5">{desc}</p>}
       </div>
 
       {/* Right column */}
       <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
         {/* Date — clickable PostponeDate */}
-        {dueDate &&
-        <PostponeDate
-          taskId={task.id}
-          dueDate={dueDate}
-          dateColor={dateColor}
-          relativeText={relativeText}
-          absoluteText={absoluteText}
-          onPostpone={onPostpone} />
-
-        }
+        {dueDate && (
+          <PostponeDate
+            taskId={task.id}
+            dueDate={dueDate}
+            dateColor={dateColor}
+            relativeText={relativeText}
+            absoluteText={absoluteText}
+            onPostpone={onPostpone}
+          />
+        )}
 
         {/* Signal badge */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-            {signal ?
-            <button className={cn("inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold hover:opacity-80 transition-opacity mt-0.5", signalCat?.badgeColor)}>
+            {signal ? (
+              <button
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold hover:opacity-80 transition-opacity mt-0.5",
+                  signalCat?.badgeColor,
+                )}
+              >
                 {signal}
                 <ChevronDown className="h-3 w-3" />
-              </button> :
-
-            <button className="text-[0.75rem] text-muted-foreground/50 hover:text-muted-foreground transition-colors mt-0.5">
+              </button>
+            ) : (
+              <button className="text-[0.75rem] text-muted-foreground/50 hover:text-muted-foreground transition-colors mt-0.5">
                 + Signal
               </button>
-            }
+            )}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-[200px]" onClick={(e) => e.stopPropagation()}>
-            {CATEGORIES.map((c) =>
-            <DropdownMenuItem
-              key={c.label}
-              disabled={!task.contact_id}
-              onClick={(e) => task.contact_id && onChangeSignal(e as any, task.contact_id, c.label)}>
-              
-                <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold mr-2", c.badgeColor)}>
+            {CATEGORIES.map((c) => (
+              <DropdownMenuItem
+                key={c.label}
+                disabled={!task.contact_id}
+                onClick={(e) => task.contact_id && onChangeSignal(e as any, task, c.label)}
+              >
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold mr-2",
+                    c.badgeColor,
+                  )}
+                >
                   {c.label}
                 </span>
                 {signal === c.label && <Check className="ml-auto h-4 w-4" />}
               </DropdownMenuItem>
-            )}
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </div>);
-
+    </div>
+  );
 }
 
 // ─── PostponeDate ──────────────────────────────────────────
 
-function PostponeDate({ taskId, dueDate, dateColor, relativeText, absoluteText, onPostpone
-
-
-
-
-
-
-}: {taskId: string;dueDate: Date;dateColor: string;relativeText: string | null;absoluteText: string | null;onPostpone: (e: React.MouseEvent, taskId: string, newDate: Date) => void;}) {
+function PostponeDate({
+  taskId,
+  dueDate,
+  dateColor,
+  relativeText,
+  absoluteText,
+  onPostpone,
+}: {
+  taskId: string;
+  dueDate: Date;
+  dateColor: string;
+  relativeText: string | null;
+  absoluteText: string | null;
+  onPostpone: (e: React.MouseEvent, taskId: string, newDate: Date) => void;
+}) {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const w1 = addWeeks(dueDate, 1);
   const w2 = addWeeks(dueDate, 2);
@@ -609,27 +699,32 @@ function PostponeDate({ taskId, dueDate, dateColor, relativeText, absoluteText, 
     <DropdownMenu>
       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
         <button className="flex items-center gap-1.5 cursor-pointer hover:opacity-70 transition-opacity">
-          <span className={cn("text-[0.8125rem] font-medium", dateColor)}>
-            {relativeText}
-          </span>
-          <span className={cn("text-[0.8125rem] font-medium", dateColor)}>
-            · {absoluteText}
-          </span>
+          <span className={cn("text-[0.8125rem] font-medium", dateColor)}>{relativeText}</span>
+          <span className={cn("text-[0.8125rem] font-medium", dateColor)}>· {absoluteText}</span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[220px]" onClick={(e) => e.stopPropagation()}>
         <DropdownMenuLabel className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground px-2 py-1.5">
           Utsett til
         </DropdownMenuLabel>
-        <DropdownMenuItem className="cursor-pointer flex items-center" onClick={(e) => onPostpone(e as any, taskId, w1)}>
+        <DropdownMenuItem
+          className="cursor-pointer flex items-center"
+          onClick={(e) => onPostpone(e as any, taskId, w1)}
+        >
           <span className="text-foreground">+ 1 uke</span>
           <span className="text-muted-foreground text-xs ml-auto">{format(w1, "dd.MM.yyyy")}</span>
         </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer flex items-center" onClick={(e) => onPostpone(e as any, taskId, w2)}>
+        <DropdownMenuItem
+          className="cursor-pointer flex items-center"
+          onClick={(e) => onPostpone(e as any, taskId, w2)}
+        >
           <span className="text-foreground">+ 2 uker</span>
           <span className="text-muted-foreground text-xs ml-auto">{format(w2, "dd.MM.yyyy")}</span>
         </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer flex items-center" onClick={(e) => onPostpone(e as any, taskId, m1)}>
+        <DropdownMenuItem
+          className="cursor-pointer flex items-center"
+          onClick={(e) => onPostpone(e as any, taskId, m1)}
+        >
           <span className="text-foreground">+ 1 måned</span>
           <span className="text-muted-foreground text-xs ml-auto">{format(m1, "dd.MM.yyyy")}</span>
         </DropdownMenuItem>
@@ -639,8 +734,11 @@ function PostponeDate({ taskId, dueDate, dateColor, relativeText, absoluteText, 
             <PopoverTrigger asChild>
               <button
                 className="w-full text-left px-2 py-1.5 text-[0.8125rem] hover:bg-secondary rounded-sm flex items-center gap-2"
-                onClick={(e) => {e.stopPropagation();setCalendarOpen(true);}}>
-                
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCalendarOpen(true);
+                }}
+              >
                 <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
                 Velg dato
               </button>
@@ -656,14 +754,14 @@ function PostponeDate({ taskId, dueDate, dateColor, relativeText, absoluteText, 
                     setCalendarOpen(false);
                   }
                 }}
-                className="p-3 pointer-events-auto" />
-              
+                className="p-3 pointer-events-auto"
+              />
             </PopoverContent>
           </Popover>
         </div>
       </DropdownMenuContent>
-    </DropdownMenu>);
-
+    </DropdownMenu>
+  );
 }
 
 export default OppfolgingerSection;
