@@ -3,7 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Search, ArrowUpDown, ChevronDown, Sparkles, Radio } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BulkSignalModal } from "@/components/BulkSignalModal";
@@ -13,14 +18,22 @@ import { relativeDate } from "@/lib/relativeDate";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, differenceInDays } from "date-fns";
 import { nb } from "date-fns/locale";
-import { calcHeatScore, getTemperature, getHeatResult, getTier, getTaskStatus, getActivityStatus, TEMP_CONFIG } from "@/lib/heatScore";
+import {
+  calcHeatScore,
+  getTemperature,
+  getHeatResult,
+  getTier,
+  getTaskStatus,
+  getActivityStatus,
+  TEMP_CONFIG,
+} from "@/lib/heatScore";
 
 type SortField = "name" | "company" | "title" | "signal" | "owner" | "last_activity" | "priority";
 type SortDir = "asc" | "desc";
 
-import { CATEGORIES, getEffectiveSignal } from "@/lib/categoryUtils";
+import { CATEGORIES, getEffectiveSignal, upsertTaskSignalDescription } from "@/lib/categoryUtils";
 
-const SIGNAL_OPTIONS = CATEGORIES.map(c => ({ label: c.label, color: c.badgeColor }));
+const SIGNAL_OPTIONS = CATEGORIES.map((c) => ({ label: c.label, color: c.badgeColor }));
 
 function getSignalBadge(category: string | null) {
   if (!category) return null;
@@ -53,9 +66,9 @@ const Contacts = () => {
         .limit(2000);
       if (error) throw error;
 
-      const contactIds = new Set(data.map(c => c.id));
+      const contactIds = new Set(data.map((c) => c.id));
 
-      const companyIds = [...new Set(data.map(c => c.company_id).filter(Boolean))];
+      const companyIds = [...new Set(data.map((c) => c.company_id).filter(Boolean))];
 
       const [{ data: acts }, { data: tasks }, { data: techProfiles }, { data: foresporsler }] = await Promise.all([
         supabase
@@ -66,33 +79,39 @@ const Contacts = () => {
           .limit(5000),
         supabase
           .from("tasks")
-          .select("contact_id, created_at, due_date, status, description, title")
+          .select("contact_id, created_at, updated_at, due_date, status, description, title")
           .not("contact_id", "is", null)
           .limit(5000),
         companyIds.length > 0
-          ? supabase.from("company_tech_profile").select("company_id, sist_fra_finn, teknologier").in("company_id", companyIds)
+          ? supabase
+              .from("company_tech_profile")
+              .select("company_id, sist_fra_finn, teknologier")
+              .in("company_id", companyIds)
           : Promise.resolve({ data: [] }),
-        supabase.from("foresporsler").select("selskap_id, mottatt_dato, status").not("status", "in", '("avsluttet","tapt")'),
+        supabase
+          .from("foresporsler")
+          .select("selskap_id, mottatt_dato, status")
+          .not("status", "in", '("avsluttet","tapt")'),
       ]);
 
       // Last activity date map — only past activities count
       const lastActMap: Record<string, string> = {};
       const now = new Date().toISOString();
-      (acts || []).forEach(a => {
+      (acts || []).forEach((a) => {
         if (a.contact_id && a.created_at <= now && !lastActMap[a.contact_id]) lastActMap[a.contact_id] = a.created_at;
       });
 
       // Signal: effective (expiry-aware) signal per contact
       const contactActsMap: Record<string, typeof acts> = {};
       const contactTasksMap: Record<string, typeof tasks> = {};
-      (acts || []).forEach(a => {
+      (acts || []).forEach((a) => {
         if (a.contact_id) {
           if (!contactActsMap[a.contact_id]) contactActsMap[a.contact_id] = [];
           contactActsMap[a.contact_id]!.push(a);
         }
       });
-      (tasks || []).forEach(t => {
-        if (t.contact_id) {
+      (tasks || []).forEach((t) => {
+        if (t.contact_id && t.status !== "done") {
           if (!contactTasksMap[t.contact_id]) contactTasksMap[t.contact_id] = [];
           contactTasksMap[t.contact_id]!.push(t);
         }
@@ -101,8 +120,19 @@ const Contacts = () => {
       const signalMap: Record<string, string> = {};
       for (const cid of contactIds) {
         const sig = getEffectiveSignal(
-          (contactActsMap[cid] || []).map(a => ({ created_at: a.created_at, subject: a.subject!, description: a.description })),
-          (contactTasksMap[cid] || []).map(t => ({ created_at: t.created_at, title: t.title!, description: t.description, due_date: t.due_date })),
+          (contactActsMap[cid] || []).map((a) => ({
+            created_at: a.created_at,
+            subject: a.subject!,
+            description: a.description,
+          })),
+          (contactTasksMap[cid] || []).map((t) => ({
+            created_at: t.created_at,
+            updated_at: t.updated_at,
+            title: t.title!,
+            description: t.description,
+            due_date: t.due_date,
+            status: t.status,
+          })),
         );
         if (sig) signalMap[cid] = sig;
       }
@@ -110,7 +140,7 @@ const Contacts = () => {
       // Open tasks count + overdue flag per contact
       const openTasksMap: Record<string, { count: number; overdue: boolean }> = {};
       const today = new Date().toISOString().slice(0, 10);
-      (tasks || []).forEach(t => {
+      (tasks || []).forEach((t) => {
         if (t.contact_id && t.status === "open") {
           if (!openTasksMap[t.contact_id]) openTasksMap[t.contact_id] = { count: 0, overdue: false };
           openTasksMap[t.contact_id].count++;
@@ -118,32 +148,38 @@ const Contacts = () => {
         }
       });
 
-      const rows = data.map(c => {
+      const rows = data.map((c) => {
         const lastActivity = lastActMap[c.id] || null;
         const signal = signalMap[c.id] || null;
         const openTasks = openTasksMap[c.id] || { count: 0, overdue: false };
         const isInnkjoper = !!c.call_list;
         const ikkeAktuellKontakt = !!(c as any).ikke_aktuell_kontakt;
         const techProfile = (techProfiles || []).find((tp: any) => tp.company_id === c.company_id);
-        const hasMarkedsradar = !!(techProfile?.sist_fra_finn && differenceInDays(new Date(), new Date(techProfile.sist_fra_finn)) <= 90);
+        const hasMarkedsradar = !!(
+          techProfile?.sist_fra_finn && differenceInDays(new Date(), new Date(techProfile.sist_fra_finn)) <= 90
+        );
         const daysSince = lastActivity ? differenceInDays(new Date(), new Date(lastActivity)) : 999;
 
-        const hasAktivForespørsel = (foresporsler || []).some((f: any) =>
-          f.selskap_id === c.company_id &&
-          f.mottatt_dato &&
-          differenceInDays(new Date(), new Date(f.mottatt_dato)) <= 45
+        const hasAktivForespørsel = (foresporsler || []).some(
+          (f: any) =>
+            f.selskap_id === c.company_id &&
+            f.mottatt_dato &&
+            differenceInDays(new Date(), new Date(f.mottatt_dato)) <= 45,
         );
-        const hasTidligereForespørsel = (foresporsler || []).some((f: any) =>
-          f.selskap_id === c.company_id &&
-          f.mottatt_dato &&
-          differenceInDays(new Date(), new Date(f.mottatt_dato)) > 45
+        const hasTidligereForespørsel = (foresporsler || []).some(
+          (f: any) =>
+            f.selskap_id === c.company_id &&
+            f.mottatt_dato &&
+            differenceInDays(new Date(), new Date(f.mottatt_dato)) > 45,
         );
 
         // KES: finnes det aktivitet etter at signalet ble satt?
-        const contactActs = (contactActsMap[c.id] || []);
+        const contactActs = contactActsMap[c.id] || [];
         const signalAct = contactActs.find((a: any) => {
           const cat = a.subject || "";
-          return ["Behov nå","Får fremtidig behov","Får kanskje behov","Ukjent om behov","Ikke aktuelt"].includes(cat);
+          return ["Behov nå", "Får fremtidig behov", "Får kanskje behov", "Ukjent om behov", "Ikke aktuelt"].includes(
+            cat,
+          );
         });
         const signalSetAt = signalAct ? new Date(signalAct.created_at) : null;
         const lastActDate = lastActivity ? new Date(lastActivity) : null;
@@ -193,7 +229,6 @@ const Contacts = () => {
   const totalCount = contactsResult?.totalCount ?? 0;
   const capped = contactsResult?.capped ?? false;
 
-
   const pendingToggles = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const handleToggle = (contact: any, field: "cv_email" | "call_list", newValue: boolean) => {
@@ -208,17 +243,20 @@ const Contacts = () => {
 
     queryClient.setQueryData(["contacts-full"], (old: any) => ({
       ...old,
-      rows: old?.rows?.map((c: any) => c.id === contact.id ? { ...c, [field]: newValue } : c),
+      rows: old?.rows?.map((c: any) => (c.id === contact.id ? { ...c, [field]: newValue } : c)),
     }));
 
     const timeout = setTimeout(async () => {
       delete pendingToggles.current[key];
-      const { error } = await supabase.from("contacts").update({ [field]: newValue }).eq("id", contact.id);
+      const { error } = await supabase
+        .from("contacts")
+        .update({ [field]: newValue })
+        .eq("id", contact.id);
       if (error) {
         toast.error("Kunne ikke oppdatere");
         queryClient.setQueryData(["contacts-full"], (old: any) => ({
           ...old,
-          rows: old?.rows?.map((c: any) => c.id === contact.id ? { ...c, [field]: !newValue } : c),
+          rows: old?.rows?.map((c: any) => (c.id === contact.id ? { ...c, [field]: !newValue } : c)),
         }));
       }
       queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
@@ -234,7 +272,7 @@ const Contacts = () => {
           delete pendingToggles.current[key];
           queryClient.setQueryData(["contacts-full"], (old: any) => ({
             ...old,
-            rows: old?.rows?.map((c: any) => c.id === contact.id ? { ...c, [field]: !newValue } : c),
+            rows: old?.rows?.map((c: any) => (c.id === contact.id ? { ...c, [field]: !newValue } : c)),
           }));
         },
       },
@@ -242,26 +280,61 @@ const Contacts = () => {
   };
 
   const setSignalMutation = useMutation({
-    mutationFn: async ({ contactId, companyId, label }: { contactId: string; companyId: string | null; label: string }) => {
-      const { error } = await supabase.from("activities").insert({
-        type: "note",
-        subject: label,
-        description: `[${label}]`,
+    mutationFn: async ({
+      contactId,
+      companyId,
+      label,
+    }: {
+      contactId: string;
+      companyId: string | null;
+      label: string;
+    }) => {
+      const { data: existingTasks, error: taskLookupError } = await supabase
+        .from("tasks")
+        .select("id, description, due_date")
+        .eq("contact_id", contactId)
+        .neq("status", "done")
+        .order("due_date", { ascending: true, nullsFirst: false })
+        .limit(1);
+      if (taskLookupError) throw taskLookupError;
+
+      const primaryTask = existingTasks?.[0];
+      if (primaryTask) {
+        const { error } = await supabase
+          .from("tasks")
+          .update({
+            description: upsertTaskSignalDescription(primaryTask.description, label, !primaryTask.due_date),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", primaryTask.id);
+        if (error) throw error;
+        return;
+      }
+
+      const { error } = await supabase.from("tasks").insert({
+        title: "Følg opp om behov",
+        description: upsertTaskSignalDescription(null, label, true),
+        priority: "medium",
+        due_date: null,
         contact_id: contactId,
         company_id: companyId,
+        assigned_to: user?.id,
         created_by: user?.id,
       });
       if (error) throw error;
     },
     onMutate: async ({ contactId, label }) => {
       // Optimistic update
-      queryClient.setQueryData(["contacts-full"], (old: any[]) =>
-        old?.map(c => c.id === contactId ? { ...c, signal: label } : c)
-      );
+      queryClient.setQueryData(["contacts-full"], (old: any) => ({
+        ...old,
+        rows: old?.rows?.map((c: any) => (c.id === contactId ? { ...c, signal: label } : c)),
+      }));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
       queryClient.invalidateQueries({ queryKey: ["companies-full"] });
+      queryClient.invalidateQueries({ queryKey: ["oppfolginger-tasks-v1"] });
+      queryClient.invalidateQueries({ queryKey: ["oppfolginger-signal-v1"] });
       toast.success("Signal oppdatert");
     },
     onError: () => {
@@ -274,7 +347,7 @@ const Contacts = () => {
   const getOwnerName = (contact: any) => (contact.profiles as any)?.full_name || null;
 
   const ownerMap = new Map<string, string>();
-  contacts.forEach(c => {
+  contacts.forEach((c) => {
     const id = getOwnerId(c);
     const name = getOwnerName(c);
     if (id && name) ownerMap.set(id, name);
@@ -283,16 +356,17 @@ const Contacts = () => {
 
   const filtered = contacts.filter((c) => {
     const q = search.toLowerCase();
-    const matchSearch = !q || `${c.first_name} ${c.last_name}`.toLowerCase().includes(q) ||
-      (c.companies as any)?.name?.toLowerCase().includes(q) || c.title?.toLowerCase().includes(q);
+    const matchSearch =
+      !q ||
+      `${c.first_name} ${c.last_name}`.toLowerCase().includes(q) ||
+      (c.companies as any)?.name?.toLowerCase().includes(q) ||
+      c.title?.toLowerCase().includes(q);
     const matchOwner = ownerFilter === "all" || getOwnerId(c) === ownerFilter;
     const matchSignal = signalFilter === "all" || (c as any).signal === signalFilter;
-    const matchType = typeFilter === "all" ||
-      (typeFilter === "call_list" && c.call_list) ||
-      (typeFilter === "cv_email" && c.cv_email);
+    const matchType =
+      typeFilter === "all" || (typeFilter === "call_list" && c.call_list) || (typeFilter === "cv_email" && c.cv_email);
     return matchSearch && matchOwner && matchSignal && matchType;
   });
-
 
   const SIGNAL_ORDER: Record<string, number> = {
     "Behov nå": 0,
@@ -305,9 +379,12 @@ const Contacts = () => {
   const sorted = [...filtered].sort((a, b) => {
     const dir = sort.dir === "asc" ? 1 : -1;
     switch (sort.field) {
-      case "name": return dir * `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`, "nb");
-      case "company": return dir * ((a.companies as any)?.name || "").localeCompare((b.companies as any)?.name || "", "nb");
-      case "title": return dir * (a.title || "").localeCompare(b.title || "", "nb");
+      case "name":
+        return dir * `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`, "nb");
+      case "company":
+        return dir * ((a.companies as any)?.name || "").localeCompare((b.companies as any)?.name || "", "nb");
+      case "title":
+        return dir * (a.title || "").localeCompare(b.title || "", "nb");
       case "signal": {
         const sa = (a as any).signal as string | null;
         const sb = (b as any).signal as string | null;
@@ -315,7 +392,8 @@ const Contacts = () => {
         const ob = sb ? (SIGNAL_ORDER[sb] ?? 5) : 6;
         return dir * (oa - ob);
       }
-      case "owner": return dir * (getOwnerName(a) || "").localeCompare(getOwnerName(b) || "", "nb");
+      case "owner":
+        return dir * (getOwnerName(a) || "").localeCompare(getOwnerName(b) || "", "nb");
       case "last_activity":
         if (!(a as any).lastActivity && !(b as any).lastActivity) return 0;
         if (!(a as any).lastActivity) return 1;
@@ -329,24 +407,51 @@ const Contacts = () => {
         if (ta !== tb) return ta - tb; // tier ASC (1 best)
         return sb - sa; // score DESC innen tier
       }
-      default: return 0;
+      default:
+        return 0;
     }
   });
 
   const toggleSort = (field: SortField) => {
-    setSort((prev) => prev.field === field ? { field, dir: prev.dir === "asc" ? "desc" : "asc" } : { field, dir: field === "last_activity" ? "desc" : "asc" });
+    setSort((prev) =>
+      prev.field === field
+        ? { field, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { field, dir: field === "last_activity" ? "desc" : "asc" },
+    );
   };
 
-  const SortHeader = ({ field, children, className = "" }: { field: SortField; children: React.ReactNode; className?: string }) => (
-    <button onClick={() => toggleSort(field)}
-      className={`flex items-center gap-1 text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground hover:text-foreground transition-colors ${className}`}>
+  const SortHeader = ({
+    field,
+    children,
+    className = "",
+  }: {
+    field: SortField;
+    children: React.ReactNode;
+    className?: string;
+  }) => (
+    <button
+      onClick={() => toggleSort(field)}
+      className={`flex items-center gap-1 text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground hover:text-foreground transition-colors ${className}`}
+    >
       {children}
       <ArrowUpDown className={`h-3 w-3 ${sort.field === field ? "text-foreground" : "text-muted-foreground/20"}`} />
     </button>
   );
 
-  const Chip = ({ label, value, current, onSelect }: { label: string; value: string; current: string; onSelect: (v: string) => void }) => (
-    <button onClick={() => onSelect(value)} className={current === value ? CHIP_ON : CHIP_OFF}>{label}</button>
+  const Chip = ({
+    label,
+    value,
+    current,
+    onSelect,
+  }: {
+    label: string;
+    value: string;
+    current: string;
+    onSelect: (v: string) => void;
+  }) => (
+    <button onClick={() => onSelect(value)} className={current === value ? CHIP_ON : CHIP_OFF}>
+      {label}
+    </button>
   );
 
   return (
@@ -364,8 +469,12 @@ const Contacts = () => {
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-          <Input placeholder="Søk..." value={search} onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border" />
+          <Input
+            placeholder="Søk..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border"
+          />
         </div>
       </div>
 
@@ -374,7 +483,9 @@ const Contacts = () => {
         <div className="space-y-2 flex-1">
           {/* EIER */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Eier</span>
+            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+              Eier
+            </span>
             <Chip label="Alle" value="all" current={ownerFilter} onSelect={setOwnerFilter} />
             {uniqueOwners.map(([id, name]) => (
               <Chip key={id} label={name} value={id} current={ownerFilter} onSelect={setOwnerFilter} />
@@ -382,7 +493,9 @@ const Contacts = () => {
           </div>
           {/* SIGNAL */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Signal</span>
+            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+              Signal
+            </span>
             <Chip label="Alle" value="all" current={signalFilter} onSelect={setSignalFilter} />
             {SIGNAL_OPTIONS.map((s) => (
               <Chip key={s.label} label={s.label} value={s.label} current={signalFilter} onSelect={setSignalFilter} />
@@ -392,16 +505,13 @@ const Contacts = () => {
               onClick={() => {
                 const next = !hotListActive;
                 setHotListActive(next);
-                setSort(next
-                  ? { field: "priority", dir: "desc" }
-                  : { field: "signal", dir: "asc" }
-                );
+                setSort(next ? { field: "priority", dir: "desc" } : { field: "signal", dir: "asc" });
               }}
               className={cn(
                 "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer inline-flex items-center gap-1.5",
                 hotListActive
                   ? "bg-red-500 text-white border-red-500 font-medium"
-                  : "border-border text-muted-foreground hover:bg-secondary"
+                  : "border-border text-muted-foreground hover:bg-secondary",
               )}
             >
               🔥 Hot list
@@ -409,7 +519,9 @@ const Contacts = () => {
           </div>
           {/* TYPE */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">Type</span>
+            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+              Type
+            </span>
             <Chip label="Alle" value="all" current={typeFilter} onSelect={setTypeFilter} />
             <Chip label="Innkjøper" value="call_list" current={typeFilter} onSelect={setTypeFilter} />
             <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
@@ -419,9 +531,7 @@ const Contacts = () => {
           <div className="w-px h-8 bg-border" />
           <div className="text-right">
             <span className="text-[0.9375rem] font-semibold text-foreground">
-              {filtered.length === contacts.length
-                ? `${totalCount}${capped ? "+" : ""}`
-                : filtered.length}
+              {filtered.length === contacts.length ? `${totalCount}${capped ? "+" : ""}` : filtered.length}
             </span>
             <span className="text-[0.9375rem] text-muted-foreground ml-1.5">kontakter</span>
           </div>
@@ -430,19 +540,25 @@ const Contacts = () => {
 
       {/* Table */}
       {isLoading ? (
-        <div className="space-y-px">{[1,2,3,4,5].map(i => <div key={i} className="h-[44px] bg-secondary/50 animate-pulse rounded" />)}</div>
+        <div className="space-y-px">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-[44px] bg-secondary/50 animate-pulse rounded" />
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <p className="text-sm text-muted-foreground py-12 text-center">Ingen kontakter funnet</p>
       ) : (
         <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
-            <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_110px_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_110px_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
             <SortHeader field="name">Navn</SortHeader>
             <SortHeader field="signal">Signal</SortHeader>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Finn</span>
             <SortHeader field="company">Selskap</SortHeader>
             <SortHeader field="title">Stilling</SortHeader>
             <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Tags</span>
-            <SortHeader field="last_activity" className="justify-end">Siste akt.</SortHeader>
+            <SortHeader field="last_activity" className="justify-end">
+              Siste akt.
+            </SortHeader>
           </div>
           <div className="divide-y divide-border">
             {sorted.map((contact) => {
@@ -452,23 +568,33 @@ const Contacts = () => {
               const openTasks = (contact as any).openTasks || { count: 0, overdue: false };
 
               return (
-                <div key={contact.id}
+                <div
+                  key={contact.id}
                   style={{
                     borderLeft: hotListActive
-                      ? (contact as any).temperature === "hett"    ? "3px solid rgb(239 68 68)"
-                      : (contact as any).temperature === "lovende" ? "3px solid rgb(251 146 60)"
-                      : (contact as any).temperature === "mulig"   ? "3px solid rgb(251 191 36)"
-                      : "3px solid rgb(229 231 235)"
-                      : "3px solid transparent"
+                      ? (contact as any).temperature === "hett"
+                        ? "3px solid rgb(239 68 68)"
+                        : (contact as any).temperature === "lovende"
+                          ? "3px solid rgb(251 146 60)"
+                          : (contact as any).temperature === "mulig"
+                            ? "3px solid rgb(251 191 36)"
+                            : "3px solid rgb(229 231 235)"
+                      : "3px solid transparent",
                   }}
-                  className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_110px_100px] gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75">
+                  className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_110px_100px] gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75"
+                >
                   {/* NAME - clickable */}
-                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="min-w-0 text-left cursor-pointer flex items-center gap-2">
+                  <button
+                    onClick={() => navigate(`/kontakter/${contact.id}`)}
+                    className="min-w-0 text-left cursor-pointer flex items-center gap-2"
+                  >
                     <p className="text-[0.8125rem] font-medium text-foreground truncate">
                       {contact.first_name} {contact.last_name}
                     </p>
                     {hotListActive && (contact as any).needsReview && (
-                      <span className="text-[0.6875rem]" title="Trenger oppfølging">⚠</span>
+                      <span className="text-[0.6875rem]" title="Trenger oppfølging">
+                        ⚠
+                      </span>
                     )}
                   </button>
                   {/* SIGNAL - inline editable */}
@@ -476,7 +602,9 @@ const Contacts = () => {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         {signalBadge ? (
-                          <button className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer ${signalBadge.color}`}>
+                          <button
+                            className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer ${signalBadge.color}`}
+                          >
                             {signal}
                             <ChevronDown className="h-3 w-3 ml-1" />
                           </button>
@@ -487,12 +615,20 @@ const Contacts = () => {
                         )}
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start">
-                        {SIGNAL_OPTIONS.map(s => (
+                        {SIGNAL_OPTIONS.map((s) => (
                           <DropdownMenuItem
                             key={s.label}
-                            onClick={() => setSignalMutation.mutate({ contactId: contact.id, companyId: contact.company_id, label: s.label })}
+                            onClick={() =>
+                              setSignalMutation.mutate({
+                                contactId: contact.id,
+                                companyId: contact.company_id,
+                                label: s.label,
+                              })
+                            }
                           >
-                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${s.color}`}>
+                            <span
+                              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${s.color}`}
+                            >
                               {s.label}
                             </span>
                           </DropdownMenuItem>
@@ -514,29 +650,41 @@ const Contacts = () => {
                     )}
                   </div>
                   {/* COMPANY */}
-                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate flex items-center gap-1 text-left cursor-pointer">
+                  <button
+                    onClick={() => navigate(`/kontakter/${contact.id}`)}
+                    className="text-[0.8125rem] text-muted-foreground truncate flex items-center gap-1 text-left cursor-pointer"
+                  >
                     {companyName || ""}
                   </button>
                   {/* TITLE */}
-                  <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate text-left cursor-pointer">
+                  <button
+                    onClick={() => navigate(`/kontakter/${contact.id}`)}
+                    className="text-[0.8125rem] text-muted-foreground truncate text-left cursor-pointer"
+                  >
                     {contact.title?.slice(0, 25) || ""}
                   </button>
                   {/* TAGS */}
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => handleToggle(contact, "cv_email", !contact.cv_email)}
-                      className={contact.cv_email
-                        ? "rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
-                        : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
+                      className={
+                        contact.cv_email
+                          ? "rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
+                          : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
                       }
-                    >CV</button>
+                    >
+                      CV
+                    </button>
                     <button
                       onClick={() => handleToggle(contact, "call_list", !contact.call_list)}
-                      className={contact.call_list
-                        ? "rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
-                        : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
+                      className={
+                        contact.call_list
+                          ? "rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
+                          : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
                       }
-                    >Innkjøper</button>
+                    >
+                      Innkjøper
+                    </button>
                   </div>
                   {/* SISTE AKT */}
                   <span className="text-[0.75rem] text-muted-foreground text-right">
@@ -545,9 +693,13 @@ const Contacts = () => {
                         <TooltipTrigger asChild>
                           <span>{relativeDate((contact as any).lastActivity)}</span>
                         </TooltipTrigger>
-                        <TooltipContent>{format(new Date((contact as any).lastActivity), "d. MMMM yyyy", { locale: nb })}</TooltipContent>
+                        <TooltipContent>
+                          {format(new Date((contact as any).lastActivity), "d. MMMM yyyy", { locale: nb })}
+                        </TooltipContent>
                       </Tooltip>
-                    ) : ""}
+                    ) : (
+                      ""
+                    )}
                   </span>
                 </div>
               );
