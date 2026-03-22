@@ -484,7 +484,7 @@ const DailyBrief = () => {
           {filterOptions.map(opt => (
             <button
               key={opt.id}
-              onClick={() => { setOwnerFilter(opt.id); setCurrentContactId(null); setTreated(new Set()); setHistory([]); }}
+              onClick={() => { setOwnerFilter(opt.id); setCurrentContactId(null); setTreated(new Set()); setHistory([]); setCompletedAll(false); }}
               className={cn(
                 "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
                 ownerFilter === opt.id
