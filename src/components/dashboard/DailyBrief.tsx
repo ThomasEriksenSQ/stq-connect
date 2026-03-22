@@ -273,6 +273,13 @@ const DailyBrief = () => {
   scoredLeadsRef.current = scoredLeads;
   treatedRef.current = treated;
   currentRef.current = current;
+
+  useEffect(() => {
+    if (!completedAll && currentContactId === null && queue.length > 0) {
+      setCurrentContactId(queue[0].contact.id);
+    }
+  }, [queue, completedAll, currentContactId]);
+
   const treatedCount = treated.size;
 
   const daysSinceLast = current?.lastAct ? differenceInDays(new Date(), new Date(current.lastAct.created_at)) : 999;
