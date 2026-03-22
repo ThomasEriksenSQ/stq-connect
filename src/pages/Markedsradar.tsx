@@ -1,27 +1,62 @@
-import { useState, useMemo, useCallback } from "react";
-import { companiesMatch } from "@/lib/companyMatch";
+import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { useToast } from "@/hooks/use-toast";
-import { Download, ExternalLink, Plus, User, TrendingUp, TrendingDown, Sparkles, Loader2, Search, Building2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { format, startOfWeek, getISOWeek, getISOWeekYear, subDays, parseISO } from "date-fns";
-import { nb } from "date-fns/locale";
-import { LineChart, Line, XAxis, YAxis, Tooltip as ReTooltip, Legend, ResponsiveContainer, BarChart, Bar, CartesianGrid } from "recharts";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
-import ReactMarkdown from "react-markdown";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip as ReTooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { format, parseISO } from "date-fns";
+import { nb } from "date-fns/locale";
+import {
+  Building2,
+  Download,
+  ExternalLink,
+  Loader2,
+  Mail,
+  Phone,
+  Plus,
+  Search,
+  Sparkles,
+  Target,
+  Users,
+} from "lucide-react";
 
-// ── Types ──
-type FinnAnnonse = {
-  id: string;
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
+import { companiesMatch } from "@/lib/companyMatch";
+import {
+  buildMarketRadar,
+  extractNormalizedTechnologies,
+  getIsoWeekStr,
+  type FinnAnnonseInput,
+  type RadarCompany,
+  type RadarCompanyRef,
+} from "@/lib/markedsradar";
+import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+
+type FinnAnnonse = FinnAnnonseInput & {
+  created_at: string | null;
+};
+
+type CompanyRef = RadarCompanyRef;
+type FinnImportRow = {
   dato: string;
   uke: string | null;
   selskap: string | null;
@@ -32,53 +67,52 @@ type FinnAnnonse = {
   kontaktnavn: string | null;
   kontakt_epost: string | null;
   kontakt_telefon: string | null;
-  created_at: string;
+};
+type ProcessFinnImportResult = {
+  annonser_behandlet: number;
+  teknologier_array_fikset: number;
+  selskaper_med_teknologier: number;
+  dna_profiler_oppdatert: number;
+  errors?: string[];
 };
 
-type CompanyRef = { id: string; name: string };
+const CHART_COLORS = ["#0f766e", "#2563eb", "#ea580c", "#7c3aed", "#db2777", "#65a30d"];
 
-const TECH_KEYWORDS = ["C++", "C", "Rust", "Python", "Zephyr", "Yocto", "Embedded Linux", "FreeRTOS", "FPGA"];
-const TECH_COLORS: Record<string, string> = {
-  "C++": "#3b82f6", C: "#10b981", Rust: "#f97316", Python: "#eab308",
-  Zephyr: "#8b5cf6", Yocto: "#ec4899", "Embedded Linux": "#14b8a6",
-  FreeRTOS: "#f43f5e", FPGA: "#6366f1",
-};
-
-function getIsoWeekStr(d: Date): string {
-  return `${getISOWeekYear(d)}-W${String(getISOWeek(d)).padStart(2, "0")}`;
+function trendTone(delta: number) {
+  if (delta > 0) return "text-[hsl(var(--success))]";
+  if (delta < 0) return "text-destructive";
+  return "text-muted-foreground";
 }
 
-function matchTech(text: string, keyword: string): boolean {
-  if (keyword === "C") return /\bC\b/.test(text);
-  return text.toLowerCase().includes(keyword.toLowerCase());
+function techColor(index: number) {
+  return CHART_COLORS[index % CHART_COLORS.length];
 }
 
-// ── Main Component ──
+function companyRoute(company: CompanyRef | null) {
+  return company ? `/selskaper/${company.id}` : null;
+}
+
+function createCompanyRoute(name: string) {
+  return `/selskaper?ny=${encodeURIComponent(name)}`;
+}
+
 export default function Markedsradar() {
-  const { toast } = useToast();
   const navigate = useNavigate();
   const [importOpen, setImportOpen] = useState(false);
 
-  // Fetch annonser
   const { data: annonser = [], refetch } = useQuery({
     queryKey: ["finn_annonser"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("finn_annonser" as any)
-        .select("*")
-        .order("dato", { ascending: false });
+      const { data, error } = await supabase.from("finn_annonser").select("*").order("dato", { ascending: false });
       if (error) throw error;
-      return (data || []) as unknown as FinnAnnonse[];
+      return (data || []) as FinnAnnonse[];
     },
   });
 
-  // Fetch companies for CRM matching
   const { data: companies = [] } = useQuery({
     queryKey: ["companies_ref"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("companies")
-        .select("id, name");
+      const { data, error } = await supabase.from("companies").select("id, name");
       if (error) throw error;
       return (data || []) as CompanyRef[];
     },
@@ -87,20 +121,25 @@ export default function Markedsradar() {
   const findCompany = useCallback(
     (selskap: string | null) => {
       if (!selskap) return null;
-      return companies.find((c) => companiesMatch(selskap, c.name)) || null;
+      return companies.find((company) => companiesMatch(selskap, company.name)) || null;
     },
-    [companies]
+    [companies],
   );
 
   const currentWeek = getIsoWeekStr(new Date());
+  const market = useMemo(
+    () => buildMarketRadar(annonser, currentWeek, findCompany),
+    [annonser, currentWeek, findCompany],
+  );
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-[1.5rem] font-bold text-foreground">Markedsradar</h1>
-          <p className="text-[0.8125rem] text-muted-foreground">Embedded & firmware-markedet i Norge</p>
+          <p className="text-[0.8125rem] text-muted-foreground">
+            Handlingsrettet oversikt over Finn-importerte selskaper, teknologier og kontaktpunkter.
+          </p>
         </div>
         <Button onClick={() => setImportOpen(true)} className="gap-2">
           <Download className="h-4 w-4" />
@@ -108,21 +147,23 @@ export default function Markedsradar() {
         </Button>
       </div>
 
-      <Tabs defaultValue="oversikt">
+      <Tabs defaultValue="radar">
         <TabsList>
-          <TabsTrigger value="oversikt">Oversikt</TabsTrigger>
+          <TabsTrigger value="radar">Radar</TabsTrigger>
           <TabsTrigger value="annonser">Annonser</TabsTrigger>
           <TabsTrigger value="ai">AI-analyse</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="oversikt">
-          <OversiktTab annonser={annonser} currentWeek={currentWeek} findCompany={findCompany} navigate={navigate} />
+        <TabsContent value="radar">
+          <RadarTab market={market} navigate={navigate} />
         </TabsContent>
+
         <TabsContent value="annonser">
-          <AnnonserTab annonser={annonser} findCompany={findCompany} navigate={navigate} />
+          <AnnonserTab annonser={annonser} market={market} findCompany={findCompany} navigate={navigate} />
         </TabsContent>
+
         <TabsContent value="ai">
-          <AIAnalyseTab annonser={annonser} currentWeek={currentWeek} findCompany={findCompany} />
+          <AIAnalyseTab annonser={annonser} market={market} currentWeek={currentWeek} findCompany={findCompany} />
         </TabsContent>
       </Tabs>
 
@@ -131,241 +172,548 @@ export default function Markedsradar() {
   );
 }
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// OVERSIKT TAB
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function OversiktTab({ annonser, currentWeek, findCompany, navigate }: {
-  annonser: FinnAnnonse[]; currentWeek: string;
-  findCompany: (s: string | null) => CompanyRef | null;
+function RadarTab({
+  market,
+  navigate,
+}: {
+  market: ReturnType<typeof buildMarketRadar>;
   navigate: ReturnType<typeof useNavigate>;
 }) {
-  const now = new Date();
-  const prevWeek = getIsoWeekStr(subDays(startOfWeek(now, { weekStartsOn: 1 }), 1));
+  const [crmFilter, setCrmFilter] = useState<"alle" | "crm" | "ikke_crm">("alle");
+  const [techFilter, setTechFilter] = useState<string>("alle");
 
-  const thisWeek = annonser.filter((a) => a.uke === currentWeek);
-  const lastWeek = annonser.filter((a) => a.uke === prevWeek);
-  const diff = thisWeek.length - lastWeek.length;
+  const filteredCompanies = useMemo(() => {
+    let rows = market.companies;
+    if (crmFilter === "crm") rows = rows.filter((company) => company.inCrm);
+    if (crmFilter === "ikke_crm") rows = rows.filter((company) => !company.inCrm);
+    if (techFilter !== "alle") {
+      rows = rows.filter((company) => company.technologyCounts.some((item) => item.name === techFilter));
+    }
+    return rows;
+  }, [crmFilter, market.companies, techFilter]);
 
-  // Unique companies last 30 days
-  const d30 = subDays(now, 30).toISOString().slice(0, 10);
-  const uniqueCompanies30 = new Set(
-    annonser.filter((a) => a.dato >= d30 && a.selskap).map((a) => a.selskap!.toLowerCase().trim())
-  ).size;
-
-  // Hottest tech this week
-  const techCountsWeek: Record<string, number> = {};
-  thisWeek.forEach((a) => {
-    if (!a.teknologier) return;
-    TECH_KEYWORDS.forEach((kw) => {
-      if (matchTech(a.teknologier!, kw)) techCountsWeek[kw] = (techCountsWeek[kw] || 0) + 1;
-    });
-  });
-  const hottestTech = Object.entries(techCountsWeek).sort((a, b) => b[1] - a[1])[0];
-
-  // Chart data: last 12 weeks
-  const weeks = useMemo(() => {
-    const allWeeks = [...new Set(annonser.map((a) => a.uke).filter(Boolean))] as string[];
-    return allWeeks.sort().slice(-12);
-  }, [annonser]);
-
-  const chartData = useMemo(() => {
-    return weeks.map((w) => {
-      const weekRows = annonser.filter((a) => a.uke === w);
-      const entry: Record<string, any> = { uke: `Uke ${w.split("-W")[1]}` };
-      TECH_KEYWORDS.forEach((kw) => {
-        entry[kw] = weekRows.filter((r) => r.teknologier && matchTech(r.teknologier, kw)).length;
-      });
-      return entry;
-    });
-  }, [weeks, annonser]);
-
-  // Top employers last 90 days
-  const d90 = subDays(now, 90).toISOString().slice(0, 10);
-  const employerCounts = useMemo(() => {
-    const map: Record<string, number> = {};
-    annonser.filter((a) => a.dato >= d90 && a.selskap).forEach((a) => {
-      const key = a.selskap!.trim();
-      map[key] = (map[key] || 0) + 1;
-    });
-    return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 12);
-  }, [annonser, d90]);
-
-  const barData = employerCounts.map(([name, count]) => ({
-    name, count, inCRM: !!findCompany(name),
-  }));
+  const filteredCompanyKeys = new Set(filteredCompanies.map((company) => company.key));
+  const visibleContacts = market.topContactOpportunities.filter((contact) =>
+    filteredCompanyKeys.has(contact.companyKey),
+  );
+  const visibleNewCompanies = market.newCompaniesNotInCrm.filter((company) => filteredCompanyKeys.has(company.key));
+  const visibleTechTrends =
+    techFilter === "alle"
+      ? market.technologyTrends.slice(0, 8)
+      : market.technologyTrends.filter((trend) => trend.name === techFilter);
+  const chartTechs = market.technologyOptions.slice(0, 5);
+  const selectedTechCompanies = techFilter === "alle" ? [] : filteredCompanies.slice(0, 8);
+  const totalContactable = market.companies.reduce(
+    (sum, company) => sum + company.contacts.filter((contact) => contact.email || contact.phone).length,
+    0,
+  );
 
   return (
     <div className="space-y-6 mt-4">
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Annonser denne uken" value={thisWeek.length} />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <StatCard label="Annonser denne uken" value={market.adsThisWeek} />
         <StatCard
           label="Endring fra forrige uke"
-          value={`${diff >= 0 ? "+" : ""}${diff}`}
-          sub={diff >= 0 ? "↑" : "↓"}
-          color={diff >= 0 ? "text-[hsl(var(--success))]" : "text-destructive"}
+          value={`${market.weekDiff >= 0 ? "+" : ""}${market.weekDiff}`}
+          color={market.weekDiff >= 0 ? "text-[hsl(var(--success))]" : "text-destructive"}
+          sub={market.weekDiff >= 0 ? "opp" : "ned"}
         />
-        <StatCard label="Unike selskaper (30d)" value={uniqueCompanies30} />
+        <StatCard label="Unike selskaper (30d)" value={market.uniqueCompanies30d} />
+        <StatCard label="Nye selskaper ikke i CRM" value={market.newCompaniesNotInCrm.length} />
         <StatCard
-          label="Varmeste teknologi"
-          value={hottestTech ? hottestTech[0] : "–"}
-          sub={hottestTech ? `${hottestTech[1]} treff` : undefined}
+          label="Kontaktpunkter med info"
+          value={totalContactable}
+          sub={market.hottestTech ? `Varmest: ${market.hottestTech}` : undefined}
         />
       </div>
 
-      {/* Tech trend chart */}
       <Card>
-        <CardContent className="pt-6">
-          <h2 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4">Teknologitrender</h2>
-          <ResponsiveContainer width="100%" height={320}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="uke" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <ReTooltip />
-              <Legend />
-              {TECH_KEYWORDS.map((kw) => (
-                <Line key={kw} type="monotone" dataKey={kw} stroke={TECH_COLORS[kw]} strokeWidth={2} dot={false} />
+        <CardContent className="pt-5 pb-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">Filtre</p>
+              <p className="text-[0.8125rem] text-muted-foreground">
+                Viser {filteredCompanies.length} prioriterte selskaper
+                {techFilter !== "alle" ? ` for ${techFilter}` : ""}.
+              </p>
+            </div>
+            <div className="flex items-center gap-1 flex-wrap">
+              {(["alle", "crm", "ikke_crm"] as const).map((value) => (
+                <button
+                  key={value}
+                  onClick={() => setCrmFilter(value)}
+                  className={cn(
+                    "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
+                    crmFilter === value
+                      ? "bg-primary/10 border-primary/30 text-primary font-medium"
+                      : "border-border text-muted-foreground hover:bg-secondary",
+                  )}
+                >
+                  {value === "alle" ? "Alle" : value === "crm" ? "I CRM" : "Ikke i CRM"}
+                </button>
               ))}
-            </LineChart>
-          </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              onClick={() => setTechFilter("alle")}
+              className={cn(
+                "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors",
+                techFilter === "alle"
+                  ? "bg-foreground text-background border-foreground font-medium"
+                  : "border-border text-muted-foreground hover:bg-secondary",
+              )}
+            >
+              Alle teknologier
+            </button>
+            {market.technologyOptions.map((tech) => (
+              <button
+                key={tech}
+                onClick={() => setTechFilter((current) => (current === tech ? "alle" : tech))}
+                className={cn(
+                  "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors",
+                  techFilter === tech
+                    ? "bg-primary/10 border-primary/30 text-primary font-medium"
+                    : "border-border text-muted-foreground hover:bg-secondary",
+                )}
+              >
+                {tech}
+              </button>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Two columns */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Top employers bar chart */}
-        <Card>
-          <CardContent className="pt-6">
-            <h2 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4">
-              Topp arbeidsgivere (siste 90 dager)
-            </h2>
-            <ResponsiveContainer width="100%" height={barData.length * 36 + 20}>
-              <BarChart data={barData} layout="vertical" margin={{ left: 100 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis type="number" tick={{ fontSize: 11 }} />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  tick={{ fontSize: 11 }}
-                  width={100}
-                />
-                <ReTooltip />
-                <Bar
-                  dataKey="count"
-                  radius={[0, 4, 4, 0]}
-                  cursor="pointer"
-                  onClick={(d: any) => {
-                    const c = findCompany(d.name);
-                    if (c) navigate(`/selskaper/${c.id}`);
-                  }}
-                  fill="hsl(var(--primary))"
-                  // Color based on CRM status handled via cells
-                />
-              </BarChart>
-            </ResponsiveContainer>
+      {techFilter !== "alle" && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="pt-5 pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-primary/70">
+                  Valgt teknologi
+                </p>
+                <h2 className="text-[1.125rem] font-semibold text-foreground">{techFilter}</h2>
+                <p className="text-[0.8125rem] text-muted-foreground">
+                  {selectedTechCompanies.length} selskaper i visningen matcher dette signalet akkurat nå.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {selectedTechCompanies.slice(0, 5).map((company) => (
+                  <button
+                    key={company.key}
+                    onClick={() =>
+                      navigate(company.company ? companyRoute(company.company)! : createCompanyRoute(company.name))
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-background px-3 py-1.5 text-[0.75rem] text-foreground hover:bg-secondary"
+                  >
+                    {!company.inCrm && <Plus className="h-3 w-3" />}
+                    {company.name}
+                  </button>
+                ))}
+              </div>
+            </div>
           </CardContent>
         </Card>
+      )}
 
-        {/* This week's ads */}
+      <div className="grid gap-6 xl:grid-cols-3">
         <Card>
-          <CardContent className="pt-6">
-            <h2 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4">
-              Nye annonser denne uken
-            </h2>
-            <div className="divide-y divide-border max-h-[400px] overflow-y-auto">
-              {thisWeek.slice(0, 20).map((a) => {
-                const c = findCompany(a.selskap);
-                return (
-                  <div key={a.id} className="py-2.5 flex items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={cn("text-[0.9375rem] font-medium truncate", c ? "text-foreground cursor-pointer hover:underline" : "text-foreground")}
-                          onClick={() => c && navigate(`/selskaper/${c.id}`)}
-                        >
-                          {a.selskap || "Ukjent"}
-                        </span>
-                        {!c && (
-                          <span className="inline-flex items-center gap-1 text-[0.6875rem] text-[hsl(var(--warning))] font-medium">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--warning))]" />
-                            Ikke i CRM
-                          </span>
-                        )}
-                        {a.kontaktnavn && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <User className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="font-medium">{a.kontaktnavn}</p>
-                              {a.kontakt_epost && <p className="text-[0.75rem]">{a.kontakt_epost}</p>}
-                              {a.kontakt_telefon && <p className="text-[0.75rem]">{a.kontakt_telefon}</p>}
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                      </div>
-                      <p className="text-[0.8125rem] text-muted-foreground truncate">{a.stillingsrolle}</p>
-                      {a.teknologier && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {a.teknologier.split(",").map((t) => t.trim()).filter(Boolean).slice(0, 4).map((t) => (
-                            <span key={t} className="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-[0.6875rem] text-muted-foreground">{t}</span>
-                          ))}
-                        </div>
-                      )}
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Building2 className="h-4 w-4 text-primary" />
+              <div>
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                  Opprett i CRM
+                </p>
+                <p className="text-[0.8125rem] text-muted-foreground">Selskaper som ikke finnes i dag.</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {visibleNewCompanies.slice(0, 6).map((company) => (
+                <div key={company.key} className="rounded-lg border border-border bg-secondary/20 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[0.875rem] font-medium text-foreground">{company.name}</p>
+                      <p className="text-[0.75rem] text-muted-foreground">
+                        {company.adCount} annonser ·{" "}
+                        {company.topTechnologies.slice(0, 3).join(", ") || "Ingen teknologi tolket"}
+                      </p>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {!c && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => navigate(`/selskaper?ny=${encodeURIComponent(a.selskap || "")}`)}
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                      {a.lenke && (
-                        <a href={a.lenke} target="_blank" rel="noopener noreferrer">
-                          <Button variant="ghost" size="icon" className="h-7 w-7">
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </Button>
-                        </a>
-                      )}
-                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate(createCompanyRoute(company.name))}
+                      className="gap-1.5"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Opprett
+                    </Button>
                   </div>
-                );
-              })}
-              {thisWeek.length === 0 && (
-                <p className="text-[0.8125rem] text-muted-foreground py-4 text-center">Ingen annonser denne uken ennå.</p>
+                </div>
+              ))}
+              {visibleNewCompanies.length === 0 && (
+                <p className="text-[0.8125rem] text-muted-foreground">Ingen nye selskaper i dette utvalget.</p>
               )}
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Users className="h-4 w-4 text-primary" />
+              <div>
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                  Kontaktpersoner
+                </p>
+                <p className="text-[0.8125rem] text-muted-foreground">De mest nyttige direkte kontaktpunktene.</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {visibleContacts.slice(0, 6).map((contact) => (
+                <div key={contact.key} className="rounded-lg border border-border bg-secondary/20 p-3 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[0.875rem] font-medium text-foreground">{contact.name || "Kontaktperson"}</p>
+                      <button
+                        onClick={() =>
+                          navigate(
+                            contact.company ? companyRoute(contact.company)! : createCompanyRoute(contact.companyName),
+                          )
+                        }
+                        className="text-[0.75rem] text-primary hover:underline"
+                      >
+                        {contact.companyName}
+                      </button>
+                      {contact.role && <p className="text-[0.75rem] text-muted-foreground">{contact.role}</p>}
+                    </div>
+                    <Badge variant="outline">{contact.adCount} treff</Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {contact.phone && (
+                      <a
+                        href={`tel:${contact.phone}`}
+                        className="inline-flex items-center gap-1.5 text-[0.75rem] text-foreground hover:text-primary"
+                      >
+                        <Phone className="h-3.5 w-3.5" />
+                        {contact.phone}
+                      </a>
+                    )}
+                    {contact.email && (
+                      <a
+                        href={`mailto:${contact.email}`}
+                        className="inline-flex items-center gap-1.5 text-[0.75rem] text-foreground hover:text-primary"
+                      >
+                        <Mail className="h-3.5 w-3.5" />
+                        {contact.email}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {visibleContacts.length === 0 && (
+                <p className="text-[0.8125rem] text-muted-foreground">
+                  Ingen kontaktpunkter med telefon eller e-post i dette utvalget.
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Target className="h-4 w-4 text-primary" />
+              <div>
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                  Teknologier i vekst
+                </p>
+                <p className="text-[0.8125rem] text-muted-foreground">Siste 30 dager sammenlignet med forrige 30.</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {visibleTechTrends.slice(0, 6).map((trend) => (
+                <div key={trend.name} className="rounded-lg border border-border bg-secondary/20 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <button
+                        onClick={() => setTechFilter(trend.name)}
+                        className="text-[0.875rem] font-medium text-foreground hover:text-primary"
+                      >
+                        {trend.name}
+                      </button>
+                      <p className="text-[0.75rem] text-muted-foreground">{trend.current} annonser siste 30 dager</p>
+                    </div>
+                    <span className={cn("text-[0.75rem] font-medium", trendTone(trend.delta))}>
+                      {trend.momentumLabel}
+                    </span>
+                  </div>
+                  {trend.companies.length > 0 && (
+                    <p className="text-[0.75rem] text-muted-foreground mt-1">{trend.companies.join(" · ")}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1.35fr_1fr]">
+        <Card>
+          <CardContent className="pt-5 pb-4">
+            <div className="mb-4">
+              <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                Teknologitrender over tid
+              </p>
+              <p className="text-[0.8125rem] text-muted-foreground">De mest synlige teknologisignalene i datasettet.</p>
+            </div>
+            {market.weeklyTechSeries.length === 0 || chartTechs.length === 0 ? (
+              <p className="text-[0.8125rem] text-muted-foreground py-10 text-center">
+                Ikke nok data til å tegne trendgraf ennå.
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height={320}>
+                <LineChart data={market.weeklyTechSeries}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="uke" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <ReTooltip />
+                  <Legend />
+                  {chartTechs.map((tech, index) => (
+                    <Line
+                      key={tech}
+                      type="monotone"
+                      dataKey={tech}
+                      stroke={techColor(index)}
+                      strokeWidth={2.25}
+                      dot={false}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-5 pb-4">
+            <div className="mb-4">
+              <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                Selskaper med sterkest signal
+              </p>
+              <p className="text-[0.8125rem] text-muted-foreground">
+                Basert på antall annonser, recency, tech-match og kontaktdata.
+              </p>
+            </div>
+            {filteredCompanies.length === 0 ? (
+              <p className="text-[0.8125rem] text-muted-foreground py-10 text-center">
+                Ingen selskaper matcher filteret.
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height={Math.max(260, filteredCompanies.slice(0, 8).length * 34)}>
+                <BarChart
+                  data={filteredCompanies.slice(0, 8).map((company) => ({
+                    name: company.name,
+                    score: company.score,
+                    annonser: company.adCount,
+                  }))}
+                  layout="vertical"
+                  margin={{ left: 112, right: 8 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis type="number" tick={{ fontSize: 11 }} />
+                  <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11 }} />
+                  <ReTooltip />
+                  <Bar dataKey="score" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardContent className="pt-5 pb-4 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                Prioriterte selskaper
+              </p>
+              <p className="text-[0.8125rem] text-muted-foreground">Klare neste steg for salg og oppfølging.</p>
+            </div>
+            <Badge variant="outline">{filteredCompanies.length} selskaper</Badge>
+          </div>
+
+          <div className="space-y-3">
+            {filteredCompanies.slice(0, 14).map((company) => (
+              <PriorityCompanyCard key={company.key} company={company} navigate={navigate} />
+            ))}
+            {filteredCompanies.length === 0 && (
+              <p className="text-[0.8125rem] text-muted-foreground py-8 text-center">
+                Ingen selskaper matcher dagens filter.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function PriorityCompanyCard({
+  company,
+  navigate,
+}: {
+  company: RadarCompany;
+  navigate: ReturnType<typeof useNavigate>;
+}) {
+  const bestContact = company.contacts[0];
+  const actionText =
+    company.primaryAction === "create_company"
+      ? "Opprett selskap"
+      : company.primaryAction === "contact"
+        ? "Åpne selskap"
+        : "Åpne CRM";
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-4 shadow-card">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-3 min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() =>
+                navigate(company.company ? companyRoute(company.company)! : createCompanyRoute(company.name))
+              }
+              className="text-[1rem] font-semibold text-foreground hover:text-primary text-left"
+            >
+              {company.name}
+            </button>
+            <Badge variant={company.inCrm ? "secondary" : "outline"}>{company.inCrm ? "I CRM" : "Ikke i CRM"}</Badge>
+            <Badge variant="outline">{company.adCount} annonser</Badge>
+            {company.currentWeekCount > 0 && <Badge variant="outline">{company.currentWeekCount} denne uken</Badge>}
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            {company.topTechnologies.slice(0, 5).map((tech) => (
+              <span
+                key={tech}
+                className="inline-flex items-center rounded-full border border-border px-2.5 py-1 text-[0.6875rem] text-muted-foreground"
+              >
+                {tech}
+              </span>
+            ))}
+          </div>
+
+          <p className="text-[0.8125rem] text-muted-foreground">
+            {[company.latestRole, company.locations[0], ...company.scoreReasons].filter(Boolean).join(" · ")}
+          </p>
+
+          {bestContact && (
+            <div className="rounded-lg border border-border bg-secondary/25 p-3">
+              <p className="text-[0.75rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                Beste kontaktpunkt
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <span className="text-[0.875rem] font-medium text-foreground">
+                  {bestContact.name || "Kontaktperson"}
+                </span>
+                {bestContact.role && <span className="text-[0.75rem] text-muted-foreground">{bestContact.role}</span>}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-3">
+                {bestContact.phone && (
+                  <a
+                    href={`tel:${bestContact.phone}`}
+                    className="inline-flex items-center gap-1.5 text-[0.75rem] text-foreground hover:text-primary"
+                  >
+                    <Phone className="h-3.5 w-3.5" />
+                    {bestContact.phone}
+                  </a>
+                )}
+                {bestContact.email && (
+                  <a
+                    href={`mailto:${bestContact.email}`}
+                    className="inline-flex items-center gap-1.5 text-[0.75rem] text-foreground hover:text-primary"
+                  >
+                    <Mail className="h-3.5 w-3.5" />
+                    {bestContact.email}
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-2 shrink-0">
+          <Button
+            variant={company.primaryAction === "create_company" ? "default" : "outline"}
+            onClick={() =>
+              navigate(company.company ? companyRoute(company.company)! : createCompanyRoute(company.name))
+            }
+          >
+            {actionText}
+          </Button>
+          {bestContact?.phone && (
+            <Button variant="outline" asChild>
+              <a href={`tel:${bestContact.phone}`}>
+                <Phone className="h-3.5 w-3.5 mr-1.5" />
+                Ring
+              </a>
+            </Button>
+          )}
+          {bestContact?.email && (
+            <Button variant="outline" asChild>
+              <a href={`mailto:${bestContact.email}`}>
+                <Mail className="h-3.5 w-3.5 mr-1.5" />
+                E-post
+              </a>
+            </Button>
+          )}
+          {company.latestLink && (
+            <Button variant="ghost" asChild>
+              <a href={company.latestLink} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                Annonse
+              </a>
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-function StatCard({ label, value, sub, color }: { label: string; value: string | number; sub?: string; color?: string }) {
+function StatCard({
+  label,
+  value,
+  sub,
+  color,
+}: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  color?: string;
+}) {
   return (
     <Card>
       <CardContent className="pt-5 pb-4">
         <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">{label}</p>
-        <p className={cn("text-[1.5rem] font-bold mt-1", color || "text-foreground")}>
-          {value} {sub && <span className="text-[0.875rem]">{sub}</span>}
-        </p>
+        <p className={cn("text-[1.5rem] font-bold mt-1", color || "text-foreground")}>{value}</p>
+        {sub && <p className="text-[0.75rem] text-muted-foreground mt-1">{sub}</p>}
       </CardContent>
     </Card>
   );
 }
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// ANNONSER TAB
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function AnnonserTab({ annonser, findCompany, navigate }: {
+function AnnonserTab({
+  annonser,
+  market,
+  findCompany,
+  navigate,
+}: {
   annonser: FinnAnnonse[];
-  findCompany: (s: string | null) => CompanyRef | null;
+  market: ReturnType<typeof buildMarketRadar>;
+  findCompany: (name: string | null) => CompanyRef | null;
   navigate: ReturnType<typeof useNavigate>;
 }) {
   const [search, setSearch] = useState("");
@@ -376,93 +724,109 @@ function AnnonserTab({ annonser, findCompany, navigate }: {
   const PER_PAGE = 25;
 
   const allWeeks = useMemo(() => {
-    const w = [...new Set(annonser.map((a) => a.uke).filter(Boolean))] as string[];
-    return w.sort().reverse();
+    const weeks = [...new Set(annonser.map((ad) => ad.uke).filter(Boolean))] as string[];
+    return weeks.sort().reverse();
   }, [annonser]);
 
   const filtered = useMemo(() => {
     let rows = annonser;
+
     if (search) {
-      const q = search.toLowerCase();
-      rows = rows.filter((r) =>
-        (r.selskap || "").toLowerCase().includes(q) ||
-        (r.stillingsrolle || "").toLowerCase().includes(q) ||
-        (r.teknologier || "").toLowerCase().includes(q)
+      const query = search.toLowerCase();
+      rows = rows.filter((row) =>
+        [row.selskap, row.stillingsrolle, row.teknologier, row.kontaktnavn, row.kontakt_epost, row.kontakt_telefon]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(query)),
       );
     }
-    if (weekFilter !== "alle") rows = rows.filter((r) => r.uke === weekFilter);
+
+    if (weekFilter !== "alle") rows = rows.filter((row) => row.uke === weekFilter);
     if (techFilters.length > 0) {
-      rows = rows.filter((r) =>
-        r.teknologier && techFilters.some((tf) => matchTech(r.teknologier!, tf))
+      rows = rows.filter((row) =>
+        techFilters.some((tech) => extractNormalizedTechnologies(row.teknologier).includes(tech)),
       );
     }
-    if (crmFilter === "crm") rows = rows.filter((r) => findCompany(r.selskap));
-    if (crmFilter === "ikke_crm") rows = rows.filter((r) => !findCompany(r.selskap));
+    if (crmFilter === "crm") rows = rows.filter((row) => findCompany(row.selskap));
+    if (crmFilter === "ikke_crm") rows = rows.filter((row) => !findCompany(row.selskap));
+
     return rows;
-  }, [annonser, search, weekFilter, techFilters, crmFilter, findCompany]);
+  }, [annonser, crmFilter, findCompany, search, techFilters, weekFilter]);
 
   const paged = filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
 
   return (
     <div className="space-y-4 mt-4">
-      {/* Filters */}
       <div className="space-y-2">
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="relative max-w-xs flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Søk selskap, rolle, teknologi..."
+              placeholder="Søk selskap, rolle, kontakt eller teknologi..."
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(0);
+              }}
               className="pl-9"
             />
           </div>
+
           <select
             className="h-10 rounded-md border border-input bg-background px-3 text-[0.8125rem]"
             value={weekFilter}
-            onChange={(e) => { setWeekFilter(e.target.value); setPage(0); }}
+            onChange={(event) => {
+              setWeekFilter(event.target.value);
+              setPage(0);
+            }}
           >
             <option value="alle">Alle uker</option>
-            {allWeeks.map((w) => (
-              <option key={w} value={w}>{w}</option>
+            {allWeeks.map((week) => (
+              <option key={week} value={week}>
+                {week}
+              </option>
             ))}
           </select>
-          <div className="flex items-center gap-1">
-            {(["alle", "crm", "ikke_crm"] as const).map((v) => (
+
+          <div className="flex items-center gap-1 flex-wrap">
+            {(["alle", "crm", "ikke_crm"] as const).map((value) => (
               <button
-                key={v}
-                onClick={() => { setCrmFilter(v); setPage(0); }}
+                key={value}
+                onClick={() => {
+                  setCrmFilter(value);
+                  setPage(0);
+                }}
                 className={cn(
                   "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
-                  crmFilter === v
+                  crmFilter === value
                     ? "bg-primary/10 border-primary/30 text-primary font-medium"
-                    : "border-border text-muted-foreground hover:bg-secondary"
+                    : "border-border text-muted-foreground hover:bg-secondary",
                 )}
               >
-                {v === "alle" ? "Alle" : v === "crm" ? "I CRM" : "Ikke i CRM"}
+                {value === "alle" ? "Alle" : value === "crm" ? "I CRM" : "Ikke i CRM"}
               </button>
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {TECH_KEYWORDS.map((kw) => (
+
+        <div className="flex flex-wrap gap-1.5">
+          {market.technologyOptions.map((tech) => (
             <button
-              key={kw}
+              key={tech}
               onClick={() => {
-                setTechFilters((prev) =>
-                  prev.includes(kw) ? prev.filter((t) => t !== kw) : [...prev, kw]
+                setTechFilters((current) =>
+                  current.includes(tech) ? current.filter((value) => value !== tech) : [...current, tech],
                 );
                 setPage(0);
               }}
               className={cn(
                 "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors",
-                techFilters.includes(kw)
+                techFilters.includes(tech)
                   ? "bg-primary/10 border-primary/30 text-primary font-medium"
-                  : "border-border text-muted-foreground hover:bg-secondary"
+                  : "border-border text-muted-foreground hover:bg-secondary",
               )}
             >
-              {kw}
+              {tech}
             </button>
           ))}
         </div>
@@ -470,7 +834,6 @@ function AnnonserTab({ annonser, findCompany, navigate }: {
 
       <p className="text-[0.8125rem] text-muted-foreground">{filtered.length} annonser</p>
 
-      {/* Table */}
       <Card className="shadow-card">
         <Table>
           <TableHeader>
@@ -485,67 +848,87 @@ function AnnonserTab({ annonser, findCompany, navigate }: {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paged.map((a) => {
-              const c = findCompany(a.selskap);
-              const techs = a.teknologier ? a.teknologier.split(",").map((t) => t.trim()).filter(Boolean) : [];
+            {paged.map((annonse) => {
+              const company = findCompany(annonse.selskap);
+              const technologies = extractNormalizedTechnologies(annonse.teknologier);
+
               return (
-                <TableRow key={a.id} className="min-h-[44px]">
+                <TableRow key={annonse.id} className="min-h-[44px]">
                   <TableCell className="text-[0.8125rem] text-muted-foreground whitespace-nowrap">
-                    {format(parseISO(a.dato), "d. MMM yyyy", { locale: nb })}
+                    {format(parseISO(annonse.dato), "d. MMM yyyy", { locale: nb })}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1.5">
-                      {c ? (
-                        <span
-                          className="text-[0.8125rem] font-medium text-primary cursor-pointer hover:underline"
-                          onClick={() => navigate(`/selskaper/${c.id}`)}
-                        >
-                          {a.selskap}
-                        </span>
-                      ) : (
-                        <span className="text-[0.8125rem] font-medium">{a.selskap}</span>
-                      )}
-                      {!c && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--warning))]" />
-                      )}
+                      <button
+                        className={cn(
+                          "text-[0.8125rem] font-medium text-left",
+                          company ? "text-primary hover:underline" : "text-foreground",
+                        )}
+                        onClick={() =>
+                          navigate(company ? companyRoute(company)! : createCompanyRoute(annonse.selskap || ""))
+                        }
+                      >
+                        {annonse.selskap}
+                      </button>
+                      {!company && <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--warning))]" />}
                     </div>
                   </TableCell>
-                  <TableCell className="text-[0.8125rem]">{a.stillingsrolle}</TableCell>
-                  <TableCell className="text-[0.8125rem] text-muted-foreground">{a.lokasjon}</TableCell>
+                  <TableCell className="text-[0.8125rem]">{annonse.stillingsrolle}</TableCell>
+                  <TableCell className="text-[0.8125rem] text-muted-foreground">{annonse.lokasjon}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {techs.slice(0, 4).map((t) => (
-                        <span key={t} className="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-[0.6875rem] text-muted-foreground">{t}</span>
+                      {technologies.slice(0, 4).map((technology) => (
+                        <span
+                          key={technology}
+                          className="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-[0.6875rem] text-muted-foreground"
+                        >
+                          {technology}
+                        </span>
                       ))}
-                      {techs.length > 4 && (
-                        <span className="text-[0.6875rem] text-muted-foreground">+{techs.length - 4} mer</span>
+                      {technologies.length > 4 && (
+                        <span className="text-[0.6875rem] text-muted-foreground">+{technologies.length - 4} mer</span>
                       )}
                     </div>
                   </TableCell>
                   <TableCell>
-                    {a.kontaktnavn ? (
+                    {annonse.kontaktnavn ? (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <User className="h-4 w-4 text-muted-foreground cursor-help" />
+                          <button className="inline-flex items-center gap-1.5 text-[0.75rem] text-foreground hover:text-primary">
+                            <Users className="h-3.5 w-3.5" />
+                            {annonse.kontaktnavn}
+                          </button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p className="font-medium">{a.kontaktnavn}</p>
-                          {a.kontakt_epost && <p className="text-[0.75rem]">{a.kontakt_epost}</p>}
-                          {a.kontakt_telefon && <p className="text-[0.75rem]">{a.kontakt_telefon}</p>}
+                          <p className="font-medium">{annonse.kontaktnavn}</p>
+                          {annonse.kontakt_epost && <p className="text-[0.75rem]">{annonse.kontakt_epost}</p>}
+                          {annonse.kontakt_telefon && <p className="text-[0.75rem]">{annonse.kontakt_telefon}</p>}
                         </TooltipContent>
                       </Tooltip>
                     ) : (
-                      <span className="text-[0.6875rem] text-muted-foreground">–</span>
+                      <span className="text-[0.6875rem] text-muted-foreground">-</span>
                     )}
                   </TableCell>
                   <TableCell>
-                    {a.lenke && (
-                      <a href={a.lenke} target="_blank" rel="noopener noreferrer">
-                        <Button variant="ghost" size="icon" className="h-7 w-7">
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </Button>
-                      </a>
-                    )}
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() =>
+                          navigate(company ? companyRoute(company)! : createCompanyRoute(annonse.selskap || ""))
+                        }
+                      >
+                        {company ? <Building2 className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+                      </Button>
+                      {annonse.lenke && (
+                        <a href={annonse.lenke} target="_blank" rel="noopener noreferrer">
+                          <Button variant="ghost" size="icon" className="h-7 w-7">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Button>
+                        </a>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               );
@@ -554,7 +937,6 @@ function AnnonserTab({ annonser, findCompany, navigate }: {
         </Table>
       </Card>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(page - 1)}>
@@ -572,55 +954,57 @@ function AnnonserTab({ annonser, findCompany, navigate }: {
   );
 }
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// AI ANALYSE TAB
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function AIAnalyseTab({ annonser, currentWeek, findCompany }: {
-  annonser: FinnAnnonse[]; currentWeek: string;
-  findCompany: (s: string | null) => CompanyRef | null;
+function AIAnalyseTab({
+  annonser,
+  market,
+  currentWeek,
+  findCompany,
+}: {
+  annonser: FinnAnnonse[];
+  market: ReturnType<typeof buildMarketRadar>;
+  currentWeek: string;
+  findCompany: (name: string | null) => CompanyRef | null;
 }) {
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const generateAnalysis = async () => {
     setLoading(true);
     try {
-      const now = new Date();
-      const thisWeekRows = annonser
-        .filter((a) => a.uke === currentWeek)
-        .map((r) => `${r.selskap} · ${r.stillingsrolle} · ${r.teknologier}`)
-        .join("\n") || "Ingen data denne uken";
+      const thisWeekRows =
+        annonser
+          .filter((annonse) => annonse.uke === currentWeek)
+          .map((annonse) => {
+            const parts = [
+              annonse.selskap,
+              annonse.stillingsrolle,
+              extractNormalizedTechnologies(annonse.teknologier).join(", "),
+              annonse.kontaktnavn ? `Kontakt: ${annonse.kontaktnavn}` : null,
+            ].filter(Boolean);
+            return parts.join(" · ");
+          })
+          .join("\n") || "Ingen data denne uken";
 
-      // Tech counts last 4 weeks
-      const w4 = [...new Set(annonser.map((a) => a.uke).filter(Boolean))]
-        .sort()
-        .slice(-4) as string[];
-      const w4Rows = annonser.filter((a) => a.uke && w4.includes(a.uke));
-      const tc: Record<string, number> = {};
-      w4Rows.forEach((r) => {
-        if (!r.teknologier) return;
-        TECH_KEYWORDS.forEach((kw) => {
-          if (matchTech(r.teknologier!, kw)) tc[kw] = (tc[kw] || 0) + 1;
-        });
-      });
-      const techCounts = Object.entries(tc).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}: ${v}`).join(", ");
+      const techCounts = market.technologyTrends
+        .slice(0, 10)
+        .map((trend) => `${trend.name}: ${trend.current} siste 30d (${trend.momentumLabel})`)
+        .join(", ");
 
-      // Top companies last 8 weeks
-      const w8 = [...new Set(annonser.map((a) => a.uke).filter(Boolean))]
-        .sort()
-        .slice(-8) as string[];
-      const w8Rows = annonser.filter((a) => a.uke && w8.includes(a.uke));
-      const cc: Record<string, number> = {};
-      w8Rows.forEach((r) => {
-        if (r.selskap) cc[r.selskap.trim()] = (cc[r.selskap.trim()] || 0) + 1;
-      });
-      const topCompanies = Object.entries(cc).sort((a, b) => b[1] - a[1]).slice(0, 15).map(([k, v]) => `${k}: ${v} annonser`).join(", ");
+      const topCompanies = market.topHiringCompanies
+        .slice(0, 12)
+        .map(
+          (company) =>
+            `${company.name}: ${company.adCount} annonser, ${company.topTechnologies.slice(0, 3).join("/") || "ingen tech"}${company.inCrm ? " [CRM]" : " [ikke CRM]"}`,
+        )
+        .join(", ");
 
-      // Not in CRM
-      const allCompanyNames = [...new Set(annonser.filter((a) => a.selskap).map((a) => a.selskap!.trim()))];
-      const notInCRM = allCompanyNames.filter((n) => !findCompany(n)).slice(0, 20).join(", ");
+      const notInCRM = market.newCompaniesNotInCrm
+        .slice(0, 12)
+        .map((company) => `${company.name} (${company.adCount} annonser)`)
+        .join(", ");
 
       const { data, error } = await supabase.functions.invoke("markedsradar-analyse", {
         body: { currentWeek, thisWeekRows, techCounts, topCompanies, notInCRM },
@@ -631,116 +1015,110 @@ function AIAnalyseTab({ annonser, currentWeek, findCompany }: {
 
       setAnalysis(data.analysis);
       setGeneratedAt(new Date());
-    } catch (e: any) {
-      toast({ title: "Feil", description: e.message || "Kunne ikke generere analyse", variant: "destructive" });
+    } catch (error: unknown) {
+      toast({
+        title: "Feil",
+        description: error instanceof Error ? error.message : "Kunne ikke generere analyse",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const navigate = useNavigate();
-
   const parsedSections = useMemo(() => {
     if (!analysis) return [];
-    // Split on numbered sections like "1. " "2. " etc
-    const parts = analysis.split(/(?=\d\.\s)/);
-    return parts
+
+    return analysis
+      .split(/(?=\d\.\s)/)
       .map((part) => {
-        const match = part.match(/^\d\.\s*(.*)/s);
+        const match = part.match(/^(\d)\.\s*(.*)/s);
         if (!match) return null;
-        const content = match[1].trim();
-        // Extract emoji + title from first line
+        const sectionNum = Number(match[1]);
+        const content = match[2].trim();
         const lines = content.split("\n");
-        const headerLine = lines[0].replace(/^\*+|\*+$/g, "").trim();
+        const header = lines[0].replace(/^\*+|\*+$/g, "").trim();
         const body = lines.slice(1).join("\n").trim();
-        // Detect section number
-        const numMatch = part.match(/^(\d)\./);
-        const sectionNum = numMatch ? parseInt(numMatch[1]) : 0;
-        return { sectionNum, header: headerLine, body };
+        return { sectionNum, header, body };
       })
-      .filter(Boolean) as { sectionNum: number; header: string; body: string }[];
+      .filter(Boolean) as Array<{ sectionNum: number; header: string; body: string }>;
   }, [analysis]);
 
   const renderBold = (text: string) => {
     const parts = text.split(/(\*\*.*?\*\*)/g);
-    return parts.map((p, i) => {
-      if (p.startsWith("**") && p.endsWith("**")) {
-        return <strong key={i} className="font-semibold text-foreground">{p.slice(2, -2)}</strong>;
+    return parts.map((part, index) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return (
+          <strong key={index} className="font-semibold text-foreground">
+            {part.slice(2, -2)}
+          </strong>
+        );
       }
-      return <span key={i}>{p}</span>;
+      return <span key={index}>{part}</span>;
     });
   };
 
   const renderParagraphs = (body: string) => {
-    const paragraphs = body.split(/\n\n+/).filter(Boolean);
-    return paragraphs.map((p, i) => (
-      <p key={i} className="text-[0.9375rem] leading-relaxed text-foreground/70">
-        {renderBold(p.replace(/\n/g, " "))}
-      </p>
-    ));
+    return body
+      .split(/\n\n+/)
+      .filter(Boolean)
+      .map((paragraph, index) => (
+        <p key={index} className="text-[0.9375rem] leading-relaxed text-foreground/70">
+          {renderBold(paragraph.replace(/\n/g, " "))}
+        </p>
+      ));
   };
 
-  const renderLeadsSection = (body: string) => {
-    // Split into sub-cards per company lead (lines starting with - or • or **CompanyName**)
-    const blocks: { title: string; desc: string }[] = [];
-    const lines = body.split("\n").filter((l) => l.trim());
-    let current: { title: string; desc: string } | null = null;
+  const renderLeadCards = (body: string) => {
+    const lines = body
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const blocks: Array<{ title: string; description: string }> = [];
+    let current: { title: string; description: string } | null = null;
 
-    for (const line of lines) {
-      const leadMatch = line.match(/^[-•*]*\s*\*?\*?(.+?)\*?\*?\s*[·–—:]\s*(.*)/);
-      const boldLeadMatch = line.match(/^\*\*(.+?)\*\*\s*[·–—:]\s*(.*)/);
-      const bulletMatch = line.match(/^[-•]\s*\*?\*?(.+?)\*?\*?\s*$/);
+    lines.forEach((line) => {
+      const match = line.match(/^[-•*]*\s*\*?\*?(.+?)\*?\*?\s*[·–—:]\s*(.*)/);
 
-      if (boldLeadMatch) {
+      if (match) {
         if (current) blocks.push(current);
-        current = { title: boldLeadMatch[1].trim(), desc: boldLeadMatch[2].trim() };
-      } else if (leadMatch && (line.startsWith("-") || line.startsWith("•") || line.startsWith("*"))) {
-        if (current) blocks.push(current);
-        current = { title: leadMatch[1].trim(), desc: leadMatch[2].trim() };
-      } else if (current) {
-        current.desc += " " + line.trim();
-      } else {
-        // Standalone line, create a block
-        if (current) blocks.push(current);
-        current = { title: "", desc: line.trim() };
+        current = { title: match[1].trim(), description: match[2].trim() };
+        return;
       }
-    }
-    if (current) blocks.push(current);
 
+      if (!current) {
+        current = { title: "", description: line };
+        return;
+      }
+
+      current.description += ` ${line}`;
+    });
+
+    if (current) blocks.push(current);
     if (blocks.length === 0) return renderParagraphs(body);
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {blocks.map((b, i) => {
-          const company = findCompany(b.title);
+      <div className="grid gap-3 md:grid-cols-2">
+        {blocks.map((block, index) => {
+          const company = findCompany(block.title);
           return (
             <div
-              key={i}
-              className="rounded-lg border border-border bg-secondary/30 p-4 space-y-1.5"
+              key={`${block.title}-${index}`}
+              className="rounded-lg border border-border bg-secondary/30 p-4 space-y-2"
             >
               <div className="flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-primary shrink-0" />
-                <span className="text-[1rem] font-bold text-foreground">{b.title || `Lead ${i + 1}`}</span>
+                <Building2 className="h-4 w-4 text-primary" />
+                <span className="text-[1rem] font-semibold text-foreground">{block.title || `Lead ${index + 1}`}</span>
               </div>
-              {b.desc && (
-                <p className="text-[0.875rem] leading-relaxed text-foreground/70">{renderBold(b.desc)}</p>
-              )}
-              {b.title && (
-                <div className="pt-1">
-                  {company ? (
-                    <button
-                      onClick={() => navigate(`/companies/${company.id}`)}
-                      className="text-[0.8125rem] text-primary hover:underline"
-                    >
-                      Åpne i CRM →
-                    </button>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-[0.75rem] text-muted-foreground">
-                      <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--warning))]" />
-                      Ikke i CRM
-                    </span>
-                  )}
-                </div>
+              <p className="text-[0.875rem] leading-relaxed text-foreground/70">{renderBold(block.description)}</p>
+              {block.title && (
+                <Button
+                  variant="ghost"
+                  className="px-0 h-auto text-[0.8125rem] text-primary hover:text-primary"
+                  onClick={() => navigate(company ? companyRoute(company)! : createCompanyRoute(block.title))}
+                >
+                  {company ? "Åpne i CRM" : "Opprett i CRM"}
+                </Button>
               )}
             </div>
           );
@@ -749,30 +1127,30 @@ function AIAnalyseTab({ annonser, currentWeek, findCompany }: {
     );
   };
 
-  const renderCRMChips = (body: string) => {
-    // Extract company names from the body text
-    const names = body
-      .split(/[,\n•\-]/)
-      .map((s) => s.replace(/\*\*/g, "").trim())
-      .filter((s) => s.length > 1 && s.length < 60);
-
+  const renderCrmChips = (body: string) => {
+    const names = [
+      ...new Set(
+        body
+          .split(/[,\n•-]/)
+          .map((name) => name.replace(/\*\*/g, "").trim())
+          .filter((name) => name.length > 1 && name.length < 70),
+      ),
+    ];
     if (names.length === 0) return renderParagraphs(body);
 
     return (
       <div className="flex flex-wrap gap-2">
-        {names.map((name, i) => {
+        {names.map((name) => {
           const company = findCompany(name);
           return (
             <button
-              key={i}
-              onClick={() => {
-                if (company) navigate(`/companies/${company.id}`);
-              }}
+              key={name}
+              onClick={() => navigate(company ? companyRoute(company)! : createCompanyRoute(name))}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[0.8125rem] font-medium transition-colors",
                 company
                   ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20"
-                  : "border-border bg-secondary text-foreground hover:bg-accent"
+                  : "border-border bg-secondary text-foreground hover:bg-accent",
               )}
             >
               {!company && <Plus className="h-3 w-3" />}
@@ -784,29 +1162,9 @@ function AIAnalyseTab({ annonser, currentWeek, findCompany }: {
     );
   };
 
-  const renderSection = (section: { sectionNum: number; header: string; body: string }) => {
-    const isLeads = section.sectionNum === 2;
-    const isCRM = section.sectionNum === 5;
-
-    return (
-      <Card key={section.sectionNum} className="overflow-hidden">
-        <div className="border-b border-border px-5 py-3">
-          <h3 className="text-[1.0625rem] font-bold text-foreground">{section.header}</h3>
-        </div>
-        <CardContent className="pt-4 pb-5 space-y-3">
-          {isLeads
-            ? renderLeadsSection(section.body)
-            : isCRM
-              ? renderCRMChips(section.body)
-              : renderParagraphs(section.body)}
-        </CardContent>
-      </Card>
-    );
-  };
-
   return (
     <div className="space-y-6 mt-4">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         <Button onClick={generateAnalysis} disabled={loading} className="gap-2">
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           Generer analyse
@@ -826,18 +1184,36 @@ function AIAnalyseTab({ annonser, currentWeek, findCompany }: {
         </Card>
       )}
 
-      {analysis && !loading && (
+      {!loading && analysis && (
         <div className="space-y-4">
-          {parsedSections.map((s) => renderSection(s))}
+          {parsedSections.map((section) => {
+            const useLeads = section.sectionNum === 2;
+            const useCrmChips = section.sectionNum === 5;
+
+            return (
+              <Card key={section.sectionNum} className="overflow-hidden">
+                <div className="border-b border-border px-5 py-3">
+                  <h3 className="text-[1.0625rem] font-bold text-foreground">{section.header}</h3>
+                </div>
+                <CardContent className="pt-4 pb-5 space-y-3">
+                  {useLeads
+                    ? renderLeadCards(section.body)
+                    : useCrmChips
+                      ? renderCrmChips(section.body)
+                      : renderParagraphs(section.body)}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
-      {!analysis && !loading && (
+      {!loading && !analysis && (
         <Card>
           <CardContent className="py-12 text-center">
             <Sparkles className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
             <p className="text-[0.9375rem] text-muted-foreground">
-              Klikk "Generer analyse" for å få AI-drevet markedsinnsikt basert på Finn-data.
+              AI-oppsummeringen bruker de nye radarprioriteringene som input og peker ut hva STACQ bør handle på nå.
             </p>
           </CardContent>
         </Card>
@@ -846,57 +1222,55 @@ function AIAnalyseTab({ annonser, currentWeek, findCompany }: {
   );
 }
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// IMPORT MODAL
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () => void; refetch: () => void }) {
   const { toast } = useToast();
-  const [rows, setRows] = useState<any[]>([]);
+  const [rows, setRows] = useState<FinnImportRow[]>([]);
   const [importing, setImporting] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [processResult, setProcessResult] = useState<any>(null);
+  const [processResult, setProcessResult] = useState<ProcessFinnImportResult | null>(null);
   const [fileName, setFileName] = useState("");
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (!file) return;
     setFileName(file.name);
 
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      const data = new Uint8Array(ev.target!.result as ArrayBuffer);
-      const wb = XLSX.read(data, { type: "array" });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const json: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+    reader.onload = (loadEvent) => {
+      const data = new Uint8Array(loadEvent.target!.result as ArrayBuffer);
+      const workbook = XLSX.read(data, { type: "array" });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: "" });
 
-      // Map columns
       const mapped = json
-        .map((r) => {
-          const dato = excelDate(r["Dato"] || r["dato"]);
-          const selskap = String(r["Selskap"] || r["selskap"] || "").trim();
+        .map((row) => {
+          const dato = excelDate(row["Dato"] || row["dato"]);
+          const selskap = String(row["Selskap"] || row["selskap"] || "").trim();
           if (!dato || !selskap) return null;
 
-          // Filter out Witted / STACQ
           const lower = selskap.toLowerCase();
           if (lower.includes("witted") || lower.includes("stacq")) return null;
 
-          const d = parseISO(dato);
           return {
             dato,
-            uke: getIsoWeekStr(d),
+            uke: getIsoWeekStr(parseISO(dato)),
             selskap,
-            stillingsrolle: String(r["Stillingsrolle"] || r["stillingsrolle"] || r["Rolle"] || r["rolle"] || "").trim() || null,
-            lokasjon: String(r["Lokasjon"] || r["lokasjon"] || r["Sted"] || r["sted"] || "").trim() || null,
-            teknologier: String(r["Teknologier"] || r["teknologier"] || "").trim() || null,
-            lenke: String(r["Lenke"] || r["lenke"] || r["URL"] || r["url"] || "").trim() || null,
-            kontaktnavn: String(r["Kontaktnavn"] || r["kontaktnavn"] || "").trim() || null,
-            kontakt_epost: String(r["Kontakt epost"] || r["kontakt_epost"] || r["Kontakt_epost"] || "").trim() || null,
-            kontakt_telefon: String(r["Kontakt telefon"] || r["kontakt_telefon"] || r["Kontakt_telefon"] || "").trim() || null,
+            stillingsrolle:
+              String(row["Stillingsrolle"] || row["stillingsrolle"] || row["Rolle"] || row["rolle"] || "").trim() ||
+              null,
+            lokasjon: String(row["Lokasjon"] || row["lokasjon"] || row["Sted"] || row["sted"] || "").trim() || null,
+            teknologier: String(row["Teknologier"] || row["teknologier"] || "").trim() || null,
+            lenke: String(row["Lenke"] || row["lenke"] || row["URL"] || row["url"] || "").trim() || null,
+            kontaktnavn: String(row["Kontaktnavn"] || row["kontaktnavn"] || "").trim() || null,
+            kontakt_epost:
+              String(row["Kontakt epost"] || row["kontakt_epost"] || row["Kontakt_epost"] || "").trim() || null,
+            kontakt_telefon:
+              String(row["Kontakt telefon"] || row["kontakt_telefon"] || row["Kontakt_telefon"] || "").trim() || null,
           };
         })
         .filter(Boolean);
 
-      setRows(mapped);
+      setRows(mapped as FinnImportRow[]);
     };
     reader.readAsArrayBuffer(file);
   };
@@ -905,9 +1279,10 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
     if (rows.length === 0) return;
     setImporting(true);
     try {
-      const { data, error } = await supabase
-        .from("finn_annonser" as any)
-        .upsert(rows as any, { onConflict: "dato,selskap,lenke", ignoreDuplicates: true });
+      const { error } = await supabase.from("finn_annonser").upsert(rows, {
+        onConflict: "dato,selskap,lenke",
+        ignoreDuplicates: true,
+      });
 
       if (error) throw error;
 
@@ -916,8 +1291,12 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
       setFileName("");
       onClose();
       refetch();
-    } catch (e: any) {
-      toast({ title: "Feil", description: e.message, variant: "destructive" });
+    } catch (error: unknown) {
+      toast({
+        title: "Feil",
+        description: error instanceof Error ? error.message : "Kunne ikke importere filen",
+        variant: "destructive",
+      });
     } finally {
       setImporting(false);
     }
@@ -927,20 +1306,28 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
     setProcessing(true);
     setProcessResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke("process-finn-import");
+      const { data, error } = await supabase.functions.invoke<ProcessFinnImportResult>("process-finn-import");
       if (error) throw error;
+      if (!data) throw new Error("Ingen respons fra process-finn-import");
       setProcessResult(data);
-      toast({ title: "Prosessering fullført", description: `${data.teknologier_array_fikset} teknologier fikset, ${data.dna_profiler_oppdatert} DNA-profiler oppdatert` });
+      toast({
+        title: "Prosessering fullført",
+        description: `${data.teknologier_array_fikset} teknologier fikset, ${data.dna_profiler_oppdatert} DNA-profiler oppdatert`,
+      });
       refetch();
-    } catch (e: any) {
-      toast({ title: "Feil", description: e.message, variant: "destructive" });
+    } catch (error: unknown) {
+      toast({
+        title: "Feil",
+        description: error instanceof Error ? error.message : "Kunne ikke prosessere Finn-data",
+        variant: "destructive",
+      });
     } finally {
       setProcessing(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+    <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Importer Finn-annonser</DialogTitle>
@@ -948,7 +1335,11 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
 
         <div className="space-y-4">
           <Input type="file" accept=".xlsx,.xls" onChange={handleFile} />
-          {fileName && <p className="text-[0.8125rem] text-muted-foreground">{fileName} — {rows.length} rader</p>}
+          {fileName && (
+            <p className="text-[0.8125rem] text-muted-foreground">
+              {fileName} - {rows.length} rader
+            </p>
+          )}
 
           {rows.length > 0 && (
             <div className="max-h-[300px] overflow-auto border rounded-lg">
@@ -963,19 +1354,21 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rows.slice(0, 10).map((r, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="text-[0.8125rem]">{r.dato}</TableCell>
-                      <TableCell className="text-[0.8125rem]">{r.selskap}</TableCell>
-                      <TableCell className="text-[0.8125rem]">{r.stillingsrolle}</TableCell>
-                      <TableCell className="text-[0.8125rem]">{r.lokasjon}</TableCell>
-                      <TableCell className="text-[0.8125rem]">{r.teknologier}</TableCell>
+                  {rows.slice(0, 10).map((row, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="text-[0.8125rem]">{row.dato}</TableCell>
+                      <TableCell className="text-[0.8125rem]">{row.selskap}</TableCell>
+                      <TableCell className="text-[0.8125rem]">{row.stillingsrolle}</TableCell>
+                      <TableCell className="text-[0.8125rem]">{row.lokasjon}</TableCell>
+                      <TableCell className="text-[0.8125rem]">{row.teknologier}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
               {rows.length > 10 && (
-                <p className="text-[0.75rem] text-muted-foreground text-center py-2">...og {rows.length - 10} rader til</p>
+                <p className="text-[0.75rem] text-muted-foreground text-center py-2">
+                  ...og {rows.length - 10} rader til
+                </p>
               )}
             </div>
           )}
@@ -987,7 +1380,9 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
               <p className="font-medium text-foreground">Prosessering fullført</p>
               <p className="text-muted-foreground">Behandlet: {processResult.annonser_behandlet} annonser</p>
               <p className="text-muted-foreground">Teknologier fikset: {processResult.teknologier_array_fikset}</p>
-              <p className="text-muted-foreground">Selskaper med teknologier: {processResult.selskaper_med_teknologier}</p>
+              <p className="text-muted-foreground">
+                Selskaper med teknologier: {processResult.selskaper_med_teknologier}
+              </p>
               <p className="text-muted-foreground">DNA-profiler oppdatert: {processResult.dna_profiler_oppdatert}</p>
               {processResult.errors?.length > 0 && (
                 <p className="text-destructive text-[0.75rem]">Feil: {processResult.errors.join(", ")}</p>
@@ -995,13 +1390,10 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
             </div>
           )}
           <div className="flex gap-2 w-full justify-end">
-            <Button variant="outline" onClick={onClose}>Avbryt</Button>
-            <Button
-              variant="outline"
-              onClick={doProcess}
-              disabled={processing}
-              className="gap-2"
-            >
+            <Button variant="outline" onClick={onClose}>
+              Avbryt
+            </Button>
+            <Button variant="outline" onClick={doProcess} disabled={processing} className="gap-2">
               {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               Prosesser Finn-data
             </Button>
@@ -1016,19 +1408,18 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
   );
 }
 
-// ── Helper: Excel date parsing ──
-function excelDate(val: any): string | null {
-  if (!val) return null;
-  if (typeof val === "number") {
-    // Excel serial date
-    const d = new Date((val - 25569) * 86400 * 1000);
-    return d.toISOString().slice(0, 10);
+function excelDate(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === "number") {
+    const date = new Date((value - 25569) * 86400 * 1000);
+    return date.toISOString().slice(0, 10);
   }
-  const s = String(val).trim();
-  // Try ISO
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
-  // Try dd.mm.yyyy
-  const m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+
+  const text = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10);
+
+  const match = text.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (match) return `${match[3]}-${match[2].padStart(2, "0")}-${match[1].padStart(2, "0")}`;
+
   return null;
 }
