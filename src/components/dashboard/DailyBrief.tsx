@@ -276,6 +276,9 @@ const DailyBrief = () => {
       const prevSnapshot = lastReview.signals_at_review;
       const currSnapshot = buildSignalSnapshot(l);
       const changed = JSON.stringify(prevSnapshot) !== JSON.stringify(currSnapshot);
+      if (l.contact.id === 'f50e0df6-f84a-4f16-931e-b62f17893fb6') {
+        console.log('ARILD DEBUG', { tier: l.tier, cooldownDays, daysSinceReview, prevSnapshot, currSnapshot, changed, lastReview });
+      }
       return changed;
     });
   }, [scoredLeads, treated, reviewMap]);
