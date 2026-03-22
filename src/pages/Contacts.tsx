@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, Building2, ArrowUpDown, ChevronDown, Sparkles } from "lucide-react";
+import { Search, ArrowUpDown, ChevronDown, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BulkSignalModal } from "@/components/BulkSignalModal";
 import { toast } from "sonner";
@@ -495,7 +495,7 @@ const Contacts = () => {
                   </div>
                   {/* COMPANY */}
                   <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate flex items-center gap-1 text-left cursor-pointer">
-                    {companyName ? <><Building2 className="h-3 w-3 flex-shrink-0" />{companyName}</> : ""}
+                    {companyName || ""}
                   </button>
                   {/* TITLE */}
                   <button onClick={() => navigate(`/kontakter/${contact.id}`)} className="text-[0.8125rem] text-muted-foreground truncate text-left cursor-pointer">
