@@ -177,7 +177,6 @@ const DailyBrief = () => {
   const foresporsler = salgsData?.foresporsler ?? [];
 
 
-
   useEffect(() => {
     const card = cardRef.current;
     if (!card) return;
