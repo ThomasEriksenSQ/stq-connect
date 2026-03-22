@@ -454,6 +454,9 @@ const Contacts = () => {
                     <p className="text-[0.8125rem] font-medium text-foreground truncate">
                       {contact.first_name} {contact.last_name}
                     </p>
+                    {hotListActive && (contact as any).needsReview && (
+                      <span className="text-[0.6875rem]" title="Trenger oppfølging">⚠</span>
+                    )}
                   </button>
                   {/* SIGNAL - inline editable */}
                   <div className="min-w-0" onClick={(e) => e.stopPropagation()}>

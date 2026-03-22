@@ -187,9 +187,25 @@ const DailyBrief = () => {
         (!f.mottatt_dato || differenceInDays(new Date(), new Date(f.mottatt_dato)) > 45)
       );
       const isInnkjoper = !!contact.call_list;
-      const score = calcHeatScore({ signal, isInnkjoper, hasMarkedsradar, hasAktivForespørsel, hasOverdue, daysSinceLastContact: daysSince });
-      const temperature = getTemperature({ score, signal, hasOverdue, hasMarkedsradar, isInnkjoper });
-      return { contact, signal, score, temperature, lastAct, nextTask, hasOverdue, hasMarkedsradar, isInnkjoper, hasAktivForespørsel, hasTidligereForespørsel };
+      const heatResult = getHeatResult({
+        signal,
+        isInnkjoper,
+        hasMarkedsradar,
+        hasAktivForespørsel,
+        hasOverdue,
+        daysSinceLastContact: daysSince,
+        hasTidligereForespørsel,
+        ikkeAktuellKontakt: !!(contact as any).ikke_aktuell_kontakt,
+      });
+      return {
+        contact, signal,
+        score: heatResult.score,
+        temperature: heatResult.temperature,
+        tier: heatResult.tier,
+        reasons: heatResult.reasons,
+        needsReview: heatResult.needsReview,
+        lastAct, nextTask, hasOverdue, hasMarkedsradar, isInnkjoper, hasAktivForespørsel, hasTidligereForespørsel,
+      };
     }).filter(Boolean).sort((a: any, b: any) => {
       const tempOrder = { hett: 0, lovende: 1, mulig: 2, sovende: 3 };
       if (tempOrder[a.temperature] !== tempOrder[b.temperature]) return tempOrder[a.temperature] - tempOrder[b.temperature];
