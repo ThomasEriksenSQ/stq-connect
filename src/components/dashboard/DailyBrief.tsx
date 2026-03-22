@@ -880,6 +880,12 @@ const DailyBrief = () => {
                         const harSignal = !!currentSignal && currentSignal !== "Ukjent om behov";
                         const harTask = !!current.nextTask;
                         const harForfalt = current.hasOverdue;
+                        const erIkkeAktuell = localIkkeAktuell[current.contact.id] ?? !!current.contact.ikke_aktuell_kontakt;
+                        if (erIkkeAktuell) {
+                          saveReview(current.contact.id, "ikke_aktuell", current);
+                          goNext("left", true);
+                          return;
+                        }
                         const openNudge = (scenario: typeof nudgeScenario) => {
                           setNudgeScenario(scenario);
                           setNudgeSignal(currentSignal || "Ukjent om behov");
