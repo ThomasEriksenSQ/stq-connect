@@ -248,7 +248,10 @@ export function OppdragEditSheet({
         deal_type: dealType,
         utpris: Number(utpris) || null,
         til_konsulent: Number(tilKonsulent) || null,
-        forny_dato: fornyDato ? format(fornyDato, "yyyy-MM-dd") : null,
+        lopende_30_dager: isLopende,
+        forny_dato: isLopende
+          ? (() => { const d = new Date(); d.setDate(d.getDate() + 30); return format(d, "yyyy-MM-dd"); })()
+          : (fornyDato ? format(fornyDato, "yyyy-MM-dd") : null),
         start_dato: startDato ? format(startDato, "yyyy-MM-dd") : null,
         kunde: selskapNavn || null,
         selskap_id: selskapId || null,
