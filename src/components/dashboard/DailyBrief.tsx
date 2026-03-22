@@ -305,29 +305,22 @@ const DailyBrief = () => {
     setTimeout(() => {
       setActiveForm(null);
       setLocalIkkeAktuell({});
+      const newTreatedSet = new Set([...treated, ...(contactIdToMark ? [contactIdToMark] : [])]);
       if (contactIdToMark) {
-        setTreated(prev => new Set([...prev, contactIdToMark]));
+        setTreated(newTreatedSet);
       }
       if (dir === "left") {
-        // Legg nåværende til history før vi går videre
         if (current) {
           setHistory(prev => [...prev, current.contact.id]);
         }
-        // Finn neste i queue som ikke er treated og ikke er markert nå
-        const newTreatedSet = contactIdToMark
-          ? new Set([...treated, contactIdToMark])
-          : treated;
-        const next = queue.find(l =>
-          !newTreatedSet.has(l.contact.id) &&
-          l.contact.id !== current?.contact.id
-        );
+        const currentIdx = scoredLeads.findIndex(l => l.contact.id === current?.contact.id);
+        const next = scoredLeads.slice(currentIdx + 1).find(l => !newTreatedSet.has(l.contact.id));
         setCurrentContactId(next?.contact.id ?? null);
       } else {
-        // Gå tilbake i history
         setHistory(prev => {
           const newHistory = [...prev];
           const prevId = newHistory.pop();
-          if (prevId) setCurrentContactId(prevId);
+          setCurrentContactId(prevId ?? null);
           return newHistory;
         });
       }
@@ -346,7 +339,7 @@ const DailyBrief = () => {
         setTimeout(() => setIsAnimating(false), 420);
       }));
     }, 240);
-  }, [isAnimating, queue, treated, current]);
+  }, [isAnimating, scoredLeads, treated, current]);
 
   const saveReview = useCallback(async (contactId: string, actionTaken: string, lead: ScoredLead) => {
     await supabase.from("agent_contact_reviews").insert({
