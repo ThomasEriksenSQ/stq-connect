@@ -1075,10 +1075,11 @@ const DailyBrief = () => {
                       key={cat.label}
                       onClick={() => setNudgeSignal(cat.label)}
                       className={cn(
-                        "h-10 px-3 rounded-xl border text-[0.8125rem] font-medium transition-all",
+                        "h-10 px-3 rounded-xl border text-[0.8125rem] font-medium transition-all flex items-center justify-center gap-1.5",
                         nudgeSignal === cat.label ? cat.active + " shadow-sm" : cat.inactive
                       )}
                     >
+                      {nudgeSignal === cat.label && <span className="text-sm">✓</span>}
                       {cat.label}
                     </button>
                   ))}
