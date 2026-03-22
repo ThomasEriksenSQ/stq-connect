@@ -276,6 +276,9 @@ const DailyBrief = () => {
     return queue[0] ?? null;
   }, [currentContactId, scoredLeads, queue]);
 
+  const currentIndexInQueue = currentContactId
+    ? queue.findIndex(l => l.contact.id === currentContactId)
+    : 0;
   const currentIndexInScored = currentContactId
     ? scoredLeads.findIndex(l => l.contact.id === currentContactId)
     : 0;
