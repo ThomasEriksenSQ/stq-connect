@@ -278,11 +278,11 @@ export default function KonsulenterOppdrag() {
       o.daysUntilForny <= 30
     ).length;
 
-    const fornyelser90 = enriched.filter((o: any) =>
+    const fornyelser60 = enriched.filter((o: any) =>
       (o.status === "Aktiv" || o.status === "Oppstart") &&
       o.daysUntilForny !== null &&
       o.daysUntilForny >= 0 &&
-      o.daysUntilForny <= 90
+      o.daysUntilForny <= 60
     ).length;
 
     return {
