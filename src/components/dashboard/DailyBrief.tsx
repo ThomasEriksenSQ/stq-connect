@@ -459,6 +459,31 @@ const DailyBrief = () => {
   return (
     <div className="space-y-4">
 
+      {/* ── Ukentlig påminnelse ── */}
+      {viewMode === "kort" && !completedAll && !reminderDismissed && (() => {
+        const userContacts = rawContacts.filter((c: any) => c.owner_id === user?.id);
+        const reviewDates = userContacts
+          .map((c: any) => c.next_review_at)
+          .filter(Boolean)
+          .map((d: string) => new Date(d).getTime());
+        const shouldShow = reviewDates.length === 0 || (Date.now() - Math.max(...reviewDates)) >= 7 * 24 * 60 * 60 * 1000;
+        if (!shouldShow) return null;
+        return (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <Bell className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-amber-900 text-[0.875rem]">Påminnelse!</p>
+                <p className="text-amber-800 text-[0.8125rem] mt-0.5">Viktig at vi bruker salgsagenten jevnlig for å opprettholde en god kontaktliste.</p>
+              </div>
+            </div>
+            <button onClick={() => setReminderDismissed(true)} className="text-amber-400 hover:text-amber-700 flex-shrink-0 mt-0.5">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        );
+      })()}
+
       {/* ── Filter + visningsvalg ── */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-14 flex-shrink-0">Eier</span>
