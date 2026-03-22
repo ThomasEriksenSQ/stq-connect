@@ -105,6 +105,7 @@ const DailyBrief = () => {
   const [dragStartX, setDragStartX] = useState<number | null>(null);
   const [dragDeltaX, setDragDeltaX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [history, setHistory] = useState<string[]>([]);
 
 
   const { data: allProfiles = [] } = useQuery({
@@ -304,28 +305,31 @@ const DailyBrief = () => {
     setTimeout(() => {
       setActiveForm(null);
       setLocalIkkeAktuell({});
-      const newTreated = contactIdToMark
-        ? new Set([...treated, contactIdToMark])
-        : treated;
       if (contactIdToMark) {
-        setTreated(newTreated);
+        setTreated(prev => new Set([...prev, contactIdToMark]));
       }
       if (dir === "left") {
-        // Finn neste kontakt i queue som ikke er treated
-        const nextLead = queue.find(l =>
-          !newTreated.has(l.contact.id) &&
-          l.contact.id !== contactIdToMark &&
+        // Legg nåværende til history før vi går videre
+        if (current) {
+          setHistory(prev => [...prev, current.contact.id]);
+        }
+        // Finn neste i queue som ikke er treated og ikke er markert nå
+        const newTreatedSet = contactIdToMark
+          ? new Set([...treated, contactIdToMark])
+          : treated;
+        const next = queue.find(l =>
+          !newTreatedSet.has(l.contact.id) &&
           l.contact.id !== current?.contact.id
         );
-        setCurrentContactId(nextLead?.contact.id ?? null);
+        setCurrentContactId(next?.contact.id ?? null);
       } else {
-        // Tilbake: finn forrige i queue basert på nåværende posisjon
-        const currentQueueIdx = queue.findIndex(l => l.contact.id === current?.contact.id);
-        const prevIdx = Math.max(currentQueueIdx - 1, 0);
-        const prevLead = queue[prevIdx];
-        if (prevLead && prevLead.contact.id !== current?.contact.id) {
-          setCurrentContactId(prevLead.contact.id);
-        }
+        // Gå tilbake i history
+        setHistory(prev => {
+          const newHistory = [...prev];
+          const prevId = newHistory.pop();
+          if (prevId) setCurrentContactId(prevId);
+          return newHistory;
+        });
       }
       if (card) {
         const inX = dir === "left" ? 80 : -80;
@@ -450,7 +454,7 @@ const DailyBrief = () => {
           {filterOptions.map(opt => (
             <button
               key={opt.id}
-              onClick={() => { setOwnerFilter(opt.id); setCurrentContactId(null); setTreated(new Set()); }}
+              onClick={() => { setOwnerFilter(opt.id); setCurrentContactId(null); setTreated(new Set()); setHistory([]); }}
               className={cn(
                 "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
                 ownerFilter === opt.id
@@ -924,14 +928,14 @@ const DailyBrief = () => {
               <div className="flex items-center justify-between px-2">
                 <button
                   onClick={() => goNext("right")}
-                  disabled={queue.findIndex(l => l.contact.id === current?.contact.id) <= 0}
+                  disabled={history.length === 0}
                   className="flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-15 disabled:pointer-events-none transition-all"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => goNext("left")}
-                  disabled={queue.findIndex(l => l.contact.id === current?.contact.id) >= queue.length - 1}
+                  disabled={queue.filter(l => !treated.has(l.contact.id) && l.contact.id !== current?.contact.id).length === 0}
                   className="flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-15 disabled:pointer-events-none transition-all"
                 >
                   <ChevronRight className="h-4 w-4" />
