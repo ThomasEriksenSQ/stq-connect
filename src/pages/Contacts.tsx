@@ -510,7 +510,7 @@ const Contacts = () => {
                           <Radio className="h-3.5 w-3.5 text-blue-500 cursor-default" />
                         </TooltipTrigger>
                         <TooltipContent>
-                          Selskapet har annonsert etter tech-kompetanse på Finn.no siste 90 dager
+                          Selskapet har annonsert etter embedded på Finn.no siste 90 dager
                         </TooltipContent>
                       </Tooltip>
                     )}
