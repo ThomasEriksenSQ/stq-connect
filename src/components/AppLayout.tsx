@@ -11,6 +11,7 @@ import { AIChatPanel } from "@/components/AIChatPanel";
 
 const navItems = [
   { title: "Salgsagent", url: "/", icon: LayoutDashboard, end: true },
+  { title: "Oppfølginger", url: "/oppfolginger", icon: CalendarCheck },
   { title: "Selskaper", url: "/selskaper", icon: Building2 },
   { title: "Kontakter", url: "/kontakter", icon: Users },
   { title: "Forespørsler", url: "/foresporsler", icon: Briefcase },
