@@ -99,11 +99,17 @@ const TECHNOLOGY_RULES: Array<{ label: string; patterns: RegExp[] }> = [
   { label: "Buildroot", patterns: [/\bbuildroot\b/i] },
   { label: "FPGA", patterns: [/\bfpga\b/i, /\basic\b/i] },
   { label: "Device drivers", patterns: [/\bdevice drivers?\b/i, /\bkernel modules?\b/i] },
-  { label: "Microcontrollers", patterns: [/\bmicrocontrollers?\b/i, /\bmicroprocessor systems?\b/i, /\barm cortex-m\b/i] },
+  {
+    label: "Microcontrollers",
+    patterns: [/\bmicrocontrollers?\b/i, /\bmicroprocessor systems?\b/i, /\barm cortex-m\b/i],
+  },
   { label: "Firmware", patterns: [/\bfirmware\b/i] },
   { label: "Embedded systems", patterns: [/\bembedded systems?\b/i] },
   { label: "Robotics", patterns: [/\brobotics?\b/i, /\bcomputer vision\b/i] },
-  { label: "PCB design", patterns: [/\bpcb design\b/i, /\bhigh-speed design\b/i, /\banalog electronics\b/i, /\bdigital design\b/i] },
+  {
+    label: "PCB design",
+    patterns: [/\bpcb design\b/i, /\bhigh-speed design\b/i, /\banalog electronics\b/i, /\bdigital design\b/i],
+  },
   { label: "Electronics", patterns: [/\belectronics\b/i, /\belectronics design\b/i, /\belectronic design\b/i] },
   { label: "UAV", patterns: [/\buav\b/i, /\bpx4\b/i, /\bmavlink\b/i] },
   { label: "Testing", patterns: [/\btest\b/i, /\bquality assurance\b/i, /\bverification\b/i] },
@@ -248,7 +254,10 @@ function buildContactKey(ad: FinnAnnonseInput): string | null {
   return parts.length > 0 ? parts.join("|") : null;
 }
 
-function scoreCompany(company: MutableCompany, inCrm: boolean): { score: number; reasons: string[]; contactableNow: boolean } {
+function scoreCompany(
+  company: MutableCompany,
+  inCrm: boolean,
+): { score: number; reasons: string[]; contactableNow: boolean } {
   const strategicHits = [...company.techCounts.entries()]
     .filter(([name]) => STRATEGIC_TECHNOLOGIES.has(name))
     .reduce((sum, [, count]) => sum + count, 0);
@@ -268,7 +277,8 @@ function scoreCompany(company: MutableCompany, inCrm: boolean): { score: number;
   if (company.currentWeekCount > 0) reasons.push(`${company.currentWeekCount} annonser denne uken`);
   if (company.recent30Count > 1) reasons.push(`${company.recent30Count} annonser siste 30 dager`);
   if (strategicHits > 0) reasons.push(`${strategicHits} treff pa kjernekompetanse`);
-  if (reachableContacts > 0) reasons.push(`${reachableContacts} kontakt${reachableContacts > 1 ? "er" : ""} med direkte info`);
+  if (reachableContacts > 0)
+    reasons.push(`${reachableContacts} kontakt${reachableContacts > 1 ? "er" : ""} med direkte info`);
 
   return {
     score,
@@ -341,9 +351,7 @@ export function buildMarketRadar(
   currentWeek: string,
   findCompany: (name: string | null) => RadarCompanyRef | null,
 ): RadarSnapshot {
-  const cleanedAds = ads
-    .filter((ad) => ad.dato && ad.selskap)
-    .sort((a, b) => b.dato.localeCompare(a.dato));
+  const cleanedAds = ads.filter((ad) => ad.dato && ad.selskap).sort((a, b) => b.dato.localeCompare(a.dato));
 
   const anchorDate = cleanedAds[0]?.dato ? parseISO(cleanedAds[0].dato) : new Date();
   const lastWeek = getIsoWeekStr(subDays(parseISO(`${anchorDate.toISOString().slice(0, 10)}`), 7));
@@ -476,9 +484,7 @@ export function buildMarketRadar(
   const adsThisWeek = cleanedAds.filter((ad) => ad.uke === currentWeek).length;
   const adsLastWeek = cleanedAds.filter((ad) => ad.uke === lastWeek).length;
   const uniqueCompanies30d = new Set(
-    cleanedAds
-      .filter((ad) => ad.dato >= start30 && ad.selskap)
-      .map((ad) => normalizeCompanyName(ad.selskap!)),
+    cleanedAds.filter((ad) => ad.dato >= start30 && ad.selskap).map((ad) => normalizeCompanyName(ad.selskap!)),
   ).size;
 
   return {
