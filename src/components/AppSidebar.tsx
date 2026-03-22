@@ -1,4 +1,4 @@
-import { LayoutDashboard, Building2, Users, CalendarCheck, ClipboardList, Briefcase, FileText, LogOut } from "lucide-react";
+import { Building2, Users, LogOut, FileText } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -15,13 +15,9 @@ import {
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { title: "Salgsagent", url: "/", icon: LayoutDashboard, end: true },
-  { title: "Selskaper", url: "/selskaper", icon: Building2, end: false },
-  { title: "Kontakter", url: "/kontakter", icon: Users, end: false },
-  { title: "Forespørsler", url: "/foresporsler", icon: ClipboardList, end: false },
-  { title: "Oppfølginger", url: "/oppfolginger", icon: CalendarCheck, end: false },
-  { title: "Aktive oppdrag", url: "/konsulenter/i-oppdrag", icon: Briefcase, end: false },
-  { title: "CV Maker", url: "/cv-maker", icon: FileText, end: false },
+  { title: "Selskaper", url: "/selskaper", icon: Building2 },
+  { title: "Kontakter", url: "/kontakter", icon: Users },
+  { title: "CV Maker", url: "/cv-maker", icon: FileText },
 ];
 
 export function AppSidebar() {
@@ -45,7 +41,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
-                      end={item.end}
+                      end={false}
                       className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sidebar-foreground/80 transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                       activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
                     >
