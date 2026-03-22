@@ -519,6 +519,7 @@ const DailyBrief = () => {
     };
   }, [isAnimating, goNext]);
 
+  const showReminder = useMemo(() => {
     if (reminderDismissed) return false;
     if (isLoading) return false;
     if (rawContacts.length === 0) return false;
