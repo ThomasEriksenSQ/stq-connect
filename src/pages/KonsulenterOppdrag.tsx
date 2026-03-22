@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState } from "react";
 import { cn, formatNOK, getInitials } from "@/lib/utils";
 import { format, differenceInDays } from "date-fns";
-import { Briefcase, CalendarCheck, TrendingUp, BarChart2, Loader2 } from "lucide-react";
+import { Briefcase, CalendarCheck, BarChart2, Loader2 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { OppdragEditSheet } from "@/components/OppdragEditSheet";
 import { FornyelsesTimeline } from "@/components/FornyelsesTimeline";
