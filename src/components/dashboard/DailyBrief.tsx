@@ -120,7 +120,9 @@ const DailyBrief = () => {
   const dragDeltaXRef = useRef(0);
   const [isDragging, setIsDragging] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
+  const [futureHistory, setFutureHistory] = useState<string[]>([]);
   const historyRef = useRef<string[]>([]);
+  const futureHistoryRef = useRef<string[]>([]);
   const scoredLeadsRef = useRef<ScoredLead[]>([]);
   const treatedRef = useRef<Set<string>>(new Set());
   const currentRef = useRef<ScoredLead | null>(null);
@@ -282,9 +284,17 @@ const DailyBrief = () => {
       }) as ScoredLead[];
   }, [rawContacts, allActivities, allTasks, techProfiles, foresporsler]);
 
+  const eligibleScoredLeads = useMemo(() => {
+    const now = new Date();
+    return scoredLeads.filter((lead) => {
+      const nextReviewAt = lead.contact.next_review_at ? new Date(lead.contact.next_review_at) : null;
+      return !(nextReviewAt && nextReviewAt > now);
+    });
+  }, [scoredLeads]);
+
   const queue = useMemo(() => {
-    return scoredLeads.filter((l) => !treated.has(l.contact.id));
-  }, [scoredLeads, treated]);
+    return eligibleScoredLeads.filter((l) => !treated.has(l.contact.id));
+  }, [eligibleScoredLeads, treated]);
 
   const current = useMemo(() => {
     if (completedAll) return null;
@@ -297,10 +307,16 @@ const DailyBrief = () => {
   scoredLeadsRef.current = scoredLeads;
   treatedRef.current = treated;
   currentRef.current = current;
+  futureHistoryRef.current = futureHistory;
 
   useEffect(() => {
     if (!isLoading && !completedAll && currentContactId === null) {
-      const firstInQueue = scoredLeadsRef.current.find((l) => !treatedRef.current.has(l.contact.id));
+      const now = new Date();
+      const firstInQueue = scoredLeadsRef.current.find((l) => {
+        if (treatedRef.current.has(l.contact.id)) return false;
+        const nextReviewAt = l.contact.next_review_at ? new Date(l.contact.next_review_at) : null;
+        return !(nextReviewAt && nextReviewAt > now);
+      });
       if (firstInQueue) {
         setCurrentContactId(firstInQueue.contact.id);
       }
@@ -377,6 +393,7 @@ const DailyBrief = () => {
       const currentLead = currentRef.current;
       const scoredSnapshot = scoredLeadsRef.current;
       const treatedSnapshot = treatedRef.current;
+      const futureSnapshot = futureHistoryRef.current;
       const contactIdToMark = markCurrent && currentLead ? currentLead.contact.id : null;
       const card = cardRef.current;
       if (card) {
@@ -401,22 +418,42 @@ const DailyBrief = () => {
             historyRef.current = newHist;
             setHistory(newHist);
           }
-          const currentIdx = scoredSnapshot.findIndex((l) => l.contact.id === currentLead?.contact.id);
-          const afterCurrent = currentIdx >= 0 ? scoredSnapshot.slice(currentIdx + 1) : scoredSnapshot;
-          const next =
-            afterCurrent.find((l) => !newTreatedSet.has(l.contact.id)) ||
-            scoredSnapshot.find((l) => !newTreatedSet.has(l.contact.id));
-          if (next) {
-            setCurrentContactId(next.contact.id);
+          if (!markCurrent && futureSnapshot.length > 0) {
+            const newFuture = [...futureSnapshot];
+            const nextId = newFuture.pop() ?? null;
+            futureHistoryRef.current = newFuture;
+            setFutureHistory(newFuture);
+            setCurrentContactId(nextId);
           } else {
-            setCompletedAll(true);
-            setCurrentContactId(null);
+            if (futureSnapshot.length > 0) {
+              futureHistoryRef.current = [];
+              setFutureHistory([]);
+            }
+            const now = new Date();
+            const eligibleSnapshot = scoredSnapshot.filter((lead) => {
+              const nextReviewAt = lead.contact.next_review_at ? new Date(lead.contact.next_review_at) : null;
+              return !(nextReviewAt && nextReviewAt > now);
+            });
+            const currentIdx = eligibleSnapshot.findIndex((l) => l.contact.id === currentLead?.contact.id);
+            const afterCurrent = currentIdx >= 0 ? eligibleSnapshot.slice(currentIdx + 1) : eligibleSnapshot;
+            const next =
+              afterCurrent.find((l) => !newTreatedSet.has(l.contact.id)) ||
+              eligibleSnapshot.find((l) => !newTreatedSet.has(l.contact.id));
+            if (next) {
+              setCurrentContactId(next.contact.id);
+            } else {
+              setCompletedAll(true);
+              setCurrentContactId(null);
+            }
           }
         } else {
           const newHistory = [...historyRef.current];
           const prevId = newHistory.pop() ?? null;
+          const newFuture = currentLead ? [...futureSnapshot, currentLead.contact.id] : [...futureSnapshot];
           historyRef.current = newHistory;
+          futureHistoryRef.current = newFuture;
           setHistory(newHistory);
+          setFutureHistory(newFuture);
           setCurrentContactId(prevId);
         }
         if (card) {
@@ -482,7 +519,7 @@ const DailyBrief = () => {
     return [{ id: "alle", label: "Alle" }, ...(me ? [{ id: me.id, label: me.full_name }] : []), ...others];
   }, [allProfiles, user?.id]);
 
-  const progress = scoredLeads.length > 0 ? (treatedCount / scoredLeads.length) * 100 : 0;
+  const progress = eligibleScoredLeads.length > 0 ? (treatedCount / eligibleScoredLeads.length) * 100 : 0;
 
   const handleNudgeOkNeste = useCallback(async () => {
     if (!current) return;
@@ -630,7 +667,9 @@ const DailyBrief = () => {
                 setCurrentContactId(null);
                 setTreated(new Set());
                 historyRef.current = [];
+                futureHistoryRef.current = [];
                 setHistory([]);
+                setFutureHistory([]);
                 setCompletedAll(false);
               }}
               className={cn(
@@ -1188,9 +1227,10 @@ const DailyBrief = () => {
                 <button
                   onClick={() => goNext("left")}
                   disabled={(() => {
-                    const idx = scoredLeads.findIndex((s) => s.contact.id === current?.contact.id);
-                    const afterCurrent = scoredLeads.slice(idx + 1).filter((l) => !treated.has(l.contact.id));
-                    const beforeCurrent = scoredLeads
+                    if (futureHistory.length > 0) return false;
+                    const idx = eligibleScoredLeads.findIndex((s) => s.contact.id === current?.contact.id);
+                    const afterCurrent = eligibleScoredLeads.slice(idx + 1).filter((l) => !treated.has(l.contact.id));
+                    const beforeCurrent = eligibleScoredLeads
                       .slice(0, Math.max(idx, 0))
                       .filter((l) => !treated.has(l.contact.id));
                     return afterCurrent.length === 0 && beforeCurrent.length === 0;
@@ -1224,11 +1264,11 @@ const DailyBrief = () => {
       {/* ── LISTEVISNING ── */}
       {viewMode === "liste" && (
         <div className="bg-card border border-border rounded-xl overflow-hidden">
-          {scoredLeads.length === 0 ? (
+          {eligibleScoredLeads.length === 0 ? (
             <p className="text-center py-12 text-muted-foreground">Ingen leads å vise</p>
           ) : (
             <div className="divide-y divide-border">
-              {scoredLeads.map((lead) => {
+              {eligibleScoredLeads.map((lead) => {
                 const temp = TEMP_CONFIG[lead.temperature];
                 return (
                   <button
