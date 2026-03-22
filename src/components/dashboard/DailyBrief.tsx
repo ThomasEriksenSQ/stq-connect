@@ -338,25 +338,28 @@ const DailyBrief = () => {
   }, [isAnimating]);
 
   const saveReview = useCallback(async (contactId: string, actionTaken: string, lead: ScoredLead) => {
-    const newReview = {
-      contact_id: contactId,
-      reviewed_by: user?.id,
-      action_taken: actionTaken,
-      signals_at_review: buildSignalSnapshot(lead),
-      reviewed_at: new Date().toISOString(),
-    };
-    queryClient.setQueryData(["agent-reviews"], (old: any[]) => {
-      const filtered = (old || []).filter((r: any) => r.contact_id !== contactId);
-      return [newReview, ...filtered];
-    });
+    const cooldownDays = COOLDOWN_DAYS[lead.tier] ?? 90;
+    const nextReviewAt = new Date();
+    nextReviewAt.setDate(nextReviewAt.getDate() + cooldownDays);
+    
+    queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
+      ...old,
+      rawContacts: old?.rawContacts?.map((c: any) =>
+        c.id === contactId ? { ...c, next_review_at: nextReviewAt.toISOString() } : c
+      ),
+    }));
+    
+    await supabase.from("contacts").update({ 
+      next_review_at: nextReviewAt.toISOString() 
+    }).eq("id", contactId);
+    
     await supabase.from("agent_contact_reviews").insert({
       contact_id: contactId,
       reviewed_by: user?.id,
       action_taken: actionTaken,
       signals_at_review: buildSignalSnapshot(lead),
     });
-    
-  }, [user?.id, queryClient]);
+  }, [user?.id, queryClient, ownerFilter]);
 
   const updateTaskMutation = useMutation({
     mutationFn: async ({ taskId, dueDate }: { taskId: string; dueDate: string }) => {
