@@ -174,7 +174,7 @@ const DailyBrief = () => {
   const techProfiles = salgsData?.techProfiles ?? [];
   const foresporsler = salgsData?.foresporsler ?? [];
 
-  const { data: agentReviews = [] } = useQuery({
+  const { data: agentReviews = [], isLoading: isLoadingReviews } = useQuery({
     queryKey: ["agent-reviews"],
     queryFn: async () => {
       const { data, error } = await supabase
