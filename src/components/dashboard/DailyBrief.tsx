@@ -203,7 +203,7 @@ const DailyBrief = () => {
     return rawContacts.map((contact: any) => {
       const contactActs = allActivities.filter((a: any) => a.contact_id === contact.id);
       const contactTasks = allTasks.filter((t: any) => t.contact_id === contact.id);
-      if (contact.id === 'd60a7ed2-298d-402e-9a04-6442c27f068c') console.log('VICTOR ACTS', contactActs.map(a => a.subject));
+      
       const signal = getEffectiveSignal(
         contactActs.map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
         contactTasks.map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date }))
