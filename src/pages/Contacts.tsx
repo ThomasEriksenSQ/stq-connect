@@ -503,9 +503,16 @@ const Contacts = () => {
                     {contact.title?.slice(0, 25) || ""}
                   </button>
                   {/* FINN.NO */}
-                  <div className="flex items-center justify-center" title="Annonserer på Finn.no">
+                  <div className="flex items-center justify-center">
                     {(contact as any).hasMarkedsradar && (
-                      <Radio className="h-3.5 w-3.5 text-blue-500" />
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Radio className="h-3.5 w-3.5 text-blue-500 cursor-default" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Selskapet har annonsert etter tech-kompetanse på Finn.no siste 90 dager
+                        </TooltipContent>
+                      </Tooltip>
                     )}
                   </div>
                   {/* TAGS */}
