@@ -276,6 +276,9 @@ const DailyBrief = () => {
       const prevSnapshot = lastReview.signals_at_review;
       const currSnapshot = buildSignalSnapshot(l);
       const changed = JSON.stringify(prevSnapshot) !== JSON.stringify(currSnapshot);
+      if (l.contact.id === 'd60a7ed2-298d-402e-9a04-6442c27f068c') {
+        console.log('VICTOR DEBUG', { tier: l.tier, cooldownDays, daysSinceReview, prevSnapshot, currSnapshot, changed, lastReview });
+      }
       return changed;
     });
   }, [scoredLeads, treated, reviewMap]);
