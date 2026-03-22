@@ -70,6 +70,18 @@ function buildReasonLine(lead: ScoredLead, daysSince: number): string {
   return joined.charAt(0).toUpperCase() + joined.slice(1);
 }
 
+const COOLDOWN_DAYS: Record<number, number> = { 1: 14, 2: 45, 3: 60, 4: 90 };
+
+function buildSignalSnapshot(lead: ScoredLead) {
+  return {
+    signal: lead.signal || null,
+    hasMarkedsradar: lead.hasMarkedsradar,
+    hasAktivForespørsel: lead.hasAktivForespørsel,
+    hasOverdue: lead.hasOverdue,
+    tier: lead.tier,
+  };
+}
+
 /* ── Main Component ── */
 const DailyBrief = () => {
   const { user } = useAuth();
