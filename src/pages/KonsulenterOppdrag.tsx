@@ -40,17 +40,51 @@ function VarslingsInnstillinger() {
     },
   });
 
-  const [localEmails, setLocalEmails] = useState<string[] | null>(null);
-  const [localAktiv, setLocalAktiv] = useState<boolean | null>(null);
-  const [localTerskel, setLocalTerskel] = useState<string | null>(null);
-  const [newEmail, setNewEmail] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [sendingTest, setSendingTest] = useState(false);
+  const [renewalEmailsLocal, setRenewalEmailsLocal] = useState<string[] | null>(null);
+  const [renewalAktivLocal, setRenewalAktivLocal] = useState<boolean | null>(null);
+  const [renewalTerskelLocal, setRenewalTerskelLocal] = useState<string | null>(null);
+  const [newRenewalEmail, setNewRenewalEmail] = useState("");
+  const [savingRenewal, setSavingRenewal] = useState(false);
+  const [sendingRenewalTest, setSendingRenewalTest] = useState(false);
 
-  // Derive current values
-  const emails = localEmails ?? (settings?.epost_mottakere as string[]) ?? [];
-  const aktiv = localAktiv ?? settings?.aktiv ?? true;
-  const terskel = localTerskel ?? String(settings?.terskel_dager ?? 90);
+  const [radarEmailsLocal, setRadarEmailsLocal] = useState<string[] | null>(null);
+  const [radarAktivLocal, setRadarAktivLocal] = useState<boolean | null>(null);
+  const [radarAutoSendLocal, setRadarAutoSendLocal] = useState<boolean | null>(null);
+  const [radarAiLocal, setRadarAiLocal] = useState<boolean | null>(null);
+  const [newRadarEmail, setNewRadarEmail] = useState("");
+  const [savingRadar, setSavingRadar] = useState(false);
+  const [sendingRadarTest, setSendingRadarTest] = useState(false);
+  const [sendingRadarNow, setSendingRadarNow] = useState(false);
+
+  const renewalEmails = renewalEmailsLocal ?? (settings?.epost_mottakere as string[]) ?? [];
+  const renewalAktiv = renewalAktivLocal ?? settings?.aktiv ?? true;
+  const renewalTerskel = renewalTerskelLocal ?? String(settings?.terskel_dager ?? 90);
+
+  const radarEmails = radarEmailsLocal ?? (settings?.markedsradar_epost_mottakere as string[]) ?? [];
+  const radarAktiv = radarAktivLocal ?? settings?.markedsradar_aktiv ?? false;
+  const radarAutoSend = radarAutoSendLocal ?? settings?.markedsradar_send_etter_import ?? true;
+  const radarAi = radarAiLocal ?? settings?.markedsradar_inkluder_ai ?? true;
+
+  const isValidEmail = (email: string) => email.includes("@") && email.includes(".");
+
+  const addRecipient = (
+    value: string,
+    currentEmails: string[],
+    setEmails: (value: string[]) => void,
+    clear: () => void,
+  ) => {
+    const trimmed = value.trim();
+    if (!isValidEmail(trimmed)) return;
+    if (currentEmails.length >= 5) return;
+    if (currentEmails.includes(trimmed)) return;
+    setEmails([...currentEmails, trimmed]);
+    clear();
+  };
+
+  const removeRecipient = (email: string, currentEmails: string[], setEmails: (value: string[]) => void) => {
+    if (currentEmails.length <= 1) return;
+    setEmails(currentEmails.filter((entry) => entry !== email));
+  };
 
   if (isLoading) {
     return (
@@ -60,44 +94,30 @@ function VarslingsInnstillinger() {
     );
   }
 
-  const addEmail = () => {
-    const trimmed = newEmail.trim();
-    if (!trimmed.includes("@") || !trimmed.includes(".")) return;
-    if (emails.length >= 5) return;
-    if (emails.includes(trimmed)) return;
-    setLocalEmails([...emails, trimmed]);
-    setNewEmail("");
-  };
-
-  const removeEmail = (email: string) => {
-    if (emails.length <= 1) return;
-    setLocalEmails(emails.filter((e) => e !== email));
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
+  const handleSaveRenewal = async () => {
+    setSavingRenewal(true);
     try {
       const { error } = await supabase
         .from("varslingsinnstillinger" as any)
         .update({
-          epost_mottakere: emails,
-          terskel_dager: Number(terskel),
-          aktiv,
+          epost_mottakere: renewalEmails,
+          terskel_dager: Number(renewalTerskel),
+          aktiv: renewalAktiv,
           updated_at: new Date().toISOString(),
         } as any)
         .eq("id", settings.id);
       if (error) throw error;
-      toast.success("Innstillinger lagret");
+      toast.success("Fornyelsesinnstillinger lagret");
       queryClient.invalidateQueries({ queryKey: ["varslingsinnstillinger"] });
     } catch {
       toast.error("Kunne ikke lagre innstillinger");
     } finally {
-      setSaving(false);
+      setSavingRenewal(false);
     }
   };
 
   const handleTestEmail = async () => {
-    setSendingTest(true);
+    setSendingRenewalTest(true);
     try {
       const { error } = await supabase.functions.invoke("fornyelse-varsel-epost", {
         body: { test: true },
@@ -107,25 +127,86 @@ function VarslingsInnstillinger() {
     } catch {
       toast.error("Kunne ikke sende test-e-post");
     } finally {
-      setSendingTest(false);
+      setSendingRenewalTest(false);
+    }
+  };
+
+  const handleSaveRadar = async () => {
+    setSavingRadar(true);
+    try {
+      const { error } = await supabase
+        .from("varslingsinnstillinger" as any)
+        .update({
+          markedsradar_epost_mottakere: radarEmails,
+          markedsradar_aktiv: radarAktiv,
+          markedsradar_send_etter_import: radarAutoSend,
+          markedsradar_inkluder_ai: radarAi,
+          updated_at: new Date().toISOString(),
+        } as any)
+        .eq("id", settings.id);
+      if (error) throw error;
+      toast.success("Markedsradar-innstillinger lagret");
+      queryClient.invalidateQueries({ queryKey: ["varslingsinnstillinger"] });
+    } catch {
+      toast.error("Kunne ikke lagre markedsradar-innstillinger");
+    } finally {
+      setSavingRadar(false);
+    }
+  };
+
+  const handleRadarTestEmail = async () => {
+    setSendingRadarTest(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("markedsradar-ukesmail", {
+        body: { test: true },
+      });
+      if (error) throw error;
+      if (data?.skipped) {
+        toast.message(data.reason || "Ingen markedsradar sendt");
+      } else {
+        toast.success(`Test av markedsradar sendt${data?.latestWeek ? ` for ${data.latestWeek}` : ""}`);
+      }
+    } catch {
+      toast.error("Kunne ikke sende test av markedsradar");
+    } finally {
+      setSendingRadarTest(false);
+    }
+  };
+
+  const handleRadarSendNow = async () => {
+    setSendingRadarNow(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("markedsradar-ukesmail", {
+        body: { force: true, source: "manual" },
+      });
+      if (error) throw error;
+      if (data?.skipped) {
+        toast.message(data.reason || "Ingen markedsradar sendt");
+      } else {
+        toast.success(`Markedsradar sendt${data?.latestWeek ? ` for ${data.latestWeek}` : ""}`);
+      }
+      queryClient.invalidateQueries({ queryKey: ["varslingsinnstillinger"] });
+    } catch {
+      toast.error("Kunne ikke sende markedsradar nå");
+    } finally {
+      setSendingRadarNow(false);
     }
   };
 
   return (
-    <div className="max-w-lg space-y-6">
+    <div className="max-w-5xl grid gap-6 xl:grid-cols-2">
       <div className="border border-border rounded-xl bg-card p-6 shadow-[0_1px_3px_rgba(0,0,0,0.07)] space-y-6">
-        {/* Section 1: Email recipients */}
         <div className="space-y-3">
           <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             E-postmottakere
           </p>
           <div className="space-y-2">
-            {emails.map((email) => (
+            {renewalEmails.map((email) => (
               <div key={email} className="flex items-center justify-between">
                 <span className="text-[0.875rem] text-foreground">{email}</span>
-                {emails.length > 1 && (
+                {renewalEmails.length > 1 && (
                   <button
-                    onClick={() => removeEmail(email)}
+                    onClick={() => removeRecipient(email, renewalEmails, setRenewalEmailsLocal)}
                     className="text-muted-foreground hover:text-destructive transition-colors text-sm"
                   >
                     ✕
@@ -134,19 +215,24 @@ function VarslingsInnstillinger() {
               </div>
             ))}
           </div>
-          {emails.length >= 5 ? (
+          {renewalEmails.length >= 5 ? (
             <p className="text-[0.75rem] text-muted-foreground">Maks 5 mottakere</p>
           ) : (
             <div className="flex items-center gap-2">
               <Input
                 placeholder="navn@domene.no"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addEmail()}
+                value={newRenewalEmail}
+                onChange={(e) => setNewRenewalEmail(e.target.value)}
+                onKeyDown={(e) =>
+                  e.key === "Enter" &&
+                  addRecipient(newRenewalEmail, renewalEmails, setRenewalEmailsLocal, () => setNewRenewalEmail(""))
+                }
                 className="h-9 text-[0.875rem]"
               />
               <button
-                onClick={addEmail}
+                onClick={() =>
+                  addRecipient(newRenewalEmail, renewalEmails, setRenewalEmailsLocal, () => setNewRenewalEmail(""))
+                }
                 className="h-9 px-3 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary shrink-0"
               >
                 Legg til
@@ -155,20 +241,17 @@ function VarslingsInnstillinger() {
           )}
         </div>
 
-        {/* Section 2: Settings */}
         <div className="space-y-4">
           <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            Innstillinger
+            Fornyelsesvarsler
           </p>
           <div className="flex items-center justify-between">
             <Label className="text-[0.8125rem] text-foreground">Aktiver ukentlig e-postvarsel</Label>
-            <Switch checked={aktiv} onCheckedChange={(v) => setLocalAktiv(v)} />
+            <Switch checked={renewalAktiv} onCheckedChange={(value) => setRenewalAktivLocal(value)} />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[0.8125rem] text-foreground">
-              Send varsler for oppdrag som utløper innen
-            </Label>
-            <Select value={terskel} onValueChange={(v) => setLocalTerskel(v)}>
+            <Label className="text-[0.8125rem] text-foreground">Send varsler for oppdrag som utløper innen</Label>
+            <Select value={renewalTerskel} onValueChange={(value) => setRenewalTerskelLocal(value)}>
               <SelectTrigger className="h-9 w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -181,23 +264,134 @@ function VarslingsInnstillinger() {
           </div>
         </div>
 
-        {/* Save button */}
         <button
-          onClick={handleSave}
-          disabled={saving}
+          onClick={handleSaveRenewal}
+          disabled={savingRenewal}
           className="bg-primary text-primary-foreground h-9 px-4 rounded-lg text-[0.8125rem] font-medium hover:opacity-90 disabled:opacity-50"
         >
-          {saving ? "Lagrer..." : "Lagre innstillinger"}
+          {savingRenewal ? "Lagrer..." : "Lagre fornyelsesinnstillinger"}
         </button>
 
-        {/* Test section */}
         <div className="border-t border-border pt-4">
           <button
             onClick={handleTestEmail}
-            disabled={sendingTest}
+            disabled={sendingRenewalTest}
             className="border border-border text-[0.8125rem] text-muted-foreground hover:text-foreground h-8 px-3 rounded-lg disabled:opacity-50"
           >
-            {sendingTest ? "Sender..." : "Send test-e-post nå"}
+            {sendingRenewalTest ? "Sender..." : "Send test-e-post nå"}
+          </button>
+        </div>
+      </div>
+
+      <div className="border border-border rounded-xl bg-card p-6 shadow-[0_1px_3px_rgba(0,0,0,0.07)] space-y-6">
+        <div className="space-y-3">
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Markedsradar-mottakere
+          </p>
+          <div className="space-y-2">
+            {radarEmails.map((email) => (
+              <div key={email} className="flex items-center justify-between">
+                <span className="text-[0.875rem] text-foreground">{email}</span>
+                {radarEmails.length > 1 && (
+                  <button
+                    onClick={() => removeRecipient(email, radarEmails, setRadarEmailsLocal)}
+                    className="text-muted-foreground hover:text-destructive transition-colors text-sm"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          {radarEmails.length >= 5 ? (
+            <p className="text-[0.75rem] text-muted-foreground">Maks 5 mottakere</p>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="navn@domene.no"
+                value={newRadarEmail}
+                onChange={(e) => setNewRadarEmail(e.target.value)}
+                onKeyDown={(e) =>
+                  e.key === "Enter" &&
+                  addRecipient(newRadarEmail, radarEmails, setRadarEmailsLocal, () => setNewRadarEmail(""))
+                }
+                className="h-9 text-[0.875rem]"
+              />
+              <button
+                onClick={() =>
+                  addRecipient(newRadarEmail, radarEmails, setRadarEmailsLocal, () => setNewRadarEmail(""))
+                }
+                className="h-9 px-3 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary shrink-0"
+              >
+                Legg til
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Markedsradar
+          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-[0.8125rem] text-foreground">Aktiver ukentlig markedsradar-mail</Label>
+              <p className="text-[0.75rem] text-muted-foreground mt-1">
+                Brukes for manuell utsending og fremtidig automatisering.
+              </p>
+            </div>
+            <Switch checked={radarAktiv} onCheckedChange={(value) => setRadarAktivLocal(value)} />
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-[0.8125rem] text-foreground">Send automatisk etter Finn-import</Label>
+              <p className="text-[0.75rem] text-muted-foreground mt-1">
+                Når ukens Excel importeres, sendes mailen automatisk hvis aktivert.
+              </p>
+            </div>
+            <Switch checked={radarAutoSend} onCheckedChange={(value) => setRadarAutoSendLocal(value)} />
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-[0.8125rem] text-foreground">Inkluder AI-oppsummering</Label>
+              <p className="text-[0.75rem] text-muted-foreground mt-1">
+                Kort oppsummering av trender og hva som er viktigst kommersielt.
+              </p>
+            </div>
+            <Switch checked={radarAi} onCheckedChange={(value) => setRadarAiLocal(value)} />
+          </div>
+          <div className="rounded-lg border border-border bg-secondary/20 px-3 py-2.5">
+            <p className="text-[0.75rem] text-muted-foreground">
+              Sist sendt uke:{" "}
+              <span className="text-foreground font-medium">
+                {settings?.markedsradar_sist_sendt_uke || "Ikke sendt ennå"}
+              </span>
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={handleSaveRadar}
+          disabled={savingRadar}
+          className="bg-primary text-primary-foreground h-9 px-4 rounded-lg text-[0.8125rem] font-medium hover:opacity-90 disabled:opacity-50"
+        >
+          {savingRadar ? "Lagrer..." : "Lagre markedsradar-innstillinger"}
+        </button>
+
+        <div className="border-t border-border pt-4 flex flex-wrap gap-2">
+          <button
+            onClick={handleRadarTestEmail}
+            disabled={sendingRadarTest}
+            className="border border-border text-[0.8125rem] text-muted-foreground hover:text-foreground h-8 px-3 rounded-lg disabled:opacity-50"
+          >
+            {sendingRadarTest ? "Sender..." : "Send test av markedsradar"}
+          </button>
+          <button
+            onClick={handleRadarSendNow}
+            disabled={sendingRadarNow}
+            className="border border-border text-[0.8125rem] text-muted-foreground hover:text-foreground h-8 px-3 rounded-lg disabled:opacity-50"
+          >
+            {sendingRadarNow ? "Sender..." : "Send markedsradar nå"}
           </button>
         </div>
       </div>
@@ -230,9 +424,7 @@ export default function KonsulenterOppdrag() {
       return data || [];
     },
   });
-  const companyStatusMap: Record<string, string> = Object.fromEntries(
-    allCompanies.map((c: any) => [c.id, c.status])
-  );
+  const companyStatusMap: Record<string, string> = Object.fromEntries(allCompanies.map((c: any) => [c.id, c.status]));
 
   const enriched = useMemo(
     () =>
@@ -246,43 +438,45 @@ export default function KonsulenterOppdrag() {
         const daysUntilForny = o.lopende_30_dager
           ? 30
           : o.forny_dato
-          ? differenceInDays(new Date(o.forny_dato), today)
-          : null;
+            ? differenceInDays(new Date(o.forny_dato), today)
+            : null;
         return { ...o, status: computedStatus, margin, marginPerTime, marginPct, daysUntilForny };
       }),
-    [oppdrag]
+    [oppdrag],
   );
 
   const stats = useMemo(() => {
     const aktive = enriched.filter((o: any) => o.status === "Aktiv");
     const oppstart = enriched.filter((o: any) => o.status === "Oppstart");
     const totalDagspris = aktive.reduce((s: number, o: any) => s + (Number(o.utpris) || 0) * TIMER_PER_DAG, 0);
-    const avgMargin =
-      aktive.length > 0
-        ? aktive.reduce((s: number, o: any) => s + o.marginPct, 0) / aktive.length
-        : 0;
+    const avgMargin = aktive.length > 0 ? aktive.reduce((s: number, o: any) => s + o.marginPct, 0) / aktive.length : 0;
     const now = new Date();
-    const y = now.getFullYear(), m = now.getMonth();
+    const y = now.getFullYear(),
+      m = now.getMonth();
     const dim = new Date(y, m + 1, 0).getDate();
     let workdays = 0;
-    for (let d = 1; d <= dim; d++) { const dow = new Date(y, m, d).getDay(); if (dow !== 0 && dow !== 6) workdays++; }
+    for (let d = 1; d <= dim; d++) {
+      const dow = new Date(y, m, d).getDay();
+      if (dow !== 0 && dow !== 6) workdays++;
+    }
     const stacqPerDag = aktive.reduce((s: number, o: any) => s + o.margin, 0);
     const stacqMonthly = stacqPerDag * workdays;
-    const oppstartMarginPerTime = oppstart.length > 0
-      ? oppstart.reduce((s: number, o: any) => s + o.marginPerTime, 0) / oppstart.length
-      : 0;
-    const fornyelser30 = enriched.filter((o: any) =>
-      (o.status === "Aktiv" || o.status === "Oppstart") &&
-      o.daysUntilForny !== null &&
-      o.daysUntilForny >= 0 &&
-      o.daysUntilForny <= 30
+    const oppstartMarginPerTime =
+      oppstart.length > 0 ? oppstart.reduce((s: number, o: any) => s + o.marginPerTime, 0) / oppstart.length : 0;
+    const fornyelser30 = enriched.filter(
+      (o: any) =>
+        (o.status === "Aktiv" || o.status === "Oppstart") &&
+        o.daysUntilForny !== null &&
+        o.daysUntilForny >= 0 &&
+        o.daysUntilForny <= 30,
     ).length;
 
-    const fornyelser60 = enriched.filter((o: any) =>
-      (o.status === "Aktiv" || o.status === "Oppstart") &&
-      o.daysUntilForny !== null &&
-      o.daysUntilForny >= 0 &&
-      o.daysUntilForny <= 60
+    const fornyelser60 = enriched.filter(
+      (o: any) =>
+        (o.status === "Aktiv" || o.status === "Oppstart") &&
+        o.daysUntilForny !== null &&
+        o.daysUntilForny >= 0 &&
+        o.daysUntilForny <= 60,
     ).length;
 
     return {
@@ -337,10 +531,12 @@ export default function KonsulenterOppdrag() {
 
       {/* Tab switcher */}
       <div className="flex items-center gap-2 mb-6">
-        {([
-          { key: "oppdrag", label: "Oppdrag" },
-          { key: "innstillinger", label: "Varslingsinnstillinger" },
-        ] as const).map((tab) => (
+        {(
+          [
+            { key: "oppdrag", label: "Oppdrag" },
+            { key: "innstillinger", label: "Varslingsinnstillinger" },
+          ] as const
+        ).map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
@@ -348,7 +544,7 @@ export default function KonsulenterOppdrag() {
               "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
               activeTab === tab.key
                 ? "bg-foreground text-background border-foreground"
-                : "border-border text-muted-foreground hover:bg-secondary"
+                : "border-border text-muted-foreground hover:bg-secondary",
             )}
           >
             {tab.label}
@@ -397,7 +593,7 @@ export default function KonsulenterOppdrag() {
                   "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
                   filter === c
                     ? "bg-foreground text-background border-foreground"
-                    : "border-border text-muted-foreground hover:bg-secondary"
+                    : "border-border text-muted-foreground hover:bg-secondary",
                 )}
               >
                 {c}
@@ -410,7 +606,10 @@ export default function KonsulenterOppdrag() {
             {/* Header row */}
             <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
               {["Konsulent", "Kunde", "Type", "Utpris", "Margin", "Forny", "Status"].map((h) => (
-                <span key={h} className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                <span
+                  key={h}
+                  className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground"
+                >
                   {h}
                 </span>
               ))}
@@ -426,7 +625,7 @@ export default function KonsulenterOppdrag() {
                     onClick={() => setSelectedRowId(o.id)}
                     className={cn(
                       "grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 items-center px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer",
-                      isInaktiv && "opacity-60"
+                      isInaktiv && "opacity-60",
                     )}
                   >
                     {/* KONSULENT */}
@@ -439,10 +638,29 @@ export default function KonsulenterOppdrag() {
                     <div>
                       {(() => {
                         const cs = o.selskap_id ? companyStatusMap[o.selskap_id] : null;
-                        if (cs === "partner") return <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Partner</span>;
-                        if (cs === "customer" || cs === "kunde") return <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Kunde</span>;
-                        if (cs === "prospect") return <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Potensiell</span>;
-                        return <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-500 border border-gray-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">—</span>;
+                        if (cs === "partner")
+                          return (
+                            <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
+                              Partner
+                            </span>
+                          );
+                        if (cs === "customer" || cs === "kunde")
+                          return (
+                            <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
+                              Kunde
+                            </span>
+                          );
+                        if (cs === "prospect")
+                          return (
+                            <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
+                              Potensiell
+                            </span>
+                          );
+                        return (
+                          <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-500 border border-gray-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
+                            —
+                          </span>
+                        );
                       })()}
                     </div>
                     {/* UTPRIS */}
@@ -457,8 +675,8 @@ export default function KonsulenterOppdrag() {
                           o.marginPct >= 28
                             ? "text-emerald-600"
                             : o.marginPct >= 20
-                            ? "text-amber-600"
-                            : "text-destructive"
+                              ? "text-amber-600"
+                              : "text-destructive",
                         )}
                       >
                         kr {formatNOK(o.marginPerTime)}/t
@@ -474,13 +692,9 @@ export default function KonsulenterOppdrag() {
                       ) : o.daysUntilForny <= 30 ? (
                         <span className="text-amber-600 font-medium">Om {o.daysUntilForny}d</span>
                       ) : o.daysUntilForny <= 90 ? (
-                        <span className="text-amber-600">
-                          {format(new Date(o.forny_dato), "dd.MM.yy")}
-                        </span>
+                        <span className="text-amber-600">{format(new Date(o.forny_dato), "dd.MM.yy")}</span>
                       ) : (
-                        <span className="text-muted-foreground">
-                          {format(new Date(o.forny_dato), "dd.MM.yy")}
-                        </span>
+                        <span className="text-muted-foreground">{format(new Date(o.forny_dato), "dd.MM.yy")}</span>
                       )}
                     </div>
                     {/* STATUS */}
@@ -490,7 +704,7 @@ export default function KonsulenterOppdrag() {
                           "inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold",
                           o.status === "Aktiv" && "bg-emerald-100 text-emerald-700",
                           o.status === "Oppstart" && "bg-amber-100 text-amber-700",
-                          o.status === "Inaktiv" && "bg-muted text-muted-foreground"
+                          o.status === "Inaktiv" && "bg-muted text-muted-foreground",
                         )}
                       >
                         {o.status}
@@ -500,11 +714,14 @@ export default function KonsulenterOppdrag() {
                 );
               })}
             </div>
-            {filtered.length === 0 && (
-              <p className="text-muted-foreground text-center py-12">Ingen oppdrag å vise</p>
-            )}
+            {filtered.length === 0 && <p className="text-muted-foreground text-center py-12">Ingen oppdrag å vise</p>}
           </div>
-          <Sheet open={selectedRowId !== null} onOpenChange={(o) => { if (!o) setSelectedRowId(null); }}>
+          <Sheet
+            open={selectedRowId !== null}
+            onOpenChange={(o) => {
+              if (!o) setSelectedRowId(null);
+            }}
+          >
             <SheetContent side="right" className="w-[840px] sm:w-[920px] p-0" hideCloseButton>
               <OppdragEditSheet
                 row={enriched.find((o: any) => o.id === selectedRowId) || null}
