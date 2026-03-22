@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from "react";
 import {
+  ADDITIONAL_SECTION_TITLE_OPTIONS,
   CvRendererPreview,
   openCvPrintDialog,
   formatProjectPeriod,
   PROJECT_MONTH_OPTIONS,
   type CVDocument,
+  type AdditionalSection,
   type ProjectEntry,
   type CompetenceGroup,
   type TimelineEntry,
@@ -113,6 +115,14 @@ function getSelectedContactPresetId(contact: CVDocument["hero"]["contact"]) {
   return entry?.[0] ?? CLEAR_SELECT;
 }
 
+function createAdditionalSection(format: AdditionalSection["format"]): AdditionalSection {
+  return {
+    title: ADDITIONAL_SECTION_TITLE_OPTIONS[0],
+    format,
+    items: [{ period: "", primary: "" }],
+  };
+}
+
 function PortraitFocalPicker({
   imageUrl,
   position,
@@ -164,12 +174,7 @@ function PortraitFocalPicker({
           e.preventDefault();
         }}
       >
-        <img
-          src={imageUrl}
-          alt=""
-          className="w-full h-full object-cover pointer-events-none"
-          draggable={false}
-        />
+        <img src={imageUrl} alt="" className="w-full h-full object-cover pointer-events-none" draggable={false} />
         {/* Crosshair */}
         <div
           className="absolute w-5 h-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-md pointer-events-none"
@@ -211,6 +216,7 @@ export function CvEditorPanel({
   const [pendingDeletes, setPendingDeletes] = useState<Record<string, ReturnType<typeof setTimeout>>>({});
   const [editorWidth, setEditorWidth] = useState(480);
   const [isResizingEditor, setIsResizingEditor] = useState(false);
+  const [expandedAdditionalSection, setExpandedAdditionalSection] = useState<string>("");
   const resizeBoundsRef = useRef({ right: 0, width: 0 });
 
   const EDITOR_MIN_WIDTH = 440;
@@ -369,6 +375,16 @@ export function CvEditorPanel({
       const oldIndex = prev.competenceGroups.findIndex((_, i) => `comp-${i}` === active.id);
       const newIndex = prev.competenceGroups.findIndex((_, i) => `comp-${i}` === over.id);
       return { ...prev, competenceGroups: arrayMove(prev.competenceGroups, oldIndex, newIndex) };
+    });
+  };
+
+  const handleAdditionalSectionDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    update((prev) => {
+      const oldIndex = prev.additionalSections.findIndex((_, i) => `additional-${i}` === active.id);
+      const newIndex = prev.additionalSections.findIndex((_, i) => `additional-${i}` === over.id);
+      return { ...prev, additionalSections: arrayMove(prev.additionalSections, oldIndex, newIndex) };
     });
   };
 
@@ -551,7 +567,12 @@ export function CvEditorPanel({
                           className="text-[0.8125rem]"
                         />
                         <button
-                          onClick={() => scheduleDelete(`intro-${i}`, "Intro-avsnitt", (p) => ({ ...p, introParagraphs: p.introParagraphs.filter((_, j) => j !== i) }))}
+                          onClick={() =>
+                            scheduleDelete(`intro-${i}`, "Intro-avsnitt", (p) => ({
+                              ...p,
+                              introParagraphs: p.introParagraphs.filter((_, j) => j !== i),
+                            }))
+                          }
                           className="text-muted-foreground hover:text-destructive shrink-0 p-1"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -590,7 +611,13 @@ export function CvEditorPanel({
                                 className="text-[0.8125rem] font-medium"
                               />
                               <button
-                                onClick={() => scheduleDelete(`comp-${i}`, `Kompetansegruppe "${doc.competenceGroups[i]?.label || i + 1}"`, (p) => ({ ...p, competenceGroups: p.competenceGroups.filter((_, j) => j !== i) }))}
+                                onClick={() =>
+                                  scheduleDelete(
+                                    `comp-${i}`,
+                                    `Kompetansegruppe "${doc.competenceGroups[i]?.label || i + 1}"`,
+                                    (p) => ({ ...p, competenceGroups: p.competenceGroups.filter((_, j) => j !== i) }),
+                                  )
+                                }
                                 className="text-muted-foreground hover:text-destructive shrink-0 p-1"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -863,7 +890,16 @@ export function CvEditorPanel({
                                           className="text-[0.8125rem]"
                                         />
                                         <button
-                                          onClick={() => scheduleDelete(`proj-${i}-para-${pi}`, "Avsnitt", (p) => { const arr = [...p.projects]; arr[i] = { ...arr[i], paragraphs: arr[i].paragraphs.filter((_, j) => j !== pi) }; return { ...p, projects: arr }; })}
+                                          onClick={() =>
+                                            scheduleDelete(`proj-${i}-para-${pi}`, "Avsnitt", (p) => {
+                                              const arr = [...p.projects];
+                                              arr[i] = {
+                                                ...arr[i],
+                                                paragraphs: arr[i].paragraphs.filter((_, j) => j !== pi),
+                                              };
+                                              return { ...p, projects: arr };
+                                            })
+                                          }
                                           className="text-muted-foreground hover:text-destructive shrink-0 p-1"
                                         >
                                           <Trash2 className="h-3.5 w-3.5" />
@@ -883,7 +919,13 @@ export function CvEditorPanel({
                                     />
                                   </div>
                                   <button
-                                    onClick={() => scheduleDelete(`project-${i}`, `Prosjekt "${doc.projects[i]?.company || "Uten navn"}"`, (p) => ({ ...p, projects: p.projects.filter((_, j) => j !== i) }))}
+                                    onClick={() =>
+                                      scheduleDelete(
+                                        `project-${i}`,
+                                        `Prosjekt "${doc.projects[i]?.company || "Uten navn"}"`,
+                                        (p) => ({ ...p, projects: p.projects.filter((_, j) => j !== i) }),
+                                      )
+                                    }
                                     className="text-destructive text-[0.75rem] font-medium hover:underline flex items-center gap-0.5 mt-2"
                                   >
                                     <Trash2 className="h-3 w-3" /> Slett prosjekt
@@ -926,6 +968,241 @@ export function CvEditorPanel({
                 </AccordionContent>
               </AccordionItem>
 
+              {/* EKSTRA HOVEDSEKSJONER */}
+              <AccordionItem value="additional-sections">
+                <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
+                  Ekstra hovedseksjoner
+                </AccordionTrigger>
+                <AccordionContent className="space-y-2 pt-2">
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleAdditionalSectionDragEnd}
+                  >
+                    <SortableContext
+                      items={doc.additionalSections.map((_, i) => `additional-${i}`)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {doc.additionalSections.map((section, i) => (
+                        <SortableItem key={`additional-${i}`} id={`additional-${i}`}>
+                          <Accordion
+                            type="single"
+                            collapsible
+                            value={
+                              expandedAdditionalSection === `additional-section-${i}` ? expandedAdditionalSection : ""
+                            }
+                            onValueChange={(value) => setExpandedAdditionalSection(value)}
+                          >
+                            <AccordionItem
+                              value={`additional-section-${i}`}
+                              className="border border-border rounded-lg bg-card"
+                            >
+                              <AccordionTrigger className="px-3 py-2 text-[0.8125rem] font-medium">
+                                {section.title}
+                              </AccordionTrigger>
+                              <AccordionContent className="px-3 pb-3 space-y-3">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <label className={LABEL}>Hovedseksjon</label>
+                                    <Select
+                                      value={section.title}
+                                      onValueChange={(value) =>
+                                        update((p) => {
+                                          const arr = [...p.additionalSections];
+                                          arr[i] = {
+                                            ...arr[i],
+                                            title: value as AdditionalSection["title"],
+                                          };
+                                          return { ...p, additionalSections: arr };
+                                        })
+                                      }
+                                    >
+                                      <SelectTrigger className="mt-1 h-10 text-[0.8125rem]">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {ADDITIONAL_SECTION_TITLE_OPTIONS.map((option) => (
+                                          <SelectItem key={option} value={option}>
+                                            {option}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div>
+                                    <label className={LABEL}>Format</label>
+                                    <Select
+                                      value={section.format}
+                                      onValueChange={(value) =>
+                                        update((p) => {
+                                          const arr = [...p.additionalSections];
+                                          arr[i] = {
+                                            ...arr[i],
+                                            format: value as AdditionalSection["format"],
+                                          };
+                                          return { ...p, additionalSections: arr };
+                                        })
+                                      }
+                                    >
+                                      <SelectTrigger className="mt-1 h-10 text-[0.8125rem]">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="timeline">Dato</SelectItem>
+                                        <SelectItem value="bullet">Punktliste</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <label className={LABEL}>Rader</label>
+                                    <button
+                                      onClick={() =>
+                                        update((p) => {
+                                          const arr = [...p.additionalSections];
+                                          arr[i] = {
+                                            ...arr[i],
+                                            items: [...arr[i].items, { period: "", primary: "" }],
+                                          };
+                                          return { ...p, additionalSections: arr };
+                                        })
+                                      }
+                                      className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
+                                    >
+                                      <Plus className="h-3 w-3" /> Legg til
+                                    </button>
+                                  </div>
+
+                                  {section.items.map((item, itemIndex) => (
+                                    <div key={`${i}-${itemIndex}`} className="mb-2 rounded-lg border border-border p-2">
+                                      {section.format === "timeline" ? (
+                                        <div className="flex items-start gap-2">
+                                          <Input
+                                            value={item.period}
+                                            placeholder="Periode"
+                                            onChange={(e) =>
+                                              update((p) => {
+                                                const arr = [...p.additionalSections];
+                                                const items = [...arr[i].items];
+                                                items[itemIndex] = { ...items[itemIndex], period: e.target.value };
+                                                arr[i] = { ...arr[i], items };
+                                                return { ...p, additionalSections: arr };
+                                              })
+                                            }
+                                            className="text-[0.8125rem] w-36"
+                                          />
+                                          <Input
+                                            value={item.primary}
+                                            placeholder="Tekst"
+                                            onChange={(e) =>
+                                              update((p) => {
+                                                const arr = [...p.additionalSections];
+                                                const items = [...arr[i].items];
+                                                items[itemIndex] = { ...items[itemIndex], primary: e.target.value };
+                                                arr[i] = { ...arr[i], items };
+                                                return { ...p, additionalSections: arr };
+                                              })
+                                            }
+                                            className="text-[0.8125rem] flex-1"
+                                          />
+                                          <button
+                                            onClick={() =>
+                                              scheduleDelete(`additional-${i}-item-${itemIndex}`, "Rad", (p) => {
+                                                const arr = [...p.additionalSections];
+                                                arr[i] = {
+                                                  ...arr[i],
+                                                  items: arr[i].items.filter((_, j) => j !== itemIndex),
+                                                };
+                                                return { ...p, additionalSections: arr };
+                                              })
+                                            }
+                                            className="text-muted-foreground hover:text-destructive shrink-0 p-1"
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-start gap-2">
+                                          <Input
+                                            value={item.primary}
+                                            placeholder="Tekst"
+                                            onChange={(e) =>
+                                              update((p) => {
+                                                const arr = [...p.additionalSections];
+                                                const items = [...arr[i].items];
+                                                items[itemIndex] = { ...items[itemIndex], primary: e.target.value };
+                                                arr[i] = { ...arr[i], items };
+                                                return { ...p, additionalSections: arr };
+                                              })
+                                            }
+                                            className="text-[0.8125rem] flex-1"
+                                          />
+                                          <button
+                                            onClick={() =>
+                                              scheduleDelete(`additional-${i}-item-${itemIndex}`, "Punkt", (p) => {
+                                                const arr = [...p.additionalSections];
+                                                arr[i] = {
+                                                  ...arr[i],
+                                                  items: arr[i].items.filter((_, j) => j !== itemIndex),
+                                                };
+                                                return { ...p, additionalSections: arr };
+                                              })
+                                            }
+                                            className="text-muted-foreground hover:text-destructive shrink-0 p-1"
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+
+                                <button
+                                  onClick={() =>
+                                    scheduleDelete(
+                                      `additional-section-${i}`,
+                                      `Hovedseksjon "${doc.additionalSections[i]?.title || i + 1}"`,
+                                      (p) => ({
+                                        ...p,
+                                        additionalSections: p.additionalSections.filter((_, j) => j !== i),
+                                      }),
+                                    )
+                                  }
+                                  className="text-destructive text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
+                                >
+                                  <Trash2 className="h-3 w-3" /> Slett hovedseksjon
+                                </button>
+                              </AccordionContent>
+                            </AccordionItem>
+                          </Accordion>
+                        </SortableItem>
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={() =>
+                        update((p) => {
+                          const nextSections = [...p.additionalSections, createAdditionalSection("timeline")];
+                          setExpandedAdditionalSection(`additional-section-${nextSections.length - 1}`);
+                          return {
+                            ...p,
+                            additionalSections: nextSections,
+                          };
+                        })
+                      }
+                      className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
+                    >
+                      <Plus className="h-3 w-3" /> Ny hovedseksjon
+                    </button>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
               {/* UTDANNELSE */}
               <AccordionItem value="utdannelse">
                 <AccordionTrigger className="text-[0.8125rem] font-bold uppercase tracking-wide">
@@ -960,7 +1237,12 @@ export function CvEditorPanel({
                           className="text-[0.8125rem] flex-1"
                         />
                         <button
-                          onClick={() => scheduleDelete(`edu-${i}`, `Utdannelse "${doc.education[i]?.primary || i + 1}"`, (p) => ({ ...p, education: p.education.filter((_, j) => j !== i) }))}
+                          onClick={() =>
+                            scheduleDelete(`edu-${i}`, `Utdannelse "${doc.education[i]?.primary || i + 1}"`, (p) => ({
+                              ...p,
+                              education: p.education.filter((_, j) => j !== i),
+                            }))
+                          }
                           className="text-muted-foreground hover:text-destructive shrink-0 p-1"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -1024,7 +1306,13 @@ export function CvEditorPanel({
                         className="text-[0.8125rem] flex-1"
                       />
                       <button
-                        onClick={() => scheduleDelete(`work-${i}`, `Arbeidserfaring "${doc.workExperience[i]?.primary || i + 1}"`, (p) => ({ ...p, workExperience: p.workExperience.filter((_, j) => j !== i) }))}
+                        onClick={() =>
+                          scheduleDelete(
+                            `work-${i}`,
+                            `Arbeidserfaring "${doc.workExperience[i]?.primary || i + 1}"`,
+                            (p) => ({ ...p, workExperience: p.workExperience.filter((_, j) => j !== i) }),
+                          )
+                        }
                         className="text-muted-foreground hover:text-destructive shrink-0 p-1"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -1064,7 +1352,13 @@ export function CvEditorPanel({
                           className="text-[0.8125rem] font-medium"
                         />
                         <button
-                          onClick={() => scheduleDelete(`sidebar-${si}`, `Sidebar-seksjon "${doc.sidebarSections[si]?.heading || si + 1}"`, (p) => ({ ...p, sidebarSections: p.sidebarSections.filter((_, j) => j !== si) }))}
+                          onClick={() =>
+                            scheduleDelete(
+                              `sidebar-${si}`,
+                              `Sidebar-seksjon "${doc.sidebarSections[si]?.heading || si + 1}"`,
+                              (p) => ({ ...p, sidebarSections: p.sidebarSections.filter((_, j) => j !== si) }),
+                            )
+                          }
                           className="text-muted-foreground hover:text-destructive shrink-0 p-1"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -1086,7 +1380,13 @@ export function CvEditorPanel({
                             className="text-[0.8125rem]"
                           />
                           <button
-                            onClick={() => scheduleDelete(`sidebar-${si}-item-${ii}`, "Sidebar-punkt", (p) => { const arr = [...p.sidebarSections]; arr[si] = { ...arr[si], items: arr[si].items.filter((_, j) => j !== ii) }; return { ...p, sidebarSections: arr }; })}
+                            onClick={() =>
+                              scheduleDelete(`sidebar-${si}-item-${ii}`, "Sidebar-punkt", (p) => {
+                                const arr = [...p.sidebarSections];
+                                arr[si] = { ...arr[si], items: arr[si].items.filter((_, j) => j !== ii) };
+                                return { ...p, sidebarSections: arr };
+                              })
+                            }
                             className="text-muted-foreground hover:text-destructive shrink-0 p-1"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
