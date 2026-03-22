@@ -304,16 +304,28 @@ const DailyBrief = () => {
     setTimeout(() => {
       setActiveForm(null);
       setLocalIkkeAktuell({});
+      const newTreated = contactIdToMark
+        ? new Set([...treated, contactIdToMark])
+        : treated;
       if (contactIdToMark) {
-        setTreated(prev => new Set([...prev, contactIdToMark]));
+        setTreated(newTreated);
       }
       if (dir === "left") {
-        const startIdx = currentIndexInScored;
-        const next = scoredLeads.slice(startIdx + 1).find(l => !treated.has(l.contact.id) && l.contact.id !== contactIdToMark);
-        setCurrentContactId(next?.contact.id ?? null);
+        // Finn neste kontakt i queue som ikke er treated
+        const nextLead = queue.find(l =>
+          !newTreated.has(l.contact.id) &&
+          l.contact.id !== contactIdToMark &&
+          l.contact.id !== current?.contact.id
+        );
+        setCurrentContactId(nextLead?.contact.id ?? null);
       } else {
-        const prevIdx = Math.max(currentIndexInQueue - 1, 0);
-        setCurrentContactId(queue[prevIdx]?.contact.id ?? null);
+        // Tilbake: finn forrige i queue basert på nåværende posisjon
+        const currentQueueIdx = queue.findIndex(l => l.contact.id === current?.contact.id);
+        const prevIdx = Math.max(currentQueueIdx - 1, 0);
+        const prevLead = queue[prevIdx];
+        if (prevLead && prevLead.contact.id !== current?.contact.id) {
+          setCurrentContactId(prevLead.contact.id);
+        }
       }
       if (card) {
         const inX = dir === "left" ? 80 : -80;
@@ -330,7 +342,7 @@ const DailyBrief = () => {
         setTimeout(() => setIsAnimating(false), 420);
       }));
     }, 240);
-  }, [isAnimating, scoredLeads, queue, treated, current, currentIndexInScored, currentIndexInQueue]);
+  }, [isAnimating, queue, treated, current]);
 
   const saveReview = useCallback(async (contactId: string, actionTaken: string, lead: ScoredLead) => {
     await supabase.from("agent_contact_reviews").insert({
