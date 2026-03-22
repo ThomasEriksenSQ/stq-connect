@@ -238,12 +238,12 @@ const DailyBrief = () => {
     }).sort((a, b) => {
       const ta = a.tier, tb = b.tier;
       if (ta !== tb) return ta - tb;
-      const ra = reviewMap[a.contact.id]?.reviewed_at ?? "1970-01-01T00:00:00Z";
-      const rb = reviewMap[b.contact.id]?.reviewed_at ?? "1970-01-01T00:00:00Z";
+      const ra = a.contact.next_review_at ?? "1970-01-01T00:00:00Z";
+      const rb = b.contact.next_review_at ?? "1970-01-01T00:00:00Z";
       if (ra !== rb) return ra.localeCompare(rb);
       return b.score - a.score;
     }) as ScoredLead[];
-  }, [rawContacts, allActivities, allTasks, techProfiles, foresporsler, reviewMap]);
+  }, [rawContacts, allActivities, allTasks, techProfiles, foresporsler]);
 
   const queue = useMemo(() => {
     return scoredLeads.filter(l => {
