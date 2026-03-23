@@ -681,11 +681,17 @@ function ConsultantSheet({
             <TagInput value={kompetanseNettside} onChange={setKompetanseNettside} placeholder="Legg til kompetanse..." />
           </div>
           <div>
-            <label className={LABEL}>Kompetanse (profilside)</label>
+            <div className="flex items-center gap-2 mb-0">
+              <label className={LABEL}>Kompetanse (profilside)</label>
+              {competences.length > 0 && <button onClick={() => setCompetences([])} className="text-[0.6875rem] text-muted-foreground hover:text-destructive">Fjern alle</button>}
+            </div>
             <TagInput value={competences} onChange={setCompetences} placeholder="Legg til kompetanse..." />
           </div>
           <div>
-            <label className={LABEL}>Industrier</label>
+            <div className="flex items-center gap-2 mb-0">
+              <label className={LABEL}>Industrier</label>
+              {industries.length > 0 && <button onClick={() => setIndustries([])} className="text-[0.6875rem] text-muted-foreground hover:text-destructive">Fjern alle</button>}
+            </div>
             <TagInput value={industries} onChange={setIndustries} placeholder="Legg til industri..." />
           </div>
           <div className="flex items-center gap-2">
