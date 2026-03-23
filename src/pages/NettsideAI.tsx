@@ -97,12 +97,12 @@ function DeleteButton({ onConfirm }: { onConfirm: () => void }) {
   );
 }
 
-function TagInput({ value, onChange, placeholder }: { value: string[]; onChange: (v: string[]) => void; placeholder?: string }) {
+function TagInput({ value, onChange, placeholder, onClearAll }: { value: string[]; onChange: (v: string[]) => void; placeholder?: string; onClearAll?: () => void }) {
   const [input, setInput] = useState("");
   const add = () => {
-    const tag = input.trim();
-    if (tag && !value.includes(tag)) {
-      onChange([...value, tag]);
+    const tags = input.split(",").map((s) => s.trim()).filter((s) => s && !value.includes(s));
+    if (tags.length > 0) {
+      onChange([...value, ...tags]);
     }
     setInput("");
   };
