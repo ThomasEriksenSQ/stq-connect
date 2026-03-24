@@ -1275,6 +1275,65 @@ function TilgjengelighetLeadsTab() {
   );
 }
 
+/* ─── Innstillinger Tab ─── */
+
+function InnstillingerTab() {
+  const queryClient = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ["site-settings-chat"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_settings")
+        .select("value, updated_at")
+        .eq("key", "chat_enabled")
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const chatEnabled = data?.value === "true";
+
+  const toggleMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const { error } = await supabase
+        .from("site_settings")
+        .update({ value: enabled ? "true" : "false", updated_at: new Date().toISOString() })
+        .eq("key", "chat_enabled");
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["site-settings-chat"] });
+      toast.success("Innstilling lagret");
+    },
+    onError: () => toast.error("Kunne ikke lagre innstilling"),
+  });
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-5 shadow-sm max-w-md">
+      <span className={LABEL}>Nettside-widget</span>
+      <div className="flex items-center justify-between gap-4 mt-2">
+        <div className="flex items-center gap-3">
+          <Switch
+            checked={chatEnabled}
+            disabled={isLoading || toggleMutation.isPending}
+            onCheckedChange={(v) => toggleMutation.mutate(v)}
+          />
+          <span className="text-[0.8125rem] text-foreground">Chat-widget på nettsiden</span>
+        </div>
+        {chatEnabled ? (
+          <span className="rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold bg-green-100 text-green-800 border border-green-200">Aktiv</span>
+        ) : (
+          <span className="rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold bg-gray-100 text-gray-600 border border-gray-200">Deaktivert</span>
+        )}
+      </div>
+      <p className="text-[0.75rem] text-muted-foreground mt-3">
+        {data?.updated_at ? `Sist oppdatert: ${format(new Date(data.updated_at), "d. MMM yyyy HH:mm", { locale: nb })}` : ""}
+      </p>
+    </div>
+  );
+}
+
 /* ─── Main Page ─── */
 
 const NettsideAI = () => {
@@ -1293,6 +1352,7 @@ const NettsideAI = () => {
           <TabsTrigger value="soknader">Søknader</TabsTrigger>
           <TabsTrigger value="leads">Tilgjengelighet Leads</TabsTrigger>
           <TabsTrigger value="knowledge">AI-kunnskap</TabsTrigger>
+          <TabsTrigger value="innstillinger">Innstillinger</TabsTrigger>
         </TabsList>
         <TabsContent value="consultants" className="mt-5">
           <ConsultantsTab />
@@ -1305,6 +1365,9 @@ const NettsideAI = () => {
         </TabsContent>
         <TabsContent value="knowledge" className="mt-5">
           <KnowledgeTab />
+        </TabsContent>
+        <TabsContent value="innstillinger" className="mt-5">
+          <InnstillingerTab />
         </TabsContent>
       </Tabs>
     </div>
