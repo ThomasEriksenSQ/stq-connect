@@ -8,6 +8,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import {
   DropdownMenu,
@@ -224,6 +234,7 @@ export function CompanyCardContent({
   const [analyzeText, setAnalyzeText] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [techTagInput, setTechTagInput] = useState("");
+  const [deleteCompanyDialogOpen, setDeleteCompanyDialogOpen] = useState(false);
 
   const { data: company, isLoading } = useQuery({
     queryKey: ["company", companyId],
@@ -441,6 +452,19 @@ export function CompanyCardContent({
       queryClient.invalidateQueries({ queryKey: ["company-contact-tasks", companyId] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
+  });
+
+  const deleteCompanyMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("companies").delete().eq("id", companyId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
+      toast.success("Selskap slettet");
+      navigate("/selskaper");
+    },
+    onError: () => toast.error("Kunne ikke slette selskap"),
   });
 
   const changeSignalMutation = useMutation({
@@ -865,22 +889,49 @@ export function CompanyCardContent({
                       className="h-10 rounded-lg"
                     />
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
                     <Button
                       type="button"
-                      variant="outline"
-                      className="flex-1 h-10 rounded-lg"
-                      onClick={() => setEditCompanyOpen(false)}
+                      variant="ghost"
+                      className="h-10 px-3 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => setDeleteCompanyDialogOpen(true)}
                     >
-                      Avbryt
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Slett selskap
                     </Button>
-                    <Button type="submit" className="flex-1 h-10 rounded-lg">
-                      Lagre
-                    </Button>
+                    <div className="flex gap-2 flex-1 justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1 h-10 rounded-lg"
+                        onClick={() => setEditCompanyOpen(false)}
+                      >
+                        Avbryt
+                      </Button>
+                      <Button type="submit" className="flex-1 h-10 rounded-lg">
+                        Lagre
+                      </Button>
+                    </div>
                   </div>
                 </form>
               </DialogContent>
             </Dialog>
+            <AlertDialog open={deleteCompanyDialogOpen} onOpenChange={setDeleteCompanyDialogOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Slett {company?.name}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Er du sikker på at du vil slette dette selskapet? Alle tilknyttede data vil forbli intakt, men selskapet fjernes permanent. Dette kan ikke angres.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => deleteCompanyMutation.mutate()}>
+                    Slett selskap
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             {editable && (
               <button
                 onClick={() => {
