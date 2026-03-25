@@ -887,6 +887,30 @@ export default function CVMaker() {
   const projectMeasureRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
+    const prevTitle = document.title;
+    document.title = "STACQ - CV-Editor";
+    const setMeta = (name: string, content: string) => {
+      let el = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute("name", name);
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", content);
+      return el;
+    };
+    const desc = setMeta("description", "STACQ - CV-Editor");
+    const author = setMeta("author", "STACQ");
+    const robots = setMeta("robots", "noindex, nofollow");
+    return () => {
+      document.title = prevTitle;
+      desc.setAttribute("content", "");
+      author.setAttribute("content", "");
+      robots.setAttribute("content", "");
+    };
+  }, []);
+
+  useEffect(() => {
     const style = document.createElement("style");
     style.id = "cv-print-styles";
     style.textContent = `
