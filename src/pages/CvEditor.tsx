@@ -175,6 +175,29 @@ export default function CvEditor() {
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(newSession));
       setSession(newSession);
       setCvData(dbRowToCvDoc(cvRow));
+
+      const ansattNavn = ansattRow?.navn || "Ukjent ansatt";
+      const now = new Date();
+      const timeStr = now.toLocaleString("nb-NO", {
+        timeZone: "Europe/Oslo",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      fetch(`${SUPABASE_URL}/functions/v1/slack-crm`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          recipient: "#crm",
+          message: `${ansattNavn} logget inn på CV-editoren — ${timeStr}`,
+        }),
+      }).catch(() => {});
     } catch {
       showError("Noe gikk galt");
     } finally {
