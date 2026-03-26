@@ -6,6 +6,51 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const TECH_SECTION_KEYWORDS = [
+  "kompet",
+  "teknolog",
+  "sprak",
+  "språk",
+  "rammeverk",
+  "verktoy",
+  "verktøy",
+  "stack",
+  "tools",
+];
+
+function normalizeTag(value: string) {
+  const normalized = value
+    .replace(/^[\s,;|•\-]+/, "")
+    .replace(/[\s,;|•\-]+$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return normalized || null;
+}
+
+function splitTechText(value: string) {
+  return value
+    .split(/[\n,;|•]+/g)
+    .map((part) => normalizeTag(part))
+    .filter((part): part is string => Boolean(part));
+}
+
+function addTagsFromValue(tags: Set<string>, value: unknown) {
+  if (typeof value === "string") {
+    for (const part of splitTechText(value)) tags.add(part);
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    for (const entry of value) addTagsFromValue(tags, entry);
+  }
+}
+
+function isTechSidebarSection(section: any) {
+  const heading = typeof section?.heading === "string" ? section.heading.toLowerCase() : "";
+  return TECH_SECTION_KEYWORDS.some((keyword) => heading.includes(keyword));
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -20,10 +65,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // Fetch the CV document for this employee
     const { data: cvDoc, error: cvError } = await supabase
@@ -36,48 +78,33 @@ Deno.serve(async (req) => {
 
     if (cvError) throw cvError;
     if (!cvDoc) {
-      return new Response(
-        JSON.stringify({ error: "Ingen CV funnet for denne ansatte" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Ingen CV funnet for denne ansatte" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Extract unique competencies from CV data
+    // Extract unique competencies from the structured CV fields
     const tags = new Set<string>();
 
-    // From competence_groups: array of { title, items: string[] }
+    // From competence_groups: array of { label, content }
     const groups = (cvDoc.competence_groups as any[]) || [];
     for (const g of groups) {
-      if (Array.isArray(g.items)) {
-        for (const item of g.items) {
-          if (typeof item === "string" && item.trim()) tags.add(item.trim());
-        }
-      }
+      addTagsFromValue(tags, g?.content);
     }
 
-    // From projects: extract technologies mentioned
+    // From projects: technologies are stored as free text in the editor
     const projects = (cvDoc.projects as any[]) || [];
     for (const p of projects) {
-      if (Array.isArray(p.technologies)) {
-        for (const t of p.technologies) {
-          if (typeof t === "string" && t.trim()) tags.add(t.trim());
-        }
-      }
-      if (Array.isArray(p.tech)) {
-        for (const t of p.tech) {
-          if (typeof t === "string" && t.trim()) tags.add(t.trim());
-        }
-      }
+      addTagsFromValue(tags, p?.technologies);
+      addTagsFromValue(tags, p?.tech);
     }
 
-    // From sidebar_sections: look for technology/competence sections
+    // From sidebar_sections: only include sections that look technology-related
     const sidebar = (cvDoc.sidebar_sections as any[]) || [];
     for (const s of sidebar) {
-      if (Array.isArray(s.items)) {
-        for (const item of s.items) {
-          if (typeof item === "string" && item.trim()) tags.add(item.trim());
-        }
-      }
+      if (!isTechSidebarSection(s)) continue;
+      addTagsFromValue(tags, s?.items);
     }
 
     const kompetanse = Array.from(tags);
@@ -94,15 +121,14 @@ Deno.serve(async (req) => {
 
     if (updateError) throw updateError;
 
-    return new Response(
-      JSON.stringify({ count: kompetanse.length, kompetanse }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ count: kompetanse.length, kompetanse }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (err) {
     console.error("sync-cv-kompetanse error:", err);
-    return new Response(
-      JSON.stringify({ error: err.message || "Ukjent feil" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: err.message || "Ukjent feil" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
