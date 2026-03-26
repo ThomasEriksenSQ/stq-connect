@@ -43,6 +43,24 @@ const EMPTY_CV: CVDocument = {
   workExperience: [],
 };
 
+function formatUpdatedAt(value?: string | null) {
+  if (!value) return "Ikke registrert ennå";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Ikke registrert ennå";
+
+  return format(date, "d. MMM yyyy HH:mm", { locale: nb });
+}
+
+async function syncCompetenceFromCv(ansattId: number) {
+  const { data, error } = await anonClient.functions.invoke("sync-cv-kompetanse", {
+    body: { ansatt_id: ansattId },
+  });
+
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+}
+
 function dbRowToCvDoc(row: any): CVDocument {
   return {
     hero: {
@@ -97,6 +115,7 @@ export default function CvEditor() {
   const [shake, setShake] = useState(false);
   const [cvData, setCvData] = useState<CVDocument | null>(null);
   const [imageUrl, setImageUrl] = useState<string | undefined>();
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [versions, setVersions] = useState<any[]>([]);
 
@@ -115,7 +134,10 @@ export default function CvEditor() {
     if (!session) return;
     (async () => {
       const { data } = await anonClient.from("cv_documents").select("*").eq("id", session.cv_id).single();
-      if (data) setCvData(dbRowToCvDoc(data));
+      if (data) {
+        setCvData(dbRowToCvDoc(data));
+        setLastUpdatedAt(data.updated_at || null);
+      }
     })();
   }, [session]);
 
@@ -175,6 +197,7 @@ export default function CvEditor() {
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(newSession));
       setSession(newSession);
       setCvData(dbRowToCvDoc(cvRow));
+      setLastUpdatedAt(cvRow.updated_at || null);
 
       const ansattNavn = ansattRow?.navn || "Ukjent ansatt";
       const now = new Date();
@@ -190,8 +213,8 @@ export default function CvEditor() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "apikey": SUPABASE_ANON_KEY,
-          "authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          apikey: SUPABASE_ANON_KEY,
+          authorization: `Bearer ${SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
           recipient: "#crm",
@@ -254,6 +277,15 @@ export default function CvEditor() {
     setVersionsOpen(true);
   }, [session]);
 
+  const runCompetenceSync = useCallback(async (ansattId: number) => {
+    try {
+      await syncCompetenceFromCv(ansattId);
+    } catch (error) {
+      console.error("Failed to sync competence from CV:", error);
+      toast.error("CV ble lagret, men kompetanse kunne ikke synkroniseres til CRM.");
+    }
+  }, []);
+
   const restoreVersion = useCallback((snapshot: any) => {
     setCvData(dbRowToCvDoc(snapshot));
     setVersionsOpen(false);
@@ -262,14 +294,20 @@ export default function CvEditor() {
 
   const handleSave = async (data: CVDocument, savedByName: string) => {
     if (!session) return;
-    await anonClient.from("cv_documents").update(cvDocToDbRow(data)).eq("id", session.cv_id);
+    const savedAt = new Date().toISOString();
+    const snapshot = { ...cvDocToDbRow(data), updated_at: savedAt };
+
+    await anonClient.from("cv_documents").update(snapshot).eq("id", session.cv_id);
     // Create version snapshot
     await anonClient.from("cv_versions").insert({
       cv_id: session.cv_id,
-      snapshot: cvDocToDbRow(data) as any,
+      snapshot: snapshot as any,
       saved_by: savedByName,
       source: "ansatt",
+      created_at: savedAt,
     });
+    setLastUpdatedAt(savedAt);
+    await runCompetenceSync(session.ansatt_id);
   };
 
   // STATE 1 — PIN login
@@ -328,17 +366,22 @@ export default function CvEditor() {
           imageUrl={cvData.hero.portrait_url || imageUrl}
           renderToolbar={({ saveStatus, onDownload }) => (
             <div className="flex items-center justify-between w-full px-4 py-2 border-b border-border bg-background">
-              <div className="flex items-center gap-2">
-                <span className="text-[0.875rem] font-semibold text-foreground">
-                  {cvData.hero.name || session.ansatt_name} — CV
-                </span>
-                {saveStatus === "saving" && (
-                  <span className="flex items-center gap-1 text-[0.75rem] text-muted-foreground">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Lagrer...
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-[0.875rem] font-semibold text-foreground">
+                    {cvData.hero.name || session.ansatt_name} — CV
                   </span>
-                )}
-                {saveStatus === "saved" && <span className="text-[0.75rem] text-muted-foreground">✓ Lagret</span>}
+                  {saveStatus === "saving" && (
+                    <span className="flex items-center gap-1 text-[0.75rem] text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Lagrer...
+                    </span>
+                  )}
+                  {saveStatus === "saved" && <span className="text-[0.75rem] text-muted-foreground">✓ Lagret</span>}
+                </div>
+                <span className="text-[0.6875rem] text-muted-foreground">
+                  Sist oppdatert dato: {formatUpdatedAt(lastUpdatedAt)}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={loadVersions}>
