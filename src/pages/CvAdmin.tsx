@@ -46,6 +46,36 @@ const EMPTY_CV: CVDocument = {
   workExperience: [],
 };
 
+type CvVersionMeta = {
+  created_at: string | null;
+  source: string | null;
+};
+
+function formatUpdatedAt(value?: string | null) {
+  if (!value) return "Ikke registrert ennå";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Ikke registrert ennå";
+
+  return format(date, "d. MMM yyyy HH:mm", { locale: nb });
+}
+
+function getLatestVersionDates(versions: CvVersionMeta[]) {
+  const lastAdmin = versions.find((version) => version.source === "admin")?.created_at ?? null;
+  const lastAnsatt = versions.find((version) => version.source === "ansatt")?.created_at ?? null;
+
+  return { lastAdmin, lastAnsatt };
+}
+
+async function syncCompetenceFromCv(ansattId: number) {
+  const { data, error } = await supabase.functions.invoke("sync-cv-kompetanse", {
+    body: { ansatt_id: ansattId },
+  });
+
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+}
+
 function dbRowToCvDoc(row: any): CVDocument {
   return {
     hero: {
@@ -91,11 +121,27 @@ export default function CvAdmin() {
   const [cvId, setCvId] = useState<string | null>(null);
   const [ansattName, setAnsattName] = useState("");
   const [imageUrl, setImageUrl] = useState<string | undefined>();
+  const [lastAdminUpdatedAt, setLastAdminUpdatedAt] = useState<string | null>(null);
+  const [lastAnsattUpdatedAt, setLastAnsattUpdatedAt] = useState<string | null>(null);
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [versions, setVersions] = useState<any[]>([]);
   const [cvUploadParsing, setCvUploadParsing] = useState(false);
   const cvUploadRef = useRef<HTMLInputElement>(null);
   const [fullscreen, setFullscreen] = useState(true);
+
+  const loadVersionDates = useCallback(async (currentCvId: string) => {
+    const { data, error } = await supabase
+      .from("cv_versions")
+      .select("created_at, source")
+      .eq("cv_id", currentCvId)
+      .order("created_at", { ascending: false });
+
+    if (error) return;
+
+    const { lastAdmin, lastAnsatt } = getLatestVersionDates((data || []) as CvVersionMeta[]);
+    setLastAdminUpdatedAt(lastAdmin);
+    setLastAnsattUpdatedAt(lastAnsatt);
+  }, []);
 
   useEffect(() => {
     if (!ansattId || !user) return;
@@ -142,6 +188,7 @@ export default function CvAdmin() {
 
       setCvId(cvRow.id);
       setCvData(dbRowToCvDoc(cvRow));
+      void loadVersionDates(cvRow.id);
     };
 
     loadCvAdminData();
@@ -149,7 +196,7 @@ export default function CvAdmin() {
     return () => {
       cancelled = true;
     };
-  }, [ansattId, user]);
+  }, [ansattId, user, loadVersionDates]);
 
   useEffect(() => {
     if (!ansattName) return;
@@ -160,20 +207,49 @@ export default function CvAdmin() {
     };
   }, [ansattName]);
 
+  const runCompetenceSync = useCallback(async () => {
+    const numericAnsattId = Number(ansattId);
+    if (Number.isNaN(numericAnsattId)) return;
+
+    try {
+      await syncCompetenceFromCv(numericAnsattId);
+    } catch (error) {
+      console.error("Failed to sync competence from CV:", error);
+      toast.error("CV ble lagret, men kompetanse kunne ikke synkroniseres til CRM.");
+    }
+  }, [ansattId]);
+
   const handleSave = useCallback(
     async (doc: CVDocument) => {
       if (!cvId) return;
+      const savedAt = new Date().toISOString();
+      const snapshot = { ...cvDocToDbRow(doc), updated_at: savedAt };
 
       const { error } = await supabase
         .from("cv_documents")
-        .update(cvDocToDbRow(doc) as any)
+        .update(snapshot as any)
         .eq("id", cvId);
 
       if (error) {
         throw error;
       }
+
+      const { error: versionError } = await supabase.from("cv_versions").insert({
+        cv_id: cvId,
+        snapshot: snapshot as any,
+        saved_by: user?.email || "crm",
+        source: "admin",
+        created_at: savedAt,
+      });
+
+      if (versionError) {
+        throw versionError;
+      }
+
+      setLastAdminUpdatedAt(savedAt);
+      await runCompetenceSync();
     },
-    [cvId],
+    [cvId, runCompetenceSync, user?.email],
   );
 
   const loadVersions = useCallback(async () => {
@@ -262,15 +338,33 @@ export default function CvAdmin() {
         setCvData(newCvData);
 
         if (cvId) {
+          const savedAt = new Date().toISOString();
+          const snapshot = { ...cvDocToDbRow(newCvData), updated_at: savedAt };
           const { error: saveError } = await supabase
             .from("cv_documents")
-            .update(cvDocToDbRow(newCvData) as any)
+            .update(snapshot as any)
             .eq("id", cvId);
 
           if (saveError) {
             toast.error("Kunne ikke lagre CV-data til databasen");
             return;
           }
+
+          const { error: versionError } = await supabase.from("cv_versions").insert({
+            cv_id: cvId,
+            snapshot: snapshot as any,
+            saved_by: user?.email || "crm",
+            source: "admin",
+            created_at: savedAt,
+          });
+
+          if (versionError) {
+            toast.error("Kunne ikke lagre versjonshistorikk");
+            return;
+          }
+
+          setLastAdminUpdatedAt(savedAt);
+          await runCompetenceSync();
         }
 
         toast.success("CV fullstendig analysert — alle seksjoner er fylt inn");
@@ -280,7 +374,7 @@ export default function CvAdmin() {
         setCvUploadParsing(false);
       }
     },
-    [cvData, cvId],
+    [cvData, cvId, runCompetenceSync, user?.email],
   );
 
   if (loading) {
@@ -312,27 +406,33 @@ export default function CvAdmin() {
           onDownloadPdf={handleDownloadPdf}
           renderToolbar={({ saveStatus, onDownload }) => (
             <div className="sticky top-0 z-10 bg-background border-b border-border px-6 py-3 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-3 text-[0.8125rem]">
-                <button
-                  onClick={() => navigate("/konsulenter/ansatte")}
-                  className="text-muted-foreground hover:text-foreground flex items-center gap-1"
-                >
-                  <ArrowLeft className="h-3.5 w-3.5" />
-                  Tilbake
-                </button>
-                <span className="text-foreground font-medium">{ansattName ? `${ansattName} — CV` : "CV"}</span>
-                {saveStatus === "saving" && (
-                  <span className="flex items-center gap-1 text-muted-foreground">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Lagrer...
-                  </span>
-                )}
-                {saveStatus === "saved" && (
-                  <span className="flex items-center gap-1 text-emerald-600">
-                    <Check className="h-3.5 w-3.5" />
-                    Lagret
-                  </span>
-                )}
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-3 text-[0.8125rem]">
+                  <button
+                    onClick={() => navigate("/konsulenter/ansatte")}
+                    className="text-muted-foreground hover:text-foreground flex items-center gap-1"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" />
+                    Tilbake
+                  </button>
+                  <span className="text-foreground font-medium">{ansattName ? `${ansattName} — CV` : "CV"}</span>
+                  {saveStatus === "saving" && (
+                    <span className="flex items-center gap-1 text-muted-foreground">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Lagrer...
+                    </span>
+                  )}
+                  {saveStatus === "saved" && (
+                    <span className="flex items-center gap-1 text-emerald-600">
+                      <Check className="h-3.5 w-3.5" />
+                      Lagret
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.6875rem] text-muted-foreground">
+                  <span>Sist oppdatert (admin): {formatUpdatedAt(lastAdminUpdatedAt)}</span>
+                  <span>Sist oppdatert (ansatt): {formatUpdatedAt(lastAnsattUpdatedAt)}</span>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <TooltipProvider>
