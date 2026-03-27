@@ -56,6 +56,10 @@ function VarslingsInnstillinger() {
   const [sendingRadarTest, setSendingRadarTest] = useState(false);
   const [sendingRadarNow, setSendingRadarNow] = useState(false);
 
+  const [salgsagentAktivLocal, setSalgsagentAktivLocal] = useState<boolean | null>(null);
+  const [savingSalgsagent, setSavingSalgsagent] = useState(false);
+  const [sendingSalgsagentTest, setSendingSalgsagentTest] = useState(false);
+
   const renewalEmails = renewalEmailsLocal ?? (settings?.epost_mottakere as string[]) ?? [];
   const renewalAktiv = renewalAktivLocal ?? settings?.aktiv ?? true;
   const renewalTerskel = renewalTerskelLocal ?? String(settings?.terskel_dager ?? 90);
