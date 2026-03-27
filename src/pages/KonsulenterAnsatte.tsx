@@ -18,6 +18,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 
+function cvRelativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  if (days === 0) return "i dag";
+  if (days < 7) return `${days}d siden`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `${weeks}u siden`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}md siden`;
+  return `${Math.floor(months / 12)}år siden`;
+}
+
 type Filter = "Alle" | "Aktiv" | "Kommende" | "Sluttet";
 
 const GRID_COLS = "grid grid-cols-[minmax(0,2.2fr)_95px_100px_85px_80px_110px_minmax(0,1.5fr)]";
@@ -54,6 +66,25 @@ export default function KonsulenterAnsatte() {
       return data;
     },
   });
+
+  const { data: cvDocs = [] } = useQuery({
+    queryKey: ["cv-documents-updated"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cv_documents")
+        .select("ansatt_id, updated_at");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const cvUpdatedMap = useMemo(() => {
+    const m = new Map<number, string>();
+    (cvDocs as any[]).forEach((c) => {
+      if (c.ansatt_id && c.updated_at) m.set(c.ansatt_id, c.updated_at);
+    });
+    return m;
+  }, [cvDocs]);
 
   const oppdragMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -332,6 +363,15 @@ export default function KonsulenterAnsatte() {
                   <ExternalLink className="h-3 w-3" />
                   CV-editor
                 </button>
+                {(() => {
+                  const updatedAt = cvUpdatedMap.get(a.id);
+                  if (!updatedAt) return null;
+                  return (
+                    <span className="text-[0.6875rem] text-muted-foreground whitespace-nowrap">
+                      {cvRelativeTime(updatedAt)}
+                    </span>
+                  );
+                })()}
               </div>
               {/* HANDLINGER */}
               <div className="flex items-center gap-1.5 justify-end">
