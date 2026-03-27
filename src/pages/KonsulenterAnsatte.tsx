@@ -72,19 +72,24 @@ export default function KonsulenterAnsatte() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("cv_documents")
-        .select("ansatt_id, updated_at");
+        .select("ansatt_id, updated_at, portrait_url");
       if (error) throw error;
       return data;
     },
   });
 
-  const cvUpdatedMap = useMemo(() => {
-    const m = new Map<number, string>();
+  const cvDataMap = useMemo(() => {
+    const updatedMap = new Map<number, string>();
+    const portraitMap = new Map<number, string>();
     (cvDocs as any[]).forEach((c) => {
-      if (c.ansatt_id && c.updated_at) m.set(c.ansatt_id, c.updated_at);
+      if (c.ansatt_id && c.updated_at) updatedMap.set(c.ansatt_id, c.updated_at);
+      if (c.ansatt_id && c.portrait_url) portraitMap.set(c.ansatt_id, c.portrait_url);
     });
-    return m;
+    return { updatedMap, portraitMap };
   }, [cvDocs]);
+
+  const cvUpdatedMap = cvDataMap.updatedMap;
+  const cvPortraitMap = cvDataMap.portraitMap;
 
   const oppdragMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -271,13 +276,18 @@ export default function KonsulenterAnsatte() {
             >
               {/* NAVN */}
               <div className="flex items-center gap-3 min-w-0">
-                {a.bilde_url ? (
-                  <img src={a.bilde_url} alt={a.navn} className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-border" />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-primary/10 text-primary text-[0.6875rem] font-bold flex items-center justify-center flex-shrink-0">
-                    {getInitials(a.navn)}
-                  </div>
-                )}
+                {(() => {
+                  const portrait = cvPortraitMap.get(a.id);
+                  const src = portrait || a.bilde_url;
+                  if (src) {
+                    return <img src={src} alt={a.navn} className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-border" />;
+                  }
+                  return (
+                    <div className="w-8 h-8 rounded-full bg-primary/10 text-primary text-[0.6875rem] font-bold flex items-center justify-center flex-shrink-0">
+                      {getInitials(a.navn)}
+                    </div>
+                  );
+                })()}
                 <span className="font-medium text-[0.8125rem] truncate">{a.navn}</span>
               </div>
               {/* START */}
