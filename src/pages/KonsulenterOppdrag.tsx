@@ -56,6 +56,10 @@ function VarslingsInnstillinger() {
   const [sendingRadarTest, setSendingRadarTest] = useState(false);
   const [sendingRadarNow, setSendingRadarNow] = useState(false);
 
+  const [salgsagentAktivLocal, setSalgsagentAktivLocal] = useState<boolean | null>(null);
+  const [savingSalgsagent, setSavingSalgsagent] = useState(false);
+  const [sendingSalgsagentTest, setSendingSalgsagentTest] = useState(false);
+
   const renewalEmails = renewalEmailsLocal ?? (settings?.epost_mottakere as string[]) ?? [];
   const renewalAktiv = renewalAktivLocal ?? settings?.aktiv ?? true;
   const renewalTerskel = renewalTerskelLocal ?? String(settings?.terskel_dager ?? 90);
@@ -64,6 +68,8 @@ function VarslingsInnstillinger() {
   const radarAktiv = radarAktivLocal ?? settings?.markedsradar_aktiv ?? false;
   const radarAutoSend = radarAutoSendLocal ?? settings?.markedsradar_send_etter_import ?? true;
   const radarAi = radarAiLocal ?? settings?.markedsradar_inkluder_ai ?? true;
+
+  const salgsagentAktiv = salgsagentAktivLocal ?? settings?.salgsagent_aktiv ?? true;
 
   const isValidEmail = (email: string) => email.includes("@") && email.includes(".");
 
@@ -194,7 +200,7 @@ function VarslingsInnstillinger() {
   };
 
   return (
-    <div className="max-w-5xl grid gap-6 xl:grid-cols-2">
+    <div className="max-w-5xl grid gap-6 xl:grid-cols-3">
       <div className="border border-border rounded-xl bg-card p-6 shadow-[0_1px_3px_rgba(0,0,0,0.07)] space-y-6">
         <div className="space-y-3">
           <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
@@ -392,6 +398,67 @@ function VarslingsInnstillinger() {
             className="border border-border text-[0.8125rem] text-muted-foreground hover:text-foreground h-8 px-3 rounded-lg disabled:opacity-50"
           >
             {sendingRadarNow ? "Sender..." : "Send markedsradar nå"}
+          </button>
+        </div>
+      </div>
+
+      <div className="border border-border rounded-xl bg-card p-6 shadow-[0_1px_3px_rgba(0,0,0,0.07)] space-y-6">
+        <div className="space-y-4">
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Salgsagent-påminnelse
+          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-[0.8125rem] text-foreground">Aktiver ukentlig påminnelse</Label>
+              <p className="text-[0.75rem] text-muted-foreground mt-1">
+                Sender e-post til bruker hvis Salgsagenten ikke er brukt på 7 dager.
+              </p>
+            </div>
+            <Switch checked={salgsagentAktiv} onCheckedChange={(value) => setSalgsagentAktivLocal(value)} />
+          </div>
+        </div>
+
+        <button
+          onClick={async () => {
+            setSavingSalgsagent(true);
+            try {
+              const { error } = await supabase
+                .from("varslingsinnstillinger" as any)
+                .update({ salgsagent_aktiv: salgsagentAktiv, updated_at: new Date().toISOString() } as any)
+                .eq("id", settings.id);
+              if (error) throw error;
+              toast.success("Salgsagent-innstillinger lagret");
+              queryClient.invalidateQueries({ queryKey: ["varslingsinnstillinger"] });
+            } catch {
+              toast.error("Kunne ikke lagre innstillinger");
+            } finally {
+              setSavingSalgsagent(false);
+            }
+          }}
+          disabled={savingSalgsagent}
+          className="bg-primary text-primary-foreground h-9 px-4 rounded-lg text-[0.8125rem] font-medium hover:opacity-90 disabled:opacity-50"
+        >
+          {savingSalgsagent ? "Lagrer..." : "Lagre salgsagent-innstillinger"}
+        </button>
+
+        <div className="border-t border-border pt-4">
+          <button
+            onClick={async () => {
+              setSendingSalgsagentTest(true);
+              try {
+                const { error } = await supabase.functions.invoke("salgsagent-paaminning", { body: { test: true } });
+                if (error) throw error;
+                toast.success("Test-påminnelse sendt til thomas@stacq.no");
+              } catch {
+                toast.error("Kunne ikke sende test-påminnelse");
+              } finally {
+                setSendingSalgsagentTest(false);
+              }
+            }}
+            disabled={sendingSalgsagentTest}
+            className="border border-border text-[0.8125rem] text-muted-foreground hover:text-foreground h-8 px-3 rounded-lg disabled:opacity-50"
+          >
+            {sendingSalgsagentTest ? "Sender..." : "Send test-påminnelse"}
           </button>
         </div>
       </div>
