@@ -143,7 +143,7 @@ const Login = () => {
           </form>
         </div>
 
-        <p style={{ fontSize: "0.75rem", color: "hsl(var(--muted-foreground))" }}>crm.stacq.no</p>
+        
       </div>
     </div>
   );
