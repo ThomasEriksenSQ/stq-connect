@@ -527,6 +527,37 @@ export default function KonsulenterOppdrag() {
   });
   const companyStatusMap: Record<string, string> = Object.fromEntries(allCompanies.map((c: any) => [c.id, c.status]));
 
+  const { data: ansatteListe = [] } = useQuery({
+    queryKey: ["ansatte-names"],
+    queryFn: async () => {
+      const { data } = await supabase.from("stacq_ansatte").select("id, navn");
+      return data || [];
+    },
+  });
+
+  const { data: cvPortraits = [] } = useQuery({
+    queryKey: ["cv-portraits"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("cv_documents")
+        .select("ansatt_id, portrait_url")
+        .not("portrait_url", "is", null);
+      return data || [];
+    },
+  });
+
+  const { nameToAnsattId, portraitByAnsattId } = useMemo(() => {
+    const nameMap = new Map<string, number>();
+    (ansatteListe as any[]).forEach((a) => {
+      if (a.id && a.navn) nameMap.set(a.navn.trim().toLowerCase(), a.id);
+    });
+    const portraitMap = new Map<number, string>();
+    (cvPortraits as any[]).forEach((c) => {
+      if (c.ansatt_id && c.portrait_url) portraitMap.set(c.ansatt_id, c.portrait_url);
+    });
+    return { nameToAnsattId: nameMap, portraitByAnsattId: portraitMap };
+  }, [ansatteListe, cvPortraits]);
+
   const enriched = useMemo(
     () =>
       oppdrag.map((o: any) => {
@@ -730,7 +761,27 @@ export default function KonsulenterOppdrag() {
                     )}
                   >
                     {/* KONSULENT */}
-                    <div className="min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {(() => {
+                        const isAnsatt = o.er_ansatt === true;
+                        const ansattId = isAnsatt ? nameToAnsattId.get(o.kandidat?.trim().toLowerCase()) : undefined;
+                        const portrait = ansattId ? portraitByAnsattId.get(ansattId) : undefined;
+                        if (isAnsatt && portrait) {
+                          return <img src={portrait} alt={o.kandidat} className="w-7 h-7 rounded-full object-cover border border-border flex-shrink-0" />;
+                        }
+                        if (isAnsatt) {
+                          return (
+                            <div className="w-7 h-7 rounded-full bg-primary/10 text-primary text-[0.625rem] font-bold flex items-center justify-center flex-shrink-0">
+                              {getInitials(o.kandidat || "?")}
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="w-7 h-7 rounded-full bg-muted text-muted-foreground text-[0.625rem] font-bold flex items-center justify-center flex-shrink-0">
+                            {getInitials(o.kandidat || "?")}
+                          </div>
+                        );
+                      })()}
                       <p className="text-[0.875rem] font-semibold text-foreground truncate">{o.kandidat}</p>
                     </div>
                     {/* KUNDE */}
