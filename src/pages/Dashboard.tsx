@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import DailyBrief from "@/components/dashboard/DailyBrief";
 import OppfolgingerSection from "@/components/dashboard/OppfolgingerSection";
 import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBoundary";
