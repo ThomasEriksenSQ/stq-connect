@@ -219,6 +219,26 @@ export function ForespørselSheet({
   const [oppdragSubmitting, setOppdragSubmitting] = useState(false);
   const [oppdragLopende, setOppdragLopende] = useState(false);
 
+  // Portrait lookup for ansatte
+  const { data: ansattePortraits = [] } = useQuery({
+    queryKey: ["ansatte-portraits"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("cv_documents")
+        .select("ansatt_id, portrait_url")
+        .not("portrait_url", "is", null);
+      return data || [];
+    },
+  });
+
+  const portraitByAnsattId = useMemo(() => {
+    const m = new Map<number, string>();
+    (ansattePortraits as any[]).forEach((c) => {
+      if (c.ansatt_id && c.portrait_url) m.set(c.ansatt_id, c.portrait_url);
+    });
+    return m;
+  }, [ansattePortraits]);
+
   // Linked consultants (both intern and ekstern)
   const { data: linkedKonsulenter = [], refetch: refetchLinked } = useQuery({
     queryKey: ["foresporsler-konsulenter", row?.id],
@@ -719,9 +739,13 @@ export function ForespørselSheet({
                         <div key={k.id} className="rounded-lg border border-border bg-muted/30 px-3 py-2.5 mb-2">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
-                              <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[0.6875rem] font-semibold text-primary">
-                                {getInitials(navn || "?")}
-                              </div>
+                              {(() => {
+                                const portrait = k.konsulent_type === "intern" && k.stacq_ansatte?.id
+                                  ? portraitByAnsattId.get(k.stacq_ansatte.id)
+                                  : undefined;
+                                if (portrait) return <img src={portrait} alt={navn || ""} className="h-7 w-7 rounded-full object-cover border border-border flex-shrink-0" />;
+                                return <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[0.6875rem] font-semibold text-primary flex-shrink-0">{getInitials(navn || "?")}</div>;
+                              })()}
                               <span className="text-[0.875rem] font-medium">{navn || "Ukjent"}</span>
                               <span className={cn(
                                 "inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold",
