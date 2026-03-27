@@ -73,7 +73,10 @@ export default function KonsulenterAnsatte() {
   const fornyDateMap = useMemo(() => {
     const m = new Map<string, string>();
     (oppdrag as any[]).forEach((o) => {
-      if (o.forny_dato) m.set(o.kandidat, o.forny_dato);
+      if (!o.forny_dato) return;
+      if (!m.has(o.kandidat) || o.status === "Aktiv") {
+        m.set(o.kandidat, o.forny_dato);
+      }
     });
     return m;
   }, [oppdrag]);
