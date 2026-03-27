@@ -56,7 +56,8 @@ function VarslingsInnstillinger() {
   const [sendingRadarTest, setSendingRadarTest] = useState(false);
   const [sendingRadarNow, setSendingRadarNow] = useState(false);
 
-  const [salgsagentAktivLocal, setSalgsagentAktivLocal] = useState<boolean | null>(null);
+  const [salgsagentEmailsLocal, setSalgsagentEmailsLocal] = useState<string[] | null>(null);
+  const [newSalgsagentEmail, setNewSalgsagentEmail] = useState("");
   const [savingSalgsagent, setSavingSalgsagent] = useState(false);
   const [sendingSalgsagentTest, setSendingSalgsagentTest] = useState(false);
 
@@ -69,7 +70,7 @@ function VarslingsInnstillinger() {
   const radarAutoSend = radarAutoSendLocal ?? settings?.markedsradar_send_etter_import ?? true;
   const radarAi = radarAiLocal ?? settings?.markedsradar_inkluder_ai ?? true;
 
-  const salgsagentAktiv = salgsagentAktivLocal ?? settings?.salgsagent_aktiv ?? true;
+  const salgsagentEmails = salgsagentEmailsLocal ?? (settings?.epost_mottakere as string[]) ?? ["thomas@stacq.no"];
 
   const isValidEmail = (email: string) => email.includes("@") && email.includes(".");
 
@@ -403,19 +404,52 @@ function VarslingsInnstillinger() {
       </div>
 
       <div className="border border-border rounded-xl bg-card p-6 shadow-[0_1px_3px_rgba(0,0,0,0.07)] space-y-6">
-        <div className="space-y-4">
+        <div className="space-y-3">
           <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             Salgsagent-påminnelse
           </p>
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-[0.8125rem] text-foreground">Aktiver ukentlig påminnelse</Label>
-              <p className="text-[0.75rem] text-muted-foreground mt-1">
-                Sender e-post til bruker hvis Salgsagenten ikke er brukt på 7 dager.
-              </p>
-            </div>
-            <Switch checked={salgsagentAktiv} onCheckedChange={(value) => setSalgsagentAktivLocal(value)} />
+          <p className="text-[0.75rem] text-muted-foreground">
+            Sender e-post til mottaker hvis Salgsagenten ikke er brukt på 7 dager.
+          </p>
+          <div className="space-y-2">
+            {salgsagentEmails.map((email) => (
+              <div key={email} className="flex items-center justify-between">
+                <span className="text-[0.875rem] text-foreground">{email}</span>
+                {salgsagentEmails.length > 1 && (
+                  <button
+                    onClick={() => setSalgsagentEmailsLocal(salgsagentEmails.filter((e) => e !== email))}
+                    className="text-muted-foreground hover:text-destructive transition-colors text-sm"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
+          {salgsagentEmails.length >= 5 ? (
+            <p className="text-[0.75rem] text-muted-foreground">Maks 5 mottakere</p>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="navn@domene.no"
+                value={newSalgsagentEmail}
+                onChange={(e) => setNewSalgsagentEmail(e.target.value)}
+                onKeyDown={(e) =>
+                  e.key === "Enter" &&
+                  addRecipient(newSalgsagentEmail, salgsagentEmails, setSalgsagentEmailsLocal, () => setNewSalgsagentEmail(""))
+                }
+                className="h-9 text-[0.875rem]"
+              />
+              <button
+                onClick={() =>
+                  addRecipient(newSalgsagentEmail, salgsagentEmails, setSalgsagentEmailsLocal, () => setNewSalgsagentEmail(""))
+                }
+                className="h-9 px-3 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary shrink-0"
+              >
+                Legg til
+              </button>
+            </div>
+          )}
         </div>
 
         <button
@@ -424,7 +458,7 @@ function VarslingsInnstillinger() {
             try {
               const { error } = await supabase
                 .from("varslingsinnstillinger" as any)
-                .update({ salgsagent_aktiv: salgsagentAktiv, updated_at: new Date().toISOString() } as any)
+                .update({ salgsagent_aktiv: true, updated_at: new Date().toISOString() } as any)
                 .eq("id", settings.id);
               if (error) throw error;
               toast.success("Salgsagent-innstillinger lagret");
@@ -448,7 +482,7 @@ function VarslingsInnstillinger() {
               try {
                 const { error } = await supabase.functions.invoke("salgsagent-paaminning", { body: { test: true } });
                 if (error) throw error;
-                toast.success("Test-påminnelse sendt til thomas@stacq.no");
+                toast.success("Test-påminnelse sendt");
               } catch {
                 toast.error("Kunne ikke sende test-påminnelse");
               } finally {
