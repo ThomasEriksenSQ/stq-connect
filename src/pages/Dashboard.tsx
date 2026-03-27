@@ -10,6 +10,17 @@ type Tab = "agent" | "oppfolginger";
 const Dashboard = () => {
   const [tab, setTab] = useState<Tab>("agent");
 
+  useEffect(() => {
+    const trackUsage = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await supabase
+        .from("salgsagent_bruk")
+        .upsert({ user_id: user.id, brukt_at: new Date().toISOString() }, { onConflict: "user_id" });
+    };
+    trackUsage();
+  }, []);
+
   return (
     <div className="space-y-6">
 
