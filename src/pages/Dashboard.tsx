@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import DailyBrief from "@/components/dashboard/DailyBrief";
 import OppfolgingerSection from "@/components/dashboard/OppfolgingerSection";
 import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBoundary";
@@ -8,6 +9,17 @@ type Tab = "agent" | "oppfolginger";
 
 const Dashboard = () => {
   const [tab, setTab] = useState<Tab>("agent");
+
+  useEffect(() => {
+    const trackUsage = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await supabase
+        .from("salgsagent_bruk")
+        .upsert({ user_id: user.id, brukt_at: new Date().toISOString() }, { onConflict: "user_id" });
+    };
+    trackUsage();
+  }, []);
 
   return (
     <div className="space-y-6">
