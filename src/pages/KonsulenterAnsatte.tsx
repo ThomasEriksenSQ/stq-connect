@@ -17,13 +17,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-function getFornyColor(fornyDato: string): { label: string; className: string } {
-  const days = differenceInDays(new Date(fornyDato), new Date());
-  if (days < 0) return { label: `Utløpt ${Math.abs(days)}d siden`, className: "text-destructive font-semibold" };
-  if (days <= 30) return { label: `Om ${days}d`, className: "text-amber-600 font-semibold" };
-  if (days <= 60) return { label: `Om ${days}d`, className: "text-amber-500" };
-  return { label: format(new Date(fornyDato), "dd.MM.yy"), className: "text-muted-foreground" };
-}
 
 type Filter = "Alle" | "Aktiv" | "Kommende" | "Sluttet";
 
@@ -55,7 +48,7 @@ export default function KonsulenterAnsatte() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stacq_oppdrag")
-      .select("kandidat, status, forny_dato")
+      .select("kandidat, status, forny_dato, lopende_30_dager")
       .in("status", ["Aktiv", "Oppstart"]);
       if (error) throw error;
       return data;
@@ -70,12 +63,14 @@ export default function KonsulenterAnsatte() {
     return m;
   }, [oppdrag]);
 
-  const fornyDateMap = useMemo(() => {
-    const m = new Map<string, string>();
+  const fornyMap = useMemo(() => {
+    const m = new Map<string, { forny_dato: string | null; lopende_30_dager: boolean }>();
     (oppdrag as any[]).forEach((o) => {
-      if (!o.forny_dato) return;
       if (!m.has(o.kandidat) || o.status === "Aktiv") {
-        m.set(o.kandidat, o.forny_dato);
+        m.set(o.kandidat, {
+          forny_dato: o.forny_dato ?? null,
+          lopende_30_dager: !!o.lopende_30_dager,
+        });
       }
     });
     return m;
@@ -295,20 +290,35 @@ export default function KonsulenterAnsatte() {
               </div>
               {/* FORNYES */}
               <div>
-                {(() => {
-                  const fornyDato = fornyDateMap.get(a.navn);
-                  if (!fornyDato) return <span className="text-[0.8125rem] text-muted-foreground">—</span>;
-                  const { label, className } = getFornyColor(fornyDato);
+              {(() => {
+                  const entry = fornyMap.get(a.navn);
+                  if (!entry) return <span className="text-[0.8125rem] text-muted-foreground">—</span>;
+                  const effectiveDate = entry.lopende_30_dager
+                    ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                    : entry.forny_dato ? new Date(entry.forny_dato) : null;
+                  if (!effectiveDate) return <span className="text-[0.8125rem] text-muted-foreground">—</span>;
+                  const days = differenceInDays(effectiveDate, new Date());
+                  let label: string;
+                  let className: string;
+                  if (days < 0) {
+                    label = `Utløpt ${Math.abs(days)}d siden`;
+                    className = "text-destructive font-semibold";
+                  } else if (days <= 30) {
+                    label = `Om ${days}d`;
+                    className = "text-amber-600 font-semibold";
+                  } else if (days <= 60) {
+                    label = `Om ${days}d`;
+                    className = "text-amber-500";
+                  } else {
+                    label = format(effectiveDate, "dd.MM.yy");
+                    className = "text-muted-foreground";
+                  }
                   return (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span className={cn("text-[0.8125rem] cursor-default", className)}>
-                          {label}
-                        </span>
+                        <span className={cn("text-[0.8125rem] cursor-default", className)}>{label}</span>
                       </TooltipTrigger>
-                      <TooltipContent>
-                        {format(new Date(fornyDato), "d. MMMM yyyy", { locale: nb })}
-                      </TooltipContent>
+                      <TooltipContent>{format(effectiveDate, "d. MMMM yyyy", { locale: nb })}</TooltipContent>
                     </Tooltip>
                   );
                 })()}
