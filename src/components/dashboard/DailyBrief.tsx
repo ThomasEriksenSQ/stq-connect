@@ -79,6 +79,32 @@ function buildReasonLine(lead: ScoredLead, daysSince: number): string {
 
 const COOLDOWN_DAYS: Record<number, number> = { 1: 14, 2: 45, 3: 60, 4: 90 };
 
+function readTreatedFromStorage(key: string) {
+  if (typeof window === "undefined") return new Set<string>();
+
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return new Set<string>();
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set<string>();
+
+    return new Set(parsed.filter((value): value is string => typeof value === "string"));
+  } catch {
+    return new Set<string>();
+  }
+}
+
+function writeTreatedToStorage(key: string, treated: Set<string>) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(key, JSON.stringify(Array.from(treated)));
+  } catch {
+    // Ignore storage errors and fall back to in-memory state
+  }
+}
+
 function buildSignalSnapshot(lead: ScoredLead, signalOverride?: string) {
   return {
     signal: signalOverride || lead.signal || null,
@@ -126,6 +152,12 @@ const DailyBrief = () => {
   const scoredLeadsRef = useRef<ScoredLead[]>([]);
   const treatedRef = useRef<Set<string>>(new Set());
   const currentRef = useRef<ScoredLead | null>(null);
+  const skipNextPersistRef = useRef(true);
+  const todayKey = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
+  const treatedStorageKey = useMemo(
+    () => `daily-brief-treated:${user?.id || "anonymous"}:${ownerFilter}:${todayKey}`,
+    [ownerFilter, todayKey, user?.id],
+  );
 
   const { data: allProfiles = [] } = useQuery({
     queryKey: ["profiles"],
@@ -308,6 +340,27 @@ const DailyBrief = () => {
   treatedRef.current = treated;
   currentRef.current = current;
   futureHistoryRef.current = futureHistory;
+
+  useEffect(() => {
+    const storedTreated = readTreatedFromStorage(treatedStorageKey);
+    skipNextPersistRef.current = true;
+    setTreated(storedTreated);
+    treatedRef.current = storedTreated;
+    setCurrentContactId(null);
+    setCompletedAll(false);
+    historyRef.current = [];
+    futureHistoryRef.current = [];
+    setHistory([]);
+    setFutureHistory([]);
+  }, [treatedStorageKey]);
+
+  useEffect(() => {
+    if (skipNextPersistRef.current) {
+      skipNextPersistRef.current = false;
+      return;
+    }
+    writeTreatedToStorage(treatedStorageKey, treated);
+  }, [treated, treatedStorageKey]);
 
   useEffect(() => {
     if (!isLoading && !completedAll && currentContactId === null) {
@@ -663,9 +716,9 @@ const DailyBrief = () => {
             <button
               key={opt.id}
               onClick={() => {
+                if (opt.id === ownerFilter) return;
                 setOwnerFilter(opt.id);
                 setCurrentContactId(null);
-                setTreated(new Set());
                 historyRef.current = [];
                 futureHistoryRef.current = [];
                 setHistory([]);
