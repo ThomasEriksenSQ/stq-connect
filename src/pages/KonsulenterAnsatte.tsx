@@ -367,7 +367,7 @@ export default function KonsulenterAnsatte() {
                   const updatedAt = cvUpdatedMap.get(a.id);
                   if (!updatedAt) return null;
                   return (
-                    <span className="text-[0.6875rem] text-muted-foreground whitespace-nowrap">
+                    <span className="text-[0.8125rem] text-muted-foreground whitespace-nowrap">
                       {cvRelativeTime(updatedAt)}
                     </span>
                   );
