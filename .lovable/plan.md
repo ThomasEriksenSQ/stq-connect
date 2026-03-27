@@ -1,35 +1,34 @@
 
 
-# Update: Norwegian UI Language
+## Plan: Legg til profilbilde i Fornyelser-tidslinja
 
-The database schema, table names, column names, and all backend code remain in English as planned. The user-facing interface will be fully in Norwegian.
+### Bakgrunn
+`FornyelsesTimeline` viser fornavn + kunde per rad, men ingen avatar. `stacq_oppdrag` har `kandidat` (fullt navn) og `er_ansatt` (boolean), men ingen `ansatt_id`. Portrettbilder ligger i `cv_documents.portrait_url` koblet via `stacq_ansatte.id`.
 
-## What changes
+### Tilnærming
+Matche oppdragets `kandidat`-navn mot `stacq_ansatte.navn` for å finne ansatt-ID, deretter slå opp portrait fra `cv_documents`.
 
-All UI text — labels, buttons, headings, placeholders, menu items, status labels, and empty states — will be written in Norwegian (Bokmål).
+### Endringer
 
-Examples:
-- "Companies" → "Selskaper"
-- "Contacts" → "Kontakter"
-- "Activities" → "Aktiviteter"
-- "Tasks" → "Oppgaver"
-- "Add Note" → "Legg til notat"
-- "Log Activity" → "Logg aktivitet"
-- "Create Task" → "Opprett oppgave"
-- "Search..." → "Søk..."
-- "Open" / "Done" → "Åpen" / "Fullført"
-- "Name" → "Navn"
-- "Industry" → "Bransje"
-- "Due date" → "Forfallsdato"
-- "Sign in" → "Logg inn"
-- Activity types: Note → Notat, Call → Samtale, Meeting → Møte, Email → E-post
+**1. `src/components/FornyelsesTimeline.tsx`**
 
-## Implementation approach
+- Importer `useQuery`, `supabase`, og `getInitials` fra `@/lib/utils`
+- Legg til to queries inne i komponenten:
+  - Hent alle ansatte: `stacq_ansatte` → `id, navn`
+  - Hent portretter: `cv_documents` → `ansatt_id, portrait_url` (der portrait_url ikke er null)
+- Bygg to maps i en `useMemo`:
+  - `nameToAnsattId`: `Map<string, number>` (lowercase navn → id)
+  - `portraitByAnsattId`: `Map<number, string>` (ansatt_id → portrait_url)
+- I `rows` useMemo: inkluder `fullName: o.kandidat` (fullt navn, ikke bare fornavn) og `erAnsatt: o.er_ansatt`
+- I hver rad, legg til en 24×24px avatar foran navn+kunde:
+  - For ansatte (`er_ansatt === true`): slå opp portrait via `nameToAnsattId` → `portraitByAnsattId`. Vis `<img>` hvis funnet, ellers initialer.
+  - For ikke-ansatte (`er_ansatt !== true`): vis initialer (1-2 bokstaver) i en `bg-muted` sirkel.
+- Utvid den sticky venstre kolonnen fra `w-[160px]` til `w-[190px]` for å gi plass til avataren.
 
-- All hardcoded UI strings will be in Norwegian directly in the components (no i18n library needed since this is a single-language internal tool)
-- Database columns stay English (e.g. `company_name`, `due_date`, `status`)
-- Supabase table/column names stay English
-- TypeScript types and variable names stay English
-
-This will be applied throughout all pages and components during implementation. No separate translation step needed — Norwegian is simply the default language for all UI copy.
+### Tekniske detaljer
+- Avatar: `w-6 h-6 rounded-full` (24px) med `object-cover border border-border` for bilder
+- Initialer-sirkel: `w-6 h-6 rounded-full bg-primary/10 text-primary text-[0.5625rem] font-bold flex items-center justify-center`
+- For ikke-ansatte: `bg-muted text-muted-foreground` i stedet for primary
+- `getInitials` brukes fra `@/lib/utils` (allerede eksisterende)
+- Navn-matching gjøres case-insensitive med `.toLowerCase()` og trimming av mellomrom
 
