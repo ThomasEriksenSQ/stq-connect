@@ -56,7 +56,8 @@ function VarslingsInnstillinger() {
   const [sendingRadarTest, setSendingRadarTest] = useState(false);
   const [sendingRadarNow, setSendingRadarNow] = useState(false);
 
-  const [salgsagentAktivLocal, setSalgsagentAktivLocal] = useState<boolean | null>(null);
+  const [salgsagentEmailsLocal, setSalgsagentEmailsLocal] = useState<string[] | null>(null);
+  const [newSalgsagentEmail, setNewSalgsagentEmail] = useState("");
   const [savingSalgsagent, setSavingSalgsagent] = useState(false);
   const [sendingSalgsagentTest, setSendingSalgsagentTest] = useState(false);
 
