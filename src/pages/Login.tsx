@@ -19,7 +19,7 @@ const Login = () => {
     <div
       style={{
         minHeight: "100vh",
-        background: "#FFFFFF",
+        background: "hsl(var(--background))",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -29,31 +29,20 @@ const Login = () => {
       <div
         style={{
           width: "100%",
-          maxWidth: "420px",
+          maxWidth: "380px",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: "1.5rem",
+          gap: "2rem",
         }}
       >
-        <img
-          src="/logo.png"
-          alt="STACQ CRM"
-          style={{
-            width: "135%",
-            maxWidth: "630px",
-            height: "auto",
-            objectFit: "contain",
-            paddingBottom: "10px",
-            paddingTop: "15px",
-          }}
-        />
+        <img src="/STACQ_logo_black.png" alt="STACQ" style={{ width: "140px", height: "auto", objectFit: "contain" }} />
 
         <div
           style={{
             width: "100%",
-            background: "#fff",
-            border: "1px solid #E5E7EB",
+            background: "hsl(var(--card))",
+            border: "1px solid hsl(var(--border))",
             borderRadius: "12px",
             padding: "2rem",
             boxShadow: "0 1px 3px rgba(0,0,0,0.07)",
@@ -66,8 +55,8 @@ const Login = () => {
                   fontSize: "0.6875rem",
                   fontWeight: 600,
                   letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: "#6B7280",
+                  textTransform: "uppercase" as const,
+                  color: "hsl(var(--muted-foreground))",
                 }}
               >
                 E-POST
@@ -79,17 +68,19 @@ const Login = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 style={{
-                  background: "#FAFAFA",
-                  border: "1px solid #E5E7EB",
+                  background: "hsl(var(--background))",
+                  border: "1px solid hsl(var(--border))",
                   borderRadius: "8px",
-                  padding: "0.75rem 1rem",
-                  color: "#111",
-                  fontSize: "0.9375rem",
+                  padding: "0.625rem 0.875rem",
+                  color: "hsl(var(--foreground))",
+                  fontSize: "0.875rem",
                   outline: "none",
                   transition: "border-color 0.15s",
+                  width: "100%",
+                  boxSizing: "border-box" as const,
                 }}
-                onFocus={(e) => (e.target.style.borderColor = "#c84a00")}
-                onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
+                onFocus={(e) => (e.target.style.borderColor = "hsl(var(--ring))")}
+                onBlur={(e) => (e.target.style.borderColor = "hsl(var(--border))")}
               />
             </div>
 
@@ -99,8 +90,8 @@ const Login = () => {
                   fontSize: "0.6875rem",
                   fontWeight: 600,
                   letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: "#6B7280",
+                  textTransform: "uppercase" as const,
+                  color: "hsl(var(--muted-foreground))",
                 }}
               >
                 PASSORD
@@ -113,17 +104,19 @@ const Login = () => {
                 required
                 minLength={6}
                 style={{
-                  background: "#FAFAFA",
-                  border: "1px solid #E5E7EB",
+                  background: "hsl(var(--background))",
+                  border: "1px solid hsl(var(--border))",
                   borderRadius: "8px",
-                  padding: "0.75rem 1rem",
-                  color: "#111",
-                  fontSize: "0.9375rem",
+                  padding: "0.625rem 0.875rem",
+                  color: "hsl(var(--foreground))",
+                  fontSize: "0.875rem",
                   outline: "none",
                   transition: "border-color 0.15s",
+                  width: "100%",
+                  boxSizing: "border-box" as const,
                 }}
-                onFocus={(e) => (e.target.style.borderColor = "#c84a00")}
-                onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
+                onFocus={(e) => (e.target.style.borderColor = "hsl(var(--ring))")}
+                onBlur={(e) => (e.target.style.borderColor = "hsl(var(--border))")}
               />
             </div>
 
@@ -131,17 +124,17 @@ const Login = () => {
               type="submit"
               disabled={loading}
               style={{
-                marginTop: "0.5rem",
-                padding: "0.75rem",
-                background: loading ? "#d4844a" : "linear-gradient(135deg, #c84a00 0%, #e06000 100%)",
+                marginTop: "0.25rem",
+                padding: "0.625rem 1rem",
+                background: "hsl(var(--primary))",
                 border: "none",
                 borderRadius: "8px",
-                color: "#fff",
-                fontSize: "0.875rem",
+                color: "hsl(var(--primary-foreground))",
+                fontSize: "0.8125rem",
                 fontWeight: 600,
-                letterSpacing: "0.04em",
+                letterSpacing: "0.02em",
                 cursor: loading ? "not-allowed" : "pointer",
-                boxShadow: "0 1px 3px rgba(200,74,0,0.3)",
+                opacity: loading ? 0.7 : 1,
                 transition: "opacity 0.15s",
               }}
             >
@@ -149,6 +142,8 @@ const Login = () => {
             </button>
           </form>
         </div>
+
+        <p style={{ fontSize: "0.75rem", color: "hsl(var(--muted-foreground))" }}>crm.stacq.no</p>
       </div>
     </div>
   );
