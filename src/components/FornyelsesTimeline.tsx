@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { cn, formatNOK } from "@/lib/utils";
+import { cn, formatNOK, getInitials } from "@/lib/utils";
 import { format, differenceInDays, startOfMonth } from "date-fns";
 import { nb } from "date-fns/locale";
 import {
@@ -7,6 +7,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Des"];
 
@@ -26,6 +28,37 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
   const year = new Date().getFullYear();
   const currentMonth = new Date().getMonth();
 
+  const { data: ansatteListe = [] } = useQuery({
+    queryKey: ["ansatte-names"],
+    queryFn: async () => {
+      const { data } = await supabase.from("stacq_ansatte").select("id, navn");
+      return data || [];
+    },
+  });
+
+  const { data: cvPortraits = [] } = useQuery({
+    queryKey: ["cv-portraits"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("cv_documents")
+        .select("ansatt_id, portrait_url")
+        .not("portrait_url", "is", null);
+      return data || [];
+    },
+  });
+
+  const { nameToAnsattId, portraitByAnsattId } = useMemo(() => {
+    const nameMap = new Map<string, number>();
+    (ansatteListe as any[]).forEach((a) => {
+      if (a.id && a.navn) nameMap.set(a.navn.trim().toLowerCase(), a.id);
+    });
+    const portraitMap = new Map<number, string>();
+    (cvPortraits as any[]).forEach((c) => {
+      if (c.ansatt_id && c.portrait_url) portraitMap.set(c.ansatt_id, c.portrait_url);
+    });
+    return { nameToAnsattId: nameMap, portraitByAnsattId: portraitMap };
+  }, [ansatteListe, cvPortraits]);
+
   const rows = useMemo(() => {
     return enriched
       .filter((o: any) => (o.status === "Aktiv" || o.status === "Oppstart") && o.forny_dato)
@@ -34,9 +67,11 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
         return {
           id: o.id,
           navn: o.kandidat?.split(" ")[0] || "?",
+          fullName: o.kandidat || "?",
           kunde: o.kunde || "",
           utpris: Number(o.utpris) || 0,
           status: o.status,
+          erAnsatt: o.er_ansatt === true,
           fornyDate: d,
           fornyMonth: d.getFullYear() === year ? d.getMonth() : -1,
           fornyDay: d.getDate(),
@@ -69,7 +104,7 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
           <div className="min-w-[900px]">
             {/* Header */}
             <div className="flex border-b border-border bg-background sticky top-0 z-20">
-              <div className="w-[160px] shrink-0 px-3 py-2 sticky left-0 z-30 bg-background" />
+              <div className="w-[190px] shrink-0 px-3 py-2 sticky left-0 z-30 bg-background" />
               {MONTHS_SHORT.map((m, i) => (
                 <div
                   key={m}
@@ -92,11 +127,32 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
             <div className="divide-y divide-border">
               {rows.map((r) => {
                 const pill = getPillColor(r.fornyDate, r.status === "Oppstart");
+                const ansattId = r.erAnsatt ? nameToAnsattId.get(r.fullName.trim().toLowerCase()) : undefined;
+                const portrait = ansattId ? portraitByAnsattId.get(ansattId) : undefined;
                 return (
                   <div key={r.id} className="flex items-center hover:bg-muted/30 transition-colors">
-                    <div className="w-[160px] shrink-0 px-3 py-2.5 sticky left-0 z-10 bg-card">
-                      <p className="text-[0.8125rem] font-semibold text-foreground truncate">{r.navn}</p>
-                      <p className="text-[0.6875rem] text-muted-foreground truncate">{r.kunde}</p>
+                    <div className="w-[190px] shrink-0 px-3 py-2.5 sticky left-0 z-10 bg-card flex items-center gap-2">
+                      {(() => {
+                        if (r.erAnsatt && portrait) {
+                          return <img src={portrait} alt={r.fullName} className="w-6 h-6 rounded-full object-cover border border-border flex-shrink-0" />;
+                        }
+                        if (r.erAnsatt) {
+                          return (
+                            <div className="w-6 h-6 rounded-full bg-primary/10 text-primary text-[0.5625rem] font-bold flex items-center justify-center flex-shrink-0">
+                              {getInitials(r.fullName)}
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="w-6 h-6 rounded-full bg-muted text-muted-foreground text-[0.5625rem] font-bold flex items-center justify-center flex-shrink-0">
+                            {getInitials(r.fullName)}
+                          </div>
+                        );
+                      })()}
+                      <div className="min-w-0">
+                        <p className="text-[0.8125rem] font-semibold text-foreground truncate">{r.navn}</p>
+                        <p className="text-[0.6875rem] text-muted-foreground truncate">{r.kunde}</p>
+                      </div>
                     </div>
                     {MONTHS_SHORT.map((_, i) => (
                       <div
