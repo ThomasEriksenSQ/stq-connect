@@ -848,6 +848,24 @@ export type Database = {
         }
         Relationships: []
       }
+      salgsagent_bruk: {
+        Row: {
+          brukt_at: string
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          brukt_at?: string
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          brukt_at?: string
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       site_settings: {
         Row: {
           key: string
@@ -1104,6 +1122,8 @@ export type Database = {
           markedsradar_inkluder_ai: boolean
           markedsradar_send_etter_import: boolean
           markedsradar_sist_sendt_uke: string | null
+          salgsagent_aktiv: boolean | null
+          salgsagent_sist_sendt: string | null
           terskel_dager: number
           updated_at: string | null
         }
@@ -1117,6 +1137,8 @@ export type Database = {
           markedsradar_inkluder_ai?: boolean
           markedsradar_send_etter_import?: boolean
           markedsradar_sist_sendt_uke?: string | null
+          salgsagent_aktiv?: boolean | null
+          salgsagent_sist_sendt?: string | null
           terskel_dager?: number
           updated_at?: string | null
         }
@@ -1130,6 +1152,8 @@ export type Database = {
           markedsradar_inkluder_ai?: boolean
           markedsradar_send_etter_import?: boolean
           markedsradar_sist_sendt_uke?: string | null
+          salgsagent_aktiv?: boolean | null
+          salgsagent_sist_sendt?: string | null
           terskel_dager?: number
           updated_at?: string | null
         }
