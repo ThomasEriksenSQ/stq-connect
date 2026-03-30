@@ -725,6 +725,9 @@ function ConsultantSheet({
 /* ─── Knowledge Tab ─── */
 
 function SoknaderTab() {
+  const queryClient = useQueryClient();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
   const { data: applications = [], isLoading } = useQuery({
     queryKey: ["website_applications"],
     queryFn: async () => {
@@ -734,6 +737,22 @@ function SoknaderTab() {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("website_applications").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["website_applications"] });
+      toast.success("Søknad slettet");
+      setDeletingId(null);
+    },
+    onError: () => {
+      toast.error("Kunne ikke slette søknad");
+      setDeletingId(null);
     },
   });
 
@@ -765,6 +784,7 @@ function SoknaderTab() {
                 <TableHead>E-post</TableHead>
                 <TableHead>Telefon</TableHead>
                 <TableHead>CV</TableHead>
+                <TableHead className="w-10"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -797,6 +817,32 @@ function SoknaderTab() {
                       </a>
                     ) : (
                       <span className="text-[0.8125rem] text-muted-foreground">–</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {deletingId === app.id ? (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => deleteMutation.mutate(app.id)}
+                          disabled={deleteMutation.isPending}
+                          className="text-[0.75rem] font-medium text-destructive hover:underline"
+                        >
+                          {deleteMutation.isPending ? "Sletter…" : "Ja, slett"}
+                        </button>
+                        <button
+                          onClick={() => setDeletingId(null)}
+                          className="text-[0.75rem] font-medium text-muted-foreground hover:underline"
+                        >
+                          Avbryt
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setDeletingId(app.id)}
+                        className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     )}
                   </TableCell>
                 </TableRow>
