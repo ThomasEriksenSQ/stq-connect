@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { Plus, X, ArrowUpDown, Pencil, Trash2, Sparkles, Loader2, ChevronDown, Check, ClipboardList, UserX, Users, Trophy } from "lucide-react";
 import { ForespørselSheet } from "@/components/ForespørselSheet";
 import { relativeDate, fullDate } from "@/lib/relativeDate";
-import { relativeDate, fullDate } from "@/lib/relativeDate";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -771,7 +770,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
 export default function Foresporsler() {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
+  
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
   const [sheetExpanded, setSheetExpanded] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("aktive");
@@ -1042,7 +1041,7 @@ export default function Foresporsler() {
       )}
 
       <NyForesporselModal open={modalOpen} onClose={() => setModalOpen(false)} />
-      <ImportForesporslerModal open={importOpen} onOpenChange={setImportOpen} />
+      
 
       {/* Detail/Edit Sheet */}
       <Sheet open={!!selectedRow} onOpenChange={(o) => { if (!o) { setSelectedRowId(null); setSheetExpanded(false); } }}>
