@@ -458,13 +458,6 @@ const Contacts = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-[1.375rem] font-bold">Kontakter</h1>
-        <button
-          onClick={() => setBulkModalOpen(true)}
-          className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
-        >
-          <Sparkles className="h-3.5 w-3.5 text-primary" />
-          Oppdater signaler
-        </button>
       </div>
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-xs">
