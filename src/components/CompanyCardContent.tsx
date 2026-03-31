@@ -890,12 +890,13 @@ export function CompanyCardContent({
                       className="h-10 max-w-full rounded-lg"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
+                  <div className="mt-2 border-t border-border/80 pt-4">
+                    <div className="flex flex-wrap items-center gap-1">
                       <Button
                         type="button"
                         variant="ghost"
-                        className="h-10 px-3 rounded-lg"
+                        size="sm"
+                        className="h-9 rounded-lg px-2.5 text-muted-foreground hover:text-foreground"
                         onClick={() => setMergeCompanyDialogOpen(true)}
                       >
                         <ArrowRightLeft className="h-4 w-4 mr-1" />
@@ -904,14 +905,15 @@ export function CompanyCardContent({
                       <Button
                         type="button"
                         variant="ghost"
-                        className="h-10 px-3 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10"
+                        size="sm"
+                        className="h-9 rounded-lg px-2.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
                         onClick={() => setDeleteCompanyDialogOpen(true)}
                       >
                         <Trash2 className="h-4 w-4 mr-1" />
                         Slett selskap
                       </Button>
                     </div>
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="mt-3 flex items-center justify-end gap-2">
                       <Button
                         type="button"
                         variant="outline"
