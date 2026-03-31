@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+import { buildMatchingProfile, sanitizeAiMatchResults } from "../_shared/matchingProfile.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -28,25 +30,39 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const { teknologier, sted, interne, eksterne } = await req.json();
+    const requestProfile = buildMatchingProfile(teknologier || []);
 
-    if (!teknologier?.length) {
+    if (!requestProfile.tags.length) {
       return new Response(JSON.stringify([]), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    const candidateProfiles = new Map<string, { tags: string[]; type: string }>();
+    const normalizedInterne = (interne || []).map((k: any) => {
+      const profile = buildMatchingProfile(k.kompetanse || []);
+      candidateProfiles.set(String(k.id), { tags: profile.tags, type: "intern" });
+      return { ...k, _profile: profile };
+    });
+    const normalizedEksterne = (eksterne || []).map((k: any) => {
+      const profile = buildMatchingProfile(k.teknologier || []);
+      candidateProfiles.set(String(k.id), { tags: profile.tags, type: "ekstern" });
+      return { ...k, _profile: profile };
+    });
+
     const systemPrompt = `You are a consultant matching assistant for STACQ, a Norwegian IT staffing company specializing in embedded systems and engineering.
 Rank consultants by fit for the assignment. Return ONLY a valid JSON array, no markdown, no explanation:
 [{ "id": <number|string>, "navn": "<name>", "type": "intern"|"ekstern", "score": <1-10>, "begrunnelse": "<1 short Norwegian sentence, max 12 words>", "match_tags": ["<matching technology>", ...] }]
-Rank best fit first. Return ALL consultants with score >= 4, ranked best first. Return as many matches as possible — do not limit the list.`;
+Rank best fit first. Return ALL consultants with score >= 4, ranked best first. Return as many matches as possible — do not limit the list.
+Use exact canonical tags from the provided profiles when you populate match_tags. Do not invent new tags.`;
 
-    const userPrompt = `Forespørsel: ${teknologier.join(", ")}${sted ? ` — ${sted}` : ""}
+    const userPrompt = `Forespørsel: ${requestProfile.promptText}${sted ? ` — ${sted}` : ""}
 
 Interne konsulenter:
-${(interne || []).map((k: any) => `[id:${k.id}] ${k.navn}: ${(k.kompetanse || []).join(", ") || "ukjent"}`).join("\n") || "Ingen"}
+${normalizedInterne.map((k: any) => `[id:${k.id}] ${k.navn}: ${k._profile.promptText}`).join("\n") || "Ingen"}
 
 Eksterne konsulenter (tilgjengelige):
-${(eksterne || []).map((k: any) => `[id:${k.id}] ${k.navn}: ${(k.teknologier || []).join(", ") || "ukjent"}`).join("\n") || "Ingen"}`;
+${normalizedEksterne.map((k: any) => `[id:${k.id}] ${k.navn}: ${k._profile.promptText}`).join("\n") || "Ingen"}`;
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -104,7 +120,14 @@ ${(eksterne || []).map((k: any) => `[id:${k.id}] ${k.navn}: ${(k.teknologier || 
       );
     }
 
-    return new Response(JSON.stringify(parsed), {
+    const sanitized = sanitizeAiMatchResults(parsed, {
+      targetTags: requestProfile.tags,
+      sourcesById: candidateProfiles,
+      allowedTypes: new Set(["intern", "ekstern"]),
+      fallbackReason: "Relevant teknologimatch",
+    });
+
+    return new Response(JSON.stringify(sanitized), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

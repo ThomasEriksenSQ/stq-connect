@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+import { buildMatchingProfile, sanitizeAiMatchResults } from "../_shared/matchingProfile.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -28,12 +30,20 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const { konsulent, foresporsler } = await req.json();
+    const consultantProfile = buildMatchingProfile(konsulent?.teknologier || []);
 
-    if (!foresporsler?.length) {
+    if (!foresporsler?.length || !consultantProfile.tags.length) {
       return new Response(JSON.stringify([]), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const requestProfiles = new Map<string, { tags: string[] }>();
+    const normalizedForesporsler = (foresporsler || []).map((f: any) => {
+      const profile = buildMatchingProfile(f.teknologier || []);
+      requestProfiles.set(String(f.id), { tags: profile.tags });
+      return { ...f, _profile: profile };
+    });
 
     const systemPrompt = `Du er en konsulentmatcher for STACQ, et norsk IT-konsulentbyrå som spesialiserer seg på embedded systems og engineering.
 Ranger forespørsler etter hvor godt de passer for denne konsulenten.
@@ -45,16 +55,17 @@ Return ONLY valid JSON array, no markdown, no explanation:
   "begrunnelse": "<string, maks 12 ord, norsk>",
   "match_tags": ["<matching technology>", ...]
 }]
-Ranger best match først. Inkluder kun score >= 4. Returner maks 15 matcher.`;
+Ranger best match først. Inkluder kun score >= 4. Returner maks 15 matcher.
+Bruk eksakte kanoniske tags fra profilene når du fyller match_tags. Ikke finn opp nye tags.`;
 
     const userPrompt = `Konsulent: ${konsulent.navn}
-Teknologier: ${konsulent.teknologier?.join(", ") || "ukjent"}
+Profil: ${consultantProfile.promptText}
 ${konsulent.cv_tekst ? `CV-sammendrag: ${konsulent.cv_tekst.slice(0, 800)}` : "CV: ikke tilgjengelig"}
 ${konsulent.geografi ? `Geografi: ${konsulent.geografi}` : ""}
 
 Aktive forespørsler:
-${foresporsler.map((f: any) =>
-  `ID:${f.id} | ${f.selskap_navn} | ${f.sted || "ukjent sted"} | Teknologier: ${(f.teknologier || []).join(", ") || "ukjent"} | Frist: ${f.frist_dato || "ingen"}`
+${normalizedForesporsler.map((f: any) =>
+  `ID:${f.id} | ${f.selskap_navn} | ${f.sted || "ukjent sted"} | ${f._profile.promptText} | Frist: ${f.frist_dato || "ingen"}`
 ).join("\n")}`;
 
     const response = await fetch(
@@ -131,7 +142,13 @@ ${foresporsler.map((f: any) =>
       }
     }
 
-    return new Response(JSON.stringify(parsed), {
+    const sanitized = sanitizeAiMatchResults(parsed, {
+      targetTags: consultantProfile.tags,
+      sourcesById: requestProfiles,
+      fallbackReason: "Relevant teknologimatch",
+    });
+
+    return new Response(JSON.stringify(sanitized), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
