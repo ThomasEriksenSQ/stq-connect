@@ -1,11 +1,85 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { normalizeTechnologyTags } from "../_shared/technologyTags.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const TECH_SECTION_KEYWORDS = [
+  "kompet",
+  "teknolog",
+  "sprak",
+  "språk",
+  "rammeverk",
+  "verktoy",
+  "verktøy",
+  "stack",
+  "tools",
+  "nokkelpunkter",
+  "nøkkelpunkter",
+];
+
+function splitTechText(value: string) {
+  return value
+    .split(/[\n,;|•]+/g)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function addTagsFromValue(tags: Set<string>, value: unknown) {
+  if (typeof value === "string") {
+    for (const part of splitTechText(value)) tags.add(part);
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    for (const entry of value) addTagsFromValue(tags, entry);
+  }
+}
+
+function isTechSidebarSection(section: any) {
+  const heading = typeof section?.heading === "string" ? section.heading.toLowerCase() : "";
+  return TECH_SECTION_KEYWORDS.some((keyword) => heading.includes(keyword));
+}
+
+function deriveCandidateProfile(parsed: any) {
+  const tags = new Set<string>();
+
+  const competenceGroups = Array.isArray(parsed?.competenceGroups) ? parsed.competenceGroups : [];
+  for (const group of competenceGroups) {
+    addTagsFromValue(tags, group?.content);
+  }
+
+  const projects = Array.isArray(parsed?.projects) ? parsed.projects : [];
+  for (const project of projects) {
+    addTagsFromValue(tags, project?.technologies);
+    addTagsFromValue(tags, project?.tech);
+  }
+
+  const sidebarSections = Array.isArray(parsed?.sidebarSections) ? parsed.sidebarSections : [];
+  for (const section of sidebarSections) {
+    if (!isTechSidebarSection(section)) continue;
+    addTagsFromValue(tags, section?.items);
+  }
+
+  return {
+    kompetanse: normalizeTechnologyTags(Array.from(tags)),
+    rolle:
+      typeof parsed?.tittel === "string" && parsed.tittel.trim()
+        ? parsed.tittel.trim()
+        : typeof projects?.[0]?.role === "string" && projects[0].role.trim()
+          ? projects[0].role.trim()
+          : null,
+    bio: Array.isArray(parsed?.introParagraphs)
+      ? parsed.introParagraphs
+          .filter((entry: unknown): entry is string => typeof entry === "string" && entry.trim().length > 0)
+          .join("\n\n")
+      : "",
+  };
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS")
@@ -160,7 +234,12 @@ Regler:
       );
     }
 
-    return new Response(JSON.stringify(parsed), {
+    const enriched = {
+      ...parsed,
+      ...deriveCandidateProfile(parsed),
+    };
+
+    return new Response(JSON.stringify(enriched), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

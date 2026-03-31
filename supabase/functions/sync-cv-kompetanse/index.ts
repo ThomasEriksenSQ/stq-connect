@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { normalizeTechnologyTags } from "../_shared/technologyTags.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -107,7 +108,7 @@ Deno.serve(async (req) => {
       addTagsFromValue(tags, s?.items);
     }
 
-    const kompetanse = Array.from(tags);
+    const kompetanse = normalizeTechnologyTags(Array.from(tags));
 
     // Update the employee record
     const { error: updateError } = await supabase

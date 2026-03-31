@@ -6,6 +6,7 @@ import { Upload, FileText, Loader2, Check, X, AlertCircle, Search, CloudOff } fr
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { normalizeTechnologyTags } from "@/lib/technologyTags";
 
 /* ─── Types ─── */
 type ConsultantType = "freelance" | "partner";
@@ -83,7 +84,10 @@ export default function ImporterCver() {
     });
     if (error) throw error;
     if (data?.error) throw new Error(data.error);
-    return data;
+    return {
+      ...data,
+      kompetanse: normalizeTechnologyTags(data?.kompetanse || []),
+    };
   };
 
   const matchToExisting = useCallback(
@@ -168,7 +172,7 @@ export default function ImporterCver() {
   const saveEksternUpdate = async (cv: ParsedCV) => {
     if (!cv.matchedId || !cv.data) return;
     const { error } = await supabase.from("external_consultants").update({
-      teknologier: cv.data.kompetanse || [],
+      teknologier: normalizeTechnologyTags(cv.data.kompetanse || []),
       cv_tekst: cv.data.bio || null,
       updated_at: new Date().toISOString(),
     }).eq("id", cv.matchedId as string);
@@ -180,7 +184,7 @@ export default function ImporterCver() {
     if (!cv.type) { toast.error("Velg type (Freelance / Via partner)"); return; }
     const { error } = await supabase.from("external_consultants").insert({
       navn: cv.data.navn || cv.file.name.replace(".pdf", ""),
-      teknologier: cv.data.kompetanse || [],
+      teknologier: normalizeTechnologyTags(cv.data.kompetanse || []),
       cv_tekst: cv.data.bio || null,
       type: cv.type,
       company_id: cv.type === "partner" ? cv.partnerId : null,

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { normalizeTechnologyTags } from "@/lib/technologyTags";
 
 interface CvData {
   navn: string;
@@ -87,7 +88,7 @@ export function CvUploadFlow({ onClose, onAddMessage }: CvUploadFlowProps) {
           navn: data.navn || "",
           epost: data.epost || null,
           telefon: data.telefon || null,
-          kompetanse: data.kompetanse || [],
+          kompetanse: normalizeTechnologyTags(data.kompetanse || []),
           rolle: data.rolle || null,
           erfaring_aar: data.erfaring_aar || null,
           bio: data.bio || "",
@@ -146,7 +147,7 @@ export function CvUploadFlow({ onClose, onAddMessage }: CvUploadFlowProps) {
     try {
       if (updateExisting && internMatch) {
         const { error } = await supabase.from("stacq_ansatte").update({
-          kompetanse: cvData.kompetanse,
+          kompetanse: normalizeTechnologyTags(cvData.kompetanse),
           bio: cvData.bio,
           geografi: cvData.geografi || undefined,
           erfaring_aar: cvData.erfaring_aar,
@@ -157,7 +158,7 @@ export function CvUploadFlow({ onClose, onAddMessage }: CvUploadFlowProps) {
       } else {
         const { error } = await supabase.from("stacq_ansatte").insert({
           navn: cvData.navn,
-          kompetanse: cvData.kompetanse,
+          kompetanse: normalizeTechnologyTags(cvData.kompetanse),
           bio: cvData.bio,
           geografi: cvData.geografi || null,
           erfaring_aar: cvData.erfaring_aar,
@@ -185,7 +186,7 @@ export function CvUploadFlow({ onClose, onAddMessage }: CvUploadFlowProps) {
         navn: cvData.navn,
         epost: cvData.epost || null,
         telefon: cvData.telefon || null,
-        teknologier: cvData.kompetanse,
+        teknologier: normalizeTechnologyTags(cvData.kompetanse),
         rolle: cvData.rolle || null,
         erfaring_aar: cvData.erfaring_aar,
         selskap_tekst: selectedCompany.name,
@@ -213,7 +214,7 @@ export function CvUploadFlow({ onClose, onAddMessage }: CvUploadFlowProps) {
         navn: cvData.navn,
         epost: cvData.epost || null,
         telefon: cvData.telefon || null,
-        teknologier: cvData.kompetanse,
+        teknologier: normalizeTechnologyTags(cvData.kompetanse),
         rolle: cvData.rolle || null,
         erfaring_aar: cvData.erfaring_aar,
         selskap_tekst: freelanceSelskapNavn || null,

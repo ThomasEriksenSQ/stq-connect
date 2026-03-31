@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { normalizeTechnologyTags } from "../_shared/technologyTags.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -90,6 +91,10 @@ serve(async (req) => {
         JSON.stringify({ error: "Kunne ikke tolke AI-svaret" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    if (Array.isArray(parsed?.kompetanser)) {
+      parsed.kompetanser = normalizeTechnologyTags(parsed.kompetanser);
     }
 
     return new Response(JSON.stringify(parsed), {

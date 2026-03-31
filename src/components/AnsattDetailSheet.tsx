@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { normalizeTechnologyTags } from "@/lib/technologyTags";
 
 const SUPABASE_URL = "https://kbvzpcebfopqqrvmbiap.supabase.co";
 
@@ -134,7 +135,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      if (Array.isArray(data?.kompetanse)) set("kompetanse", data.kompetanse);
+      if (Array.isArray(data?.kompetanse)) set("kompetanse", normalizeTechnologyTags(data.kompetanse));
       toast.success(`${data.count} kompetanser hentet fra CV`);
       queryClient.invalidateQueries({ queryKey: ["stacq-ansatte"] });
     } catch (err: any) {
@@ -147,8 +148,10 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
   const set = (key: string, val: any) => setForm((prev) => ({ ...prev, [key]: val }));
 
   const addTag = (tag: string) => {
-    const t = tag.trim();
-    if (t && !form.kompetanse.includes(t)) set("kompetanse", [...form.kompetanse, t]);
+    const normalized = normalizeTechnologyTags(tag);
+    if (normalized.length > 0) {
+      set("kompetanse", normalizeTechnologyTags([...form.kompetanse, ...normalized]));
+    }
     setTagInput("");
   };
 
@@ -208,7 +211,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
       if (data?.error) throw new Error(data.error);
 
       if (data.erfaring_aar) set("erfaring_aar", String(data.erfaring_aar));
-      if (data.kompetanse?.length) set("kompetanse", data.kompetanse);
+      if (data.kompetanse?.length) set("kompetanse", normalizeTechnologyTags(data.kompetanse));
       if (data.geografi) set("geografi", data.geografi);
       setCvParsed(true);
       toast.success("CV analysert — feltene er fylt inn");
@@ -231,7 +234,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
       status: form.status,
       start_dato: form.start_dato || null,
       slutt_dato: form.slutt_dato || null,
-      kompetanse: form.kompetanse,
+      kompetanse: normalizeTechnologyTags(form.kompetanse),
       bilde_url: form.bilde_url || null,
       erfaring_aar: form.erfaring_aar ? parseInt(form.erfaring_aar) : null,
       tilgjengelig_fra: form.tilgjengelig_fra || null,

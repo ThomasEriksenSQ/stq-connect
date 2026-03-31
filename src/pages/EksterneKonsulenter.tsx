@@ -7,6 +7,7 @@ import { nb } from "date-fns/locale";
 import { Plus, X, Search, CalendarIcon, Upload, CheckCircle2, Loader2, Users, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatCleanupSummary } from "@/lib/candidateIdentity";
+import { normalizeTechnologyTags } from "@/lib/technologyTags";
 import { relativeFutureDate } from "@/lib/relativeDate";
 import { OppdragsMatchPanel } from "@/components/OppdragsMatchPanel";
 import { Calendar } from "@/components/ui/calendar";
@@ -366,8 +367,10 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
 
   // Tag input
   const addTag = (tag: string) => {
-    const t = tag.trim();
-    if (t && !form.teknologier.includes(t)) set("teknologier", [...form.teknologier, t]);
+    const normalized = normalizeTechnologyTags(tag);
+    if (normalized.length > 0) {
+      set("teknologier", normalizeTechnologyTags([...form.teknologier, ...normalized]));
+    }
     setTagInput("");
   };
 
@@ -418,7 +421,7 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
         prefilled.add("telefon");
       }
       if (data.technologies?.length && form.teknologier.length === 0) {
-        set("teknologier", data.technologies);
+        set("teknologier", normalizeTechnologyTags(data.technologies));
         prefilled.add("teknologier");
       }
 
@@ -453,7 +456,7 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
       telefon: form.telefon.trim() || null,
       company_id: form.type === "partner" ? (form.company_id || null) : null,
       selskap_tekst: form.type === "freelance" ? (form.selskap_tekst.trim() || null) : null,
-      teknologier: form.teknologier,
+      teknologier: normalizeTechnologyTags(form.teknologier),
       status: form.status,
       tilgjengelig_fra: form.tilgjengelig_fra || null,
       cv_tekst: form.cv_tekst || null,
