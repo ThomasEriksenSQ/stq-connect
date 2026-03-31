@@ -177,6 +177,83 @@ export type Database = {
           },
         ]
       }
+      company_aliases: {
+        Row: {
+          alias_name: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          normalized_alias: string
+          source_company_id: string | null
+        }
+        Insert: {
+          alias_name: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          normalized_alias: string
+          source_company_id?: string | null
+        }
+        Update: {
+          alias_name?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          normalized_alias?: string
+          source_company_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_aliases_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_merge_log: {
+        Row: {
+          created_at: string
+          id: string
+          merged_by: string | null
+          relation_counts: Json
+          source_company_id: string
+          source_company_name: string
+          source_snapshot: Json
+          target_company_id: string
+          target_company_name: string
+          target_snapshot: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          merged_by?: string | null
+          relation_counts?: Json
+          source_company_id: string
+          source_company_name: string
+          source_snapshot?: Json
+          target_company_id: string
+          target_company_name: string
+          target_snapshot?: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          merged_by?: string | null
+          relation_counts?: Json
+          source_company_id?: string
+          source_company_name?: string
+          source_snapshot?: Json
+          target_company_id?: string
+          target_company_name?: string
+          target_snapshot?: Json
+        }
+        Relationships: []
+      }
       company_tech_profile: {
         Row: {
           company_id: string | null

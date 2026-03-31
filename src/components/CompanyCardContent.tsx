@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { DescriptionText } from "@/components/DescriptionText";
+import { MergeCompanyDialog } from "@/components/company/MergeCompanyDialog";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,6 +44,7 @@ import {
   MessageCircle,
   Plus,
   Trash2,
+  ArrowRightLeft,
   MapPin,
   Loader2,
   Target,
@@ -241,6 +243,7 @@ export function CompanyCardContent({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [techTagInput, setTechTagInput] = useState("");
   const [deleteCompanyDialogOpen, setDeleteCompanyDialogOpen] = useState(false);
+  const [mergeCompanyDialogOpen, setMergeCompanyDialogOpen] = useState(false);
 
   const { data: company, isLoading } = useQuery({
     queryKey: ["company", companyId],
@@ -885,6 +888,15 @@ export function CompanyCardContent({
                     <Button
                       type="button"
                       variant="ghost"
+                      className="h-10 px-3 rounded-lg"
+                      onClick={() => setMergeCompanyDialogOpen(true)}
+                    >
+                      <ArrowRightLeft className="h-4 w-4 mr-1" />
+                      Slå sammen selskap
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
                       className="h-10 px-3 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10"
                       onClick={() => setDeleteCompanyDialogOpen(true)}
                     >
@@ -924,6 +936,16 @@ export function CompanyCardContent({
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+            <MergeCompanyDialog
+              open={mergeCompanyDialogOpen}
+              onOpenChange={setMergeCompanyDialogOpen}
+              sourceCompanyId={companyId}
+              sourceCompanyName={company.name}
+              onMerged={(targetCompanyId) => {
+                queryClient.invalidateQueries();
+                navigate(`/selskaper/${targetCompanyId}`);
+              }}
+            />
             {editable && (
               <button
                 onClick={() => {

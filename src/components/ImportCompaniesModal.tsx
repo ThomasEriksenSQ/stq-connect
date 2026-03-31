@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Upload, CheckCircle2, AlertTriangle, XCircle, Loader2, ArrowRight } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
+import { findBestCompanyMatch, normalizeCompanyName } from "@/lib/companyMatch";
 
 type ParsedRow = {
   selskap: string;
@@ -28,8 +29,18 @@ type ClassifiedRow = ParsedRow & {
   forceImport?: boolean;
 };
 
-function normalizeName(n: string) {
-  return n.toLowerCase().replace(/\b(as|asa|a\/s)\b/g, "").replace(/[^a-zæøå0-9]/g, "").trim();
+type ExistingCompanyCandidate = {
+  id: string;
+  name: string;
+  org_number: string | null;
+  aliases: string[];
+};
+
+function matchesExactCompanyIdentity(name: string, candidate: ExistingCompanyCandidate): boolean {
+  const normalized = normalizeCompanyName(name);
+  if (!normalized) return false;
+
+  return [candidate.name, ...candidate.aliases].some((value) => normalizeCompanyName(value) === normalized);
 }
 
 export function ImportCompaniesModal({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
@@ -45,7 +56,7 @@ export function ImportCompaniesModal({ open, onOpenChange }: { open: boolean; on
     const buf = await file.arrayBuffer();
     const wb = XLSX.read(buf, { type: "array" });
     const ws = wb.Sheets[wb.SheetNames[0]];
-    const json: any[] = XLSX.utils.sheet_to_json(ws);
+    const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws);
 
     const parsed: ParsedRow[] = json.map((r) => ({
       selskap: String(r["Selskap"] || r["selskap"] || "").trim(),
@@ -59,13 +70,32 @@ export function ImportCompaniesModal({ open, onOpenChange }: { open: boolean; on
       kontaktpersoner: String(r["Kontaktpersoner"] || r["kontaktpersoner"] || "").trim(),
     })).filter((r) => r.selskap);
 
-    // Fetch existing companies
-    const { data: existing } = await supabase.from("companies").select("id, name, org_number");
-    const existingByOrg = new Map<string, { id: string; name: string }>();
-    const existingByName = new Map<string, { id: string; name: string }>();
-    (existing || []).forEach((c) => {
-      if (c.org_number) existingByOrg.set(c.org_number.replace(/\D/g, ""), { id: c.id, name: c.name });
-      existingByName.set(normalizeName(c.name), { id: c.id, name: c.name });
+    const [{ data: existing, error: existingError }, { data: aliases, error: aliasesError }] = await Promise.all([
+      supabase.from("companies").select("id, name, org_number"),
+      supabase.from("company_aliases").select("company_id, alias_name"),
+    ]);
+
+    if (existingError || aliasesError) {
+      throw existingError || aliasesError;
+    }
+
+    const aliasMap = new Map<string, string[]>();
+    (aliases || []).forEach((alias) => {
+      const values = aliasMap.get(alias.company_id) || [];
+      values.push(alias.alias_name);
+      aliasMap.set(alias.company_id, values);
+    });
+
+    const existingCompanies: ExistingCompanyCandidate[] = (existing || []).map((company) => ({
+      id: company.id,
+      name: company.name,
+      org_number: company.org_number,
+      aliases: aliasMap.get(company.id) || [],
+    }));
+
+    const existingByOrg = new Map<string, ExistingCompanyCandidate>();
+    existingCompanies.forEach((company) => {
+      if (company.org_number) existingByOrg.set(company.org_number.replace(/\D/g, ""), company);
     });
 
     const classified: ClassifiedRow[] = parsed.map((r) => {
@@ -74,11 +104,16 @@ export function ImportCompaniesModal({ open, onOpenChange }: { open: boolean; on
         const ex = existingByOrg.get(r.org_nr)!;
         return { ...r, status: "duplicate", existingName: ex.name, existingId: ex.id, selected: false };
       }
-      // Fuzzy name match
-      const norm = normalizeName(r.selskap);
-      if (existingByName.has(norm)) {
-        const ex = existingByName.get(norm)!;
-        return { ...r, status: "possible_duplicate", existingName: ex.name, existingId: ex.id, selected: false };
+      const matchedCompany = findBestCompanyMatch(r.selskap, existingCompanies);
+      if (matchedCompany) {
+        const exactIdentityMatch = matchesExactCompanyIdentity(r.selskap, matchedCompany);
+        return {
+          ...r,
+          status: exactIdentityMatch ? "duplicate" : "possible_duplicate",
+          existingName: matchedCompany.name,
+          existingId: matchedCompany.id,
+          selected: false,
+        };
       }
       return { ...r, status: "new", selected: true };
     });

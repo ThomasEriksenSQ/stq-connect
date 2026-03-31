@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.cleanup-external-consultants]
 verify_jwt = false
+
+[functions.merge-companies]
+verify_jwt = false

@@ -22,6 +22,7 @@ type CompanyRef = {
   id: string;
   name: string;
   status: string | null;
+  aliases?: string[];
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -122,10 +123,25 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: companies, error: companiesError } = await supabase.from("companies").select("id, name, status");
-    if (companiesError) throw companiesError;
+    const [{ data: companies, error: companiesError }, { data: aliases, error: aliasesError }] = await Promise.all([
+      supabase.from("companies").select("id, name, status"),
+      supabase.from("company_aliases").select("company_id, alias_name"),
+    ]);
+    if (companiesError || aliasesError) throw companiesError || aliasesError;
 
-    const companyById = new Map((companies || []).map((company) => [company.id, company as CompanyRef]));
+    const aliasMap = new Map<string, string[]>();
+    (aliases || []).forEach((alias) => {
+      const list = aliasMap.get(alias.company_id) || [];
+      list.push(alias.alias_name);
+      aliasMap.set(alias.company_id, list);
+    });
+
+    const companiesWithAliases = ((companies || []) as CompanyRef[]).map((company) => ({
+      ...company,
+      aliases: aliasMap.get(company.id) || [],
+    }));
+
+    const companyById = new Map(companiesWithAliases.map((company) => [company.id, company as CompanyRef]));
     const updates: Array<Promise<unknown>> = [];
     const affectedCompanyIds = new Set<string>();
     const companiesWithTechnologies = new Set<string>();
@@ -135,7 +151,7 @@ Deno.serve(async (req) => {
     for (const row of annonser) {
       const normalizedTags = mergeTechnologyTags(row.teknologier_array || [], row.teknologier || null);
       const existingCompany = row.matched_company_id ? companyById.get(row.matched_company_id) || null : null;
-      const matchedCompany = existingCompany || findBestCompanyMatch(row.selskap, companies || []);
+      const matchedCompany = existingCompany || findBestCompanyMatch(row.selskap, companiesWithAliases);
 
       if (normalizedTags.length > 0 && matchedCompany?.id) {
         companiesWithTechnologies.add(matchedCompany.id);

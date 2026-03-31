@@ -50,7 +50,20 @@ export function companiesMatch(a: string, b: string): boolean {
   return getCompanyMatchScore(a, b) >= 72;
 }
 
-export function findBestCompanyMatch<T extends { name: string }>(
+type CompanyMatchCandidate = {
+  name: string;
+  aliases?: string[] | null;
+};
+
+function getCandidateNames(candidate: CompanyMatchCandidate): string[] {
+  const names = [candidate.name, ...(candidate.aliases || [])]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value));
+
+  return [...new Set(names)];
+}
+
+export function findBestCompanyMatch<T extends CompanyMatchCandidate>(
   companyName: string | null | undefined,
   companies: T[],
 ): T | null {
@@ -60,11 +73,13 @@ export function findBestCompanyMatch<T extends { name: string }>(
   let bestScore = 0;
 
   companies.forEach((company) => {
-    const score = getCompanyMatchScore(companyName, company.name);
-    if (score > bestScore) {
-      best = company;
-      bestScore = score;
-    }
+    getCandidateNames(company).forEach((candidateName) => {
+      const score = getCompanyMatchScore(companyName, candidateName);
+      if (score > bestScore) {
+        best = company;
+        bestScore = score;
+      }
+    });
   });
 
   return bestScore >= 72 ? best : null;

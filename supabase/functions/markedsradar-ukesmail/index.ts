@@ -1,5 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
+import { findBestCompanyMatch, normalizeCompanyName } from "../_shared/companyMatch.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -24,6 +26,7 @@ type CompanyRef = {
   id: string;
   name: string;
   status: string | null;
+  aliases?: string[];
 };
 
 type RadarCompany = {
@@ -104,24 +107,6 @@ const STRATEGIC_TECHS = new Set([
   "Embedded systems",
   "Microcontrollers",
 ]);
-
-function normalizeCompanyName(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/\b(as|asa|ab|gmbh|ltd|inc|llc|norway|norge|no)\b/g, "")
-    .replace(/[.\-_,]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function companiesMatch(a: string, b: string): boolean {
-  const na = normalizeCompanyName(a);
-  const nb = normalizeCompanyName(b);
-  if (na === nb) return true;
-  if (na.length >= 4 && nb.includes(na)) return true;
-  if (nb.length >= 4 && na.includes(nb)) return true;
-  return false;
-}
 
 function splitTechSegments(raw: string): string[] {
   const segments: string[] = [];
@@ -222,7 +207,7 @@ function buildMarketSnapshot(annonser: FinnAnnonse[], companies: CompanyRef[]): 
 
   const findCompany = (name: string | null): CompanyRef | null => {
     if (!name) return null;
-    return companies.find((company) => companiesMatch(name, company.name)) || null;
+    return findBestCompanyMatch(name, companies) || null;
   };
 
   const grouped = new Map<
@@ -600,7 +585,7 @@ Deno.serve(async (req) => {
     }
 
     const ninetyDaysAgo = dateDaysAgo(new Date(), 90);
-    const [{ data: annonser, error: annonserErr }, { data: companies, error: companiesErr }] = await Promise.all([
+    const [{ data: annonser, error: annonserErr }, { data: companies, error: companiesErr }, { data: aliases, error: aliasesErr }] = await Promise.all([
       supabase
         .from("finn_annonser")
         .select(
@@ -609,10 +594,11 @@ Deno.serve(async (req) => {
         .gte("dato", ninetyDaysAgo)
         .order("dato", { ascending: false }),
       supabase.from("companies").select("id, name, status"),
+      supabase.from("company_aliases").select("company_id, alias_name"),
     ]);
 
-    if (annonserErr || companiesErr) {
-      throw annonserErr || companiesErr;
+    if (annonserErr || companiesErr || aliasesErr) {
+      throw annonserErr || companiesErr || aliasesErr;
     }
 
     if (!annonser || annonser.length === 0) {
@@ -622,7 +608,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    const snapshot = buildMarketSnapshot(annonser as FinnAnnonse[], (companies || []) as CompanyRef[]);
+    const aliasMap = new Map<string, string[]>();
+    (aliases || []).forEach((alias) => {
+      const values = aliasMap.get(alias.company_id) || [];
+      values.push(alias.alias_name);
+      aliasMap.set(alias.company_id, values);
+    });
+
+    const companiesWithAliases = ((companies || []) as CompanyRef[]).map((company) => ({
+      ...company,
+      aliases: aliasMap.get(company.id) || [],
+    }));
+
+    const snapshot = buildMarketSnapshot(annonser as FinnAnnonse[], companiesWithAliases);
     if (!snapshot.latestWeek) {
       return new Response(JSON.stringify({ skipped: true, reason: "Fant ingen uke i Finn-data" }), {
         status: 200,
