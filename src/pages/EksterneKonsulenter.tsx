@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 import { Plus, X, Search, CalendarIcon, Upload, CheckCircle2, Loader2, Users, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { formatCleanupSummary } from "@/lib/candidateIdentity";
 import { relativeFutureDate } from "@/lib/relativeDate";
 import { OppdragsMatchPanel } from "@/components/OppdragsMatchPanel";
 import { Calendar } from "@/components/ui/calendar";
@@ -55,6 +56,8 @@ export default function EksterneKonsulenter() {
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [cleanupOpen, setCleanupOpen] = useState(false);
+  const [cleanupRunning, setCleanupRunning] = useState(false);
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["external-consultants"],
@@ -100,6 +103,29 @@ export default function EksterneKonsulenter() {
     setModalOpen(true);
   };
 
+  const handleCleanup = async () => {
+    setCleanupRunning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cleanup-external-consultants", {
+        body: {},
+      });
+
+      if (error) throw error;
+      if (!data?.summary) throw new Error("Ingen respons fra cleanup-external-consultants");
+
+      toast.success(formatCleanupSummary(data.summary), {
+        description: `${data.summary.kept_external} eksterne konsulenter gjenstår etter opprydding.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["external-consultants"] });
+      setCleanupOpen(false);
+    } catch (error) {
+      console.error("cleanup-external-consultants failed:", error);
+      toast.error(error instanceof Error ? error.message : "Kunne ikke rydde eksterne konsulenter");
+    } finally {
+      setCleanupRunning(false);
+    }
+  };
+
   if (isLoading) {
     return <p className="text-muted-foreground py-12 text-center">Laster eksterne konsulenter...</p>;
   }
@@ -131,6 +157,14 @@ export default function EksterneKonsulenter() {
         >
           <Upload className="h-4 w-4" />
           Importer CVer
+        </button>
+        <button
+          onClick={() => setCleanupOpen(true)}
+          disabled={cleanupRunning}
+          className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+        >
+          {cleanupRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
+          Rydd dubletter
         </button>
         <button
           onClick={openCreate}
@@ -223,6 +257,23 @@ export default function EksterneKonsulenter() {
         editRow={editId ? rows.find((r: any) => r.id === editId) : null}
         userId={user?.id}
       />
+
+      <AlertDialog open={cleanupOpen} onOpenChange={setCleanupOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rydd eksterne konsulenter?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Dette fjerner åpenbare dubletter og eksterne kandidater som matcher ansatte. Rader som allerede er koblet til en forespørsel blir hoppet over.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cleanupRunning}>Avbryt</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCleanup} disabled={cleanupRunning}>
+              {cleanupRunning ? "Rydder..." : "Ja, rydd nå"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

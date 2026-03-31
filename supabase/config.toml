@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.rebuild-technical-dna]
 verify_jwt = false
+
+[functions.cleanup-external-consultants]
+verify_jwt = false
