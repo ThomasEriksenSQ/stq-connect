@@ -1,7 +1,7 @@
 import { Outlet, NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import { FornyelsesVarsel } from "@/components/FornyelsesVarsel";
 import { useTheme } from "next-themes";
-import { Moon, Sun, LogOut, Building2, Users, LayoutDashboard, Sparkles, Briefcase, ChevronDown, Users2, TrendingUp, UserPlus, Radar, Globe, FileText } from "lucide-react";
+import { Moon, Sun, LogOut, Building2, Users, LayoutDashboard, Sparkles, Briefcase, ChevronDown, Users2, TrendingUp, UserPlus, Radar, Globe, FileText, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ const navItems = [
   { title: "Selskaper", url: "/selskaper", icon: Building2 },
   { title: "Kontakter", url: "/kontakter", icon: Users },
   { title: "Forespørsler", url: "/foresporsler", icon: Briefcase },
+  { title: "Mockup", url: "/mockup", icon: LayoutGrid, end: true },
 ];
 
 
