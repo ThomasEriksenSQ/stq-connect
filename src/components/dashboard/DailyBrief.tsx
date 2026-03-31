@@ -6,6 +6,7 @@ import { differenceInDays, isPast, isToday, format, addWeeks, addMonths } from "
 import { nb } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { getEffectiveSignal, upsertTaskSignalDescription } from "@/lib/categoryUtils";
+import { CONTACT_CV_EMAIL_REQUIRED_MESSAGE, contactHasEmail } from "@/lib/contactCvEligibility";
 import { getHeatResult, TEMP_CONFIG } from "@/lib/heatScore";
 import { Flame, List, ChevronLeft, ChevronRight, Radio, Loader2, MapPin, ChevronDown, X, Bell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -1164,6 +1165,10 @@ const DailyBrief = () => {
                       <button
                         onClick={() => {
                           const newVal = !current.contact.cv_email;
+                          if (newVal && !contactHasEmail(current.contact)) {
+                            toast.error(CONTACT_CV_EMAIL_REQUIRED_MESSAGE);
+                            return;
+                          }
                           supabase
                             .from("contacts")
                             .update({ cv_email: newVal })

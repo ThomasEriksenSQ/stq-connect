@@ -96,6 +96,10 @@ Deno.serve(async (req) => {
       return inserted;
     }
 
+    function hasEmail(value: unknown) {
+      return typeof value === "string" && value.trim().length > 0;
+    }
+
     // --- Build lookup maps for activities/tasks resolution ---
     async function buildLookups() {
       const companies = await fetchAll("companies", "id, sf_account_id");
@@ -177,6 +181,7 @@ Deno.serve(async (req) => {
         const { sf_account_id, ...rest } = r;
         return {
           ...rest,
+          cv_email: Boolean(rest.cv_email) && hasEmail(rest.email),
           company_id: sf_account_id ? sfAccMap[sf_account_id] || null : null,
         };
       });

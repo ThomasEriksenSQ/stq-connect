@@ -15,6 +15,7 @@ import { BulkSignalModal } from "@/components/BulkSignalModal";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { relativeDate } from "@/lib/relativeDate";
+import { CONTACT_CV_EMAIL_REQUIRED_MESSAGE, contactHasEmail } from "@/lib/contactCvEligibility";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, differenceInDays } from "date-fns";
 import { nb } from "date-fns/locale";
@@ -232,6 +233,11 @@ const Contacts = () => {
   const pendingToggles = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const handleToggle = (contact: any, field: "cv_email" | "call_list", newValue: boolean) => {
+    if (field === "cv_email" && newValue && !contactHasEmail(contact)) {
+      toast.error(CONTACT_CV_EMAIL_REQUIRED_MESSAGE);
+      return;
+    }
+
     const key = `${contact.id}-${field}`;
     const label = field === "cv_email" ? "CV-Epost" : "Innkjøper";
     const msg = newValue ? `${label} aktivert` : `${label} deaktivert`;

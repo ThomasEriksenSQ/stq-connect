@@ -44,6 +44,11 @@ import { fullDate } from "@/lib/relativeDate";
 import { cleanDescription } from "@/lib/cleanDescription";
 import { cn } from "@/lib/utils";
 import { getEffectiveSignal, upsertTaskSignalDescription } from "@/lib/categoryUtils";
+import {
+  buildContactCvSafeUpdates,
+  CONTACT_CV_EMAIL_REQUIRED_MESSAGE,
+  contactHasEmail,
+} from "@/lib/contactCvEligibility";
 import { mergeTechnologyTags } from "@/lib/technologyTags";
 
 /* ── Category system ── */
@@ -336,7 +341,8 @@ export function ContactCardContent({
 
   const updateMutation = useMutation({
     mutationFn: async (updates: Record<string, any>) => {
-      const { error } = await supabase.from("contacts").update(updates).eq("id", contactId);
+      const safeUpdates = buildContactCvSafeUpdates(contact as any, updates);
+      const { error } = await supabase.from("contacts").update(safeUpdates).eq("id", contactId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -923,8 +929,8 @@ export function ContactCardContent({
           {/* CV-Epost */}
           <button
             onClick={() => {
-              if (!contact.cv_email && !(contact as any).email) {
-                toast.error("Legg til e-postadresse før du aktiverer CV-Epost-listen");
+              if (!contact.cv_email && !contactHasEmail(contact as any)) {
+                toast.error(CONTACT_CV_EMAIL_REQUIRED_MESSAGE);
                 return;
               }
               updateMutation.mutate({ cv_email: !(contact as any).cv_email });

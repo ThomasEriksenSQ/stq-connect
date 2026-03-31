@@ -57,6 +57,11 @@ import InlineEdit from "@/components/InlineEdit";
 import { lookupByOrgNr } from "@/components/BrregSearch";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  CONTACT_CV_EMAIL_REQUIRED_MESSAGE,
+  contactHasEmail,
+  sanitizeContactCvEmail,
+} from "@/lib/contactCvEligibility";
 import { getSortedTechnologyEntries, mergeTechnologyTags } from "@/lib/technologyTags";
 import {
   CATEGORIES as SIGNAL_CATEGORIES,
@@ -1439,7 +1444,7 @@ export function CompanyCardContent({
                         title: contactForm.title || null,
                         linkedin: contactForm.linkedin || null,
                         locations: contactForm.location ? [contactForm.location] : [],
-                        cv_email: contactForm.cv_email,
+                        cv_email: sanitizeContactCvEmail(contactForm.email, contactForm.cv_email),
                         call_list: contactForm.call_list,
                         company_id: companyId,
                         created_by: user?.id,
@@ -1500,7 +1505,13 @@ export function CompanyCardContent({
                         <Label className="text-label">E-post</Label>
                         <Input
                           value={contactForm.email}
-                          onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                          onChange={(e) =>
+                            setContactForm({
+                              ...contactForm,
+                              email: e.target.value,
+                              cv_email: sanitizeContactCvEmail(e.target.value, contactForm.cv_email),
+                            })
+                          }
                           type="email"
                           className="h-10 rounded-lg"
                         />
@@ -1561,7 +1572,13 @@ export function CompanyCardContent({
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => setContactForm({ ...contactForm, cv_email: !contactForm.cv_email })}
+                          onClick={() => {
+                            if (!contactForm.cv_email && !contactHasEmail(contactForm)) {
+                              toast.error(CONTACT_CV_EMAIL_REQUIRED_MESSAGE);
+                              return;
+                            }
+                            setContactForm({ ...contactForm, cv_email: !contactForm.cv_email });
+                          }}
                           className={cn(
                             "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
                             contactForm.cv_email
