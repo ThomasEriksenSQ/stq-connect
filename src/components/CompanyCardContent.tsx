@@ -890,35 +890,37 @@ export function CompanyCardContent({
                       className="h-10 max-w-full rounded-lg"
                     />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="h-10 px-3 rounded-lg"
-                      onClick={() => setMergeCompanyDialogOpen(true)}
-                    >
-                      <ArrowRightLeft className="h-4 w-4 mr-1" />
-                      Slå sammen selskap
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="h-10 px-3 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => setDeleteCompanyDialogOpen(true)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Slett selskap
-                    </Button>
-                    <div className="flex gap-2 flex-1 justify-end">
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="h-10 px-3 rounded-lg"
+                        onClick={() => setMergeCompanyDialogOpen(true)}
+                      >
+                        <ArrowRightLeft className="h-4 w-4 mr-1" />
+                        Slå sammen selskap
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="h-10 px-3 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setDeleteCompanyDialogOpen(true)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Slett selskap
+                      </Button>
+                    </div>
+                    <div className="flex items-center justify-end gap-2">
                       <Button
                         type="button"
                         variant="outline"
-                        className="flex-1 h-10 rounded-lg"
+                        className="h-10 min-w-[110px] rounded-lg"
                         onClick={() => setEditCompanyOpen(false)}
                       >
                         Avbryt
                       </Button>
-                      <Button type="submit" className="flex-1 h-10 rounded-lg">
+                      <Button type="submit" className="h-10 min-w-[110px] rounded-lg">
                         Lagre
                       </Button>
                     </div>
