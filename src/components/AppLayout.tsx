@@ -14,6 +14,7 @@ const navItems = [
   { title: "Selskaper", url: "/selskaper", icon: Building2 },
   { title: "Kontakter", url: "/kontakter", icon: Users },
   { title: "Forespørsler", url: "/foresporsler", icon: Briefcase },
+  { title: "Mockup", url: "/mockup", icon: LayoutGrid, end: true },
 ];
 
 

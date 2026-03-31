@@ -83,6 +83,7 @@ const App = () => (
                 <Route path="foresporsler" element={<Foresporsler />} />
                 <Route path="nettside-ai" element={<NettsideAI />} />
                 <Route path="cv-maker" element={<CVMaker />} />
+                <Route path="mockup" element={<Mockup />} />
                 
                 <Route path="import" element={<Import />} />
                 <Route path="admin/brreg-sync" element={<AdminBrregSync />} />
