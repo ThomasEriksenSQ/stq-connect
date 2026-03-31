@@ -772,7 +772,13 @@ export function CompanyCardContent({
               </DialogContent>
             </Dialog>
             {/* Edit company dialog */}
-            <Dialog open={editCompanyOpen} onOpenChange={setEditCompanyOpen}>
+            <Dialog
+              open={editCompanyOpen && !mergeCompanyDialogOpen}
+              onOpenChange={(nextOpen) => {
+                if (mergeCompanyDialogOpen && nextOpen) return;
+                setEditCompanyOpen(nextOpen);
+              }}
+            >
               <DialogContent className="sm:max-w-[440px] rounded-xl">
                 <DialogHeader>
                   <DialogTitle>Rediger selskap</DialogTitle>
@@ -942,6 +948,8 @@ export function CompanyCardContent({
               sourceCompanyId={companyId}
               sourceCompanyName={company.name}
               onMerged={(targetCompanyId) => {
+                setEditCompanyOpen(false);
+                setMergeCompanyDialogOpen(false);
                 queryClient.invalidateQueries();
                 navigate(`/selskaper/${targetCompanyId}`);
               }}
