@@ -19,27 +19,30 @@ const TECHNOLOGY_RULES: TechnologyRule[] = [
   { label: "Zephyr", patterns: [/^zephyr$/i, /\bzephyr\b/i] },
   { label: "FreeRTOS", patterns: [/^freertos$/i, /^free rtos$/i, /\bfreertos\b/i, /\bfree rtos\b/i] },
   { label: "NuttX", patterns: [/^nuttx$/i, /\bnuttx\b/i] },
-  { label: "RTOS", patterns: [/^rtos$/i, /\brtos\b/i] },
+  { label: "RTOS", patterns: [/^rtos$/i, /\brtos\b/i, /^real[- ]time systems?$/i, /\breal[- ]time systems?\b/i] },
   { label: "Bare metal", patterns: [/^bare metal$/i, /\bbare[- ]metal\b/i] },
   { label: "Firmware", patterns: [/^firmware$/i, /\bfirmware\b/i] },
   { label: "Embedded systems", patterns: [/^embedded$/i, /^embedded systems?$/i, /\bembedded systems?\b/i] },
-  { label: "Device drivers", patterns: [/^device drivers?$/i, /\bdevice drivers?\b/i, /\bkernel modules?\b/i] },
+  { label: "Device drivers", patterns: [/^device drivers?$/i, /\bdevice drivers?\b/i, /\bkernel modules?\b/i, /^kernel drivers?$/i, /\bkernel drivers?\b/i] },
   { label: "FPGA", patterns: [/^fpga$/i, /\bfpga\b/i] },
   { label: "ASIC", patterns: [/^asic$/i, /\basic\b/i] },
   { label: "ARM Cortex-M", patterns: [/^arm cortex m$/i, /^cortex m$/i, /\barm cortex-m\b/i, /\bcortex-m\b/i] },
-  { label: "Microcontrollers", patterns: [/^microcontrollers?$/i, /\bmicrocontrollers?\b/i] },
+  { label: "Microcontrollers", patterns: [/^microcontrollers?$/i, /\bmicrocontrollers?\b/i, /^mikrokontroll(?:er|ere|eren|erne)$/i, /\bmikrokontroll(?:er|ere|eren|erne)\b/i] },
   { label: "ARM", patterns: [/^arm$/i, /^arm32$/i, /^arm64$/i, /\barm\b/i] },
   { label: "STM32", patterns: [/^stm32$/i, /\bstm32\b/i] },
   { label: "nRF52", patterns: [/^nrf52$/i, /\bnrf52\b/i] },
   { label: "ESP32", patterns: [/^esp32$/i, /\besp32\b/i] },
   { label: "CAN", patterns: [/^can$/i, /^can bus$/i, /\bcan bus\b/i] },
+  { label: "Modbus", patterns: [/^modbus$/i, /\bmodbus\b/i] },
   { label: "SPI", patterns: [/^spi$/i, /\bspi\b/i] },
   { label: "I2C", patterns: [/^i2c$/i, /\bi2c\b/i] },
   { label: "UART", patterns: [/^uart$/i, /\buart\b/i] },
+  { label: "Ethernet/IP", patterns: [/^ethernet\/ip$/i, /^ethernet ip$/i, /\bethernet\/ip\b/i] },
   { label: "BLE", patterns: [/^ble$/i, /^bluetooth low energy$/i, /\bbluetooth low energy\b/i] },
   { label: "Bluetooth", patterns: [/^bluetooth$/i, /\bbluetooth\b/i] },
   { label: "Wi-Fi", patterns: [/^wifi$/i, /^wi-fi$/i, /\bwi[ -]?fi\b/i] },
   { label: "MQTT", patterns: [/^mqtt$/i, /\bmqtt\b/i] },
+  { label: "CI/CD", patterns: [/^ci\/cd$/i, /^ci-cd$/i, /\bci\/cd\b/i, /\bcontinuous integration\/continuous deployment\b/i] },
   { label: "Docker", patterns: [/^docker$/i, /\bdocker\b/i] },
   { label: "Kubernetes", patterns: [/^kubernetes$/i, /^k8s$/i, /\bkubernetes\b/i, /\bk8s\b/i] },
   { label: "Jenkins", patterns: [/^jenkins$/i, /\bjenkins\b/i] },
@@ -59,10 +62,24 @@ const IGNORED_VALUES = new Set([
   "-",
   "n/a",
   "na",
+  "ci",
+  "cd",
   "none",
   "ukjent",
   "annet",
 ]);
+
+const IGNORED_PATTERNS = [
+  /^communication protocols?$/i,
+  /^kommunikasjonsprotokoller$/i,
+  /^protocols?$/i,
+];
+
+const PRESERVED_COMPOUND_SEGMENTS = [
+  /^ci\/cd$/i,
+  /^ethernet\/ip$/i,
+  /^tcp\/ip$/i,
+];
 
 function sanitizeToken(token: string): string {
   return token
@@ -99,6 +116,7 @@ function splitCompoundSegment(segment: string): string[] {
   const cleaned = sanitizeToken(segment);
   if (!cleaned) return [];
   if (!cleaned.includes("/")) return [cleaned];
+  if (PRESERVED_COMPOUND_SEGMENTS.some((pattern) => pattern.test(cleaned))) return [cleaned];
 
   if (/^[A-Za-z0-9#+.-]+(?:\s*\/\s*[A-Za-z0-9#+.-]+)+$/.test(cleaned)) {
     return cleaned
@@ -130,6 +148,7 @@ export function normalizeTechnologyTag(token: string | null | undefined): string
 
   const lower = cleaned.toLowerCase();
   if (IGNORED_VALUES.has(lower)) return null;
+  if (IGNORED_PATTERNS.some((pattern) => pattern.test(cleaned))) return null;
 
   for (const rule of TECHNOLOGY_RULES) {
     if (rule.patterns.some((pattern) => pattern.test(cleaned))) {

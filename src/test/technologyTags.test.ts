@@ -26,10 +26,28 @@ describe("technologyTags", () => {
     expect(extracted).toEqual(expect.arrayContaining(["C++", "Embedded Linux", "Yocto", "Qt", "SPI", "I2C", "BLE"]));
   });
 
+  it("keeps canonical slash tags and removes generic protocol noise", () => {
+    const extracted = extractTechnologyTagsFromText("CI/CD, Communication Protocols (modbus, Can, Ethernet/ip)");
+    expect(extracted).toEqual(expect.arrayContaining(["CI/CD", "Modbus", "Ethernet/IP"]));
+    expect(extracted).not.toContain("CI");
+    expect(extracted).not.toContain("CD");
+    expect(extracted).not.toContain("Communication Protocols");
+  });
+
   it("merges and de-duplicates technologies across sources", () => {
     expect(
       mergeTechnologyTags(["c++", "Yocto"], ["C++", "embedded linux"], "Qt/QML, Yocto"),
     ).toEqual(["C++", "Yocto", "Embedded Linux", "Qt"]);
+  });
+
+  it("normalizes norwegian and broad embedded variants into canonical tags", () => {
+    expect(
+      normalizeTechnologyTags([
+        "mikrokontroller",
+        "Kernel Drivers",
+        "Real-time systems",
+      ]),
+    ).toEqual(["Microcontrollers", "Device drivers", "RTOS"]);
   });
 
   it("sorts parsed frequency maps by count", () => {
