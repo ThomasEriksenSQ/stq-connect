@@ -57,6 +57,7 @@ import InlineEdit from "@/components/InlineEdit";
 import { lookupByOrgNr } from "@/components/BrregSearch";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { getSortedTechnologyEntries, mergeTechnologyTags } from "@/lib/technologyTags";
 import {
   CATEGORIES as SIGNAL_CATEGORIES,
   getEffectiveSignal,
@@ -557,25 +558,11 @@ export function CompanyCardContent({
           .in("status", ["AKTIV/SIGNERT"]),
         supabase.from("external_consultants").select("id, navn, teknologier, status").in("status", ["ledig", "aktiv"]),
       ]);
-      const alleTags: string[] = [];
-      // From techProfile
-      if (techProfile?.teknologier) {
-        alleTags.push(...Object.keys(techProfile.teknologier as Record<string, number>));
-      }
-      (foresporslerData || []).forEach((f) => {
-        if (f.teknologier) alleTags.push(...f.teknologier);
-      });
-      (contacts as any[]).forEach((c) => {
-        if ((c as any).teknologier) alleTags.push(...(c as any).teknologier);
-      });
-      const freq: Record<string, number> = {};
-      alleTags.forEach((t) => {
-        freq[t] = (freq[t] || 0) + 1;
-      });
-      const teknologier = Object.entries(freq)
-        .sort((a, b) => b[1] - a[1])
-        .map(([tag]) => tag)
-        .slice(0, 15);
+      const teknologier = mergeTechnologyTags(
+        techProfile?.teknologier ? Object.keys(techProfile.teknologier as Record<string, number>) : [],
+        ...(foresporslerData || []).map((foresporsel) => foresporsel.teknologier || []),
+        ...(contacts as any[]).map((contact) => (contact as any).teknologier || []),
+      ).slice(0, 15);
       if (!teknologier.length) {
         toast("Ingen teknisk profil på selskapet ennå — legg til teknologier på forespørsler eller kontakter");
         setMatchingKonsulenter(false);
@@ -614,11 +601,11 @@ export function CompanyCardContent({
     if (!analyzeText.trim()) return;
     setIsAnalyzing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("extract-knowledge", {
-        body: { text: analyzeText, type: "teknologier" },
+      const { data, error } = await supabase.functions.invoke<{ tags: string[] }>("extract-technology-tags", {
+        body: { text: analyzeText },
       });
       if (error) throw error;
-      const tags: string[] = data?.tags || data?.teknologier || [];
+      const tags: string[] = data?.tags || [];
       if (tags.length > 0) {
         toast.success(`${tags.length} teknologier funnet`);
       } else {
@@ -1106,17 +1093,17 @@ export function CompanyCardContent({
         <div className="space-y-5">
           {/* ── Teknisk DNA ── */}
           {(() => {
-            const techTags = techProfile?.teknologier
-              ? Object.entries(techProfile.teknologier as Record<string, number>).sort((a, b) => b[1] - a[1])
-              : [];
-            const contactTechTags = [...new Set(contacts.flatMap((c) => (c as any).teknologier || []))];
+            const techTags = getSortedTechnologyEntries(techProfile?.teknologier);
+            const contactTechTags = mergeTechnologyTags(
+              ...(contacts as any[]).map((contact) => (contact as any).teknologier || []),
+            );
             const hasTech = techTags.length > 0 || contactTechTags.length > 0;
 
             return (
               <div className="mb-2">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                    Tekniske behov
+                    Teknisk DNA
                     {techProfile?.konsulent_hyppighet ? (
                       <span className="ml-2 text-muted-foreground/50 font-normal normal-case tracking-normal">
                         · {techProfile.konsulent_hyppighet} annonser
@@ -1124,6 +1111,12 @@ export function CompanyCardContent({
                     ) : null}
                   </h3>
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowAnalyze((current) => !current)}
+                      className="inline-flex items-center gap-1.5 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-primary" /> Analyser tekst
+                    </button>
                     {hasTech && (
                       <button
                         onClick={handleFinnKonsulenter}
@@ -1275,14 +1268,14 @@ export function CompanyCardContent({
                 {techTags.length > 0 ? (
                   <div className="space-y-3">
                     <div>
-                      <p className="text-[0.6875rem] text-muted-foreground/60 mb-1.5">Fra Finn.no</p>
+                      <p className="text-[0.6875rem] text-muted-foreground/60 mb-1.5">Fra Finn og forespørsler</p>
                       <div className="flex flex-wrap gap-1">
-                        {techTags.slice(0, 20).map(([tech, count]) => (
+                        {techTags.slice(0, 20).map(({ name, count }) => (
                           <span
-                            key={tech}
+                            key={name}
                             className="inline-flex items-center rounded-full bg-secondary text-foreground px-2.5 py-0.5 text-[0.75rem] font-mono border border-border"
                           >
-                            {tech}
+                            {name}
                             {count > 1 ? <span className="ml-1 text-muted-foreground/60">×{count}</span> : null}
                           </span>
                         ))}
@@ -1302,7 +1295,7 @@ export function CompanyCardContent({
                       <>
                         <div className="border-t border-border/50" />
                         <div>
-                          <p className="text-[0.6875rem] text-muted-foreground/60 mb-1.5">Fra kontakter</p>
+                          <p className="text-[0.6875rem] text-muted-foreground/60 mb-1.5">Kontakt-DNA</p>
                           <div className="flex flex-wrap gap-1">
                             {contactTechTags.slice(0, 10).map((tech: string) => (
                               <span

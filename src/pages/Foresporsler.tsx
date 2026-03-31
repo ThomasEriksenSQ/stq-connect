@@ -33,6 +33,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
+import { mergeTechnologyTags } from "@/lib/technologyTags";
 import { format, differenceInDays, parseISO, startOfDay } from "date-fns";
 import { nb } from "date-fns/locale";
 
@@ -161,22 +162,15 @@ function truncate(s: string, max: number): string {
 
 /* ─── AI Tech Analysis ─── */
 
-const AI_SYSTEM_PROMPT = `Du er en teknisk rekrutterer for et norsk konsulentselskap som spesialiserer seg på embedded systems og ingeniørfag.
-Analyser teksten og returner KUN en JSON-array med tekniske nøkkelord/teknologier som er nevnt eller sterkt implisert.
-Eksempler: ["C++", "Embedded", "Linux", "Yocto", "Python", "FPGA", "ROS", "Rust", "Java", "Sikkerhet", "Lab", "C", "Qt", "CMake"]
-Returner BARE arrayen, ingen annen tekst. Maks 8 tags. Bruk korte presise navn, ikke setninger.`;
-
-async function analyzeTextForTech(rawText: string): Promise<string[]> {
-  const { data, error } = await supabase.functions.invoke("chat", {
+async function analyzeTextForTech(rawText: string, existingTags: string[] = []): Promise<string[]> {
+  const { data, error } = await supabase.functions.invoke<{ tags: string[] }>("extract-technology-tags", {
     body: {
-      system: AI_SYSTEM_PROMPT,
-      messages: [{ role: "user", content: rawText.trim() }],
+      text: rawText.trim(),
+      existing: existingTags,
     },
   });
   if (error) throw error;
-  const text = data?.text ?? "[]";
-  const clean = text.replace(/```json|```/g, "").trim();
-  return JSON.parse(clean);
+  return data?.tags || mergeTechnologyTags(existingTags);
 }
 
 function AiTeknologiBox({
@@ -194,12 +188,11 @@ function AiTeknologiBox({
     if (!rawText.trim()) return;
     setAnalyzing(true);
     try {
-      const found = await analyzeTextForTech(rawText);
-      const merged = [...new Set([...existingTags, ...found])];
+      const merged = await analyzeTextForTech(rawText, existingTags);
       onTagsFound(merged);
       setShow(false);
       setRawText("");
-      toast.success(`${found.length} teknologier lagt til`);
+      toast.success(`${Math.max(merged.length - existingTags.length, 0)} teknologier lagt til`);
     } catch (err) {
       console.error(err);
       toast.error("Kunne ikke analysere teksten");
@@ -371,8 +364,8 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
   }, [companyContacts, kontakt]);
 
   const addTag = (tag: string) => {
-    const t = tag.trim();
-    if (t && !tags.includes(t)) setTags([...tags, t]);
+    const merged = mergeTechnologyTags(tags, [tag]);
+    if (merged.length !== tags.length) setTags(merged);
     setTagInput("");
   };
 
@@ -415,6 +408,8 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
     }
     setSubmitting(true);
 
+    const normalizedTags = mergeTechnologyTags(tags);
+
     // 1. Insert forespørsel
     const { error } = await supabase.from("foresporsler").insert({
       selskap_navn: selskap,
@@ -423,7 +418,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
       sted: sted || null,
       avdeling: avdeling || null,
       kontakt_id: kontaktId,
-      teknologier: tags,
+      teknologier: normalizedTags,
       kommentar: kommentar || null,
       type: isPartner ? "VIA" : "DIR",
       sluttkunde: isPartner ? (sluttkunde || null) : null,

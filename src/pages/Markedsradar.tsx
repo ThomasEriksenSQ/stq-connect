@@ -39,10 +39,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { companiesMatch } from "@/lib/companyMatch";
+import { findBestCompanyMatch } from "@/lib/companyMatch";
 import {
   buildMarketRadar,
-  extractNormalizedTechnologies,
+  getFinnAnnonseTechnologies,
   getIsoWeekStr,
   type FinnAnnonseInput,
   type RadarCompany,
@@ -69,10 +69,12 @@ type FinnImportRow = {
   kontakt_telefon: string | null;
 };
 type ProcessFinnImportResult = {
+  uke?: string | null;
   annonser_behandlet: number;
   teknologier_array_fikset: number;
   selskaper_med_teknologier: number;
   dna_profiler_oppdatert: number;
+  kontakter_oppdatert?: number;
   errors?: string[];
 };
 type MarkedsradarEmailResult = {
@@ -125,18 +127,34 @@ export default function Markedsradar() {
     },
   });
 
+  const companyById = useMemo(
+    () => new Map(companies.map((company) => [company.id, company])),
+    [companies],
+  );
+
   const findCompany = useCallback(
     (selskap: string | null) => {
       if (!selskap) return null;
-      return companies.find((company) => companiesMatch(selskap, company.name)) || null;
+      return findBestCompanyMatch(selskap, companies);
     },
     [companies],
   );
 
+  const resolveCompanyForAd = useCallback(
+    (annonse: FinnAnnonseInput) => {
+      if (annonse.matched_company_id) {
+        return companyById.get(annonse.matched_company_id) || findCompany(annonse.selskap);
+      }
+
+      return findCompany(annonse.selskap);
+    },
+    [companyById, findCompany],
+  );
+
   const currentWeek = getIsoWeekStr(new Date());
   const market = useMemo(
-    () => buildMarketRadar(annonser, currentWeek, findCompany),
-    [annonser, currentWeek, findCompany],
+    () => buildMarketRadar(annonser, currentWeek, resolveCompanyForAd),
+    [annonser, currentWeek, resolveCompanyForAd],
   );
 
   return (
@@ -725,7 +743,7 @@ function AnnonserTab({
     if (weekFilter !== "alle") rows = rows.filter((row) => row.uke === weekFilter);
     if (techFilters.length > 0) {
       rows = rows.filter((row) =>
-        techFilters.some((tech) => extractNormalizedTechnologies(row.teknologier).includes(tech)),
+        techFilters.some((tech) => getFinnAnnonseTechnologies(row).includes(tech)),
       );
     }
     if (crmFilter === "crm") rows = rows.filter((row) => findCompany(row.selskap));
@@ -832,7 +850,7 @@ function AnnonserTab({
           <TableBody>
             {paged.map((annonse) => {
               const company = findCompany(annonse.selskap);
-              const technologies = extractNormalizedTechnologies(annonse.teknologier);
+              const technologies = getFinnAnnonseTechnologies(annonse);
 
               return (
                 <TableRow key={annonse.id} className="min-h-[44px]">
@@ -963,7 +981,7 @@ function AIAnalyseTab({
             const parts = [
               annonse.selskap,
               annonse.stillingsrolle,
-              extractNormalizedTechnologies(annonse.teknologier).join(", "),
+              getFinnAnnonseTechnologies(annonse).join(", "),
               annonse.kontaktnavn ? `Kontakt: ${annonse.kontaktnavn}` : null,
             ].filter(Boolean);
             return parts.join(" · ");
@@ -1261,6 +1279,7 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
     if (rows.length === 0) return;
     setImporting(true);
     try {
+      const importedWeeks = [...new Set(rows.map((row) => row.uke).filter(Boolean))] as string[];
       const { error } = await supabase.from("finn_annonser").upsert(rows, {
         onConflict: "dato,selskap,lenke",
         ignoreDuplicates: true,
@@ -1268,7 +1287,27 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
 
       if (error) throw error;
 
-      toast({ title: "Importert", description: `${rows.length} annonser behandlet.` });
+      let latestProcessResult: ProcessFinnImportResult | null = null;
+      try {
+        const { data: processData, error: processError } = await supabase.functions.invoke<ProcessFinnImportResult>(
+          "process-finn-import",
+          {
+            body: importedWeeks.length > 0 ? { uker: importedWeeks } : {},
+          },
+        );
+        if (processError) throw processError;
+        latestProcessResult = processData || null;
+        if (latestProcessResult) setProcessResult(latestProcessResult);
+      } catch (processError) {
+        console.error("process-finn-import after import failed", processError);
+      }
+
+      toast({
+        title: "Importert",
+        description: latestProcessResult?.uke
+          ? `${rows.length} annonser behandlet for ${latestProcessResult.uke}.`
+          : `${rows.length} annonser behandlet.`,
+      });
 
       try {
         const { data: emailResult, error: emailError } = await supabase.functions.invoke<MarkedsradarEmailResult>(
@@ -1309,13 +1348,18 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
     setProcessing(true);
     setProcessResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke<ProcessFinnImportResult>("process-finn-import");
+      const selectedWeeks = [...new Set(rows.map((row) => row.uke).filter(Boolean))] as string[];
+      const { data, error } = await supabase.functions.invoke<ProcessFinnImportResult>("process-finn-import", {
+        body: selectedWeeks.length > 0 ? { uker: selectedWeeks } : {},
+      });
       if (error) throw error;
       if (!data) throw new Error("Ingen respons fra process-finn-import");
       setProcessResult(data);
       toast({
         title: "Prosessering fullført",
-        description: `${data.teknologier_array_fikset} teknologier fikset, ${data.dna_profiler_oppdatert} DNA-profiler oppdatert`,
+        description: data.uke
+          ? `${data.uke}: ${data.teknologier_array_fikset} teknologier fikset, ${data.dna_profiler_oppdatert} DNA-profiler oppdatert`
+          : `${data.teknologier_array_fikset} teknologier fikset, ${data.dna_profiler_oppdatert} DNA-profiler oppdatert`,
       });
       refetch();
     } catch (error: unknown) {
@@ -1381,12 +1425,16 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
           {processResult && (
             <div className="w-full rounded-lg bg-muted px-4 py-3 text-[0.8125rem] space-y-1">
               <p className="font-medium text-foreground">Prosessering fullført</p>
+              {processResult.uke && <p className="text-muted-foreground">Uke: {processResult.uke}</p>}
               <p className="text-muted-foreground">Behandlet: {processResult.annonser_behandlet} annonser</p>
               <p className="text-muted-foreground">Teknologier fikset: {processResult.teknologier_array_fikset}</p>
               <p className="text-muted-foreground">
                 Selskaper med teknologier: {processResult.selskaper_med_teknologier}
               </p>
               <p className="text-muted-foreground">DNA-profiler oppdatert: {processResult.dna_profiler_oppdatert}</p>
+              {typeof processResult.kontakter_oppdatert === "number" && (
+                <p className="text-muted-foreground">Kontakter oppdatert: {processResult.kontakter_oppdatert}</p>
+              )}
               {processResult.errors?.length > 0 && (
                 <p className="text-destructive text-[0.75rem]">Feil: {processResult.errors.join(", ")}</p>
               )}

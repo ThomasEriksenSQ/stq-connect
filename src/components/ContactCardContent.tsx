@@ -36,7 +36,6 @@ import {
   Target,
   Loader2,
   MapPin,
-  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday, getYear, addDays, addWeeks, addMonths, addYears } from "date-fns";
@@ -45,6 +44,7 @@ import { fullDate } from "@/lib/relativeDate";
 import { cleanDescription } from "@/lib/cleanDescription";
 import { cn } from "@/lib/utils";
 import { getEffectiveSignal, upsertTaskSignalDescription } from "@/lib/categoryUtils";
+import { mergeTechnologyTags } from "@/lib/technologyTags";
 
 /* ── Category system ── */
 const CATEGORIES = [
@@ -240,195 +240,6 @@ function InlineField({
   );
 }
 
-const SUGGESTED_TECH_TAGS = [
-  "C++",
-  "C",
-  "Embedded",
-  "Yocto",
-  "Linux",
-  "Qt",
-  "FPGA",
-  "Python",
-  "SPI/I2C",
-  "MCU",
-  "Embedded Linux",
-  "Sikkerhet",
-  "AUTOSAR",
-  "FreeRTOS",
-];
-
-function TechTagEditor({
-  tags,
-  onSave,
-  contact,
-  updateMutation,
-  showAnalyze,
-  setShowAnalyze,
-}: {
-  tags: string[];
-  onSave: (tags: string[]) => void;
-  contact?: any;
-  updateMutation?: any;
-  showAnalyze?: boolean;
-  setShowAnalyze?: (v: boolean) => void;
-}) {
-  const [input, setInput] = useState("");
-
-  const [analyzeText, setAnalyzeText] = useState("");
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-
-  const addTags = (raw: string) => {
-    const newTags = raw
-      .split(/[,;\n]+/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-    const unique = newTags.filter((t) => !tags.includes(t));
-    if (unique.length) onSave([...tags, ...unique.filter((t, i, a) => a.indexOf(t) === i)]);
-    setInput("");
-  };
-
-  const removeTag = (tag: string) => {
-    onSave(tags.filter((t) => t !== tag));
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if ((e.key === "Enter" || e.key === ",") && input.trim()) {
-      e.preventDefault();
-      addTags(input);
-    }
-  };
-
-  const handlePaste = (e: React.ClipboardEvent) => {
-    const pasted = e.clipboardData.getData("text");
-    if (pasted.includes(",") || pasted.includes(";") || pasted.includes("\n")) {
-      e.preventDefault();
-      addTags(pasted);
-    }
-  };
-
-  const handleAnalyzeText = async () => {
-    setIsAnalyzing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("chat", {
-        body: {
-          messages: [
-            {
-              role: "user",
-              content: `Analyser denne teksten og trekk ut relevante teknologier, programmeringsspråk, rammeverk og fagområder som er relevante for embedded/firmware/C/C++ konsulentbransjen. Returner KUN en JSON-array med strings, ingen annen tekst. Eksempel: ["C++", "Embedded Linux", "RTOS"]\n\nTekst:\n${analyzeText}`,
-            },
-          ],
-        },
-      });
-      if (error) throw error;
-      // Parse SSE streamed response or direct JSON
-      let resultText = "";
-      if (typeof data === "string") {
-        // SSE response - extract content from data lines
-        const lines = data.split("\n");
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") continue;
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.message?.content || "";
-            resultText += content;
-          } catch {
-            /* skip partial */
-          }
-        }
-      } else {
-        resultText = data?.choices?.[0]?.message?.content || JSON.stringify(data);
-      }
-      const clean = resultText.replace(/```json|```/g, "").trim();
-      const parsed: string[] = JSON.parse(clean);
-      const existing = tags || [];
-      const merged = [...new Set([...existing, ...parsed])];
-      onSave(merged);
-      if (setShowAnalyze) setShowAnalyze(false);
-      setAnalyzeText("");
-      toast.success(`${parsed.filter((t) => !existing.includes(t)).length} teknologier lagt til`);
-    } catch {
-      toast.error("Kunne ikke analysere tekst");
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  return (
-    <div>
-      <div className="flex flex-wrap items-center gap-1.5 p-2 border border-border rounded-lg bg-background min-h-[36px]">
-        {tags.map((t) => (
-          <span
-            key={t}
-            className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-[0.75rem] text-foreground"
-          >
-            {t}
-            <button onClick={() => removeTag(t)} className="hover:text-destructive">
-              <X className="h-3 w-3" />
-            </button>
-          </span>
-        ))}
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          placeholder={tags.length === 0 ? "Legg til teknologi..." : ""}
-          className="flex-1 min-w-[100px] bg-transparent outline-none text-[0.8125rem] placeholder:text-muted-foreground"
-        />
-      </div>
-      {showAnalyze && (
-        <div className="mt-2 p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-2">
-          <p className="text-[0.75rem] text-muted-foreground">
-            Lim inn tekst og AI henter ut relevante tags som legges til
-          </p>
-          <Textarea
-            value={analyzeText}
-            onChange={(e) => setAnalyzeText(e.target.value)}
-            placeholder="Lim inn tekst her..."
-            rows={4}
-            className="text-[0.875rem] rounded-md resize-none"
-          />
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleAnalyzeText}
-              disabled={!analyzeText.trim() || isAnalyzing}
-              className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.75rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-colors"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              {isAnalyzing ? "Analyserer..." : "Finn teknologier"}
-            </button>
-            <button
-              onClick={() => {
-                if (setShowAnalyze) setShowAnalyze(false);
-                setAnalyzeText("");
-              }}
-              className="text-[0.75rem] text-muted-foreground hover:text-foreground"
-            >
-              Avbryt
-            </button>
-          </div>
-        </div>
-      )}
-      <div className="flex flex-wrap gap-1.5 mt-1.5">
-        {SUGGESTED_TECH_TAGS.filter((s) => !tags.includes(s))
-          .slice(0, 8)
-          .map((s) => (
-            <button
-              key={s}
-              onClick={() => addTags(s)}
-              className="h-6 px-2 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors"
-            >
-              {s}
-            </button>
-          ))}
-      </div>
-    </div>
-  );
-}
-
 const DATE_CHIPS = [
   { label: "Følg opp på sikt", fn: (): Date | null => null },
   { label: "I dag", fn: () => new Date() },
@@ -467,7 +278,6 @@ export function ContactCardContent({
   const companySearchRef = useRef<HTMLInputElement>(null);
   const [matchingConsultants, setMatchingConsultants] = useState(false);
   const [consultantResults, setConsultantResults] = useState<any[] | null>(null);
-  const [showAnalyze, setShowAnalyze] = useState(false);
 
   const { data: contact, isLoading } = useQuery({
     queryKey: ["contact", contactId],
@@ -691,9 +501,9 @@ export function ContactCardContent({
   });
 
   const handleFinnKonsulent = async () => {
-    const teknologier = (contact as any).teknologier || [];
+    const teknologier = mergeTechnologyTags((contact as any).teknologier || []);
     if (!teknologier.length) {
-      toast("Legg til teknisk profil på kontakten først");
+      toast("Kontaktens tekniske DNA er tomt ennå");
       return;
     }
     setMatchingConsultants(true);
@@ -1204,65 +1014,49 @@ export function ContactCardContent({
       <div className="space-y-0">
         {/* ── Tekniske behov ── */}
         <div className="mb-5">
-          {editable && (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                  Teknisk behov for {contact.first_name} {contact.last_name}
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => setShowAnalyze(!showAnalyze)}
-                    className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
-                  >
-                    <Sparkles className="h-3.5 w-3.5 text-primary" /> Legg til teknologi tags
-                  </button>
-                  {contact.teknologier && (contact.teknologier as string[]).length > 0 && (
-                    <button
-                      onClick={handleFinnKonsulent}
-                      disabled={matchingConsultants}
-                      className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
-                    >
-                      {matchingConsultants ? (
-                        <>
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Matcher...
-                        </>
-                      ) : (
-                        <>
-                          <Target className="h-3.5 w-3.5 text-primary" /> Finn konsulent
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-              </div>
-              <TechTagEditor
-                tags={(contact as any).teknologier || []}
-                onSave={(tags) => updateMutation.mutate({ teknologier: tags })}
-                contact={contact}
-                updateMutation={updateMutation}
-                showAnalyze={showAnalyze}
-                setShowAnalyze={setShowAnalyze}
-              />
-            </div>
-          )}
-          {!editable && (contact as any).teknologier?.length > 0 && (
-            <div>
-              <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground block mb-2">
-                Tekniske behov
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                Teknisk DNA for {contact.first_name} {contact.last_name}
               </span>
+              {contact.teknologier && (contact.teknologier as string[]).length > 0 && (
+                <button
+                  onClick={handleFinnKonsulent}
+                  disabled={matchingConsultants}
+                  className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+                >
+                  {matchingConsultants ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Matcher...
+                    </>
+                  ) : (
+                    <>
+                      <Target className="h-3.5 w-3.5 text-primary" /> Finn konsulent
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+
+            <p className="text-[0.75rem] text-muted-foreground mb-2">
+              Bygges automatisk fra foresporsler og sikre Finn-treff.
+            </p>
+
+            {(contact as any).teknologier?.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
-                {((contact as any).teknologier as string[]).map((t: string) => (
+                {((contact as any).teknologier as string[]).map((tag: string) => (
                   <span
-                    key={t}
+                    key={tag}
                     className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.75rem] font-medium text-foreground"
                   >
-                    {t}
+                    {tag}
                   </span>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <p className="text-[0.8125rem] text-muted-foreground">Ingen teknisk profil ennå.</p>
+            )}
+          </div>
 
           {/* AI Signal suggestion */}
           {editable &&

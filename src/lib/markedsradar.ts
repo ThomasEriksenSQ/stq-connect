@@ -1,6 +1,7 @@
 import { getISOWeek, getISOWeekYear, parseISO, subDays } from "date-fns";
 
 import { normalizeCompanyName } from "@/lib/companyMatch";
+import { extractTechnologyTagsFromText, normalizeTechnologyTags } from "@/lib/technologyTags";
 
 export type FinnAnnonseInput = {
   id: string;
@@ -14,6 +15,8 @@ export type FinnAnnonseInput = {
   kontaktnavn: string | null;
   kontakt_epost: string | null;
   kontakt_telefon: string | null;
+  matched_company_id?: string | null;
+  teknologier_array?: string[] | null;
   created_at?: string | null;
 };
 
@@ -88,128 +91,35 @@ export type RadarSnapshot = {
   weeklyTechSeries: RadarWeeklyTechPoint[];
 };
 
-const TECHNOLOGY_RULES: Array<{ label: string; patterns: RegExp[] }> = [
-  { label: "C++", patterns: [/\bc\+\+\b/i, /\bmodern c\b/i] },
-  { label: "C", patterns: [/(^|[^a-z0-9])c([^a-z0-9+#]|$)/i] },
-  { label: "Rust", patterns: [/\brust\b/i] },
-  { label: "Python", patterns: [/\bpython\b/i] },
-  { label: "Zephyr", patterns: [/\bzephyr\b/i] },
-  { label: "Yocto", patterns: [/\byocto\b/i] },
-  { label: "Embedded Linux", patterns: [/\bembedded linux\b/i] },
-  { label: "Linux", patterns: [/(^|[^a-z])linux([^a-z]|$)/i] },
-  { label: "RTOS", patterns: [/\brtos\b/i, /\bfree rtos\b/i, /\bfreertos\b/i, /\bnuttx\b/i] },
-  { label: "Bare metal", patterns: [/\bbare[- ]metal\b/i] },
-  { label: "Buildroot", patterns: [/\bbuildroot\b/i] },
-  { label: "FPGA", patterns: [/\bfpga\b/i, /\basic\b/i] },
-  { label: "Device drivers", patterns: [/\bdevice drivers?\b/i, /\bkernel modules?\b/i] },
-  {
-    label: "Microcontrollers",
-    patterns: [/\bmicrocontrollers?\b/i, /\bmicroprocessor systems?\b/i, /\barm cortex-m\b/i],
-  },
-  { label: "Firmware", patterns: [/\bfirmware\b/i] },
-  { label: "Embedded systems", patterns: [/\bembedded systems?\b/i] },
-  { label: "Robotics", patterns: [/\brobotics?\b/i, /\bcomputer vision\b/i] },
-  {
-    label: "PCB design",
-    patterns: [/\bpcb design\b/i, /\bhigh-speed design\b/i, /\banalog electronics\b/i, /\bdigital design\b/i],
-  },
-  { label: "Electronics", patterns: [/\belectronics\b/i, /\belectronics design\b/i, /\belectronic design\b/i] },
-  { label: "UAV", patterns: [/\buav\b/i, /\bpx4\b/i, /\bmavlink\b/i] },
-  { label: "Testing", patterns: [/\btest\b/i, /\bquality assurance\b/i, /\bverification\b/i] },
-];
-
 const STRATEGIC_TECHNOLOGIES = new Set([
   "C++",
   "C",
   "Rust",
   "RTOS",
+  "FreeRTOS",
+  "NuttX",
   "Embedded Linux",
   "Yocto",
   "Zephyr",
   "Bare metal",
   "FPGA",
   "Microcontrollers",
+  "ARM Cortex-M",
+  "STM32",
   "Firmware",
   "Embedded systems",
 ]);
 
-function sanitizeTechToken(token: string): string {
-  return token
-    .replace(/^[\s(]+|[\s)]+$/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function splitTechSegments(raw: string): string[] {
-  const segments: string[] = [];
-  let current = "";
-  let depth = 0;
-
-  for (const char of raw) {
-    if (char === "(") depth += 1;
-    if (char === ")") depth = Math.max(0, depth - 1);
-
-    if (char === "," && depth === 0) {
-      const cleaned = sanitizeTechToken(current);
-      if (cleaned) segments.push(cleaned);
-      current = "";
-      continue;
-    }
-
-    current += char;
-  }
-
-  const cleaned = sanitizeTechToken(current);
-  if (cleaned) segments.push(cleaned);
-
-  return segments;
-}
-
-function titleCaseToken(token: string): string {
-  if (/^[A-Z0-9+#/-]+$/.test(token)) return token;
-  return token.replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function normalizeTechnologyToken(token: string): string | null {
-  const cleaned = sanitizeTechToken(token);
-  if (!cleaned) return null;
-
-  for (const rule of TECHNOLOGY_RULES) {
-    if (rule.patterns.some((pattern) => pattern.test(cleaned))) return rule.label;
-  }
-
-  const lower = cleaned.toLowerCase();
-  if (lower.length < 2) return null;
-  if (lower === "software upgrades") return "Firmware";
-  if (lower === "network devices") return "Embedded systems";
-
-  return titleCaseToken(cleaned);
-}
-
 export function extractNormalizedTechnologies(raw: string | null | undefined): string[] {
-  if (!raw) return [];
+  return extractTechnologyTagsFromText(raw);
+}
 
-  const segments = splitTechSegments(raw);
-  const tokens = new Set<string>();
+export function getFinnAnnonseTechnologies(annonse: FinnAnnonseInput): string[] {
+  if (annonse.teknologier_array && annonse.teknologier_array.length > 0) {
+    return normalizeTechnologyTags(annonse.teknologier_array);
+  }
 
-  const pushToken = (value: string) => {
-    const normalized = normalizeTechnologyToken(value);
-    if (normalized) tokens.add(normalized);
-  };
-
-  segments.forEach((segment) => {
-    pushToken(segment);
-
-    const nestedMatches = [...segment.matchAll(/\(([^)]+)\)/g)];
-    nestedMatches.forEach((match) => {
-      splitTechSegments(match[1]).forEach(pushToken);
-    });
-
-    const withoutParens = sanitizeTechToken(segment.replace(/\([^)]*\)/g, " "));
-    if (withoutParens && withoutParens !== segment) pushToken(withoutParens);
-  });
-
-  return [...tokens];
+  return extractNormalizedTechnologies(annonse.teknologier);
 }
 
 export function getIsoWeekStr(date: Date): string {
@@ -311,7 +221,7 @@ function buildTechnologyTrends(ads: FinnAnnonseInput[], anchorDate: Date): Radar
   const counts = new Map<string, { current: number; previous: number; companies: Set<string> }>();
 
   ads.forEach((ad) => {
-    const techs = extractNormalizedTechnologies(ad.teknologier);
+    const techs = getFinnAnnonseTechnologies(ad);
     if (techs.length === 0) return;
 
     techs.forEach((tech) => {
@@ -355,7 +265,7 @@ function buildWeeklyTechSeries(ads: FinnAnnonseInput[], topTechs: string[]): Rad
     const entry: RadarWeeklyTechPoint = { uke: `Uke ${week.split("-W")[1]}` };
 
     topTechs.forEach((tech) => {
-      entry[tech] = rows.filter((ad) => extractNormalizedTechnologies(ad.teknologier).includes(tech)).length;
+      entry[tech] = rows.filter((ad) => getFinnAnnonseTechnologies(ad).includes(tech)).length;
     });
 
     return entry;
@@ -365,7 +275,7 @@ function buildWeeklyTechSeries(ads: FinnAnnonseInput[], topTechs: string[]): Rad
 export function buildMarketRadar(
   ads: FinnAnnonseInput[],
   currentWeek: string,
-  findCompany: (name: string | null) => RadarCompanyRef | null,
+  findCompany: (ad: FinnAnnonseInput) => RadarCompanyRef | null,
 ): RadarSnapshot {
   const cleanedAds = ads.filter((ad) => ad.dato && ad.selskap).sort((a, b) => b.dato.localeCompare(a.dato));
 
@@ -376,10 +286,10 @@ export function buildMarketRadar(
   const companies = new Map<string, MutableCompany>();
 
   cleanedAds.forEach((ad) => {
-    const crmCompany = findCompany(ad.selskap);
+    const crmCompany = findCompany(ad);
     const companyName = crmCompany?.name || ad.selskap!.trim();
     const groupKey = crmCompany ? `crm:${crmCompany.id}` : `raw:${normalizeCompanyName(companyName)}`;
-    const techs = extractNormalizedTechnologies(ad.teknologier);
+    const techs = getFinnAnnonseTechnologies(ad);
 
     let group = companies.get(groupKey);
     if (!group) {

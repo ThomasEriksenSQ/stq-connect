@@ -1222,6 +1222,32 @@ export type Database = {
         }
         Returns: boolean
       }
+      normalize_contact_phone: {
+        Args: {
+          input_value: string | null
+        }
+        Returns: string | null
+      }
+      rebuild_company_technical_dna: {
+        Args: {
+          target_company_id?: string | null
+        }
+        Returns: number
+      }
+      rebuild_contact_technical_dna: {
+        Args: {
+          target_company_id?: string | null
+          target_contact_id?: string | null
+        }
+        Returns: number
+      }
+      rebuild_technical_dna: {
+        Args: {
+          target_company_id?: string | null
+          target_contact_id?: string | null
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "user"

@@ -14,6 +14,7 @@ import { format, startOfWeek, differenceInDays } from "date-fns";
 import { nb } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import { getEffectiveSignal } from "@/lib/categoryUtils";
+import { mergeTechnologyTags, normalizeTechnologyTags } from "@/lib/technologyTags";
 
 /* ─── Types ─── */
 
@@ -397,12 +398,30 @@ Returner BARE JSON, ingen annen tekst.`,
       const data = await resp.json();
       const text = (data.text || "").replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(text);
+      let normalizedTechnologies = normalizeTechnologyTags(parsed.teknologier || []);
+
+      try {
+        const { data: extracted, error: extractError } = await supabase.functions.invoke<{ tags: string[] }>(
+          "extract-technology-tags",
+          {
+            body: {
+              text: rawText,
+              existing: normalizedTechnologies,
+            },
+          },
+        );
+        if (extractError) throw extractError;
+        normalizedTechnologies = extracted?.tags || normalizedTechnologies;
+      } catch (extractError) {
+        console.error("extract-technology-tags failed", extractError);
+      }
+
       setParsedForesp(parsed);
       setFSelskapNavn(parsed.selskap_navn || "");
       setFSted(parsed.sted || "");
       setFFrist(parsed.frist_dato || "");
       setFType(parsed.type || "DIR");
-      setFTeknologier(parsed.teknologier || []);
+      setFTeknologier(normalizedTechnologies);
       setFKommentar(parsed.kommentar || "");
     } catch (e) {
       console.error(e);
@@ -415,13 +434,14 @@ Returner BARE JSON, ingen annen tekst.`,
   /* ── Forespørsel: save */
   const handleSaveForespørsel = async () => {
     if (!fSelskapNavn.trim()) { toast.error("Selskap er påkrevd"); return; }
+    const normalizedTechnologies = mergeTechnologyTags(fTeknologier);
     const { error } = await supabase.from("foresporsler").insert({
       selskap_navn: fSelskapNavn,
       selskap_id: fSelskapId || null,
       sted: fSted || null,
       frist_dato: fFrist || null,
       type: fType,
-      teknologier: fTeknologier,
+      teknologier: normalizedTechnologies,
       kommentar: fKommentar || null,
       status: "Ny",
       created_by: user?.id,
@@ -429,7 +449,7 @@ Returner BARE JSON, ingen annen tekst.`,
     if (error) { toast.error("Kunne ikke opprette"); return; }
     toast.success("Forespørsel opprettet!");
     queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
-    setMessages(prev => [...prev, { role: "assistant", content: `✅ Forespørsel fra **${fSelskapNavn}** er opprettet med teknologier: ${fTeknologier.join(", ") || "ingen"}.` }]);
+    setMessages(prev => [...prev, { role: "assistant", content: `✅ Forespørsel fra **${fSelskapNavn}** er opprettet med teknologier: ${normalizedTechnologies.join(", ") || "ingen"}.` }]);
     setMode(null);
     setParsedForesp(null);
     setRawText("");

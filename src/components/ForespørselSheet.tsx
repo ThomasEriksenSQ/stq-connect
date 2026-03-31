@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { format, parseISO } from "date-fns";
 import { nb } from "date-fns/locale";
 import { getEffectiveSignal } from "@/lib/categoryUtils";
+import { mergeTechnologyTags } from "@/lib/technologyTags";
 
 const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
 
@@ -344,8 +345,8 @@ export function ForespørselSheet({
     || row?.type === "via_megler";
 
   const addTag = (tag: string) => {
-    const t = tag.trim();
-    if (t && !teknologier.includes(t)) setTeknologier([...teknologier, t]);
+    const merged = mergeTechnologyTags(teknologier, [tag]);
+    if (merged.length !== teknologier.length) setTeknologier(merged);
     setTagInput("");
   };
 
@@ -359,6 +360,7 @@ export function ForespørselSheet({
   const handleSave = async () => {
     if (!row || saving) return;
     setSaving(true);
+    const normalizedTechnologies = mergeTechnologyTags(teknologier);
     const { error } = await supabase
       .from("foresporsler")
       .update({
@@ -370,7 +372,7 @@ export function ForespørselSheet({
         avdeling: avdeling || null,
         frist_dato: fristDato || null,
         type: isPartner ? "VIA" : "DIR",
-        teknologier,
+        teknologier: normalizedTechnologies,
         kommentar: kommentar || null,
         sluttkunde: sluttkunde || null,
         status: status || row.status,
@@ -1110,22 +1112,18 @@ function EditMode(props: any) {
     if (!analyzeText.trim()) return;
     setAnalyzing(true);
     try {
-      const AI_SYSTEM_PROMPT = `Du er en teknisk rekrutterer for et norsk konsulentselskap som spesialiserer seg på embedded systems og ingeniørfag.
-Analyser teksten og returner KUN en JSON-array med tekniske nøkkelord/teknologier som er nevnt eller sterkt implisert.
-Eksempler: ["C++", "Embedded", "Linux", "Yocto", "Python", "FPGA", "ROS", "Rust", "Java", "Sikkerhet", "Lab", "C", "Qt", "CMake"]
-Returner BARE arrayen, ingen annen tekst. Maks 8 tags. Bruk korte presise navn, ikke setninger.`;
-      const { data, error } = await supabase.functions.invoke("chat", {
-        body: { system: AI_SYSTEM_PROMPT, messages: [{ role: "user", content: analyzeText.trim() }] },
+      const { data, error } = await supabase.functions.invoke<{ tags: string[] }>("extract-technology-tags", {
+        body: {
+          text: analyzeText.trim(),
+          existing: teknologier,
+        },
       });
       if (error) throw error;
-      const text = data?.text ?? "[]";
-      const clean = text.replace(/```json|```/g, "").trim();
-      const found: string[] = JSON.parse(clean);
-      const merged = [...new Set([...teknologier, ...found])];
+      const merged = data?.tags || mergeTechnologyTags(teknologier);
       setTeknologier(merged);
       setShowAnalyze(false);
       setAnalyzeText("");
-      toast.success(`${found.length} teknologier lagt til`);
+      toast.success(`${Math.max(merged.length - teknologier.length, 0)} teknologier lagt til`);
     } catch (err) {
       console.error(err);
       toast.error("Kunne ikke analysere teksten");

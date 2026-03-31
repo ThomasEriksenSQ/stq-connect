@@ -35,3 +35,12 @@ verify_jwt = false
 
 [functions.match-contact-to-consultants]
 verify_jwt = false
+
+[functions.extract-technology-tags]
+verify_jwt = false
+
+[functions.process-finn-import]
+verify_jwt = false
+
+[functions.rebuild-technical-dna]
+verify_jwt = false
