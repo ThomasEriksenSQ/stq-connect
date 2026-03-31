@@ -79,6 +79,12 @@ function compactWhitespace(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
 
+function cleanDisplayText(value: string) {
+  return compactWhitespace(value)
+    .replace(/^Teknologier:\s*/i, "")
+    .replace(/^(Rolle|Periode):\s*/i, "");
+}
+
 function normalizeHeading(value: string | null | undefined) {
   const heading = compactWhitespace(String(value || "")).replace(/:$/, "");
   return heading ? heading.toLocaleUpperCase("nb-NO") : "";
@@ -132,6 +138,67 @@ function normalizeAdditionalSectionFormat(value: string | null | undefined, item
     : "bullet";
 }
 
+function looksLikeLongSentence(value: string) {
+  const wordCount = value.split(/\s+/).filter(Boolean).length;
+  return wordCount > 14 || /[.!?]/.test(value);
+}
+
+function sanitizeSidebarSections(sections: Array<{ heading: string; items: string[] }>) {
+  return sections
+    .map((section) => ({
+      heading: section.heading,
+      items: section.items
+        .map((item) => cleanDisplayText(item))
+        .filter(Boolean)
+        .filter((item) => {
+          if (section.heading === "KONTAKTPERSON") return false;
+          if (/^Kontaktperson$/i.test(item)) return false;
+          if (/^(Jon Richard Nygaard|Thomas Eriksen)$/i.test(item)) return false;
+          if (/jr@stacq\.no|thomas@stacq\.no/i.test(item)) return false;
+          if (/Rolle:|Periode:|Teknologier:/i.test(item)) return false;
+          if (looksLikeLongSentence(item)) return false;
+          return true;
+        }),
+    }))
+    .filter((section) => section.heading && section.items.length > 0);
+}
+
+function sanitizeIntroParagraphs(paragraphs: string[]) {
+  return paragraphs
+    .map((paragraph) => cleanDisplayText(paragraph))
+    .filter(Boolean)
+    .filter((paragraph) => {
+      if (/^(PERSONALIA|NØKKELPUNKTER|UTDANNELSE|KONTAKTPERSON)\b/i.test(paragraph)) return false;
+      if (/^\s*[•\-]/.test(paragraph)) return false;
+      return true;
+    });
+}
+
+function sanitizeProjects(
+  projects: Array<{
+    company: string;
+    subtitle: string;
+    role: string;
+    period: string;
+    paragraphs: string[];
+    technologies: string;
+  }>,
+) {
+  return projects.map((project) => ({
+    ...project,
+    paragraphs: project.paragraphs
+      .map((paragraph) => cleanDisplayText(paragraph))
+      .filter(Boolean)
+      .filter(
+        (paragraph) =>
+          !/^(Rolle:|Periode:|Teknologier:)/i.test(paragraph) &&
+          paragraph !== project.role &&
+          paragraph !== project.period,
+      ),
+    technologies: cleanDisplayText(project.technologies),
+  }));
+}
+
 export function buildCvEditorImportDocument(
   parsed: ParsedImportResult,
   segments: CvEditorImportSegment[],
@@ -160,7 +227,7 @@ export function buildCvEditorImportDocument(
 } {
   const segmentMap = toSegmentMap(segments);
 
-  const sidebarSections = (parsed.sidebarSections || [])
+  const sidebarSections = sanitizeSidebarSections((parsed.sidebarSections || [])
     .map((section) => {
       const items = [
         ...((section.itemIds || []).map((id) => resolveSegmentRefs(id, segmentMap))),
@@ -172,7 +239,7 @@ export function buildCvEditorImportDocument(
         items,
       };
     })
-    .filter((section) => section.heading && section.items.length > 0);
+    .filter((section) => section.heading && section.items.length > 0));
 
   const competenceGroups = (parsed.competenceGroups || [])
     .map((group) => ({
@@ -183,7 +250,7 @@ export function buildCvEditorImportDocument(
     }))
     .filter((group) => group.label && group.content);
 
-  const projects = (parsed.projects || [])
+  const projects = sanitizeProjects((parsed.projects || [])
     .map((project) => ({
       company: resolvePreferredText(project.companyIds, project.company, segmentMap),
       subtitle: resolvePreferredText(project.subtitleIds, project.subtitle, segmentMap),
@@ -192,7 +259,7 @@ export function buildCvEditorImportDocument(
       paragraphs: resolveParagraphs(project.paragraphs, segmentMap),
       technologies: resolvePreferredText(project.technologyIds, project.technologies, segmentMap, ", "),
     }))
-    .filter((project) => project.company || project.paragraphs.length > 0 || project.technologies);
+    .filter((project) => project.company || project.paragraphs.length > 0 || project.technologies));
 
   const additionalSections = (parsed.additionalSections || [])
     .map((section) => {
@@ -215,7 +282,7 @@ export function buildCvEditorImportDocument(
     navn: resolvePreferredText(parsed.navnIds, parsed.navn, segmentMap),
     tittel: resolvePreferredText(parsed.tittelIds, parsed.tittel, segmentMap),
     sidebarSections,
-    introParagraphs: resolveParagraphs(parsed.introParagraphs, segmentMap),
+    introParagraphs: sanitizeIntroParagraphs(resolveParagraphs(parsed.introParagraphs, segmentMap)),
     competenceGroups,
     projects,
     education: (parsed.education || [])

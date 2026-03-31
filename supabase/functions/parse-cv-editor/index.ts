@@ -75,6 +75,19 @@ function buildSegmentCatalog(segments: CvEditorImportSegment[]) {
     .join("\n");
 }
 
+function detectStacqTemplate(segments: CvEditorImportSegment[]) {
+  const firstPageText = segments
+    .filter((segment) => segment.page === 1)
+    .map((segment) => segment.text.toLocaleUpperCase("nb-NO"))
+    .join("\n");
+
+  return (
+    firstPageText.includes("PERSONALIA") &&
+    firstPageText.includes("NØKKELPUNKTER") &&
+    firstPageText.includes("UTDANNELSE")
+  );
+}
+
 function hasMeaningfulImportedContent(document: ReturnType<typeof buildCvEditorImportDocument>) {
   return Boolean(
     document.navn ||
@@ -230,6 +243,7 @@ async function parseFromOcr(args: {
   filename: string;
   base64: string;
   segments: CvEditorImportSegment[];
+  templateDetected?: boolean;
 }) {
   const systemPrompt = `Du er en CV-importør for STACQ sin CV-editor.
 Denne PDF-en ser ut til å være scannet eller tekstfattig. Du må derfor transkribere og strukturere innholdet så teksttro som mulig.
@@ -239,6 +253,11 @@ Regler:
 - Ikke skriv en ny profesjonell oppsummering.
 - Ikke forbedre språk eller tone.
 - Det er lov å normalisere åpenbare whitespace-feil og datoformat hvis nødvendig.
+- Ikke legg kontaktblokken inn i sidebarSections.
+- Ikke legg navn eller tittel inn i introParagraphs.
+- Ikke legg sidebar-punkter inn i introParagraphs.
+- Sidebar-punkter skal være korte punktlinjer, ikke lange setninger.
+- Ikke dupliser "Rolle", "Periode" eller "Teknologier" både i overskrift og brødtekst.
 - additionalSections skal brukes for ekstra hovedseksjoner som sertifiseringer, kurs, foredrag, konferanser og lignende.
 - Returner KUN gyldig JSON.
 
@@ -281,7 +300,17 @@ Returner eksakt denne strukturen:
   "warnings": ["string"]
 }`;
 
+  const templateHint = args.templateDetected
+    ? `Dokumentet ser ut til å bruke STACQ sin CV-mal:
+- venstre sorte kolonne inneholder sidebarSections
+- kontaktblokken øverst til høyre skal IKKE bli en sidebarSection
+- navnefelt og tittel i den grå toppraden skal til navn/tittel
+- brødteksten i hovedkolonnen skal til introParagraphs, competenceGroups og prosjekter`
+    : "";
+
   const userPrompt = `Analyser CV-en "${args.filename}" med OCR-lignende nøyaktighet. Hvis de vedlagte tekstsegmentene hjelper, bruk dem som støtte, men det viktigste er å transkribere teksten så trofast som mulig.
+
+${templateHint}
 
 Eksisterende segmenter:
 ${args.segments.length ? buildSegmentCatalog(args.segments) : "(ingen brukbare tekstsegmenter funnet)"}`;
@@ -311,12 +340,14 @@ serve(async (req) => {
     const filename = body.filename || "cv.pdf";
     const segments = Array.isArray(body.segments) ? body.segments : [];
     const isLowTextConfidence = Boolean(body.isLowTextConfidence);
+    const templateDetected = detectStacqTemplate(segments);
 
     if (!segments.length && !body.base64) {
       throw new Error("Missing CV content");
     }
 
-    let sourceMode: "segments" | "ocr" = segments.length > 0 && !isLowTextConfidence ? "segments" : "ocr";
+    let sourceMode: "segments" | "ocr" =
+      segments.length > 0 && !isLowTextConfidence && !templateDetected ? "segments" : "ocr";
     let requiresReview = sourceMode === "ocr";
     let importDocument;
 
@@ -333,6 +364,7 @@ serve(async (req) => {
           filename,
           base64: body.base64,
           segments,
+          templateDetected,
         });
       } else {
         throw new Error("Missing PDF data for OCR fallback");
@@ -350,6 +382,7 @@ serve(async (req) => {
         filename,
         base64: body.base64,
         segments,
+        templateDetected,
       });
       importDocument.warnings = [
         "Automatisk fallback til OCR-løype ble brukt. Kontroller teksten ekstra nøye.",
@@ -363,6 +396,9 @@ serve(async (req) => {
 
     if (isLowTextConfidence && !importDocument.warnings.includes("PDF-en ser ut til å være scannet eller tekstfattig. Kontroller importen nøye.")) {
       importDocument.warnings.unshift("PDF-en ser ut til å være scannet eller tekstfattig. Kontroller importen nøye.");
+    }
+    if (templateDetected && !importDocument.warnings.includes("STACQ-malen ble tolket via layout-aware OCR. Kontroller spesielt navn, ingress og sidebar.")) {
+      importDocument.warnings.unshift("STACQ-malen ble tolket via layout-aware OCR. Kontroller spesielt navn, ingress og sidebar.");
     }
 
     return jsonResponse({

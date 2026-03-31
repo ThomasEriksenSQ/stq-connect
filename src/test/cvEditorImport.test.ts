@@ -116,4 +116,44 @@ describe("buildCvEditorImportDocument", () => {
       },
     ]);
   });
+
+  it("drops contact/sidebar noise and project header duplication", () => {
+    const result = buildCvEditorImportDocument(
+      {
+        sidebarSections: [
+          {
+            heading: "KONTAKTPERSON",
+            items: ["Jon Richard Nygaard", "932 87 267 / jr@stacq.no"],
+          },
+          {
+            heading: "PERSONALIA",
+            items: ["Født 1988", "Dette er en altfor lang setning som egentlig hører hjemme i brødteksten."],
+          },
+        ],
+        introParagraphs: ["• Dette er et sidebar-punkt", "Christian er en erfaren utvikler."],
+        projects: [
+          {
+            company: "ACME",
+            role: "Senior utvikler",
+            period: "2024",
+            paragraphs: ["Rolle: Senior utvikler", "Periode: 2024", "Bygget sikker firmware."],
+            technologies: "Teknologier: C++, Zephyr",
+          },
+        ],
+      },
+      [],
+    );
+
+    expect(result.sidebarSections).toEqual([
+      {
+        heading: "PERSONALIA",
+        items: ["Født 1988"],
+      },
+    ]);
+    expect(result.introParagraphs).toEqual(["Christian er en erfaren utvikler."]);
+    expect(result.projects[0]).toMatchObject({
+      paragraphs: ["Bygget sikker firmware."],
+      technologies: "C++, Zephyr",
+    });
+  });
 });
