@@ -1292,14 +1292,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      execute_company_merge: {
-        Args: {
-          p_merged_by?: string
-          p_source_company_id: string
-          p_target_company_id: string
-        }
-        Returns: Json
-      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1307,21 +1299,30 @@ export type Database = {
         }
         Returns: boolean
       }
-      normalize_company_alias: { Args: { value: string }; Returns: string }
       normalize_contact_phone: {
-        Args: { input_value: string }
-        Returns: string
+        Args: {
+          input_value: string | null
+        }
+        Returns: string | null
       }
       rebuild_company_technical_dna: {
-        Args: { target_company_id?: string }
+        Args: {
+          target_company_id?: string | null
+        }
         Returns: number
       }
       rebuild_contact_technical_dna: {
-        Args: { target_company_id?: string; target_contact_id?: string }
+        Args: {
+          target_company_id?: string | null
+          target_contact_id?: string | null
+        }
         Returns: number
       }
       rebuild_technical_dna: {
-        Args: { target_company_id?: string; target_contact_id?: string }
+        Args: {
+          target_company_id?: string | null
+          target_contact_id?: string | null
+        }
         Returns: Json
       }
     }
