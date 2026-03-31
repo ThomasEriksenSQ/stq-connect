@@ -22,6 +22,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CvEditorPanel } from "@/components/cv/CvEditorPanel";
 import { openCvPrintDialog, type CVDocument } from "@/components/cv/CvRenderer";
+import { extractCvPdfSegments } from "@/lib/cvPdfExtract";
 import { toast } from "sonner";
 
 const DEFAULT_CONTACT = {
@@ -110,6 +111,20 @@ function cvDocToDbRow(doc: CVDocument) {
     sidebar_sections: doc.sidebarSections,
     updated_at: new Date().toISOString(),
   };
+}
+
+function hasCvDocumentContent(doc: CVDocument) {
+  return Boolean(
+    doc.hero.name.trim() ||
+      doc.hero.title.trim() ||
+      doc.sidebarSections.some((section) => section.heading.trim() || section.items.some((item) => item.trim())) ||
+      doc.introParagraphs.some((paragraph) => paragraph.trim()) ||
+      doc.competenceGroups.some((group) => group.label.trim() || group.content.trim()) ||
+      doc.projects.length ||
+      doc.additionalSections.length ||
+      doc.education.length ||
+      doc.workExperience.length,
+  );
 }
 
 export default function CvAdmin() {
@@ -309,8 +324,19 @@ export default function CvAdmin() {
           reader.readAsDataURL(file);
         });
 
-        const { data, error } = await supabase.functions.invoke("parse-cv", {
-          body: { base64, filename: file.name },
+        let segments: Awaited<ReturnType<typeof extractCvPdfSegments>>["segments"] = [];
+        let isLowTextConfidence = true;
+
+        try {
+          const extracted = await extractCvPdfSegments(file);
+          segments = extracted.segments;
+          isLowTextConfidence = extracted.isLowTextConfidence;
+        } catch (extractError) {
+          console.warn("Could not extract deterministic PDF text, falling back to OCR import:", extractError);
+        }
+
+        const { data, error } = await supabase.functions.invoke("parse-cv-editor", {
+          body: { base64, filename: file.name, segments, isLowTextConfidence },
         });
 
         if (error || !data) {
@@ -327,17 +353,39 @@ export default function CvAdmin() {
             name: data.navn || currentCv.hero.name,
             title: data.tittel || currentCv.hero.title,
           },
-          introParagraphs: data.introParagraphs?.length ? data.introParagraphs : currentCv.introParagraphs,
-          competenceGroups: data.competenceGroups?.length ? data.competenceGroups : currentCv.competenceGroups,
-          projects: data.projects?.length ? data.projects : currentCv.projects,
-          education: data.education?.length ? data.education : currentCv.education,
-          workExperience: data.workExperience?.length ? data.workExperience : currentCv.workExperience,
-          sidebarSections: data.sidebarSections?.length ? data.sidebarSections : currentCv.sidebarSections,
+          introParagraphs: Array.isArray(data.introParagraphs) ? data.introParagraphs : [],
+          competenceGroups: Array.isArray(data.competenceGroups) ? data.competenceGroups : [],
+          projects: Array.isArray(data.projects) ? data.projects : [],
+          education: Array.isArray(data.education) ? data.education : [],
+          workExperience: Array.isArray(data.workExperience) ? data.workExperience : [],
+          sidebarSections: Array.isArray(data.sidebarSections) ? data.sidebarSections : [],
+          additionalSections: Array.isArray(data.additionalSections) ? data.additionalSections : [],
         };
+
+        if (!hasCvDocumentContent(newCvData)) {
+          toast.error("Kunne ikke hente ut nok tekst fra CV-en — fyll inn manuelt");
+          return;
+        }
 
         setCvData(newCvData);
 
         if (cvId) {
+          if (hasCvDocumentContent(currentCv)) {
+            const backupSavedAt = new Date().toISOString();
+            const { error: backupError } = await supabase.from("cv_versions").insert({
+              cv_id: cvId,
+              snapshot: { ...cvDocToDbRow(currentCv), updated_at: backupSavedAt } as any,
+              saved_by: user?.email || "crm",
+              source: "admin",
+              created_at: backupSavedAt,
+            });
+
+            if (backupError) {
+              toast.error("Kunne ikke lagre sikkerhetskopi av nåværende CV");
+              return;
+            }
+          }
+
           const savedAt = new Date().toISOString();
           const snapshot = { ...cvDocToDbRow(newCvData), updated_at: savedAt };
           const { error: saveError } = await supabase
@@ -367,7 +415,15 @@ export default function CvAdmin() {
           await runCompetenceSync();
         }
 
-        toast.success("CV fullstendig analysert — alle seksjoner er fylt inn");
+        if (data.requiresReview || data.warnings?.length) {
+          toast.success("CV importert — kontroller tekst og ekstra seksjoner før du går videre");
+
+          if (Array.isArray(data.warnings) && data.warnings.length > 0) {
+            toast.info(data.warnings.slice(0, 2).join(" "));
+          }
+        } else {
+          toast.success("CV importert — teksten er lagt inn i editoren");
+        }
       } catch {
         toast.error("Kunne ikke analysere CV — fyll inn manuelt");
       } finally {
@@ -499,10 +555,10 @@ export default function CvAdmin() {
                         onClick={() => cvUploadRef.current?.click()}
                       >
                         <Sparkles className="h-3.5 w-3.5 mr-1" />
-                        AI-analyse av orginal CV
+                        AI-analyse av original CV
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Last opp eksisterende CV — AI fyller inn feltene automatisk</TooltipContent>
+                    <TooltipContent>Last opp eksisterende CV — teksten importeres inn i editoren</TooltipContent>
                   </Tooltip>
                 )}
                 <input ref={cvUploadRef} type="file" accept=".pdf" className="hidden" onChange={handleCvUpload} />

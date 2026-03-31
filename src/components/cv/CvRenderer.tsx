@@ -44,7 +44,9 @@ export const ADDITIONAL_SECTION_TITLE_OPTIONS = [
   "MENTORROLLER",
 ] as const;
 
-export type AdditionalSectionTitle = (typeof ADDITIONAL_SECTION_TITLE_OPTIONS)[number];
+export const DEFAULT_ADDITIONAL_SECTION_TITLE = ADDITIONAL_SECTION_TITLE_OPTIONS[0];
+
+export type AdditionalSectionTitle = string;
 export type AdditionalSectionFormat = "timeline" | "bullet";
 
 export type AdditionalSectionItem = {
@@ -1255,6 +1257,15 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
     () => doc.additionalSections.map((section) => buildAdditionalSectionFragments(section)),
     [doc.additionalSections],
   );
+  const additionalSectionMeasureTitle = useMemo(() => {
+    const titles = doc.additionalSections
+      .map((section) => section.title.trim())
+      .filter(Boolean);
+
+    if (titles.length === 0) return DEFAULT_ADDITIONAL_SECTION_TITLE;
+
+    return titles.reduce((longest, title) => (title.length > longest.length ? title : longest), titles[0]);
+  }, [doc.additionalSections]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1399,10 +1410,10 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
             </div>
           ))}
           <div ref={additionalSectionTitleTopMeasureRef} style={{ display: "flow-root" }}>
-            <SectionTitle marginTop="0">{ADDITIONAL_SECTION_TITLE_OPTIONS[0]}</SectionTitle>
+            <SectionTitle marginTop="0">{additionalSectionMeasureTitle}</SectionTitle>
           </div>
           <div ref={additionalSectionTitleAfterMeasureRef} style={{ display: "flow-root" }}>
-            <SectionTitle marginTop="6mm">{ADDITIONAL_SECTION_TITLE_OPTIONS[0]}</SectionTitle>
+            <SectionTitle marginTop="6mm">{additionalSectionMeasureTitle}</SectionTitle>
           </div>
           {additionalSectionFragments.flat().map((fragment) => (
             <div

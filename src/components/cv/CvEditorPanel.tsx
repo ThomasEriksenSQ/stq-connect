@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } fro
 import {
   ADDITIONAL_SECTION_TITLE_OPTIONS,
   CvRendererPreview,
+  DEFAULT_ADDITIONAL_SECTION_TITLE,
   openCvPrintDialog,
   formatProjectPeriod,
   PROJECT_MONTH_OPTIONS,
@@ -74,6 +75,7 @@ function SortableItem({ id, children }: { id: string; children: React.ReactNode 
 
 const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
 const CLEAR_SELECT = "__none__";
+const CUSTOM_ADDITIONAL_SECTION_TITLE = "__custom__";
 const CURRENT_YEAR = new Date().getFullYear();
 const PROJECT_YEAR_OPTIONS = Array.from({ length: CURRENT_YEAR - 1977 }, (_, index) => CURRENT_YEAR + 2 - index);
 const CONTACT_PERSON_PRESETS = {
@@ -117,10 +119,14 @@ function getSelectedContactPresetId(contact: CVDocument["hero"]["contact"]) {
 
 function createAdditionalSection(format: AdditionalSection["format"]): AdditionalSection {
   return {
-    title: ADDITIONAL_SECTION_TITLE_OPTIONS[0],
+    title: DEFAULT_ADDITIONAL_SECTION_TITLE,
     format,
     items: [{ period: "", primary: "" }],
   };
+}
+
+function isPresetAdditionalSectionTitle(title: string) {
+  return ADDITIONAL_SECTION_TITLE_OPTIONS.includes(title as (typeof ADDITIONAL_SECTION_TITLE_OPTIONS)[number]);
 }
 
 function PortraitFocalPicker({
@@ -1005,13 +1011,20 @@ export function CvEditorPanel({
                                   <div>
                                     <label className={LABEL}>Hovedseksjon</label>
                                     <Select
-                                      value={section.title}
+                                      value={
+                                        isPresetAdditionalSectionTitle(section.title)
+                                          ? section.title
+                                          : CUSTOM_ADDITIONAL_SECTION_TITLE
+                                      }
                                       onValueChange={(value) =>
                                         update((p) => {
                                           const arr = [...p.additionalSections];
                                           arr[i] = {
                                             ...arr[i],
-                                            title: value as AdditionalSection["title"],
+                                            title:
+                                              value === CUSTOM_ADDITIONAL_SECTION_TITLE
+                                                ? arr[i].title || DEFAULT_ADDITIONAL_SECTION_TITLE
+                                                : value,
                                           };
                                           return { ...p, additionalSections: arr };
                                         })
@@ -1026,8 +1039,24 @@ export function CvEditorPanel({
                                             {option}
                                           </SelectItem>
                                         ))}
+                                        <SelectItem value={CUSTOM_ADDITIONAL_SECTION_TITLE}>Egendefinert</SelectItem>
                                       </SelectContent>
                                     </Select>
+                                    <Input
+                                      value={section.title}
+                                      placeholder="Seksjonstittel"
+                                      onChange={(e) =>
+                                        update((p) => {
+                                          const arr = [...p.additionalSections];
+                                          arr[i] = {
+                                            ...arr[i],
+                                            title: e.target.value,
+                                          };
+                                          return { ...p, additionalSections: arr };
+                                        })
+                                      }
+                                      className="mt-2 text-[0.8125rem]"
+                                    />
                                   </div>
                                   <div>
                                     <label className={LABEL}>Format</label>
