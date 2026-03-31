@@ -779,7 +779,7 @@ export function CompanyCardContent({
                 setEditCompanyOpen(nextOpen);
               }}
             >
-              <DialogContent className="w-[calc(100vw-2rem)] max-w-[440px] rounded-xl">
+              <DialogContent className="w-[calc(100vw-2rem)] max-w-[440px] overflow-x-hidden rounded-xl">
                 <DialogHeader>
                   <DialogTitle>Rediger selskap</DialogTitle>
                 </DialogHeader>
@@ -800,26 +800,26 @@ export function CompanyCardContent({
                     });
                     setEditCompanyOpen(false);
                   }}
-                  className="mt-3 min-w-0 space-y-4"
+                  className="mt-3 w-full max-w-full min-w-0 space-y-4 overflow-x-hidden"
                 >
-                  <div className="space-y-1.5">
+                  <div className="max-w-full min-w-0 space-y-1.5">
                     <Label className="text-label">Selskapsnavn</Label>
                     <Input
                       value={editForm.name}
                       onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                       required
-                      className="h-10 rounded-lg"
+                      className="h-10 max-w-full rounded-lg"
                     />
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="max-w-full min-w-0 space-y-1.5">
                     <Label className="text-label">Org.nr</Label>
                     <Input
                       value={editForm.org_number}
                       onChange={(e) => setEditForm({ ...editForm, org_number: e.target.value })}
-                      className="h-10 rounded-lg"
+                      className="h-10 max-w-full rounded-lg"
                     />
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="max-w-full min-w-0 space-y-1.5">
                     <Label className="text-label">Geografisk sted</Label>
                     <div className="flex flex-wrap gap-1.5 mb-2">
                       {editForm.locations.map((loc, i) => (
@@ -846,7 +846,7 @@ export function CompanyCardContent({
                         value={newLocation}
                         onChange={(e) => setNewLocation(e.target.value)}
                         placeholder="Legg til sted..."
-                        className="h-9 min-w-0 flex-1 rounded-lg"
+                        className="h-9 min-w-0 max-w-full flex-1 rounded-lg"
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && newLocation.trim()) {
                             e.preventDefault();
@@ -872,22 +872,22 @@ export function CompanyCardContent({
                       </Button>
                     </div>
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="max-w-full min-w-0 space-y-1.5">
                     <Label className="text-label">Nettside</Label>
                     <Input
                       value={editForm.website}
                       onChange={(e) => setEditForm({ ...editForm, website: e.target.value })}
                       placeholder="https://..."
-                      className="h-10 rounded-lg"
+                      className="h-10 max-w-full rounded-lg"
                     />
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="max-w-full min-w-0 space-y-1.5">
                     <Label className="text-label">LinkedIn</Label>
                     <Input
                       value={editForm.linkedin}
                       onChange={(e) => setEditForm({ ...editForm, linkedin: e.target.value })}
                       placeholder="https://linkedin.com/company/..."
-                      className="h-10 rounded-lg"
+                      className="h-10 max-w-full rounded-lg"
                     />
                   </div>
                   <div className="flex items-center gap-2">
