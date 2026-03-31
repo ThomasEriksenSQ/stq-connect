@@ -50,6 +50,33 @@ describe("technologyTags", () => {
     ).toEqual(["Microcontrollers", "Device drivers", "RTOS"]);
   });
 
+  it("filters noisy free-text phrases while preserving useful domain tags", () => {
+    const extracted = normalizeTechnologyTags([
+      "Automation * Flashing * Factory Acceptance Tests * Integrasjon Mot Erp-suite (netsuite",
+      "Geospatial Data And C++",
+      "Maps",
+      "Packaging/deployment for UAV hardware",
+      "Bear Metal As A Service",
+      "Osv..",
+    ]);
+
+    expect(extracted).toEqual(expect.arrayContaining(["Automation", "GIS", "C++", "UAV"]));
+    expect(extracted).not.toContain("Bear Metal As A Service");
+    expect(extracted).not.toContain("Geospatial Data And C++");
+    expect(extracted).not.toContain("Automation * Flashing * Factory Acceptance Tests * Integrasjon Mot Erp-suite (netsuite");
+    expect(extracted).not.toContain("Osv..");
+  });
+
+  it("salvages concrete technologies from noisy mixed phrases", () => {
+    expect(
+      normalizeTechnologyTags([
+        "VHDL og kanskje har litt erfaring med Xilinx SoC",
+        "Nordic semi sin nrf9x-serie",
+        "Bootloaders (u-boot",
+      ]),
+    ).toEqual(expect.arrayContaining(["VHDL", "Xilinx", "Nordic nRF", "U-Boot"]));
+  });
+
   it("sorts parsed frequency maps by count", () => {
     expect(
       getSortedTechnologyEntries({

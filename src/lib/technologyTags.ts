@@ -6,7 +6,7 @@ type TechnologyRule = {
 };
 
 const TECHNOLOGY_RULES: TechnologyRule[] = [
-  { label: "C++", patterns: [/^c\+\+$/i, /\bc\+\+\b/i, /\bmodern c\+\+\b/i] },
+  { label: "C++", patterns: [/^c\+\+$/i, /(^|[^A-Za-z0-9])c\+\+([^A-Za-z0-9]|$)/i, /\bmodern c\+\+\b/i] },
   { label: "C", patterns: [/^c$/i, /^ansi c$/i, /^embedded c$/i] },
   { label: "Rust", patterns: [/^rust$/i, /\brust\b/i] },
   { label: "Python", patterns: [/^python$/i, /\bpython\b/i] },
@@ -55,6 +55,19 @@ const TECHNOLOGY_RULES: TechnologyRule[] = [
   { label: "Testing", patterns: [/^testing$/i, /^test$/i, /\bverification\b/i, /\btesting\b/i, /\btest automation\b/i] },
   { label: "Safety", patterns: [/^safety$/i, /\bfunctional safety\b/i, /^functional safety$/i] },
   { label: "Cybersecurity", patterns: [/^cybersecurity$/i, /^security$/i, /\bcyber security\b/i, /\bsecurity\b/i] },
+  { label: "AI", patterns: [/^ai$/i, /^artificial intelligence$/i, /\bartificial intelligence\b/i, /\bai\b/i] },
+  { label: "Automation", patterns: [/^automation$/i, /\bautomation\b/i] },
+  { label: "Edge Computing", patterns: [/^edge computing$/i, /\bedge computing\b/i] },
+  { label: "GIS", patterns: [/^gis$/i, /^maps?$/i, /^geospatial$/i, /\bgis\b/i, /\bgeospatial\b/i] },
+  { label: "HIL", patterns: [/^hil$/i, /^hardware[- ]in[- ]the[- ]loop$/i, /\bhardware[- ]in[- ]the[- ]loop\b/i] },
+  { label: "UAV", patterns: [/^uavs?$/i, /^drones?$/i, /^unmanned aerial vehicles?$/i, /\buavs?\b/i, /\bdrones?\b/i] },
+  { label: "Hardware Integration", patterns: [/^hardware integration$/i, /\bhardware integration\b/i, /^embedded and hardware integration$/i] },
+  { label: "Odoo", patterns: [/^odoo$/i, /^odoo[- ]suite$/i, /\bodoo\b/i] },
+  { label: "U-Boot", patterns: [/^u-boot$/i, /\bu-boot\b/i] },
+  { label: "VHDL", patterns: [/^vhdl$/i, /\bvhdl\b/i] },
+  { label: "Xilinx", patterns: [/^xilinx$/i, /\bxilinx\b/i] },
+  { label: "LoRa", patterns: [/^lora$/i, /\blora\b/i] },
+  { label: "Nordic nRF", patterns: [/^nordic nrf$/i, /\bnrf(?:5|9)[0-9xa-z-]*\b/i, /\bnordic semi\b/i] },
 ];
 
 const IGNORED_VALUES = new Set([
@@ -80,6 +93,51 @@ const PRESERVED_COMPOUND_SEGMENTS = [
   /^ethernet\/ip$/i,
   /^tcp\/ip$/i,
 ];
+
+const FALLBACK_BLOCKED_PATTERNS = [
+  /https?:\/\//i,
+  /www\./i,
+  /@/,
+  /[:*]/,
+  /\.\./,
+  /[()]/,
+  /\bosv\b/i,
+  /\bse mail\b/i,
+  /\bwanted\b/i,
+  /\bkanskje\b/i,
+  /\bkjennskap\b/i,
+  /\berfaring\b/i,
+  /\bintegrasjon\b/i,
+  /\bintegration\b/i,
+  /\bdeployment\b/i,
+  /\bpackaging\b/i,
+  /\bacceptance\b/i,
+  /\bfactory\b/i,
+  /\bsette opp\b/i,
+  /\bon-prem\b/i,
+  /\bcloud\b/i,
+  /\bsuite\b/i,
+  /\bebom\b/i,
+];
+
+const FALLBACK_STOPWORDS = new Set([
+  "a",
+  "an",
+  "and",
+  "as",
+  "av",
+  "eller",
+  "for",
+  "med",
+  "mot",
+  "of",
+  "og",
+  "på",
+  "sin",
+  "til",
+  "to",
+  "with",
+]);
 
 function sanitizeToken(token: string): string {
   return token
@@ -142,6 +200,24 @@ function titleCaseToken(token: string): string {
     .join(" ");
 }
 
+function isSafeFallbackTechnologyTag(token: string): boolean {
+  if (token.length < 2 || token.length > 40) return false;
+  if (!/^[\p{L}\p{N}+#./ -]+$/u.test(token)) return false;
+  if (FALLBACK_BLOCKED_PATTERNS.some((pattern) => pattern.test(token))) return false;
+
+  const words = token
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (words.length === 0 || words.length > 3) return false;
+  if (words.some((word) => FALLBACK_STOPWORDS.has(word))) return false;
+
+  if (token.includes("/") && !/^[A-Za-z0-9+#.-]+\/[A-Za-z0-9+#.-]+$/.test(token)) return false;
+
+  return true;
+}
+
 export function normalizeTechnologyTag(token: string | null | undefined): string | null {
   const cleaned = sanitizeToken(String(token || ""));
   if (!cleaned) return null;
@@ -156,7 +232,7 @@ export function normalizeTechnologyTag(token: string | null | undefined): string
     }
   }
 
-  if (lower.length < 2) return null;
+  if (lower.length < 2 || !isSafeFallbackTechnologyTag(cleaned)) return null;
   return titleCaseToken(cleaned);
 }
 
