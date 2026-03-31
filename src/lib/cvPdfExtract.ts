@@ -25,6 +25,7 @@ type PositionedItem = {
 };
 
 const PDF_LINE_Y_TOLERANCE = 2.8;
+const PDF_COLUMN_GAP_THRESHOLD = 36;
 
 function normalizePdfText(text: string): string {
   return text.replace(/\s+/g, " ").replace(/\u00ad/g, "").trim();
@@ -49,6 +50,33 @@ function joinLineItems(items: PositionedItem[]): string {
       const separator = shouldInsertSpace(previous, item, gap) ? " " : "";
       return `${line}${separator}${item.text}`;
     }, "");
+}
+
+function splitLineIntoClusters(items: PositionedItem[]) {
+  const ordered = [...items].sort((a, b) => a.x - b.x);
+  const clusters: PositionedItem[][] = [];
+
+  for (const item of ordered) {
+    const currentCluster = clusters[clusters.length - 1];
+    if (!currentCluster) {
+      clusters.push([item]);
+      continue;
+    }
+
+    const previous = currentCluster[currentCluster.length - 1];
+    const previousRight = previous.x + previous.width;
+    const gap = item.x - previousRight;
+    const adaptiveThreshold = Math.max(PDF_COLUMN_GAP_THRESHOLD, Math.max(previous.fontSize, item.fontSize) * 2.8);
+
+    if (gap > adaptiveThreshold) {
+      clusters.push([item]);
+      continue;
+    }
+
+    currentCluster.push(item);
+  }
+
+  return clusters;
 }
 
 function isHeadingCandidate(text: string, fontSize: number, averageFontSize: number) {
@@ -119,11 +147,12 @@ export function buildCvPdfSegments(
   }
 
   return lines
-    .map((lineItems, index) => {
-      const text = normalizePdfText(joinLineItems(lineItems));
+    .flatMap((lineItems) => splitLineIntoClusters(lineItems))
+    .map((clusterItems, index) => {
+      const text = normalizePdfText(joinLineItems(clusterItems));
       if (!text) return null;
 
-      const fontSize = Math.max(...lineItems.map((item) => item.fontSize));
+      const fontSize = Math.max(...clusterItems.map((item) => item.fontSize));
       return {
         id: `p${pageNumber}-s${index + 1}`,
         page: pageNumber,

@@ -231,7 +231,12 @@ export function CvEditorPanel({
 
   // Sync if initialData changes externally (e.g. version restore)
   useEffect(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = undefined;
+    }
     setDoc(initialData);
+    setSaveStatus("idle");
   }, [initialData]);
 
   // Compute preview scale

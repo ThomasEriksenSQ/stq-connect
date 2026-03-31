@@ -39,4 +39,20 @@ describe("cvPdfExtract", () => {
 
     expect(segments.map((segment) => segment.text)).toEqual(["C++,", "embedded-linux"]);
   });
+
+  it("splits wide multi-column lines into separate segments", () => {
+    const segments = buildCvPdfSegments(
+      [
+        { str: "•", transform: [1, 0, 0, 1, 16, 620], width: 4, height: 10 },
+        { str: "Norsk, morsmål", transform: [1, 0, 0, 1, 24, 620], width: 70, height: 10 },
+        { str: "Anders er en senior Embedded-ingeniør", transform: [1, 0, 0, 1, 190, 620], width: 210, height: 12 },
+      ],
+      1,
+    );
+
+    expect(segments.map((segment) => segment.text)).toEqual([
+      "• Norsk, morsmål",
+      "Anders er en senior Embedded-ingeniør",
+    ]);
+  });
 });

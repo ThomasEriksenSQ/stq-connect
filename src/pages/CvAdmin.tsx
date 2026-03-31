@@ -345,13 +345,17 @@ export default function CvAdmin() {
         }
 
         const currentCv = cvData || EMPTY_CV;
+        const preservedContact = currentCv.hero.contact || DEFAULT_CONTACT;
+        const preservedPortraitUrl = currentCv.hero.portrait_url;
+        const preservedPortraitPosition = currentCv.hero.portrait_position || "50% 50%";
 
         const newCvData: CVDocument = {
-          ...currentCv,
           hero: {
-            ...currentCv.hero,
-            name: data.navn || currentCv.hero.name,
-            title: data.tittel || currentCv.hero.title,
+            name: data.navn || "",
+            title: data.tittel || "",
+            contact: preservedContact,
+            portrait_url: preservedPortraitUrl,
+            portrait_position: preservedPortraitPosition,
           },
           introParagraphs: Array.isArray(data.introParagraphs) ? data.introParagraphs : [],
           competenceGroups: Array.isArray(data.competenceGroups) ? data.competenceGroups : [],
