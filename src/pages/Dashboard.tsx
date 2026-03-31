@@ -23,10 +23,6 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      <div className="inline-flex items-center rounded-full border border-amber-300 bg-amber-100 px-3 py-1 text-xs font-semibold tracking-[0.18em] text-amber-900">
-        TEST
-      </div>
-
       {/* Tab bar */}
       <div className="flex items-center gap-1 border-b border-border">
         <button
