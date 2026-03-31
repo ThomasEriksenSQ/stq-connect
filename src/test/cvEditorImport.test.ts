@@ -156,4 +156,17 @@ describe("buildCvEditorImportDocument", () => {
       technologies: "C++, Zephyr",
     });
   });
+
+  it("collapses OCR-style letter-spaced names without rewriting titles", () => {
+    const result = buildCvEditorImportDocument(
+      {
+        navn: "A n d e r s N i l s e n",
+        tittel: "S e n i o r E m b e d d e d -i n g e n i ø r m e d 5 å r s e r f a r i n g",
+      },
+      [],
+    );
+
+    expect(result.navn).toBe("Anders Nilsen");
+    expect(result.tittel).toBe("S e n i o r E m b e d d e d -i n g e n i ø r m e d 5 å r s e r f a r i n g");
+  });
 });

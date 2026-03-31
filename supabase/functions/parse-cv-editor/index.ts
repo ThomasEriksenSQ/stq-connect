@@ -88,6 +88,16 @@ function detectStacqTemplate(segments: CvEditorImportSegment[]) {
   );
 }
 
+function buildTemplateHint(templateDetected: boolean) {
+  if (!templateDetected) return "";
+
+  return `Dokumentet ser ut til å bruke STACQ sin CV-mal:
+- venstre sorte kolonne inneholder sidebarSections
+- kontaktblokken øverst til høyre skal IKKE bli en sidebarSection
+- navnefelt og tittel i toppraden skal til navn/tittel
+- brødteksten i hovedkolonnen skal til introParagraphs, competenceGroups og prosjekter`;
+}
+
 function hasMeaningfulImportedContent(document: ReturnType<typeof buildCvEditorImportDocument>) {
   return Boolean(
     document.navn ||
@@ -169,6 +179,7 @@ async function parseFromSegments(args: {
   apiKey: string;
   filename: string;
   segments: CvEditorImportSegment[];
+  templateDetected?: boolean;
 }) {
   const systemPrompt = `Du er en CV-importør for STACQ sin CV-editor.
 Målet er å bevare originaltekst fra CV-en så ordrett som mulig.
@@ -224,7 +235,11 @@ Returner eksakt denne strukturen:
   "warnings": ["string"]
 }`;
 
+  const templateHint = buildTemplateHint(Boolean(args.templateDetected));
+
   const userPrompt = `Analyser CV-en "${args.filename}" og bygg en teksttro editor-struktur fra segmentene under.
+
+${templateHint}
 
 Segmenter:
 ${buildSegmentCatalog(args.segments)}`;
@@ -300,13 +315,7 @@ Returner eksakt denne strukturen:
   "warnings": ["string"]
 }`;
 
-  const templateHint = args.templateDetected
-    ? `Dokumentet ser ut til å bruke STACQ sin CV-mal:
-- venstre sorte kolonne inneholder sidebarSections
-- kontaktblokken øverst til høyre skal IKKE bli en sidebarSection
-- navnefelt og tittel i den grå toppraden skal til navn/tittel
-- brødteksten i hovedkolonnen skal til introParagraphs, competenceGroups og prosjekter`
-    : "";
+  const templateHint = buildTemplateHint(Boolean(args.templateDetected));
 
   const userPrompt = `Analyser CV-en "${args.filename}" med OCR-lignende nøyaktighet. Hvis de vedlagte tekstsegmentene hjelper, bruk dem som støtte, men det viktigste er å transkribere teksten så trofast som mulig.
 
@@ -346,8 +355,7 @@ serve(async (req) => {
       throw new Error("Missing CV content");
     }
 
-    let sourceMode: "segments" | "ocr" =
-      segments.length > 0 && !isLowTextConfidence && !templateDetected ? "segments" : "ocr";
+    let sourceMode: "segments" | "ocr" = segments.length > 0 && !isLowTextConfidence ? "segments" : "ocr";
     let requiresReview = sourceMode === "ocr";
     let importDocument;
 
@@ -357,6 +365,7 @@ serve(async (req) => {
           apiKey,
           filename,
           segments,
+          templateDetected,
         });
       } else if (body.base64) {
         importDocument = await parseFromOcr({
@@ -397,7 +406,11 @@ serve(async (req) => {
     if (isLowTextConfidence && !importDocument.warnings.includes("PDF-en ser ut til å være scannet eller tekstfattig. Kontroller importen nøye.")) {
       importDocument.warnings.unshift("PDF-en ser ut til å være scannet eller tekstfattig. Kontroller importen nøye.");
     }
-    if (templateDetected && !importDocument.warnings.includes("STACQ-malen ble tolket via layout-aware OCR. Kontroller spesielt navn, ingress og sidebar.")) {
+    if (
+      templateDetected &&
+      sourceMode === "ocr" &&
+      !importDocument.warnings.includes("STACQ-malen ble tolket via layout-aware OCR. Kontroller spesielt navn, ingress og sidebar.")
+    ) {
       importDocument.warnings.unshift("STACQ-malen ble tolket via layout-aware OCR. Kontroller spesielt navn, ingress og sidebar.");
     }
 

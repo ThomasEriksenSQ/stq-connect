@@ -85,6 +85,84 @@ function cleanDisplayText(value: string) {
     .replace(/^(Rolle|Periode):\s*/i, "");
 }
 
+function isSingleLetterToken(value: string) {
+  return /^[A-Za-zÆØÅæøå]$/u.test(value);
+}
+
+function isHyphenLetterToken(value: string) {
+  return /^-[A-Za-zÆØÅæøå]$/u.test(value);
+}
+
+function collapseSpacedWords(value: string) {
+  const normalized = compactWhitespace(value);
+  const tokens = normalized.split(/\s+/);
+
+  if (tokens.length < 4) return normalized;
+
+  const rebuilt: string[] = [];
+  let index = 0;
+
+  while (index < tokens.length) {
+    const token = tokens[index];
+
+    if (!isSingleLetterToken(token)) {
+      rebuilt.push(token);
+      index += 1;
+      continue;
+    }
+
+    let cursor = index;
+    let currentWord = "";
+    const words: string[] = [];
+
+    while (cursor < tokens.length) {
+      const currentToken = tokens[cursor];
+
+      if (isSingleLetterToken(currentToken)) {
+        if (
+          currentWord &&
+          currentWord.length > 1 &&
+          /[a-zæøå]$/u.test(currentWord) &&
+          /^[A-ZÆØÅ]$/u.test(currentToken)
+        ) {
+          words.push(currentWord);
+          currentWord = currentToken;
+        } else {
+          currentWord += currentToken;
+        }
+
+        cursor += 1;
+        continue;
+      }
+
+      if (isHyphenLetterToken(currentToken) && currentWord) {
+        currentWord += currentToken;
+        cursor += 1;
+        continue;
+      }
+
+      break;
+    }
+
+    if (currentWord) words.push(currentWord);
+
+    if (words.join("").length >= 4 && words.some((word) => word.length > 1)) {
+      rebuilt.push(...words);
+      index = cursor;
+      continue;
+    }
+
+    rebuilt.push(token);
+    index += 1;
+  }
+
+  return rebuilt.join(" ");
+}
+
+function normalizeHeroName(value: string) {
+  return collapseSpacedWords(compactWhitespace(value));
+}
+
 function normalizeHeading(value: string | null | undefined) {
   const heading = compactWhitespace(String(value || "")).replace(/:$/, "");
   return heading ? heading.toLocaleUpperCase("nb-NO") : "";
@@ -279,8 +357,8 @@ export function buildCvEditorImportDocument(
     .filter((section) => section.title && section.items.length > 0);
 
   return {
-    navn: resolvePreferredText(parsed.navnIds, parsed.navn, segmentMap),
-    tittel: resolvePreferredText(parsed.tittelIds, parsed.tittel, segmentMap),
+    navn: normalizeHeroName(resolvePreferredText(parsed.navnIds, parsed.navn, segmentMap)),
+    tittel: compactWhitespace(resolvePreferredText(parsed.tittelIds, parsed.tittel, segmentMap)),
     sidebarSections,
     introParagraphs: sanitizeIntroParagraphs(resolveParagraphs(parsed.introParagraphs, segmentMap)),
     competenceGroups,
