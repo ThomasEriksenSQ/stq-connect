@@ -779,7 +779,7 @@ export function CompanyCardContent({
                 setEditCompanyOpen(nextOpen);
               }}
             >
-              <DialogContent className="sm:max-w-[440px] rounded-xl">
+              <DialogContent className="w-[calc(100vw-2rem)] max-w-[440px] rounded-xl">
                 <DialogHeader>
                   <DialogTitle>Rediger selskap</DialogTitle>
                 </DialogHeader>
@@ -800,7 +800,7 @@ export function CompanyCardContent({
                     });
                     setEditCompanyOpen(false);
                   }}
-                  className="space-y-4 mt-3"
+                  className="mt-3 min-w-0 space-y-4"
                 >
                   <div className="space-y-1.5">
                     <Label className="text-label">Selskapsnavn</Label>
@@ -841,12 +841,12 @@ export function CompanyCardContent({
                         </span>
                       ))}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex min-w-0 gap-2">
                       <Input
                         value={newLocation}
                         onChange={(e) => setNewLocation(e.target.value)}
                         placeholder="Legg til sted..."
-                        className="h-9 rounded-lg flex-1"
+                        className="h-9 min-w-0 flex-1 rounded-lg"
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && newLocation.trim()) {
                             e.preventDefault();
