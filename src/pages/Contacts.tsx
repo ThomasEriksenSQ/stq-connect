@@ -460,13 +460,20 @@ const Contacts = () => {
     </button>
   );
 
+  const mobileSortValue = `${sort.field}:${sort.dir}`;
+
+  const handleMobileSortChange = (value: string) => {
+    const [field, dir] = value.split(":");
+    setSort({ field: field as SortField, dir: dir as SortDir });
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="text-[1.375rem] font-bold">Kontakter</h1>
       </div>
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-xs">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1 max-w-full sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
           <Input
             placeholder="Søk..."
@@ -475,10 +482,26 @@ const Contacts = () => {
             className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border"
           />
         </div>
+        <div className="md:hidden">
+          <select
+            value={mobileSortValue}
+            onChange={(e) => handleMobileSortChange(e.target.value)}
+            className="h-9 w-full rounded-lg border border-border bg-card px-3 text-[0.8125rem] text-foreground"
+          >
+            <option value="priority:desc">Sorter: Prioritet</option>
+            <option value="name:asc">Sorter: Navn A-Å</option>
+            <option value="name:desc">Sorter: Navn Å-A</option>
+            <option value="company:asc">Sorter: Selskap A-Å</option>
+            <option value="title:asc">Sorter: Stilling A-Å</option>
+            <option value="signal:asc">Sorter: Signal</option>
+            <option value="owner:asc">Sorter: Eier</option>
+            <option value="last_activity:desc">Sorter: Siste aktivitet</option>
+          </select>
+        </div>
       </div>
 
       {/* Chip filters */}
-      <div className="flex items-start gap-3">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start">
         <div className="space-y-2 flex-1">
           {/* EIER */}
           <div className="flex items-center gap-2 flex-wrap">
@@ -526,7 +549,7 @@ const Contacts = () => {
             <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
           </div>
         </div>
-        <div className="flex items-center gap-3 ml-auto shrink-0">
+        <div className="flex items-center gap-3 md:ml-auto shrink-0">
           <div className="w-px h-8 bg-border" />
           <div className="text-right">
             <span className="text-[0.9375rem] font-semibold text-foreground">
@@ -547,28 +570,18 @@ const Contacts = () => {
       ) : filtered.length === 0 ? (
         <p className="text-sm text-muted-foreground py-12 text-center">Ingen kontakter funnet</p>
       ) : (
-        <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
-          <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_110px_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
-            <SortHeader field="name">Navn</SortHeader>
-            <SortHeader field="signal">Signal</SortHeader>
-            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Finn</span>
-            <SortHeader field="company">Selskap</SortHeader>
-            <SortHeader field="title">Stilling</SortHeader>
-            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Tags</span>
-            <SortHeader field="last_activity" className="justify-end">
-              Siste akt.
-            </SortHeader>
-          </div>
-          <div className="divide-y divide-border">
+        <>
+          <div className="space-y-3 md:hidden">
             {sorted.map((contact) => {
               const companyName = (contact.companies as any)?.name;
               const signal = (contact as any).signal as string | null;
               const signalBadge = getSignalBadge(signal);
-              const openTasks = (contact as any).openTasks || { count: 0, overdue: false };
 
               return (
-                <div
+                <button
                   key={contact.id}
+                  type="button"
+                  onClick={() => navigate(`/kontakter/${contact.id}`)}
                   style={{
                     borderLeft: hotListActive
                       ? (contact as any).temperature === "hett"
@@ -580,24 +593,44 @@ const Contacts = () => {
                             : "3px solid rgb(229 231 235)"
                       : "3px solid transparent",
                   }}
-                  className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_110px_100px] gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75"
+                  className="w-full rounded-xl border border-border bg-card px-4 py-3 text-left shadow-card"
                 >
-                  {/* NAME - clickable */}
-                  <button
-                    onClick={() => navigate(`/kontakter/${contact.id}`)}
-                    className="min-w-0 text-left cursor-pointer flex items-center gap-2"
-                  >
-                    <p className="text-[0.8125rem] font-medium text-foreground truncate">
-                      {contact.first_name} {contact.last_name}
-                    </p>
-                    {hotListActive && (contact as any).needsReview && (
-                      <span className="text-[0.6875rem]" title="Trenger oppfølging">
-                        ⚠
-                      </span>
-                    )}
-                  </button>
-                  {/* SIGNAL - inline editable */}
-                  <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[0.9375rem] font-semibold text-foreground truncate">
+                          {contact.first_name} {contact.last_name}
+                        </p>
+                        {hotListActive && (contact as any).needsReview && (
+                          <span className="text-[0.75rem]" title="Trenger oppfølging">
+                            ⚠
+                          </span>
+                        )}
+                      </div>
+                      {companyName && (
+                        <p className="mt-1 text-[0.8125rem] text-muted-foreground truncate">{companyName}</p>
+                      )}
+                      {contact.title && (
+                        <p className="text-[0.8125rem] text-muted-foreground truncate">{contact.title}</p>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0">
+                      {(contact as any).lastActivity && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <p className="text-[0.75rem] text-muted-foreground">
+                              {relativeDate((contact as any).lastActivity)}
+                            </p>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {format(new Date((contact as any).lastActivity), "d. MMMM yyyy", { locale: nb })}
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         {signalBadge ? (
@@ -605,7 +638,7 @@ const Contacts = () => {
                             className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer ${signalBadge.color}`}
                           >
                             {signal}
-                            <ChevronDown className="h-3 w-3 ml-1" />
+                            <ChevronDown className="ml-1 h-3 w-3" />
                           </button>
                         ) : (
                           <button className="inline-flex items-center rounded-full border border-dashed border-border px-2 py-0.5 text-[0.6875rem] text-muted-foreground/50 cursor-pointer hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors">
@@ -634,77 +667,199 @@ const Contacts = () => {
                         ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  </div>
-                  {/* FINN.NO */}
-                  <div className="flex items-center justify-center">
+
                     {(contact as any).hasMarkedsradar && (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Radio className="h-3.5 w-3.5 text-blue-500 cursor-default" />
+                          <div className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-blue-200 bg-blue-50">
+                            <Radio className="h-3.5 w-3.5 text-blue-500 cursor-default" />
+                          </div>
                         </TooltipTrigger>
                         <TooltipContent>
                           Selskapet har annonsert etter embedded på Finn.no siste 90 dager
                         </TooltipContent>
                       </Tooltip>
                     )}
+
+                    <div className="ml-auto flex gap-1">
+                      <button
+                        onClick={() => handleToggle(contact, "cv_email", !contact.cv_email)}
+                        className={
+                          contact.cv_email
+                            ? "rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
+                            : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
+                        }
+                      >
+                        CV
+                      </button>
+                      <button
+                        onClick={() => handleToggle(contact, "call_list", !contact.call_list)}
+                        className={
+                          contact.call_list
+                            ? "rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
+                            : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
+                        }
+                      >
+                        Innkjøper
+                      </button>
+                    </div>
                   </div>
-                  {/* COMPANY */}
-                  <button
-                    onClick={() => navigate(`/kontakter/${contact.id}`)}
-                    className="text-[0.8125rem] text-muted-foreground truncate flex items-center gap-1 text-left cursor-pointer"
-                  >
-                    {companyName || ""}
-                  </button>
-                  {/* TITLE */}
-                  <button
-                    onClick={() => navigate(`/kontakter/${contact.id}`)}
-                    className="text-[0.8125rem] text-muted-foreground truncate text-left cursor-pointer"
-                  >
-                    {contact.title?.slice(0, 25) || ""}
-                  </button>
-                  {/* TAGS */}
-                  <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => handleToggle(contact, "cv_email", !contact.cv_email)}
-                      className={
-                        contact.cv_email
-                          ? "rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
-                          : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
-                      }
-                    >
-                      CV
-                    </button>
-                    <button
-                      onClick={() => handleToggle(contact, "call_list", !contact.call_list)}
-                      className={
-                        contact.call_list
-                          ? "rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
-                          : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
-                      }
-                    >
-                      Innkjøper
-                    </button>
-                  </div>
-                  {/* SISTE AKT */}
-                  <span className="text-[0.75rem] text-muted-foreground text-right">
-                    {(contact as any).lastActivity ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span>{relativeDate((contact as any).lastActivity)}</span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {format(new Date((contact as any).lastActivity), "d. MMMM yyyy", { locale: nb })}
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : (
-                      ""
-                    )}
-                  </span>
-                </div>
+                </button>
               );
             })}
           </div>
-        </div>
+
+          <div className="hidden md:block border border-border rounded-lg overflow-hidden bg-card shadow-card">
+            <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_110px_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+              <SortHeader field="name">Navn</SortHeader>
+              <SortHeader field="signal">Signal</SortHeader>
+              <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Finn</span>
+              <SortHeader field="company">Selskap</SortHeader>
+              <SortHeader field="title">Stilling</SortHeader>
+              <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Tags</span>
+              <SortHeader field="last_activity" className="justify-end">
+                Siste akt.
+              </SortHeader>
+            </div>
+            <div className="divide-y divide-border">
+              {sorted.map((contact) => {
+                const companyName = (contact.companies as any)?.name;
+                const signal = (contact as any).signal as string | null;
+                const signalBadge = getSignalBadge(signal);
+
+                return (
+                  <div
+                    key={contact.id}
+                    style={{
+                      borderLeft: hotListActive
+                        ? (contact as any).temperature === "hett"
+                          ? "3px solid rgb(239 68 68)"
+                          : (contact as any).temperature === "lovende"
+                            ? "3px solid rgb(251 146 60)"
+                            : (contact as any).temperature === "mulig"
+                              ? "3px solid rgb(251 191 36)"
+                              : "3px solid rgb(229 231 235)"
+                        : "3px solid transparent",
+                    }}
+                    className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_110px_100px] gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75"
+                  >
+                    <button
+                      onClick={() => navigate(`/kontakter/${contact.id}`)}
+                      className="min-w-0 text-left cursor-pointer flex items-center gap-2"
+                    >
+                      <p className="text-[0.8125rem] font-medium text-foreground truncate">
+                        {contact.first_name} {contact.last_name}
+                      </p>
+                      {hotListActive && (contact as any).needsReview && (
+                        <span className="text-[0.6875rem]" title="Trenger oppfølging">
+                          ⚠
+                        </span>
+                      )}
+                    </button>
+                    <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          {signalBadge ? (
+                            <button
+                              className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer ${signalBadge.color}`}
+                            >
+                              {signal}
+                              <ChevronDown className="h-3 w-3 ml-1" />
+                            </button>
+                          ) : (
+                            <button className="inline-flex items-center rounded-full border border-dashed border-border px-2 py-0.5 text-[0.6875rem] text-muted-foreground/50 cursor-pointer hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors">
+                              + Signal
+                            </button>
+                          )}
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                          {SIGNAL_OPTIONS.map((s) => (
+                            <DropdownMenuItem
+                              key={s.label}
+                              onClick={() =>
+                                setSignalMutation.mutate({
+                                  contactId: contact.id,
+                                  companyId: contact.company_id,
+                                  label: s.label,
+                                })
+                              }
+                            >
+                              <span
+                                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${s.color}`}
+                              >
+                                {s.label}
+                              </span>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    <div className="flex items-center justify-center">
+                      {(contact as any).hasMarkedsradar && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Radio className="h-3.5 w-3.5 text-blue-500 cursor-default" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Selskapet har annonsert etter embedded på Finn.no siste 90 dager
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => navigate(`/kontakter/${contact.id}`)}
+                      className="text-[0.8125rem] text-muted-foreground truncate flex items-center gap-1 text-left cursor-pointer"
+                    >
+                      {companyName || ""}
+                    </button>
+                    <button
+                      onClick={() => navigate(`/kontakter/${contact.id}`)}
+                      className="text-[0.8125rem] text-muted-foreground truncate text-left cursor-pointer"
+                    >
+                      {contact.title?.slice(0, 25) || ""}
+                    </button>
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleToggle(contact, "cv_email", !contact.cv_email)}
+                        className={
+                          contact.cv_email
+                            ? "rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
+                            : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
+                        }
+                      >
+                        CV
+                      </button>
+                      <button
+                        onClick={() => handleToggle(contact, "call_list", !contact.call_list)}
+                        className={
+                          contact.call_list
+                            ? "rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
+                            : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
+                        }
+                      >
+                        Innkjøper
+                      </button>
+                    </div>
+                    <span className="text-[0.75rem] text-muted-foreground text-right">
+                      {(contact as any).lastActivity ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span>{relativeDate((contact as any).lastActivity)}</span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {format(new Date((contact as any).lastActivity), "d. MMMM yyyy", { locale: nb })}
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        ""
+                      )}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
       )}
       <BulkSignalModal open={bulkModalOpen} onClose={() => setBulkModalOpen(false)} />
     </div>

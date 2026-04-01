@@ -643,7 +643,7 @@ export function ContactCardContent({
     <div>
       {/* ── ZONE A: Contact Header ── */}
       <div className="mb-5">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           {editable ? (
             <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">
               <InlineField
@@ -663,7 +663,7 @@ export function ContactCardContent({
             </h2>
           )}
           {/* Owner badge */}
-          <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0 sm:ml-auto">
             {/* Signal badge */}
             {editable &&
               (() => {

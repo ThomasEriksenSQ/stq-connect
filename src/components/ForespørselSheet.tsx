@@ -656,11 +656,11 @@ export function ForespørselSheet({
           />
         ) : (
           /* ─── VIEW MODE ─── */
-          <div className={cn("h-full", showMatch ? "flex" : "")}>
+          <div className={cn("h-full", showMatch ? "flex flex-col sm:flex-row" : "")}>
             {/* LEFT COLUMN */}
             <div className={cn(
               "overflow-y-auto py-5 px-6",
-              showMatch ? "w-[320px] flex-shrink-0" : "flex-1"
+              showMatch ? "w-full sm:w-[320px] flex-shrink-0" : "flex-1"
             )}>
               <div className="space-y-5">
                 {/* Missing contact warning */}
@@ -669,7 +669,7 @@ export function ForespørselSheet({
                 )}
 
                 {/* Info row */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <p className={LABEL}>Mottatt</p>
                     <Tooltip>
@@ -843,7 +843,7 @@ export function ForespørselSheet({
 
             {/* RIGHT COLUMN — Match results */}
             {showMatch && (
-              <div className="flex-1 border-l border-border overflow-y-auto py-5 px-5 max-h-[calc(100vh-200px)]">
+              <div className="flex-1 border-t sm:border-t-0 sm:border-l border-border overflow-y-auto py-5 px-5 max-h-[calc(100vh-200px)]">
                 <div className="flex items-center justify-between gap-2 mb-4">
                   <div className="flex items-center gap-2">
                     <Target className="h-4 w-4 text-primary" />
@@ -961,7 +961,7 @@ export function ForespørselSheet({
       {/* Footer */}
       <div className="px-6 py-4 border-t border-border">
         {editMode ? (
-          <div className="flex gap-3">
+          <div className="flex flex-col-reverse sm:flex-row gap-3">
             <button
               onClick={() => setEditMode(false)}
               className="flex-1 h-9 text-[0.8125rem] rounded-lg border border-border text-muted-foreground hover:bg-secondary transition-colors"
@@ -1002,7 +1002,7 @@ export function ForespørselSheet({
             </div>
 
             {/* Editable fields */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={LABEL}>Utpris / time</label>
                 <Input
@@ -1024,7 +1024,7 @@ export function ForespørselSheet({
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={LABEL}>Startdato</label>
                 <Input

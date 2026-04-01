@@ -1140,7 +1140,7 @@ export function CompanyCardContent({
 
             return (
               <div className="mb-2">
-                <div className="flex items-center justify-between mb-2">
+                <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
                     Teknisk DNA
                     {techProfile?.konsulent_hyppighet ? (
@@ -1149,7 +1149,7 @@ export function CompanyCardContent({
                       </span>
                     ) : null}
                   </h3>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
                       onClick={() => setShowAnalyze((current) => !current)}
                       className="inline-flex items-center gap-1.5 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
@@ -1450,7 +1450,7 @@ export function CompanyCardContent({
         </div>
 
         {/* Høyre: Kun kontakter */}
-        <div className="space-y-2 border-l border-border pl-5">
+        <div className="space-y-2 border-t border-border pt-5 md:border-t-0 md:border-l md:pl-5 md:pt-0">
           <div className="flex items-center justify-between">
             <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
               Kontakter · {contacts.length}
@@ -1463,7 +1463,7 @@ export function CompanyCardContent({
                     Ny kontakt
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[440px] rounded-xl">
+                <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-[440px] rounded-xl">
                   <DialogHeader>
                     <DialogTitle>Ny kontakt</DialogTitle>
                   </DialogHeader>
@@ -1506,7 +1506,7 @@ export function CompanyCardContent({
                     }}
                     className="space-y-4 mt-3"
                   >
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1.5">
                         <Label className="text-label">Fornavn</Label>
                         <Input
@@ -1534,7 +1534,7 @@ export function CompanyCardContent({
                         className="h-10 rounded-lg"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1.5">
                         <Label className="text-label">E-post</Label>
                         <Input

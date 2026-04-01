@@ -455,13 +455,21 @@ const Companies = () => {
     }
   };
 
+  const mobileSortValue = `${sort.field}:${sort.dir}`;
+
+  const handleMobileSortChange = (value: string) => {
+    const [field, dir] = value.split(":");
+    setUserHasSorted(true);
+    setSort({ field: field as SortField, dir: dir as SortDir });
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="text-[1.375rem] font-bold">Selskaper</h1>
       </div>
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-xs">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1 max-w-full sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
           <Input
             placeholder="Søk..."
@@ -470,9 +478,22 @@ const Companies = () => {
             className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border"
           />
         </div>
+        <div className="md:hidden">
+          <select
+            value={mobileSortValue}
+            onChange={(e) => handleMobileSortChange(e.target.value)}
+            className="h-9 w-full rounded-lg border border-border bg-card px-3 text-[0.8125rem] text-foreground"
+          >
+            <option value="name:asc">Sorter: Navn A-Å</option>
+            <option value="name:desc">Sorter: Navn Å-A</option>
+            <option value="type:asc">Sorter: Type</option>
+            <option value="city:asc">Sorter: Sted A-Å</option>
+            <option value="last_activity:desc">Sorter: Siste aktivitet</option>
+          </select>
+        </div>
         <Dialog open={open} onOpenChange={handleDialogOpenChange}>
           <DialogTrigger asChild>
-            <Button className="rounded-lg h-9 px-3.5 text-[0.8125rem] font-medium gap-1.5">
+            <Button className="rounded-lg h-9 px-3.5 text-[0.8125rem] font-medium gap-1.5 w-full sm:w-auto">
               <Plus className="h-4 w-4" />
               Nytt selskap
             </Button>
@@ -604,7 +625,7 @@ const Companies = () => {
       </div>
 
       {/* Chip filters */}
-      <div className="flex items-start gap-3">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start">
         <div className="space-y-2 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
@@ -645,7 +666,7 @@ const Companies = () => {
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-3 ml-auto shrink-0">
+        <div className="flex items-center gap-3 md:ml-auto shrink-0">
           <div className="w-px h-8 bg-border" />
           <div className="text-right">
             <span className="text-[0.9375rem] font-semibold text-foreground">{filtered.length}</span>
@@ -664,19 +685,82 @@ const Companies = () => {
       ) : filtered.length === 0 ? (
         <p className="text-sm text-muted-foreground py-12 text-center">Ingen selskaper funnet</p>
       ) : (
-        <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
-          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
-            <SortHeader field="name">Selskap</SortHeader>
-            <SortHeader field="type">Type</SortHeader>
-            <SortHeader field="city">Sted</SortHeader>
-            <SortHeader field="last_activity" className="justify-end">
-              Siste akt.
-            </SortHeader>
+        <>
+          <div className="space-y-3 md:hidden">
+            {sorted.map((company) => (
+              <button
+                key={company.id}
+                type="button"
+                onClick={() => navigate(`/selskaper/${company.id}`)}
+                className="w-full rounded-xl border border-border bg-card px-4 py-3 text-left shadow-card"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[0.9375rem] font-semibold text-foreground truncate">{company.name}</p>
+                    {company.org_number && (
+                      <p className="mt-1 text-[0.75rem] text-muted-foreground truncate">Org.nr {company.org_number}</p>
+                    )}
+                    {company.city && (
+                      <p className="text-[0.8125rem] text-muted-foreground truncate">{company.city}</p>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0">
+                    {company.lastActivity && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <p className="text-[0.75rem] text-muted-foreground">{relativeDate(company.lastActivity)}</p>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {format(new Date(company.lastActivity), "d. MMMM yyyy", { locale: nb })}
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between gap-3" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      {(() => {
+                        const t = TYPE_OPTIONS.find(
+                          (o) => o.value === company.status || (o.value === "customer" && company.status === "kunde"),
+                        );
+                        const label = t?.label || company.status;
+                        return (
+                          <button className="inline-flex items-center rounded-full border border-border px-3 py-1 text-[0.75rem] font-medium text-muted-foreground hover:text-foreground transition-colors text-left cursor-pointer">
+                            {label}
+                            <ChevronDown className="ml-1 h-3 w-3 flex-shrink-0" />
+                          </button>
+                        );
+                      })()}
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      {TYPE_OPTIONS.map((o) => (
+                        <DropdownMenuItem
+                          key={o.value}
+                          onClick={() => setTypeMutation.mutate({ companyId: company.id, status: o.value })}
+                        >
+                          {o.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </button>
+            ))}
           </div>
-          <div className="divide-y divide-border">
-            {sorted.map((company) => {
-              const status = getStatus(company.status);
-              return (
+
+          <div className="hidden md:block border border-border rounded-lg overflow-hidden bg-card shadow-card">
+            <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+              <SortHeader field="name">Selskap</SortHeader>
+              <SortHeader field="type">Type</SortHeader>
+              <SortHeader field="city">Sted</SortHeader>
+              <SortHeader field="last_activity" className="justify-end">
+                Siste akt.
+              </SortHeader>
+            </div>
+            <div className="divide-y divide-border">
+              {sorted.map((company) => (
                 <div
                   key={company.id}
                   className="w-full grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 text-left cursor-pointer"
@@ -684,11 +768,7 @@ const Companies = () => {
                 >
                   <div className="min-w-0">
                     <span className="text-[0.8125rem] font-medium text-foreground truncate block">{company.name}</span>
-                    {false && company.industry && (
-                      <p className="text-[0.6875rem] text-muted-foreground truncate mt-0.5">{company.industry}</p>
-                    )}
                   </div>
-                  {/* TYPE - inline editable */}
                   <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -717,7 +797,6 @@ const Companies = () => {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  {/* STED */}
                   <span className="text-[0.8125rem] text-muted-foreground truncate">{company.city || ""}</span>
                   <span className="text-[0.75rem] text-muted-foreground text-right">
                     {company.lastActivity ? (
@@ -734,10 +813,10 @@ const Companies = () => {
                     )}
                   </span>
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

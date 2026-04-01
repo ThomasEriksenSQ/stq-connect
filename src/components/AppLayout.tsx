@@ -1,13 +1,14 @@
 import { Outlet, NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import { FornyelsesVarsel } from "@/components/FornyelsesVarsel";
 import { useTheme } from "next-themes";
-import { Moon, Sun, LogOut, Building2, Users, LayoutDashboard, Sparkles, Briefcase, ChevronDown, Users2, TrendingUp, UserPlus, Radar, Globe, FileText } from "lucide-react";
+import { Moon, Sun, LogOut, Building2, Users, LayoutDashboard, Sparkles, Briefcase, ChevronDown, Users2, TrendingUp, UserPlus, Radar, Globe, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AIChatPanel } from "@/components/AIChatPanel";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const navItems = [
   { title: "Salgsagent", url: "/", icon: LayoutDashboard, end: true },
@@ -16,12 +17,22 @@ const navItems = [
   { title: "Forespørsler", url: "/foresporsler", icon: Briefcase },
 ];
 
+const stacqItems = [
+  { title: "STACQ Prisen", url: "/stacq/prisen", icon: TrendingUp },
+  { title: "Markedsradar", url: "/markedsradar", icon: Radar },
+  { title: "Aktive oppdrag", url: "/konsulenter/i-oppdrag", icon: Briefcase },
+  { title: "Ansatte", url: "/konsulenter/ansatte", icon: Users },
+  { title: "Eksterne", url: "/konsulenter/eksterne", icon: UserPlus },
+  { title: "stacq.no", url: "/nettside-ai", icon: Globe },
+];
 
 export function AppLayout() {
   const { theme, setTheme } = useTheme();
   const { signOut, user } = useAuth();
   const location = useLocation();
+  const isMobile = useIsMobile();
   const [aiOpen, setAiOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   const [konsDropOpen, setKonsDropOpen] = useState(false);
   const konsRef = useRef<HTMLDivElement>(null);
   const isKonsActive = location.pathname.startsWith("/konsulenter") || location.pathname.startsWith("/stacq") || location.pathname.startsWith("/markedsradar") || location.pathname.startsWith("/nettside-ai") || location.pathname.startsWith("/cv-maker");
@@ -42,12 +53,23 @@ export function AppLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <header className="sticky top-0 z-30 border-b border-border bg-card">
-        <div className="max-w-6xl mx-auto px-8 flex items-center h-[53px] gap-8">
-          <span className="text-[1.0625rem] font-bold tracking-tight text-foreground select-none">
-            STACQ
-          </span>
+        <div className="max-w-6xl mx-auto px-4 md:px-8 flex items-center h-[53px] gap-3 md:gap-8">
+          <div className="flex items-center gap-3 md:gap-8 min-w-0 flex-1">
+            {isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setNavOpen(true)}
+                className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground shrink-0"
+              >
+                <Menu className="h-4 w-4 stroke-[1.5]" />
+              </Button>
+            )}
+            <span className="text-[1.0625rem] font-bold tracking-tight text-foreground select-none shrink-0">
+              STACQ
+            </span>
 
-          <nav className="flex items-center gap-1 flex-1">
+            <nav className="hidden md:flex items-center gap-1 flex-1 min-w-0">
             {navItems.map((item) => {
               const isActive = item.end
                 ? location.pathname === item.url
@@ -187,8 +209,9 @@ export function AppLayout() {
               )}
             </div>
           </nav>
+          </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 md:gap-2 shrink-0">
             <Button
               variant="ghost"
               size="icon"
@@ -206,27 +229,125 @@ export function AppLayout() {
               <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             </Button>
-            <div className="h-7 w-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[0.625rem] font-semibold select-none">
+            <div className="h-7 w-7 rounded-full bg-primary/10 text-primary hidden sm:flex items-center justify-center text-[0.625rem] font-semibold select-none">
               {initials}
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={signOut}
-              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
-            >
-              <LogOut className="h-4 w-4 stroke-[1.5]" />
-            </Button>
+            {!isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={signOut}
+                className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
+              >
+                <LogOut className="h-4 w-4 stroke-[1.5]" />
+              </Button>
+            )}
           </div>
         </div>
       </header>
 
       <FornyelsesVarsel />
       <main className="flex-1 overflow-auto">
-        <div className="max-w-6xl mx-auto px-8 py-7 animate-fade-up">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 py-5 md:py-7 animate-fade-up">
           <Outlet />
         </div>
       </main>
+
+      <Sheet open={navOpen} onOpenChange={setNavOpen}>
+        <SheetContent side="left" className="w-[300px] p-0">
+          <div className="flex h-full flex-col">
+            <div className="border-b border-border px-5 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[1.0625rem] font-bold tracking-tight text-foreground">STACQ</p>
+                  <p className="mt-1 text-[0.75rem] text-muted-foreground">{user?.email}</p>
+                </div>
+                <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[0.75rem] font-semibold select-none">
+                  {initials}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-3 py-4">
+              <div className="space-y-1">
+                <p className="px-3 pb-1 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                  CRM
+                </p>
+                {navItems.map((item) => {
+                  const isActive = item.end
+                    ? location.pathname === item.url
+                    : location.pathname.startsWith(item.url);
+                  return (
+                    <RouterNavLink
+                      key={item.url}
+                      to={item.url}
+                      end={item.end}
+                      onClick={() => setNavOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[0.875rem] font-medium transition-colors",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      <item.icon className="h-4 w-4 stroke-[1.5]" />
+                      {item.title}
+                    </RouterNavLink>
+                  );
+                })}
+              </div>
+
+              <div className="mt-5 space-y-1">
+                <p className="px-3 pb-1 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                  STACQ
+                </p>
+                {stacqItems.map((item) => {
+                  const isActive = location.pathname.startsWith(item.url);
+                  return (
+                    <RouterNavLink
+                      key={item.url}
+                      to={item.url}
+                      onClick={() => setNavOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[0.875rem] font-medium transition-colors",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      <item.icon className="h-4 w-4 stroke-[1.5]" />
+                      {item.title}
+                    </RouterNavLink>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="border-t border-border px-3 py-3 space-y-1">
+              <button
+                onClick={() => {
+                  setTheme(theme === "dark" ? "light" : "dark");
+                  setNavOpen(false);
+                }}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[0.875rem] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                {theme === "dark" ? <Sun className="h-4 w-4 stroke-[1.5]" /> : <Moon className="h-4 w-4 stroke-[1.5]" />}
+                Bytt tema
+              </button>
+              <button
+                onClick={() => {
+                  setNavOpen(false);
+                  signOut();
+                }}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[0.875rem] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <LogOut className="h-4 w-4 stroke-[1.5]" />
+                Logg ut
+              </button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Sheet open={aiOpen} onOpenChange={setAiOpen}>
         <SheetContent className="sm:max-w-[420px] p-0" hideCloseButton>

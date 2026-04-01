@@ -357,7 +357,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
         if (!v) onClose();
       }}
     >
-      <SheetContent side="right" className="w-[840px] sm:w-[920px] p-0 flex flex-col [&>button]:hidden">
+      <SheetContent side="right" className="w-full sm:w-[920px] p-0 flex flex-col [&>button]:hidden">
         {/* ─── EDIT MODE ─── */}
         {editing ? (
           <div className="flex-1 overflow-y-auto px-6 py-5">
@@ -379,7 +379,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={LABEL}>Epost</label>
                   <Input
@@ -399,7 +399,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={LABEL}>Startdato</label>
                   <Input
@@ -458,7 +458,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
 
               {/* ── PROFIL ── */}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={LABEL}>Erfaring (år)</label>
                   <Input

@@ -673,7 +673,7 @@ export default function KonsulenterOppdrag() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 mb-6">
+      <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <h1 className="text-[1.375rem] font-bold">Aktive oppdrag</h1>
           <span className="bg-secondary text-muted-foreground rounded-full px-2.5 py-0.5 text-xs font-medium">
@@ -683,7 +683,7 @@ export default function KonsulenterOppdrag() {
         {activeTab === "oppdrag" && (
           <button
             onClick={() => setCreateOpen(true)}
-            className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity shrink-0"
+            className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity shrink-0"
           >
             <Plus className="h-4 w-4" />
             Nytt oppdrag
@@ -692,7 +692,7 @@ export default function KonsulenterOppdrag() {
       </div>
 
       {/* Tab switcher */}
-      <div className="flex items-center gap-2 mb-6">
+      <div className="flex flex-wrap items-center gap-2 mb-6">
         {(
           [
             { key: "oppdrag", label: "Oppdrag" },
@@ -746,7 +746,7 @@ export default function KonsulenterOppdrag() {
           <FornyelsesTimeline enriched={enriched} />
 
           {/* Filter chips */}
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex flex-wrap items-center gap-2 mb-4">
             {chips.map((c) => (
               <button
                 key={c}
@@ -763,8 +763,112 @@ export default function KonsulenterOppdrag() {
             ))}
           </div>
 
+          {/* Mobile cards */}
+          <div className="space-y-3 md:hidden">
+            {filtered.map((o: any) => {
+              const isInaktiv = o.status === "Inaktiv";
+              const kundeType = (() => {
+                const cs = o.selskap_id ? companyStatusMap[o.selskap_id] : null;
+                if (cs === "partner") return "Partner";
+                if (cs === "customer" || cs === "kunde") return "Kunde";
+                if (cs === "prospect") return "Potensiell";
+                return "—";
+              })();
+
+              return (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => setSelectedRowId(o.id)}
+                  className={cn(
+                    "w-full rounded-xl border border-border bg-card px-4 py-3 text-left shadow-card",
+                    isInaktiv && "opacity-60",
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      {(() => {
+                        const isAnsatt = o.er_ansatt === true;
+                        const ansattId = isAnsatt
+                          ? o.ansatt_id ?? nameToAnsattId.get(o.kandidat?.trim().toLowerCase())
+                          : undefined;
+                        const portrait = ansattId ? portraitByAnsattId.get(ansattId) : undefined;
+                        if (isAnsatt && portrait) {
+                          return <img src={portrait} alt={o.kandidat} className="h-9 w-9 rounded-full object-cover border border-border flex-shrink-0" />;
+                        }
+                        return (
+                          <div
+                            className={cn(
+                              "h-9 w-9 rounded-full text-[0.6875rem] font-bold flex items-center justify-center flex-shrink-0",
+                              isAnsatt ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            {getInitials(o.kandidat || "?")}
+                          </div>
+                        );
+                      })()}
+                      <div className="min-w-0">
+                        <p className="text-[0.9375rem] font-semibold text-foreground truncate">{o.kandidat}</p>
+                        <p className="mt-1 text-[0.8125rem] text-muted-foreground truncate">{o.kunde}</p>
+                      </div>
+                    </div>
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold shrink-0",
+                        o.status === "Aktiv" && "bg-emerald-100 text-emerald-700",
+                        o.status === "Oppstart" && "bg-amber-100 text-amber-700",
+                        o.status === "Inaktiv" && "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {o.status}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-[0.6875rem] font-medium text-foreground">
+                      {kundeType}
+                    </span>
+                    <span className="text-[0.8125rem] font-medium text-foreground">kr {formatNOK(Number(o.utpris) || 0)}/t</span>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-3 text-[0.8125rem]">
+                    <div>
+                      <p className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Margin</p>
+                      <p
+                        className={cn(
+                          "mt-1 font-medium",
+                          o.marginPct >= 28 ? "text-emerald-600" : o.marginPct >= 20 ? "text-amber-600" : "text-destructive",
+                        )}
+                      >
+                        kr {formatNOK(o.marginPerTime)}/t
+                      </p>
+                      <p className="text-[0.6875rem] text-muted-foreground">{o.marginPct.toFixed(1)}%</p>
+                    </div>
+                    <div>
+                      <p className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Forny</p>
+                      <div className="mt-1 text-[0.8125rem]">
+                        {o.daysUntilForny === null ? (
+                          <span className="text-muted-foreground">–</span>
+                        ) : o.daysUntilForny < 0 ? (
+                          <span className="font-medium text-destructive">Utløpt</span>
+                        ) : o.daysUntilForny <= 30 ? (
+                          <span className="font-medium text-amber-600">Om {o.daysUntilForny}d</span>
+                        ) : o.daysUntilForny <= 90 ? (
+                          <span className="text-amber-600">{format(new Date(o.forny_dato), "dd.MM.yy")}</span>
+                        ) : (
+                          <span className="text-muted-foreground">{format(new Date(o.forny_dato), "dd.MM.yy")}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+            {filtered.length === 0 && <p className="text-muted-foreground text-center py-12">Ingen oppdrag å vise</p>}
+          </div>
+
           {/* Table */}
-          <div className="border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
+          <div className="hidden md:block border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
             {/* Header row */}
             <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
               {["Konsulent", "Kunde", "Type", "Utpris", "Margin", "Forny", "Status"].map((h) => (
@@ -909,7 +1013,7 @@ export default function KonsulenterOppdrag() {
               }
             }}
           >
-            <SheetContent side="right" className="w-[840px] sm:w-[920px] p-0" hideCloseButton>
+            <SheetContent side="right" className="w-full sm:w-[920px] p-0" hideCloseButton>
               <OppdragEditSheet
                 key={createOpen ? "create-oppdrag" : `edit-oppdrag-${selectedOppdrag?.id ?? "none"}`}
                 row={selectedOppdrag}

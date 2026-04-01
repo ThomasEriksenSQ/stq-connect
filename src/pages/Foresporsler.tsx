@@ -857,10 +857,20 @@ export default function Foresporsler() {
     return { aktive: aktive.length, utenKonsulent, iProsess, vunnet };
   }, [rows]);
 
+  const mobileSortValue = `${sort.field}:${sort.dir}`;
+
+  const handleMobileSortChange = (value: string) => {
+    const [field, dir] = value.split(":");
+    setSort({
+      field: field as typeof sort.field,
+      dir: dir as typeof sort.dir,
+    });
+  };
+
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2.5">
           <h1 className="text-[1.5rem] font-bold text-foreground">Forespørsler</h1>
           <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-primary/10 text-primary text-[0.6875rem] font-semibold">
@@ -870,7 +880,7 @@ export default function Foresporsler() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setModalOpen(true)}
-            className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
+            className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
           >
             <Plus className="h-4 w-4" />
             Ny forespørsel
@@ -904,9 +914,21 @@ export default function Foresporsler() {
 
       {/* Filter chips */}
       <div className="space-y-2">
-        <div className="flex items-center gap-2">
+        <div className="md:hidden">
+          <select
+            value={mobileSortValue}
+            onChange={(e) => handleMobileSortChange(e.target.value)}
+            className="h-9 w-full rounded-lg border border-border bg-card px-3 text-[0.8125rem] text-foreground"
+          >
+            <option value="mottatt_dato:desc">Sorter: Nyeste først</option>
+            <option value="mottatt_dato:asc">Sorter: Eldste først</option>
+            <option value="selskap_navn:asc">Sorter: Selskap A-Å</option>
+            <option value="sendt_count:desc">Sorter: Flest sendt inn</option>
+          </select>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-16 flex-shrink-0">Tid</span>
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             {STATUS_CHIPS.map((f) => (
               <button key={f.value} className={statusFilter === f.value ? CHIP_ON : CHIP_OFF} onClick={() => setStatusFilter(f.value)}>
                 {f.label}
@@ -914,9 +936,9 @@ export default function Foresporsler() {
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-16 flex-shrink-0">Type</span>
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             {(["Alle", "DIR", "VIA"] as TypeFilter[]).map(f => (
               <button key={f} className={typeFilter === f ? CHIP_ON : CHIP_OFF} onClick={() => setTypeFilter(f)}>
                 {f === "Alle" ? "Alle" : f === "DIR" ? "Direkte" : "Partner"}
@@ -930,109 +952,201 @@ export default function Foresporsler() {
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">Laster...</div>
       ) : (
-        <div className="border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
-          {/* Header row */}
-          <div className="grid grid-cols-[90px_minmax(0,1.5fr)_minmax(0,1fr)_80px_minmax(0,1.3fr)_minmax(220px,1fr)] gap-3 px-4 py-2.5 border-b border-border bg-background">
-            <SortHeader field="mottatt_dato">Mottatt</SortHeader>
-            <SortHeader field="selskap_navn">Selskap</SortHeader>
-            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Kontakt</span>
-            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Type</span>
-            <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Teknologier</span>
-            <SortHeader field="sendt_count">Sendt inn</SortHeader>
-          </div>
-          {/* Data rows */}
-          <div className="divide-y divide-border">
-          {sorted.map((row: any) => {
-            const days = getDaysAgo(row.mottatt_dato);
-            const sendt = row.foresporsler_konsulenter || [];
+        <>
+          <div className="space-y-3 md:hidden">
+            {sorted.map((row: any) => {
+              const days = getDaysAgo(row.mottatt_dato);
+              const sendt = row.foresporsler_konsulenter || [];
 
-            return (
-              <div
-                key={row.id}
-                onClick={() => setSelectedRowId(row.id)}
-                className="grid grid-cols-[90px_minmax(0,1.5fr)_minmax(0,1fr)_80px_minmax(0,1.3fr)_minmax(220px,1fr)] gap-3 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer"
-              >
-                {/* Mottatt */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className={cn("text-[0.8125rem]", getMottattClass(days))}>
-                      {relativeDate(row.mottatt_dato)}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>{fullDate(row.mottatt_dato)}</TooltipContent>
-                </Tooltip>
-                {/* Selskap */}
-                <span className="text-[0.875rem] font-semibold text-foreground truncate">
-                  {row.selskap_navn}
-                </span>
-                {/* Kontakt */}
-                <span className="text-[0.8125rem] text-foreground truncate">
-                  {row.contacts
-                    ? `${row.contacts.first_name} ${row.contacts.last_name}`.trim()
-                    : <span className="text-muted-foreground">—</span>}
-                </span>
-                {/* Type */}
-                <TypeBadge type={row.type} />
-                {/* Teknologier */}
-                <div className="flex items-center gap-1 flex-wrap">
-                  {(row.teknologier || []).slice(0, 3).map((t: string) => (
-                    <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-foreground">
-                      {t}
-                    </span>
-                  ))}
-                  {(row.teknologier || []).length > 3 && (
-                    <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-[0.6875rem] text-muted-foreground">
-                      +{row.teknologier!.length - 3}
-                    </span>
-                  )}
-                </div>
-                {/* Sendt inn */}
-                <div className="flex flex-col items-end gap-1">
-                  {sendt.length === 0 ? (
-                    <span className="text-[0.8125rem] text-muted-foreground">—</span>
-                  ) : (
-                    sendt.map((k: any) => {
-                      const navn = (k.konsulent_type === "intern" ? k.stacq_ansatte?.navn : k.external_consultants?.navn)?.split(" ")[0] || "Ukjent";
-                      const ks = k.status;
-                      const cfg: Record<string, string> = {
-                        "sendt_cv":  "bg-blue-50 text-blue-700 border-blue-200",
-                        "intervju":  "bg-violet-50 text-violet-700 border-violet-200",
-                        "vunnet":    "bg-emerald-100 text-emerald-800 border-emerald-200",
-                        "avslag":    "bg-red-50 text-red-700 border-red-200",
-                        "bortfalt":  "bg-gray-100 text-gray-500 border-gray-200",
-                      };
-                      const labelMap: Record<string, string> = {
-                        "sendt_cv": "Sendt CV",
-                        "intervju": "Intervju",
-                        "vunnet": "Vunnet",
-                        "avslag": "Avslag",
-                        "bortfalt": "Bortfalt",
-                      };
-                      const color = ks && cfg[ks] ? cfg[ks] : "";
-                      const label = labelMap[ks] || ks;
-                      return (
-                        <div key={k.id} className="flex items-center gap-1.5">
-                          <span className="text-[0.8125rem] font-medium text-foreground">{navn}</span>
-                          {color ? (
-                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold ${color}`}>{label}</span>
-                          ) : (
-                            <span className="text-[0.625rem] text-muted-foreground border border-dashed border-border rounded-full px-2 py-0.5">Ny</span>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
+              return (
+                <button
+                  key={row.id}
+                  type="button"
+                  onClick={() => setSelectedRowId(row.id)}
+                  className="w-full rounded-xl border border-border bg-card px-4 py-3 text-left shadow-card"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[0.9375rem] font-semibold text-foreground truncate">{row.selskap_navn}</p>
+                      <p className="mt-1 text-[0.8125rem] text-muted-foreground truncate">
+                        {row.contacts
+                          ? `${row.contacts.first_name} ${row.contacts.last_name}`.trim()
+                          : "Ingen kontakt"}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className={cn("text-[0.8125rem]", getMottattClass(days))}>
+                            {relativeDate(row.mottatt_dato)}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>{fullDate(row.mottatt_dato)}</TooltipContent>
+                      </Tooltip>
+                      <TypeBadge type={row.type} />
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {(row.teknologier || []).slice(0, 4).map((t: string) => (
+                      <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-foreground">
+                        {t}
+                      </span>
+                    ))}
+                    {(row.teknologier || []).length > 4 && (
+                      <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-[0.6875rem] text-muted-foreground">
+                        +{row.teknologier!.length - 4}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-3 space-y-1.5">
+                    <p className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                      Sendt inn
+                    </p>
+                    {sendt.length === 0 ? (
+                      <p className="text-[0.8125rem] text-muted-foreground">Ingen konsulenter sendt inn ennå</p>
+                    ) : (
+                      sendt.map((k: any) => {
+                        const navn = (
+                          k.konsulent_type === "intern" ? k.stacq_ansatte?.navn : k.external_consultants?.navn
+                        )?.split(" ")[0] || "Ukjent";
+                        const ks = k.status;
+                        const cfg: Record<string, string> = {
+                          sendt_cv: "bg-blue-50 text-blue-700 border-blue-200",
+                          intervju: "bg-violet-50 text-violet-700 border-violet-200",
+                          vunnet: "bg-emerald-100 text-emerald-800 border-emerald-200",
+                          avslag: "bg-red-50 text-red-700 border-red-200",
+                          bortfalt: "bg-gray-100 text-gray-500 border-gray-200",
+                        };
+                        const labelMap: Record<string, string> = {
+                          sendt_cv: "Sendt CV",
+                          intervju: "Intervju",
+                          vunnet: "Vunnet",
+                          avslag: "Avslag",
+                          bortfalt: "Bortfalt",
+                        };
+                        const color = ks && cfg[ks] ? cfg[ks] : "";
+                        const label = labelMap[ks] || ks;
+                        return (
+                          <div key={k.id} className="flex items-center justify-between gap-2">
+                            <span className="text-[0.8125rem] font-medium text-foreground">{navn}</span>
+                            {color ? (
+                              <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold ${color}`}>{label}</span>
+                            ) : (
+                              <span className="text-[0.625rem] text-muted-foreground border border-dashed border-border rounded-full px-2 py-0.5">Ny</span>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+            {sorted.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                Ingen forespørsler å vise
               </div>
-            );
-          })}
-          {sorted.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              Ingen forespørsler å vise
-            </div>
-          )}
+            )}
           </div>
-        </div>
+
+          <div className="hidden md:block border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
+            <div className="grid grid-cols-[90px_minmax(0,1.5fr)_minmax(0,1fr)_80px_minmax(0,1.3fr)_minmax(220px,1fr)] gap-3 px-4 py-2.5 border-b border-border bg-background">
+              <SortHeader field="mottatt_dato">Mottatt</SortHeader>
+              <SortHeader field="selskap_navn">Selskap</SortHeader>
+              <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Kontakt</span>
+              <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Type</span>
+              <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Teknologier</span>
+              <SortHeader field="sendt_count">Sendt inn</SortHeader>
+            </div>
+            <div className="divide-y divide-border">
+            {sorted.map((row: any) => {
+              const days = getDaysAgo(row.mottatt_dato);
+              const sendt = row.foresporsler_konsulenter || [];
+
+              return (
+                <div
+                  key={row.id}
+                  onClick={() => setSelectedRowId(row.id)}
+                  className="grid grid-cols-[90px_minmax(0,1.5fr)_minmax(0,1fr)_80px_minmax(0,1.3fr)_minmax(220px,1fr)] gap-3 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer"
+                >
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className={cn("text-[0.8125rem]", getMottattClass(days))}>
+                        {relativeDate(row.mottatt_dato)}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>{fullDate(row.mottatt_dato)}</TooltipContent>
+                  </Tooltip>
+                  <span className="text-[0.875rem] font-semibold text-foreground truncate">
+                    {row.selskap_navn}
+                  </span>
+                  <span className="text-[0.8125rem] text-foreground truncate">
+                    {row.contacts
+                      ? `${row.contacts.first_name} ${row.contacts.last_name}`.trim()
+                      : <span className="text-muted-foreground">—</span>}
+                  </span>
+                  <TypeBadge type={row.type} />
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {(row.teknologier || []).slice(0, 3).map((t: string) => (
+                      <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-foreground">
+                        {t}
+                      </span>
+                    ))}
+                    {(row.teknologier || []).length > 3 && (
+                      <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-[0.6875rem] text-muted-foreground">
+                        +{row.teknologier!.length - 3}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    {sendt.length === 0 ? (
+                      <span className="text-[0.8125rem] text-muted-foreground">—</span>
+                    ) : (
+                      sendt.map((k: any) => {
+                        const navn = (k.konsulent_type === "intern" ? k.stacq_ansatte?.navn : k.external_consultants?.navn)?.split(" ")[0] || "Ukjent";
+                        const ks = k.status;
+                        const cfg: Record<string, string> = {
+                          "sendt_cv":  "bg-blue-50 text-blue-700 border-blue-200",
+                          "intervju":  "bg-violet-50 text-violet-700 border-violet-200",
+                          "vunnet":    "bg-emerald-100 text-emerald-800 border-emerald-200",
+                          "avslag":    "bg-red-50 text-red-700 border-red-200",
+                          "bortfalt":  "bg-gray-100 text-gray-500 border-gray-200",
+                        };
+                        const labelMap: Record<string, string> = {
+                          "sendt_cv": "Sendt CV",
+                          "intervju": "Intervju",
+                          "vunnet": "Vunnet",
+                          "avslag": "Avslag",
+                          "bortfalt": "Bortfalt",
+                        };
+                        const color = ks && cfg[ks] ? cfg[ks] : "";
+                        const label = labelMap[ks] || ks;
+                        return (
+                          <div key={k.id} className="flex items-center gap-1.5">
+                            <span className="text-[0.8125rem] font-medium text-foreground">{navn}</span>
+                            {color ? (
+                              <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold ${color}`}>{label}</span>
+                            ) : (
+                              <span className="text-[0.625rem] text-muted-foreground border border-dashed border-border rounded-full px-2 py-0.5">Ny</span>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            {sorted.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                Ingen forespørsler å vise
+              </div>
+            )}
+            </div>
+          </div>
+        </>
       )}
 
       <NyForesporselModal open={modalOpen} onClose={() => setModalOpen(false)} />
@@ -1040,7 +1154,7 @@ export default function Foresporsler() {
 
       {/* Detail/Edit Sheet */}
       <Sheet open={!!selectedRow} onOpenChange={(o) => { if (!o) { setSelectedRowId(null); setSheetExpanded(false); } }}>
-        <SheetContent side="right" className="w-[840px] sm:w-[920px] p-0" hideCloseButton>
+        <SheetContent side="right" className="w-full sm:w-[920px] p-0" hideCloseButton>
           <ForespørselSheet row={selectedRow} onClose={() => { setSelectedRowId(null); setSheetExpanded(false); }} onExpandChange={setSheetExpanded} />
         </SheetContent>
       </Sheet>

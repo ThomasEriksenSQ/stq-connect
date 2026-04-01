@@ -171,6 +171,13 @@ export default function StacqPrisen() {
     ? aktive.reduce((s, r) => s + (r.utpris ? (r.stacqPris / r.utpris) * 100 : 0), 0) / aktive.length
     : 0;
 
+  const mobileSortValue = `${sort.field}:${sort.dir}`;
+
+  const handleMobileSortChange = (value: string) => {
+    const [field, dir] = value.split(":");
+    setSort({ field: field as SortField, dir: dir as SortDir });
+  };
+
 
   const SortHeader = ({ field, children, className = "" }: { field: SortField; children: React.ReactNode; className?: string }) => (
     <button
@@ -239,7 +246,64 @@ export default function StacqPrisen() {
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground">Laster...</div>
         ) : (
-          <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
+          <>
+            <div className="mb-3 md:hidden">
+              <select
+                value={mobileSortValue}
+                onChange={(e) => handleMobileSortChange(e.target.value)}
+                className="h-9 w-full rounded-lg border border-border bg-card px-3 text-[0.8125rem] text-foreground"
+              >
+                <option value="stacq:desc">Sorter: Høyeste STACQ Pris</option>
+                <option value="kandidat:asc">Sorter: Konsulent A-Å</option>
+                <option value="kunde:asc">Sorter: Kunde A-Å</option>
+                <option value="utpris:desc">Sorter: Høyeste utpris</option>
+              </select>
+            </div>
+
+            <div className="space-y-3 md:hidden">
+              {sorted.map((row) => {
+                const pct = row.utpris ? (row.stacqPris / row.utpris) * 100 : 0;
+                return (
+                  <button
+                    key={row.id}
+                    type="button"
+                    onClick={() => setEditRow(row)}
+                    className="w-full rounded-xl border border-border bg-card px-4 py-3 text-left shadow-card"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[0.9375rem] font-semibold text-foreground truncate">{row.kandidat}</p>
+                        <p className="mt-1 text-[0.8125rem] text-muted-foreground truncate">{row.kunde || "—"}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className={`text-[0.9375rem] font-bold ${stacqColor(row.stacqPris)}`}>kr {formatKr(Math.round(row.stacqPris))}</p>
+                        <p className="text-[0.75rem] text-muted-foreground">{Math.round(pct)}%</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-[0.6875rem] font-medium text-foreground">
+                        {getKundeTypeLabel(row.selskap_id ? companyStatusMap[row.selskap_id] : null)}
+                      </span>
+                      <span className="text-[0.8125rem] text-muted-foreground">Utpris {row.utpris ?? "–"}</span>
+                      {row.status === "Aktiv" ? (
+                        <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 text-[0.6875rem] font-semibold">Aktiv</span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-[0.6875rem] font-semibold">Oppstart</span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+
+              <div className="rounded-xl border border-border bg-card px-4 py-3 shadow-card">
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">Total</p>
+                <p className="mt-1 text-[1rem] font-bold text-emerald-600">kr {formatKr(Math.round(stacqTotalPerTime + oppstartTotalPerTime))}/time</p>
+                <p className="text-[0.75rem] text-muted-foreground">{Math.round(totalPct)}% av utpris</p>
+              </div>
+            </div>
+
+            <div className="hidden md:block border border-border rounded-lg overflow-hidden bg-card shadow-card">
             <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_80px_80px_80px_100px_60px_80px] gap-3 px-4 py-2.5 border-b border-border bg-background">
               <SortHeader field="kandidat">Konsulent</SortHeader>
               <SortHeader field="kunde">Kunde</SortHeader>
@@ -304,7 +368,8 @@ export default function StacqPrisen() {
                 <span />
               </div>
             </div>
-          </div>
+            </div>
+          </>
         )}
       </div>
 
