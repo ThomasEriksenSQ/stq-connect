@@ -62,4 +62,62 @@ describe("matchingProfile", () => {
       },
     ]);
   });
+
+  it("deduplicates repeated consultant results and sorts deterministically", () => {
+    const results = sanitizeAiMatchResults(
+      [
+        {
+          id: 9,
+          navn: "Zara Test",
+          score: 7,
+          begrunnelse: "Solid match",
+          match_tags: ["C++"],
+          type: "intern",
+        },
+        {
+          id: 3,
+          navn: "Anders Test",
+          score: 9,
+          begrunnelse: "Sterk match",
+          match_tags: ["Embedded Linux", "C++"],
+          type: "intern",
+        },
+        {
+          id: 3,
+          navn: "Anders Test",
+          score: 8,
+          begrunnelse: "Svakere duplikat",
+          match_tags: ["C++"],
+          type: "intern",
+        },
+      ],
+      {
+        targetTags: ["Embedded Linux", "C++"],
+        sourcesById: new Map([
+          ["3", { tags: ["Embedded Linux", "C++"], type: "intern" }],
+          ["9", { tags: ["C++"], type: "intern" }],
+        ]),
+        allowedTypes: new Set(["intern", "ekstern"]),
+      },
+    );
+
+    expect(results).toEqual([
+      {
+        id: 3,
+        navn: "Anders Test",
+        type: "intern",
+        score: 9,
+        begrunnelse: "Sterk match",
+        match_tags: ["C++", "Embedded Linux"],
+      },
+      {
+        id: 9,
+        navn: "Zara Test",
+        type: "intern",
+        score: 7,
+        begrunnelse: "Solid match",
+        match_tags: ["C++"],
+      },
+    ]);
+  });
 });

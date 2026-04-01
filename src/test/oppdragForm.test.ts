@@ -10,8 +10,8 @@ describe("oppdragForm", () => {
         ansattId: 5,
         selskapNavn: "Autostore",
         selskapId: "company-1",
-        utpris: "1500",
-        tilKonsulent: "1050",
+        utpris: "1 500,50",
+        tilKonsulent: "1 050",
       }),
     );
 
@@ -19,7 +19,7 @@ describe("oppdragForm", () => {
     expect(payload.ekstern_id).toBeNull();
     expect(payload.er_ansatt).toBe(true);
     expect(payload.kandidat).toBe("Anders Nilsen");
-    expect(payload.utpris).toBe(1500);
+    expect(payload.utpris).toBe(1500.5);
     expect(payload.til_konsulent).toBe(1050);
   });
 

@@ -46,7 +46,12 @@ export const OPPDRAG_DEFAULTS: OppdragFormState = {
 function toNullableNumber(value: string): number | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
-  const numeric = Number(trimmed.replace(",", "."));
+  const compact = trimmed.replace(/\s+/g, "");
+  const normalized =
+    compact.includes(",") && compact.includes(".")
+      ? compact.replace(/\./g, "").replace(",", ".")
+      : compact.replace(",", ".");
+  const numeric = Number(normalized);
   return Number.isFinite(numeric) ? numeric : null;
 }
 

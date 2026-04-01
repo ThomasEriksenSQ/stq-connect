@@ -23,21 +23,34 @@ export function buildContactCvSafeUpdates<T extends ContactCvEligibilityInput>(
   current: T,
   updates: Partial<T>,
 ): Partial<T> {
-  const nextEmail = Object.prototype.hasOwnProperty.call(updates, "email") ? updates.email : current.email;
+  const hasEmailUpdate = Object.prototype.hasOwnProperty.call(updates, "email");
+  const normalizedNextEmail = hasEmailUpdate
+    ? normalizeContactEmail(updates.email)
+    : normalizeContactEmail(current.email);
+  const emailUpdates = hasEmailUpdate
+    ? ({
+        email: normalizedNextEmail,
+      } as Partial<T>)
+    : {};
 
   if (Object.prototype.hasOwnProperty.call(updates, "cv_email")) {
     return {
       ...updates,
-      cv_email: sanitizeContactCvEmail(nextEmail, updates.cv_email),
+      ...emailUpdates,
+      cv_email: sanitizeContactCvEmail(normalizedNextEmail, updates.cv_email),
     };
   }
 
-  if (Object.prototype.hasOwnProperty.call(updates, "email") && !contactHasEmail({ email: nextEmail })) {
+  if (hasEmailUpdate && !normalizedNextEmail) {
     return {
       ...updates,
+      ...emailUpdates,
       cv_email: false,
     };
   }
 
-  return updates;
+  return {
+    ...updates,
+    ...emailUpdates,
+  };
 }

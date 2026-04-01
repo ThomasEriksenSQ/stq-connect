@@ -27,7 +27,7 @@ describe("contactCvEligibility", () => {
         { email: "kontakt@stacq.no", cv_email: true },
         { email: "" },
       ),
-    ).toEqual({ email: "", cv_email: false });
+    ).toEqual({ email: null, cv_email: false });
   });
 
   it("keeps unrelated updates untouched", () => {
@@ -53,5 +53,14 @@ describe("contactCvEligibility", () => {
         { cv_email: true },
       ),
     ).toEqual({ cv_email: true });
+  });
+
+  it("trims email updates before persisting them", () => {
+    expect(
+      buildContactCvSafeUpdates(
+        { email: null, cv_email: false },
+        { email: "  kontakt@stacq.no  " },
+      ),
+    ).toEqual({ email: "kontakt@stacq.no" });
   });
 });

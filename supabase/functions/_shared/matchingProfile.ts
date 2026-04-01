@@ -41,6 +41,16 @@ type MatchingResultShape = {
   selskap_navn?: string;
 };
 
+type SanitizedMatchResult = {
+  id: number | string;
+  score: number;
+  begrunnelse: string;
+  match_tags: string[];
+  type?: string;
+  navn?: string;
+  selskap_navn?: string;
+};
+
 function compareMatchingTags(a: string, b: string): number {
   const aDomain = DOMAIN_TAGS.has(a);
   const bDomain = DOMAIN_TAGS.has(b);
@@ -66,6 +76,16 @@ function normalizeIdKey(value: unknown): string | null {
   if (typeof value === "string" && value.trim()) return value.trim();
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return null;
+}
+
+function compareSanitizedResults(a: SanitizedMatchResult, b: SanitizedMatchResult): number {
+  if (a.score !== b.score) return b.score - a.score;
+
+  const aName = a.navn?.trim() || "";
+  const bName = b.navn?.trim() || "";
+  if (aName && bName) return aName.localeCompare(bName, "nb");
+
+  return String(a.id).localeCompare(String(b.id), "nb");
 }
 
 export function normalizeMatchingTags(
@@ -120,12 +140,13 @@ export function sanitizeAiMatchResults(
 
   const targetTagSet = new Set(normalizeMatchingTags(options.targetTags, 50));
   const maxMatchTags = options.maxMatchTags ?? DEFAULT_MAX_MATCH_TAGS;
+  const deduped = new Map<string, SanitizedMatchResult>();
 
-  return results.reduce<MatchingResultShape[]>((acc, entry) => {
-    if (!entry || typeof entry !== "object") return acc;
+  results.forEach((entry) => {
+    if (!entry || typeof entry !== "object") return;
     const raw = entry as Record<string, unknown>;
     const idKey = normalizeIdKey(raw.id);
-    if (!idKey) return acc;
+    if (!idKey) return;
 
     const source = options.sourcesById.get(idKey);
     const sourceTags = normalizeMatchingTags(source?.tags || [], 50);
@@ -139,7 +160,7 @@ export function sanitizeAiMatchResults(
     const parsedScore = Number(raw.score);
     const score = Number.isFinite(parsedScore) ? Math.max(1, Math.min(10, Math.round(parsedScore))) : 4;
 
-    const result: MatchingResultShape = {
+    const result: SanitizedMatchResult = {
       id: typeof raw.id === "number" ? raw.id : idKey,
       score,
       begrunnelse: truncateReason(
@@ -163,7 +184,11 @@ export function sanitizeAiMatchResults(
       result.type = candidateType;
     }
 
-    acc.push(result);
-    return acc;
-  }, []);
+    const existing = deduped.get(idKey);
+    if (!existing || compareSanitizedResults(result, existing) < 0) {
+      deduped.set(idKey, result);
+    }
+  });
+
+  return Array.from(deduped.values()).sort(compareSanitizedResults);
 }
