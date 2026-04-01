@@ -1044,11 +1044,14 @@ export function CvEditorPanel({
                                       onValueChange={(value) =>
                                         update((p) => {
                                           const arr = [...p.additionalSections];
+                                          const currentTitle = arr[i].title;
                                           arr[i] = {
                                             ...arr[i],
                                             title:
                                               value === CUSTOM_ADDITIONAL_SECTION_TITLE
-                                                ? arr[i].title || DEFAULT_ADDITIONAL_SECTION_TITLE
+                                                ? isPresetAdditionalSectionTitle(currentTitle)
+                                                  ? ""
+                                                  : currentTitle
                                                 : value,
                                           };
                                           return { ...p, additionalSections: arr };
