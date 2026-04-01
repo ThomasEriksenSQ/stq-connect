@@ -1103,7 +1103,8 @@ export function CvEditorPanel({
                                       </SelectTrigger>
                                       <SelectContent>
                                         <SelectItem value="timeline">Dato</SelectItem>
-                                        <SelectItem value="bullet">Punktliste</SelectItem>
+                                        <SelectItem value="bullet">Punktliste (bold)</SelectItem>
+                                        <SelectItem value="bullet-regular">Punktliste (regular)</SelectItem>
                                       </SelectContent>
                                     </Select>
                                   </div>

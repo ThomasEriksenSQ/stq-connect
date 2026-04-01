@@ -47,7 +47,7 @@ export const ADDITIONAL_SECTION_TITLE_OPTIONS = [
 export const DEFAULT_ADDITIONAL_SECTION_TITLE = ADDITIONAL_SECTION_TITLE_OPTIONS[0];
 
 export type AdditionalSectionTitle = string;
-export type AdditionalSectionFormat = "timeline" | "bullet";
+export type AdditionalSectionFormat = "timeline" | "bullet" | "bullet-regular";
 
 export type AdditionalSectionItem = {
   period: string;
@@ -1042,7 +1042,15 @@ function TimelineRow({
   );
 }
 
-function AdditionalSectionBulletRow({ primary, marginBottom = "2.8mm" }: { primary: string; marginBottom?: string }) {
+function AdditionalSectionBulletRow({
+  primary,
+  marginBottom = "2.8mm",
+  bold = true,
+}: {
+  primary: string;
+  marginBottom?: string;
+  bold?: boolean;
+}) {
   return (
     <div style={{ display: "flex", gap: "3.8mm", marginBottom, alignItems: "flex-start" }}>
       <span
@@ -1058,7 +1066,17 @@ function AdditionalSectionBulletRow({ primary, marginBottom = "2.8mm" }: { prima
       >
         •
       </span>
-      <span style={{ fontSize: "9.8pt", lineHeight: 1.28, color: "#202020", fontWeight: 600, flex: 1 }}>{primary}</span>
+      <span
+        style={{
+          fontSize: "9.8pt",
+          lineHeight: 1.28,
+          color: "#202020",
+          fontWeight: bold ? 600 : 400,
+          flex: 1,
+        }}
+      >
+        {primary}
+      </span>
     </div>
   );
 }
@@ -1067,8 +1085,13 @@ function AdditionalSectionRows({ format, items }: { format: AdditionalSectionFor
   return (
     <>
       {items.map((item, index) =>
-        format === "bullet" ? (
-          <AdditionalSectionBulletRow key={`${item.primary}-${index}`} primary={item.primary} marginBottom="2.8mm" />
+        format === "bullet" || format === "bullet-regular" ? (
+          <AdditionalSectionBulletRow
+            key={`${item.primary}-${index}`}
+            primary={item.primary}
+            marginBottom="2.8mm"
+            bold={format === "bullet"}
+          />
         ) : (
           <TimelineRow
             key={`${item.period}-${item.primary}-${index}`}
