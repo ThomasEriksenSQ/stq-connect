@@ -185,6 +185,15 @@ interface ContactCardContentProps {
   onNavigateToFullPage?: () => void;
 }
 
+interface ConsultantMatchResult {
+  id: number | string;
+  navn: string;
+  type?: "intern" | "ekstern";
+  score: number;
+  begrunnelse: string;
+  match_tags: string[];
+}
+
 // Inline editable text field
 function InlineField({
   value,
@@ -282,7 +291,8 @@ export function ContactCardContent({
   const [companyResults, setCompanyResults] = useState<{ id: string; name: string }[]>([]);
   const companySearchRef = useRef<HTMLInputElement>(null);
   const [matchingConsultants, setMatchingConsultants] = useState(false);
-  const [consultantResults, setConsultantResults] = useState<any[] | null>(null);
+  const [consultantResults, setConsultantResults] = useState<ConsultantMatchResult[] | null>(null);
+  const [matchSourceFilter, setMatchSourceFilter] = useState<"Alle" | "Ansatte" | "Eksterne">("Alle");
 
   const { data: contact, isLoading } = useQuery({
     queryKey: ["contact", contactId],
@@ -515,51 +525,28 @@ export function ContactCardContent({
     setMatchingConsultants(true);
     setConsultantResults(null);
     try {
-      const [{ data: interne }, { data: foresporsler }] = await Promise.all([
+      const [{ data: interne }, { data: eksterne }] = await Promise.all([
         supabase
           .from("stacq_ansatte")
           .select("id, navn, kompetanse, geografi, erfaring_aar, status")
-          .in("status", ["AKTIV/SIGNERT"]),
+          .in("status", ["AKTIV/SIGNERT", "Ledig"]),
         supabase
-          .from("foresporsler")
-          .select("teknologier")
-          .eq("selskap_id", contact.company_id || "")
-          .gte("mottatt_dato", new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)),
+          .from("external_consultants")
+          .select("id, navn, teknologier, status")
+          .in("status", ["ledig", "aktiv"]),
       ]);
 
-      const effectiveSignal = getEffectiveSignal(
-        activities.map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
-        tasks.map((t: any) => ({
-          created_at: t.created_at,
-          title: t.title,
-          description: t.description,
-          due_date: t.due_date,
-        })),
-      );
-
-      const sisteAktivitet = activities[0]?.created_at
-        ? new Date(activities[0].created_at).toLocaleDateString("nb-NO", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })
-        : null;
-
-      const { data, error } = await supabase.functions.invoke("match-contact-to-consultants", {
+      const { data, error } = await supabase.functions.invoke("match-consultants", {
         body: {
-          kontakt_teknologier: teknologier,
-          kontakt_navn: `${contact.first_name} ${contact.last_name}`,
-          selskap_navn: companyName || "",
-          selskap_id: contact.company_id || null,
-          kontakt_er_innkjoper: (contact as any).call_list || false,
-          kontakt_signal: effectiveSignal || "Ukjent om behov",
-          aktive_foresporsler: foresporsler || [],
-          siste_kontakt_dato: sisteAktivitet,
+          teknologier,
+          sted: companyCity || "",
           interne: interne || [],
+          eksterne: eksterne || [],
         },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      setMatchSourceFilter("Alle");
       setConsultantResults(Array.isArray(data) ? data : []);
     } catch (err: any) {
       toast.error(err.message || "Kunne ikke kjøre matching");
@@ -1345,12 +1332,51 @@ export function ContactCardContent({
               <p className="text-[0.8125rem] text-muted-foreground">Ingen treff med score ≥ 4</p>
             ) : (
               <div className="space-y-2">
-                {consultantResults.map((m: any, i: number) => (
-                  <div key={m.id} className="rounded-lg border border-border bg-card p-3">
+                {consultantResults.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    {(["Alle", "Ansatte", "Eksterne"] as const).map((chip) => {
+                      const selected = matchSourceFilter === chip;
+                      return (
+                        <button
+                          key={chip}
+                          onClick={() => setMatchSourceFilter(chip)}
+                          className={selected
+                            ? "h-7 px-2.5 text-[0.75rem] rounded-full border bg-foreground border-foreground text-background font-medium transition-colors"
+                            : "h-7 px-2.5 text-[0.75rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors"
+                          }
+                        >
+                          {chip}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {consultantResults
+                  .filter((m) =>
+                    matchSourceFilter === "Alle"
+                      ? true
+                      : matchSourceFilter === "Ansatte"
+                        ? m.type === "intern"
+                        : m.type === "ekstern",
+                  )
+                  .map((m, i) => (
+                  <div key={`${m.type || "ukjent"}-${m.id}`} className="rounded-lg border border-border bg-card p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
                         <span className="text-[0.875rem] font-semibold text-foreground truncate">{m.navn}</span>
+                        {m.type && (
+                          <span
+                            className={cn(
+                              "inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold shrink-0",
+                              m.type === "intern"
+                                ? "bg-foreground text-background"
+                                : "bg-blue-100 text-blue-700",
+                            )}
+                          >
+                            {m.type === "intern" ? "Ansatt" : "Ekstern"}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <span
