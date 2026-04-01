@@ -190,8 +190,14 @@ Regler:
 - Når et felt består av flere linjer fra PDF-en, returner en array med segment-id-er i riktig rekkefølge.
 - Ikke finn på nye segment-id-er.
 - Ikke dupliser samme segment i flere felter med mindre CV-en faktisk gjentar teksten.
+- sidebarSections kan KUN inneholde seksjonene PERSONALIA, NØKKELPUNKTER og UTDANNELSE.
+- Seksjoner som PROGRAMMERINGSSPRÅK, SOFTWARE, HARDWARE, OPERATIVSYSTEMER, SERTIFISERINGER, KURS, FOREDRAG og ANNET RELEVANT skal IKKE i sidebarSections.
+- education og workExperience skal bare brukes for faktiske hovedseksjoner/tidslinjer i hovedkolonnen, ikke for punktlisten i sidebar under UTDANNELSE.
 - additionalSections skal brukes for ekstra hovedseksjoner som ikke hører hjemme i intro, kompetanse, prosjekter, utdanning, arbeidserfaring eller sidebar.
 - additionalSections.title skal være en kort seksjonstittel hentet fra CV-en, helst selve overskriften.
+- project.role skal kun være selve rollen/tittelen, uten prefiks som "Rolle:".
+- project.period skal kun være perioden/datoen, uten prefiks som "Periode:".
+- project.company, project.subtitle, project.role og project.period skal være korte labels, ikke bokstavspacet tekst.
 - Hvis en seksjon ikke finnes, returner tom array.
 - Returner KUN gyldig JSON.
 
@@ -271,8 +277,14 @@ Regler:
 - Ikke legg kontaktblokken inn i sidebarSections.
 - Ikke legg navn eller tittel inn i introParagraphs.
 - Ikke legg sidebar-punkter inn i introParagraphs.
+- sidebarSections kan KUN inneholde PERSONALIA, NØKKELPUNKTER og UTDANNELSE.
+- Ikke legg PROGRAMMERINGSSPRÅK, SOFTWARE, HARDWARE, OPERATIVSYSTEMER, SERTIFISERINGER, KURS, FOREDRAG eller ANNET RELEVANT i sidebarSections.
+- education og workExperience skal bare brukes for faktiske hovedseksjoner/tidslinjer i hovedkolonnen, ikke for punktlisten i sidebar under UTDANNELSE.
 - Sidebar-punkter skal være korte punktlinjer, ikke lange setninger.
 - Ikke dupliser "Rolle", "Periode" eller "Teknologier" både i overskrift og brødtekst.
+- project.role skal kun være selve rollen/tittelen, uten "Rolle:".
+- project.period skal kun være perioden/datoen, uten "Periode:".
+- project.company, project.subtitle, project.role og project.period skal ikke være bokstavspacet tekst.
 - additionalSections skal brukes for ekstra hovedseksjoner som sertifiseringer, kurs, foredrag, konferanser og lignende.
 - Returner KUN gyldig JSON.
 

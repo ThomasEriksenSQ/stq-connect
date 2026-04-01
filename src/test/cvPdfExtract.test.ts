@@ -55,4 +55,29 @@ describe("cvPdfExtract", () => {
       "Anders er en senior Embedded-ingeniør",
     ]);
   });
+
+  it("normalizes spaced label-like segments without touching paragraphs", () => {
+    const segments = buildCvPdfSegments(
+      [
+        { str: "K", transform: [1, 0, 0, 1, 20, 700], width: 8, height: 16 },
+        { str: "I", transform: [1, 0, 0, 1, 31, 700], width: 5, height: 16 },
+        { str: "W", transform: [1, 0, 0, 1, 42, 700], width: 12, height: 16 },
+        { str: "I", transform: [1, 0, 0, 1, 57, 700], width: 5, height: 16 },
+        { str: ".", transform: [1, 0, 0, 1, 67, 700], width: 4, height: 16 },
+        { str: "K", transform: [1, 0, 0, 1, 79, 700], width: 8, height: 16 },
+        { str: "I", transform: [1, 0, 0, 1, 90, 700], width: 5, height: 16 },
+        { str: "G", transform: [1, 0, 0, 1, 104, 700], width: 9, height: 16 },
+        { str: "m", transform: [1, 0, 0, 1, 116, 700], width: 9, height: 16 },
+        { str: "b", transform: [1, 0, 0, 1, 128, 700], width: 8, height: 16 },
+        { str: "H", transform: [1, 0, 0, 1, 140, 700], width: 9, height: 16 },
+        { str: "Anders er en senior Embedded-ingeniør", transform: [1, 0, 0, 1, 190, 660], width: 240, height: 12 },
+      ],
+      1,
+    );
+
+    expect(segments.map((segment) => segment.text)).toEqual([
+      "KIWI.KI GmbH",
+      "Anders er en senior Embedded-ingeniør",
+    ]);
+  });
 });

@@ -26,9 +26,138 @@ type PositionedItem = {
 
 const PDF_LINE_Y_TOLERANCE = 2.8;
 const PDF_COLUMN_GAP_THRESHOLD = 36;
+const PDF_SPACED_LABEL_MIN_TOKENS = 4;
 
 function normalizePdfText(text: string): string {
   return text.replace(/\s+/g, " ").replace(/\u00ad/g, "").trim();
+}
+
+function isSingleLetterToken(token: string) {
+  return /^[A-Za-zÆØÅæøå]$/u.test(token);
+}
+
+function isDigitToken(token: string) {
+  return /^\d+$/u.test(token);
+}
+
+function isHyphenLetterToken(token: string) {
+  return /^-[A-Za-zÆØÅæøå]$/u.test(token);
+}
+
+function isLabelPunctuationToken(token: string) {
+  return /^[.:,+/]$/u.test(token);
+}
+
+function shouldCollapseSpacedLabel(text: string) {
+  const tokens = normalizePdfText(text).split(/\s+/).filter(Boolean);
+  if (tokens.length < PDF_SPACED_LABEL_MIN_TOKENS) return false;
+
+  const signalTokens = tokens.filter(
+    (token) =>
+      isSingleLetterToken(token) ||
+      isDigitToken(token) ||
+      isHyphenLetterToken(token) ||
+      isLabelPunctuationToken(token),
+  ).length;
+
+  return signalTokens / tokens.length > 0.45;
+}
+
+function normalizeCommonLabelArtifacts(text: string) {
+  return text
+    .replace(/\s+([.:,+/])/g, "$1")
+    .replace(/([.:/+])\s+([A-Za-zÆØÅæøå])/gu, "$1$2")
+    .replace(/([.:/+])(\S)/g, "$1$2")
+    .replace(/(?<=\d)\s+(?=\d)/gu, "")
+    .replace(/\b([A-ZÆØÅ]{2,})\s+([A-ZÆØÅ]{1,4})\b/g, "$1$2")
+    .replace(/\b([A-Za-zÆØÅæøå.]+)(Gmb)\s+H\b/g, "$1 $2H")
+    .replace(/([A-ZÆØÅ]{2,})(ASA|AS|AB|BV|SA)\b/g, "$1 $2")
+    .replace(/([A-Za-zÆØÅæøå.]+)(GmbH)\b/g, "$1 $2")
+    .replace(/(\d)\s*\+\s*års\s*erfaring/giu, "$1+ års erfaring")
+    .replace(/(\d)\s*årserfaring/giu, "$1 års erfaring")
+    .replace(/([A-Za-zÆØÅæøå])-ingeniørmed\b/gu, "$1-ingeniør med")
+    .replace(/\b(\d{1,2})\s*\/\s*(\d{2,4})\b/g, "$1/$2")
+    .replace(/\bmed(\d)/giu, "med $1")
+    .replace(/\bårs([A-Za-zÆØÅæøå])/giu, "års $1")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function collapseSpacedLabelText(text: string) {
+  const normalized = normalizePdfText(text);
+  if (!shouldCollapseSpacedLabel(normalized)) return normalized;
+
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  const words: string[] = [];
+  let current = "";
+
+  const flush = () => {
+    if (current) {
+      words.push(current);
+      current = "";
+    }
+  };
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    const next = tokens[index + 1] || "";
+
+    if (isLabelPunctuationToken(token)) {
+      if (current) current += token;
+      else words.push(token);
+      continue;
+    }
+
+    if (isHyphenLetterToken(token)) {
+      current += token;
+      continue;
+    }
+
+    if (isDigitToken(token)) {
+      if (current && !/^\d+$/u.test(current) && !/[+-]$/u.test(current)) flush();
+      current += token;
+      continue;
+    }
+
+    if (!isSingleLetterToken(token)) {
+      flush();
+      words.push(token);
+      continue;
+    }
+
+    if (!current) {
+      current = token;
+      continue;
+    }
+
+    const currentAllUpper = /^[A-ZÆØÅ0-9.]+$/u.test(current);
+    const currentEndsLower = /[a-zæøå]$/u.test(current);
+    const nextIsLower = /^[a-zæøå]$/u.test(next);
+
+    if (currentAllUpper && current.length >= 2 && /^[A-ZÆØÅ]$/u.test(token) && nextIsLower) {
+      flush();
+      current = token;
+      continue;
+    }
+
+    if (currentEndsLower && /^[A-ZÆØÅ]$/u.test(token) && nextIsLower) {
+      flush();
+      current = token;
+      continue;
+    }
+
+    if (currentEndsLower && /^[A-ZÆØÅ]$/u.test(token) && next) {
+      flush();
+      current = token;
+      continue;
+    }
+
+    current += token;
+  }
+
+  flush();
+
+  return normalizeCommonLabelArtifacts(words.join(" "));
 }
 
 function shouldInsertSpace(previous: PositionedItem, next: PositionedItem, gap: number) {
@@ -153,13 +282,14 @@ export function buildCvPdfSegments(
       if (!text) return null;
 
       const fontSize = Math.max(...clusterItems.map((item) => item.fontSize));
+      const normalizedText = collapseSpacedLabelText(text);
       return {
         id: `p${pageNumber}-s${index + 1}`,
         page: pageNumber,
         order: startingOrder + index,
-        text,
+        text: normalizedText,
         fontSize,
-        isHeadingCandidate: isHeadingCandidate(text, fontSize, averageFontSize),
+        isHeadingCandidate: isHeadingCandidate(normalizedText, fontSize, averageFontSize),
       } satisfies CvPdfSegment;
     })
     .filter((segment): segment is CvPdfSegment => Boolean(segment));

@@ -79,6 +79,19 @@ function compactWhitespace(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
 
+const ALLOWED_SIDEBAR_HEADINGS = new Set(["PERSONALIA", "NØKKELPUNKTER", "UTDANNELSE"]);
+const COMPETENCE_SECTION_HEADINGS = new Set([
+  "PROGRAMMERINGSSPRÅK",
+  "SOFTWARE",
+  "HARDWARE",
+  "OPERATIVSYSTEMER",
+  "OPERATIVSYSTEM",
+  "ANNET RELEVANT",
+  "ANNEN RELEVANT",
+  "ANNET",
+]);
+const TIMELINE_SECTION_HEADINGS = new Set(["SERTIFISERINGER", "KURS", "KONFERANSER", "FOREDRAG"]);
+
 function cleanDisplayText(value: string) {
   return compactWhitespace(value)
     .replace(/^Teknologier:\s*/i, "")
@@ -163,8 +176,40 @@ function normalizeHeroName(value: string) {
   return collapseSpacedWords(compactWhitespace(value));
 }
 
+function normalizeCommonLabelArtifacts(value: string) {
+  return compactWhitespace(value)
+    .replace(/\s+([.:,+/])/g, "$1")
+    .replace(/([.:/+])\s+([A-Za-zÆØÅæøå])/gu, "$1$2")
+    .replace(/([.:/+])(\S)/g, "$1$2")
+    .replace(/(?<=\d)\s+(?=\d)/gu, "")
+    .replace(/\b([A-ZÆØÅ]{2,})\s+([A-ZÆØÅ]{1,4})\b/g, "$1$2")
+    .replace(/\b([A-Za-zÆØÅæøå.]+)(Gmb)\s+H\b/g, "$1 $2H")
+    .replace(/([A-ZÆØÅ]{2,})(ASA|AS|AB|BV|SA)\b/g, "$1 $2")
+    .replace(/([A-Za-zÆØÅæøå.]+)(GmbH)\b/g, "$1 $2")
+    .replace(/\b(\d{1,2})\s*\/\s*(\d{2,4})\b/g, "$1/$2")
+    .replace(/\b(\d+)\s*\+\s*års\s*erfaring\b/giu, "$1+ års erfaring")
+    .replace(/\b(\d+)\s*årserfaring\b/giu, "$1 års erfaring")
+    .replace(/([A-Za-zÆØÅæøå])-ingeniørmed\b/gu, "$1-ingeniør med")
+    .replace(/\bmed(\d)/giu, "med $1")
+    .replace(/\bårs([A-Za-zÆØÅæøå])/giu, "års $1")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function normalizeShortLabelText(value: string | null | undefined) {
+  const normalized = compactWhitespace(String(value || ""));
+  if (!normalized) return "";
+  return normalizeCommonLabelArtifacts(collapseSpacedWords(normalized));
+}
+
+function humanizeSectionLabel(value: string) {
+  const normalized = normalizeHeading(value);
+  if (!normalized) return "";
+  return normalized.charAt(0) + normalized.slice(1).toLocaleLowerCase("nb-NO");
+}
+
 function normalizeHeading(value: string | null | undefined) {
-  const heading = compactWhitespace(String(value || "")).replace(/:$/, "");
+  const heading = normalizeShortLabelText(String(value || "")).replace(/:$/, "");
   return heading ? heading.toLocaleUpperCase("nb-NO") : "";
 }
 
@@ -226,7 +271,8 @@ function sanitizeSidebarSections(sections: Array<{ heading: string; items: strin
     .map((section) => ({
       heading: section.heading,
       items: section.items
-        .map((item) => cleanDisplayText(item))
+        .map((item) => cleanDisplayText(item).replace(/^\s*[•·▪◦]+\s*/u, ""))
+        .map((item) => normalizeShortLabelText(item))
         .filter(Boolean)
         .filter((item) => {
           if (section.heading === "KONTAKTPERSON") return false;
@@ -236,9 +282,10 @@ function sanitizeSidebarSections(sections: Array<{ heading: string; items: strin
           if (/Rolle:|Periode:|Teknologier:/i.test(item)) return false;
           if (looksLikeLongSentence(item)) return false;
           return true;
-        }),
+        })
+        .filter((item, index, items) => items.indexOf(item) === index),
     }))
-    .filter((section) => section.heading && section.items.length > 0);
+    .filter((section) => ALLOWED_SIDEBAR_HEADINGS.has(section.heading) && section.items.length > 0);
 }
 
 function sanitizeIntroParagraphs(paragraphs: string[]) {
@@ -264,6 +311,10 @@ function sanitizeProjects(
 ) {
   return projects.map((project) => ({
     ...project,
+    company: normalizeShortLabelText(project.company),
+    subtitle: normalizeShortLabelText(project.subtitle),
+    role: normalizeShortLabelText(cleanDisplayText(project.role)),
+    period: normalizeCommonLabelArtifacts(cleanDisplayText(project.period)),
     paragraphs: project.paragraphs
       .map((paragraph) => cleanDisplayText(paragraph))
       .filter(Boolean)
@@ -275,6 +326,24 @@ function sanitizeProjects(
       ),
     technologies: cleanDisplayText(project.technologies),
   }));
+}
+
+function uniqueBy<T>(items: T[], keyFn: (item: T) => string) {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = keyFn(item);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function inferOverflowSectionFormat(
+  heading: string,
+  items: string[],
+): "timeline" | "bullet" {
+  if (!TIMELINE_SECTION_HEADINGS.has(heading)) return "bullet";
+  return items.some((item) => /\b\d{2,4}\b/.test(item)) ? "timeline" : "bullet";
 }
 
 export function buildCvEditorImportDocument(
@@ -305,7 +374,7 @@ export function buildCvEditorImportDocument(
 } {
   const segmentMap = toSegmentMap(segments);
 
-  const sidebarSections = sanitizeSidebarSections((parsed.sidebarSections || [])
+  const rawSidebarSections = (parsed.sidebarSections || [])
     .map((section) => {
       const items = [
         ...((section.itemIds || []).map((id) => resolveSegmentRefs(id, segmentMap))),
@@ -317,16 +386,51 @@ export function buildCvEditorImportDocument(
         items,
       };
     })
-    .filter((section) => section.heading && section.items.length > 0));
+    .filter((section) => section.heading && section.items.length > 0);
 
-  const competenceGroups = (parsed.competenceGroups || [])
+  const sidebarSections = sanitizeSidebarSections(rawSidebarSections);
+  const overflowSidebarSections = rawSidebarSections
+    .map((section) => ({
+      heading: section.heading,
+      items: section.items
+        .map((item) => cleanDisplayText(item).replace(/^\s*[•·▪◦]+\s*/u, ""))
+        .map((item) => normalizeShortLabelText(item))
+        .filter(Boolean),
+    }))
+    .filter((section) => section.heading && section.items.length > 0 && !ALLOWED_SIDEBAR_HEADINGS.has(section.heading));
+
+  const overflowCompetenceGroups = overflowSidebarSections
+    .filter((section) => COMPETENCE_SECTION_HEADINGS.has(section.heading))
+    .map((section) => ({
+      label: humanizeSectionLabel(section.heading),
+      content: uniqueBy(section.items, (item) => item).join(", "),
+    }));
+
+  const overflowAdditionalSections = overflowSidebarSections
+    .filter((section) => !COMPETENCE_SECTION_HEADINGS.has(section.heading))
+    .map((section) => ({
+      title: normalizeHeading(section.heading),
+      format: inferOverflowSectionFormat(section.heading, section.items),
+      items: uniqueBy(section.items, (item) => item).map((item) => ({
+        period: "",
+        primary: item,
+      })),
+    }));
+
+  const competenceGroups = uniqueBy(
+    [
+      ...(parsed.competenceGroups || [])
     .map((group) => ({
-      label: compactWhitespace(group.label || ""),
+      label: normalizeShortLabelText(group.label || ""),
       content: compactWhitespace(
         resolveSegmentRefs(group.itemIds || group.content || "", segmentMap, " "),
       ),
     }))
-    .filter((group) => group.label && group.content);
+    .filter((group) => group.label && group.content),
+      ...overflowCompetenceGroups,
+    ],
+    (group) => `${group.label}::${group.content}`,
+  );
 
   const projects = sanitizeProjects((parsed.projects || [])
     .map((project) => ({
@@ -342,9 +446,9 @@ export function buildCvEditorImportDocument(
   const additionalSections = (parsed.additionalSections || [])
     .map((section) => {
       const items = (section.items || [])
-        .map((item) => ({
-          period: resolvePreferredText(item.periodIds, item.period, segmentMap),
-          primary: resolvePreferredText(item.primaryIds || item.itemIds, item.primary, segmentMap),
+      .map((item) => ({
+          period: normalizeCommonLabelArtifacts(resolvePreferredText(item.periodIds, item.period, segmentMap)),
+          primary: normalizeShortLabelText(resolvePreferredText(item.primaryIds || item.itemIds, item.primary, segmentMap)),
         }))
         .filter((item) => item.primary);
 
@@ -356,27 +460,35 @@ export function buildCvEditorImportDocument(
     })
     .filter((section) => section.title && section.items.length > 0);
 
+  const sidebarEducationItems = new Set(
+    sidebarSections
+      .filter((section) => section.heading === "UTDANNELSE")
+      .flatMap((section) => section.items.map((item) => normalizeShortLabelText(item))),
+  );
+
   return {
     navn: normalizeHeroName(resolvePreferredText(parsed.navnIds, parsed.navn, segmentMap)),
-    tittel: compactWhitespace(resolvePreferredText(parsed.tittelIds, parsed.tittel, segmentMap)),
+    tittel: normalizeShortLabelText(resolvePreferredText(parsed.tittelIds, parsed.tittel, segmentMap)),
     sidebarSections,
     introParagraphs: sanitizeIntroParagraphs(resolveParagraphs(parsed.introParagraphs, segmentMap)),
     competenceGroups,
     projects,
     education: (parsed.education || [])
       .map((entry) => ({
-        period: resolvePreferredText(entry.periodIds, entry.period, segmentMap),
-        primary: resolvePreferredText(entry.primaryIds, entry.primary, segmentMap),
-        secondary: resolvePreferredText(entry.secondaryIds, entry.secondary, segmentMap),
+        period: normalizeCommonLabelArtifacts(resolvePreferredText(entry.periodIds, entry.period, segmentMap)),
+        primary: normalizeShortLabelText(resolvePreferredText(entry.primaryIds, entry.primary, segmentMap)),
+        secondary: normalizeShortLabelText(resolvePreferredText(entry.secondaryIds, entry.secondary, segmentMap)),
       }))
-      .filter((entry) => entry.period || entry.primary || entry.secondary),
+      .filter((entry) => entry.period || entry.primary || entry.secondary)
+      .filter((entry) => Boolean(entry.period || entry.secondary))
+      .filter((entry) => !sidebarEducationItems.has(entry.primary)),
     workExperience: (parsed.workExperience || [])
       .map((entry) => ({
-        period: resolvePreferredText(entry.periodIds, entry.period, segmentMap),
-        primary: resolvePreferredText(entry.primaryIds, entry.primary, segmentMap),
+        period: normalizeCommonLabelArtifacts(resolvePreferredText(entry.periodIds, entry.period, segmentMap)),
+        primary: normalizeShortLabelText(resolvePreferredText(entry.primaryIds, entry.primary, segmentMap)),
       }))
-      .filter((entry) => entry.period || entry.primary),
-    additionalSections,
+      .filter((entry) => Boolean(entry.period && entry.primary)),
+    additionalSections: uniqueBy([...additionalSections, ...overflowAdditionalSections], (section) => `${section.title}::${section.items.map((item) => `${item.period}|${item.primary}`).join(";")}`),
     warnings: (parsed.warnings || []).map((warning) => compactWhitespace(warning || "")).filter(Boolean),
   };
 }

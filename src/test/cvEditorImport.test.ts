@@ -167,6 +167,66 @@ describe("buildCvEditorImportDocument", () => {
     );
 
     expect(result.navn).toBe("Anders Nilsen");
-    expect(result.tittel).toBe("S e n i o r E m b e d d e d -i n g e n i ø r m e d 5 å r s e r f a r i n g");
+    expect(result.tittel).toBe("Senior Embedded-ingeniør med 5 års erfaring");
+  });
+
+  it("keeps sidebar limited to the three allowed sections and reroutes extra sections", () => {
+    const result = buildCvEditorImportDocument(
+      {
+        sidebarSections: [
+          {
+            heading: "P E R S O N A L I A",
+            items: ["• Født 1995", "• Norsk, morsmål"],
+          },
+          {
+            heading: "PROGRAMMERINGSSPRÅK",
+            items: ["• C, C++, Python", "• Embedded Linux"],
+          },
+          {
+            heading: "SERTIFISERINGER",
+            items: ["• IEC 62443", "• Side channel security"],
+          },
+        ],
+        projects: [
+          {
+            company: "K I W I . K I G m b H",
+            subtitle: "Utvikling av digitale låsesystemer",
+            role: "Rolle: Embedded-ingeniør",
+            period: "Periode: 9 / 2 2 - 9 / 2 4",
+            paragraphs: [],
+            technologies: "",
+          },
+        ],
+        education: [
+          { period: "", primary: "Bachelor of Science", secondary: "" },
+        ],
+      },
+      [],
+    );
+
+    expect(result.sidebarSections).toEqual([
+      {
+        heading: "PERSONALIA",
+        items: ["Født 1995", "Norsk, morsmål"],
+      },
+    ]);
+    expect(result.competenceGroups).toContainEqual({
+      label: "Programmeringsspråk",
+      content: "C, C++, Python, Embedded Linux",
+    });
+    expect(result.additionalSections).toContainEqual({
+      title: "SERTIFISERINGER",
+      format: "bullet",
+      items: [
+        { period: "", primary: "IEC 62443" },
+        { period: "", primary: "Side channel security" },
+      ],
+    });
+    expect(result.projects[0]).toMatchObject({
+      company: "KIWI.KI GmbH",
+      role: "Embedded-ingeniør",
+      period: "9/22 - 9/24",
+    });
+    expect(result.education).toEqual([]);
   });
 });
