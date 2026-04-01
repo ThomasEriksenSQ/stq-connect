@@ -399,6 +399,26 @@ export function CvEditorPanel({
     });
   };
 
+  const handleEducationDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    update((prev) => {
+      const oldIndex = prev.education.findIndex((_, i) => `education-${i}` === active.id);
+      const newIndex = prev.education.findIndex((_, i) => `education-${i}` === over.id);
+      return { ...prev, education: arrayMove(prev.education, oldIndex, newIndex) };
+    });
+  };
+
+  const handleWorkExperienceDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    update((prev) => {
+      const oldIndex = prev.workExperience.findIndex((_, i) => `work-${i}` === active.id);
+      const newIndex = prev.workExperience.findIndex((_, i) => `work-${i}` === over.id);
+      return { ...prev, workExperience: arrayMove(prev.workExperience, oldIndex, newIndex) };
+    });
+  };
+
   const setHero = (key: string, val: string) => update((p) => ({ ...p, hero: { ...p.hero, [key]: val } }));
   const setHeroContact = (key: string, val: string) =>
     update((p) => ({
@@ -1243,59 +1263,72 @@ export function CvEditorPanel({
                   Utdannelse
                 </AccordionTrigger>
                 <AccordionContent className="space-y-2 pt-2">
-                  {doc.education.map((entry, i) => (
-                    <div key={i} className="border border-border rounded-lg p-3 bg-card space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Input
-                          value={entry.period}
-                          placeholder="Periode"
-                          onChange={(e) =>
-                            update((p) => {
-                              const arr = [...p.education];
-                              arr[i] = { ...arr[i], period: e.target.value };
-                              return { ...p, education: arr };
-                            })
-                          }
-                          className="text-[0.8125rem] w-32"
-                        />
-                        <Input
-                          value={entry.primary}
-                          placeholder="Grad / tittel"
-                          onChange={(e) =>
-                            update((p) => {
-                              const arr = [...p.education];
-                              arr[i] = { ...arr[i], primary: e.target.value };
-                              return { ...p, education: arr };
-                            })
-                          }
-                          className="text-[0.8125rem] flex-1"
-                        />
-                        <button
-                          onClick={() =>
-                            scheduleDelete(`edu-${i}`, `Utdannelse "${doc.education[i]?.primary || i + 1}"`, (p) => ({
-                              ...p,
-                              education: p.education.filter((_, j) => j !== i),
-                            }))
-                          }
-                          className="text-muted-foreground hover:text-destructive shrink-0 p-1"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      <Input
-                        value={entry.secondary || ""}
-                        placeholder="Detaljer (valgfritt)"
-                        onChange={(e) =>
-                          update((p) => {
-                            const arr = [...p.education];
-                            arr[i] = { ...arr[i], secondary: e.target.value };
-                            return { ...p, education: arr };
-                          })
-                        }
-                        className="text-[0.8125rem]"
-                      />
-                    </div>
-                  ))}
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleEducationDragEnd}>
+                    <SortableContext
+                      items={doc.education.map((_, i) => `education-${i}`)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {doc.education.map((entry, i) => (
+                        <SortableItem key={`education-${i}`} id={`education-${i}`}>
+                          <div className="border border-border rounded-lg p-3 bg-card space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Input
+                                value={entry.period}
+                                placeholder="Periode"
+                                onChange={(e) =>
+                                  update((p) => {
+                                    const arr = [...p.education];
+                                    arr[i] = { ...arr[i], period: e.target.value };
+                                    return { ...p, education: arr };
+                                  })
+                                }
+                                className="text-[0.8125rem] w-32"
+                              />
+                              <Input
+                                value={entry.primary}
+                                placeholder="Grad / tittel"
+                                onChange={(e) =>
+                                  update((p) => {
+                                    const arr = [...p.education];
+                                    arr[i] = { ...arr[i], primary: e.target.value };
+                                    return { ...p, education: arr };
+                                  })
+                                }
+                                className="text-[0.8125rem] flex-1"
+                              />
+                              <button
+                                onClick={() =>
+                                  scheduleDelete(
+                                    `edu-${i}`,
+                                    `Utdannelse "${doc.education[i]?.primary || i + 1}"`,
+                                    (p) => ({
+                                      ...p,
+                                      education: p.education.filter((_, j) => j !== i),
+                                    }),
+                                  )
+                                }
+                                className="text-muted-foreground hover:text-destructive shrink-0 p-1"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                            <Input
+                              value={entry.secondary || ""}
+                              placeholder="Detaljer (valgfritt)"
+                              onChange={(e) =>
+                                update((p) => {
+                                  const arr = [...p.education];
+                                  arr[i] = { ...arr[i], secondary: e.target.value };
+                                  return { ...p, education: arr };
+                                })
+                              }
+                              className="text-[0.8125rem]"
+                            />
+                          </div>
+                        </SortableItem>
+                      ))}
+                    </SortableContext>
+                  </DndContext>
                   <button
                     onClick={() =>
                       update((p) => ({ ...p, education: [...p.education, { period: "", primary: "", secondary: "" }] }))
@@ -1313,46 +1346,59 @@ export function CvEditorPanel({
                   Arbeidserfaring
                 </AccordionTrigger>
                 <AccordionContent className="space-y-2 pt-2">
-                  {doc.workExperience.map((entry, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <Input
-                        value={entry.period}
-                        placeholder="Periode"
-                        onChange={(e) =>
-                          update((p) => {
-                            const arr = [...p.workExperience];
-                            arr[i] = { ...arr[i], period: e.target.value };
-                            return { ...p, workExperience: arr };
-                          })
-                        }
-                        className="text-[0.8125rem] w-32"
-                      />
-                      <Input
-                        value={entry.primary}
-                        placeholder="Selskap"
-                        onChange={(e) =>
-                          update((p) => {
-                            const arr = [...p.workExperience];
-                            arr[i] = { ...arr[i], primary: e.target.value };
-                            return { ...p, workExperience: arr };
-                          })
-                        }
-                        className="text-[0.8125rem] flex-1"
-                      />
-                      <button
-                        onClick={() =>
-                          scheduleDelete(
-                            `work-${i}`,
-                            `Arbeidserfaring "${doc.workExperience[i]?.primary || i + 1}"`,
-                            (p) => ({ ...p, workExperience: p.workExperience.filter((_, j) => j !== i) }),
-                          )
-                        }
-                        className="text-muted-foreground hover:text-destructive shrink-0 p-1"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleWorkExperienceDragEnd}
+                  >
+                    <SortableContext
+                      items={doc.workExperience.map((_, i) => `work-${i}`)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {doc.workExperience.map((entry, i) => (
+                        <SortableItem key={`work-${i}`} id={`work-${i}`}>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={entry.period}
+                              placeholder="Periode"
+                              onChange={(e) =>
+                                update((p) => {
+                                  const arr = [...p.workExperience];
+                                  arr[i] = { ...arr[i], period: e.target.value };
+                                  return { ...p, workExperience: arr };
+                                })
+                              }
+                              className="text-[0.8125rem] w-32"
+                            />
+                            <Input
+                              value={entry.primary}
+                              placeholder="Selskap"
+                              onChange={(e) =>
+                                update((p) => {
+                                  const arr = [...p.workExperience];
+                                  arr[i] = { ...arr[i], primary: e.target.value };
+                                  return { ...p, workExperience: arr };
+                                })
+                              }
+                              className="text-[0.8125rem] flex-1"
+                            />
+                            <button
+                              onClick={() =>
+                                scheduleDelete(
+                                  `work-${i}`,
+                                  `Arbeidserfaring "${doc.workExperience[i]?.primary || i + 1}"`,
+                                  (p) => ({ ...p, workExperience: p.workExperience.filter((_, j) => j !== i) }),
+                                )
+                              }
+                              className="text-muted-foreground hover:text-destructive shrink-0 p-1"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </SortableItem>
+                      ))}
+                    </SortableContext>
+                  </DndContext>
                   <button
                     onClick={() =>
                       update((p) => ({ ...p, workExperience: [...p.workExperience, { period: "", primary: "" }] }))
