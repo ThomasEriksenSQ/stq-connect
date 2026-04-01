@@ -24,11 +24,11 @@ const Dashboard = () => {
   return (
     <div className="space-y-6">
       {/* Tab bar */}
-      <div className="flex items-center gap-1 border-b border-border">
+      <div className="flex flex-wrap items-center gap-1 border-b border-border">
         <button
           onClick={() => setTab("agent")}
           className={cn(
-            "relative px-4 py-2.5 text-[0.875rem] font-medium transition-colors",
+            "relative flex-1 min-w-[140px] px-4 py-2.5 text-[0.875rem] font-medium transition-colors sm:flex-none",
             tab === "agent"
               ? "text-foreground"
               : "text-muted-foreground hover:text-foreground"
@@ -42,7 +42,7 @@ const Dashboard = () => {
         <button
           onClick={() => setTab("oppfolginger")}
           className={cn(
-            "relative px-4 py-2.5 text-[0.875rem] font-medium transition-colors",
+            "relative flex-1 min-w-[140px] px-4 py-2.5 text-[0.875rem] font-medium transition-colors sm:flex-none",
             tab === "oppfolginger"
               ? "text-foreground"
               : "text-muted-foreground hover:text-foreground"

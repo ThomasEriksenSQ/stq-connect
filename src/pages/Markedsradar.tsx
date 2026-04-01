@@ -159,24 +159,24 @@ export default function Markedsradar() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div>
           <h1 className="text-[1.5rem] font-bold text-foreground">Markedsradar</h1>
           <p className="text-[0.8125rem] text-muted-foreground">
             Handlingsrettet oversikt over Finn-importerte selskaper, teknologier og kontaktpunkter.
           </p>
         </div>
-        <Button onClick={() => setImportOpen(true)} className="gap-2">
+        <Button onClick={() => setImportOpen(true)} className="w-full gap-2 sm:w-auto">
           <Download className="h-4 w-4" />
           Importer uke
         </Button>
       </div>
 
       <Tabs defaultValue="radar">
-        <TabsList>
-          <TabsTrigger value="radar">Radar</TabsTrigger>
-          <TabsTrigger value="annonser">Annonser</TabsTrigger>
-          <TabsTrigger value="ai">AI-analyse</TabsTrigger>
+        <TabsList className="h-auto w-full flex-wrap justify-start">
+          <TabsTrigger value="radar" className="flex-1 min-w-[110px] sm:flex-none">Radar</TabsTrigger>
+          <TabsTrigger value="annonser" className="flex-1 min-w-[110px] sm:flex-none">Annonser</TabsTrigger>
+          <TabsTrigger value="ai" className="flex-1 min-w-[110px] sm:flex-none">AI-analyse</TabsTrigger>
         </TabsList>
 
         <TabsContent value="radar">
@@ -758,8 +758,8 @@ function AnnonserTab({
   return (
     <div className="space-y-4 mt-4">
       <div className="space-y-2">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative max-w-xs flex-1">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="relative w-full sm:max-w-xs sm:flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Søk selskap, rolle, kontakt eller teknologi..."
@@ -773,7 +773,7 @@ function AnnonserTab({
           </div>
 
           <select
-            className="h-10 rounded-md border border-input bg-background px-3 text-[0.8125rem]"
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-[0.8125rem] sm:w-auto"
             value={weekFilter}
             onChange={(event) => {
               setWeekFilter(event.target.value);
@@ -834,7 +834,106 @@ function AnnonserTab({
 
       <p className="text-[0.8125rem] text-muted-foreground">{filtered.length} annonser</p>
 
-      <Card className="shadow-card">
+      <div className="space-y-3 md:hidden">
+        {paged.map((annonse) => {
+          const company = findCompany(annonse.selskap);
+          const technologies = getFinnAnnonseTechnologies(annonse);
+
+          return (
+            <Card key={annonse.id} className="shadow-card">
+              <CardContent className="pt-4 pb-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 space-y-1">
+                    <p className="text-[0.75rem] text-muted-foreground">
+                      {format(parseISO(annonse.dato), "d. MMM yyyy", { locale: nb })}
+                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        className={cn(
+                          "text-[0.9375rem] font-semibold text-left",
+                          company ? "text-primary hover:underline" : "text-foreground",
+                        )}
+                        onClick={() =>
+                          navigate(company ? companyRoute(company)! : createCompanyRoute(annonse.selskap || ""))
+                        }
+                      >
+                        {annonse.selskap}
+                      </button>
+                      {!company && <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--warning))]" />}
+                    </div>
+                    {annonse.stillingsrolle && <p className="text-[0.8125rem] text-foreground">{annonse.stillingsrolle}</p>}
+                    {annonse.lokasjon && <p className="text-[0.75rem] text-muted-foreground">{annonse.lokasjon}</p>}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() =>
+                        navigate(company ? companyRoute(company)! : createCompanyRoute(annonse.selskap || ""))
+                      }
+                    >
+                      {company ? <Building2 className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                    </Button>
+                    {annonse.lenke && (
+                      <a href={annonse.lenke} target="_blank" rel="noopener noreferrer">
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {technologies.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {technologies.slice(0, 4).map((technology) => (
+                      <span
+                        key={technology}
+                        className="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-[0.6875rem] text-muted-foreground"
+                      >
+                        {technology}
+                      </span>
+                    ))}
+                    {technologies.length > 4 && (
+                      <span className="text-[0.6875rem] text-muted-foreground">+{technologies.length - 4} mer</span>
+                    )}
+                  </div>
+                )}
+
+                {annonse.kontaktnavn && (
+                  <div className="space-y-1">
+                    <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Kontakt</p>
+                    <p className="text-[0.8125rem] text-foreground">{annonse.kontaktnavn}</p>
+                    <div className="flex flex-wrap gap-3">
+                      {annonse.kontakt_telefon && (
+                        <a
+                          href={`tel:${annonse.kontakt_telefon}`}
+                          className="inline-flex items-center gap-1.5 text-[0.75rem] text-foreground hover:text-primary"
+                        >
+                          <Phone className="h-3.5 w-3.5" />
+                          {annonse.kontakt_telefon}
+                        </a>
+                      )}
+                      {annonse.kontakt_epost && (
+                        <a
+                          href={`mailto:${annonse.kontakt_epost}`}
+                          className="inline-flex items-center gap-1.5 text-[0.75rem] text-foreground hover:text-primary"
+                        >
+                          <Mail className="h-3.5 w-3.5" />
+                          {annonse.kontakt_epost}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <Card className="hidden md:block shadow-card">
         <Table>
           <TableHeader>
             <TableRow>
@@ -938,7 +1037,7 @@ function AnnonserTab({
       </Card>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex flex-col items-center justify-center gap-2 sm:flex-row">
           <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(page - 1)}>
             Forrige
           </Button>

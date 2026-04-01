@@ -688,7 +688,7 @@ const DailyBrief = () => {
     <div className="space-y-4">
       {/* ── Ukentlig påminnelse ── */}
       {viewMode === "kort" && !completedAll && showReminder && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 flex items-start justify-between gap-3">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 sm:px-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
             <Bell className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
             <div>
@@ -700,7 +700,7 @@ const DailyBrief = () => {
           </div>
           <button
             onClick={() => setReminderDismissed(true)}
-            className="text-amber-400 hover:text-amber-700 flex-shrink-0 mt-0.5"
+            className="self-end text-amber-400 hover:text-amber-700 flex-shrink-0 sm:self-auto sm:mt-0.5"
           >
             <X className="h-4 w-4" />
           </button>
@@ -708,11 +708,11 @@ const DailyBrief = () => {
       )}
 
       {/* ── Filter + visningsvalg ── */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground w-14 flex-shrink-0">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground sm:w-14 sm:flex-shrink-0">
           Eier
         </span>
-        <div className="flex items-center gap-1.5 flex-1">
+        <div className="flex flex-wrap items-center gap-1.5 sm:flex-1">
           {filterOptions.map((opt) => (
             <button
               key={opt.id}
@@ -738,11 +738,11 @@ const DailyBrief = () => {
           ))}
         </div>
 
-        <div className="flex items-center flex-shrink-0 ml-auto">
+        <div className="flex items-center self-stretch sm:ml-auto sm:self-auto">
           <button
             onClick={() => setViewMode("kort")}
             className={cn(
-              "h-8 px-3 text-[0.8125rem] rounded-l-full border transition-colors inline-flex items-center gap-1.5",
+              "h-8 flex-1 px-3 text-[0.8125rem] rounded-l-full border transition-colors inline-flex items-center justify-center gap-1.5 sm:flex-none",
               viewMode === "kort"
                 ? "bg-foreground text-background border-foreground font-medium"
                 : "border-border text-muted-foreground hover:bg-secondary",
@@ -753,7 +753,7 @@ const DailyBrief = () => {
           <button
             onClick={() => setViewMode("liste")}
             className={cn(
-              "h-8 px-3 text-[0.8125rem] rounded-r-full border-t border-b border-r transition-colors inline-flex items-center gap-1.5",
+              "h-8 flex-1 px-3 text-[0.8125rem] rounded-r-full border-t border-b border-r transition-colors inline-flex items-center justify-center gap-1.5 sm:flex-none",
               viewMode === "liste"
                 ? "bg-foreground text-background border-foreground font-medium"
                 : "border-border text-muted-foreground hover:bg-secondary",
@@ -769,7 +769,7 @@ const DailyBrief = () => {
         <div>
           {/* Progressbar */}
           <div className="mb-4">
-            <div className="flex items-center justify-between text-[0.75rem] text-muted-foreground mb-1.5">
+            <div className="flex flex-col gap-1 text-[0.75rem] text-muted-foreground mb-1.5 sm:flex-row sm:items-center sm:justify-between">
               <span>{treatedCount} behandlet i dag</span>
               <span>{queue.length} igjen</span>
             </div>
@@ -803,7 +803,7 @@ const DailyBrief = () => {
                   <div className={cn("h-1", TEMP_CONFIG[current.temperature].bar)} />
                 </div>
 
-                <div className="flex justify-end px-5 pt-4">
+                <div className="flex justify-end px-4 pt-4 sm:px-5">
                   <button
                     onClick={() => setPanelOpen(true)}
                     className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg bg-secondary border border-border text-[0.75rem] text-muted-foreground hover:text-foreground transition-all"
@@ -813,7 +813,7 @@ const DailyBrief = () => {
                   </button>
                 </div>
 
-                <div className="p-7 pt-3">
+                <div className="p-4 pt-3 sm:p-7 sm:pt-3">
                   {/* ── Sone 1: Navn + meta ── */}
                   <div className="pb-5">
                     <div className="space-y-1">
@@ -852,7 +852,7 @@ const DailyBrief = () => {
                   {/* ── Sone 2: Siste + Neste oppfølging ── */}
                   <div className="py-5">
                     {/* Snapshot-grid */}
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6">
                       {/* Siste */}
                       <div className="space-y-1.5">
                         <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
@@ -1274,7 +1274,7 @@ const DailyBrief = () => {
               </div>
 
               {/* Navigasjon under kortet */}
-              <div className="flex items-center justify-between px-2">
+              <div className="flex items-center justify-between px-1 sm:px-2">
                 <button
                   onClick={() => goNext("right")}
                   disabled={history.length === 0}
@@ -1299,7 +1299,7 @@ const DailyBrief = () => {
                 </button>
               </div>
 
-              <div className="mt-4 rounded-2xl border border-border bg-card px-6 py-4 flex items-start gap-3">
+              <div className="mt-4 rounded-2xl border border-border bg-card px-4 py-4 sm:px-6 flex items-start gap-3">
                 <div className="flex-shrink-0 w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center mt-0.5">
                   <Flame className="h-3.5 w-3.5 text-amber-500" />
                 </div>
@@ -1332,11 +1332,11 @@ const DailyBrief = () => {
                   <button
                     key={lead.contact.id}
                     onClick={() => navigate(`/kontakter/${lead.contact.id}`)}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary/50 transition-colors text-left"
+                    className="w-full flex flex-col items-start gap-3 px-4 py-3 hover:bg-secondary/50 transition-colors text-left sm:flex-row sm:items-center"
                   >
                     <div className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", temp.dot)} />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[0.875rem] font-medium text-foreground truncate">
                           {lead.contact.first_name} {lead.contact.last_name}
                         </span>
@@ -1366,7 +1366,7 @@ const DailyBrief = () => {
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <p className="text-[0.75rem] text-muted-foreground truncate">
                           {lead.contact.companies?.name}
                           {lead.contact.title && ` · ${lead.contact.title}`}
@@ -1378,16 +1378,18 @@ const DailyBrief = () => {
                         )}
                       </div>
                     </div>
-                    <span
-                      className={cn(
-                        "text-[0.75rem] font-medium flex-shrink-0 px-2 py-0.5 rounded-full",
-                        temp.bg,
-                        temp.text,
-                      )}
-                    >
-                      {temp.label}
-                    </span>
-                    <span className="text-[0.6875rem] text-muted-foreground flex-shrink-0">T{lead.tier}</span>
+                    <div className="flex items-center gap-2 self-end sm:self-auto">
+                      <span
+                        className={cn(
+                          "text-[0.75rem] font-medium flex-shrink-0 px-2 py-0.5 rounded-full",
+                          temp.bg,
+                          temp.text,
+                        )}
+                      >
+                        {temp.label}
+                      </span>
+                      <span className="text-[0.6875rem] text-muted-foreground flex-shrink-0">T{lead.tier}</span>
+                    </div>
                   </button>
                 );
               })}
@@ -1416,7 +1418,7 @@ const DailyBrief = () => {
             <div className="fixed inset-0 z-[100] flex items-center justify-center">
               <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setNudgeOpen(false)} />
               <div
-                className="relative w-full max-w-2xl mx-4 bg-card border border-border rounded-2xl shadow-xl p-10"
+                className="relative w-full max-w-2xl mx-4 bg-card border border-border rounded-2xl shadow-xl p-5 sm:p-10"
                 style={{ animation: "shake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97)" }}
               >
                 <button
@@ -1437,7 +1439,7 @@ const DailyBrief = () => {
                         : `Sett ny dato for oppfølging`
                       : 'Sett ny dato for: "Følg opp om behov"'}
                   </p>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                     {NUDGE_DATE_CHIPS.map((chip) => (
                       <button
                         key={chip.value}
@@ -1480,7 +1482,7 @@ const DailyBrief = () => {
                   {nudgeRequiresSignalChoice && !nudgeSignal && (
                     <p className="text-[0.75rem] text-destructive mb-3">Velg et signal for å gå videre.</p>
                   )}
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {[
                       {
                         label: "Behov nå",
@@ -1549,8 +1551,8 @@ const DailyBrief = () => {
       {/* ── Side panel ── */}
       {current && (
         <Sheet open={panelOpen} onOpenChange={setPanelOpen}>
-          <SheetContent side="right" className="overflow-y-auto">
-            <div className="p-6 max-w-2xl">
+          <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+            <div className="p-4 sm:p-6 max-w-2xl">
               <ContactCardContent contactId={current.contact.id} editable={true} />
             </div>
           </SheetContent>
