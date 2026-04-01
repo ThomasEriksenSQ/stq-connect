@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState } from "react";
 import { cn, formatNOK, getInitials } from "@/lib/utils";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, startOfDay } from "date-fns";
 import { Briefcase, CalendarCheck, BarChart2, Loader2, Plus } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { OppdragEditSheet } from "@/components/OppdragEditSheet";
@@ -18,11 +18,24 @@ const TIMER_PER_DAG = 7.5;
 
 function computeOppdragStatus(oppdrag: any): string {
   if (oppdrag.status === "Inaktiv") return "Inaktiv";
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const startDate = oppdrag.start_dato ? new Date(oppdrag.start_dato) : null;
+  const today = startOfDay(new Date());
+  const startDate = parseOppdragDate(oppdrag.start_dato);
   if (startDate && startDate > today) return "Oppstart";
   return "Aktiv";
+}
+
+function parseOppdragDate(value?: string | null): Date | null {
+  if (!value) return null;
+
+  const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnlyMatch) {
+    const [, year, month, day] = dateOnlyMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
 }
 
 // --- Settings panel as a separate component ---

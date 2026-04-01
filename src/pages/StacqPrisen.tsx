@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import { nb } from "date-fns/locale";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -58,11 +58,24 @@ function getKundeTypeLabel(companyStatus: string | null): string {
 
 function computeOppdragStatus(r: any): string {
   if (r.status === "Inaktiv") return "Inaktiv";
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const startDate = r.start_dato ? new Date(r.start_dato) : null;
+  const today = startOfDay(new Date());
+  const startDate = parseOppdragDate(r.start_dato);
   if (startDate && startDate > today) return "Oppstart";
   return "Aktiv";
+}
+
+function parseOppdragDate(value?: string | null): Date | null {
+  if (!value) return null;
+
+  const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnlyMatch) {
+    const [, year, month, day] = dateOnlyMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
 }
 
 export default function StacqPrisen() {
