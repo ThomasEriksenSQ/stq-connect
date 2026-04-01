@@ -1035,8 +1035,10 @@ export type Database = {
       }
       stacq_oppdrag: {
         Row: {
+          ansatt_id: number | null
           created_at: string | null
           deal_type: string | null
+          ekstern_id: string | null
           ekstra_kostnad: number | null
           er_ansatt: boolean | null
           forny_dato: string | null
@@ -1055,8 +1057,10 @@ export type Database = {
           utpris: number | null
         }
         Insert: {
+          ansatt_id?: number | null
           created_at?: string | null
           deal_type?: string | null
+          ekstern_id?: string | null
           ekstra_kostnad?: number | null
           er_ansatt?: boolean | null
           forny_dato?: string | null
@@ -1075,8 +1079,10 @@ export type Database = {
           utpris?: number | null
         }
         Update: {
+          ansatt_id?: number | null
           created_at?: string | null
           deal_type?: string | null
+          ekstern_id?: string | null
           ekstra_kostnad?: number | null
           er_ansatt?: boolean | null
           forny_dato?: string | null
@@ -1095,6 +1101,20 @@ export type Database = {
           utpris?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "stacq_oppdrag_ansatt_id_fkey"
+            columns: ["ansatt_id"]
+            isOneToOne: false
+            referencedRelation: "stacq_ansatte"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stacq_oppdrag_ekstern_id_fkey"
+            columns: ["ekstern_id"]
+            isOneToOne: false
+            referencedRelation: "external_consultants"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "stacq_oppdrag_selskap_id_fkey"
             columns: ["selskap_id"]

@@ -29,6 +29,8 @@ import { format, parseISO } from "date-fns";
 import { nb } from "date-fns/locale";
 import { getEffectiveSignal } from "@/lib/categoryUtils";
 import { mergeTechnologyTags } from "@/lib/technologyTags";
+import { createOppdragFormState } from "@/lib/oppdragForm";
+import { createOppdrag, invalidateOppdragQueries } from "@/lib/oppdragPersistence";
 
 const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
 
@@ -219,6 +221,9 @@ export function ForespørselSheet({
   const [oppdragKommentar, setOppdragKommentar] = useState("");
   const [oppdragSubmitting, setOppdragSubmitting] = useState(false);
   const [oppdragLopende, setOppdragLopende] = useState(false);
+  const [oppdragAnsattId, setOppdragAnsattId] = useState<number | null>(null);
+  const [oppdragEksternId, setOppdragEksternId] = useState<string | null>(null);
+  const [oppdragErAnsatt, setOppdragErAnsatt] = useState(true);
 
   // Portrait lookup for ansatte
   const { data: ansattePortraits = [] } = useQuery({
@@ -431,14 +436,17 @@ export function ForespørselSheet({
     });
   };
 
-  const updateKonsulentStatus = async (linkId: string, newStatus: string, konsulentNavn?: string) => {
+  const updateKonsulentStatus = async (linkedKonsulent: any, newStatus: string) => {
     await supabase
       .from("foresporsler_konsulenter")
       .update({ status: newStatus, status_updated_at: new Date().toISOString() })
-      .eq("id", linkId);
+      .eq("id", linkedKonsulent.id);
     if (newStatus === "vunnet") {
       fireConfetti();
-      // Open oppdrag creation modal
+      const isIntern = linkedKonsulent.konsulent_type === "intern";
+      const konsulentNavn = isIntern
+        ? linkedKonsulent.stacq_ansatte?.navn
+        : linkedKonsulent.external_consultants?.navn;
       setOppdragKonsulentNavn(konsulentNavn || "");
       setOppdragUtpris("");
       setOppdragInnpris("");
@@ -446,6 +454,9 @@ export function ForespørselSheet({
       setOppdragFornyDato("");
       setOppdragKommentar("");
       setOppdragLopende(false);
+      setOppdragAnsattId(isIntern ? linkedKonsulent.ansatt_id ?? null : null);
+      setOppdragEksternId(isIntern ? null : linkedKonsulent.ekstern_id ?? null);
+      setOppdragErAnsatt(isIntern);
       setTimeout(() => setOppdragModalOpen(true), 600);
     }
     queryClient.invalidateQueries({ queryKey: ["foresporsler-konsulenter", row.id] });
@@ -454,26 +465,33 @@ export function ForespørselSheet({
 
   const handleCreateOppdrag = async () => {
     setOppdragSubmitting(true);
-    const { error } = await supabase.from("stacq_oppdrag").insert({
-      kandidat: oppdragKonsulentNavn,
-      kunde: row.selskap_navn,
-      deal_type: row.type || null,
-      utpris: oppdragUtpris ? Number(oppdragUtpris) : null,
-      til_konsulent: oppdragInnpris ? Number(oppdragInnpris) : null,
-      start_dato: oppdragStartDato || null,
-      forny_dato: oppdragFornyDato || null,
-      kommentar: oppdragKommentar || null,
-      status: "Oppstart",
-      er_ansatt: true,
-    });
-    setOppdragSubmitting(false);
-    if (error) {
+    try {
+      await createOppdrag(
+        createOppdragFormState({
+          kandidat: oppdragKonsulentNavn,
+          personType: oppdragErAnsatt ? "ansatt" : "ekstern",
+          ansattId: oppdragErAnsatt ? oppdragAnsattId : null,
+          eksternId: oppdragErAnsatt ? null : oppdragEksternId,
+          status: "Oppstart",
+          dealType: row.type || "DIR",
+          utpris: oppdragUtpris,
+          tilKonsulent: oppdragInnpris,
+          startDato: oppdragStartDato ? new Date(oppdragStartDato) : undefined,
+          fornyDato: oppdragFornyDato ? new Date(oppdragFornyDato) : undefined,
+          kommentar: oppdragKommentar,
+          selskapId: row.selskap_id || null,
+          selskapNavn: row.selskap_navn || null,
+          isLopende: oppdragLopende,
+        }),
+      );
+      await invalidateOppdragQueries(queryClient);
+      toast.success("Oppdrag opprettet");
+      setOppdragModalOpen(false);
+    } catch {
       toast.error("Kunne ikke opprette oppdrag");
-      return;
+    } finally {
+      setOppdragSubmitting(false);
     }
-    toast.success("Oppdrag opprettet");
-    queryClient.invalidateQueries({ queryKey: ["stacq-oppdrag-prisen"] });
-    setOppdragModalOpen(false);
   };
 
   // Save kommentar inline
@@ -764,7 +782,7 @@ export function ForespørselSheet({
                             {PIPELINE.map(s => (
                               <button
                                 key={s.key}
-                                onClick={() => updateKonsulentStatus(k.id, s.key, navn || "Ukjent")}
+                                onClick={() => updateKonsulentStatus(k, s.key)}
                                 className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold transition-all ${
                                   status === s.key
                                     ? `${s.color} ring-2 ring-offset-1 ring-current`

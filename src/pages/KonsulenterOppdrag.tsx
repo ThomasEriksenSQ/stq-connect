@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState } from "react";
 import { cn, formatNOK, getInitials } from "@/lib/utils";
 import { format, differenceInDays } from "date-fns";
-import { Briefcase, CalendarCheck, BarChart2, Loader2 } from "lucide-react";
+import { Briefcase, CalendarCheck, BarChart2, Loader2, Plus } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { OppdragEditSheet } from "@/components/OppdragEditSheet";
 import { FornyelsesTimeline } from "@/components/FornyelsesTimeline";
@@ -503,6 +503,7 @@ function VarslingsInnstillinger() {
 export default function KonsulenterOppdrag() {
   const [filter, setFilter] = useState<Filter>("Aktiv");
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"oppdrag" | "innstillinger">("oppdrag");
   const today = new Date();
 
@@ -645,6 +646,11 @@ export default function KonsulenterOppdrag() {
     });
   }, [enriched, filter]);
 
+  const selectedOppdrag = useMemo(
+    () => enriched.find((oppdrag: any) => oppdrag.id === selectedRowId) || null,
+    [enriched, selectedRowId],
+  );
+
   const chips: Filter[] = ["Alle", "Aktiv", "Oppstart", "Inaktiv"];
 
   if (isLoading) {
@@ -654,11 +660,22 @@ export default function KonsulenterOppdrag() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <h1 className="text-[1.375rem] font-bold">Aktive oppdrag</h1>
-        <span className="bg-secondary text-muted-foreground rounded-full px-2.5 py-0.5 text-xs font-medium">
-          {stats.aktive + stats.oppstart}
-        </span>
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3 min-w-0">
+          <h1 className="text-[1.375rem] font-bold">Aktive oppdrag</h1>
+          <span className="bg-secondary text-muted-foreground rounded-full px-2.5 py-0.5 text-xs font-medium">
+            {stats.aktive + stats.oppstart}
+          </span>
+        </div>
+        {activeTab === "oppdrag" && (
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity shrink-0"
+          >
+            <Plus className="h-4 w-4" />
+            Nytt oppdrag
+          </button>
+        )}
       </div>
 
       {/* Tab switcher */}
@@ -764,7 +781,9 @@ export default function KonsulenterOppdrag() {
                     <div className="flex items-center gap-2 min-w-0">
                       {(() => {
                         const isAnsatt = o.er_ansatt === true;
-                        const ansattId = isAnsatt ? nameToAnsattId.get(o.kandidat?.trim().toLowerCase()) : undefined;
+                        const ansattId = isAnsatt
+                          ? o.ansatt_id ?? nameToAnsattId.get(o.kandidat?.trim().toLowerCase())
+                          : undefined;
                         const portrait = ansattId ? portraitByAnsattId.get(ansattId) : undefined;
                         if (isAnsatt && portrait) {
                           return <img src={portrait} alt={o.kandidat} className="w-7 h-7 rounded-full object-cover border border-border flex-shrink-0" />;
@@ -869,15 +888,22 @@ export default function KonsulenterOppdrag() {
             {filtered.length === 0 && <p className="text-muted-foreground text-center py-12">Ingen oppdrag å vise</p>}
           </div>
           <Sheet
-            open={selectedRowId !== null}
+            open={selectedRowId !== null || createOpen}
             onOpenChange={(o) => {
-              if (!o) setSelectedRowId(null);
+              if (!o) {
+                setSelectedRowId(null);
+                setCreateOpen(false);
+              }
             }}
           >
             <SheetContent side="right" className="w-[840px] sm:w-[920px] p-0" hideCloseButton>
               <OppdragEditSheet
-                row={enriched.find((o: any) => o.id === selectedRowId) || null}
-                onClose={() => setSelectedRowId(null)}
+                key={createOpen ? "create-oppdrag" : `edit-oppdrag-${selectedOppdrag?.id ?? "none"}`}
+                row={selectedOppdrag}
+                onClose={() => {
+                  setSelectedRowId(null);
+                  setCreateOpen(false);
+                }}
               />
             </SheetContent>
           </Sheet>
