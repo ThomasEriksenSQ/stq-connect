@@ -91,6 +91,8 @@ const COMPETENCE_SECTION_HEADINGS = new Set([
   "ANNET",
 ]);
 const TIMELINE_SECTION_HEADINGS = new Set(["SERTIFISERINGER", "KURS", "KONFERANSER", "FOREDRAG"]);
+const EDUCATION_SECTION_HEADINGS = new Set(["UTDANNELSE", "UTDANNING"]);
+const WORK_EXPERIENCE_SECTION_HEADINGS = new Set(["ARBEIDSERFARING", "ERFARING"]);
 
 function cleanDisplayText(value: string) {
   return compactWhitespace(value)
@@ -338,6 +340,120 @@ function uniqueBy<T>(items: T[], keyFn: (item: T) => string) {
   });
 }
 
+function collapseRepeatedWordSequence(value: string) {
+  const normalized = compactWhitespace(value);
+  const words = normalized.split(/\s+/).filter(Boolean);
+
+  for (let size = Math.floor(words.length / 2); size >= 2; size -= 1) {
+    if (size * 2 !== words.length) continue;
+
+    const first = words.slice(0, size).join(" ");
+    const second = words.slice(size).join(" ");
+
+    if (first === second) {
+      return first;
+    }
+  }
+
+  return normalized;
+}
+
+function normalizeTimelinePeriod(value: string) {
+  return normalizeCommonLabelArtifacts(compactWhitespace(value).replace(/[—−]/g, "–"));
+}
+
+function normalizeTimelinePrimary(value: string) {
+  return collapseRepeatedWordSequence(normalizeShortLabelText(value));
+}
+
+function extractLeadingPeriod(value: string) {
+  const normalized = compactWhitespace(value);
+  const match = normalized.match(
+    /^((?:\d{1,2}\/\d{2,4}|\d{4})(?:\s*[–-]\s*(?:(?:\d{1,2}\/\d{2,4}|\d{4}|nå|nåværende|d\.d\.)?)?)?)\s+(.+)$/iu,
+  );
+
+  if (!match) return null;
+
+  return {
+    period: normalizeTimelinePeriod(match[1]),
+    primary: normalizeTimelinePrimary(match[2]),
+  };
+}
+
+function normalizeTimelineEntry(
+  entry: { period: string; primary: string; secondary?: string },
+  kind: "education" | "work",
+) {
+  let period = normalizeTimelinePeriod(entry.period);
+  let primary = normalizeTimelinePrimary(entry.primary);
+  let secondary = kind === "education" ? normalizeTimelinePrimary(entry.secondary || "") : "";
+
+  if (primary) {
+    const extracted = extractLeadingPeriod(primary);
+    if (!period && extracted) {
+      period = extracted.period;
+      primary = extracted.primary;
+    } else if (period && extracted?.period === period) {
+      primary = extracted.primary;
+    }
+  }
+
+  if (secondary) {
+    const extractedSecondary = extractLeadingPeriod(secondary);
+    if (!period && extractedSecondary) {
+      period = extractedSecondary.period;
+      secondary = extractedSecondary.primary;
+    } else if (period && extractedSecondary?.period === period) {
+      secondary = extractedSecondary.primary;
+    }
+  }
+
+  if (kind === "work" && secondary) {
+    primary = normalizeTimelinePrimary(`${primary} ${secondary}`);
+    secondary = "";
+  }
+
+  if (secondary && secondary === primary) {
+    secondary = "";
+  }
+
+  return {
+    period,
+    primary,
+    secondary,
+  };
+}
+
+function normalizeTimelineKey(entry: { period: string; primary: string; secondary?: string }) {
+  return [entry.period, entry.primary, entry.secondary || ""]
+    .map((value) => normalizeShortLabelText(value))
+    .join("::");
+}
+
+function sanitizeEducationEntries(
+  entries: Array<{ period: string; primary: string; secondary: string }>,
+  sidebarEducationItems: Set<string>,
+) {
+  return uniqueBy(
+    entries
+      .map((entry) => normalizeTimelineEntry(entry, "education"))
+      .filter((entry) => entry.period || entry.primary || entry.secondary)
+      .filter((entry) => Boolean(entry.period || entry.secondary))
+      .filter((entry) => entry.primary && !sidebarEducationItems.has(entry.primary)),
+    normalizeTimelineKey,
+  );
+}
+
+function sanitizeWorkExperienceEntries(entries: Array<{ period: string; primary: string }>) {
+  return uniqueBy(
+    entries
+      .map((entry) => normalizeTimelineEntry(entry, "work"))
+      .filter((entry) => Boolean(entry.period && entry.primary))
+      .map((entry) => ({ period: entry.period, primary: entry.primary })),
+    normalizeTimelineKey,
+  );
+}
+
 function inferOverflowSectionFormat(
   heading: string,
   items: string[],
@@ -466,6 +582,30 @@ export function buildCvEditorImportDocument(
       .flatMap((section) => section.items.map((item) => normalizeShortLabelText(item))),
   );
 
+  const additionalEducationEntries = additionalSections
+    .filter((section) => EDUCATION_SECTION_HEADINGS.has(section.title))
+    .flatMap((section) =>
+      section.items.map((item) => ({
+        period: item.period,
+        primary: item.primary,
+        secondary: "",
+      })),
+    );
+
+  const additionalWorkEntries = additionalSections
+    .filter((section) => WORK_EXPERIENCE_SECTION_HEADINGS.has(section.title))
+    .flatMap((section) =>
+      section.items.map((item) => ({
+        period: item.period,
+        primary: item.primary,
+      })),
+    );
+
+  const visibleAdditionalSections = additionalSections.filter(
+    (section) =>
+      !EDUCATION_SECTION_HEADINGS.has(section.title) && !WORK_EXPERIENCE_SECTION_HEADINGS.has(section.title),
+  );
+
   return {
     navn: normalizeHeroName(resolvePreferredText(parsed.navnIds, parsed.navn, segmentMap)),
     tittel: normalizeShortLabelText(resolvePreferredText(parsed.tittelIds, parsed.tittel, segmentMap)),
@@ -473,22 +613,31 @@ export function buildCvEditorImportDocument(
     introParagraphs: sanitizeIntroParagraphs(resolveParagraphs(parsed.introParagraphs, segmentMap)),
     competenceGroups,
     projects,
-    education: (parsed.education || [])
-      .map((entry) => ({
-        period: normalizeCommonLabelArtifacts(resolvePreferredText(entry.periodIds, entry.period, segmentMap)),
-        primary: normalizeShortLabelText(resolvePreferredText(entry.primaryIds, entry.primary, segmentMap)),
-        secondary: normalizeShortLabelText(resolvePreferredText(entry.secondaryIds, entry.secondary, segmentMap)),
-      }))
-      .filter((entry) => entry.period || entry.primary || entry.secondary)
-      .filter((entry) => Boolean(entry.period || entry.secondary))
-      .filter((entry) => !sidebarEducationItems.has(entry.primary)),
-    workExperience: (parsed.workExperience || [])
-      .map((entry) => ({
-        period: normalizeCommonLabelArtifacts(resolvePreferredText(entry.periodIds, entry.period, segmentMap)),
-        primary: normalizeShortLabelText(resolvePreferredText(entry.primaryIds, entry.primary, segmentMap)),
-      }))
-      .filter((entry) => Boolean(entry.period && entry.primary)),
-    additionalSections: uniqueBy([...additionalSections, ...overflowAdditionalSections], (section) => `${section.title}::${section.items.map((item) => `${item.period}|${item.primary}`).join(";")}`),
+    education: sanitizeEducationEntries(
+      [
+        ...(parsed.education || []).map((entry) => ({
+          period: resolvePreferredText(entry.periodIds, entry.period, segmentMap),
+          primary: resolvePreferredText(entry.primaryIds, entry.primary, segmentMap),
+          secondary: resolvePreferredText(entry.secondaryIds, entry.secondary, segmentMap),
+        })),
+        ...additionalEducationEntries,
+      ],
+      sidebarEducationItems,
+    ),
+    workExperience: sanitizeWorkExperienceEntries([
+      ...(parsed.workExperience || []).map((entry) => ({
+        period: resolvePreferredText(entry.periodIds, entry.period, segmentMap),
+        primary: resolvePreferredText(entry.primaryIds, entry.primary, segmentMap),
+      })),
+      ...additionalWorkEntries,
+    ]),
+    additionalSections: uniqueBy(
+      [...visibleAdditionalSections, ...overflowAdditionalSections].filter(
+        (section) =>
+          !EDUCATION_SECTION_HEADINGS.has(section.title) && !WORK_EXPERIENCE_SECTION_HEADINGS.has(section.title),
+      ),
+      (section) => `${section.title}::${section.items.map((item) => `${item.period}|${item.primary}`).join(";")}`,
+    ),
     warnings: (parsed.warnings || []).map((warning) => compactWhitespace(warning || "")).filter(Boolean),
   };
 }

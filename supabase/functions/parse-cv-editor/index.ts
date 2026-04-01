@@ -53,7 +53,7 @@ async function requireAuthorizedClient(req: Request) {
   return supabase;
 }
 
-function extractJsonPayload(text: string) {
+function sanitizeJsonCandidate(text: string) {
   let clean = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
   const firstBrace = clean.indexOf("{");
   const lastBrace = clean.lastIndexOf("}");
@@ -62,8 +62,24 @@ function extractJsonPayload(text: string) {
     clean = clean.slice(firstBrace, lastBrace + 1);
   }
 
-  clean = clean.replace(/,\s*([}\]])/g, "$1");
-  return JSON.parse(clean);
+  return clean
+    .replace(/,\s*([}\]])/g, "$1")
+    .replace(/[\u0000-\u001f]+/g, " ")
+    .trim();
+}
+
+function tryParseJsonPayload(text: string) {
+  const candidates = [sanitizeJsonCandidate(text)];
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      // Try next candidate
+    }
+  }
+
+  return null;
 }
 
 function buildSegmentCatalog(segments: CvEditorImportSegment[]) {
@@ -86,6 +102,23 @@ function detectStacqTemplate(segments: CvEditorImportSegment[]) {
     firstPageText.includes("NØKKELPUNKTER") &&
     firstPageText.includes("UTDANNELSE")
   );
+}
+
+function looksCorruptedExtractedText(segments: CvEditorImportSegment[]) {
+  if (segments.length === 0) return false;
+
+  const text = segments.map((segment) => segment.text).join(" ");
+  const tokens = text.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return false;
+
+  const suspiciousTokenCount = tokens.filter(
+    (token) =>
+      /[A-Za-zÆØÅæøå][&:`][A-Za-zÆØÅæøå]/u.test(token) ||
+      /[a-zæøå][A-ZÆØÅ][a-zæøå]/u.test(token) ||
+      /[A-Za-zÆØÅæøå]`[A-Za-zÆØÅæøå]/u.test(token),
+  ).length;
+
+  return suspiciousTokenCount >= 3 || suspiciousTokenCount / tokens.length > 0.012;
 }
 
 function buildTemplateHint(templateDetected: boolean) {
@@ -172,7 +205,40 @@ async function invokeLovableChat(payload: {
     throw new Error("AI returnerte tomt svar");
   }
 
-  return extractJsonPayload(text);
+  return text;
+}
+
+async function repairMalformedJson(args: {
+  apiKey: string;
+  rawText: string;
+}) {
+  const repaired = await invokeLovableChat({
+    apiKey: args.apiKey,
+    systemPrompt: `Du reparerer ugyldig JSON.
+Returner kun gyldig JSON og behold struktur, nøkler og innhold så likt som mulig.
+Ikke legg til forklaringer, markdown eller kodegjerder.`,
+    userPrompt: `Reparer dette til gyldig JSON:\n\n${args.rawText}`,
+  });
+
+  const parsed = tryParseJsonPayload(repaired);
+  if (!parsed) {
+    throw new Error("AI returnerte ugyldig JSON ved reparasjon");
+  }
+
+  return parsed;
+}
+
+async function extractJsonPayload(args: {
+  apiKey: string;
+  text: string;
+}) {
+  const parsed = tryParseJsonPayload(args.text);
+  if (parsed) return parsed;
+
+  return repairMalformedJson({
+    apiKey: args.apiKey,
+    rawText: args.text,
+  });
 }
 
 async function parseFromSegments(args: {
@@ -250,10 +316,15 @@ ${templateHint}
 Segmenter:
 ${buildSegmentCatalog(args.segments)}`;
 
-  const parsed = await invokeLovableChat({
+  const rawResponse = await invokeLovableChat({
     apiKey: args.apiKey,
     systemPrompt,
     userPrompt,
+  });
+
+  const parsed = await extractJsonPayload({
+    apiKey: args.apiKey,
+    text: rawResponse,
   });
 
   return buildCvEditorImportDocument(parsed, args.segments);
@@ -336,11 +407,16 @@ ${templateHint}
 Eksisterende segmenter:
 ${args.segments.length ? buildSegmentCatalog(args.segments) : "(ingen brukbare tekstsegmenter funnet)"}`;
 
-  const parsed = await invokeLovableChat({
+  const rawResponse = await invokeLovableChat({
     apiKey: args.apiKey,
     systemPrompt,
     userPrompt,
     base64: args.base64,
+  });
+
+  const parsed = await extractJsonPayload({
+    apiKey: args.apiKey,
+    text: rawResponse,
   });
 
   return buildCvEditorImportDocument(parsed, args.segments);
@@ -362,12 +438,14 @@ serve(async (req) => {
     const segments = Array.isArray(body.segments) ? body.segments : [];
     const isLowTextConfidence = Boolean(body.isLowTextConfidence);
     const templateDetected = detectStacqTemplate(segments);
+    const corruptedExtractedText = looksCorruptedExtractedText(segments);
 
     if (!segments.length && !body.base64) {
       throw new Error("Missing CV content");
     }
 
-    let sourceMode: "segments" | "ocr" = segments.length > 0 && !isLowTextConfidence ? "segments" : "ocr";
+    let sourceMode: "segments" | "ocr" =
+      segments.length > 0 && !isLowTextConfidence && !corruptedExtractedText ? "segments" : "ocr";
     let requiresReview = sourceMode === "ocr";
     let importDocument;
 
@@ -424,6 +502,12 @@ serve(async (req) => {
       !importDocument.warnings.includes("STACQ-malen ble tolket via layout-aware OCR. Kontroller spesielt navn, ingress og sidebar.")
     ) {
       importDocument.warnings.unshift("STACQ-malen ble tolket via layout-aware OCR. Kontroller spesielt navn, ingress og sidebar.");
+    }
+    if (
+      corruptedExtractedText &&
+      !importDocument.warnings.includes("PDF-teksten ser delvis korrupt ut. OCR-løype ble prioritert for å bevare tekst bedre.")
+    ) {
+      importDocument.warnings.unshift("PDF-teksten ser delvis korrupt ut. OCR-løype ble prioritert for å bevare tekst bedre.");
     }
 
     return jsonResponse({

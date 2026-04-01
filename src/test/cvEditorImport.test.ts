@@ -229,4 +229,54 @@ describe("buildCvEditorImportDocument", () => {
     });
     expect(result.education).toEqual([]);
   });
+
+  it("folds duplicated core timeline sections out of additionalSections", () => {
+    const result = buildCvEditorImportDocument(
+      {
+        workExperience: [
+          {
+            period: "2024 –",
+            primary: "STACQ AS",
+          },
+        ],
+        additionalSections: [
+          {
+            title: "Arbeidserfaring",
+            format: "timeline",
+            items: [
+              { primary: "2024 – STACQ AS" },
+              { primary: "2022 – 2024 KIWI.KI GmbH 2022 – 2024 KIWI.KI GmbH" },
+            ],
+          },
+          {
+            title: "UTDANNELSE",
+            format: "timeline",
+            items: [
+              { primary: "2017 – 2019 Master i elektronikk fra NTNU" },
+              { primary: "2014 – 2017 Bachelor i elektroingeniør fra HiST/NTNU" },
+            ],
+          },
+        ],
+      },
+      [],
+    );
+
+    expect(result.additionalSections).toEqual([]);
+    expect(result.workExperience).toEqual([
+      { period: "2024 –", primary: "STACQ AS" },
+      { period: "2022 – 2024", primary: "KIWI.KI GmbH" },
+    ]);
+    expect(result.education).toEqual([
+      {
+        period: "2017 – 2019",
+        primary: "Master i elektronikk fra NTNU",
+        secondary: "",
+      },
+      {
+        period: "2014 – 2017",
+        primary: "Bachelor i elektroingeniør fra HiST/NTNU",
+        secondary: "",
+      },
+    ]);
+  });
 });
