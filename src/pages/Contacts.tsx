@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { BulkSignalModal } from "@/components/BulkSignalModal";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { relativeDate } from "@/lib/relativeDate";
 import { CONTACT_CV_EMAIL_REQUIRED_MESSAGE, contactHasEmail } from "@/lib/contactCvEligibility";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -28,18 +29,19 @@ import {
   getActivityStatus,
   TEMP_CONFIG,
 } from "@/lib/heatScore";
+import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/queryKeys";
 
 type SortField = "name" | "company" | "title" | "signal" | "owner" | "last_activity" | "priority";
 type SortDir = "asc" | "desc";
 
-import { CATEGORIES, getEffectiveSignal, upsertTaskSignalDescription } from "@/lib/categoryUtils";
-
-const SIGNAL_OPTIONS = CATEGORIES.map((c) => ({ label: c.label, color: c.badgeColor }));
-
-function getSignalBadge(category: string | null) {
-  if (!category) return null;
-  return SIGNAL_OPTIONS.find((s) => s.label === category) || null;
-}
+import {
+  CATEGORIES,
+  SIGNAL_OPTIONS,
+  getEffectiveSignal,
+  getSignalBadge,
+  getSignalRank,
+  upsertTaskSignalDescription,
+} from "@/lib/categoryUtils";
 
 const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer";
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
@@ -47,18 +49,21 @@ const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground fo
 
 const Contacts = () => {
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [ownerFilter, setOwnerFilter] = useState("all");
-  const [signalFilter, setSignalFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "priority", dir: "desc" });
-  const [hotListActive, setHotListActive] = useState(true);
+  const [search, setSearch] = usePersistentState("stacq:contacts:search", "");
+  const [ownerFilter, setOwnerFilter] = usePersistentState("stacq:contacts:ownerFilter", "all");
+  const [signalFilter, setSignalFilter] = usePersistentState("stacq:contacts:signalFilter", "all");
+  const [typeFilter, setTypeFilter] = usePersistentState("stacq:contacts:typeFilter", "all");
+  const [sort, setSort] = usePersistentState<{ field: SortField; dir: SortDir }>("stacq:contacts:sort", {
+    field: "priority",
+    dir: "desc",
+  });
+  const [hotListActive, setHotListActive] = usePersistentState("stacq:contacts:hotListActive", true);
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const navigate = useNavigate();
 
   const { data: contactsResult, isLoading } = useQuery({
-    queryKey: ["contacts-full"],
+    queryKey: crmQueryKeys.contacts.all(),
     queryFn: async () => {
       const { data, error, count } = await supabase
         .from("contacts")
@@ -247,7 +252,7 @@ const Contacts = () => {
       delete pendingToggles.current[key];
     }
 
-    queryClient.setQueryData(["contacts-full"], (old: any) => ({
+    queryClient.setQueryData(crmQueryKeys.contacts.all(), (old: any) => ({
       ...old,
       rows: old?.rows?.map((c: any) => (c.id === contact.id ? { ...c, [field]: newValue } : c)),
     }));
@@ -260,12 +265,12 @@ const Contacts = () => {
         .eq("id", contact.id);
       if (error) {
         toast.error("Kunne ikke oppdatere");
-        queryClient.setQueryData(["contacts-full"], (old: any) => ({
+        queryClient.setQueryData(crmQueryKeys.contacts.all(), (old: any) => ({
           ...old,
           rows: old?.rows?.map((c: any) => (c.id === contact.id ? { ...c, [field]: !newValue } : c)),
         }));
       }
-      queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() });
     }, 10000);
     pendingToggles.current[key] = timeout;
 
@@ -276,7 +281,7 @@ const Contacts = () => {
         onClick: () => {
           clearTimeout(pendingToggles.current[key]);
           delete pendingToggles.current[key];
-          queryClient.setQueryData(["contacts-full"], (old: any) => ({
+          queryClient.setQueryData(crmQueryKeys.contacts.all(), (old: any) => ({
             ...old,
             rows: old?.rows?.map((c: any) => (c.id === contact.id ? { ...c, [field]: !newValue } : c)),
           }));
@@ -331,20 +336,17 @@ const Contacts = () => {
     },
     onMutate: async ({ contactId, label }) => {
       // Optimistic update
-      queryClient.setQueryData(["contacts-full"], (old: any) => ({
+      queryClient.setQueryData(crmQueryKeys.contacts.all(), (old: any) => ({
         ...old,
         rows: old?.rows?.map((c: any) => (c.id === contactId ? { ...c, signal: label } : c)),
       }));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
-      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
-      queryClient.invalidateQueries({ queryKey: ["oppfolginger-tasks-v1"] });
-      queryClient.invalidateQueries({ queryKey: ["oppfolginger-signal-v1"] });
+      invalidateQueryGroup(queryClient, crmSummaryQueryKeys);
       toast.success("Signal oppdatert");
     },
     onError: () => {
-      queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() });
       toast.error("Kunne ikke oppdatere signal");
     },
   });
@@ -374,14 +376,6 @@ const Contacts = () => {
     return matchSearch && matchOwner && matchSignal && matchType;
   });
 
-  const SIGNAL_ORDER: Record<string, number> = {
-    "Behov nå": 0,
-    "Får fremtidig behov": 1,
-    "Får kanskje behov": 2,
-    "Ukjent om behov": 3,
-    "Ikke aktuelt": 4,
-  };
-
   const sorted = [...filtered].sort((a, b) => {
     const dir = sort.dir === "asc" ? 1 : -1;
     switch (sort.field) {
@@ -394,8 +388,8 @@ const Contacts = () => {
       case "signal": {
         const sa = (a as any).signal as string | null;
         const sb = (b as any).signal as string | null;
-        const oa = sa ? (SIGNAL_ORDER[sa] ?? 5) : 6;
-        const ob = sb ? (SIGNAL_ORDER[sb] ?? 5) : 6;
+        const oa = getSignalRank(sa);
+        const ob = getSignalRank(sb);
         return dir * (oa - ob);
       }
       case "owner":
@@ -635,7 +629,7 @@ const Contacts = () => {
                       <DropdownMenuTrigger asChild>
                         {signalBadge ? (
                           <button
-                            className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer ${signalBadge.color}`}
+                            className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer ${signalBadge.badgeColor}`}
                           >
                             {signal}
                             <ChevronDown className="ml-1 h-3 w-3" />
@@ -761,7 +755,7 @@ const Contacts = () => {
                         <DropdownMenuTrigger asChild>
                           {signalBadge ? (
                             <button
-                              className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer ${signalBadge.color}`}
+                              className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer ${signalBadge.badgeColor}`}
                             >
                               {signal}
                               <ChevronDown className="h-3 w-3 ml-1" />

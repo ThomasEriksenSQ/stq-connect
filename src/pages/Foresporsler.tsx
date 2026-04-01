@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { getInitials, cn } from "@/lib/utils";
 import {
   Dialog,
@@ -36,6 +37,7 @@ import { Input } from "@/components/ui/input";
 import { mergeTechnologyTags } from "@/lib/technologyTags";
 import { format, differenceInDays, parseISO, startOfDay } from "date-fns";
 import { nb } from "date-fns/locale";
+import { crmQueryKeys } from "@/lib/queryKeys";
 
 type StatusFilter = "aktive" | "utgatte" | "alle";
 type TypeFilter = "Alle" | "DIR" | "VIA";
@@ -342,7 +344,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
   const isPartner = selectedCompany?.status === "partner";
 
   const { data: companyContacts = [] } = useQuery({
-    queryKey: ["foresporsler-kontakter", selskapId],
+    queryKey: crmQueryKeys.foresporsler.kontakter(selskapId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
@@ -396,7 +398,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
     setKontaktId(data.id);
     setShowCreateContact(false);
     setKontaktError(false);
-    queryClient.invalidateQueries({ queryKey: ["foresporsler-kontakter", selskapId] });
+    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.kontakter(selskapId) });
     toast.success(`${data.first_name} ${data.last_name} opprettet`);
   };
 
@@ -446,7 +448,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
     setSubmitting(false);
     const contactDisplayName = kontakt || "kontakten";
     toast.success(`Forespørsel opprettet · 🔥 Behov nå satt på ${contactDisplayName}`);
-    queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
+    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.list() });
     onClose();
   };
 
@@ -768,12 +770,12 @@ export default function Foresporsler() {
   
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
   const [sheetExpanded, setSheetExpanded] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("aktive");
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
-  const [sort, setSort] = useState<{
+  const [statusFilter, setStatusFilter] = usePersistentState<StatusFilter>("stacq:foresporsler:statusFilter", "aktive");
+  const [typeFilter, setTypeFilter] = usePersistentState<TypeFilter>("stacq:foresporsler:typeFilter", "Alle");
+  const [sort, setSort] = usePersistentState<{
     field: "mottatt_dato" | "selskap_navn" | "sendt_count";
     dir: "asc" | "desc";
-  }>({ field: "mottatt_dato", dir: "desc" });
+  }>("stacq:foresporsler:sort", { field: "mottatt_dato", dir: "desc" });
 
   const toggleSort = (field: typeof sort.field) => {
     setSort(prev =>
@@ -784,7 +786,7 @@ export default function Foresporsler() {
   };
 
   const { data: rows, isLoading } = useQuery({
-    queryKey: ["foresporsler-list"],
+    queryKey: crmQueryKeys.foresporsler.list(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("foresporsler")

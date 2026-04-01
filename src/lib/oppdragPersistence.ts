@@ -2,18 +2,10 @@ import type { QueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { buildOppdragWritePayload, type OppdragFormState } from "@/lib/oppdragForm";
-
-const OPPDRAG_QUERY_KEYS = [
-  ["stacq-oppdrag"],
-  ["stacq-oppdrag-prisen"],
-  ["stacq-oppdrag-active-names"],
-  ["stacq-oppdrag-fornyelser"],
-] as const;
+import { invalidateQueryGroup, oppdragQueryKeys } from "@/lib/queryKeys";
 
 export async function invalidateOppdragQueries(queryClient: QueryClient) {
-  await Promise.all(
-    OPPDRAG_QUERY_KEYS.map((queryKey) => queryClient.invalidateQueries({ queryKey: [...queryKey] })),
-  );
+  await invalidateQueryGroup(queryClient, oppdragQueryKeys);
 }
 
 export async function createOppdrag(

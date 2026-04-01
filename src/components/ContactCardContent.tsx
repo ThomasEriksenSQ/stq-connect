@@ -45,11 +45,18 @@ import { cleanDescription } from "@/lib/cleanDescription";
 import { cn } from "@/lib/utils";
 import { getEffectiveSignal, upsertTaskSignalDescription } from "@/lib/categoryUtils";
 import {
+  filterConsultantMatches,
+  formatConsultantMatchFreshness,
+  getConsultantMatchScoreColor,
+  sortConsultantMatches,
+} from "@/lib/consultantMatches";
+import {
   buildContactCvSafeUpdates,
   CONTACT_CV_EMAIL_REQUIRED_MESSAGE,
   contactHasEmail,
 } from "@/lib/contactCvEligibility";
 import { mergeTechnologyTags } from "@/lib/technologyTags";
+import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/queryKeys";
 
 /* ── Category system ── */
 const CATEGORIES = [
@@ -293,9 +300,10 @@ export function ContactCardContent({
   const [matchingConsultants, setMatchingConsultants] = useState(false);
   const [consultantResults, setConsultantResults] = useState<ConsultantMatchResult[] | null>(null);
   const [matchSourceFilter, setMatchSourceFilter] = useState<"Alle" | "Ansatte" | "Eksterne">("Alle");
+  const [matchUpdatedAt, setMatchUpdatedAt] = useState<string | null>(null);
 
   const { data: contact, isLoading } = useQuery({
-    queryKey: ["contact", contactId],
+    queryKey: crmQueryKeys.contacts.detail(contactId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
@@ -309,7 +317,7 @@ export function ContactCardContent({
   });
 
   const { data: allProfiles = [] } = useQuery({
-    queryKey: ["profiles"],
+    queryKey: crmQueryKeys.profiles.all(),
     queryFn: async () => {
       const { data, error } = await supabase.from("profiles").select("id, full_name").order("full_name");
       if (error) throw error;
@@ -318,7 +326,7 @@ export function ContactCardContent({
   });
 
   const { data: activities = [] } = useQuery({
-    queryKey: ["contact-activities", contactId],
+    queryKey: crmQueryKeys.contacts.activities(contactId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("activities")
@@ -335,7 +343,7 @@ export function ContactCardContent({
   const profileMapFull = Object.fromEntries(allProfiles.map((p) => [p.id, p.full_name]));
 
   const { data: tasks = [] } = useQuery({
-    queryKey: ["contact-tasks", contactId],
+    queryKey: crmQueryKeys.contacts.tasks(contactId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks")
@@ -356,8 +364,8 @@ export function ContactCardContent({
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["contact", contactId] });
-      queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.detail(contactId) });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() });
     },
     onError: () => toast.error("Kunne ikke oppdatere"),
   });
@@ -391,12 +399,9 @@ export function ContactCardContent({
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["contact-tasks", contactId] });
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
-      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
-      queryClient.invalidateQueries({ queryKey: ["oppfolginger-tasks-v1"] });
-      queryClient.invalidateQueries({ queryKey: ["oppfolginger-signal-v1"] });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.tasks(contactId) });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.generic.tasks() });
+      invalidateQueryGroup(queryClient, crmSummaryQueryKeys);
       toast.success("Signal oppdatert");
       closeForm();
     },
@@ -416,9 +421,9 @@ export function ContactCardContent({
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["contact-activities", contactId] });
-      queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
-      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.activities(contactId) });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
       toast.success("Aktivitet registrert");
       closeForm();
     },
@@ -440,8 +445,8 @@ export function ContactCardContent({
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["contact-tasks", contactId] });
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.tasks(contactId) });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.generic.tasks() });
       toast.success("Oppfølging opprettet");
       closeForm();
     },
@@ -461,8 +466,8 @@ export function ContactCardContent({
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["contact-tasks", contactId] });
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.tasks(contactId) });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.generic.tasks() });
       toast.success("Oppfølging fullført", { duration: 2000 });
     },
   });
@@ -473,7 +478,7 @@ export function ContactCardContent({
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["contact-activities", contactId] });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.activities(contactId) });
       toast.success("Aktivitet slettet");
     },
   });
@@ -484,7 +489,7 @@ export function ContactCardContent({
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["contact-activities", contactId] });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.activities(contactId) });
       toast.success("Oppdatert");
     },
   });
@@ -495,8 +500,8 @@ export function ContactCardContent({
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["contact-tasks", contactId] });
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.tasks(contactId) });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.generic.tasks() });
       toast.success("Oppfølging slettet");
     },
   });
@@ -510,8 +515,8 @@ export function ContactCardContent({
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["contact-tasks", contactId] });
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.tasks(contactId) });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.generic.tasks() });
       toast.success("Oppdatert");
     },
   });
@@ -524,6 +529,7 @@ export function ContactCardContent({
     }
     setMatchingConsultants(true);
     setConsultantResults(null);
+    setMatchUpdatedAt(null);
     try {
       const [{ data: interne }, { data: eksterne }] = await Promise.all([
         supabase
@@ -547,14 +553,22 @@ export function ContactCardContent({
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setMatchSourceFilter("Alle");
-      setConsultantResults(Array.isArray(data) ? data : []);
+      setConsultantResults(sortConsultantMatches(Array.isArray(data) ? data : []));
+      setMatchUpdatedAt(new Date().toISOString());
     } catch (err: any) {
       toast.error(err.message || "Kunne ikke kjøre matching");
       setConsultantResults([]);
+      setMatchUpdatedAt(null);
     } finally {
       setMatchingConsultants(false);
     }
   };
+
+  const visibleConsultantResults = useMemo(
+    () => filterConsultantMatches(consultantResults || [], matchSourceFilter),
+    [consultantResults, matchSourceFilter],
+  );
+  const consultantMatchFreshness = formatConsultantMatchFreshness(matchUpdatedAt);
 
   const openForm = (type: "call" | "meeting" | "task") => {
     setActiveForm(type);
@@ -1313,9 +1327,16 @@ export function ContactCardContent({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Target className="h-4 w-4 text-primary" />
-                <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                  Konsulentmatch
-                </span>
+                <div>
+                  <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                    Konsulentmatch
+                  </span>
+                  {consultantMatchFreshness && (
+                    <p className="text-[0.6875rem] text-muted-foreground normal-case tracking-normal">
+                      {consultantMatchFreshness}
+                    </p>
+                  )}
+                </div>
                 <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-primary/10 text-primary text-[0.6875rem] font-semibold">
                   {consultantResults.length}
                 </span>
@@ -1328,7 +1349,7 @@ export function ContactCardContent({
               </button>
             </div>
 
-            {consultantResults.length === 0 ? (
+            {visibleConsultantResults.length === 0 ? (
               <p className="text-[0.8125rem] text-muted-foreground">Ingen treff med score ≥ 4</p>
             ) : (
               <div className="space-y-2">
@@ -1351,15 +1372,7 @@ export function ContactCardContent({
                     })}
                   </div>
                 )}
-                {consultantResults
-                  .filter((m) =>
-                    matchSourceFilter === "Alle"
-                      ? true
-                      : matchSourceFilter === "Ansatte"
-                        ? m.type === "intern"
-                        : m.type === "ekstern",
-                  )
-                  .map((m, i) => (
+                {visibleConsultantResults.map((m, i) => (
                   <div key={`${m.type || "ukjent"}-${m.id}`} className="rounded-lg border border-border bg-card p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
@@ -1382,7 +1395,7 @@ export function ContactCardContent({
                         <span
                           className={cn(
                             "inline-block h-2.5 w-2.5 rounded-full",
-                            m.score >= 8 ? "bg-emerald-500" : m.score >= 6 ? "bg-amber-500" : "bg-red-500",
+                            getConsultantMatchScoreColor(m.score),
                           )}
                         />
 

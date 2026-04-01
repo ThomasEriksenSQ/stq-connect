@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/queryKeys";
 import { differenceInDays, isPast, isToday, format, addWeeks, addMonths } from "date-fns";
 import { nb } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -161,7 +162,7 @@ const DailyBrief = () => {
   );
 
   const { data: allProfiles = [] } = useQuery({
-    queryKey: ["profiles"],
+    queryKey: crmQueryKeys.profiles.all(),
     queryFn: async () => {
       const { data, error } = await supabase.from("profiles").select("id, full_name");
       if (error) throw error;
@@ -170,7 +171,7 @@ const DailyBrief = () => {
   });
 
   const { data: salgsData, isLoading } = useQuery({
-    queryKey: ["salgssenter-all", ownerFilter],
+    queryKey: crmQueryKeys.dailyBrief.all(ownerFilter),
     queryFn: async () => {
       let q = supabase
         .from("contacts")
@@ -428,15 +429,12 @@ const DailyBrief = () => {
       }
 
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["salgssenter-all"] }),
-        queryClient.invalidateQueries({ queryKey: ["contact-tasks", contactId] }),
-        queryClient.invalidateQueries({ queryKey: ["contacts-full"] }),
-        queryClient.invalidateQueries({ queryKey: ["companies-full"] }),
-        queryClient.invalidateQueries({ queryKey: ["oppfolginger-tasks-v1"] }),
-        queryClient.invalidateQueries({ queryKey: ["oppfolginger-signal-v1"] }),
+        queryClient.invalidateQueries({ queryKey: crmQueryKeys.dailyBrief.all(ownerFilter) }),
+        queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.tasks(contactId) }),
+        invalidateQueryGroup(queryClient, crmSummaryQueryKeys),
       ]);
     },
-    [queryClient, user?.id],
+    [ownerFilter, queryClient, user?.id],
   );
 
   const goNext = useCallback(

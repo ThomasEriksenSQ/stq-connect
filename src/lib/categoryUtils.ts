@@ -6,6 +6,11 @@ export const CATEGORIES = [
   { label: "Ikke aktuelt", badgeColor: "bg-red-50 text-red-700 border-red-200" },
 ] as const;
 
+export const SIGNAL_OPTIONS = CATEGORIES.map((category) => ({
+  label: category.label,
+  badgeColor: category.badgeColor,
+}));
+
 export const LEGACY_CATEGORY_MAP: Record<string, string> = {
   "Fremtidig behov": "Får fremtidig behov",
   "Har kanskje behov": "Får kanskje behov",
@@ -87,6 +92,21 @@ export function extractCategory(subject: string | null, description: string | nu
 }
 
 export const SIGNAL_ORDER = CATEGORIES.map((c) => c.label);
+
+export function getSignalBadge(category: string | null) {
+  if (!category) return null;
+
+  const normalized = normalizeCategoryLabel(category);
+  return SIGNAL_OPTIONS.find((option) => option.label === normalized) || null;
+}
+
+export function getSignalRank(category: string | null): number {
+  if (!category) return SIGNAL_ORDER.length + 1;
+
+  const normalized = normalizeCategoryLabel(category);
+  const rank = SIGNAL_ORDER.indexOf(normalized);
+  return rank === -1 ? SIGNAL_ORDER.length : rank;
+}
 
 /**
  * Given all activities and open tasks for a contact/company, return the current signal.

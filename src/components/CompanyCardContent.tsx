@@ -60,11 +60,18 @@ import { lookupByOrgNr } from "@/components/BrregSearch";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import {
+  filterConsultantMatches,
+  formatConsultantMatchFreshness,
+  getConsultantMatchScoreColor,
+  sortConsultantMatches,
+} from "@/lib/consultantMatches";
+import {
   CONTACT_CV_EMAIL_REQUIRED_MESSAGE,
   contactHasEmail,
   sanitizeContactCvEmail,
 } from "@/lib/contactCvEligibility";
 import { getSortedTechnologyEntries, mergeTechnologyTags } from "@/lib/technologyTags";
+import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/queryKeys";
 import {
   CATEGORIES as SIGNAL_CATEGORIES,
   getEffectiveSignal,
@@ -237,6 +244,7 @@ export function CompanyCardContent({
   const [matchingKonsulenter, setMatchingKonsulenter] = useState(false);
   const [konsulentResults, setKonsulentResults] = useState<any[] | null>(null);
   const [konsulentFilter, setKonsulentFilter] = useState<"Alle" | "Ansatte" | "Eksterne">("Alle");
+  const [konsulentMatchUpdatedAt, setKonsulentMatchUpdatedAt] = useState<string | null>(null);
   const { user } = useAuth();
   const [showAnalyze, setShowAnalyze] = useState(false);
   const [analyzeText, setAnalyzeText] = useState("");
@@ -246,7 +254,7 @@ export function CompanyCardContent({
   const [mergeCompanyDialogOpen, setMergeCompanyDialogOpen] = useState(false);
 
   const { data: company, isLoading } = useQuery({
-    queryKey: ["company", companyId],
+    queryKey: crmQueryKeys.companies.detail(companyId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("companies")
@@ -311,7 +319,7 @@ export function CompanyCardContent({
   }, [editForm.org_number]);
 
   const { data: allProfiles = [] } = useQuery({
-    queryKey: ["profiles"],
+    queryKey: crmQueryKeys.profiles.all(),
     queryFn: async () => {
       const { data, error } = await supabase.from("profiles").select("id, full_name");
       if (error) throw error;
@@ -321,7 +329,7 @@ export function CompanyCardContent({
   const profileMapFull = Object.fromEntries(allProfiles.map((p) => [p.id, p.full_name]));
 
   const { data: contacts = [] } = useQuery({
-    queryKey: ["company-contacts", companyId],
+    queryKey: crmQueryKeys.companies.contacts(companyId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
@@ -337,7 +345,7 @@ export function CompanyCardContent({
   const contactIds = contacts.map((c) => c.id);
 
   const { data: companyActivities = [] } = useQuery({
-    queryKey: ["company-activities-direct", companyId],
+    queryKey: crmQueryKeys.companies.activities(companyId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("activities")
@@ -351,7 +359,7 @@ export function CompanyCardContent({
   });
 
   const { data: contactActivities = [] } = useQuery({
-    queryKey: ["company-contact-activities", companyId, contactIds],
+    queryKey: crmQueryKeys.companies.contactActivities(companyId, contactIds),
     queryFn: async () => {
       if (contactIds.length === 0) return [];
       const { data, error } = await supabase
@@ -375,7 +383,7 @@ export function CompanyCardContent({
   );
 
   const { data: companyTasks = [] } = useQuery({
-    queryKey: ["company-tasks", companyId],
+    queryKey: crmQueryKeys.companies.tasks(companyId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks")
@@ -390,7 +398,7 @@ export function CompanyCardContent({
   });
 
   const { data: contactTasks = [] } = useQuery({
-    queryKey: ["company-contact-tasks", companyId, contactIds],
+    queryKey: crmQueryKeys.companies.contactTasks(companyId, contactIds),
     queryFn: async () => {
       if (contactIds.length === 0) return [];
       const { data, error } = await supabase
@@ -406,7 +414,7 @@ export function CompanyCardContent({
   });
 
   const { data: techProfile } = useQuery({
-    queryKey: ["company-tech-profile", companyId],
+    queryKey: crmQueryKeys.companies.techProfile(companyId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("company_tech_profile")
@@ -437,8 +445,8 @@ export function CompanyCardContent({
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["company", companyId] });
-      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.detail(companyId) });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
       toast.success("Oppdatert");
     },
     onError: () => toast.error("Kunne ikke oppdatere"),
@@ -457,9 +465,9 @@ export function CompanyCardContent({
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["company-tasks", companyId] });
-      queryClient.invalidateQueries({ queryKey: ["company-contact-tasks", companyId] });
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.tasks(companyId) });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.contactTasks(companyId) });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.generic.tasks() });
     },
   });
 
@@ -469,7 +477,7 @@ export function CompanyCardContent({
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
       toast.success("Selskap slettet");
       navigate("/selskaper");
     },
@@ -505,12 +513,9 @@ export function CompanyCardContent({
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["company-tasks", companyId] });
-      queryClient.invalidateQueries({ queryKey: ["company-contact-tasks", companyId] });
-      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
-      queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
-      queryClient.invalidateQueries({ queryKey: ["oppfolginger-tasks-v1"] });
-      queryClient.invalidateQueries({ queryKey: ["oppfolginger-signal-v1"] });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.tasks(companyId) });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.contactTasks(companyId) });
+      invalidateQueryGroup(queryClient, crmSummaryQueryKeys);
       toast.success("Signal oppdatert");
     },
     onError: () => toast.error("Kunne ikke oppdatere signal"),
@@ -519,6 +524,12 @@ export function CompanyCardContent({
   const updateField = (field: string) => (value: string) => {
     updateMutation.mutate({ [field]: value || null });
   };
+
+  const visibleKonsulentResults = useMemo(
+    () => filterConsultantMatches(konsulentResults || [], konsulentFilter),
+    [konsulentFilter, konsulentResults],
+  );
+  const konsulentMatchFreshness = formatConsultantMatchFreshness(konsulentMatchUpdatedAt);
 
   if (isLoading) {
     return (
@@ -553,6 +564,7 @@ export function CompanyCardContent({
   const handleFinnKonsulenter = async () => {
     setMatchingKonsulenter(true);
     setKonsulentResults(null);
+    setKonsulentMatchUpdatedAt(null);
     try {
       const [{ data: foresporslerData }, { data: interne }, { data: eksterne }] = await Promise.all([
         supabase
@@ -596,10 +608,12 @@ export function CompanyCardContent({
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      setKonsulentResults(Array.isArray(data) ? data : []);
+      setKonsulentResults(sortConsultantMatches(Array.isArray(data) ? data : []));
+      setKonsulentMatchUpdatedAt(new Date().toISOString());
     } catch (err: any) {
       toast.error(err.message || "Kunne ikke kjøre matching");
       setKonsulentResults([]);
+      setKonsulentMatchUpdatedAt(null);
     } finally {
       setMatchingKonsulenter(false);
     }
@@ -1216,9 +1230,16 @@ export function CompanyCardContent({
                 {konsulentResults !== null && (
                   <div className="mb-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                        Konsulentmatch · {konsulentResults.length}
-                      </span>
+                      <div>
+                        <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                          Konsulentmatch · {konsulentResults.length}
+                        </span>
+                        {konsulentMatchFreshness && (
+                          <p className="text-[0.6875rem] text-muted-foreground normal-case tracking-normal">
+                            {konsulentMatchFreshness}
+                          </p>
+                        )}
+                      </div>
                       <button
                         onClick={handleFinnKonsulenter}
                         className="text-[0.6875rem] text-muted-foreground hover:text-foreground"
@@ -1242,24 +1263,10 @@ export function CompanyCardContent({
                         </button>
                       ))}
                     </div>
-                    {konsulentResults.filter((m: any) =>
-                      konsulentFilter === "Alle"
-                        ? true
-                        : konsulentFilter === "Ansatte"
-                          ? m.type === "intern"
-                          : m.type === "ekstern",
-                    ).length === 0 ? (
+                    {visibleKonsulentResults.length === 0 ? (
                       <p className="text-[0.8125rem] text-muted-foreground">Ingen treff</p>
                     ) : (
-                      konsulentResults
-                        .filter((m: any) =>
-                          konsulentFilter === "Alle"
-                            ? true
-                            : konsulentFilter === "Ansatte"
-                              ? m.type === "intern"
-                              : m.type === "ekstern",
-                        )
-                        .map((m: any, i: number) => (
+                      visibleKonsulentResults.map((m: any, i: number) => (
                           <div key={`${m.type}-${m.id}`} className="rounded-lg border border-border bg-card p-2.5">
                             <div className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-1.5 min-w-0">
@@ -1280,7 +1287,7 @@ export function CompanyCardContent({
                                 <span
                                   className={cn(
                                     "inline-block h-2 w-2 rounded-full",
-                                    m.score >= 8 ? "bg-emerald-500" : m.score >= 6 ? "bg-amber-500" : "bg-red-500",
+                                    getConsultantMatchScoreColor(m.score),
                                   )}
                                 />
 
@@ -1488,8 +1495,8 @@ export function CompanyCardContent({
                         toast.error("Kunne ikke opprette kontakt");
                         return;
                       }
-                      queryClient.invalidateQueries({ queryKey: ["company-contacts", companyId] });
-                      queryClient.invalidateQueries({ queryKey: ["contacts-full"] });
+                      queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.contacts(companyId) });
+                      queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() });
                       setNewContactOpen(false);
                       setContactForm({
                         first_name: "",
@@ -1829,16 +1836,16 @@ function CompanyActivityRow({
       updates.created_at = new Date(editDate).toISOString();
     }
     await supabase.from("activities").update(updates).eq("id", activity.id);
-    queryClient.invalidateQueries({ queryKey: ["company-activities-direct", companyId] });
-    queryClient.invalidateQueries({ queryKey: ["company-contact-activities", companyId] });
+    queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.activities(companyId) });
+    queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.contactActivities(companyId) });
     setEditing(false);
     toast.success("Aktivitet oppdatert");
   };
 
   const handleDelete = async () => {
     await supabase.from("activities").delete().eq("id", activity.id);
-    queryClient.invalidateQueries({ queryKey: ["company-activities-direct", companyId] });
-    queryClient.invalidateQueries({ queryKey: ["company-contact-activities", companyId] });
+    queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.activities(companyId) });
+    queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.contactActivities(companyId) });
     toast.success("Aktivitet slettet");
   };
 
@@ -1992,7 +1999,7 @@ function CompanyDnaPanel({ companyId }: { companyId: string }) {
   const queryClient = useQueryClient();
 
   const { data: dnaProfile } = useQuery({
-    queryKey: ["company-tech-profile", companyId],
+    queryKey: crmQueryKeys.companies.techProfile(companyId),
     queryFn: async () => {
       const { data } = await supabase.from("company_tech_profile").select("*").eq("company_id", companyId).single();
       return data || null;

@@ -15,31 +15,19 @@ import {
 import { Plus, Search, ArrowUpDown, Loader2, X, MapPin, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { usePersistentState } from "@/hooks/usePersistentState";
 
 import { BrregSearch, lookupByOrgNr } from "@/components/BrregSearch";
 import { relativeDate } from "@/lib/relativeDate";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
+import { crmQueryKeys } from "@/lib/queryKeys";
 
 type SortField = "name" | "type" | "city" | "last_activity" | "tasks";
 type SortDir = "asc" | "desc";
 
-import {
-  CATEGORIES,
-  LEGACY_CATEGORY_MAP,
-  normalizeCategoryLabel,
-  extractCategory,
-  SIGNAL_ORDER,
-  getEffectiveSignal,
-} from "@/lib/categoryUtils";
-
-const SIGNAL_OPTIONS = CATEGORIES.map((c) => ({ label: c.label, color: c.badgeColor }));
-
-function getSignalBadge(category: string | null) {
-  if (!category) return null;
-  return SIGNAL_OPTIONS.find((s) => s.label === category) || null;
-}
+import { getEffectiveSignal } from "@/lib/categoryUtils";
 
 const TYPE_BADGE_COLORS: Record<string, { label: string; badgeColor: string }> = {
   prospect: { label: "Potensiell kunde", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
@@ -131,9 +119,9 @@ const OrgNrInput = ({
 };
 
 const Companies = () => {
-  const [search, setSearch] = useState("");
-  const [ownerFilter, setOwnerFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [search, setSearch] = usePersistentState("stacq:companies:search", "");
+  const [ownerFilter, setOwnerFilter] = usePersistentState("stacq:companies:ownerFilter", "all");
+  const [statusFilter, setStatusFilter] = usePersistentState("stacq:companies:statusFilter", "all");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -150,8 +138,11 @@ const Companies = () => {
       setLocations((prev) => [form.city, ...prev.slice(1)]);
     }
   }, [form.city]);
-  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "name", dir: "asc" });
-  const [userHasSorted, setUserHasSorted] = useState(false);
+  const [sort, setSort] = usePersistentState<{ field: SortField; dir: SortDir }>("stacq:companies:sort", {
+    field: "name",
+    dir: "asc",
+  });
+  const [userHasSorted, setUserHasSorted] = usePersistentState("stacq:companies:userHasSorted", false);
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -169,7 +160,7 @@ const Companies = () => {
   }, [prefillCompanyName]);
 
   const { data: companies = [], isLoading } = useQuery({
-    queryKey: ["companies-full"],
+    queryKey: crmQueryKeys.companies.all(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("companies")
@@ -304,7 +295,7 @@ const Companies = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
       setOpen(false);
       setForm({ name: "", org_number: "", city: "", website: "", linkedin: "", status: "prospect" });
       setLocations([""]);
@@ -343,16 +334,16 @@ const Companies = () => {
       if (error) throw error;
     },
     onMutate: async ({ companyId, status }) => {
-      queryClient.setQueryData(["companies-full"], (old: any[]) =>
+      queryClient.setQueryData(crmQueryKeys.companies.all(), (old: any[]) =>
         old?.map((c) => (c.id === companyId ? { ...c, status } : c)),
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
       toast.success("Type oppdatert");
     },
     onError: () => {
-      queryClient.invalidateQueries({ queryKey: ["companies-full"] });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
       toast.error("Kunne ikke oppdatere type");
     },
   });

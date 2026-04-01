@@ -28,9 +28,16 @@ import { Input } from "@/components/ui/input";
 import { format, parseISO } from "date-fns";
 import { nb } from "date-fns/locale";
 import { getEffectiveSignal } from "@/lib/categoryUtils";
+import {
+  filterConsultantMatches,
+  formatConsultantMatchFreshness,
+  getConsultantMatchScoreColor,
+  sortConsultantMatches,
+} from "@/lib/consultantMatches";
 import { mergeTechnologyTags } from "@/lib/technologyTags";
 import { createOppdragFormState } from "@/lib/oppdragForm";
 import { createOppdrag, invalidateOppdragQueries } from "@/lib/oppdragPersistence";
+import { crmQueryKeys } from "@/lib/queryKeys";
 
 const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
 
@@ -94,12 +101,6 @@ function DeleteButton({ onConfirm }: { onConfirm: () => void }) {
   );
 }
 
-/* ─── Score dot color ─── */
-function ScoreDot({ score }: { score: number }) {
-  const color = score >= 8 ? "bg-emerald-500" : score >= 6 ? "bg-amber-500" : "bg-red-500";
-  return <span className={cn("inline-block h-2.5 w-2.5 rounded-full", color)} />;
-}
-
 /* ─── Missing Contact Banner ─── */
 
 function MissingContactBanner({ row }: { row: any }) {
@@ -128,7 +129,7 @@ function MissingContactBanner({ row }: { row: any }) {
       kontakt_id: c.id,
       updated_at: new Date().toISOString(),
     }).eq("id", row.id);
-    queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
+    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.list() });
     toast.success(`Kontakt ${c.first_name} ${c.last_name} koblet til`);
     setSearch("");
     setShowDropdown(false);
@@ -210,6 +211,7 @@ export function ForespørselSheet({
   const [matching, setMatching] = useState(false);
   const [matchResults, setMatchResults] = useState<MatchResult[] | null>(null);
   const [matchSourceFilter, setMatchSourceFilter] = useState<"Alle" | "Ansatte" | "Eksterne">("Alle");
+  const [matchUpdatedAt, setMatchUpdatedAt] = useState<string | null>(null);
 
   // Opprett oppdrag modal state
   const [oppdragModalOpen, setOppdragModalOpen] = useState(false);
@@ -247,7 +249,7 @@ export function ForespørselSheet({
 
   // Linked consultants (both intern and ekstern)
   const { data: linkedKonsulenter = [], refetch: refetchLinked } = useQuery({
-    queryKey: ["foresporsler-konsulenter", row?.id],
+    queryKey: crmQueryKeys.foresporsler.konsulenter(row?.id),
     enabled: !!row?.id,
     queryFn: async () => {
       const { data } = await supabase
@@ -261,7 +263,7 @@ export function ForespørselSheet({
 
   // Contacts for selected company
   const { data: companyContacts = [] } = useQuery({
-    queryKey: ["foresporsler-edit-kontakter", selskapId],
+    queryKey: crmQueryKeys.foresporsler.editKontakter(selskapId),
     queryFn: async () => {
       const { data } = await supabase
         .from("contacts")
@@ -292,6 +294,7 @@ export function ForespørselSheet({
   // Reset match when row changes
   useEffect(() => {
     setMatchResults(null);
+    setMatchUpdatedAt(null);
     setMatching(false);
     setEditMode(false);
     setEditingKommentar(false);
@@ -387,7 +390,7 @@ export function ForespørselSheet({
     setSaving(false);
     if (error) { toast.error("Kunne ikke oppdatere"); return; }
     toast.success("Forespørsel oppdatert");
-    queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
+    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.list() });
     setEditMode(false);
   };
 
@@ -396,7 +399,7 @@ export function ForespørselSheet({
     const { error } = await supabase.from("foresporsler").delete().eq("id", row.id);
     if (error) { toast.error("Kunne ikke slette"); return; }
     toast.success("Forespørsel slettet");
-    queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
+    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.list() });
     onClose();
   };
 
@@ -406,8 +409,8 @@ export function ForespørselSheet({
       ansatt_id: ansattId,
       konsulent_type: "intern",
     });
-    queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
-    queryClient.invalidateQueries({ queryKey: ["foresporsler-konsulenter", row.id] });
+    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.list() });
+    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.konsulenter(row.id) });
   };
 
   const handleAddEkstern = async (eksternId: string) => {
@@ -416,14 +419,14 @@ export function ForespørselSheet({
       ekstern_id: eksternId,
       konsulent_type: "ekstern",
     });
-    queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
-    queryClient.invalidateQueries({ queryKey: ["foresporsler-konsulenter", row.id] });
+    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.list() });
+    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.konsulenter(row.id) });
   };
 
   const handleRemoveKonsulent = async (linkId: string) => {
     await supabase.from("foresporsler_konsulenter").delete().eq("id", linkId);
-    queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
-    queryClient.invalidateQueries({ queryKey: ["foresporsler-konsulenter", row.id] });
+    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.list() });
+    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.konsulenter(row.id) });
   };
 
   const fireConfetti = () => {
@@ -459,8 +462,8 @@ export function ForespørselSheet({
       setOppdragErAnsatt(isIntern);
       setTimeout(() => setOppdragModalOpen(true), 600);
     }
-    queryClient.invalidateQueries({ queryKey: ["foresporsler-konsulenter", row.id] });
-    queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
+    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.konsulenter(row.id) });
+    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.list() });
   };
 
   const handleCreateOppdrag = async () => {
@@ -502,7 +505,7 @@ export function ForespørselSheet({
       .from("foresporsler")
       .update({ kommentar: kommentar || null, updated_at: new Date().toISOString() })
       .eq("id", row.id);
-    queryClient.invalidateQueries({ queryKey: ["foresporsler-list"] });
+    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.list() });
   };
 
   // AI Match
@@ -553,11 +556,13 @@ export function ForespørselSheet({
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      setMatchResults(Array.isArray(data) ? data : []);
+      setMatchResults(sortConsultantMatches(Array.isArray(data) ? data : []));
+      setMatchUpdatedAt(new Date().toISOString());
     } catch (err: any) {
       console.error("Match error:", err);
       toast.error(err.message || "Kunne ikke kjøre matching");
       setMatchResults([]);
+      setMatchUpdatedAt(null);
     } finally {
       setMatching(false);
     }
@@ -573,6 +578,12 @@ export function ForespørselSheet({
       toast.success(`${match.navn} (ekstern) lagt til`);
     }
   };
+
+  const visibleMatchResults = useMemo(
+    () => filterConsultantMatches(matchResults || [], matchSourceFilter),
+    [matchResults, matchSourceFilter],
+  );
+  const matchFreshness = formatConsultantMatchFreshness(matchUpdatedAt);
 
   const SUGGESTED_TAGS = ["C++", "C", "Embedded", "Yocto", "Linux", "Qt", "FPGA", "Python", "SPI/I2C", "MCU", "Embedded Linux", "Sikkerhet"];
 
@@ -847,7 +858,14 @@ export function ForespørselSheet({
                 <div className="flex items-center justify-between gap-2 mb-4">
                   <div className="flex items-center gap-2">
                     <Target className="h-4 w-4 text-primary" />
-                    <p className={`${LABEL} mb-0`}>Konsulentmatch</p>
+                    <div>
+                      <p className={`${LABEL} mb-0`}>Konsulentmatch</p>
+                      {matchFreshness && (
+                        <p className="text-[0.6875rem] text-muted-foreground normal-case tracking-normal">
+                          {matchFreshness}
+                        </p>
+                      )}
+                    </div>
                   </div>
                   {matchResults && matchResults.length > 0 && (
                     <button
@@ -896,60 +914,64 @@ export function ForespørselSheet({
 
                 {matchResults && matchResults.length > 0 && (
                   <div className="space-y-2">
-                    {matchResults
-                      .filter(m => matchSourceFilter === "Alle" ? true : matchSourceFilter === "Ansatte" ? m.type === "intern" : m.type === "ekstern")
-                      .map((m, i) => {
-                      const isLinked = alreadyLinkedIds.has(m.id);
-                      return (
-                        <div key={`${m.type}-${m.id}`} className="rounded-lg border border-border bg-card p-3">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
-                              <span className="text-[0.875rem] font-semibold text-foreground truncate">{m.navn}</span>
-                              <span className={cn(
-                                "inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold shrink-0",
-                                m.type === "intern"
-                                  ? "bg-foreground text-background"
-                                  : "bg-blue-100 text-blue-700"
-                              )}>
-                                {m.type === "intern" ? "Ansatt" : "Ekstern"}
-                              </span>
+                    {visibleMatchResults.length === 0 ? (
+                      <p className="text-[0.8125rem] text-muted-foreground">Ingen treff for valgt filter</p>
+                    ) : (
+                      visibleMatchResults.map((m, i) => {
+                        const isLinked = alreadyLinkedIds.has(m.id);
+                        return (
+                          <div key={`${m.type}-${m.id}`} className="rounded-lg border border-border bg-card p-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
+                                <span className="text-[0.875rem] font-semibold text-foreground truncate">{m.navn}</span>
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold shrink-0",
+                                    m.type === "intern"
+                                      ? "bg-foreground text-background"
+                                      : "bg-blue-100 text-blue-700",
+                                  )}
+                                >
+                                  {m.type === "intern" ? "Ansatt" : "Ekstern"}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span
+                                  className={cn("inline-block h-2.5 w-2.5 rounded-full", getConsultantMatchScoreColor(m.score))}
+                                />
+                                <span className="text-[0.8125rem] font-bold text-foreground">{m.score}/10</span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <ScoreDot score={m.score} />
-                              <span className="text-[0.8125rem] font-bold text-foreground">{m.score}/10</span>
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {m.match_tags.map((t) => (
+                                <span
+                                  key={t}
+                                  className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[0.6875rem] font-medium text-primary"
+                                >
+                                  {t}
+                                </span>
+                              ))}
                             </div>
-                          </div>
-                          {/* Match tags */}
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {m.match_tags.map(t => (
-                              <span key={t} className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
-                                {t}
+                            <p className="mt-1.5 text-[0.8125rem] italic text-muted-foreground">{m.begrunnelse}</p>
+                            {!isLinked && (
+                              <button
+                                onClick={() => addFromMatch(m)}
+                                className="mt-2 inline-flex items-center gap-1 text-[0.75rem] font-medium text-primary hover:underline"
+                              >
+                                <Plus className="h-3 w-3" />
+                                Legg til
+                              </button>
+                            )}
+                            {isLinked && (
+                              <span className="mt-2 inline-flex items-center gap-1 text-[0.75rem] font-medium text-emerald-600">
+                                ✓ Allerede lagt til
                               </span>
-                            ))}
+                            )}
                           </div>
-                          {/* Begrunnelse */}
-                          <p className="text-[0.8125rem] text-muted-foreground mt-1.5 italic">
-                            {m.begrunnelse}
-                          </p>
-                          {/* Add button */}
-                          {!isLinked && (
-                            <button
-                              onClick={() => addFromMatch(m)}
-                              className="mt-2 inline-flex items-center gap-1 text-[0.75rem] text-primary hover:underline font-medium"
-                            >
-                              <Plus className="h-3 w-3" />
-                              Legg til
-                            </button>
-                          )}
-                          {isLinked && (
-                            <span className="mt-2 inline-flex items-center gap-1 text-[0.75rem] text-emerald-600 font-medium">
-                              ✓ Allerede lagt til
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
+                        );
+                      })
+                    )}
                   </div>
                 )}
               </div>
