@@ -835,8 +835,25 @@ const Contacts = () => {
                               : "3px solid rgb(229 231 235)"
                         : "3px solid transparent",
                     }}
-                    className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_70px_70px_90px] gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75"
+                    className={`grid ${selectedKonsulent !== null ? GRID_JAKT : GRID_DEFAULT} gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75`}
                   >
+                    {selectedKonsulent !== null && (
+                      <div className="flex items-center">
+                        {(() => {
+                          const idx = sorted.indexOf(contact);
+                          const quarter = Math.ceil(sorted.length / 4);
+                          if (idx < quarter) {
+                            return <span className="inline-flex items-center rounded-full bg-foreground text-background px-2.5 py-0.5 text-[0.6875rem] font-semibold whitespace-nowrap">🔥 Ring nå</span>;
+                          } else if (idx < quarter * 2) {
+                            return <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.6875rem] font-medium text-foreground whitespace-nowrap">↩ Følg opp</span>;
+                          } else if (idx < quarter * 3) {
+                            return <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.6875rem] font-medium text-foreground whitespace-nowrap">🎯 Ny match</span>;
+                          } else {
+                            return <span className="text-[0.75rem] text-muted-foreground">—</span>;
+                          }
+                        })()}
+                      </div>
+                    )}
                     <button
                       onClick={() => navigate(`/kontakter/${contact.id}`)}
                       className="min-w-0 text-left cursor-pointer flex items-center gap-2"
