@@ -840,6 +840,20 @@ const Contacts = () => {
                     >
                       {contact.title?.slice(0, 25) || ""}
                     </button>
+                    {/* Match-kolonne — hardkodet designforslag */}
+                    <div className="flex items-center">
+                      {(() => {
+                        const idx = sorted.indexOf(contact);
+                        const third = Math.ceil(sorted.length / 3);
+                        if (idx < third) {
+                          return <span className="inline-flex items-center rounded-full bg-foreground text-background px-2.5 py-0.5 text-[0.6875rem] font-semibold">92%</span>;
+                        } else if (idx < third * 2) {
+                          return <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.6875rem] font-medium text-foreground">61%</span>;
+                        } else {
+                          return <span className="text-[0.75rem] text-muted-foreground">—</span>;
+                        }
+                      })()}
+                    </div>
                     <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => handleToggle(contact, "cv_email", !contact.cv_email)}
@@ -859,7 +873,7 @@ const Contacts = () => {
                             : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
                         }
                       >
-                        Innkjøper
+                        INN
                       </button>
                     </div>
                     <span className="text-[0.75rem] text-muted-foreground text-right">
