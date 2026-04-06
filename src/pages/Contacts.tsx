@@ -647,7 +647,6 @@ const Contacts = () => {
           </div>
         </div>
       </div>
-      )}
 
       {/* Table */}
       {isLoading ? (
