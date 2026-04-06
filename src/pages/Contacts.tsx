@@ -61,7 +61,11 @@ const JAKT_CHIPS = [
   { value: "dialog", label: "Dialog" },
   { value: "innkjoper", label: "Innkjøper" },
   { value: "kunder", label: "Kunder" },
+  { value: "kald", label: "Kald" },
 ];
+
+const GRID_DEFAULT = "grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_70px_70px_90px]";
+const GRID_JAKT = "grid-cols-[80px_minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_70px_70px_90px]";
 
 const FINN_SELSKAPER = [
   { selskap: "Kongsberg Defence & Aerospace", teknologier: ["C++", "Embedded", "RTOS"] },
@@ -796,7 +800,10 @@ const Contacts = () => {
           </div>
 
           <div className="hidden md:block border border-border rounded-lg overflow-hidden bg-card shadow-card">
-            <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_70px_70px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+            <div className={`grid ${selectedKonsulent !== null ? GRID_JAKT : GRID_DEFAULT} gap-3 px-4 py-2.5 border-b border-border bg-background`}>
+              {selectedKonsulent !== null && (
+                <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Handling</span>
+              )}
               <SortHeader field="name">Navn</SortHeader>
               <SortHeader field="signal">Signal</SortHeader>
               <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Finn</span>
@@ -828,8 +835,25 @@ const Contacts = () => {
                               : "3px solid rgb(229 231 235)"
                         : "3px solid transparent",
                     }}
-                    className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_70px_70px_90px] gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75"
+                    className={`grid ${selectedKonsulent !== null ? GRID_JAKT : GRID_DEFAULT} gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75`}
                   >
+                    {selectedKonsulent !== null && (
+                      <div className="flex items-center">
+                        {(() => {
+                          const idx = sorted.indexOf(contact);
+                          const quarter = Math.ceil(sorted.length / 4);
+                          if (idx < quarter) {
+                            return <span className="inline-flex items-center rounded-full bg-foreground text-background px-2.5 py-0.5 text-[0.6875rem] font-semibold whitespace-nowrap">🔥 Ring nå</span>;
+                          } else if (idx < quarter * 2) {
+                            return <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.6875rem] font-medium text-foreground whitespace-nowrap">↩ Følg opp</span>;
+                          } else if (idx < quarter * 3) {
+                            return <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.6875rem] font-medium text-foreground whitespace-nowrap">🎯 Ny match</span>;
+                          } else {
+                            return <span className="text-[0.75rem] text-muted-foreground">—</span>;
+                          }
+                        })()}
+                      </div>
+                    )}
                     <button
                       onClick={() => navigate(`/kontakter/${contact.id}`)}
                       className="min-w-0 text-left cursor-pointer flex items-center gap-2"
@@ -958,35 +982,40 @@ const Contacts = () => {
                   </div>
                 );
               })}
+              {selectedKonsulent !== null && jaktChip === "finn" && (
+                <>
+                  <div className="flex items-center gap-3 px-4 py-2 bg-muted/30">
+                    <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                      Ingen kontakt registrert
+                    </span>
+                  </div>
+                  {FINN_SELSKAPER.map((s) => (
+                    <div
+                      key={s.selskap}
+                      className={`grid ${GRID_JAKT} gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 border-t border-border`}
+                    >
+                      <span className="text-[0.75rem] text-muted-foreground">—</span>
+                      <button className="text-[0.8125rem] font-medium text-primary hover:underline text-left">
+                        + Legg til kontakt
+                      </button>
+                      <span className="text-muted-foreground">—</span>
+                      <span className="text-muted-foreground">—</span>
+                      <span className="text-[0.8125rem] text-muted-foreground truncate">{s.selskap}</span>
+                      <div className="flex gap-1 flex-wrap">
+                        {s.teknologier.map((t) => (
+                          <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-foreground">{t}</span>
+                        ))}
+                      </div>
+                      <span className="text-muted-foreground">—</span>
+                      <span className="text-muted-foreground">—</span>
+                      <span className="text-muted-foreground">—</span>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           </div>
         </>
-      )}
-      {selectedKonsulent !== null && (
-        <div className="mt-4">
-          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">
-            Selskaper med Finn-match uten kontakt
-          </p>
-          <div className="border border-border rounded-lg overflow-hidden bg-card divide-y divide-border">
-            {FINN_SELSKAPER.map((s) => (
-              <div key={s.selskap} className="flex items-center justify-between px-4 py-3">
-                <div>
-                  <p className="text-[0.875rem] font-medium text-foreground">{s.selskap}</p>
-                  <div className="flex gap-1 mt-1">
-                    {s.teknologier.map((t) => (
-                      <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-foreground">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <button className="text-[0.8125rem] text-primary hover:underline shrink-0 ml-4">
-                  + Legg til kontakt
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
       )}
       <BulkSignalModal open={bulkModalOpen} onClose={() => setBulkModalOpen(false)} />
     </div>
