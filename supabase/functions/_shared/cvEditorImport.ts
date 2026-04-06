@@ -441,7 +441,7 @@ function sanitizeEducationEntries(
       .filter((entry) => Boolean(entry.period || entry.secondary))
       .filter((entry) => entry.primary && !sidebarEducationItems.has(entry.primary)),
     normalizeTimelineKey,
-  );
+  ) as Array<{ period: string; primary: string; secondary: string }>;
 }
 
 function sanitizeWorkExperienceEntries(entries: Array<{ period: string; primary: string }>) {
