@@ -73,7 +73,8 @@ const FINN_SELSKAPER = [
 
 const Contacts = () => {
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
-  const [valgtKonsulent, setValgtKonsulent] = useState<number | null>(null);
+  const [selectedKonsulent, setSelectedKonsulent] = useState<number | null>(null);
+  const [jaktChip, setJaktChip] = useState("alle");
   const [search, setSearch] = usePersistentState("stacq:contacts:search", "");
   const [ownerFilter, setOwnerFilter] = usePersistentState("stacq:contacts:ownerFilter", "all");
   const [signalFilter, setSignalFilter] = usePersistentState("stacq:contacts:signalFilter", "all");
