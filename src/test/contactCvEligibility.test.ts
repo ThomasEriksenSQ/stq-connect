@@ -34,7 +34,7 @@ describe("contactCvEligibility", () => {
     expect(
       buildContactCvSafeUpdates(
         { email: "kontakt@stacq.no", cv_email: true },
-        { phone: "90000000" },
+        { phone: "90000000" } as any,
       ),
     ).toEqual({ phone: "90000000" });
   });
@@ -43,7 +43,7 @@ describe("contactCvEligibility", () => {
     expect(
       buildContactCvSafeUpdates(
         { email: null, cv_email: false },
-        { cv_email: true },
+        { cv_email: true } as any,
       ),
     ).toEqual({ cv_email: false });
 
