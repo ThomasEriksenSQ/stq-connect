@@ -493,6 +493,50 @@ const Contacts = () => {
         <h1 className="text-[1.375rem] font-bold">Kontakter</h1>
       </div>
 
+      {/* Konsulent-velger — mellom h1 og søk */}
+      <div className="flex flex-col">
+        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">
+          Tilgjengelig for oppdrag
+        </p>
+        {JAKT_KONSULENTER.map((k) => {
+          const erValgt = selectedKonsulent === k.id;
+          return (
+            <div
+              key={k.id}
+              onClick={() => setSelectedKonsulent(erValgt ? null : k.id)}
+              className={cn(
+                "flex items-center gap-3 px-4 py-2.5 rounded-lg bg-card cursor-pointer transition-colors mb-1.5",
+                erValgt
+                  ? "border-2 border-foreground"
+                  : "border border-border hover:bg-muted/40"
+              )}
+            >
+              <div
+                className={cn(
+                  "w-7 h-7 rounded-full bg-muted flex items-center justify-center text-[0.6875rem] font-semibold shrink-0",
+                  erValgt ? "border-2 border-foreground text-foreground" : "border border-border text-muted-foreground"
+                )}
+              >
+                {k.initialer}
+              </div>
+              <span className={cn(
+                "text-[0.875rem] text-foreground",
+                erValgt ? "font-semibold" : "font-medium"
+              )}>
+                {k.navn}
+              </span>
+              <div className="text-right ml-auto">
+                <span className="text-[0.75rem] text-muted-foreground">
+                  Tilgjengelig {k.ledigFra}
+                </span>
+                <span className={`text-[0.75rem] ml-1.5 ${k.passert ? "text-amber-600 font-medium" : "text-muted-foreground"}`}>
+                  · {k.dager}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1 max-w-full sm:max-w-xs">
@@ -525,8 +569,8 @@ const Contacts = () => {
       {/* Chip filters */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start">
         <div className="space-y-2 flex-1">
-          {valgtKonsulent === null && (
-            <>
+          {selectedKonsulent === null && (
+            <div className="space-y-2">
               {/* EIER */}
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
@@ -572,7 +616,25 @@ const Contacts = () => {
                 <Chip label="Innkjøper" value="call_list" current={typeFilter} onSelect={setTypeFilter} />
                 <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
               </div>
-            </>
+            </div>
+          )}
+
+          {/* Jakt-filter — kun synlig når konsulent er valgt */}
+          {selectedKonsulent !== null && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+                Type
+              </span>
+              {JAKT_CHIPS.map((chip) => (
+                <button
+                  key={chip.value}
+                  onClick={() => setJaktChip(chip.value)}
+                  className={jaktChip === chip.value ? CHIP_ON : CHIP_OFF}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
           )}
         </div>
         <div className="flex items-center gap-3 md:ml-auto shrink-0">
@@ -585,69 +647,6 @@ const Contacts = () => {
           </div>
         </div>
       </div>
-
-      {/* Konsulent-velger — vertikal, kompakt */}
-      <div className="flex flex-col">
-        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2 mt-4">
-          Tilgjengelig for oppdrag
-        </p>
-        {JAKT_KONSULENTER.map((k) => {
-          const erValgt = valgtKonsulent === k.id;
-          return (
-            <div
-              key={k.id}
-              onClick={() => setValgtKonsulent(erValgt ? null : k.id)}
-              className={cn(
-                "flex items-center justify-between px-4 py-2.5 rounded-lg bg-card cursor-pointer transition-colors mb-1.5",
-                erValgt
-                  ? "border-2 border-foreground"
-                  : "border border-border hover:bg-muted/40"
-              )}
-            >
-              <div className="flex items-center">
-                <div
-                  className={cn(
-                    "w-7 h-7 rounded-full bg-muted flex items-center justify-center text-[0.6875rem] font-semibold text-muted-foreground shrink-0 overflow-hidden",
-                    erValgt ? "border-2 border-foreground" : "border border-border"
-                  )}
-                >
-                  {k.navn.split(" ").map(n => n[0]).join("")}
-                </div>
-                <span className={cn(
-                  "text-[0.875rem] text-foreground ml-2.5",
-                  erValgt ? "font-semibold" : "font-medium"
-                )}>
-                  {k.navn}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[0.75rem] text-muted-foreground">
-                  {k.datoTekst}
-                  <span className={cn("ml-1.5", k.passert ? "text-amber-600 font-medium" : "text-muted-foreground")}>
-                    · {k.relativ}
-                  </span>
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Jakt-filter — kun synlig når konsulent er valgt */}
-      {valgtKonsulent !== null && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
-            Type
-          </span>
-          {JAKT_CHIPS.map((chip) => (
-            <span
-              key={chip}
-              className={chip === "Alle" ? CHIP_ON : CHIP_OFF}
-            >
-              {chip}
-            </span>
-          ))}
-        </div>
       )}
 
       {/* Table */}
