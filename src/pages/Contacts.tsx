@@ -466,6 +466,23 @@ const Contacts = () => {
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-[1.375rem] font-bold">Kontakter</h1>
       </div>
+
+      {/* Jaktmodus banner — hardkodet designforslag */}
+      <div className="bg-card border border-border rounded-lg px-4 py-2.5 flex items-center gap-3">
+        <div className="w-2 h-2 rounded-full bg-foreground animate-pulse" />
+        <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Jaktmodus</span>
+        <div className="border-l border-border h-4 mx-1" />
+        <span className="text-[0.875rem] font-semibold text-foreground">Erik Paulsen</span>
+        <span className="h-8 px-3 text-[0.8125rem] rounded-full border border-border text-muted-foreground inline-flex items-center">C++</span>
+        <span className="h-8 px-3 text-[0.8125rem] rounded-full border border-border text-muted-foreground inline-flex items-center">Embedded</span>
+        <span className="h-8 px-3 text-[0.8125rem] rounded-full border border-border text-muted-foreground inline-flex items-center">RTOS</span>
+        <div className="ml-auto flex items-center gap-4">
+          <span className="text-[0.75rem] text-muted-foreground">3 konsulenter i jakt</span>
+          <button className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">Bytt konsulent</button>
+          <button className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">Skru av jaktmodus</button>
+        </div>
+      </div>
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1 max-w-full sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
