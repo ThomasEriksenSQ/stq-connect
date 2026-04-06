@@ -50,7 +50,7 @@ describe("contactCvEligibility", () => {
     expect(
       buildContactCvSafeUpdates(
         { email: "kontakt@stacq.no", cv_email: false },
-        { cv_email: true },
+        { cv_email: true } as any,
       ),
     ).toEqual({ cv_email: true });
   });

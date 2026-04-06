@@ -1146,7 +1146,7 @@ export function CompanyCardContent({
         <div className="space-y-5">
           {/* ── Teknisk DNA ── */}
           {(() => {
-            const techTags = getSortedTechnologyEntries(techProfile?.teknologier);
+            const techTags = getSortedTechnologyEntries(techProfile?.teknologier as Record<string, number> | null | undefined);
             const contactTechTags = mergeTechnologyTags(
               ...(contacts as any[]).map((contact) => (contact as any).teknologier || []),
             );
