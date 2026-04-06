@@ -559,6 +559,16 @@ const Contacts = () => {
             <Chip label="Innkjøper" value="call_list" current={typeFilter} onSelect={setTypeFilter} />
             <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
           </div>
+          {/* JAKT filter chips — hardkodet designforslag */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+              Jakt
+            </span>
+            <span className={CHIP_OFF}>Forespørsler</span>
+            <span className={CHIP_OFF}>Finn-match</span>
+            <span className={CHIP_OFF}>Re-aktivering</span>
+            <span className={CHIP_OFF}>Kjente kunder</span>
+          </div>
         </div>
         <div className="flex items-center gap-3 md:ml-auto shrink-0">
           <div className="w-px h-8 bg-border" />
