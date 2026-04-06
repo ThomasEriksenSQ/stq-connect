@@ -48,13 +48,28 @@ const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-seco
 const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground font-medium`;
 
 const JAKT_KONSULENTER = [
-  { id: 1, navn: "Erik Paulsen", datoTekst: "Tilgjengelig 24. apr.", relativ: "18 dager til", passert: false },
-  { id: 2, navn: "Kari Hansen", datoTekst: "Tilgjengelig 1. juni", relativ: "56 dager til", passert: false },
-  { id: 3, navn: "Jon Berg", datoTekst: "Tilgjengelig nå", relativ: "3 dager siden", passert: true },
-  { id: 4, navn: "Lars Moen", datoTekst: "Tilgjengelig 15. mai", relativ: "39 dager til", passert: false },
+  { id: 1, navn: "Erik Paulsen", initialer: "EP", ledigFra: "24. apr.", dager: "18 dager til", passert: false },
+  { id: 2, navn: "Kari Hansen", initialer: "KH", ledigFra: "1. juni", dager: "56 dager til", passert: false },
+  { id: 3, navn: "Jon Berg", initialer: "JB", ledigFra: "nå", dager: "3 dager siden", passert: true },
+  { id: 4, navn: "Lars Moen", initialer: "LM", ledigFra: "15. mai", dager: "39 dager til", passert: false },
 ];
 
-const JAKT_CHIPS = ["Alle", "Forespørsler", "Finn-match", "Aktiv dialog", "Innkjøper", "Kjente kunder", "Re-aktivering"];
+const JAKT_CHIPS = [
+  { value: "alle", label: "Alle" },
+  { value: "foresporsler", label: "Forespørsler" },
+  { value: "finn", label: "Finn-match" },
+  { value: "dialog", label: "Aktiv dialog" },
+  { value: "innkjoper", label: "Innkjøper" },
+  { value: "kunder", label: "Kunder" },
+  { value: "reaktivering", label: "Re-aktivering" },
+  { value: "mangler", label: "Mangler kontakt" },
+];
+
+const FINN_SELSKAPER = [
+  { selskap: "Kongsberg Defence & Aerospace", teknologier: ["C++", "Embedded", "RTOS"] },
+  { selskap: "Norbit AS", teknologier: ["C", "Linux", "Yocto"] },
+  { selskap: "Nordic Semiconductor", teknologier: ["C++", "BLE", "Zephyr"] },
+];
 
 const Contacts = () => {
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
