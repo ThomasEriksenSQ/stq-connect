@@ -47,8 +47,17 @@ const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colo
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
 const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground font-medium`;
 
+const JAKT_KONSULENTER = [
+  { id: 1, navn: "Erik Paulsen", ledigFra: "24. apr.", prosent: 100 },
+  { id: 2, navn: "Kari Hansen", ledigFra: "1. juni", prosent: 50 },
+  { id: 3, navn: "Jon Berg", ledigFra: "Ledig nå", prosent: 100 },
+];
+
+const JAKT_CHIPS = ["Alle", "Forespørsler", "Finn-match", "Aktiv dialog", "Innkjøper", "Kjente kunder", "Re-aktivering"];
+
 const Contacts = () => {
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [valgtKonsulent, setValgtKonsulent] = useState<number | null>(null);
   const [search, setSearch] = usePersistentState("stacq:contacts:search", "");
   const [ownerFilter, setOwnerFilter] = usePersistentState("stacq:contacts:ownerFilter", "all");
   const [signalFilter, setSignalFilter] = usePersistentState("stacq:contacts:signalFilter", "all");
