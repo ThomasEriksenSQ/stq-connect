@@ -982,6 +982,37 @@ const Contacts = () => {
                   </div>
                 );
               })}
+              {selectedKonsulent !== null && jaktChip === "finn" && (
+                <>
+                  <div className="flex items-center gap-3 px-4 py-2 bg-muted/30">
+                    <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                      Ingen kontakt registrert
+                    </span>
+                  </div>
+                  {FINN_SELSKAPER.map((s) => (
+                    <div
+                      key={s.selskap}
+                      className={`grid ${GRID_JAKT} gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 border-t border-border`}
+                    >
+                      <span className="text-[0.75rem] text-muted-foreground">—</span>
+                      <button className="text-[0.8125rem] font-medium text-primary hover:underline text-left">
+                        + Legg til kontakt
+                      </button>
+                      <span className="text-muted-foreground">—</span>
+                      <span className="text-muted-foreground">—</span>
+                      <span className="text-[0.8125rem] text-muted-foreground truncate">{s.selskap}</span>
+                      <div className="flex gap-1 flex-wrap">
+                        {s.teknologier.map((t) => (
+                          <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-foreground">{t}</span>
+                        ))}
+                      </div>
+                      <span className="text-muted-foreground">—</span>
+                      <span className="text-muted-foreground">—</span>
+                      <span className="text-muted-foreground">—</span>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           </div>
         </>
