@@ -466,6 +466,23 @@ const Contacts = () => {
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-[1.375rem] font-bold">Kontakter</h1>
       </div>
+
+      {/* Jaktmodus banner — hardkodet designforslag */}
+      <div className="bg-card border border-border rounded-lg px-4 py-2.5 flex items-center gap-3">
+        <div className="w-2 h-2 rounded-full bg-foreground animate-pulse" />
+        <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Jaktmodus</span>
+        <div className="border-l border-border h-4 mx-1" />
+        <span className="text-[0.875rem] font-semibold text-foreground">Erik Paulsen</span>
+        <span className="h-8 px-3 text-[0.8125rem] rounded-full border border-border text-muted-foreground inline-flex items-center">C++</span>
+        <span className="h-8 px-3 text-[0.8125rem] rounded-full border border-border text-muted-foreground inline-flex items-center">Embedded</span>
+        <span className="h-8 px-3 text-[0.8125rem] rounded-full border border-border text-muted-foreground inline-flex items-center">RTOS</span>
+        <div className="ml-auto flex items-center gap-4">
+          <span className="text-[0.75rem] text-muted-foreground">3 konsulenter i jakt</span>
+          <button className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">Bytt konsulent</button>
+          <button className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">Skru av jaktmodus</button>
+        </div>
+      </div>
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1 max-w-full sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
@@ -541,6 +558,16 @@ const Contacts = () => {
             <Chip label="Alle" value="all" current={typeFilter} onSelect={setTypeFilter} />
             <Chip label="Innkjøper" value="call_list" current={typeFilter} onSelect={setTypeFilter} />
             <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
+          </div>
+          {/* JAKT filter chips — hardkodet designforslag */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+              Jakt
+            </span>
+            <span className={CHIP_OFF}>Forespørsler</span>
+            <span className={CHIP_OFF}>Finn-match</span>
+            <span className={CHIP_OFF}>Re-aktivering</span>
+            <span className={CHIP_OFF}>Kjente kunder</span>
           </div>
         </div>
         <div className="flex items-center gap-3 md:ml-auto shrink-0">
@@ -653,7 +680,7 @@ const Contacts = () => {
                             }
                           >
                             <span
-                              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${s.color}`}
+                              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${s.badgeColor}`}
                             >
                               {s.label}
                             </span>
@@ -704,12 +731,13 @@ const Contacts = () => {
           </div>
 
           <div className="hidden md:block border border-border rounded-lg overflow-hidden bg-card shadow-card">
-            <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_110px_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+            <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_70px_70px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
               <SortHeader field="name">Navn</SortHeader>
               <SortHeader field="signal">Signal</SortHeader>
               <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Finn</span>
               <SortHeader field="company">Selskap</SortHeader>
               <SortHeader field="title">Stilling</SortHeader>
+              <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Match</span>
               <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Tags</span>
               <SortHeader field="last_activity" className="justify-end">
                 Siste akt.
@@ -735,7 +763,7 @@ const Contacts = () => {
                               : "3px solid rgb(229 231 235)"
                         : "3px solid transparent",
                     }}
-                    className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_110px_100px] gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75"
+                    className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_70px_70px_90px] gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75"
                   >
                     <button
                       onClick={() => navigate(`/kontakter/${contact.id}`)}
@@ -779,7 +807,7 @@ const Contacts = () => {
                               }
                             >
                               <span
-                                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${s.color}`}
+                                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${s.badgeColor}`}
                               >
                                 {s.label}
                               </span>
@@ -812,6 +840,20 @@ const Contacts = () => {
                     >
                       {contact.title?.slice(0, 25) || ""}
                     </button>
+                    {/* Match-kolonne — hardkodet designforslag */}
+                    <div className="flex items-center">
+                      {(() => {
+                        const idx = sorted.indexOf(contact);
+                        const third = Math.ceil(sorted.length / 3);
+                        if (idx < third) {
+                          return <span className="inline-flex items-center rounded-full bg-foreground text-background px-2.5 py-0.5 text-[0.6875rem] font-semibold">92%</span>;
+                        } else if (idx < third * 2) {
+                          return <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.6875rem] font-medium text-foreground">61%</span>;
+                        } else {
+                          return <span className="text-[0.75rem] text-muted-foreground">—</span>;
+                        }
+                      })()}
+                    </div>
                     <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => handleToggle(contact, "cv_email", !contact.cv_email)}
@@ -831,7 +873,7 @@ const Contacts = () => {
                             : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
                         }
                       >
-                        Innkjøper
+                        INN
                       </button>
                     </div>
                     <span className="text-[0.75rem] text-muted-foreground text-right">
