@@ -621,7 +621,7 @@ const Contacts = () => {
       {valgtKonsulent !== null && (
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
-            Jakt
+            Type
           </span>
           {JAKT_CHIPS.map((chip) => (
             <span
