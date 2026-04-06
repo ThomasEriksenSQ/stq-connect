@@ -61,7 +61,11 @@ const JAKT_CHIPS = [
   { value: "dialog", label: "Dialog" },
   { value: "innkjoper", label: "Innkjøper" },
   { value: "kunder", label: "Kunder" },
+  { value: "kald", label: "Kald" },
 ];
+
+const GRID_DEFAULT = "grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_70px_70px_90px]";
+const GRID_JAKT = "grid-cols-[80px_minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_70px_70px_90px]";
 
 const FINN_SELSKAPER = [
   { selskap: "Kongsberg Defence & Aerospace", teknologier: ["C++", "Embedded", "RTOS"] },
