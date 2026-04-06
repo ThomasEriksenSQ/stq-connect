@@ -51,6 +51,7 @@ const JAKT_KONSULENTER = [
   { id: 1, navn: "Erik Paulsen", ledigFra: "24. apr.", prosent: 100 },
   { id: 2, navn: "Kari Hansen", ledigFra: "1. juni", prosent: 50 },
   { id: 3, navn: "Jon Berg", ledigFra: "Ledig nå", prosent: 100 },
+  { id: 4, navn: "Lars Moen", ledigFra: "15. mai", prosent: 100 },
 ];
 
 const JAKT_CHIPS = ["Alle", "Forespørsler", "Finn-match", "Aktiv dialog", "Innkjøper", "Kjente kunder", "Re-aktivering"];
