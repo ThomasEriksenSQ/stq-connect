@@ -572,6 +572,9 @@ const Contacts = () => {
 
       {/* Konsulent-velger — vertikal, kompakt */}
       <div className="flex flex-col">
+        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">
+          Tilgjengelig for oppdrag
+        </p>
         {JAKT_KONSULENTER.map((k) => {
           const erValgt = valgtKonsulent === k.id;
           return (
