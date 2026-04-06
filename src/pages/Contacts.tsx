@@ -565,6 +565,50 @@ const Contacts = () => {
         </div>
       </div>
 
+      {/* Konsulent-bokser — hardkodet designforslag */}
+      <div className="flex flex-row gap-3">
+        {JAKT_KONSULENTER.map((k) => {
+          const erValgt = valgtKonsulent === k.id;
+          return (
+            <div
+              key={k.id}
+              onClick={() => setValgtKonsulent(erValgt ? null : k.id)}
+              className={cn(
+                "rounded-lg bg-card px-4 py-3 cursor-pointer transition-colors relative",
+                erValgt
+                  ? "border-2 border-foreground"
+                  : "border border-border hover:bg-muted/40"
+              )}
+            >
+              {erValgt && (
+                <div className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-foreground animate-pulse" />
+              )}
+              <div className="text-[0.875rem] font-semibold text-foreground">{k.navn}</div>
+              <div className="text-[0.75rem] text-muted-foreground">
+                Ledig {k.ledigFra} · {k.prosent}%
+              </div>
+              <div className="border-t border-border mt-2.5 pt-2.5">
+                <div className="flex flex-wrap gap-1.5">
+                  {JAKT_CHIPS.map((chip) => (
+                    <span
+                      key={chip}
+                      className={cn(
+                        "h-7 px-2.5 text-[0.75rem] rounded-full border inline-flex items-center",
+                        chip === "Alle" && !erValgt
+                          ? "bg-foreground text-background border-foreground font-medium"
+                          : "border-border text-muted-foreground"
+                      )}
+                    >
+                      {chip}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       {/* Table */}
       {isLoading ? (
         <div className="space-y-px">
