@@ -1017,32 +1017,6 @@ const Contacts = () => {
           </div>
         </>
       )}
-      {selectedKonsulent !== null && (
-        <div className="mt-4">
-          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">
-            Selskaper med Finn-match uten kontakt
-          </p>
-          <div className="border border-border rounded-lg overflow-hidden bg-card divide-y divide-border">
-            {FINN_SELSKAPER.map((s) => (
-              <div key={s.selskap} className="flex items-center justify-between px-4 py-3">
-                <div>
-                  <p className="text-[0.875rem] font-medium text-foreground">{s.selskap}</p>
-                  <div className="flex gap-1 mt-1">
-                    {s.teknologier.map((t) => (
-                      <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-foreground">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <button className="text-[0.8125rem] text-primary hover:underline shrink-0 ml-4">
-                  + Legg til kontakt
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
       <BulkSignalModal open={bulkModalOpen} onClose={() => setBulkModalOpen(false)} />
     </div>
   );
