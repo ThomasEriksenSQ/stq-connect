@@ -58,11 +58,9 @@ const JAKT_CHIPS = [
   { value: "alle", label: "Alle" },
   { value: "foresporsler", label: "Forespørsler" },
   { value: "finn", label: "Finn-match" },
-  { value: "dialog", label: "Aktiv dialog" },
+  { value: "dialog", label: "Dialog" },
   { value: "innkjoper", label: "Innkjøper" },
   { value: "kunder", label: "Kunder" },
-  { value: "reaktivering", label: "Re-aktivering" },
-  { value: "mangler", label: "Mangler kontakt" },
 ];
 
 const FINN_SELSKAPER = [
