@@ -604,7 +604,10 @@ const Contacts = () => {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[0.75rem] text-muted-foreground">
-                  Ledig {k.ledigFra} · {k.prosent}%
+                  {k.datoTekst}
+                  <span className={cn("ml-1.5", k.passert ? "text-amber-600 font-medium" : "text-muted-foreground")}>
+                    · {k.relativ}
+                  </span>
                 </span>
                 {erValgt && (
                   <div className="w-1.5 h-1.5 rounded-full bg-foreground animate-pulse" />
