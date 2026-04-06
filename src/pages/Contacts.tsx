@@ -48,17 +48,33 @@ const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-seco
 const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground font-medium`;
 
 const JAKT_KONSULENTER = [
-  { id: 1, navn: "Erik Paulsen", datoTekst: "Tilgjengelig 24. apr.", relativ: "18 dager til", passert: false },
-  { id: 2, navn: "Kari Hansen", datoTekst: "Tilgjengelig 1. juni", relativ: "56 dager til", passert: false },
-  { id: 3, navn: "Jon Berg", datoTekst: "Tilgjengelig nå", relativ: "3 dager siden", passert: true },
-  { id: 4, navn: "Lars Moen", datoTekst: "Tilgjengelig 15. mai", relativ: "39 dager til", passert: false },
+  { id: 1, navn: "Erik Paulsen", initialer: "EP", ledigFra: "24. apr.", dager: "18 dager til", passert: false },
+  { id: 2, navn: "Kari Hansen", initialer: "KH", ledigFra: "1. juni", dager: "56 dager til", passert: false },
+  { id: 3, navn: "Jon Berg", initialer: "JB", ledigFra: "nå", dager: "3 dager siden", passert: true },
+  { id: 4, navn: "Lars Moen", initialer: "LM", ledigFra: "15. mai", dager: "39 dager til", passert: false },
 ];
 
-const JAKT_CHIPS = ["Alle", "Forespørsler", "Finn-match", "Aktiv dialog", "Innkjøper", "Kjente kunder", "Re-aktivering"];
+const JAKT_CHIPS = [
+  { value: "alle", label: "Alle" },
+  { value: "foresporsler", label: "Forespørsler" },
+  { value: "finn", label: "Finn-match" },
+  { value: "dialog", label: "Aktiv dialog" },
+  { value: "innkjoper", label: "Innkjøper" },
+  { value: "kunder", label: "Kunder" },
+  { value: "reaktivering", label: "Re-aktivering" },
+  { value: "mangler", label: "Mangler kontakt" },
+];
+
+const FINN_SELSKAPER = [
+  { selskap: "Kongsberg Defence & Aerospace", teknologier: ["C++", "Embedded", "RTOS"] },
+  { selskap: "Norbit AS", teknologier: ["C", "Linux", "Yocto"] },
+  { selskap: "Nordic Semiconductor", teknologier: ["C++", "BLE", "Zephyr"] },
+];
 
 const Contacts = () => {
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
-  const [valgtKonsulent, setValgtKonsulent] = useState<number | null>(null);
+  const [selectedKonsulent, setSelectedKonsulent] = useState<number | null>(null);
+  const [jaktChip, setJaktChip] = useState("alle");
   const [search, setSearch] = usePersistentState("stacq:contacts:search", "");
   const [ownerFilter, setOwnerFilter] = usePersistentState("stacq:contacts:ownerFilter", "all");
   const [signalFilter, setSignalFilter] = usePersistentState("stacq:contacts:signalFilter", "all");
@@ -477,6 +493,50 @@ const Contacts = () => {
         <h1 className="text-[1.375rem] font-bold">Kontakter</h1>
       </div>
 
+      {/* Konsulent-velger — mellom h1 og søk */}
+      <div className="flex flex-col">
+        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">
+          Tilgjengelig for oppdrag
+        </p>
+        {JAKT_KONSULENTER.map((k) => {
+          const erValgt = selectedKonsulent === k.id;
+          return (
+            <div
+              key={k.id}
+              onClick={() => setSelectedKonsulent(erValgt ? null : k.id)}
+              className={cn(
+                "flex items-center gap-3 px-4 py-2.5 rounded-lg bg-card cursor-pointer transition-colors mb-1.5",
+                erValgt
+                  ? "border-2 border-foreground"
+                  : "border border-border hover:bg-muted/40"
+              )}
+            >
+              <div
+                className={cn(
+                  "w-7 h-7 rounded-full bg-muted flex items-center justify-center text-[0.6875rem] font-semibold shrink-0",
+                  erValgt ? "border-2 border-foreground text-foreground" : "border border-border text-muted-foreground"
+                )}
+              >
+                {k.initialer}
+              </div>
+              <span className={cn(
+                "text-[0.875rem] text-foreground",
+                erValgt ? "font-semibold" : "font-medium"
+              )}>
+                {k.navn}
+              </span>
+              <div className="text-right ml-auto">
+                <span className="text-[0.75rem] text-muted-foreground">
+                  Tilgjengelig {k.ledigFra}
+                </span>
+                <span className={`text-[0.75rem] ml-1.5 ${k.passert ? "text-amber-600 font-medium" : "text-muted-foreground"}`}>
+                  · {k.dager}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1 max-w-full sm:max-w-xs">
@@ -509,8 +569,8 @@ const Contacts = () => {
       {/* Chip filters */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start">
         <div className="space-y-2 flex-1">
-          {valgtKonsulent === null && (
-            <>
+          {selectedKonsulent === null && (
+            <div className="space-y-2">
               {/* EIER */}
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
@@ -556,7 +616,25 @@ const Contacts = () => {
                 <Chip label="Innkjøper" value="call_list" current={typeFilter} onSelect={setTypeFilter} />
                 <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
               </div>
-            </>
+            </div>
+          )}
+
+          {/* Jakt-filter — kun synlig når konsulent er valgt */}
+          {selectedKonsulent !== null && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+                Type
+              </span>
+              {JAKT_CHIPS.map((chip) => (
+                <button
+                  key={chip.value}
+                  onClick={() => setJaktChip(chip.value)}
+                  className={jaktChip === chip.value ? CHIP_ON : CHIP_OFF}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
           )}
         </div>
         <div className="flex items-center gap-3 md:ml-auto shrink-0">
@@ -569,70 +647,6 @@ const Contacts = () => {
           </div>
         </div>
       </div>
-
-      {/* Konsulent-velger — vertikal, kompakt */}
-      <div className="flex flex-col">
-        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2 mt-4">
-          Tilgjengelig for oppdrag
-        </p>
-        {JAKT_KONSULENTER.map((k) => {
-          const erValgt = valgtKonsulent === k.id;
-          return (
-            <div
-              key={k.id}
-              onClick={() => setValgtKonsulent(erValgt ? null : k.id)}
-              className={cn(
-                "flex items-center justify-between px-4 py-2.5 rounded-lg bg-card cursor-pointer transition-colors mb-1.5",
-                erValgt
-                  ? "border-2 border-foreground"
-                  : "border border-border hover:bg-muted/40"
-              )}
-            >
-              <div className="flex items-center">
-                <div
-                  className={cn(
-                    "w-7 h-7 rounded-full bg-muted flex items-center justify-center text-[0.6875rem] font-semibold text-muted-foreground shrink-0 overflow-hidden",
-                    erValgt ? "border-2 border-foreground" : "border border-border"
-                  )}
-                >
-                  {k.navn.split(" ").map(n => n[0]).join("")}
-                </div>
-                <span className={cn(
-                  "text-[0.875rem] text-foreground ml-2.5",
-                  erValgt ? "font-semibold" : "font-medium"
-                )}>
-                  {k.navn}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[0.75rem] text-muted-foreground">
-                  {k.datoTekst}
-                  <span className={cn("ml-1.5", k.passert ? "text-amber-600 font-medium" : "text-muted-foreground")}>
-                    · {k.relativ}
-                  </span>
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Jakt-filter — kun synlig når konsulent er valgt */}
-      {valgtKonsulent !== null && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
-            Type
-          </span>
-          {JAKT_CHIPS.map((chip) => (
-            <span
-              key={chip}
-              className={chip === "Alle" ? CHIP_ON : CHIP_OFF}
-            >
-              {chip}
-            </span>
-          ))}
-        </div>
-      )}
 
       {/* Table */}
       {isLoading ? (
@@ -949,6 +963,32 @@ const Contacts = () => {
             </div>
           </div>
         </>
+      )}
+      {selectedKonsulent !== null && (
+        <div className="mt-4">
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">
+            Selskaper med Finn-match uten kontakt
+          </p>
+          <div className="border border-border rounded-lg overflow-hidden bg-card divide-y divide-border">
+            {FINN_SELSKAPER.map((s) => (
+              <div key={s.selskap} className="flex items-center justify-between px-4 py-3">
+                <div>
+                  <p className="text-[0.875rem] font-medium text-foreground">{s.selskap}</p>
+                  <div className="flex gap-1 mt-1">
+                    {s.teknologier.map((t) => (
+                      <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-foreground">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <button className="text-[0.8125rem] text-primary hover:underline shrink-0 ml-4">
+                  + Legg til kontakt
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
       <BulkSignalModal open={bulkModalOpen} onClose={() => setBulkModalOpen(false)} />
     </div>
