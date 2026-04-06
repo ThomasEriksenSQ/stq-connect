@@ -591,10 +591,12 @@ const Contacts = () => {
               <div className="flex items-center">
                 <div
                   className={cn(
-                    "w-3 h-3 rounded-full shrink-0",
-                    erValgt ? "bg-foreground" : "border-2 border-border bg-background"
+                    "w-7 h-7 rounded-full bg-muted flex items-center justify-center text-[0.6875rem] font-semibold text-muted-foreground shrink-0 overflow-hidden",
+                    erValgt ? "border-2 border-foreground" : "border border-border"
                   )}
-                />
+                >
+                  {k.navn.split(" ").map(n => n[0]).join("")}
+                </div>
                 <span className={cn(
                   "text-[0.875rem] text-foreground ml-2.5",
                   erValgt ? "font-semibold" : "font-medium"
