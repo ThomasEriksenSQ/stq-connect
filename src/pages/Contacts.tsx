@@ -763,7 +763,7 @@ const Contacts = () => {
                               : "3px solid rgb(229 231 235)"
                         : "3px solid transparent",
                     }}
-                    className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_110px_100px] gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75"
+                    className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_70px_70px_90px] gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75"
                   >
                     <button
                       onClick={() => navigate(`/kontakter/${contact.id}`)}
