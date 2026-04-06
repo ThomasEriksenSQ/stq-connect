@@ -51,6 +51,7 @@ const JAKT_KONSULENTER = [
   { id: 1, navn: "Erik Paulsen", ledigFra: "24. apr.", prosent: 100 },
   { id: 2, navn: "Kari Hansen", ledigFra: "1. juni", prosent: 50 },
   { id: 3, navn: "Jon Berg", ledigFra: "Ledig nå", prosent: 100 },
+  { id: 4, navn: "Lars Moen", ledigFra: "15. mai", prosent: 100 },
 ];
 
 const JAKT_CHIPS = ["Alle", "Forespørsler", "Finn-match", "Aktiv dialog", "Innkjøper", "Kjente kunder", "Re-aktivering"];
@@ -508,51 +509,55 @@ const Contacts = () => {
       {/* Chip filters */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start">
         <div className="space-y-2 flex-1">
-          {/* EIER */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
-              Eier
-            </span>
-            <Chip label="Alle" value="all" current={ownerFilter} onSelect={setOwnerFilter} />
-            {uniqueOwners.map(([id, name]) => (
-              <Chip key={id} label={name} value={id} current={ownerFilter} onSelect={setOwnerFilter} />
-            ))}
-          </div>
-          {/* SIGNAL */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
-              Signal
-            </span>
-            <Chip label="Alle" value="all" current={signalFilter} onSelect={setSignalFilter} />
-            {SIGNAL_OPTIONS.map((s) => (
-              <Chip key={s.label} label={s.label} value={s.label} current={signalFilter} onSelect={setSignalFilter} />
-            ))}
-            <div className="w-px h-5 bg-border mx-1" />
-            <button
-              onClick={() => {
-                const next = !hotListActive;
-                setHotListActive(next);
-                setSort(next ? { field: "priority", dir: "desc" } : { field: "signal", dir: "asc" });
-              }}
-              className={cn(
-                "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer inline-flex items-center gap-1.5",
-                hotListActive
-                  ? "bg-red-500 text-white border-red-500 font-medium"
-                  : "border-border text-muted-foreground hover:bg-secondary",
-              )}
-            >
-              🔥 Hot list
-            </button>
-          </div>
-          {/* TYPE */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
-              Type
-            </span>
-            <Chip label="Alle" value="all" current={typeFilter} onSelect={setTypeFilter} />
-            <Chip label="Innkjøper" value="call_list" current={typeFilter} onSelect={setTypeFilter} />
-            <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
-          </div>
+          {valgtKonsulent === null && (
+            <>
+              {/* EIER */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+                  Eier
+                </span>
+                <Chip label="Alle" value="all" current={ownerFilter} onSelect={setOwnerFilter} />
+                {uniqueOwners.map(([id, name]) => (
+                  <Chip key={id} label={name} value={id} current={ownerFilter} onSelect={setOwnerFilter} />
+                ))}
+              </div>
+              {/* SIGNAL */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+                  Signal
+                </span>
+                <Chip label="Alle" value="all" current={signalFilter} onSelect={setSignalFilter} />
+                {SIGNAL_OPTIONS.map((s) => (
+                  <Chip key={s.label} label={s.label} value={s.label} current={signalFilter} onSelect={setSignalFilter} />
+                ))}
+                <div className="w-px h-5 bg-border mx-1" />
+                <button
+                  onClick={() => {
+                    const next = !hotListActive;
+                    setHotListActive(next);
+                    setSort(next ? { field: "priority", dir: "desc" } : { field: "signal", dir: "asc" });
+                  }}
+                  className={cn(
+                    "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer inline-flex items-center gap-1.5",
+                    hotListActive
+                      ? "bg-red-500 text-white border-red-500 font-medium"
+                      : "border-border text-muted-foreground hover:bg-secondary",
+                  )}
+                >
+                  🔥 Hot list
+                </button>
+              </div>
+              {/* TYPE */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+                  Type
+                </span>
+                <Chip label="Alle" value="all" current={typeFilter} onSelect={setTypeFilter} />
+                <Chip label="Innkjøper" value="call_list" current={typeFilter} onSelect={setTypeFilter} />
+                <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
+              </div>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-3 md:ml-auto shrink-0">
           <div className="w-px h-8 bg-border" />
@@ -565,8 +570,8 @@ const Contacts = () => {
         </div>
       </div>
 
-      {/* Konsulent-bokser — hardkodet designforslag */}
-      <div className="flex flex-row gap-3">
+      {/* Konsulent-velger — vertikal, kompakt */}
+      <div className="flex flex-col">
         {JAKT_KONSULENTER.map((k) => {
           const erValgt = valgtKonsulent === k.id;
           return (
@@ -574,40 +579,55 @@ const Contacts = () => {
               key={k.id}
               onClick={() => setValgtKonsulent(erValgt ? null : k.id)}
               className={cn(
-                "rounded-lg bg-card px-4 py-3 cursor-pointer transition-colors relative",
+                "flex items-center justify-between px-4 py-2.5 rounded-lg bg-card cursor-pointer transition-colors mb-1.5",
                 erValgt
                   ? "border-2 border-foreground"
                   : "border border-border hover:bg-muted/40"
               )}
             >
-              {erValgt && (
-                <div className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-foreground animate-pulse" />
-              )}
-              <div className="text-[0.875rem] font-semibold text-foreground">{k.navn}</div>
-              <div className="text-[0.75rem] text-muted-foreground">
-                Ledig {k.ledigFra} · {k.prosent}%
+              <div className="flex items-center">
+                <div
+                  className={cn(
+                    "w-3 h-3 rounded-full shrink-0",
+                    erValgt ? "bg-foreground" : "border-2 border-border bg-background"
+                  )}
+                />
+                <span className={cn(
+                  "text-[0.875rem] text-foreground ml-2.5",
+                  erValgt ? "font-semibold" : "font-medium"
+                )}>
+                  {k.navn}
+                </span>
               </div>
-              <div className="border-t border-border mt-2.5 pt-2.5">
-                <div className="flex flex-wrap gap-1.5">
-                  {JAKT_CHIPS.map((chip) => (
-                    <span
-                      key={chip}
-                      className={cn(
-                        "h-7 px-2.5 text-[0.75rem] rounded-full border inline-flex items-center",
-                        chip === "Alle" && !erValgt
-                          ? "bg-foreground text-background border-foreground font-medium"
-                          : "border-border text-muted-foreground"
-                      )}
-                    >
-                      {chip}
-                    </span>
-                  ))}
-                </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[0.75rem] text-muted-foreground">
+                  Ledig {k.ledigFra} · {k.prosent}%
+                </span>
+                {erValgt && (
+                  <div className="w-1.5 h-1.5 rounded-full bg-foreground animate-pulse" />
+                )}
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* Jakt-filter — kun synlig når konsulent er valgt */}
+      {valgtKonsulent !== null && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+            Jakt
+          </span>
+          {JAKT_CHIPS.map((chip) => (
+            <span
+              key={chip}
+              className={chip === "Alle" ? CHIP_ON : CHIP_OFF}
+            >
+              {chip}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Table */}
       {isLoading ? (
