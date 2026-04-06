@@ -47,8 +47,17 @@ const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colo
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
 const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground font-medium`;
 
+const JAKT_KONSULENTER = [
+  { id: 1, navn: "Erik Paulsen", ledigFra: "24. apr.", prosent: 100 },
+  { id: 2, navn: "Kari Hansen", ledigFra: "1. juni", prosent: 50 },
+  { id: 3, navn: "Jon Berg", ledigFra: "Ledig nå", prosent: 100 },
+];
+
+const JAKT_CHIPS = ["Alle", "Forespørsler", "Finn-match", "Aktiv dialog", "Innkjøper", "Kjente kunder", "Re-aktivering"];
+
 const Contacts = () => {
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [valgtKonsulent, setValgtKonsulent] = useState<number | null>(null);
   const [search, setSearch] = usePersistentState("stacq:contacts:search", "");
   const [ownerFilter, setOwnerFilter] = usePersistentState("stacq:contacts:ownerFilter", "all");
   const [signalFilter, setSignalFilter] = usePersistentState("stacq:contacts:signalFilter", "all");
@@ -467,21 +476,6 @@ const Contacts = () => {
         <h1 className="text-[1.375rem] font-bold">Kontakter</h1>
       </div>
 
-      {/* Jaktmodus banner — hardkodet designforslag */}
-      <div className="bg-card border border-border rounded-lg px-4 py-2.5 flex items-center gap-3">
-        <div className="w-2 h-2 rounded-full bg-foreground animate-pulse" />
-        <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Jaktmodus</span>
-        <div className="border-l border-border h-4 mx-1" />
-        <span className="text-[0.875rem] font-semibold text-foreground">Erik Paulsen</span>
-        <span className="h-8 px-3 text-[0.8125rem] rounded-full border border-border text-muted-foreground inline-flex items-center">C++</span>
-        <span className="h-8 px-3 text-[0.8125rem] rounded-full border border-border text-muted-foreground inline-flex items-center">Embedded</span>
-        <span className="h-8 px-3 text-[0.8125rem] rounded-full border border-border text-muted-foreground inline-flex items-center">RTOS</span>
-        <div className="ml-auto flex items-center gap-4">
-          <span className="text-[0.75rem] text-muted-foreground">3 konsulenter i jakt</span>
-          <button className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">Bytt konsulent</button>
-          <button className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">Skru av jaktmodus</button>
-        </div>
-      </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1 max-w-full sm:max-w-xs">
@@ -559,16 +553,6 @@ const Contacts = () => {
             <Chip label="Innkjøper" value="call_list" current={typeFilter} onSelect={setTypeFilter} />
             <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
           </div>
-          {/* JAKT filter chips — hardkodet designforslag */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
-              Jakt
-            </span>
-            <span className={CHIP_OFF}>Forespørsler</span>
-            <span className={CHIP_OFF}>Finn-match</span>
-            <span className={CHIP_OFF}>Re-aktivering</span>
-            <span className={CHIP_OFF}>Kjente kunder</span>
-          </div>
         </div>
         <div className="flex items-center gap-3 md:ml-auto shrink-0">
           <div className="w-px h-8 bg-border" />
@@ -579,6 +563,50 @@ const Contacts = () => {
             <span className="text-[0.9375rem] text-muted-foreground ml-1.5">kontakter</span>
           </div>
         </div>
+      </div>
+
+      {/* Konsulent-bokser — hardkodet designforslag */}
+      <div className="flex flex-row gap-3">
+        {JAKT_KONSULENTER.map((k) => {
+          const erValgt = valgtKonsulent === k.id;
+          return (
+            <div
+              key={k.id}
+              onClick={() => setValgtKonsulent(erValgt ? null : k.id)}
+              className={cn(
+                "rounded-lg bg-card px-4 py-3 cursor-pointer transition-colors relative",
+                erValgt
+                  ? "border-2 border-foreground"
+                  : "border border-border hover:bg-muted/40"
+              )}
+            >
+              {erValgt && (
+                <div className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-foreground animate-pulse" />
+              )}
+              <div className="text-[0.875rem] font-semibold text-foreground">{k.navn}</div>
+              <div className="text-[0.75rem] text-muted-foreground">
+                Ledig {k.ledigFra} · {k.prosent}%
+              </div>
+              <div className="border-t border-border mt-2.5 pt-2.5">
+                <div className="flex flex-wrap gap-1.5">
+                  {JAKT_CHIPS.map((chip) => (
+                    <span
+                      key={chip}
+                      className={cn(
+                        "h-7 px-2.5 text-[0.75rem] rounded-full border inline-flex items-center",
+                        chip === "Alle" && !erValgt
+                          ? "bg-foreground text-background border-foreground font-medium"
+                          : "border-border text-muted-foreground"
+                      )}
+                    >
+                      {chip}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Table */}
