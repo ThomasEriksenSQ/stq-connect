@@ -611,9 +611,6 @@ const Contacts = () => {
                     · {k.relativ}
                   </span>
                 </span>
-                {erValgt && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-foreground animate-pulse" />
-                )}
               </div>
             </div>
           );
