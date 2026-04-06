@@ -48,10 +48,10 @@ const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-seco
 const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground font-medium`;
 
 const JAKT_KONSULENTER = [
-  { id: 1, navn: "Erik Paulsen", ledigFra: "24. apr.", prosent: 100 },
-  { id: 2, navn: "Kari Hansen", ledigFra: "1. juni", prosent: 50 },
-  { id: 3, navn: "Jon Berg", ledigFra: "Ledig nå", prosent: 100 },
-  { id: 4, navn: "Lars Moen", ledigFra: "15. mai", prosent: 100 },
+  { id: 1, navn: "Erik Paulsen", datoTekst: "Tilgjengelig 24. apr.", relativ: "18 dager til", passert: false },
+  { id: 2, navn: "Kari Hansen", datoTekst: "Tilgjengelig 1. juni", relativ: "56 dager til", passert: false },
+  { id: 3, navn: "Jon Berg", datoTekst: "Tilgjengelig nå", relativ: "3 dager siden", passert: true },
+  { id: 4, navn: "Lars Moen", datoTekst: "Tilgjengelig 15. mai", relativ: "39 dager til", passert: false },
 ];
 
 const JAKT_CHIPS = ["Alle", "Forespørsler", "Finn-match", "Aktiv dialog", "Innkjøper", "Kjente kunder", "Re-aktivering"];
@@ -572,6 +572,9 @@ const Contacts = () => {
 
       {/* Konsulent-velger — vertikal, kompakt */}
       <div className="flex flex-col">
+        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">
+          Tilgjengelig for oppdrag
+        </p>
         {JAKT_KONSULENTER.map((k) => {
           const erValgt = valgtKonsulent === k.id;
           return (
@@ -601,7 +604,10 @@ const Contacts = () => {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[0.75rem] text-muted-foreground">
-                  Ledig {k.ledigFra} · {k.prosent}%
+                  {k.datoTekst}
+                  <span className={cn("ml-1.5", k.passert ? "text-amber-600 font-medium" : "text-muted-foreground")}>
+                    · {k.relativ}
+                  </span>
                 </span>
                 {erValgt && (
                   <div className="w-1.5 h-1.5 rounded-full bg-foreground animate-pulse" />
