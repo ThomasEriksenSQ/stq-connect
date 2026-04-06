@@ -433,7 +433,7 @@ function normalizeTimelineKey(entry: { period: string; primary: string; secondar
 function sanitizeEducationEntries(
   entries: Array<{ period: string; primary: string; secondary?: string }>,
   sidebarEducationItems: Set<string>,
-) {
+): Array<{ period: string; primary: string; secondary: string }> {
   return uniqueBy(
     entries
       .map((entry) => normalizeTimelineEntry(entry, "education"))
