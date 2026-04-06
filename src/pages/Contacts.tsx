@@ -509,51 +509,55 @@ const Contacts = () => {
       {/* Chip filters */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start">
         <div className="space-y-2 flex-1">
-          {/* EIER */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
-              Eier
-            </span>
-            <Chip label="Alle" value="all" current={ownerFilter} onSelect={setOwnerFilter} />
-            {uniqueOwners.map(([id, name]) => (
-              <Chip key={id} label={name} value={id} current={ownerFilter} onSelect={setOwnerFilter} />
-            ))}
-          </div>
-          {/* SIGNAL */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
-              Signal
-            </span>
-            <Chip label="Alle" value="all" current={signalFilter} onSelect={setSignalFilter} />
-            {SIGNAL_OPTIONS.map((s) => (
-              <Chip key={s.label} label={s.label} value={s.label} current={signalFilter} onSelect={setSignalFilter} />
-            ))}
-            <div className="w-px h-5 bg-border mx-1" />
-            <button
-              onClick={() => {
-                const next = !hotListActive;
-                setHotListActive(next);
-                setSort(next ? { field: "priority", dir: "desc" } : { field: "signal", dir: "asc" });
-              }}
-              className={cn(
-                "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer inline-flex items-center gap-1.5",
-                hotListActive
-                  ? "bg-red-500 text-white border-red-500 font-medium"
-                  : "border-border text-muted-foreground hover:bg-secondary",
-              )}
-            >
-              🔥 Hot list
-            </button>
-          </div>
-          {/* TYPE */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
-              Type
-            </span>
-            <Chip label="Alle" value="all" current={typeFilter} onSelect={setTypeFilter} />
-            <Chip label="Innkjøper" value="call_list" current={typeFilter} onSelect={setTypeFilter} />
-            <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
-          </div>
+          {valgtKonsulent === null && (
+            <>
+              {/* EIER */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+                  Eier
+                </span>
+                <Chip label="Alle" value="all" current={ownerFilter} onSelect={setOwnerFilter} />
+                {uniqueOwners.map(([id, name]) => (
+                  <Chip key={id} label={name} value={id} current={ownerFilter} onSelect={setOwnerFilter} />
+                ))}
+              </div>
+              {/* SIGNAL */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+                  Signal
+                </span>
+                <Chip label="Alle" value="all" current={signalFilter} onSelect={setSignalFilter} />
+                {SIGNAL_OPTIONS.map((s) => (
+                  <Chip key={s.label} label={s.label} value={s.label} current={signalFilter} onSelect={setSignalFilter} />
+                ))}
+                <div className="w-px h-5 bg-border mx-1" />
+                <button
+                  onClick={() => {
+                    const next = !hotListActive;
+                    setHotListActive(next);
+                    setSort(next ? { field: "priority", dir: "desc" } : { field: "signal", dir: "asc" });
+                  }}
+                  className={cn(
+                    "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer inline-flex items-center gap-1.5",
+                    hotListActive
+                      ? "bg-red-500 text-white border-red-500 font-medium"
+                      : "border-border text-muted-foreground hover:bg-secondary",
+                  )}
+                >
+                  🔥 Hot list
+                </button>
+              </div>
+              {/* TYPE */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+                  Type
+                </span>
+                <Chip label="Alle" value="all" current={typeFilter} onSelect={setTypeFilter} />
+                <Chip label="Innkjøper" value="call_list" current={typeFilter} onSelect={setTypeFilter} />
+                <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
+              </div>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-3 md:ml-auto shrink-0">
           <div className="w-px h-8 bg-border" />
