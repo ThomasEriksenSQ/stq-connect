@@ -47,36 +47,8 @@ const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colo
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
 const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground font-medium`;
 
-const JAKT_KONSULENTER = [
-  { id: 1, navn: "Erik Paulsen", initialer: "EP", ledigFra: "24. apr.", dager: "18 dager til", passert: false },
-  { id: 2, navn: "Kari Hansen", initialer: "KH", ledigFra: "1. juni", dager: "56 dager til", passert: false },
-  { id: 3, navn: "Jon Berg", initialer: "JB", ledigFra: "nå", dager: "3 dager siden", passert: true },
-  { id: 4, navn: "Lars Moen", initialer: "LM", ledigFra: "15. mai", dager: "39 dager til", passert: false },
-];
-
-const JAKT_CHIPS = [
-  { value: "alle", label: "Alle" },
-  { value: "foresporsler", label: "Forespørsler" },
-  { value: "finn", label: "Finn-match" },
-  { value: "dialog", label: "Dialog" },
-  { value: "innkjoper", label: "Innkjøper" },
-  { value: "kunder", label: "Kunder" },
-  { value: "kald", label: "Kald" },
-];
-
-const GRID_DEFAULT = "grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_70px_70px_90px]";
-const GRID_JAKT = "grid-cols-[80px_minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_70px_70px_90px]";
-
-const FINN_SELSKAPER = [
-  { selskap: "Kongsberg Defence & Aerospace", teknologier: ["C++", "Embedded", "RTOS"] },
-  { selskap: "Norbit AS", teknologier: ["C", "Linux", "Yocto"] },
-  { selskap: "Nordic Semiconductor", teknologier: ["C++", "BLE", "Zephyr"] },
-];
-
 const Contacts = () => {
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
-  const [selectedKonsulent, setSelectedKonsulent] = useState<number | null>(null);
-  const [jaktChip, setJaktChip] = useState("alle");
   const [search, setSearch] = usePersistentState("stacq:contacts:search", "");
   const [ownerFilter, setOwnerFilter] = usePersistentState("stacq:contacts:ownerFilter", "all");
   const [signalFilter, setSignalFilter] = usePersistentState("stacq:contacts:signalFilter", "all");
@@ -494,52 +466,6 @@ const Contacts = () => {
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-[1.375rem] font-bold">Kontakter</h1>
       </div>
-
-      {/* Konsulent-velger — mellom h1 og søk */}
-      <div className="flex flex-col">
-        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">
-          Tilgjengelig for oppdrag
-        </p>
-        {JAKT_KONSULENTER.map((k) => {
-          const erValgt = selectedKonsulent === k.id;
-          return (
-            <div
-              key={k.id}
-              onClick={() => setSelectedKonsulent(erValgt ? null : k.id)}
-              className={cn(
-                "flex items-center gap-3 px-4 py-2.5 rounded-lg bg-card cursor-pointer transition-colors mb-1.5",
-                erValgt
-                  ? "border-2 border-foreground"
-                  : "border border-border hover:bg-muted/40"
-              )}
-            >
-              <div
-                className={cn(
-                  "w-7 h-7 rounded-full bg-muted flex items-center justify-center text-[0.6875rem] font-semibold shrink-0",
-                  erValgt ? "border-2 border-foreground text-foreground" : "border border-border text-muted-foreground"
-                )}
-              >
-                {k.initialer}
-              </div>
-              <span className={cn(
-                "text-[0.875rem] text-foreground",
-                erValgt ? "font-semibold" : "font-medium"
-              )}>
-                {k.navn}
-              </span>
-              <div className="text-right ml-auto">
-                <span className="text-[0.75rem] text-muted-foreground">
-                  Tilgjengelig {k.ledigFra}
-                </span>
-                <span className={`text-[0.75rem] ml-1.5 ${k.passert ? "text-amber-600 font-medium" : "text-muted-foreground"}`}>
-                  · {k.dager}
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1 max-w-full sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
@@ -571,73 +497,51 @@ const Contacts = () => {
       {/* Chip filters */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start">
         <div className="space-y-2 flex-1">
-          {selectedKonsulent === null && (
-            <div className="space-y-2">
-              {/* EIER */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
-                  Eier
-                </span>
-                <Chip label="Alle" value="all" current={ownerFilter} onSelect={setOwnerFilter} />
-                {uniqueOwners.map(([id, name]) => (
-                  <Chip key={id} label={name} value={id} current={ownerFilter} onSelect={setOwnerFilter} />
-                ))}
-              </div>
-              {/* SIGNAL */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
-                  Signal
-                </span>
-                <Chip label="Alle" value="all" current={signalFilter} onSelect={setSignalFilter} />
-                {SIGNAL_OPTIONS.map((s) => (
-                  <Chip key={s.label} label={s.label} value={s.label} current={signalFilter} onSelect={setSignalFilter} />
-                ))}
-                <div className="w-px h-5 bg-border mx-1" />
-                <button
-                  onClick={() => {
-                    const next = !hotListActive;
-                    setHotListActive(next);
-                    setSort(next ? { field: "priority", dir: "desc" } : { field: "signal", dir: "asc" });
-                  }}
-                  className={cn(
-                    "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer inline-flex items-center gap-1.5",
-                    hotListActive
-                      ? "bg-red-500 text-white border-red-500 font-medium"
-                      : "border-border text-muted-foreground hover:bg-secondary",
-                  )}
-                >
-                  🔥 Hot list
-                </button>
-              </div>
-              {/* TYPE */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
-                  Type
-                </span>
-                <Chip label="Alle" value="all" current={typeFilter} onSelect={setTypeFilter} />
-                <Chip label="Innkjøper" value="call_list" current={typeFilter} onSelect={setTypeFilter} />
-                <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
-              </div>
-            </div>
-          )}
-
-          {/* Jakt-filter — kun synlig når konsulent er valgt */}
-          {selectedKonsulent !== null && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
-                Type
-              </span>
-              {JAKT_CHIPS.map((chip) => (
-                <button
-                  key={chip.value}
-                  onClick={() => setJaktChip(chip.value)}
-                  className={jaktChip === chip.value ? CHIP_ON : CHIP_OFF}
-                >
-                  {chip.label}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* EIER */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+              Eier
+            </span>
+            <Chip label="Alle" value="all" current={ownerFilter} onSelect={setOwnerFilter} />
+            {uniqueOwners.map(([id, name]) => (
+              <Chip key={id} label={name} value={id} current={ownerFilter} onSelect={setOwnerFilter} />
+            ))}
+          </div>
+          {/* SIGNAL */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+              Signal
+            </span>
+            <Chip label="Alle" value="all" current={signalFilter} onSelect={setSignalFilter} />
+            {SIGNAL_OPTIONS.map((s) => (
+              <Chip key={s.label} label={s.label} value={s.label} current={signalFilter} onSelect={setSignalFilter} />
+            ))}
+            <div className="w-px h-5 bg-border mx-1" />
+            <button
+              onClick={() => {
+                const next = !hotListActive;
+                setHotListActive(next);
+                setSort(next ? { field: "priority", dir: "desc" } : { field: "signal", dir: "asc" });
+              }}
+              className={cn(
+                "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer inline-flex items-center gap-1.5",
+                hotListActive
+                  ? "bg-red-500 text-white border-red-500 font-medium"
+                  : "border-border text-muted-foreground hover:bg-secondary",
+              )}
+            >
+              🔥 Hot list
+            </button>
+          </div>
+          {/* TYPE */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+              Type
+            </span>
+            <Chip label="Alle" value="all" current={typeFilter} onSelect={setTypeFilter} />
+            <Chip label="Innkjøper" value="call_list" current={typeFilter} onSelect={setTypeFilter} />
+            <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
+          </div>
         </div>
         <div className="flex items-center gap-3 md:ml-auto shrink-0">
           <div className="w-px h-8 bg-border" />
@@ -749,7 +653,7 @@ const Contacts = () => {
                             }
                           >
                             <span
-                              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${s.badgeColor}`}
+                              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${s.color}`}
                             >
                               {s.label}
                             </span>
@@ -800,16 +704,12 @@ const Contacts = () => {
           </div>
 
           <div className="hidden md:block border border-border rounded-lg overflow-hidden bg-card shadow-card">
-            <div className={`grid ${selectedKonsulent !== null ? GRID_JAKT : GRID_DEFAULT} gap-3 px-4 py-2.5 border-b border-border bg-background`}>
-              {selectedKonsulent !== null && (
-                <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Handling</span>
-              )}
+            <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_110px_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
               <SortHeader field="name">Navn</SortHeader>
               <SortHeader field="signal">Signal</SortHeader>
               <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Finn</span>
               <SortHeader field="company">Selskap</SortHeader>
               <SortHeader field="title">Stilling</SortHeader>
-              <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Match</span>
               <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Tags</span>
               <SortHeader field="last_activity" className="justify-end">
                 Siste akt.
@@ -835,25 +735,8 @@ const Contacts = () => {
                               : "3px solid rgb(229 231 235)"
                         : "3px solid transparent",
                     }}
-                    className={`grid ${selectedKonsulent !== null ? GRID_JAKT : GRID_DEFAULT} gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75`}
+                    className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_110px_100px] gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75"
                   >
-                    {selectedKonsulent !== null && (
-                      <div className="flex items-center">
-                        {(() => {
-                          const idx = sorted.indexOf(contact);
-                          const quarter = Math.ceil(sorted.length / 4);
-                          if (idx < quarter) {
-                            return <span className="inline-flex items-center rounded-full bg-foreground text-background px-2.5 py-0.5 text-[0.6875rem] font-semibold whitespace-nowrap">🔥 Ring nå</span>;
-                          } else if (idx < quarter * 2) {
-                            return <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.6875rem] font-medium text-foreground whitespace-nowrap">↩ Følg opp</span>;
-                          } else if (idx < quarter * 3) {
-                            return <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.6875rem] font-medium text-foreground whitespace-nowrap">🎯 Ny match</span>;
-                          } else {
-                            return <span className="text-[0.75rem] text-muted-foreground">—</span>;
-                          }
-                        })()}
-                      </div>
-                    )}
                     <button
                       onClick={() => navigate(`/kontakter/${contact.id}`)}
                       className="min-w-0 text-left cursor-pointer flex items-center gap-2"
@@ -896,7 +779,7 @@ const Contacts = () => {
                               }
                             >
                               <span
-                                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${s.badgeColor}`}
+                                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${s.color}`}
                               >
                                 {s.label}
                               </span>
@@ -929,20 +812,6 @@ const Contacts = () => {
                     >
                       {contact.title?.slice(0, 25) || ""}
                     </button>
-                    {/* Match-kolonne — hardkodet designforslag */}
-                    <div className="flex items-center">
-                      {(() => {
-                        const idx = sorted.indexOf(contact);
-                        const third = Math.ceil(sorted.length / 3);
-                        if (idx < third) {
-                          return <span className="inline-flex items-center rounded-full bg-foreground text-background px-2.5 py-0.5 text-[0.6875rem] font-semibold">92%</span>;
-                        } else if (idx < third * 2) {
-                          return <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.6875rem] font-medium text-foreground">61%</span>;
-                        } else {
-                          return <span className="text-[0.75rem] text-muted-foreground">—</span>;
-                        }
-                      })()}
-                    </div>
                     <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => handleToggle(contact, "cv_email", !contact.cv_email)}
@@ -962,7 +831,7 @@ const Contacts = () => {
                             : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
                         }
                       >
-                        INN
+                        Innkjøper
                       </button>
                     </div>
                     <span className="text-[0.75rem] text-muted-foreground text-right">
@@ -982,37 +851,6 @@ const Contacts = () => {
                   </div>
                 );
               })}
-              {selectedKonsulent !== null && jaktChip === "finn" && (
-                <>
-                  <div className="flex items-center gap-3 px-4 py-2 bg-muted/30">
-                    <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                      Ingen kontakt registrert
-                    </span>
-                  </div>
-                  {FINN_SELSKAPER.map((s) => (
-                    <div
-                      key={s.selskap}
-                      className={`grid ${GRID_JAKT} gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 border-t border-border`}
-                    >
-                      <span className="text-[0.75rem] text-muted-foreground">—</span>
-                      <button className="text-[0.8125rem] font-medium text-primary hover:underline text-left">
-                        + Legg til kontakt
-                      </button>
-                      <span className="text-muted-foreground">—</span>
-                      <span className="text-muted-foreground">—</span>
-                      <span className="text-[0.8125rem] text-muted-foreground truncate">{s.selskap}</span>
-                      <div className="flex gap-1 flex-wrap">
-                        {s.teknologier.map((t) => (
-                          <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-foreground">{t}</span>
-                        ))}
-                      </div>
-                      <span className="text-muted-foreground">—</span>
-                      <span className="text-muted-foreground">—</span>
-                      <span className="text-muted-foreground">—</span>
-                    </div>
-                  ))}
-                </>
-              )}
             </div>
           </div>
         </>

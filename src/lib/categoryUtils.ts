@@ -91,7 +91,7 @@ export function extractCategory(subject: string | null, description: string | nu
   return "";
 }
 
-export const SIGNAL_ORDER: string[] = CATEGORIES.map((c) => c.label);
+export const SIGNAL_ORDER = CATEGORIES.map((c) => c.label);
 
 export function getSignalBadge(category: string | null) {
   if (!category) return null;
