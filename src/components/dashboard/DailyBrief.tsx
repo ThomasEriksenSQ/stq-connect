@@ -1069,6 +1069,8 @@ const DailyBrief = () => {
                     </div>
                   </div>
 
+                  {/* Divider */}
+                  <div className="border-t border-border/50" />
 
                   {/* ── Sone 4: Toggle-piller ── */}
                   <div className="py-5">
