@@ -61,24 +61,19 @@ export default function KonsulenterAnsatte() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("cv_documents")
-        .select("ansatt_id, updated_at, portrait_url");
+        .select("ansatt_id, portrait_url");
       if (error) throw error;
       return data;
     },
   });
 
-  const cvDataMap = useMemo(() => {
-    const updatedMap = new Map<number, string>();
+  const cvPortraitMap = useMemo(() => {
     const portraitMap = new Map<number, string>();
     (cvDocs as any[]).forEach((c) => {
-      if (c.ansatt_id && c.updated_at) updatedMap.set(c.ansatt_id, c.updated_at);
       if (c.ansatt_id && c.portrait_url) portraitMap.set(c.ansatt_id, c.portrait_url);
     });
-    return { updatedMap, portraitMap };
+    return portraitMap;
   }, [cvDocs]);
-
-  const cvUpdatedMap = cvDataMap.updatedMap;
-  const cvPortraitMap = cvDataMap.portraitMap;
 
   const oppdragMap = useMemo(() => {
     const m = new Map<string, string>();
