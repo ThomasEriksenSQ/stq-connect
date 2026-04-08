@@ -1,29 +1,34 @@
 
 
-## Plan: Legg til fornyelsesdata og varighet i oppdragsrader
+## Plan: Flytt CV-editor og Finn oppdrag til ansattsiden
 
-### Endring i `src/pages/AnsattDetail.tsx` — `OppdragRow`-komponenten
+### Oversikt
+Fjern "CV-editor"-knappen (+ "X siden"-tekst) og "Finn oppdrag"-knappen fra ansatt-tabellen. Legg dem til i headeren på ansattdetaljsiden (`AnsattDetail.tsx`). Tabellen beholder kun Rediger-knappen og Profil-knappen.
 
-**1. Aktive oppdrag — vis fornyelsesdato og dager til fornyelse**
+### 1. `src/pages/KonsulenterAnsatte.tsx` — Fjern kolonner
 
-Etter pris/margin-raden, legg til fornyelsesinfo basert på `forny_dato` og `lopende_30_dager` fra oppdragsobjektet (disse feltene hentes allerede via `select("*")`):
+- **Fjern CV-kolonnen** (CV-editor-knapp + relativ tid) og **Finn oppdrag-knappen** fra HANDLINGER
+- **Oppdater GRID_COLS** fra 8 kolonner til 6: `[minmax(0,2.2fr)_95px_100px_90px_80px_64px]`
+- **Oppdater header-array** til `["NAVN", "START", "ANSETTELSE", "OPPDRAG", "FORNYES", ""]`
+- **Siste kolonne** beholder kun Rediger-knapp og Profil-knapp side om side
+- Fjern ubrukte imports (`ExternalLink`, `Sparkles`) og `cvRelativeTime`-funksjonen, `cvDocs`-queryen, `cvDataMap` osv. hvis de ikke brukes andre steder
+- Fjern `autoRunMatch`-state og tilhørende logikk fra `AnsattDetailSheet`-kallet
 
-- Beregn effektiv dato: hvis `lopende_30_dager` → dagens dato + 30 dager, ellers `forny_dato`
-- Vis som: `Fornyes: 15. mai 2026 (37 dager)` med fargekoding:
-  - Utløpt: `text-destructive font-semibold`
-  - ≤30 dager: `text-amber-600 font-semibold`
-  - >30 dager: `text-muted-foreground`
+### 2. `src/pages/AnsattDetail.tsx` — Legg til knapper i headeren
 
-**2. Tidligere oppdrag — vis varighet**
+I header-seksjonen (ved siden av navn/status-badge), legg til to knapper til høyre:
 
-For inaktive oppdrag med både `start_dato` og `slutt_dato`, beregn og vis varighet ved hjelp av eksisterende `formatMonths`-funksjonen (som allerede håndterer år/måneder/uker):
+```text
+[Bilde]  Navn                          [✨ Finn oppdrag]  [🔗 CV-editor]
+         Aktiv-badge
+```
 
-- Vis som: `Varighet: 1 år 2 md` etter datoene
+- **CV-editor**: Navigerer til `/cv-admin/${ansatt.id}`, med `ExternalLink`-ikon, samme stil som dagens knapp
+- **Finn oppdrag**: Åpner `AnsattDetailSheet` med `autoRunMatch=true`, med `Sparkles`-ikon
 
-**3. Oppdater OppdragRow-signaturen**
+Legg til nødvendig state (`detailOpen`, `autoRunMatch`) og import av `AnsattDetailSheet`, `Sparkles`, `ExternalLink`.
 
-Legg til en `isActive`-prop slik at komponenten vet om den skal vise fornyelse (aktiv) eller varighet (tidligere). Alternativt sjekke `o.status` direkte.
-
-### Kun én fil endres
+### Filer som endres
+- `src/pages/KonsulenterAnsatte.tsx`
 - `src/pages/AnsattDetail.tsx`
 
