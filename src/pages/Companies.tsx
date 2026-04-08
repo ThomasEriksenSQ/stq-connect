@@ -458,30 +458,6 @@ const Companies = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-[1.375rem] font-bold">Selskaper</h1>
-      </div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1 max-w-full sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-          <Input
-            placeholder="Søk..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border"
-          />
-        </div>
-        <div className="md:hidden">
-          <select
-            value={mobileSortValue}
-            onChange={(e) => handleMobileSortChange(e.target.value)}
-            className="h-9 w-full rounded-lg border border-border bg-card px-3 text-[0.8125rem] text-foreground"
-          >
-            <option value="name:asc">Sorter: Navn A-Å</option>
-            <option value="name:desc">Sorter: Navn Å-A</option>
-            <option value="type:asc">Sorter: Type</option>
-            <option value="city:asc">Sorter: Sted A-Å</option>
-            <option value="last_activity:desc">Sorter: Siste aktivitet</option>
-          </select>
-        </div>
         <Dialog open={open} onOpenChange={handleDialogOpenChange}>
           <DialogTrigger asChild>
             <Button className="rounded-lg h-9 px-3.5 text-[0.8125rem] font-medium gap-1.5 w-full sm:w-auto">
