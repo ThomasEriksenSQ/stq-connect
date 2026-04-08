@@ -229,6 +229,22 @@ const AnsattDetail = () => {
             {status}
           </Badge>
         </div>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setMatchSheetOpen(true)}
+            className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Finn oppdrag
+          </button>
+          <button
+            onClick={() => navigate(`/cv-admin/${ansatt.id}`)}
+            className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            CV-editor
+          </button>
+        </div>
       </div>
 
       {/* INFO GRID */}
