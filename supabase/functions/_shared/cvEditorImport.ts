@@ -431,7 +431,7 @@ function normalizeTimelineKey(entry: { period: string; primary: string; secondar
 }
 
 function sanitizeEducationEntries(
-  entries: Array<{ period: string; primary: string; secondary: string }>,
+  entries: Array<{ period: string; primary: string; secondary?: string }>,
   sidebarEducationItems: Set<string>,
 ) {
   return uniqueBy(
@@ -479,7 +479,7 @@ export function buildCvEditorImportDocument(
     paragraphs: string[];
     technologies: string;
   }>;
-  education: Array<{ period: string; primary: string; secondary: string }>;
+  education: Array<{ period: string; primary: string; secondary?: string }>;
   workExperience: Array<{ period: string; primary: string }>;
   additionalSections: Array<{
     title: string;

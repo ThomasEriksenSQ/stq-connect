@@ -360,7 +360,7 @@ export function ContactCardContent({
   const updateMutation = useMutation({
     mutationFn: async (updates: Record<string, any>) => {
       const safeUpdates = buildContactCvSafeUpdates(contact as any, updates);
-      const { error } = await supabase.from("contacts").update(safeUpdates).eq("id", contactId);
+      const { error } = await supabase.from("contacts").update(safeUpdates as any).eq("id", contactId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -485,7 +485,7 @@ export function ContactCardContent({
 
   const updateActivityMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Record<string, any> }) => {
-      const { error } = await supabase.from("activities").update(updates).eq("id", id);
+      const { error } = await supabase.from("activities").update(updates as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

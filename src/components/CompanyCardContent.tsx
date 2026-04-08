@@ -441,7 +441,7 @@ export function CompanyCardContent({
 
   const updateMutation = useMutation({
     mutationFn: async (updates: Record<string, string | null>) => {
-      const { error } = await supabase.from("companies").update(updates).eq("id", companyId);
+      const { error } = await supabase.from("companies").update(updates as any).eq("id", companyId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -1146,7 +1146,7 @@ export function CompanyCardContent({
         <div className="space-y-5">
           {/* ── Teknisk DNA ── */}
           {(() => {
-            const techTags = getSortedTechnologyEntries(techProfile?.teknologier);
+            const techTags = getSortedTechnologyEntries(techProfile?.teknologier as any);
             const contactTechTags = mergeTechnologyTags(
               ...(contacts as any[]).map((contact) => (contact as any).teknologier || []),
             );
@@ -1829,7 +1829,7 @@ function CompanyActivityRow({
     if (editDate) {
       updates.created_at = new Date(editDate).toISOString();
     }
-    await supabase.from("activities").update(updates).eq("id", activity.id);
+    await supabase.from("activities").update(updates as any).eq("id", activity.id);
     queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.activities(companyId) });
     queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.contactActivities(companyId) });
     setEditing(false);

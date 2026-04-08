@@ -121,6 +121,7 @@ type ContactMatchLead = ContactRow & MatchLeadBase & {
 };
 type RequestMatchLead = MatchLeadBase & {
   leadType: "request";
+  name: string;
   requestId: number;
   requestStatus: string | null;
   requestTechnologyTags: string[];
@@ -378,7 +379,7 @@ const Contacts = () => {
         const ikkeAktuellKontakt = !!(c as any).ikke_aktuell_kontakt;
         const techProfile = techProfileByCompanyId.get(c.company_id || "");
         const hasMarkedsradar = !!(
-          techProfile?.sist_fra_finn && differenceInDays(new Date(), new Date(techProfile.sist_fra_finn)) <= 90
+          techProfile?.sistFraFinn && differenceInDays(new Date(), new Date(techProfile.sistFraFinn)) <= 90
         );
         const daysSince = lastActivity ? differenceInDays(new Date(), new Date(lastActivity)) : 999;
         const companyTechnologyTags = techProfile?.companyTechnologyTags || [];
@@ -510,7 +511,7 @@ const Contacts = () => {
       delete pendingToggles.current[key];
       const { error } = await supabase
         .from("contacts")
-        .update({ [field]: newValue })
+        .update({ [field]: newValue } as any)
         .eq("id", contact.id);
       if (error) {
         toast.error("Kunne ikke oppdatere");
@@ -1032,7 +1033,7 @@ const Contacts = () => {
       if (right.matchScore10 !== left.matchScore10) return right.matchScore10 - left.matchScore10;
       if (right.chipUrgency !== left.chipUrgency) return right.chipUrgency - left.chipUrgency;
 
-      const hotListCompare = compareByHotList(left, right);
+      const hotListCompare = compareByHotList(left as any, right as any);
       if (hotListCompare !== 0) return hotListCompare;
 
       return left.name.localeCompare(right.name, "nb");
@@ -1660,10 +1661,10 @@ const Contacts = () => {
                       {contact.title && (
                         <p className="text-[0.8125rem] text-muted-foreground truncate">{contact.title}</p>
                       )}
-                      {selectedConsultant && "matchSources" in contact && contact.matchSources.length > 0 && (
+                      {selectedConsultant && "matchSources" in contact && (contact as any).matchSources.length > 0 && (
                         <p className="mt-1 text-[0.75rem] text-muted-foreground truncate">
-                          {contact.matchSources.map(getMatchSourceLabel).join(" · ")}
-                          {contact.matchTags.length > 0 ? ` · ${contact.matchTags.slice(0, 3).join(", ")}` : ""}
+                          {(contact as any).matchSources.map(getMatchSourceLabel).join(" · ")}
+                          {(contact as any).matchTags?.length > 0 ? ` · ${(contact as any).matchTags.slice(0, 3).join(", ")}` : ""}
                         </p>
                       )}
                     </div>
@@ -1876,10 +1877,10 @@ const Contacts = () => {
                     {selectedConsultant && "matchSources" in contact ? (
                       <div className="min-w-0">
                         <p className="text-[0.75rem] font-medium text-foreground truncate">
-                          {contact.matchSources.map(getMatchSourceLabel).join(" · ")}
+                          {(contact as any).matchSources.map(getMatchSourceLabel).join(" · ")}
                         </p>
                         <p className="text-[0.6875rem] text-muted-foreground truncate">
-                          {contact.matchTags.slice(0, 3).join(", ")}
+                          {(contact as any).matchTags?.slice(0, 3).join(", ")}
                         </p>
                       </div>
                     ) : (
