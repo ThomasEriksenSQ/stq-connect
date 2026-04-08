@@ -66,7 +66,7 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
         const d = new Date(o.forny_dato);
         return {
           id: o.id,
-          navn: o.kandidat?.split(" ")[0] || "?",
+          navn: o.kandidat || "?",
           fullName: o.kandidat || "?",
           kunde: o.kunde || "",
           utpris: Number(o.utpris) || 0,
