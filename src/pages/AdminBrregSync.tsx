@@ -33,40 +33,41 @@ export default function AdminBrregSync() {
     let updated = 0;
     let skipped = 0;
 
-    for (let i = 0; i < companies.length; i++) {
-      const c = companies[i];
-      const orgnr = cleanOrgNumber(c.org_number!);
-      setProgress(`Oppdaterer ${i + 1} av ${companies.length}...`);
+    const BATCH = 5;
 
-      if (!orgnr) {
-        skipped++;
-        setLog(prev => [...prev, `⏭ ${c.name}: ugyldig orgnr "${c.org_number}"`]);
-        await delay(100);
-        continue;
-      }
+    for (let i = 0; i < companies.length; i += BATCH) {
+      const chunk = companies.slice(i, i + BATCH);
+      setProgress(`Oppdaterer ${Math.min(i + BATCH, companies.length)} av ${companies.length}...`);
 
-      try {
-        const res = await fetch(`https://data.brreg.no/enhetsregisteret/api/enheter/${orgnr}`);
-        if (!res.ok) {
-          setLog(prev => [...prev, `⚠ ${c.name}: BRREG ${res.status}`]);
+      await Promise.all(chunk.map(async (c) => {
+        const orgnr = cleanOrgNumber(c.org_number!);
+        if (!orgnr) {
           skipped++;
-        } else {
-          const data = await res.json();
-          const poststed = data?.forretningsadresse?.poststed;
-          if (poststed) {
-            await supabase.from("companies").update({ city: poststed }).eq("id", c.id);
-            updated++;
-            setLog(prev => [...prev, `✅ ${c.name} → ${poststed}`]);
-          } else {
-            skipped++;
-            setLog(prev => [...prev, `⏭ ${c.name}: ingen poststed`]);
-          }
+          setLog(prev => [...prev, `⏭ ${c.name}: ugyldig orgnr "${c.org_number}"`]);
+          return;
         }
-      } catch (e: any) {
-        setLog(prev => [...prev, `❌ ${c.name}: ${e.message}`]);
-        skipped++;
-      }
-
+        try {
+          const res = await fetch(`https://data.brreg.no/enhetsregisteret/api/enheter/${orgnr}`);
+          if (!res.ok) {
+            setLog(prev => [...prev, `⚠ ${c.name}: BRREG ${res.status}`]);
+            skipped++;
+          } else {
+            const data = await res.json();
+            const poststed = data?.forretningsadresse?.poststed;
+            if (poststed) {
+              await supabase.from("companies").update({ city: poststed }).eq("id", c.id);
+              updated++;
+              setLog(prev => [...prev, `✅ ${c.name} → ${poststed}`]);
+            } else {
+              skipped++;
+              setLog(prev => [...prev, `⏭ ${c.name}: ingen poststed`]);
+            }
+          }
+        } catch (e: any) {
+          setLog(prev => [...prev, `❌ ${c.name}: ${e.message}`]);
+          skipped++;
+        }
+      }));
       await delay(300);
     }
 
