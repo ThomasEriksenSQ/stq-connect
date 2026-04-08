@@ -122,6 +122,9 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
     setCvFile(null);
     setCvParsing(false);
     setCvParsed(false);
+    setActiveMode(null);
+    setFinnLeads(false);
+    setLeadsResults(null);
   }, [ansatt, open]);
 
   // Open directly in edit mode when requested
