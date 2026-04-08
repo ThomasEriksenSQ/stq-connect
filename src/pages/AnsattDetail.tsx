@@ -1,0 +1,379 @@
+import { useParams, useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { ArrowLeft, Phone, Mail, MapPin, Calendar, Briefcase, MessageCircle, FileText, Plus, User } from "lucide-react";
+import { format, differenceInMonths, differenceInYears } from "date-fns";
+import { nb } from "date-fns/locale";
+import { cn, getInitials, formatMonths } from "@/lib/utils";
+import { calcStacqPris } from "@/lib/stacqPris";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
+import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+
+const fmt = (d: string | null) => d ? format(new Date(d), "d. MMM yyyy", { locale: nb }) : "–";
+
+const AnsattDetail = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const [editingNote, setEditingNote] = useState(false);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [actOpen, setActOpen] = useState(false);
+  const [actForm, setActForm] = useState({ type: "samtale", subject: "", description: "" });
+
+  const ansattId = Number(id);
+
+  const { data: ansatt, isLoading } = useQuery({
+    queryKey: ["ansatt-detail", ansattId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("stacq_ansatte")
+        .select("*")
+        .eq("id", ansattId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !isNaN(ansattId),
+  });
+
+  const { data: cvDoc } = useQuery({
+    queryKey: ["ansatt-cv-doc", ansattId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("cv_documents")
+        .select("portrait_url")
+        .eq("ansatt_id", ansattId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !isNaN(ansattId),
+  });
+
+  const { data: oppdrag = [] } = useQuery({
+    queryKey: ["ansatt-oppdrag", ansattId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("stacq_oppdrag")
+        .select("*")
+        .eq("ansatt_id", ansattId)
+        .order("start_dato", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !isNaN(ansattId),
+  });
+
+  const { data: aktiviteter = [] } = useQuery({
+    queryKey: ["ansatt-aktiviteter", ansattId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ansatt_aktiviteter" as any)
+        .select("*")
+        .eq("ansatt_id", ansattId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !isNaN(ansattId),
+  });
+
+  const saveNoteMutation = useMutation({
+    mutationFn: async (kommentar: string) => {
+      const { error } = await supabase
+        .from("stacq_ansatte")
+        .update({ kommentar } as any)
+        .eq("id", ansattId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ansatt-detail", ansattId] });
+      setEditingNote(false);
+      toast.success("Notat lagret");
+    },
+  });
+
+  const createActivityMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("ansatt_aktiviteter" as any)
+        .insert({
+          ansatt_id: ansattId,
+          type: actForm.type,
+          subject: actForm.subject,
+          description: actForm.description || null,
+          created_by: user?.id,
+        } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ansatt-aktiviteter", ansattId] });
+      setActOpen(false);
+      setActForm({ type: "samtale", subject: "", description: "" });
+      toast.success("Aktivitet registrert");
+    },
+    onError: () => toast.error("Kunne ikke registrere aktivitet"),
+  });
+
+  if (isLoading) return <p className="text-muted-foreground py-12 text-center">Laster...</p>;
+  if (!ansatt) return <p className="text-muted-foreground py-12 text-center">Ansatt ikke funnet</p>;
+
+  const today = new Date();
+  const status = ansatt.status === "SLUTTET" ? "Sluttet"
+    : ansatt.start_dato && new Date(ansatt.start_dato) > today ? "Kommende" : "Aktiv";
+
+  const portrait = cvDoc?.portrait_url || ansatt.bilde_url;
+  const durationMonths = ansatt.start_dato
+    ? differenceInMonths(ansatt.slutt_dato ? new Date(ansatt.slutt_dato) : today, new Date(ansatt.start_dato))
+    : null;
+
+  const activeOppdrag = oppdrag.filter((o: any) => o.status === "Aktiv" || o.status === "Oppstart");
+  const previousOppdrag = oppdrag.filter((o: any) => o.status !== "Aktiv" && o.status !== "Oppstart");
+
+  const statusColor = status === "Aktiv"
+    ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+    : status === "Kommende"
+      ? "bg-amber-100 text-amber-700 border-amber-200"
+      : "bg-gray-100 text-gray-600 border-gray-200";
+
+  return (
+    <div className="max-w-5xl space-y-6">
+      <button onClick={() => navigate(-1)} className="inline-flex items-center gap-2 text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">
+        <ArrowLeft className="h-3.5 w-3.5 stroke-[1.5]" />
+        Tilbake
+      </button>
+
+      {/* HEADER */}
+      <div className="flex items-center gap-5">
+        {portrait ? (
+          <img src={portrait} alt={ansatt.navn} className="w-20 h-20 rounded-full object-cover border-2 border-border" />
+        ) : (
+          <div className="w-20 h-20 rounded-full bg-primary/10 text-primary text-xl font-bold flex items-center justify-center">
+            {getInitials(ansatt.navn)}
+          </div>
+        )}
+        <div>
+          <h1 className="text-[1.5rem] font-bold">{ansatt.navn}</h1>
+          <Badge className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold mt-1", statusColor)}>
+            {status}
+          </Badge>
+        </div>
+      </div>
+
+      {/* INFO GRID */}
+      <Card className="bg-card border border-border rounded-lg shadow-card">
+        <CardContent className="p-5">
+          <h2 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4">Informasjon</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+            <InfoRow icon={Mail} label="E-post" value={ansatt.epost} />
+            <InfoRow icon={Phone} label="Telefon" value={ansatt.tlf} />
+            <InfoRow icon={Calendar} label="Startdato" value={fmt(ansatt.start_dato)} />
+            <InfoRow icon={Calendar} label="Sluttdato" value={fmt(ansatt.slutt_dato)} />
+            <InfoRow icon={Calendar} label="Tilgjengelig fra" value={fmt(ansatt.tilgjengelig_fra)} />
+            <InfoRow icon={Briefcase} label="Års erfaring" value={ansatt.erfaring_aar ? `${ansatt.erfaring_aar} år` : "–"} />
+            <InfoRow icon={MapPin} label="Geografi" value={ansatt.geografi || "–"} />
+            <InfoRow icon={User} label="Ansatt i" value={durationMonths != null ? formatMonths(durationMonths) : "–"} />
+          </div>
+          {ansatt.kompetanse && ansatt.kompetanse.length > 0 && (
+            <div className="mt-4">
+              <span className="text-[0.6875rem] text-muted-foreground uppercase tracking-[0.08em] font-medium">Kompetanse</span>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {ansatt.kompetanse.map((k: string) => (
+                  <Badge key={k} variant="secondary" className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold">
+                    {k}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* OPPDRAG */}
+      <Card className="bg-card border border-border rounded-lg shadow-card">
+        <CardContent className="p-5">
+          <h2 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4">Aktive oppdrag</h2>
+          {activeOppdrag.length === 0 ? (
+            <p className="text-[0.8125rem] text-muted-foreground">Ingen aktive oppdrag</p>
+          ) : (
+            <div className="space-y-3">
+              {activeOppdrag.map((o: any) => (
+                <OppdragRow key={o.id} o={o} />
+              ))}
+            </div>
+          )}
+
+          {previousOppdrag.length > 0 && (
+            <>
+              <h2 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mt-6 mb-4">Tidligere oppdrag</h2>
+              <div className="space-y-3">
+                {previousOppdrag.map((o: any) => (
+                  <OppdragRow key={o.id} o={o} />
+                ))}
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* NOTAT */}
+      <Card className="bg-card border border-border rounded-lg shadow-card">
+        <CardContent className="p-5">
+          <h2 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-3">Notat</h2>
+          {editingNote ? (
+            <div className="space-y-2">
+              <Textarea
+                value={noteDraft}
+                onChange={(e) => setNoteDraft(e.target.value)}
+                rows={4}
+                className="text-[0.9375rem]"
+              />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => saveNoteMutation.mutate(noteDraft)} disabled={saveNoteMutation.isPending}>
+                  Lagre
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setEditingNote(false)}>Avbryt</Button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => { setNoteDraft(ansatt.kommentar || ""); setEditingNote(true); }}
+              className="text-[0.9375rem] text-foreground/70 leading-relaxed whitespace-pre-wrap w-full text-left hover:text-foreground/90 transition-colors cursor-pointer"
+            >
+              {ansatt.kommentar || <span className="text-muted-foreground/40 italic">Klikk for å skrive notat...</span>}
+            </button>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* AKTIVITETER */}
+      <Card className="bg-card border border-border rounded-lg shadow-card">
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">Aktiviteter</h2>
+            <Dialog open={actOpen} onOpenChange={setActOpen}>
+              <DialogTrigger asChild>
+                <button className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-[hsl(var(--success))] text-white hover:opacity-90">
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  Logg aktivitet
+                </button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Registrer aktivitet</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={(e) => { e.preventDefault(); createActivityMutation.mutate(); }} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Type</Label>
+                    <Select value={actForm.type} onValueChange={(v) => setActForm({ ...actForm, type: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="samtale">Samtale</SelectItem>
+                        <SelectItem value="møte">Møte</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Emne *</Label>
+                    <Input value={actForm.subject} onChange={(e) => setActForm({ ...actForm, subject: e.target.value })} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Beskrivelse</Label>
+                    <Textarea value={actForm.description} onChange={(e) => setActForm({ ...actForm, description: e.target.value })} />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={createActivityMutation.isPending}>
+                    {createActivityMutation.isPending ? "Registrerer..." : "Registrer"}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {aktiviteter.length === 0 ? (
+            <p className="text-[0.8125rem] text-muted-foreground">Ingen aktiviteter registrert</p>
+          ) : (
+            <div className="relative ml-7 space-y-4">
+              <div className="absolute left-[5px] top-[5px] bottom-0 w-[2px] bg-border" />
+              {aktiviteter.map((act: any) => {
+                const Icon = act.type === "møte" ? FileText : MessageCircle;
+                const iconColor = act.type === "møte" ? "text-primary" : "text-[hsl(var(--success))]";
+                return (
+                  <div key={act.id} className="relative pl-7">
+                    <div className={cn("absolute -left-7 top-[2px] w-[12px] h-[12px] bg-background rounded-full flex items-center justify-center")}>
+                      <Icon className={cn("h-3 w-3", iconColor)} />
+                    </div>
+                    <div>
+                      <span className="text-[1.0625rem] font-bold text-foreground">{act.subject}</span>
+                      {act.description && (
+                        <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70 mt-0.5">{act.description}</p>
+                      )}
+                      <span className="text-[0.8125rem] text-muted-foreground">
+                        {format(new Date(act.created_at), "d. MMM yyyy", { locale: nb })}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+function InfoRow({ icon: Icon, label, value }: { icon: any; label: string; value: string | null | undefined }) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <Icon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+      <span className="text-[0.6875rem] text-muted-foreground w-28 flex-shrink-0">{label}</span>
+      <span className="text-[0.8125rem] font-medium text-foreground">{value || "–"}</span>
+    </div>
+  );
+}
+
+function OppdragRow({ o }: { o: any }) {
+  const margin = o.utpris ? calcStacqPris({
+    utpris: o.utpris,
+    til_konsulent: o.til_konsulent,
+    til_konsulent_override: o.til_konsulent_override,
+    er_ansatt: !!o.er_ansatt,
+    ekstra_kostnad: o.ekstra_kostnad,
+  }) : null;
+
+  return (
+    <div className="flex items-center gap-4 py-2 px-3 rounded-lg bg-background border border-border">
+      <div className="flex-1 min-w-0">
+        <span className="text-[0.9375rem] font-medium text-foreground">{o.kunde || "Ukjent kunde"}</span>
+        {o.start_dato && (
+          <span className="text-[0.8125rem] text-muted-foreground ml-2">
+            {fmt(o.start_dato)} – {fmt(o.slutt_dato)}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-4 text-[0.8125rem]">
+        {o.utpris != null && <span className="text-muted-foreground">Utpris: <span className="font-medium text-foreground">{o.utpris} kr</span></span>}
+        {o.til_konsulent != null && <span className="text-muted-foreground">Til kons: <span className="font-medium text-foreground">{o.til_konsulent_override ?? o.til_konsulent} kr</span></span>}
+        {margin != null && <span className="text-muted-foreground">Margin: <span className="font-medium text-emerald-600">{margin} kr</span></span>}
+      </div>
+      <Badge variant="secondary" className={cn("text-xs",
+        o.status === "Aktiv" ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
+        o.status === "Oppstart" ? "bg-amber-100 text-amber-700 border-amber-200" :
+        "bg-gray-100 text-gray-600 border-gray-200"
+      )}>
+        {o.status || "–"}
+      </Badge>
+    </div>
+  );
+}
+
+export default AnsattDetail;

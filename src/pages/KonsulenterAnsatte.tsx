@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
 import { format, differenceInMonths, differenceInDays, isAfter } from "date-fns";
 import { nb } from "date-fns/locale";
-import { ExternalLink, Link2, Pencil, Plus, Sparkles } from "lucide-react";
+import { ExternalLink, Link2, Pencil, Plus, Sparkles, User } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -33,7 +33,7 @@ function cvRelativeTime(dateStr: string): string {
 
 type Filter = "Alle" | "Aktiv" | "Kommende" | "Sluttet";
 
-const GRID_COLS = "grid grid-cols-[minmax(0,2.2fr)_95px_100px_90px_80px_minmax(0,1.2fr)_minmax(0,1.3fr)]";
+const GRID_COLS = "grid grid-cols-[minmax(0,2.2fr)_95px_100px_90px_80px_minmax(0,1.2fr)_minmax(0,1.3fr)_32px]";
 
 export default function KonsulenterAnsatte() {
   const [filter, setFilter] = useState<Filter>("Aktiv");
@@ -232,8 +232,8 @@ export default function KonsulenterAnsatte() {
       <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
         {/* Header */}
         <div className={cn(GRID_COLS, "gap-3 px-4 py-2.5 border-b border-border bg-background")}>
-          {["NAVN", "START", "ANSETTELSE", "OPPDRAG", "FORNYES", "CV", "HANDLINGER"].map((h) => (
-            <span key={h} className={cn("text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap", h === "HANDLINGER" && "text-right")}>{h}</span>
+          {["NAVN", "START", "ANSETTELSE", "OPPDRAG", "FORNYES", "CV", "HANDLINGER", ""].map((h, i) => (
+            <span key={i} className={cn("text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap", h === "HANDLINGER" && "text-right")}>{h}</span>
           ))}
         </div>
         <div className="divide-y divide-border">
@@ -388,6 +388,15 @@ export default function KonsulenterAnsatte() {
                   className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground border border-border"
                 >
                   <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              {/* PROFIL LINK */}
+              <div className="flex items-center justify-center">
+                <button
+                  onClick={(e) => { e.stopPropagation(); navigate(`/konsulenter/ansatte/${a.id}`); }}
+                  className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground"
+                >
+                  <User className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>

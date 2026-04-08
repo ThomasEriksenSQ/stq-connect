@@ -33,6 +33,7 @@ const Markedsradar = lazy(() => import("./pages/Markedsradar"));
 const CvAdmin = lazy(() => import("./pages/CvAdmin"));
 const Soknad = lazy(() => import("./pages/Soknad"));
 const CompaniesMap = lazy(() => import("./pages/CompaniesMap"));
+const AnsattDetail = lazy(() => import("./pages/AnsattDetail"));
 
 const queryClient = new QueryClient();
 
@@ -100,6 +101,14 @@ const App = () => (
                   element={
                     <Suspense fallback={<LazyFallback />}>
                       <CvAdmin />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="konsulenter/ansatte/:id"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <AnsattDetail />
                     </Suspense>
                   }
                 />
