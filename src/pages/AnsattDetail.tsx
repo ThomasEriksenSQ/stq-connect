@@ -580,7 +580,7 @@ function KompetanseCollapsible({ kompetanse }: { kompetanse: string[] }) {
     const el = containerRef.current;
     if (!el) return;
     // Check if content exceeds one line (~36px)
-    setNeedsTruncation(el.scrollHeight > 36);
+    setNeedsTruncation(el.scrollHeight > 40);
   }, [kompetanse]);
 
   return (
@@ -588,7 +588,7 @@ function KompetanseCollapsible({ kompetanse }: { kompetanse: string[] }) {
       <span className="text-[0.6875rem] text-muted-foreground uppercase tracking-[0.08em] font-medium">Kompetanse</span>
       <div
         ref={containerRef}
-        className={cn("flex flex-wrap gap-1.5 mt-1.5 overflow-hidden transition-all", !expanded && "max-h-[32px]")}
+        className={cn("flex flex-wrap gap-1.5 mt-1.5 overflow-hidden transition-all", !expanded && "max-h-[26px]")}
       >
         {kompetanse.map((k: string) => (
           <Badge key={k} variant="secondary" className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold">
