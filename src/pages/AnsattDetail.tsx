@@ -272,7 +272,7 @@ const AnsattDetail = () => {
           ) : (
             <div className="space-y-3">
               {activeOppdrag.map((o: any) => (
-                <OppdragRow key={o.id} o={o} />
+                <OppdragRow key={o.id} o={o} isActive />
               ))}
             </div>
           )}
