@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Phone, Mail, MapPin, Calendar, Briefcase, MessageCircle, FileText, Plus, User } from "lucide-react";
+import { ArrowLeft, Phone, Mail, MapPin, Calendar, Briefcase, MessageCircle, FileText, Plus, User, Pencil, Trash2, Check, X } from "lucide-react";
 import { format, differenceInMonths, differenceInYears } from "date-fns";
 import { nb } from "date-fns/locale";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,6 +31,8 @@ const AnsattDetail = () => {
   const [noteDraft, setNoteDraft] = useState("");
   const [actOpen, setActOpen] = useState(false);
   const [actForm, setActForm] = useState({ type: "samtale", subject: "", description: "" });
+  const [editingActId, setEditingActId] = useState<string | null>(null);
+  const [editActForm, setEditActForm] = useState({ type: "samtale", subject: "", description: "", created_at: "" });
 
   const ansattId = Number(id);
 
@@ -124,6 +127,52 @@ const AnsattDetail = () => {
     },
     onError: () => toast.error("Kunne ikke registrere aktivitet"),
   });
+
+  const updateActivityMutation = useMutation({
+    mutationFn: async (actId: string) => {
+      const { error } = await supabase
+        .from("ansatt_aktiviteter" as any)
+        .update({
+          type: editActForm.type,
+          subject: editActForm.subject,
+          description: editActForm.description || null,
+          created_at: new Date(editActForm.created_at).toISOString(),
+        } as any)
+        .eq("id", actId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ansatt-aktiviteter", ansattId] });
+      setEditingActId(null);
+      toast.success("Aktivitet oppdatert");
+    },
+    onError: () => toast.error("Kunne ikke oppdatere aktivitet"),
+  });
+
+  const deleteActivityMutation = useMutation({
+    mutationFn: async (actId: string) => {
+      const { error } = await supabase
+        .from("ansatt_aktiviteter" as any)
+        .delete()
+        .eq("id", actId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ansatt-aktiviteter", ansattId] });
+      toast.success("Aktivitet slettet");
+    },
+    onError: () => toast.error("Kunne ikke slette aktivitet"),
+  });
+
+  const startEditActivity = (act: any) => {
+    setEditingActId(act.id);
+    setEditActForm({
+      type: act.type,
+      subject: act.subject,
+      description: act.description || "",
+      created_at: format(new Date(act.created_at), "yyyy-MM-dd'T'HH:mm"),
+    });
+  };
 
   if (isLoading) return <p className="text-muted-foreground py-12 text-center">Laster...</p>;
   if (!ansatt) return <p className="text-muted-foreground py-12 text-center">Ansatt ikke funnet</p>;
@@ -298,20 +347,94 @@ const AnsattDetail = () => {
               {aktiviteter.map((act: any) => {
                 const Icon = act.type === "møte" ? FileText : MessageCircle;
                 const iconColor = act.type === "møte" ? "text-primary" : "text-[hsl(var(--success))]";
+                const isEditing = editingActId === act.id;
                 return (
-                  <div key={act.id} className="relative pl-7">
+                  <div key={act.id} className="group relative pl-7">
                     <div className={cn("absolute -left-7 top-[2px] w-[12px] h-[12px] bg-background rounded-full flex items-center justify-center")}>
                       <Icon className={cn("h-3 w-3", iconColor)} />
                     </div>
-                    <div>
-                      <span className="text-[1.0625rem] font-bold text-foreground">{act.subject}</span>
-                      {act.description && (
-                        <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70 mt-0.5">{act.description}</p>
-                      )}
-                      <span className="text-[0.8125rem] text-muted-foreground">
-                        {format(new Date(act.created_at), "d. MMM yyyy", { locale: nb })} · {relativeDate(act.created_at)}
-                      </span>
-                    </div>
+                    {isEditing ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Select value={editActForm.type} onValueChange={(v) => setEditActForm({ ...editActForm, type: v })}>
+                            <SelectTrigger className="w-32 h-8 text-[0.8125rem]"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="samtale">Samtale</SelectItem>
+                              <SelectItem value="møte">Møte</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            type="datetime-local"
+                            value={editActForm.created_at}
+                            onChange={(e) => setEditActForm({ ...editActForm, created_at: e.target.value })}
+                            className="w-52 h-8 text-[0.8125rem]"
+                          />
+                        </div>
+                        <Input
+                          value={editActForm.subject}
+                          onChange={(e) => setEditActForm({ ...editActForm, subject: e.target.value })}
+                          placeholder="Emne"
+                          className="text-[0.9375rem]"
+                        />
+                        <Textarea
+                          value={editActForm.description}
+                          onChange={(e) => setEditActForm({ ...editActForm, description: e.target.value })}
+                          placeholder="Beskrivelse"
+                          rows={3}
+                          className="text-[0.9375rem]"
+                        />
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() => updateActivityMutation.mutate(act.id)}
+                            disabled={updateActivityMutation.isPending || !editActForm.subject.trim()}
+                            className="p-1 rounded-md hover:bg-primary/10 text-primary transition-colors"
+                          >
+                            <Check className="h-4 w-4 stroke-[2]" />
+                          </button>
+                          <button onClick={() => setEditingActId(null)} className="p-1 rounded-md hover:bg-destructive/10 text-muted-foreground transition-colors">
+                            <X className="h-4 w-4 stroke-[2]" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <span className="text-[1.0625rem] font-bold text-foreground">{act.subject}</span>
+                            {act.description && (
+                              <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70 mt-0.5">{act.description}</p>
+                            )}
+                            <span className="text-[0.8125rem] text-muted-foreground">
+                              {format(new Date(act.created_at), "d. MMM yyyy", { locale: nb })} · {relativeDate(act.created_at)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
+                            <button onClick={() => startEditActivity(act)} className="p-1 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <button className="p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Er du sikker?</AlertDialogTitle>
+                                  <AlertDialogDescription>Aktiviteten "{act.subject}" vil bli permanent slettet.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => deleteActivityMutation.mutate(act.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                    Ja, slett
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
