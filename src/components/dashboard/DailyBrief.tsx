@@ -890,7 +890,7 @@ const DailyBrief = () => {
                                 : diffDays < 180 ? "text-amber-600"
                                 : "text-destructive/70";
                               return (
-                                <p className="text-[0.75rem] whitespace-nowrap">
+                                <p className="text-[0.8125rem] whitespace-nowrap">
                                   <span className={ageColor}>{relText}</span>
                                   <span className="text-muted-foreground"> · {absText}</span>
                                 </p>
@@ -961,7 +961,7 @@ const DailyBrief = () => {
                                   </p>
                                   <span
                                     className={cn(
-                                      "text-[0.75rem] whitespace-nowrap",
+                                      "text-[0.8125rem] whitespace-nowrap",
                                       overdue ? "text-destructive font-medium" : "text-muted-foreground italic",
                                     )}
                                   >
