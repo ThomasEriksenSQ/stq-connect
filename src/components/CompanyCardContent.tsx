@@ -441,7 +441,7 @@ export function CompanyCardContent({
 
   const updateMutation = useMutation({
     mutationFn: async (updates: Record<string, string | null>) => {
-      const { error } = await supabase.from("companies").update(updates).eq("id", companyId);
+      const { error } = await supabase.from("companies").update(updates as any).eq("id", companyId);
       if (error) throw error;
     },
     onSuccess: () => {
