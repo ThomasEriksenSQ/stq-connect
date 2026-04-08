@@ -281,8 +281,8 @@ const AnsattDetail = () => {
             <>
               <h2 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mt-6 mb-4">Tidligere oppdrag</h2>
               <div className="space-y-3">
-                {previousOppdrag.map((o: any) => (
-                  <OppdragRow key={o.id} o={o} />
+              {previousOppdrag.map((o: any) => (
+                  <OppdragRow key={o.id} o={o} isActive={false} />
                 ))}
               </div>
             </>
