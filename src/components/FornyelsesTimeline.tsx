@@ -66,7 +66,7 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
         const d = new Date(o.forny_dato);
         return {
           id: o.id,
-          navn: o.kandidat?.split(" ")[0] || "?",
+          navn: o.kandidat || "?",
           fullName: o.kandidat || "?",
           kunde: o.kunde || "",
           utpris: Number(o.utpris) || 0,
@@ -151,7 +151,6 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
                       })()}
                       <div className="min-w-0">
                         <p className="text-[0.8125rem] font-semibold text-foreground truncate">{r.navn}</p>
-                        <p className="text-[0.6875rem] text-muted-foreground truncate">{r.kunde}</p>
                       </div>
                     </div>
                     {MONTHS_SHORT.map((_, i) => (
@@ -176,7 +175,7 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
                               </span>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p className="font-semibold">{r.navn} — {r.kunde}</p>
+                              <p className="font-semibold">{r.fullName}</p>
                               <p>{r.fullDate}</p>
                               <p className="text-muted-foreground">kr {formatNOK(r.utpris)}/t</p>
                             </TooltipContent>
