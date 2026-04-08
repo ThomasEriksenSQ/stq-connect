@@ -1,13 +1,24 @@
 
 
-## Plan: Endre rekkefølge og stil på knappene i ansatt-headeren
+## Plan: Lukk overlayen etter lagring i redigeringsmodus
 
-### Endring i `src/pages/AnsattDetail.tsx` (linje 233–255)
+### Problem
+Når `AnsattDetailSheet` åpnes med `openInEditMode={true}`, og brukeren lagrer, kjøres `setEditing(false)` (linje 269). Dette viser "Finn oppdrag"-innholdet i stedet for å lukke overlayen.
 
-Ny rekkefølge og styling:
-1. **CV-editor** — blå knapp (`bg-primary text-primary-foreground`)
-2. **Finn oppdrag** — blå knapp (`bg-primary text-primary-foreground`)
-3. **Rediger** — outline-stil som i dag (`border border-border bg-background`)
+### Løsning i `src/components/AnsattDetailSheet.tsx`
 
-CV-editor-knappen endres fra outline til blå primærstil for å matche Finn oppdrag.
+Endre linje 266–270: Hvis `openInEditMode` er `true`, kall `onClose()` etter lagring i stedet for `setEditing(false)`.
+
+```ts
+if (isCreate || openInEditMode) {
+  onClose();
+} else {
+  setEditing(false);
+}
+```
+
+Samme logikk for "Avbryt"-knappen (linje 574–578) — hvis `openInEditMode`, kall `onClose()`.
+
+### Kun én fil endres
+- `src/components/AnsattDetailSheet.tsx`
 
