@@ -42,8 +42,8 @@ describe("contactCvEligibility", () => {
   it("sanitizes direct cv_email updates against the next email value", () => {
     expect(
       buildContactCvSafeUpdates(
-        { email: null, cv_email: false },
-        { cv_email: true },
+        { email: null, cv_email: false as boolean },
+        { cv_email: true as boolean },
       ),
     ).toEqual({ cv_email: false });
 
