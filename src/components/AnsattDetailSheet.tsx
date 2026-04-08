@@ -427,18 +427,28 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                 </div>
               </div>
 
-              <div>
-                <label className={LABEL}>Tilgjengelig fra</label>
-                <Input
-                  type="date"
-                  value={form.tilgjengelig_fra}
-                  onChange={(e) => set("tilgjengelig_fra", e.target.value)}
-                  className="mt-1 text-[0.875rem]"
-                />
-
-                <p className="text-[0.6875rem] text-muted-foreground mt-1">
-                  Når kan konsulenten starte et nytt oppdrag? (kan være etter fornyelsesdato)
-                </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className={LABEL}>Tilgjengelig fra</label>
+                  <Input
+                    type="date"
+                    value={form.tilgjengelig_fra}
+                    onChange={(e) => set("tilgjengelig_fra", e.target.value)}
+                    className="mt-1 text-[0.875rem]"
+                  />
+                  <p className="text-[0.6875rem] text-muted-foreground mt-1">
+                    Når kan konsulenten starte et nytt oppdrag?
+                  </p>
+                </div>
+                <div>
+                  <label className={LABEL}>Fødselsdato</label>
+                  <Input
+                    type="date"
+                    value={form.fodselsdato}
+                    onChange={(e) => set("fodselsdato", e.target.value)}
+                    className="mt-1 text-[0.875rem]"
+                  />
+                </div>
               </div>
 
               <div>
