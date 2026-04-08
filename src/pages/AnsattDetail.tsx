@@ -50,6 +50,16 @@ const AnsattDetail = () => {
     enabled: !isNaN(ansattId),
   });
 
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["profiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("id, full_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+  const profileMap = Object.fromEntries(profiles.map((p) => [p.id, p.full_name]));
+
   const { data: cvDoc } = useQuery({
     queryKey: ["ansatt-cv-doc", ansattId],
     queryFn: async () => {
@@ -406,6 +416,9 @@ const AnsattDetail = () => {
                             )}
                             <span className="text-[0.8125rem] text-muted-foreground">
                               {format(new Date(act.created_at), "d. MMM yyyy", { locale: nb })} · {relativeDate(act.created_at)}
+                              {act.created_by && profileMap[act.created_by] && (
+                                <> · <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{profileMap[act.created_by]}</span></>
+                              )}
                             </span>
                           </div>
                           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
