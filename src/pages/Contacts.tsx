@@ -378,7 +378,7 @@ const Contacts = () => {
         const ikkeAktuellKontakt = !!(c as any).ikke_aktuell_kontakt;
         const techProfile = techProfileByCompanyId.get(c.company_id || "");
         const hasMarkedsradar = !!(
-          techProfile?.sist_fra_finn && differenceInDays(new Date(), new Date(techProfile.sist_fra_finn)) <= 90
+          techProfile?.sistFraFinn && differenceInDays(new Date(), new Date(techProfile.sistFraFinn)) <= 90
         );
         const daysSince = lastActivity ? differenceInDays(new Date(), new Date(lastActivity)) : 999;
         const companyTechnologyTags = techProfile?.companyTechnologyTags || [];
