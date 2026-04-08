@@ -77,6 +77,14 @@ const App = () => (
               <Route path="/" element={<ProtectedRoutes />}>
                 <Route index element={<Dashboard />} />
                 <Route path="selskaper" element={<Companies />} />
+                <Route
+                  path="selskaper/kart"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <CompaniesMap />
+                    </Suspense>
+                  }
+                />
                 <Route path="selskaper/:id" element={<CompanyDetail />} />
                 <Route path="kontakter" element={<Contacts />} />
                 <Route path="kontakter/:id" element={<ContactDetail />} />
