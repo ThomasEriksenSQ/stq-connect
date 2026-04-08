@@ -50,6 +50,16 @@ const AnsattDetail = () => {
     enabled: !isNaN(ansattId),
   });
 
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["profiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("id, full_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+  const profileMap = Object.fromEntries(profiles.map((p) => [p.id, p.full_name]));
+
   const { data: cvDoc } = useQuery({
     queryKey: ["ansatt-cv-doc", ansattId],
     queryFn: async () => {
