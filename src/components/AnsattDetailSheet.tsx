@@ -242,6 +242,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
       bilde_url: form.bilde_url || null,
       erfaring_aar: form.erfaring_aar ? parseInt(form.erfaring_aar) : null,
       tilgjengelig_fra: form.tilgjengelig_fra || null,
+      fodselsdato: form.fodselsdato || null,
       updated_at: new Date().toISOString(),
     };
 
