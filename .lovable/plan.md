@@ -1,15 +1,13 @@
 
 
-## Plan: Legg til tilbake-knapp i Finn oppdrag-overlayen
+## Plan: Endre rekkefølge og stil på knappene i ansatt-headeren
 
-### Endring i `src/components/AnsattDetailSheet.tsx`
+### Endring i `src/pages/AnsattDetail.tsx` (linje 233–255)
 
-Legg til en "Tilbake"-knapp øverst i content-området når `activeMode` er `"oppdrag"` eller `"leads"`. Knappen resetter `activeMode` til `null` slik at brukeren kan velge på nytt.
+Ny rekkefølge og styling:
+1. **CV-editor** — blå knapp (`bg-primary text-primary-foreground`)
+2. **Finn oppdrag** — blå knapp (`bg-primary text-primary-foreground`)
+3. **Rediger** — outline-stil som i dag (`border border-border bg-background`)
 
-- Legg til en `<button>` med `ArrowLeft`-ikon og teksten "Tilbake" rett over innholdet i begge modusene (linje 689 og 705)
-- `onClick` setter `setActiveMode(null)` (og `setFinnLeads(false)` for leads-modusen)
-- Stil: `inline-flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground hover:text-foreground mb-3`
-
-### Kun én fil endres
-- `src/components/AnsattDetailSheet.tsx`
+CV-editor-knappen endres fra outline til blå primærstil for å matche Finn oppdrag.
 
