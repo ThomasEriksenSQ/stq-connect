@@ -151,39 +151,21 @@ const CompaniesMap = () => {
   // Geocode companies
   useEffect(() => {
     if (!companies.length) return;
-
     const run = async () => {
       setGeocoding(true);
       const cache = loadCache();
-
-      const uniqueCities = [...new Set(companies.map((c) => c.city!.trim().toLowerCase()))];
-
-      for (let i = 0; i < uniqueCities.length; i++) {
-        const city = uniqueCities[i];
-        if (!(city in cache)) {
-          await geocodeCity(city, cache);
-          if (i < uniqueCities.length - 1) await new Promise((r) => setTimeout(r, 1100));
-        }
-      }
-
+      const cities = [...new Set(companies.map(c => c.city!.trim().toLowerCase()))];
+      await geocodeBatch(cities, cache);
       const result = companies
-        .map((c) => {
-          const coords = cache[c.city!.trim().toLowerCase()];
+        .map(c => {
+          const coords = cache[c.city!.trim().toLowerCase().replace(/\s+/g, " ")];
           if (!coords) return null;
           return { id: c.id, name: c.name, city: c.city!, status: c.status, coords };
         })
-        .filter(Boolean) as Array<{
-        id: string;
-        name: string;
-        city: string;
-        status: string;
-        coords: [number, number];
-      }>;
-
+        .filter(Boolean) as Array<{ id: string; name: string; city: string; status: string; coords: [number, number] }>;
       setGeocodedCompanies(result);
       setGeocoding(false);
     };
-
     run();
   }, [companies]);
 
