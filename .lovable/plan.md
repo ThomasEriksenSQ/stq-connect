@@ -1,14 +1,27 @@
 
 
-## Plan: Standardiser dato-chips til samme størrelse som toggle-chips
+## Plan: Fjern telefonnummer fra selskapsnivå
+
+Telefonnummer på selskaper er et artefakt fra en gammel import og skal ikke vises. Endringen er kun visuell — feltet fjernes fra visningen i headeren på selskapssiden.
 
 ### Endring
 
-**Fil:** `src/components/dashboard/DailyBrief.tsx`
+**Fil:** `src/components/CompanyCardContent.tsx` (linje 1027–1034)
 
-Dato-chipsene ("Følg opp på sikt", "1 uke", "2 uker" osv.) og date-inputen oppskaleres til samme stil som toggle-chipsene:
+Fjern blokken som viser `company.phone` i metadata-raden (org.nr · by · telefon · lenker):
 
-1. **Chip-knapper (linje 1037):** Endre `h-7 px-3 text-[0.75rem]` → `h-9 px-4 text-[0.8125rem]`. Endre inaktiv hover fra `hover:bg-primary/10 hover:text-primary hover:border-primary/30` → `hover:bg-secondary`.
+```tsx
+// Fjern denne blokken:
+{company.phone && (
+  <>
+    <span className="text-muted-foreground/40">·</span>
+    <a href={`tel:${company.phone}`} className="inline-flex items-center gap-1 hover:text-foreground">
+      <Phone className="h-3 w-3" />
+      {company.phone}
+    </a>
+  </>
+)}
+```
 
-2. **Date-input (linje 1059):** Endre `h-7 px-2 text-[0.75rem]` → `h-9 px-3 text-[0.8125rem]`. Endre inaktiv hover fra `hover:border-primary/30` → `hover:bg-secondary`.
+Ingen andre filer berøres. `Phone`-ikonet kan beholdes i importen da det muligens brukes andre steder i filen (kontaktskjema).
 
