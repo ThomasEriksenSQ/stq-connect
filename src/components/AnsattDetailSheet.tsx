@@ -553,7 +553,6 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                   </div>
                 </div>
               )}
-            </div>
 
               <div>
                 <label className={cn(LABEL, "mb-1.5 block")}>Status</label>
