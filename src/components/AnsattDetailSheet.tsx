@@ -470,26 +470,6 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                 </div>
               </div>
 
-              <div>
-                <label className={cn(LABEL, "mb-1.5 block")}>Status</label>
-                <div className="flex gap-2">
-                  {STATUS_OPTIONS.map((s) => (
-                    <button
-                      key={s.value}
-                      onClick={() => set("status", s.value)}
-                      className={cn(
-                        "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
-                        form.status === s.value
-                          ? "bg-foreground text-background border-foreground"
-                          : "border-border text-muted-foreground hover:bg-secondary",
-                      )}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {/* ── PROFIL ── */}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
