@@ -263,6 +263,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
     }
     toast.success(isCreate ? "Ansatt lagt til" : "Profil oppdatert");
     queryClient.invalidateQueries({ queryKey: ["stacq-ansatte"] });
+    queryClient.invalidateQueries({ queryKey: ["ansatt-detail", ansatt?.id] });
     if (isCreate || openInEditMode) {
       onClose();
     } else {
