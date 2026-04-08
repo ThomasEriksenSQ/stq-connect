@@ -416,6 +416,9 @@ const AnsattDetail = () => {
                             )}
                             <span className="text-[0.8125rem] text-muted-foreground">
                               {format(new Date(act.created_at), "d. MMM yyyy", { locale: nb })} · {relativeDate(act.created_at)}
+                              {act.created_by && profileMap[act.created_by] && (
+                                <> · <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">{profileMap[act.created_by]}</span></>
+                              )}
                             </span>
                           </div>
                           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
