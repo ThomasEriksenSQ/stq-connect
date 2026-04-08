@@ -105,6 +105,14 @@ const App = () => (
                   }
                 />
                 <Route
+                  path="konsulenter/ansatte/:id"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <AnsattDetail />
+                    </Suspense>
+                  }
+                />
+                <Route
                   path="konsulenter/ansatte"
                   element={
                     <Suspense fallback={<LazyFallback />}>
