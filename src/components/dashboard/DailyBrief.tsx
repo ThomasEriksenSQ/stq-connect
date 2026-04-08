@@ -888,7 +888,7 @@ const DailyBrief = () => {
                               const ageColor =
                                 diffDays < 30 ? "text-muted-foreground"
                                 : diffDays < 180 ? "text-amber-600"
-                                : "text-destructive/70";
+                                : "text-destructive";
                               return (
                                 <p className="text-[0.8125rem] whitespace-nowrap">
                                   <span className={ageColor}>{relText}</span>
