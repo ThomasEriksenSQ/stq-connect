@@ -12,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Search, ArrowUpDown, Loader2, X, MapPin, ChevronDown, Map } from "lucide-react";
+import { Plus, Search, ArrowUpDown, Loader2, X, MapPin, ChevronDown, Map as MapIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersistentState } from "@/hooks/usePersistentState";
