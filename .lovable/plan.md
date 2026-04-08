@@ -1,20 +1,31 @@
 
 
-## Plan: Blå "Se profil"-knapp
+## Plan: Legg til fødselsdatoer for ansatte
 
-### Endring i `src/pages/KonsulenterAnsatte.tsx`
+### Bakgrunn
+Fra bildet har vi fødselsdatoer for 12 ansatte som mangler dette i databasen. Christian (id 1) har allerede dato. Jon Richard Nygaard og Thomas Eriksen er systembrukere, ikke i `stacq_ansatte`. Filip Dovland, Harald Ivarson Moldsvor og Trond Hübertz Emaus er ikke i bildet.
 
-Erstatt den nåværende tekst-lenken med en styled knapp:
+### Endring: SQL-migrasjon
 
-```tsx
-<button
-  onClick={(e) => { e.stopPropagation(); navigate(`/konsulenter/ansatte/${a.id}`); }}
-  className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.75rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
->
-  Se profil
-</button>
-```
+Kjøre en UPDATE mot `stacq_ansatte` for å sette `fodselsdato`:
 
-### Kun én fil endres
-- `src/pages/KonsulenterAnsatte.tsx`
+| Navn | ID | Fødselsdato |
+|---|---|---|
+| Kacper Wysocki | 2 | 1982-09-11 |
+| Anders Nilsen | 3 | 1995-03-01 |
+| Henning Thorkildsen | 4 | 1986-05-31 |
+| Ida Abrahamsson | 5 | 1994-07-01 |
+| Trine Ødegård Olsen | 7 | 1995-03-09 |
+| Karl Eirik Bang Fossberg | 8 | 1991-08-29 |
+| Mattis Spieler Asp | 9 | 1990-08-19 |
+| Lars Rudolfsen | 10 | 1994-10-20 |
+| Tom Erik Lundesgaard | 11 | 1974-07-04 |
+| Martin Tysseland | 12 | 1994-01-01 |
+| Rikke Solbjørg | 14 | 1997-08-11 |
+| Anders Larsen | 15 | 1978-12-13 |
+
+Tre ansatte (Filip Dovland id 6, Harald Moldsvor id 13, Trond Emaus id 16) finnes ikke i bildet og oppdateres ikke.
+
+### Teknisk gjennomføring
+En database-migrasjon med 12 UPDATE-setninger. Ingen kodeendringer.
 
