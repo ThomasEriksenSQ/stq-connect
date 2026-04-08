@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Phone, Mail, MapPin, Calendar, Briefcase, MessageCircle, FileText, Plus, User, Pencil, Trash2, Check, X } from "lucide-react";
+import { ArrowLeft, Phone, Mail, MapPin, Calendar, Briefcase, MessageCircle, FileText, Plus, User, Pencil, Trash2, Check, X, ExternalLink, Sparkles } from "lucide-react";
 import { format, differenceInMonths, differenceInYears, differenceInDays, addDays } from "date-fns";
 import { nb } from "date-fns/locale";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
@@ -19,6 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
 
 const fmt = (d: string | null) => d ? format(new Date(d), "d. MMM yyyy", { locale: nb }) : "–";
 
@@ -33,6 +34,7 @@ const AnsattDetail = () => {
   const [actForm, setActForm] = useState({ type: "samtale", subject: "", description: "" });
   const [editingActId, setEditingActId] = useState<string | null>(null);
   const [editActForm, setEditActForm] = useState({ type: "samtale", subject: "", description: "", created_at: "" });
+  const [matchSheetOpen, setMatchSheetOpen] = useState(false);
 
   const ansattId = Number(id);
 
@@ -226,6 +228,22 @@ const AnsattDetail = () => {
           <Badge className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold mt-1", statusColor)}>
             {status}
           </Badge>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setMatchSheetOpen(true)}
+            className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Finn oppdrag
+          </button>
+          <button
+            onClick={() => navigate(`/cv-admin/${ansatt.id}`)}
+            className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            CV-editor
+          </button>
         </div>
       </div>
 
@@ -469,6 +487,7 @@ const AnsattDetail = () => {
           )}
         </CardContent>
       </Card>
+      <AnsattDetailSheet open={matchSheetOpen} onClose={() => setMatchSheetOpen(false)} ansatt={ansatt} openInEditMode={false} autoRunMatch={true} />
     </div>
   );
 };

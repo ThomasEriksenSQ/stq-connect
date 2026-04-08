@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
 import { format, differenceInMonths, differenceInDays, isAfter } from "date-fns";
 import { nb } from "date-fns/locale";
-import { ExternalLink, Link2, Pencil, Plus, Sparkles, User } from "lucide-react";
+import { Pencil, Plus, User } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -19,28 +19,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 
-function cvRelativeTime(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  if (days === 0) return "i dag";
-  if (days < 7) return `${days}d siden`;
-  const weeks = Math.floor(days / 7);
-  if (weeks < 5) return `${weeks}u siden`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months}md siden`;
-  return `${Math.floor(months / 12)}år siden`;
-}
 
 type Filter = "Alle" | "Aktiv" | "Kommende" | "Sluttet";
 
-const GRID_COLS = "grid grid-cols-[minmax(0,2.2fr)_95px_100px_90px_80px_minmax(0,1.2fr)_minmax(0,1.3fr)_32px]";
+const GRID_COLS = "grid grid-cols-[minmax(0,2.2fr)_95px_100px_90px_80px_64px]";
 
 export default function KonsulenterAnsatte() {
   const [filter, setFilter] = useState<Filter>("Aktiv");
   const [detailAnsatt, setDetailAnsatt] = useState<any | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [openEditMode, setOpenEditMode] = useState(false);
-  const [autoRunMatch, setAutoRunMatch] = useState(false);
   const navigate = useNavigate();
   const today = new Date();
 
@@ -73,24 +61,19 @@ export default function KonsulenterAnsatte() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("cv_documents")
-        .select("ansatt_id, updated_at, portrait_url");
+        .select("ansatt_id, portrait_url");
       if (error) throw error;
       return data;
     },
   });
 
-  const cvDataMap = useMemo(() => {
-    const updatedMap = new Map<number, string>();
+  const cvPortraitMap = useMemo(() => {
     const portraitMap = new Map<number, string>();
     (cvDocs as any[]).forEach((c) => {
-      if (c.ansatt_id && c.updated_at) updatedMap.set(c.ansatt_id, c.updated_at);
       if (c.ansatt_id && c.portrait_url) portraitMap.set(c.ansatt_id, c.portrait_url);
     });
-    return { updatedMap, portraitMap };
+    return portraitMap;
   }, [cvDocs]);
-
-  const cvUpdatedMap = cvDataMap.updatedMap;
-  const cvPortraitMap = cvDataMap.portraitMap;
 
   const oppdragMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -232,8 +215,8 @@ export default function KonsulenterAnsatte() {
       <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
         {/* Header */}
         <div className={cn(GRID_COLS, "gap-3 px-4 py-2.5 border-b border-border bg-background")}>
-          {["NAVN", "START", "ANSETTELSE", "OPPDRAG", "FORNYES", "CV", "HANDLINGER", ""].map((h, i) => (
-            <span key={i} className={cn("text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap", h === "HANDLINGER" && "text-right")}>{h}</span>
+        {["NAVN", "START", "ANSETTELSE", "OPPDRAG", "FORNYES", ""].map((h, i) => (
+            <span key={i} className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap">{h}</span>
           ))}
         </div>
         <div className="divide-y divide-border">
@@ -355,43 +338,14 @@ export default function KonsulenterAnsatte() {
                   );
                 })()}
               </div>
-              {/* CV / LINK */}
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={(e) => { e.stopPropagation(); navigate(`/cv-admin/${a.id}`); }}
-                  className="inline-flex items-center gap-1.5 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  CV-editor
-                </button>
-                {(() => {
-                  const updatedAt = cvUpdatedMap.get(a.id);
-                  if (!updatedAt) return null;
-                  return (
-                    <span className="text-[0.8125rem] text-muted-foreground whitespace-nowrap">
-                      {cvRelativeTime(updatedAt)}
-                    </span>
-                  );
-                })()}
-              </div>
-              {/* HANDLINGER */}
+              {/* ACTIONS */}
               <div className="flex items-center gap-1.5 justify-end">
-                <button
-                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); setDetailAnsatt(a); setOpenEditMode(false); setAutoRunMatch(true); setDetailOpen(true); }}
-                  className="inline-flex items-center gap-1 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Finn oppdrag
-                </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); e.preventDefault(); setDetailAnsatt(a); setOpenEditMode(true); setDetailOpen(true); }}
                   className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground border border-border"
                 >
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
-              </div>
-              {/* PROFIL LINK */}
-              <div className="flex items-center justify-center">
                 <button
                   onClick={(e) => { e.stopPropagation(); navigate(`/konsulenter/ansatte/${a.id}`); }}
                   className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground"
@@ -408,7 +362,7 @@ export default function KonsulenterAnsatte() {
         )}
       </div>
 
-      <AnsattDetailSheet open={detailOpen} onClose={() => { setDetailOpen(false); setAutoRunMatch(false); }} ansatt={detailAnsatt} openInEditMode={openEditMode} autoRunMatch={autoRunMatch} />
+      <AnsattDetailSheet open={detailOpen} onClose={() => { setDetailOpen(false); }} ansatt={detailAnsatt} openInEditMode={openEditMode} autoRunMatch={false} />
     </div>
   );
 }
