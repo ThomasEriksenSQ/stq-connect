@@ -31,6 +31,8 @@ const AnsattDetail = () => {
   const [noteDraft, setNoteDraft] = useState("");
   const [actOpen, setActOpen] = useState(false);
   const [actForm, setActForm] = useState({ type: "samtale", subject: "", description: "" });
+  const [editingActId, setEditingActId] = useState<string | null>(null);
+  const [editActForm, setEditActForm] = useState({ type: "samtale", subject: "", description: "", created_at: "" });
 
   const ansattId = Number(id);
 
