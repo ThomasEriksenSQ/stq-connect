@@ -1164,12 +1164,6 @@ export function CompanyCardContent({
                     ) : null}
                   </h3>
                   <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      onClick={() => setShowAnalyze((current) => !current)}
-                      className="inline-flex items-center gap-1.5 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
-                    >
-                      <Sparkles className="h-3.5 w-3.5 text-primary" /> Analyser tekst
-                    </button>
                     {hasTech && (
                       <button
                         onClick={handleFinnKonsulenter}
