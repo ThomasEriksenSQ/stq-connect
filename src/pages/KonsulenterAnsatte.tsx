@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
 import { format, differenceInMonths, differenceInDays, isAfter } from "date-fns";
 import { nb } from "date-fns/locale";
-import { Pencil, Plus, User } from "lucide-react";
+import { Plus, User } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
