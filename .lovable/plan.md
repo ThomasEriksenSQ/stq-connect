@@ -1,18 +1,17 @@
 
 
-## Plan: Vis hvem som la til aktiviteten
+## Plan: Gjør OppdragRow mobilvennlig
 
-Legger til visning av CRM-brukerens fulle navn etter datoen i aktivitetstidslinjen.
+Problemet er at `OppdragRow` bruker `flex items-center gap-4` horisontalt, som presser kundenavn, dato, priser og badge på én rad — det bryter på smale skjermer (390px).
 
-### Endringer i `src/pages/AnsattDetail.tsx`
+### Endring i `src/pages/AnsattDetail.tsx` — `OppdragRow`-komponenten
 
-1. **Hent profiler** — Legg til en query mot `profiles`-tabellen for å hente `id` og `full_name`, og bygg et `profileMap` (samme mønster som brukes i Tasks, ContactCardContent osv.)
+Endre layout fra én horisontal rad til en stabelbar layout på mobil:
 
-2. **Vis navn i aktivitetsraden** — Etter dato og relativ tid, legg til brukernavnet med owner-badge styling:
-   ```
-   8. apr. 2026 · I dag · Jon Richard Nygaard
-   ```
-   Bruker prosjektets owner-badge klasser: `inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium`
+1. **Ytre container**: Bytt fra `flex items-center` til `flex flex-col sm:flex-row sm:items-center`
+2. **Kundenavn + dato**: Beholdes som `flex-1 min-w-0`, men dato flyttes til egen linje under kundenavn på mobil (fjern `ml-2`, bruk `block`)
+3. **Priser-rad**: Wrap i `flex flex-wrap gap-x-4 gap-y-1` slik at prisene brytes pent
+4. **Status-badge**: Plasseres øverst til høyre på mobil via `sm:ml-auto` eller i flyten
 
-Kun én fil endres.
+Resultatet blir at kortet stables vertikalt på mobil: kundenavn → dato → priser → status.
 
