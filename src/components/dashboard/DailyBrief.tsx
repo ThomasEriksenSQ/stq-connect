@@ -1034,10 +1034,10 @@ const DailyBrief = () => {
                                       await updateTaskDueDate(chip.value);
                                     }}
                                     className={cn(
-                                      "h-7 px-3 text-[0.75rem] rounded-full border transition-colors",
+                                      "h-9 px-4 text-[0.8125rem] rounded-full border transition-colors",
                                       isActive
                                         ? "bg-primary/10 text-primary border-primary/30 font-medium"
-                                        : "border-border text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30",
+                                        : "border-border text-muted-foreground hover:bg-secondary",
                                     )}
                                   >
                                     {chip.label}
