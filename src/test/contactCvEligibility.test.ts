@@ -49,8 +49,8 @@ describe("contactCvEligibility", () => {
 
     expect(
       buildContactCvSafeUpdates(
-        { email: "kontakt@stacq.no", cv_email: false },
-        { cv_email: true },
+        { email: "kontakt@stacq.no", cv_email: false as boolean },
+        { cv_email: true as boolean },
       ),
     ).toEqual({ cv_email: true });
   });

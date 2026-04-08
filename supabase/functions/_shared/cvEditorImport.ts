@@ -437,7 +437,7 @@ function sanitizeEducationEntries(
   return uniqueBy(
     entries
       .map((entry) => normalizeTimelineEntry(entry, "education"))
-      .filter((entry) => entry.period || entry.primary || entry.secondary)
+      .filter((entry) => entry.period || entry.primary || (entry as any).secondary)
       .filter((entry) => Boolean(entry.period || entry.secondary))
       .filter((entry) => entry.primary && !sidebarEducationItems.has(entry.primary)),
     normalizeTimelineKey,
