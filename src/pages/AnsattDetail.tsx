@@ -5,6 +5,7 @@ import { ArrowLeft, Phone, Mail, MapPin, Calendar, Briefcase, MessageCircle, Fil
 import { format, differenceInMonths, differenceInYears } from "date-fns";
 import { nb } from "date-fns/locale";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
+import { relativeDate } from "@/lib/relativeDate";
 import { calcStacqPris } from "@/lib/stacqPris";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -308,7 +309,7 @@ const AnsattDetail = () => {
                         <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70 mt-0.5">{act.description}</p>
                       )}
                       <span className="text-[0.8125rem] text-muted-foreground">
-                        {format(new Date(act.created_at), "d. MMM yyyy", { locale: nb })}
+                        {format(new Date(act.created_at), "d. MMM yyyy", { locale: nb })} · {relativeDate(act.created_at)}
                       </span>
                     </div>
                   </div>
