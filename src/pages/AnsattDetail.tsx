@@ -369,10 +369,10 @@ function OppdragRow({ o }: { o: any }) {
 
 function KompetanseCollapsible({ kompetanse }: { kompetanse: string[] }) {
   const [expanded, setExpanded] = useState(false);
-  const containerRef = React.useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [needsTruncation, setNeedsTruncation] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     // Check if content exceeds one line (~36px)
