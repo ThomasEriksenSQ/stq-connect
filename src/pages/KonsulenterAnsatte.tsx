@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
 import { format, differenceInMonths, differenceInDays, isAfter } from "date-fns";
 import { nb } from "date-fns/locale";
-import { Plus, User } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -22,7 +22,7 @@ import {
 
 type Filter = "Alle" | "Aktiv" | "Kommende" | "Sluttet";
 
-const GRID_COLS = "grid grid-cols-[minmax(0,2.2fr)_95px_100px_90px_80px_40px]";
+const GRID_COLS = "grid grid-cols-[minmax(0,2.5fr)_100px_110px_100px_90px_90px]";
 
 export default function KonsulenterAnsatte() {
   const [filter, setFilter] = useState<Filter>("Aktiv");
@@ -341,9 +341,9 @@ export default function KonsulenterAnsatte() {
               <div className="flex items-center justify-end">
                 <button
                   onClick={(e) => { e.stopPropagation(); navigate(`/konsulenter/ansatte/${a.id}`); }}
-                  className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground"
+                  className="inline-flex items-center gap-1.5 text-[0.75rem] font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <User className="h-3.5 w-3.5" />
+                  Se profil
                 </button>
               </div>
             </div>
