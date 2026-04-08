@@ -384,7 +384,7 @@ function KompetanseCollapsible({ kompetanse }: { kompetanse: string[] }) {
       <span className="text-[0.6875rem] text-muted-foreground uppercase tracking-[0.08em] font-medium">Kompetanse</span>
       <div
         ref={containerRef}
-        className={cn("flex flex-wrap gap-1.5 mt-1.5 overflow-hidden transition-all", !expanded && "max-h-[34px]")}
+        className={cn("flex flex-wrap gap-1.5 mt-1.5 overflow-hidden transition-all", !expanded && "max-h-[26px]")}
       >
         {kompetanse.map((k: string) => (
           <Badge key={k} variant="secondary" className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold">
