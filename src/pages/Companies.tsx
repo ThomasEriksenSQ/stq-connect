@@ -667,7 +667,7 @@ const Companies = () => {
               className="flex items-center gap-1 text-[0.75rem] text-muted-foreground hover:text-foreground border border-border rounded-md px-2 py-0.5 hover:bg-secondary transition-colors ml-3"
             >
               <MapIcon className="w-3.5 h-3.5" />
-              Kart
+              Geografisk kart
             </button>
           </div>
         </div>
