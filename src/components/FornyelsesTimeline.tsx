@@ -175,7 +175,7 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
                               </span>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p className="font-semibold">{r.navn} — {r.kunde}</p>
+                              <p className="font-semibold">{r.fullName}</p>
                               <p>{r.fullDate}</p>
                               <p className="text-muted-foreground">kr {formatNOK(r.utpris)}/t</p>
                             </TooltipContent>
