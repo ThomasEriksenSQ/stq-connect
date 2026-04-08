@@ -1,40 +1,29 @@
 
 
-## Plan: Reorganiser informasjonsseksjonen + legg til fødselsdato
+## Plan: Legg til fornyelsesdata og varighet i oppdragsrader
 
-### Oversikt
-Reorganiserer info-griddet i tre kolonner med ny rekkefølge, og legger til fødselsdato som nytt felt.
+### Endring i `src/pages/AnsattDetail.tsx` — `OppdragRow`-komponenten
 
-### 1. Database-migrering
-Legg til `fodselsdato` (type `date`, nullable) i `stacq_ansatte`-tabellen.
+**1. Aktive oppdrag — vis fornyelsesdato og dager til fornyelse**
 
-### 2. Oppdater TypeScript-typer
-Legg til `fodselsdato: string | null` i Row, Insert og Update for `stacq_ansatte` i `src/integrations/supabase/types.ts`.
+Etter pris/margin-raden, legg til fornyelsesinfo basert på `forny_dato` og `lopende_30_dager` fra oppdragsobjektet (disse feltene hentes allerede via `select("*")`):
 
-### 3. Oppdater `src/pages/AnsattDetail.tsx`
+- Beregn effektiv dato: hvis `lopende_30_dager` → dagens dato + 30 dager, ellers `forny_dato`
+- Vis som: `Fornyes: 15. mai 2026 (37 dager)` med fargekoding:
+  - Utløpt: `text-destructive font-semibold`
+  - ≤30 dager: `text-amber-600 font-semibold`
+  - >30 dager: `text-muted-foreground`
 
-**Hent `fodselsdato`** i select-queryen.
+**2. Tidligere oppdrag — vis varighet**
 
-**Beregn alder** fra fødselsdato (differenceInYears fra date-fns).
+For inaktive oppdrag med både `start_dato` og `slutt_dato`, beregn og vis varighet ved hjelp av eksisterende `formatMonths`-funksjonen (som allerede håndterer år/måneder/uker):
 
-**Ny kolonne-rekkefølge i griddet:**
+- Vis som: `Varighet: 1 år 2 md` etter datoene
 
-```text
-Kolonne 1          Kolonne 2            Kolonne 3
-─────────          ─────────            ─────────
-E-post             Tilgjengelig fra     Startdato
-Telefon            Års erfaring         Ansatt i
-Geografi           Fødselsdato (alder)  Sluttdato
-```
+**3. Oppdater OppdragRow-signaturen**
 
-Fødselsdato vises som `d. MMM yyyy` med beregnet alder i parentes, f.eks. `15. jan 1990 (36 år)`.
+Legg til en `isActive`-prop slik at komponenten vet om den skal vise fornyelse (aktiv) eller varighet (tidligere). Alternativt sjekke `o.status` direkte.
 
-### 4. Oppdater AnsattDetailSheet (edit-modus)
-Legg til fødselsdato-felt i "Intern (CRM)"-seksjonen med `<Input type="date">`.
-
-### Filer som endres
-- Ny migrering: `supabase/migrations/XXXX_add_fodselsdato.sql`
-- `src/integrations/supabase/types.ts`
+### Kun én fil endres
 - `src/pages/AnsattDetail.tsx`
-- `src/components/AnsattDetailSheet.tsx` (edit-modus)
 
