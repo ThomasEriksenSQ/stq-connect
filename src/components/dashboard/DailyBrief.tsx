@@ -777,10 +777,38 @@ const DailyBrief = () => {
                   <div className={cn("h-1", TEMP_CONFIG[current.temperature].bar)} />
                 </div>
 
-                <div className="flex justify-end px-4 pt-4 sm:px-5">
+                <div className="flex items-center gap-2 px-4 pt-4 sm:px-5">
+                  {/* Temperatur-badge */}
+                  {(() => {
+                    const tempBadge: Record<string, { bg: string; text: string }> = {
+                      hett: { bg: "bg-red-50 border-red-100", text: "text-red-800" },
+                      lovende: { bg: "bg-orange-50 border-orange-100", text: "text-orange-800" },
+                      mulig: { bg: "bg-amber-50 border-amber-100", text: "text-amber-800" },
+                      sovende: { bg: "bg-gray-50 border-gray-100", text: "text-gray-600" },
+                    };
+                    const emoji = current.temperature === "hett" ? "🔥" : current.temperature === "lovende" ? "⚡" : current.temperature === "mulig" ? "💡" : "💤";
+                    const tb = tempBadge[current.temperature];
+                    return (
+                      <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[0.75rem] font-medium", tb.bg, tb.text)}>
+                        {emoji} {TEMP_CONFIG[current.temperature].label}
+                      </span>
+                    );
+                  })()}
+                  {/* Finn.no-badge */}
+                  {(() => {
+                    const companyTech = techProfiles.find((tp: any) => tp.company_id === current.contact.company_id);
+                    if (!companyTech?.teknologier) return null;
+                    const hasTech = Object.keys(companyTech.teknologier as Record<string, number>).length > 0;
+                    if (!hasTech) return null;
+                    return (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-blue-100 bg-blue-50 text-[0.75rem] font-medium text-blue-800">
+                        <Radio className="h-3 w-3 text-blue-500" /> Finn.no
+                      </span>
+                    );
+                  })()}
                   <button
                     onClick={() => setPanelOpen(true)}
-                    className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg bg-secondary border border-border text-[0.75rem] text-muted-foreground hover:text-foreground transition-all"
+                    className="ml-auto inline-flex items-center gap-1.5 h-7 px-3 rounded-lg bg-secondary border border-border text-[0.75rem] text-muted-foreground hover:text-foreground transition-all"
                   >
                     <span>↗</span>
                     <span>Åpne kontakt</span>
