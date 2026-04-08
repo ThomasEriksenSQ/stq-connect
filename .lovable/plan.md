@@ -1,31 +1,19 @@
 
+## Plan: Optimaliser kolonnebredder i ansatt-tabellen
 
-## Plan: Legg til fødselsdatoer for ansatte
+### Endring i `src/pages/KonsulenterAnsatte.tsx`
 
-### Bakgrunn
-Fra bildet har vi fødselsdatoer for 12 ansatte som mangler dette i databasen. Christian (id 1) har allerede dato. Jon Richard Nygaard og Thomas Eriksen er systembrukere, ikke i `stacq_ansatte`. Filip Dovland, Harald Ivarson Moldsvor og Trond Hübertz Emaus er ikke i bildet.
+Endre `GRID_COLS` fra faste pikselverdier til en mer balansert fordeling som utnytter tilgjengelig plass bedre:
 
-### Endring: SQL-migrasjon
+```ts
+// Fra:
+const GRID_COLS = "grid grid-cols-[minmax(0,2.5fr)_100px_110px_100px_90px_90px]";
 
-Kjøre en UPDATE mot `stacq_ansatte` for å sette `fodselsdato`:
+// Til:
+const GRID_COLS = "grid grid-cols-[minmax(0,2.5fr)_minmax(90px,1fr)_minmax(90px,1fr)_minmax(80px,1fr)_minmax(80px,1fr)_minmax(80px,auto)]";
+```
 
-| Navn | ID | Fødselsdato |
-|---|---|---|
-| Kacper Wysocki | 2 | 1982-09-11 |
-| Anders Nilsen | 3 | 1995-03-01 |
-| Henning Thorkildsen | 4 | 1986-05-31 |
-| Ida Abrahamsson | 5 | 1994-07-01 |
-| Trine Ødegård Olsen | 7 | 1995-03-09 |
-| Karl Eirik Bang Fossberg | 8 | 1991-08-29 |
-| Mattis Spieler Asp | 9 | 1990-08-19 |
-| Lars Rudolfsen | 10 | 1994-10-20 |
-| Tom Erik Lundesgaard | 11 | 1974-07-04 |
-| Martin Tysseland | 12 | 1994-01-01 |
-| Rikke Solbjørg | 14 | 1997-08-11 |
-| Anders Larsen | 15 | 1978-12-13 |
+Kolonnene (NAVN, START, ANSETTELSE, OPPDRAG, FORNYES, knapp) får fleksible minimumsstørrelser med `1fr` som lar dem vokse proporsjonalt, mens NAVN beholder sin `2.5fr`-vekt for å forbli bredest.
 
-Tre ansatte (Filip Dovland id 6, Harald Moldsvor id 13, Trond Emaus id 16) finnes ikke i bildet og oppdateres ikke.
-
-### Teknisk gjennomføring
-En database-migrasjon med 12 UPDATE-setninger. Ingen kodeendringer.
-
+### Kun én fil endres
+- `src/pages/KonsulenterAnsatte.tsx` (linje 25)
