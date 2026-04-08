@@ -614,7 +614,7 @@ export function buildCvEditorImportDocument(
     competenceGroups,
     projects,
     education: sanitizeEducationEntries(
-      [
+      ([
         ...(parsed.education || []).map((entry) => ({
           period: resolvePreferredText(entry.periodIds, entry.period, segmentMap),
           primary: resolvePreferredText(entry.primaryIds, entry.primary, segmentMap),
