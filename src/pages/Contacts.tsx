@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,8 +9,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, ArrowUpDown, ChevronDown, Sparkles, Radio } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Search, ArrowUpDown, ChevronDown, Radio } from "lucide-react";
+import { cn, getInitials } from "@/lib/utils";
 import { BulkSignalModal } from "@/components/BulkSignalModal";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,22 +20,124 @@ import { CONTACT_CV_EMAIL_REQUIRED_MESSAGE, contactHasEmail } from "@/lib/contac
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, differenceInDays } from "date-fns";
 import { nb } from "date-fns/locale";
+import type { Database } from "@/integrations/supabase/types";
 import {
-  calcHeatScore,
-  getTemperature,
+  TEMP_CONFIG,
   getHeatResult,
-  getTier,
   getTaskStatus,
   getActivityStatus,
-  TEMP_CONFIG,
 } from "@/lib/heatScore";
 import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/queryKeys";
+import { mergeTechnologyTags } from "@/lib/technologyTags";
+import {
+  getConsultantAvailabilityMeta,
+  hasConsultantAvailability,
+  hasRecentActualActivity,
+  isActiveRequest,
+  isColdCallCandidate,
+  isCustomerCompany,
+  sortHuntConsultants,
+  type HuntChipValue,
+} from "@/lib/contactHunt";
+import {
+  getContactMatchScore,
+  getMatchBand,
+  type MatchBand,
+} from "@/lib/contactMatchScore";
+import { getConsultantMatchScoreColor } from "@/lib/consultantMatches";
 
 type SortField = "name" | "company" | "title" | "signal" | "owner" | "last_activity" | "priority";
 type SortDir = "asc" | "desc";
+type HuntConsultant = Pick<
+  Database["public"]["Tables"]["stacq_ansatte"]["Row"],
+  "id" | "navn" | "status" | "tilgjengelig_fra" | "kompetanse"
+>;
+type CompanyPreview = Pick<Database["public"]["Tables"]["companies"]["Row"], "id" | "name" | "status" | "ikke_relevant">;
+type MatchLeadBase = {
+  leadKey: string;
+  leadType: "contact" | "company" | "request";
+  companyId: string | null;
+  companyName: string;
+  matchScore10: number;
+  matchBand: MatchBand | null;
+  matchSources: HuntChipValue[];
+  matchTags: string[];
+  sourceDates: string[];
+  chipUrgency: number;
+  summary: string;
+};
+type CompanyMatchLead = MatchLeadBase & {
+  leadType: "company";
+  companyId: string;
+  name: string;
+  status: string | null;
+  companyTechnologyTags: string[];
+  preferredContactName?: string | null;
+  preferredContactTitle?: string | null;
+};
+type RequestLeadRow = {
+  id: number;
+  companyId: string | null;
+  contactId: string | null;
+  companyName: string;
+  company: CompanyPreview | null;
+  mottattDato: string;
+  fristDato: string | null;
+  sted: string | null;
+  status: string | null;
+  technologyTags: string[];
+  contactName: string | null;
+  contactTitle: string | null;
+};
+type CompanyTechLeadRow = {
+  companyId: string;
+  company: CompanyPreview | null;
+  companyTechnologyTags: string[];
+  sistFraFinn: string | null;
+};
+type ContactRow = Database["public"]["Tables"]["contacts"]["Row"] & {
+  companies: CompanyPreview | null;
+  profiles: { id: string; full_name: string } | null;
+  lastActivity: string | null;
+  signal: string | null;
+  openTasks: { count: number; overdue: boolean };
+  heatScore: number;
+  temperature: "hett" | "lovende" | "mulig" | "sovende";
+  tier: 1 | 2 | 3 | 4;
+  reasons: string[];
+  needsReview: boolean;
+  hasAktivForespørsel: boolean;
+  hasTidligereForespørsel: boolean;
+  daysSinceLastContact: number;
+  contactTechnologyTags: string[];
+  companyTechnologyTags: string[];
+  requestTechnologyTags: string[];
+  companyStatus: string | null;
+  hasMarkedsradar: boolean;
+};
+type ContactMatchLead = ContactRow & MatchLeadBase & {
+  leadType: "contact";
+  name: string;
+};
+type RequestMatchLead = MatchLeadBase & {
+  leadType: "request";
+  requestId: number;
+  requestStatus: string | null;
+  requestTechnologyTags: string[];
+  fristDato: string | null;
+  sted: string | null;
+  contactId: string | null;
+  contactName: string | null;
+  contactTitle: string | null;
+  tier?: 1 | 2 | 3 | 4;
+  heatScore?: number;
+  temperature?: "hett" | "lovende" | "mulig" | "sovende";
+  needsReview?: boolean;
+  signal?: string | null;
+};
+type MatchLead = ContactMatchLead | CompanyMatchLead | RequestMatchLead;
 
 import {
-  CATEGORIES,
   SIGNAL_OPTIONS,
   getEffectiveSignal,
   getSignalBadge,
@@ -47,8 +149,73 @@ const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colo
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
 const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground font-medium`;
 
+const JAKT_CHIPS: Array<{ value: HuntChipValue; label: string }> = [
+  { value: "alle", label: "Alle" },
+  { value: "foresporsler", label: "Forespørsler" },
+  { value: "finn", label: "Finn-match" },
+  { value: "siste_aktivitet", label: "Siste aktivitet" },
+  { value: "innkjoper", label: "Innkjøper" },
+  { value: "kunder", label: "Kunder" },
+  { value: "cold_call", label: "Cold call" },
+];
+
+function getMatchSourceLabel(source: HuntChipValue): string {
+  switch (source) {
+    case "foresporsler":
+      return "Forespørsel";
+    case "finn":
+      return "Finn";
+    case "siste_aktivitet":
+      return "Siste aktivitet";
+    case "innkjoper":
+      return "Innkjøper";
+    case "kunder":
+      return "Kunde";
+    case "cold_call":
+      return "Cold call";
+    case "alle":
+    default:
+      return "Match";
+  }
+}
+
+function compareByHotList(
+  left: { tier?: number | null; heatScore?: number | null },
+  right: { tier?: number | null; heatScore?: number | null },
+) {
+  const leftTier = left.tier ?? 4;
+  const rightTier = right.tier ?? 4;
+  if (leftTier !== rightTier) return leftTier - rightTier;
+
+  const leftHeatScore = left.heatScore ?? -1000;
+  const rightHeatScore = right.heatScore ?? -1000;
+  if (rightHeatScore !== leftHeatScore) return rightHeatScore - leftHeatScore;
+
+  return 0;
+}
+
+function isContactMatchLead(lead: MatchLead): lead is ContactMatchLead {
+  return lead.leadType === "contact";
+}
+
+function isRequestMatchLead(lead: MatchLead): lead is RequestMatchLead {
+  return lead.leadType === "request";
+}
+
+function isCompanyMatchLead(lead: MatchLead): lead is CompanyMatchLead {
+  return lead.leadType === "company";
+}
+
+function getMatchLeadDate(lead: MatchLead): string | null {
+  if (lead.sourceDates[0]) return lead.sourceDates[0];
+  if (isContactMatchLead(lead)) return lead.lastActivity;
+  return null;
+}
+
 const Contacts = () => {
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [selectedConsultantId, setSelectedConsultantId] = useState<number | null>(null);
+  const [jaktChip, setJaktChip] = useState<HuntChipValue>("alle");
   const [search, setSearch] = usePersistentState("stacq:contacts:search", "");
   const [ownerFilter, setOwnerFilter] = usePersistentState("stacq:contacts:ownerFilter", "all");
   const [signalFilter, setSignalFilter] = usePersistentState("stacq:contacts:signalFilter", "all");
@@ -61,22 +228,24 @@ const Contacts = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const activatePriorityMode = () => {
+    if (!hotListActive) setHotListActive(true);
+    setSort({ field: "priority", dir: "desc" });
+  };
 
   const { data: contactsResult, isLoading } = useQuery({
     queryKey: crmQueryKeys.contacts.all(),
     queryFn: async () => {
       const { data, error, count } = await supabase
         .from("contacts")
-        .select("*, companies(name), profiles!contacts_owner_id_fkey(id, full_name)", { count: "exact" })
+        .select("*, companies(id, name, status, ikke_relevant), profiles!contacts_owner_id_fkey(id, full_name)", { count: "exact" })
         .order("first_name")
         .limit(2000);
       if (error) throw error;
 
       const contactIds = new Set(data.map((c) => c.id));
 
-      const companyIds = [...new Set(data.map((c) => c.company_id).filter(Boolean))];
-
-      const [{ data: acts }, { data: tasks }, { data: techProfiles }, { data: foresporsler }] = await Promise.all([
+      const [{ data: acts }, { data: tasks }, { data: companyTechProfiles }, { data: requestRows }] = await Promise.all([
         supabase
           .from("activities")
           .select("contact_id, created_at, description, subject")
@@ -88,16 +257,20 @@ const Contacts = () => {
           .select("contact_id, created_at, updated_at, due_date, status, description, title")
           .not("contact_id", "is", null)
           .limit(5000),
-        companyIds.length > 0
-          ? supabase
-              .from("company_tech_profile")
-              .select("company_id, sist_fra_finn, teknologier")
-              .in("company_id", companyIds)
-          : Promise.resolve({ data: [] }),
+        supabase
+          .from("company_tech_profile")
+          .select(
+            "company_id, sist_fra_finn, teknologier, companies!company_tech_profile_company_id_fkey(id, name, status, ikke_relevant)",
+          )
+          .not("company_id", "is", null)
+          .limit(5000),
         supabase
           .from("foresporsler")
-          .select("selskap_id, mottatt_dato, status")
-          .not("status", "in", '("avsluttet","tapt")'),
+          .select(
+            "id, selskap_id, kontakt_id, selskap_navn, sted, mottatt_dato, frist_dato, status, teknologier, companies!foresporsler_selskap_id_fkey(id, name, status, ikke_relevant), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title)",
+          )
+          .order("mottatt_dato", { ascending: false })
+          .limit(5000),
       ]);
 
       // Last activity date map — only past activities count
@@ -154,29 +327,70 @@ const Contacts = () => {
         }
       });
 
-      const rows = data.map((c) => {
+      const techProfileByCompanyId = new Map<string, CompanyTechLeadRow>();
+      const normalizedCompanyTechProfiles: CompanyTechLeadRow[] = (companyTechProfiles || [])
+        .filter((profile: any) => Boolean(profile?.company_id))
+        .map((profile: any) => ({
+          companyId: profile.company_id,
+          company: (profile.companies || null) as CompanyPreview | null,
+          sistFraFinn: profile.sist_fra_finn || null,
+          companyTechnologyTags: mergeTechnologyTags(
+            Array.isArray(profile?.teknologier)
+              ? profile.teknologier
+              : profile?.teknologier && typeof profile.teknologier === "object"
+                ? Object.keys(profile.teknologier as Record<string, number>)
+                : [],
+          ),
+        }));
+      normalizedCompanyTechProfiles.forEach((profile) => {
+        techProfileByCompanyId.set(profile.companyId, profile);
+      });
+
+      const normalizedRequests: RequestLeadRow[] = (requestRows || []).map((request: any) => ({
+        id: request.id,
+        companyId: request.selskap_id || null,
+        contactId: request.kontakt_id || null,
+        companyName: request.companies?.name || request.selskap_navn || "Ukjent selskap",
+        company: (request.companies || null) as CompanyPreview | null,
+        mottattDato: request.mottatt_dato,
+        fristDato: request.frist_dato || null,
+        sted: request.sted || null,
+        status: request.status || null,
+        technologyTags: mergeTechnologyTags(request.teknologier || []),
+        contactName: request.contacts
+          ? `${request.contacts.first_name || ""} ${request.contacts.last_name || ""}`.trim() || null
+          : null,
+        contactTitle: request.contacts?.title || null,
+      }));
+
+      const requestMap = new Map<string, RequestLeadRow[]>();
+      normalizedRequests.forEach((request) => {
+        if (!request.companyId) return;
+        if (!requestMap.has(request.companyId)) requestMap.set(request.companyId, []);
+        requestMap.get(request.companyId)?.push(request);
+      });
+
+      const rows: ContactRow[] = data.map((c) => {
         const lastActivity = lastActMap[c.id] || null;
         const signal = signalMap[c.id] || null;
         const openTasks = openTasksMap[c.id] || { count: 0, overdue: false };
         const isInnkjoper = !!c.call_list;
         const ikkeAktuellKontakt = !!(c as any).ikke_aktuell_kontakt;
-        const techProfile = (techProfiles || []).find((tp: any) => tp.company_id === c.company_id);
+        const techProfile = techProfileByCompanyId.get(c.company_id || "");
         const hasMarkedsradar = !!(
           techProfile?.sist_fra_finn && differenceInDays(new Date(), new Date(techProfile.sist_fra_finn)) <= 90
         );
         const daysSince = lastActivity ? differenceInDays(new Date(), new Date(lastActivity)) : 999;
-
-        const hasAktivForespørsel = (foresporsler || []).some(
-          (f: any) =>
-            f.selskap_id === c.company_id &&
-            f.mottatt_dato &&
-            differenceInDays(new Date(), new Date(f.mottatt_dato)) <= 45,
-        );
-        const hasTidligereForespørsel = (foresporsler || []).some(
-          (f: any) =>
-            f.selskap_id === c.company_id &&
-            f.mottatt_dato &&
-            differenceInDays(new Date(), new Date(f.mottatt_dato)) > 45,
+        const companyTechnologyTags = techProfile?.companyTechnologyTags || [];
+        const contactTechnologyTags = mergeTechnologyTags(c.teknologier || []);
+        const companyRequests = requestMap.get(c.company_id || "") || [];
+        const activeRequests = companyRequests.filter((request) => isActiveRequest(request.mottattDato, request.status));
+        const hasAktivForespørsel = activeRequests.length > 0;
+        const hasTidligereForespørsel =
+          companyRequests.length > 0 &&
+          companyRequests.some((request) => !isActiveRequest(request.mottattDato, request.status));
+        const requestTechnologyTags = mergeTechnologyTags(
+          ...activeRequests.map((request) => request.technologyTags),
         );
 
         // KES: finnes det aktivitet etter at signalet ble satt?
@@ -208,6 +422,7 @@ const Contacts = () => {
           daysSinceLastContact: daysSince,
           hasTidligereForespørsel,
           ikkeAktuellKontakt,
+          ikkeRelevantSelskap: Boolean((c.companies as any)?.ikke_relevant),
           taskStatus,
           activityStatus,
           kes,
@@ -223,17 +438,51 @@ const Contacts = () => {
           tier: heatResult.tier,
           reasons: heatResult.reasons,
           needsReview: heatResult.needsReview,
+          hasAktivForespørsel,
+          hasTidligereForespørsel,
+          daysSinceLastContact: daysSince,
+          contactTechnologyTags,
+          companyTechnologyTags,
+          requestTechnologyTags,
+          companyStatus: c.companies?.status || null,
           hasMarkedsradar,
         };
       });
 
-      return { rows, totalCount: count ?? data.length, capped: data.length < (count ?? 0) };
+      return {
+        rows,
+        totalCount: count ?? data.length,
+        capped: data.length < (count ?? 0),
+        companyTechProfiles: normalizedCompanyTechProfiles,
+        requests: normalizedRequests,
+      };
     },
   });
 
-  const contacts = contactsResult?.rows ?? [];
+  const { data: huntConsultants = [], isLoading: huntConsultantsLoading } = useQuery({
+    queryKey: ["contacts-hunt-consultants"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("stacq_ansatte")
+        .select("id, navn, status, tilgjengelig_fra, kompetanse")
+        .in("status", ["AKTIV/SIGNERT", "Ledig"])
+        .not("tilgjengelig_fra", "is", null);
+      if (error) throw error;
+      return sortHuntConsultants(((data || []) as HuntConsultant[]).filter((consultant) =>
+        hasConsultantAvailability(consultant.tilgjengelig_fra),
+      ));
+    },
+  });
+
+  const contacts = useMemo(() => contactsResult?.rows ?? [], [contactsResult]);
+  const companyTechProfiles = useMemo(() => contactsResult?.companyTechProfiles ?? [], [contactsResult]);
+  const requests = useMemo(() => contactsResult?.requests ?? [], [contactsResult]);
   const totalCount = contactsResult?.totalCount ?? 0;
   const capped = contactsResult?.capped ?? false;
+  const selectedConsultant = useMemo(
+    () => huntConsultants.find((consultant) => consultant.id === selectedConsultantId) ?? null,
+    [huntConsultants, selectedConsultantId],
+  );
 
   const pendingToggles = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
@@ -362,55 +611,517 @@ const Contacts = () => {
   });
   const uniqueOwners = Array.from(ownerMap.entries());
 
-  const filtered = contacts.filter((c) => {
-    const q = search.toLowerCase();
-    const matchSearch =
-      !q ||
-      `${c.first_name} ${c.last_name}`.toLowerCase().includes(q) ||
-      (c.companies as any)?.name?.toLowerCase().includes(q) ||
-      c.title?.toLowerCase().includes(q);
-    const matchOwner = ownerFilter === "all" || getOwnerId(c) === ownerFilter;
-    const matchSignal = signalFilter === "all" || (c as any).signal === signalFilter;
-    const matchType =
-      typeFilter === "all" || (typeFilter === "call_list" && c.call_list) || (typeFilter === "cv_email" && c.cv_email);
-    return matchSearch && matchOwner && matchSignal && matchType;
-  });
+  const searchTerm = search.trim().toLowerCase();
+  const searchFilteredContacts = useMemo(
+    () =>
+      contacts.filter((contact) => {
+        if (!searchTerm) return true;
+        const technologyTags = mergeTechnologyTags(
+          contact.contactTechnologyTags,
+          contact.companyTechnologyTags,
+          contact.requestTechnologyTags,
+        );
+        return (
+          `${contact.first_name} ${contact.last_name}`.toLowerCase().includes(searchTerm) ||
+          (contact.companies as any)?.name?.toLowerCase().includes(searchTerm) ||
+          contact.title?.toLowerCase().includes(searchTerm) ||
+          technologyTags.join(" ").toLowerCase().includes(searchTerm)
+        );
+      }),
+    [contacts, searchTerm],
+  );
 
-  const sorted = [...filtered].sort((a, b) => {
-    const dir = sort.dir === "asc" ? 1 : -1;
-    switch (sort.field) {
-      case "name":
-        return dir * `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`, "nb");
-      case "company":
-        return dir * ((a.companies as any)?.name || "").localeCompare((b.companies as any)?.name || "", "nb");
-      case "title":
-        return dir * (a.title || "").localeCompare(b.title || "", "nb");
-      case "signal": {
-        const sa = (a as any).signal as string | null;
-        const sb = (b as any).signal as string | null;
-        const oa = getSignalRank(sa);
-        const ob = getSignalRank(sb);
-        return dir * (oa - ob);
-      }
-      case "owner":
-        return dir * (getOwnerName(a) || "").localeCompare(getOwnerName(b) || "", "nb");
-      case "last_activity":
-        if (!(a as any).lastActivity && !(b as any).lastActivity) return 0;
-        if (!(a as any).lastActivity) return 1;
-        if (!(b as any).lastActivity) return -1;
-        return dir * (a as any).lastActivity.localeCompare((b as any).lastActivity);
-      case "priority": {
-        const sa = (a as any).heatScore ?? -1000;
-        const sb = (b as any).heatScore ?? -1000;
-        const ta = (a as any).tier ?? 4;
-        const tb = (b as any).tier ?? 4;
-        if (ta !== tb) return ta - tb; // tier ASC (1 best)
-        return sb - sa; // score DESC innen tier
-      }
-      default:
-        return 0;
+  const filteredContacts = useMemo(
+    () =>
+      searchFilteredContacts.filter((contact) => {
+        const matchOwner = ownerFilter === "all" || getOwnerId(contact) === ownerFilter;
+        const matchSignal = signalFilter === "all" || (contact as any).signal === signalFilter;
+        const matchType =
+          typeFilter === "all" ||
+          (typeFilter === "call_list" && contact.call_list) ||
+          (typeFilter === "cv_email" && contact.cv_email);
+        return matchOwner && matchSignal && matchType;
+      }),
+    [ownerFilter, searchFilteredContacts, signalFilter, typeFilter],
+  );
+
+  const matchBaseContacts = useMemo(
+    () =>
+      searchFilteredContacts.filter(
+        (contact) =>
+          !contact.ikke_aktuell_kontakt &&
+          !(contact.companies as any)?.ikke_relevant &&
+          contact.signal !== "Ikke aktuelt",
+      ),
+    [searchFilteredContacts],
+  );
+
+  const selectedConsultantFirstName = selectedConsultant?.navn.split(" ")[0] || "konsulenten";
+  const matchResults = useMemo(() => {
+    if (!selectedConsultant) {
+      return {
+        leads: [] as MatchLead[],
+        emptyState: null as string | null,
+      };
     }
-  });
+
+    const consultantTags = mergeTechnologyTags(selectedConsultant.kompetanse || []);
+    if (consultantTags.length === 0) {
+      return {
+        leads: [] as MatchLead[],
+        emptyState: `${selectedConsultant.navn} mangler teknisk DNA i CRM. Legg inn kompetanse på konsulenten for å få match-treff her.`,
+      };
+    }
+
+    const chipPoolKeys: Array<Exclude<HuntChipValue, "alle">> = [
+      "foresporsler",
+      "finn",
+      "siste_aktivitet",
+      "innkjoper",
+      "kunder",
+      "cold_call",
+    ];
+    const contactPools = Object.fromEntries(
+      chipPoolKeys.map((chip) => [chip, new Map<string, ContactMatchLead>()]),
+    ) as Record<Exclude<HuntChipValue, "alle">, Map<string, ContactMatchLead>>;
+    const companyPools = Object.fromEntries(
+      chipPoolKeys.map((chip) => [chip, new Map<string, CompanyMatchLead>()]),
+    ) as Record<Exclude<HuntChipValue, "alle">, Map<string, CompanyMatchLead>>;
+    const requestPools = {
+      foresporsler: new Map<number, RequestMatchLead>(),
+    };
+
+    const searchableContactById = new Map(matchBaseContacts.map((contact) => [contact.id, contact]));
+    const searchableContactsByCompanyId = new Map<string, ContactRow[]>();
+    matchBaseContacts.forEach((contact) => {
+      if (!contact.company_id) return;
+      if (!searchableContactsByCompanyId.has(contact.company_id)) searchableContactsByCompanyId.set(contact.company_id, []);
+      searchableContactsByCompanyId.get(contact.company_id)?.push(contact);
+    });
+
+    const companyTechById = new Map(companyTechProfiles.map((profile) => [profile.companyId, profile]));
+    const companyNameMatchesSearch = (name: string, tags: string[]) =>
+      !searchTerm || name.toLowerCase().includes(searchTerm) || tags.join(" ").toLowerCase().includes(searchTerm);
+    const mergeTags = (...tagGroups: string[][]) => [...new Set(tagGroups.flat().filter(Boolean))];
+    const mergeSources = (...sourceGroups: HuntChipValue[][]) => [...new Set(sourceGroups.flat())];
+    const mergeDates = (...dateGroups: string[][]) =>
+      [...new Set(dateGroups.flat().filter(Boolean))].sort((left, right) => right.localeCompare(left));
+    const mergeUrgency = (...urgencies: number[]) => Math.max(0, ...urgencies);
+    const getSourceUrgency = (chip: Exclude<HuntChipValue, "alle">, sourceDate?: string | null, contact?: ContactRow) => {
+      if (chip === "cold_call") return contact?.daysSinceLastContact ?? 0;
+      return sourceDate ? new Date(sourceDate).getTime() : 0;
+    };
+    const buildContactLeadTags = (contact: ContactRow) =>
+      mergeTechnologyTags(contact.contactTechnologyTags, contact.companyTechnologyTags);
+    const getLeadScore = (tags: string[]) => getContactMatchScore(consultantTags, tags);
+
+    const getBestCompanyContact = (companyId: string, sourceTags?: string[]) => {
+      const candidates = searchableContactsByCompanyId.get(companyId) || [];
+      if (candidates.length === 0) return null;
+
+      return [...candidates].sort((left, right) => {
+        const leftScore = getLeadScore(sourceTags || buildContactLeadTags(left)).score10;
+        const rightScore = getLeadScore(sourceTags || buildContactLeadTags(right)).score10;
+        if (rightScore !== leftScore) return rightScore - leftScore;
+
+        const hotListCompare = compareByHotList(left, right);
+        if (hotListCompare !== 0) return hotListCompare;
+
+        return `${left.first_name} ${left.last_name}`.localeCompare(`${right.first_name} ${right.last_name}`, "nb");
+      })[0];
+    };
+
+    const addContactLead = (
+      chip: Exclude<HuntChipValue, "alle">,
+      contact: ContactRow,
+      leadTags: string[],
+      sourceDate?: string | null,
+      summary?: string,
+    ) => {
+      const scoreResult = getLeadScore(leadTags);
+      if (scoreResult.score10 < 4 || !scoreResult.matchBand) return;
+
+      const nextLead: ContactMatchLead = {
+        ...contact,
+        leadKey: `contact:${contact.id}`,
+        leadType: "contact",
+        name: `${contact.first_name} ${contact.last_name}`.trim(),
+        companyId: contact.company_id,
+        companyName: contact.companies?.name || "",
+        matchScore10: scoreResult.score10,
+        matchBand: scoreResult.matchBand,
+        matchSources: [chip],
+        matchTags: scoreResult.matchTags,
+        sourceDates: sourceDate ? [sourceDate] : [],
+        chipUrgency: getSourceUrgency(chip, sourceDate, contact),
+        summary: summary || contact.title || "Kontaktlead",
+      };
+
+      const existing = contactPools[chip].get(contact.id);
+      if (!existing) {
+        contactPools[chip].set(contact.id, nextLead);
+        return;
+      }
+
+      const mergedScore = Math.max(existing.matchScore10, nextLead.matchScore10);
+      contactPools[chip].set(contact.id, {
+        ...existing,
+        matchScore10: mergedScore,
+        matchBand: getMatchBand(mergedScore) || existing.matchBand,
+        matchSources: mergeSources(existing.matchSources, nextLead.matchSources),
+        matchTags: mergeTags(existing.matchTags, nextLead.matchTags),
+        sourceDates: mergeDates(existing.sourceDates, nextLead.sourceDates),
+        chipUrgency: mergeUrgency(existing.chipUrgency, nextLead.chipUrgency),
+        summary: existing.summary || nextLead.summary,
+      });
+    };
+
+    const addCompanyLead = (
+      chip: Exclude<HuntChipValue, "alle">,
+      companyId: string | null,
+      company: CompanyPreview | null,
+      fallbackName: string,
+      leadTags: string[],
+      companyTechnologyTags: string[],
+      sourceDate?: string | null,
+      summary?: string,
+      preferredContact?: { name?: string | null; title?: string | null },
+      minimumScore = 4,
+    ) => {
+      const companyName = company?.name || fallbackName || "Ukjent selskap";
+      if (!companyId || !companyNameMatchesSearch(companyName, leadTags) || company?.ikke_relevant) return;
+
+      const scoreResult = getLeadScore(leadTags);
+      if (scoreResult.score10 < minimumScore) return;
+
+      const nextLead: CompanyMatchLead = {
+        leadKey: `company:${companyId}`,
+        leadType: "company",
+        companyId,
+        companyName,
+        name: companyName,
+        status: company?.status || null,
+        companyTechnologyTags,
+        matchScore10: scoreResult.score10,
+        matchBand: scoreResult.matchBand,
+        matchSources: [chip],
+        matchTags: scoreResult.matchTags,
+        sourceDates: sourceDate ? [sourceDate] : [],
+        chipUrgency: getSourceUrgency(chip, sourceDate),
+        summary: summary || "Selskapslead uten registrert kontakt",
+        preferredContactName: preferredContact?.name || null,
+        preferredContactTitle: preferredContact?.title || null,
+      };
+
+      const existing = companyPools[chip].get(companyId);
+      if (!existing) {
+        companyPools[chip].set(companyId, nextLead);
+        return;
+      }
+
+      const mergedScore = Math.max(existing.matchScore10, nextLead.matchScore10);
+      companyPools[chip].set(companyId, {
+        ...existing,
+        matchScore10: mergedScore,
+        matchBand: getMatchBand(mergedScore) || existing.matchBand,
+        matchSources: mergeSources(existing.matchSources, nextLead.matchSources),
+        matchTags: mergeTags(existing.matchTags, nextLead.matchTags),
+        sourceDates: mergeDates(existing.sourceDates, nextLead.sourceDates),
+        chipUrgency: mergeUrgency(existing.chipUrgency, nextLead.chipUrgency),
+        summary: existing.summary || nextLead.summary,
+        preferredContactName: existing.preferredContactName || nextLead.preferredContactName || null,
+        preferredContactTitle: existing.preferredContactTitle || nextLead.preferredContactTitle || null,
+      });
+    };
+
+    const addRequestLead = (request: RequestLeadRow) => {
+      const scoreResult = getLeadScore(request.technologyTags);
+      if (scoreResult.score10 === 0 && request.technologyTags.length === 0) return;
+
+      const linkedContact = request.contactId ? searchableContactById.get(request.contactId) || null : null;
+      const bestCompanyContact =
+        !linkedContact && request.companyId ? getBestCompanyContact(request.companyId, request.technologyTags) : null;
+      const heatContact = linkedContact || bestCompanyContact;
+      const requestName = request.companyName || "Ukjent selskap";
+      if (
+        searchTerm &&
+        !requestName.toLowerCase().includes(searchTerm) &&
+        !request.contactName?.toLowerCase().includes(searchTerm) &&
+        !request.technologyTags.join(" ").toLowerCase().includes(searchTerm)
+      ) {
+        return;
+      }
+
+      requestPools.foresporsler.set(request.id, {
+        leadKey: `request:${request.id}`,
+        leadType: "request",
+        requestId: request.id,
+        companyId: request.companyId,
+        companyName: requestName,
+        name: requestName,
+        matchScore10: scoreResult.score10,
+        matchBand: scoreResult.matchBand,
+        matchSources: ["foresporsler"],
+        matchTags: scoreResult.matchTags,
+        requestTechnologyTags: request.technologyTags,
+        sourceDates: request.mottattDato ? [request.mottattDato] : [],
+        chipUrgency: getSourceUrgency("foresporsler", request.mottattDato),
+        summary: request.contactName ? "Aktiv forespørsel med kontakt" : "Aktiv forespørsel",
+        requestStatus: request.status,
+        fristDato: request.fristDato,
+        sted: request.sted,
+        contactId: request.contactId,
+        contactName: request.contactName || (heatContact ? `${heatContact.first_name} ${heatContact.last_name}`.trim() : null),
+        contactTitle: request.contactTitle || heatContact?.title || null,
+        tier: heatContact?.tier,
+        heatScore: heatContact?.heatScore,
+        temperature: heatContact?.temperature,
+        needsReview: heatContact?.needsReview,
+        signal: heatContact?.signal || null,
+      });
+    };
+
+    const activeRequests = requests.filter((request) => isActiveRequest(request.mottattDato, request.status));
+    activeRequests.forEach((request) => {
+      addRequestLead(request);
+    });
+
+    companyTechProfiles.forEach((profile) => {
+      const hasFreshFinn =
+        Boolean(profile.sistFraFinn) && differenceInDays(new Date(), new Date(profile.sistFraFinn!)) <= 90;
+      if (!hasFreshFinn) return;
+
+      const bestContact = getBestCompanyContact(profile.companyId, profile.companyTechnologyTags);
+      if (bestContact) {
+        addContactLead("finn", bestContact, profile.companyTechnologyTags, profile.sistFraFinn, "Finn-teknologimatch");
+        return;
+      }
+
+      addCompanyLead(
+        "finn",
+        profile.companyId,
+        profile.company,
+        profile.company?.name || "Ukjent selskap",
+        profile.companyTechnologyTags,
+        profile.companyTechnologyTags,
+        profile.sistFraFinn,
+        "Finn-teknologimatch uten registrert kontakt",
+      );
+    });
+
+    matchBaseContacts.forEach((contact) => {
+      const contactLeadTags = buildContactLeadTags(contact);
+
+      if (hasRecentActualActivity(contact.daysSinceLastContact, 45)) {
+        addContactLead("siste_aktivitet", contact, contactLeadTags, contact.lastActivity, "Nylig aktivitet");
+      }
+      if (contact.call_list) {
+        addContactLead("innkjoper", contact, contactLeadTags, contact.lastActivity, "Aktiv innkjøper");
+      }
+      if (
+        isColdCallCandidate({
+          daysSinceLastContact: contact.daysSinceLastContact,
+          openTaskCount: contact.openTasks.count,
+          isIkkeAktuellKontakt: Boolean(contact.ikke_aktuell_kontakt),
+        })
+      ) {
+        addContactLead("cold_call", contact, contactLeadTags, contact.lastActivity, "Cold call-kandidat");
+      }
+    });
+
+    const customerCompanyIds = new Set<string>();
+    matchBaseContacts.forEach((contact) => {
+      if (contact.company_id && isCustomerCompany(contact.companyStatus)) customerCompanyIds.add(contact.company_id);
+    });
+    companyTechProfiles.forEach((profile) => {
+      if (profile.companyId && isCustomerCompany(profile.company?.status)) customerCompanyIds.add(profile.companyId);
+    });
+
+    customerCompanyIds.forEach((companyId) => {
+      const companyContacts = searchableContactsByCompanyId.get(companyId) || [];
+      const companyProfile = companyTechById.get(companyId);
+      const company = companyContacts[0]?.companies || companyProfile?.company || null;
+      if (!company || !isCustomerCompany(company.status) || company.ikke_relevant) return;
+
+      const customerLeadTags = mergeTechnologyTags(
+        companyProfile?.companyTechnologyTags || [],
+        ...companyContacts.map((contact) => contact.contactTechnologyTags),
+        ...companyContacts.map((contact) => contact.companyTechnologyTags),
+      );
+      const bestContact = getBestCompanyContact(companyId, customerLeadTags);
+      const customerSourceDate = bestContact?.lastActivity || companyProfile?.sistFraFinn || null;
+
+      addCompanyLead(
+        "kunder",
+        companyId,
+        company,
+        company.name,
+        customerLeadTags,
+        companyProfile?.companyTechnologyTags || [],
+        customerSourceDate,
+        "Kundeselskap",
+        {
+          name: bestContact ? `${bestContact.first_name} ${bestContact.last_name}`.trim() : null,
+          title: bestContact?.title || null,
+        },
+        1,
+      );
+    });
+
+    const mergeContactPools = (chips: Array<Exclude<HuntChipValue, "alle">>) => {
+      const merged = new Map<string, ContactMatchLead>();
+      chips.forEach((chip) => {
+        contactPools[chip].forEach((lead, contactId) => {
+          const existing = merged.get(contactId);
+          if (!existing) {
+            merged.set(contactId, { ...lead });
+            return;
+          }
+
+          const mergedScore = Math.max(existing.matchScore10, lead.matchScore10);
+          merged.set(contactId, {
+            ...existing,
+            matchScore10: mergedScore,
+            matchBand: getMatchBand(mergedScore) || existing.matchBand,
+            matchTags: mergeTags(existing.matchTags, lead.matchTags),
+            matchSources: mergeSources(existing.matchSources, lead.matchSources),
+            sourceDates: mergeDates(existing.sourceDates, lead.sourceDates),
+            chipUrgency: mergeUrgency(existing.chipUrgency, lead.chipUrgency),
+            summary: existing.summary || lead.summary,
+          });
+        });
+      });
+      return [...merged.values()];
+    };
+
+    const mergeCompanyPools = (chips: Array<Exclude<HuntChipValue, "alle">>) => {
+      const merged = new Map<string, CompanyMatchLead>();
+      chips.forEach((chip) => {
+        companyPools[chip].forEach((lead, companyId) => {
+          const existing = merged.get(companyId);
+          if (!existing) {
+            merged.set(companyId, { ...lead });
+            return;
+          }
+
+          const mergedScore = Math.max(existing.matchScore10, lead.matchScore10);
+          merged.set(companyId, {
+            ...existing,
+            matchScore10: mergedScore,
+            matchBand: getMatchBand(mergedScore) || existing.matchBand,
+            matchTags: mergeTags(existing.matchTags, lead.matchTags),
+            matchSources: mergeSources(existing.matchSources, lead.matchSources),
+            sourceDates: mergeDates(existing.sourceDates, lead.sourceDates),
+            chipUrgency: mergeUrgency(existing.chipUrgency, lead.chipUrgency),
+            summary: existing.summary || lead.summary,
+          });
+        });
+      });
+      return [...merged.values()];
+    };
+
+    const mergeRequestPools = () => [...requestPools.foresporsler.values()].filter((lead) => lead.matchScore10 >= 4);
+
+    const contactResults =
+      jaktChip === "alle" ? mergeContactPools(chipPoolKeys) : [...contactPools[jaktChip as Exclude<HuntChipValue, "alle">].values()];
+    const companyResults =
+      jaktChip === "alle" ? mergeCompanyPools(chipPoolKeys) : [...companyPools[jaktChip as Exclude<HuntChipValue, "alle">].values()];
+    const requestResults = jaktChip === "alle" ? mergeRequestPools() : jaktChip === "foresporsler" ? [...requestPools.foresporsler.values()] : [];
+
+    const leads = [...contactResults, ...companyResults, ...requestResults].sort((left, right) => {
+      if (right.matchScore10 !== left.matchScore10) return right.matchScore10 - left.matchScore10;
+      if (right.chipUrgency !== left.chipUrgency) return right.chipUrgency - left.chipUrgency;
+
+      const hotListCompare = compareByHotList(left, right);
+      if (hotListCompare !== 0) return hotListCompare;
+
+      return left.name.localeCompare(right.name, "nb");
+    });
+
+    let emptyState: string | null = null;
+    if (leads.length === 0) {
+      switch (jaktChip) {
+        case "foresporsler":
+          emptyState = activeRequests.length === 0
+            ? "Ingen aktive forespørsler siste 45 dager akkurat nå."
+            : `Ingen aktive forespørsler er synlige for ${selectedConsultantFirstName} med dagens søk akkurat nå.`;
+          break;
+        case "finn":
+          emptyState = `Ingen Finn-annonser matcher ${selectedConsultantFirstName} sin tekniske profil akkurat nå.`;
+          break;
+        case "siste_aktivitet":
+          emptyState = `Ingen kontakter med nylig aktivitet matcher ${selectedConsultantFirstName} sin tekniske profil akkurat nå.`;
+          break;
+        case "innkjoper":
+          emptyState = `Ingen aktive innkjøpere matcher ${selectedConsultantFirstName} sin tekniske profil akkurat nå.`;
+          break;
+        case "kunder":
+          emptyState = `Ingen kundeselskaper med teknisk DNA matcher ${selectedConsultantFirstName} akkurat nå.`;
+          break;
+        case "cold_call":
+          emptyState = `Ingen cold call-treff matcher ${selectedConsultantFirstName} sin tekniske profil akkurat nå.`;
+          break;
+        case "alle":
+        default:
+          emptyState = `Ingen tekniske match-treff for ${selectedConsultantFirstName} akkurat nå.`;
+          break;
+      }
+    }
+
+    return {
+      leads,
+      emptyState,
+    };
+  }, [companyTechProfiles, jaktChip, matchBaseContacts, requests, searchTerm, selectedConsultant, selectedConsultantFirstName]);
+
+  const sortedContacts = useMemo(() => {
+    if (selectedConsultant) return [] as ContactRow[];
+
+    return [...filteredContacts].sort((a, b) => {
+      const dir = sort.dir === "asc" ? 1 : -1;
+      switch (sort.field) {
+        case "name":
+          return dir * `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`, "nb");
+        case "company":
+          return dir * ((a.companies as any)?.name || "").localeCompare((b.companies as any)?.name || "", "nb");
+        case "title":
+          return dir * (a.title || "").localeCompare(b.title || "", "nb");
+        case "signal": {
+          const sa = (a as any).signal as string | null;
+          const sb = (b as any).signal as string | null;
+          const oa = getSignalRank(sa);
+          const ob = getSignalRank(sb);
+          return dir * (oa - ob);
+        }
+        case "owner":
+          return dir * (getOwnerName(a) || "").localeCompare(getOwnerName(b) || "", "nb");
+        case "last_activity":
+          if (!(a as any).lastActivity && !(b as any).lastActivity) return 0;
+          if (!(a as any).lastActivity) return 1;
+          if (!(b as any).lastActivity) return -1;
+          return dir * (a as any).lastActivity.localeCompare((b as any).lastActivity);
+        case "priority": {
+          const sa = (a as any).heatScore ?? -1000;
+          const sb = (b as any).heatScore ?? -1000;
+          const ta = (a as any).tier ?? 4;
+          const tb = (b as any).tier ?? 4;
+          if (ta !== tb) return ta - tb;
+          return sb - sa;
+        }
+        default:
+          return 0;
+      }
+    });
+  }, [filteredContacts, selectedConsultant, sort]);
+
+  const visibleMatchLeads = selectedConsultant ? matchResults.leads : [];
+  const hasVisibleResults = selectedConsultant ? visibleMatchLeads.length > 0 : sortedContacts.length > 0;
+  const visibleResultCount = selectedConsultant
+    ? visibleMatchLeads.length
+    : filteredContacts.length === contacts.length
+      ? `${totalCount}${capped ? "+" : ""}`
+      : filteredContacts.length;
+  const visibleResultLabel = selectedConsultant ? "treff" : "kontakter";
 
   const toggleSort = (field: SortField) => {
     setSort((prev) =>
@@ -430,8 +1141,13 @@ const Contacts = () => {
     className?: string;
   }) => (
     <button
+      disabled={Boolean(selectedConsultant)}
       onClick={() => toggleSort(field)}
-      className={`flex items-center gap-1 text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground hover:text-foreground transition-colors ${className}`}
+      className={cn(
+        "flex items-center gap-1 text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground transition-colors",
+        selectedConsultant ? "cursor-default opacity-60" : "hover:text-foreground",
+        className,
+      )}
     >
       {children}
       <ArrowUpDown className={`h-3 w-3 ${sort.field === field ? "text-foreground" : "text-muted-foreground/20"}`} />
@@ -461,10 +1177,100 @@ const Contacts = () => {
     setSort({ field: field as SortField, dir: dir as SortDir });
   };
 
+  const handleConsultantToggle = (consultantId: number) => {
+    setSelectedConsultantId((current) => {
+      const next = current === consultantId ? null : consultantId;
+      if (next !== null) activatePriorityMode();
+      return next;
+    });
+  };
+
+  const handleJaktChipSelect = (value: HuntChipValue) => {
+    setJaktChip(value);
+    activatePriorityMode();
+  };
+
+  const getMatchLeadHref = (lead: MatchLead) =>
+    isContactMatchLead(lead)
+      ? `/kontakter/${lead.id}`
+      : isRequestMatchLead(lead)
+        ? `/foresporsler?id=${lead.requestId}`
+        : `/selskaper/${lead.companyId}`;
+  const getMatchLeadHeatConfig = (lead: MatchLead) => {
+    if (isContactMatchLead(lead)) return TEMP_CONFIG[lead.temperature];
+    if (isRequestMatchLead(lead) && lead.temperature) return TEMP_CONFIG[lead.temperature];
+    return null;
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-[1.375rem] font-bold">Kontakter</h1>
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Tilgjengelig for oppdrag
+          </p>
+          {selectedConsultant && (
+            <button
+              onClick={() => setSelectedConsultantId(null)}
+              className="text-[0.75rem] font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Nullstill valg
+            </button>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {huntConsultantsLoading
+            ? [1, 2, 3].map((item) => <div key={item} className="h-12 w-44 rounded-xl bg-secondary/50 animate-pulse" />)
+            : huntConsultants.map((consultant) => {
+                const isSelected = selectedConsultantId === consultant.id;
+                const availability = getConsultantAvailabilityMeta(consultant.tilgjengelig_fra);
+
+                return (
+                  <button
+                    key={consultant.id}
+                    onClick={() => handleConsultantToggle(consultant.id)}
+                    className={cn(
+                      "inline-flex items-center gap-3 rounded-xl border px-3 py-2 text-left transition-colors",
+                      isSelected ? "border-foreground bg-foreground text-background" : "border-border bg-card hover:bg-muted/40",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "inline-flex h-8 w-8 items-center justify-center rounded-full text-[0.75rem] font-semibold",
+                        isSelected ? "bg-background/15 text-background" : "bg-muted text-foreground",
+                      )}
+                    >
+                      {getInitials(consultant.navn)}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-[0.8125rem] font-medium">{consultant.navn}</span>
+                      <span
+                        className={cn(
+                          "block text-[0.75rem]",
+                          isSelected
+                            ? "text-background/80"
+                            : availability.tone === "ready"
+                              ? "text-emerald-600"
+                              : availability.tone === "soon"
+                                ? "text-amber-600"
+                                : "text-muted-foreground",
+                        )}
+                      >
+                        {availability.label}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+        </div>
+        {!huntConsultantsLoading && huntConsultants.length === 0 && (
+          <p className="text-[0.8125rem] text-muted-foreground">
+            Ingen konsulenter med satt tilgjengelighetsdato er klare for matchvisning ennå.
+          </p>
+        )}
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1 max-w-full sm:max-w-xs">
@@ -476,7 +1282,7 @@ const Contacts = () => {
             className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border"
           />
         </div>
-        <div className="md:hidden">
+        {!selectedConsultant && <div className="md:hidden">
           <select
             value={mobileSortValue}
             onChange={(e) => handleMobileSortChange(e.target.value)}
@@ -491,65 +1297,83 @@ const Contacts = () => {
             <option value="owner:asc">Sorter: Eier</option>
             <option value="last_activity:desc">Sorter: Siste aktivitet</option>
           </select>
-        </div>
+        </div>}
       </div>
 
       {/* Chip filters */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start">
         <div className="space-y-2 flex-1">
-          {/* EIER */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
-              Eier
-            </span>
-            <Chip label="Alle" value="all" current={ownerFilter} onSelect={setOwnerFilter} />
-            {uniqueOwners.map(([id, name]) => (
-              <Chip key={id} label={name} value={id} current={ownerFilter} onSelect={setOwnerFilter} />
-            ))}
-          </div>
-          {/* SIGNAL */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
-              Signal
-            </span>
-            <Chip label="Alle" value="all" current={signalFilter} onSelect={setSignalFilter} />
-            {SIGNAL_OPTIONS.map((s) => (
-              <Chip key={s.label} label={s.label} value={s.label} current={signalFilter} onSelect={setSignalFilter} />
-            ))}
-            <div className="w-px h-5 bg-border mx-1" />
-            <button
-              onClick={() => {
-                const next = !hotListActive;
-                setHotListActive(next);
-                setSort(next ? { field: "priority", dir: "desc" } : { field: "signal", dir: "asc" });
-              }}
-              className={cn(
-                "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer inline-flex items-center gap-1.5",
-                hotListActive
-                  ? "bg-red-500 text-white border-red-500 font-medium"
-                  : "border-border text-muted-foreground hover:bg-secondary",
-              )}
-            >
-              🔥 Hot list
-            </button>
-          </div>
-          {/* TYPE */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
-              Type
-            </span>
-            <Chip label="Alle" value="all" current={typeFilter} onSelect={setTypeFilter} />
-            <Chip label="Innkjøper" value="call_list" current={typeFilter} onSelect={setTypeFilter} />
-            <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
-          </div>
+          {!selectedConsultant && (
+            <>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+                  Eier
+                </span>
+                <Chip label="Alle" value="all" current={ownerFilter} onSelect={setOwnerFilter} />
+                {uniqueOwners.map(([id, name]) => (
+                  <Chip key={id} label={name} value={id} current={ownerFilter} onSelect={setOwnerFilter} />
+                ))}
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+                  Signal
+                </span>
+                <Chip label="Alle" value="all" current={signalFilter} onSelect={setSignalFilter} />
+                {SIGNAL_OPTIONS.map((s) => (
+                  <Chip key={s.label} label={s.label} value={s.label} current={signalFilter} onSelect={setSignalFilter} />
+                ))}
+                <div className="w-px h-5 bg-border mx-1" />
+                <button
+                  onClick={() => {
+                    const next = !hotListActive;
+                    setHotListActive(next);
+                    setSort(next ? { field: "priority", dir: "desc" } : { field: "signal", dir: "asc" });
+                  }}
+                  className={cn(
+                    "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors inline-flex items-center gap-1.5 cursor-pointer",
+                    hotListActive
+                      ? "bg-red-500 text-white border-red-500 font-medium"
+                      : "border-border text-muted-foreground hover:bg-secondary",
+                  )}
+                >
+                  🔥 Hot list
+                </button>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+                  Type
+                </span>
+                <Chip label="Alle" value="all" current={typeFilter} onSelect={setTypeFilter} />
+                <Chip label="Innkjøper" value="call_list" current={typeFilter} onSelect={setTypeFilter} />
+                <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
+              </div>
+            </>
+          )}
+          {selectedConsultant && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+                Match
+              </span>
+              {JAKT_CHIPS.map((chip) => (
+                <button
+                  key={chip.value}
+                  onClick={() => handleJaktChipSelect(chip.value)}
+                  className={jaktChip === chip.value ? CHIP_ON : CHIP_OFF}
+                >
+                  {chip.label}
+                </button>
+              ))}
+              <span className="text-[0.75rem] text-muted-foreground">
+                Match-modus sorterer først på matchscore, deretter på ferskhet og varme for {selectedConsultant.navn.split(" ")[0]}.
+              </span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-3 md:ml-auto shrink-0">
           <div className="w-px h-8 bg-border" />
           <div className="text-right">
-            <span className="text-[0.9375rem] font-semibold text-foreground">
-              {filtered.length === contacts.length ? `${totalCount}${capped ? "+" : ""}` : filtered.length}
-            </span>
-            <span className="text-[0.9375rem] text-muted-foreground ml-1.5">kontakter</span>
+            <span className="text-[0.9375rem] font-semibold text-foreground">{visibleResultCount}</span>
+            <span className="text-[0.9375rem] text-muted-foreground ml-1.5">{visibleResultLabel}</span>
           </div>
         </div>
       </div>
@@ -561,12 +1385,241 @@ const Contacts = () => {
             <div key={i} className="h-[44px] bg-secondary/50 animate-pulse rounded" />
           ))}
         </div>
-      ) : filtered.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-12 text-center">Ingen kontakter funnet</p>
-      ) : (
+      ) : !hasVisibleResults ? (
+        <p className="text-sm text-muted-foreground py-12 text-center">
+          {selectedConsultant ? matchResults.emptyState : "Ingen kontakter funnet"}
+        </p>
+      ) : selectedConsultant ? (
         <>
           <div className="space-y-3 md:hidden">
-            {sorted.map((contact) => {
+            {visibleMatchLeads.map((lead) => {
+              const leadDate = getMatchLeadDate(lead);
+              const heatConfig = getMatchLeadHeatConfig(lead);
+
+              return (
+                <button
+                  key={lead.leadKey}
+                  type="button"
+                  onClick={() => navigate(getMatchLeadHref(lead))}
+                  style={{
+                    borderLeft: heatConfig ? `3px solid var(--match-heat)` : "3px solid transparent",
+                    ["--match-heat" as string]:
+                      heatConfig?.bar === "bg-red-500"
+                        ? "rgb(239 68 68)"
+                        : heatConfig?.bar === "bg-orange-400"
+                          ? "rgb(251 146 60)"
+                          : heatConfig?.bar === "bg-amber-400"
+                            ? "rgb(251 191 36)"
+                            : "transparent",
+                  }}
+                  className="w-full rounded-xl border border-border bg-card px-4 py-3 text-left shadow-card"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[0.9375rem] font-semibold text-foreground truncate">{lead.name}</p>
+                        {isCompanyMatchLead(lead) && (
+                          <span className="rounded-full border border-border px-2 py-0.5 text-[0.6875rem] font-medium text-muted-foreground">
+                            Selskapslead
+                          </span>
+                        )}
+                        {isRequestMatchLead(lead) && (
+                          <span className="rounded-full border border-border px-2 py-0.5 text-[0.6875rem] font-medium text-muted-foreground">
+                            Forespørsel
+                          </span>
+                        )}
+                        {isContactMatchLead(lead) && lead.needsReview && (
+                          <span className="text-[0.75rem]" title="Trenger oppfølging">
+                            ⚠
+                          </span>
+                        )}
+                      </div>
+                      {isContactMatchLead(lead) ? (
+                        <>
+                          {lead.companyName && (
+                            <p className="mt-1 text-[0.8125rem] text-muted-foreground truncate">{lead.companyName}</p>
+                          )}
+                          {lead.title && (
+                            <p className="text-[0.8125rem] text-muted-foreground truncate">{lead.title}</p>
+                          )}
+                        </>
+                      ) : isRequestMatchLead(lead) ? (
+                        <>
+                          <p className="mt-1 text-[0.8125rem] text-muted-foreground truncate">
+                            {lead.contactName || "Ingen kontakt koblet"}
+                          </p>
+                          {(lead.fristDato || lead.sted) && (
+                            <p className="text-[0.8125rem] text-muted-foreground truncate">
+                              {lead.fristDato ? `Frist ${relativeDate(lead.fristDato)}` : lead.sted}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <p className="mt-1 text-[0.8125rem] text-muted-foreground truncate">{lead.summary}</p>
+                          {lead.preferredContactName && (
+                            <p className="text-[0.8125rem] text-muted-foreground truncate">
+                              {lead.preferredContactName}
+                              {lead.preferredContactTitle ? ` · ${lead.preferredContactTitle}` : ""}
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-[0.75rem] font-semibold text-foreground">
+                        <span
+                          className={cn(
+                            "inline-block h-2.5 w-2.5 rounded-full",
+                            getConsultantMatchScoreColor(lead.matchScore10),
+                          )}
+                        />
+                        Match {lead.matchScore10}/10
+                      </div>
+                      {leadDate && (
+                        <p className="mt-1 text-[0.75rem] text-muted-foreground">{relativeDate(leadDate)}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="mt-2 text-[0.75rem] text-muted-foreground truncate">
+                    {lead.matchSources.map(getMatchSourceLabel).join(" · ")}
+                  </p>
+                  <p className="mt-1 text-[0.75rem] text-muted-foreground truncate">
+                    {lead.matchTags.slice(0, 4).join(", ")}
+                  </p>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {heatConfig ? (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[0.6875rem] font-medium text-foreground">
+                        <span className={cn("inline-block h-2 w-2 rounded-full", heatConfig.dot)} />
+                        {heatConfig.label}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[0.6875rem] font-medium text-muted-foreground">
+                        Ingen heat ennå
+                      </span>
+                    )}
+                    {(isContactMatchLead(lead) || isRequestMatchLead(lead)) && lead.signal && lead.signal !== "Ukjent om behov" && (
+                      <span className="text-[0.6875rem] text-muted-foreground truncate">{lead.signal}</span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="hidden md:block border border-border rounded-lg overflow-hidden bg-card shadow-card">
+            <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.2fr)_minmax(0,1.4fr)_120px_130px_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+              <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Lead</span>
+              <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Selskap</span>
+              <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Kilde</span>
+              <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Match</span>
+              <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Varme</span>
+              <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground text-right">Sist</span>
+            </div>
+            <div className="divide-y divide-border">
+              {visibleMatchLeads.map((lead) => {
+                const leadDate = getMatchLeadDate(lead);
+                const heatConfig = getMatchLeadHeatConfig(lead);
+
+                return (
+                  <button
+                    key={lead.leadKey}
+                    onClick={() => navigate(getMatchLeadHref(lead))}
+                    style={{
+                      borderLeft: heatConfig ? `3px solid var(--match-heat)` : "3px solid transparent",
+                      ["--match-heat" as string]:
+                        heatConfig?.bar === "bg-red-500"
+                          ? "rgb(239 68 68)"
+                          : heatConfig?.bar === "bg-orange-400"
+                            ? "rgb(251 146 60)"
+                            : heatConfig?.bar === "bg-amber-400"
+                              ? "rgb(251 191 36)"
+                              : "transparent",
+                    }}
+                    className="grid w-full grid-cols-[minmax(0,1.8fr)_minmax(0,1.2fr)_minmax(0,1.4fr)_120px_130px_100px] gap-3 items-center pl-3 pr-4 min-h-[52px] py-2 text-left hover:bg-background/80 transition-colors duration-75"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-[0.8125rem] font-medium text-foreground truncate">{lead.name}</p>
+                      <p className="text-[0.6875rem] text-muted-foreground truncate">
+                        {isContactMatchLead(lead)
+                          ? lead.title || "Kontaktlead"
+                          : isRequestMatchLead(lead)
+                            ? `${lead.summary}${lead.sted ? ` · ${lead.sted}` : ""}`
+                            : lead.summary}
+                      </p>
+                    </div>
+                    <div className="min-w-0">
+                      {isContactMatchLead(lead) ? (
+                        <>
+                          <p className="text-[0.8125rem] text-muted-foreground truncate">{lead.companyName || "—"}</p>
+                          {lead.signal && lead.signal !== "Ukjent om behov" && (
+                            <p className="text-[0.6875rem] text-muted-foreground truncate">{lead.signal}</p>
+                          )}
+                        </>
+                      ) : isRequestMatchLead(lead) ? (
+                        <>
+                          <p className="text-[0.8125rem] text-muted-foreground truncate">
+                            {lead.contactName || "Ingen kontakt koblet"}
+                          </p>
+                          <p className="text-[0.6875rem] text-muted-foreground truncate">
+                            {lead.fristDato ? `Frist ${relativeDate(lead.fristDato)}` : lead.requestStatus || "Aktiv"}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-[0.8125rem] text-muted-foreground truncate">
+                            {lead.preferredContactName || "Uten kontakt"}
+                          </p>
+                          {lead.preferredContactTitle && (
+                            <p className="text-[0.6875rem] text-muted-foreground truncate">{lead.preferredContactTitle}</p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[0.75rem] font-medium text-foreground truncate">
+                        {lead.matchSources.map(getMatchSourceLabel).join(" · ")}
+                      </p>
+                      <p className="text-[0.6875rem] text-muted-foreground truncate">
+                        {lead.matchTags.slice(0, 4).join(", ")}
+                      </p>
+                    </div>
+                    <div className="shrink-0">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-[0.75rem] font-semibold text-foreground">
+                        <span
+                          className={cn(
+                            "inline-block h-2.5 w-2.5 rounded-full",
+                            getConsultantMatchScoreColor(lead.matchScore10),
+                          )}
+                        />
+                        {lead.matchScore10}/10
+                      </span>
+                    </div>
+                    <div className="min-w-0">
+                      {heatConfig ? (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[0.6875rem] font-medium text-foreground">
+                          <span className={cn("inline-block h-2 w-2 rounded-full", heatConfig.dot)} />
+                          {heatConfig.label}
+                        </span>
+                      ) : (
+                        <span className="text-[0.6875rem] text-muted-foreground">Ingen heat ennå</span>
+                      )}
+                    </div>
+                    <div className="text-[0.75rem] text-muted-foreground text-right">
+                      {leadDate ? relativeDate(leadDate) : ""}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          {sortedContacts.length > 0 && <div className="space-y-3 md:hidden">
+            {sortedContacts.map((contact) => {
               const companyName = (contact.companies as any)?.name;
               const signal = (contact as any).signal as string | null;
               const signalBadge = getSignalBadge(signal);
@@ -606,6 +1659,12 @@ const Contacts = () => {
                       )}
                       {contact.title && (
                         <p className="text-[0.8125rem] text-muted-foreground truncate">{contact.title}</p>
+                      )}
+                      {selectedConsultant && "matchSources" in contact && contact.matchSources.length > 0 && (
+                        <p className="mt-1 text-[0.75rem] text-muted-foreground truncate">
+                          {contact.matchSources.map(getMatchSourceLabel).join(" · ")}
+                          {contact.matchTags.length > 0 ? ` · ${contact.matchTags.slice(0, 3).join(", ")}` : ""}
+                        </p>
                       )}
                     </div>
                     <div className="text-right shrink-0">
@@ -653,7 +1712,7 @@ const Contacts = () => {
                             }
                           >
                             <span
-                              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${s.color}`}
+                              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${s.badgeColor}`}
                             >
                               {s.label}
                             </span>
@@ -701,22 +1760,24 @@ const Contacts = () => {
                 </button>
               );
             })}
-          </div>
+          </div>}
 
-          <div className="hidden md:block border border-border rounded-lg overflow-hidden bg-card shadow-card">
-            <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_110px_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+          {sortedContacts.length > 0 && <div className="hidden md:block border border-border rounded-lg overflow-hidden bg-card shadow-card">
+            <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
               <SortHeader field="name">Navn</SortHeader>
               <SortHeader field="signal">Signal</SortHeader>
               <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Finn</span>
               <SortHeader field="company">Selskap</SortHeader>
               <SortHeader field="title">Stilling</SortHeader>
-              <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Tags</span>
+              <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                {selectedConsultant ? "Match" : "Tags"}
+              </span>
               <SortHeader field="last_activity" className="justify-end">
                 Siste akt.
               </SortHeader>
             </div>
             <div className="divide-y divide-border">
-              {sorted.map((contact) => {
+              {sortedContacts.map((contact) => {
                 const companyName = (contact.companies as any)?.name;
                 const signal = (contact as any).signal as string | null;
                 const signalBadge = getSignalBadge(signal);
@@ -735,7 +1796,7 @@ const Contacts = () => {
                               : "3px solid rgb(229 231 235)"
                         : "3px solid transparent",
                     }}
-                    className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_110px_100px] gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75"
+                    className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_100px] gap-3 items-center pl-3 pr-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75"
                   >
                     <button
                       onClick={() => navigate(`/kontakter/${contact.id}`)}
@@ -779,7 +1840,7 @@ const Contacts = () => {
                               }
                             >
                               <span
-                                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${s.color}`}
+                                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${s.badgeColor}`}
                               >
                                 {s.label}
                               </span>
@@ -812,28 +1873,39 @@ const Contacts = () => {
                     >
                       {contact.title?.slice(0, 25) || ""}
                     </button>
-                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => handleToggle(contact, "cv_email", !contact.cv_email)}
-                        className={
-                          contact.cv_email
-                            ? "rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
-                            : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
-                        }
-                      >
-                        CV
-                      </button>
-                      <button
-                        onClick={() => handleToggle(contact, "call_list", !contact.call_list)}
-                        className={
-                          contact.call_list
-                            ? "rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
-                            : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
-                        }
-                      >
-                        Innkjøper
-                      </button>
-                    </div>
+                    {selectedConsultant && "matchSources" in contact ? (
+                      <div className="min-w-0">
+                        <p className="text-[0.75rem] font-medium text-foreground truncate">
+                          {contact.matchSources.map(getMatchSourceLabel).join(" · ")}
+                        </p>
+                        <p className="text-[0.6875rem] text-muted-foreground truncate">
+                          {contact.matchTags.slice(0, 3).join(", ")}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => handleToggle(contact, "cv_email", !contact.cv_email)}
+                          className={
+                            contact.cv_email
+                              ? "rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
+                              : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
+                          }
+                        >
+                          CV
+                        </button>
+                        <button
+                          onClick={() => handleToggle(contact, "call_list", !contact.call_list)}
+                          className={
+                            contact.call_list
+                              ? "rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
+                              : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
+                          }
+                        >
+                          Innkjøper
+                        </button>
+                      </div>
+                    )}
                     <span className="text-[0.75rem] text-muted-foreground text-right">
                       {(contact as any).lastActivity ? (
                         <Tooltip>
@@ -852,7 +1924,7 @@ const Contacts = () => {
                 );
               })}
             </div>
-          </div>
+          </div>}
         </>
       )}
       <BulkSignalModal open={bulkModalOpen} onClose={() => setBulkModalOpen(false)} />

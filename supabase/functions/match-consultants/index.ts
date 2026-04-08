@@ -29,7 +29,24 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const { teknologier, sted, interne, eksterne } = await req.json();
+    type ConsultantCandidate = {
+      id: number | string;
+      navn: string;
+      kompetanse?: string[] | null;
+      teknologier?: string[] | null;
+    };
+
+    const {
+      teknologier,
+      sted,
+      interne,
+      eksterne,
+    }: {
+      teknologier?: string[] | null;
+      sted?: string | null;
+      interne?: ConsultantCandidate[] | null;
+      eksterne?: ConsultantCandidate[] | null;
+    } = await req.json();
     const requestProfile = buildMatchingProfile(teknologier || []);
 
     if (!requestProfile.tags.length) {
@@ -38,15 +55,15 @@ serve(async (req) => {
       });
     }
 
-    const candidateProfiles = new Map<string, { tags: string[]; type: string }>();
-    const normalizedInterne = (interne || []).map((k: any) => {
+    const candidateProfiles = new Map<string, { tags: string[]; type: string; navn?: string }>();
+    const normalizedInterne = (interne || []).map((k) => {
       const profile = buildMatchingProfile(k.kompetanse || []);
-      candidateProfiles.set(String(k.id), { tags: profile.tags, type: "intern" });
+      candidateProfiles.set(String(k.id), { tags: profile.tags, type: "intern", navn: k.navn });
       return { ...k, _profile: profile };
     });
-    const normalizedEksterne = (eksterne || []).map((k: any) => {
+    const normalizedEksterne = (eksterne || []).map((k) => {
       const profile = buildMatchingProfile(k.teknologier || []);
-      candidateProfiles.set(String(k.id), { tags: profile.tags, type: "ekstern" });
+      candidateProfiles.set(String(k.id), { tags: profile.tags, type: "ekstern", navn: k.navn });
       return { ...k, _profile: profile };
     });
 
@@ -59,10 +76,10 @@ Use exact canonical tags from the provided profiles when you populate match_tags
     const userPrompt = `Forespørsel: ${requestProfile.promptText}${sted ? ` — ${sted}` : ""}
 
 Interne konsulenter:
-${normalizedInterne.map((k: any) => `[id:${k.id}] ${k.navn}: ${k._profile.promptText}`).join("\n") || "Ingen"}
+${normalizedInterne.map((k) => `[id:${k.id}] ${k.navn}: ${k._profile.promptText}`).join("\n") || "Ingen"}
 
 Eksterne konsulenter (tilgjengelige):
-${normalizedEksterne.map((k: any) => `[id:${k.id}] ${k.navn}: ${k._profile.promptText}`).join("\n") || "Ingen"}`;
+${normalizedEksterne.map((k) => `[id:${k.id}] ${k.navn}: ${k._profile.promptText}`).join("\n") || "Ingen"}`;
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",

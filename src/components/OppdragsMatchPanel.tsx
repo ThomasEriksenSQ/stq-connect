@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { differenceInDays, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { getEffectiveSignal } from "@/lib/categoryUtils";
+import { getConsultantMatchScoreColor } from "@/lib/consultantMatches";
 
 export interface ForespørselMatch {
   id: number;
@@ -35,7 +36,7 @@ const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-seco
 const CHIP_ON = `${CHIP_BASE} bg-primary/10 border-primary/30 text-primary font-medium`;
 
 function ScoreDot({ score }: { score: number }) {
-  const color = score >= 8 ? "bg-emerald-500" : score >= 6 ? "bg-amber-500" : "bg-red-500";
+  const color = getConsultantMatchScoreColor(score);
   return <span className={cn("inline-block h-2.5 w-2.5 rounded-full", color)} />;
 }
 

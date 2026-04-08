@@ -16,7 +16,24 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const { kontakt_teknologier, kontakt_navn, selskap_navn, interne } = await req.json();
+    type InternalConsultantCandidate = {
+      id: number | string;
+      navn: string;
+      kompetanse?: string[] | null;
+      geografi?: string | null;
+    };
+
+    const {
+      kontakt_teknologier,
+      kontakt_navn,
+      selskap_navn,
+      interne,
+    }: {
+      kontakt_teknologier?: string[] | null;
+      kontakt_navn?: string | null;
+      selskap_navn?: string | null;
+      interne?: InternalConsultantCandidate[] | null;
+    } = await req.json();
     const contactProfile = buildMatchingProfile(kontakt_teknologier || []);
 
     if (!contactProfile.tags.length) {
@@ -25,10 +42,10 @@ serve(async (req) => {
       });
     }
 
-    const candidateProfiles = new Map<string, { tags: string[]; type: string }>();
-    const normalizedInterne = (interne || []).map((k: any) => {
+    const candidateProfiles = new Map<string, { tags: string[]; type: string; navn?: string }>();
+    const normalizedInterne = (interne || []).map((k) => {
       const profile = buildMatchingProfile(k.kompetanse || []);
-      candidateProfiles.set(String(k.id), { tags: profile.tags, type: "intern" });
+      candidateProfiles.set(String(k.id), { tags: profile.tags, type: "intern", navn: k.navn });
       return { ...k, _profile: profile };
     });
 
@@ -43,7 +60,7 @@ Use exact canonical tags from the provided profiles when you populate match_tags
 Behovsprofil: ${contactProfile.promptText}
 
 Interne konsulenter:
-${normalizedInterne.map((k: any) => `[id:${k.id}] ${k.navn}: ${k._profile.promptText} (${k.geografi || "ukjent sted"})`).join("\n") || "Ingen"}`;
+${normalizedInterne.map((k) => `[id:${k.id}] ${k.navn}: ${k._profile.promptText} (${k.geografi || "ukjent sted"})`).join("\n") || "Ingen"}`;
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",

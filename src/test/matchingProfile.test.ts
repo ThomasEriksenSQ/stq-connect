@@ -30,13 +30,13 @@ describe("matchingProfile", () => {
     });
   });
 
-  it("sanitizes AI match tags down to canonical overlap", () => {
+  it("sanitizes AI match tags down to canonical overlap and recomputes canonical score", () => {
     const results = sanitizeAiMatchResults(
       [
         {
           id: 12,
           navn: "Test Konsulent",
-          score: "8",
+          score: "2",
           begrunnelse: "Sterk match på embedded linux og drone-teknologi i flere prosjekter",
           match_tags: ["embedded linux", "uav", "bear metal as a service"],
           type: "intern",
@@ -63,13 +63,13 @@ describe("matchingProfile", () => {
     ]);
   });
 
-  it("deduplicates repeated consultant results and sorts deterministically", () => {
+  it("deduplicates repeated consultant results and sorts deterministically on canonical score", () => {
     const results = sanitizeAiMatchResults(
       [
         {
           id: 9,
           navn: "Zara Test",
-          score: 7,
+          score: 9,
           begrunnelse: "Solid match",
           match_tags: ["C++"],
           type: "intern",
@@ -77,7 +77,7 @@ describe("matchingProfile", () => {
         {
           id: 3,
           navn: "Anders Test",
-          score: 9,
+          score: 4,
           begrunnelse: "Sterk match",
           match_tags: ["Embedded Linux", "C++"],
           type: "intern",
@@ -85,7 +85,7 @@ describe("matchingProfile", () => {
         {
           id: 3,
           navn: "Anders Test",
-          score: 8,
+          score: 10,
           begrunnelse: "Svakere duplikat",
           match_tags: ["C++"],
           type: "intern",
@@ -106,7 +106,7 @@ describe("matchingProfile", () => {
         id: 3,
         navn: "Anders Test",
         type: "intern",
-        score: 9,
+        score: 10,
         begrunnelse: "Sterk match",
         match_tags: ["C++", "Embedded Linux"],
       },
@@ -114,9 +114,34 @@ describe("matchingProfile", () => {
         id: 9,
         navn: "Zara Test",
         type: "intern",
-        score: 7,
+        score: 6,
         begrunnelse: "Solid match",
         match_tags: ["C++"],
+      },
+    ]);
+  });
+
+  it("fills in canonical fallback matches that AI omitted", () => {
+    const results = sanitizeAiMatchResults(
+      [],
+      {
+        targetTags: ["C++", "Embedded Linux"],
+        sourcesById: new Map([
+          ["7", { tags: ["C++", "Embedded Linux"], type: "intern", navn: "Fallback Konsulent" }],
+          ["8", { tags: ["Rust"], type: "intern", navn: "Irrelevant Konsulent" }],
+        ]),
+        allowedTypes: new Set(["intern", "ekstern"]),
+      },
+    );
+
+    expect(results).toEqual([
+      {
+        id: 7,
+        navn: "Fallback Konsulent",
+        type: "intern",
+        score: 10,
+        begrunnelse: "Relevant teknologimatch",
+        match_tags: ["C++", "Embedded Linux"],
       },
     ]);
   });

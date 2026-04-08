@@ -1,4 +1,4 @@
-import { normalizeTechnologyTags } from "./technologyTags.ts";
+import { getCanonicalMatchScore, normalizeScoredMatchTags } from "./matchScore.ts";
 
 const DOMAIN_TAGS = new Set([
   "AI",
@@ -15,20 +15,14 @@ const DOMAIN_TAGS = new Set([
   "UAV",
 ]);
 
-const BROAD_TECH_TAGS = new Set([
-  "Embedded systems",
-  "Electronics",
-  "Firmware",
-  "Linux",
-  "RTOS",
-]);
-
 const DEFAULT_MAX_TAGS = 18;
 const DEFAULT_MAX_MATCH_TAGS = 6;
 
 export type MatchingSourceProfile = {
   tags: Array<string | null | undefined> | string | null | undefined;
   type?: string;
+  navn?: string;
+  selskap_navn?: string;
 };
 
 type MatchingResultShape = {
@@ -50,18 +44,6 @@ type SanitizedMatchResult = {
   navn?: string;
   selskap_navn?: string;
 };
-
-function compareMatchingTags(a: string, b: string): number {
-  const aDomain = DOMAIN_TAGS.has(a);
-  const bDomain = DOMAIN_TAGS.has(b);
-  if (aDomain !== bDomain) return aDomain ? 1 : -1;
-
-  const aBroad = BROAD_TECH_TAGS.has(a);
-  const bBroad = BROAD_TECH_TAGS.has(b);
-  if (aBroad !== bBroad) return aBroad ? 1 : -1;
-
-  return a.localeCompare(b, "nb");
-}
 
 function truncateReason(text: string, maxWords = 12): string {
   return text
@@ -92,9 +74,7 @@ export function normalizeMatchingTags(
   values: Array<string | null | undefined> | string | null | undefined,
   maxTags = DEFAULT_MAX_TAGS,
 ): string[] {
-  return normalizeTechnologyTags(values)
-    .sort(compareMatchingTags)
-    .slice(0, maxTags);
+  return normalizeScoredMatchTags(values, maxTags);
 }
 
 export function buildMatchingProfile(
@@ -141,6 +121,12 @@ export function sanitizeAiMatchResults(
   const targetTagSet = new Set(normalizeMatchingTags(options.targetTags, 50));
   const maxMatchTags = options.maxMatchTags ?? DEFAULT_MAX_MATCH_TAGS;
   const deduped = new Map<string, SanitizedMatchResult>();
+  const upsertResult = (idKey: string, result: SanitizedMatchResult) => {
+    const existing = deduped.get(idKey);
+    if (!existing || compareSanitizedResults(result, existing) < 0) {
+      deduped.set(idKey, result);
+    }
+  };
 
   results.forEach((entry) => {
     if (!entry || typeof entry !== "object") return;
@@ -157,8 +143,9 @@ export function sanitizeAiMatchResults(
     const sanitizedMatchTags = requestedMatchTags.filter((tag) => overlapSet.has(tag));
     const finalMatchTags = (sanitizedMatchTags.length > 0 ? sanitizedMatchTags : overlapTags).slice(0, maxMatchTags);
 
-    const parsedScore = Number(raw.score);
-    const score = Number.isFinite(parsedScore) ? Math.max(1, Math.min(10, Math.round(parsedScore))) : 4;
+    const scoreResult = getCanonicalMatchScore(options.targetTags, sourceTags, 50);
+    const score = scoreResult.score10;
+    if (score < 4) return;
 
     const result: SanitizedMatchResult = {
       id: typeof raw.id === "number" ? raw.id : idKey,
@@ -168,7 +155,7 @@ export function sanitizeAiMatchResults(
           ? raw.begrunnelse
           : options.fallbackReason || "Relevant teknologimatch",
       ),
-      match_tags: finalMatchTags,
+      match_tags: finalMatchTags.length > 0 ? finalMatchTags : scoreResult.matchTags.slice(0, maxMatchTags),
     };
 
     if (typeof raw.navn === "string" && raw.navn.trim()) result.navn = raw.navn.trim();
@@ -184,10 +171,31 @@ export function sanitizeAiMatchResults(
       result.type = candidateType;
     }
 
-    const existing = deduped.get(idKey);
-    if (!existing || compareSanitizedResults(result, existing) < 0) {
-      deduped.set(idKey, result);
+    upsertResult(idKey, result);
+  });
+
+  options.sourcesById.forEach((source, idKey) => {
+    if (deduped.has(idKey)) return;
+
+    const scoreResult = getCanonicalMatchScore(options.targetTags, source.tags, 50);
+    if (scoreResult.score10 < 4) return;
+
+    const result: SanitizedMatchResult = {
+      id: /^\d+$/.test(idKey) ? Number(idKey) : idKey,
+      score: scoreResult.score10,
+      begrunnelse: options.fallbackReason || "Relevant teknologimatch",
+      match_tags: scoreResult.matchTags.slice(0, maxMatchTags),
+    };
+
+    if (source.navn?.trim()) result.navn = source.navn.trim();
+    if (source.selskap_navn?.trim()) result.selskap_navn = source.selskap_navn.trim();
+
+    const candidateType = typeof source.type === "string" && source.type.trim() ? source.type.trim() : undefined;
+    if (candidateType && options.allowedTypes?.has(candidateType)) {
+      result.type = candidateType;
     }
+
+    upsertResult(idKey, result);
   });
 
   return Array.from(deduped.values()).sort(compareSanitizedResults);

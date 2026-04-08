@@ -38,6 +38,7 @@ import { mergeTechnologyTags } from "@/lib/technologyTags";
 import { format, differenceInDays, parseISO, startOfDay } from "date-fns";
 import { nb } from "date-fns/locale";
 import { crmQueryKeys } from "@/lib/queryKeys";
+import { useSearchParams } from "react-router-dom";
 
 type StatusFilter = "aktive" | "utgatte" | "alle";
 type TypeFilter = "Alle" | "DIR" | "VIA";
@@ -766,6 +767,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
 
 export default function Foresporsler() {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [modalOpen, setModalOpen] = useState(false);
   
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
@@ -776,6 +778,28 @@ export default function Foresporsler() {
     field: "mottatt_dato" | "selskap_navn" | "sendt_count";
     dir: "asc" | "desc";
   }>("stacq:foresporsler:sort", { field: "mottatt_dato", dir: "desc" });
+  const requestedRowId = Number(searchParams.get("id") || "") || null;
+
+  useEffect(() => {
+    if (requestedRowId && selectedRowId !== requestedRowId) {
+      setSelectedRowId(requestedRowId);
+    }
+  }, [requestedRowId, selectedRowId]);
+
+  const openSelectedRow = (rowId: number) => {
+    setSelectedRowId(rowId);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("id", String(rowId));
+    setSearchParams(nextParams, { replace: true });
+  };
+
+  const closeSelectedRow = () => {
+    setSelectedRowId(null);
+    setSheetExpanded(false);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("id");
+    setSearchParams(nextParams, { replace: true });
+  };
 
   const toggleSort = (field: typeof sort.field) => {
     setSort(prev =>
@@ -964,7 +988,7 @@ export default function Foresporsler() {
                 <button
                   key={row.id}
                   type="button"
-                  onClick={() => setSelectedRowId(row.id)}
+                  onClick={() => openSelectedRow(row.id)}
                   className="w-full rounded-xl border border-border bg-card px-4 py-3 text-left shadow-card"
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -1070,7 +1094,7 @@ export default function Foresporsler() {
               return (
                 <div
                   key={row.id}
-                  onClick={() => setSelectedRowId(row.id)}
+                  onClick={() => openSelectedRow(row.id)}
                   className="grid grid-cols-[90px_minmax(0,1.5fr)_minmax(0,1fr)_80px_minmax(0,1.3fr)_minmax(220px,1fr)] gap-3 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer"
                 >
                   <Tooltip>
@@ -1155,9 +1179,9 @@ export default function Foresporsler() {
       
 
       {/* Detail/Edit Sheet */}
-      <Sheet open={!!selectedRow} onOpenChange={(o) => { if (!o) { setSelectedRowId(null); setSheetExpanded(false); } }}>
+      <Sheet open={!!selectedRow} onOpenChange={(o) => { if (!o) closeSelectedRow(); }}>
         <SheetContent side="right" className="w-full sm:w-[920px] p-0" hideCloseButton>
-          <ForespørselSheet row={selectedRow} onClose={() => { setSelectedRowId(null); setSheetExpanded(false); }} onExpandChange={setSheetExpanded} />
+          <ForespørselSheet row={selectedRow} onClose={closeSelectedRow} onExpandChange={setSheetExpanded} />
         </SheetContent>
       </Sheet>
     </div>

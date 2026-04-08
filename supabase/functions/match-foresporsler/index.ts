@@ -29,7 +29,28 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const { konsulent, foresporsler } = await req.json();
+    type RequestMatchConsultant = {
+      navn: string;
+      teknologier?: string[] | null;
+      cv_tekst?: string | null;
+      geografi?: string | null;
+    };
+
+    type RequestCandidate = {
+      id: number;
+      selskap_navn: string;
+      sted?: string | null;
+      frist_dato?: string | null;
+      teknologier?: string[] | null;
+    };
+
+    const {
+      konsulent,
+      foresporsler,
+    }: {
+      konsulent?: RequestMatchConsultant | null;
+      foresporsler?: RequestCandidate[] | null;
+    } = await req.json();
     const consultantProfile = buildMatchingProfile(konsulent?.teknologier || []);
 
     if (!foresporsler?.length || !consultantProfile.tags.length) {
@@ -38,10 +59,10 @@ serve(async (req) => {
       });
     }
 
-    const requestProfiles = new Map<string, { tags: string[] }>();
-    const normalizedForesporsler = (foresporsler || []).map((f: any) => {
+    const requestProfiles = new Map<string, { tags: string[]; selskap_navn?: string }>();
+    const normalizedForesporsler = (foresporsler || []).map((f) => {
       const profile = buildMatchingProfile(f.teknologier || []);
-      requestProfiles.set(String(f.id), { tags: profile.tags });
+      requestProfiles.set(String(f.id), { tags: profile.tags, selskap_navn: f.selskap_navn });
       return { ...f, _profile: profile };
     });
 
@@ -64,7 +85,7 @@ ${konsulent.cv_tekst ? `CV-sammendrag: ${konsulent.cv_tekst.slice(0, 800)}` : "C
 ${konsulent.geografi ? `Geografi: ${konsulent.geografi}` : ""}
 
 Aktive forespørsler:
-${normalizedForesporsler.map((f: any) =>
+${normalizedForesporsler.map((f) =>
   `ID:${f.id} | ${f.selskap_navn} | ${f.sted || "ukjent sted"} | ${f._profile.promptText} | Frist: ${f.frist_dato || "ingen"}`
 ).join("\n")}`;
 
@@ -112,7 +133,7 @@ ${normalizedForesporsler.map((f: any) =>
 
     const data = await response.json();
     const text = data.choices?.[0]?.message?.content ?? "[]";
-    let clean = text.replace(/```json|```/g, "").trim();
+    const clean = text.replace(/```json|```/g, "").trim();
 
     // Handle truncated JSON: try to recover a valid array
     let parsed;

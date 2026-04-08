@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { normalizeTechnologyTags } from "@/lib/technologyTags";
+import { getConsultantMatchScoreColor } from "@/lib/consultantMatches";
 
 const SUPABASE_URL = "https://kbvzpcebfopqqrvmbiap.supabase.co";
 
@@ -756,7 +757,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                               <span
                                 className={cn(
                                   "inline-block h-2 w-2 rounded-full",
-                                  m.score >= 8 ? "bg-emerald-500" : m.score >= 6 ? "bg-amber-500" : "bg-red-500",
+                                  getConsultantMatchScoreColor(m.score),
                                 )}
                               />
                               <span className="text-[0.75rem] font-bold">{m.score}/10</span>
