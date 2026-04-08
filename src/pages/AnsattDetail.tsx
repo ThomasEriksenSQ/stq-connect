@@ -128,6 +128,52 @@ const AnsattDetail = () => {
     onError: () => toast.error("Kunne ikke registrere aktivitet"),
   });
 
+  const updateActivityMutation = useMutation({
+    mutationFn: async (actId: string) => {
+      const { error } = await supabase
+        .from("ansatt_aktiviteter" as any)
+        .update({
+          type: editActForm.type,
+          subject: editActForm.subject,
+          description: editActForm.description || null,
+          created_at: new Date(editActForm.created_at).toISOString(),
+        } as any)
+        .eq("id", actId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ansatt-aktiviteter", ansattId] });
+      setEditingActId(null);
+      toast.success("Aktivitet oppdatert");
+    },
+    onError: () => toast.error("Kunne ikke oppdatere aktivitet"),
+  });
+
+  const deleteActivityMutation = useMutation({
+    mutationFn: async (actId: string) => {
+      const { error } = await supabase
+        .from("ansatt_aktiviteter" as any)
+        .delete()
+        .eq("id", actId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ansatt-aktiviteter", ansattId] });
+      toast.success("Aktivitet slettet");
+    },
+    onError: () => toast.error("Kunne ikke slette aktivitet"),
+  });
+
+  const startEditActivity = (act: any) => {
+    setEditingActId(act.id);
+    setEditActForm({
+      type: act.type,
+      subject: act.subject,
+      description: act.description || "",
+      created_at: format(new Date(act.created_at), "yyyy-MM-dd'T'HH:mm"),
+    });
+  };
+
   if (isLoading) return <p className="text-muted-foreground py-12 text-center">Laster...</p>;
   if (!ansatt) return <p className="text-muted-foreground py-12 text-center">Ansatt ikke funnet</p>;
 
