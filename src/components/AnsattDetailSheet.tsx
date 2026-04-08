@@ -65,6 +65,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
   const [finnLeads, setFinnLeads] = useState(false);
   const [leadsResults, setLeadsResults] = useState<any[] | null>(null);
   const [leadsLoading, setLeadsLoading] = useState(false);
+  const [activeMode, setActiveMode] = useState<null | "oppdrag" | "leads">(null);
 
   const [form, setForm] = useState({
     navn: "",
