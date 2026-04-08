@@ -341,9 +341,9 @@ export default function KonsulenterAnsatte() {
               <div className="flex items-center justify-end">
                 <button
                   onClick={(e) => { e.stopPropagation(); navigate(`/konsulenter/ansatte/${a.id}`); }}
-                  className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground"
+                  className="inline-flex items-center gap-1.5 text-[0.75rem] font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <User className="h-3.5 w-3.5" />
+                  Se profil
                 </button>
               </div>
             </div>
