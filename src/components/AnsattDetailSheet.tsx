@@ -612,18 +612,9 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                 </div>
               </div>
 
-              {/* Tech tags */}
+              {/* Tech tags – collapsible */}
               {ansatt?.kompetanse?.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-3">
-                  {ansatt.kompetanse.map((t: string) => (
-                    <span
-                      key={t}
-                      className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.75rem] font-medium text-foreground"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
+                <SheetKompetanseCollapsible kompetanse={ansatt.kompetanse} />
               )}
 
               {ansatt?.tilgjengelig_fra && (
@@ -766,5 +757,43 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
         )}
       </SheetContent>
     </Sheet>
+  );
+}
+
+function SheetKompetanseCollapsible({ kompetanse }: { kompetanse: string[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [needsTruncation, setNeedsTruncation] = useState(false);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    setNeedsTruncation(el.scrollHeight > 40);
+  }, [kompetanse]);
+
+  return (
+    <div className="mt-3">
+      <div
+        ref={containerRef}
+        className={cn("flex flex-wrap gap-1.5 overflow-hidden transition-all", !expanded && "max-h-[26px]")}
+      >
+        {kompetanse.map((t: string) => (
+          <span
+            key={t}
+            className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.75rem] font-medium text-foreground"
+          >
+            {t}
+          </span>
+        ))}
+      </div>
+      {needsTruncation && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-[0.75rem] text-primary hover:underline mt-1"
+        >
+          {expanded ? "Vis mindre" : "Vis mer"}
+        </button>
+      )}
+    </div>
   );
 }
