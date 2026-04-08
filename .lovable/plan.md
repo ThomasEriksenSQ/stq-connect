@@ -1,20 +1,28 @@
 
-## Plan: Vis relativ tid etter datoer i aktivitetstidslinjen
 
-Legger til relativ tid (f.eks. "3 dager siden", "2 uker siden") etter den formaterte datoen i aktivitetsseksjonen på ansattsiden.
+## Plan: Slett og rediger aktiviteter på ansattsiden
 
-### Endring
+Legger til mulighet for å redigere og slette aktiviteter i aktivitetstidslinjen på `src/pages/AnsattDetail.tsx`.
+
+### Funksjonalitet
+
+1. **Redigering**: Klikk på en aktivitet åpner inline redigering (i tråd med prosjektets mønster for inline editing). Felter: type, emne, beskrivelse, og dato (`created_at`).
+
+2. **Sletting**: Slett-knapp med bekreftelsesdialog ("Er du sikker?" → "Ja, slett" / "Avbryt").
+
+### Tekniske endringer
 
 **Fil:** `src/pages/AnsattDetail.tsx`
 
-- Importere `relativeDate` fra `@/lib/relativeDate`
-- I aktivitetstidslinjen, endre dato-visningen fra:
-  ```
-  8. apr. 2026
-  ```
-  til:
-  ```
-  8. apr. 2026 · 3 dager siden
-  ```
+- Legge til state for `editingActId` og `editForm` (type, subject, description, created_at)
+- Legge til `updateActivityMutation` som kaller `.update()` på `ansatt_aktiviteter`
+- Legge til `deleteActivityMutation` som kaller `.delete()` på `ansatt_aktiviteter` med bekreftelse via `AlertDialog`
+- I aktivitets-renderingen: Når `editingActId === act.id`, vis inline redigeringsfelt i stedet for read-only visning
+- Legg til redigerings- og sletteikoner (Pencil, Trash2) som vises på hover per aktivitetsrad
+- Dato-felt som `<Input type="datetime-local">` for å kunne endre tidspunkt
 
-Én linje endres i renderingen av aktiviteter — legger til ` · {relativeDate(act.created_at)}` etter den eksisterende formaterte datoen.
+### UI-flyt
+- Hover over aktivitet → viser Pencil + Trash2 ikoner øverst til høyre
+- Klikk Pencil → inline redigering med lagre/avbryt-knapper
+- Klikk Trash2 → AlertDialog bekreftelse → sletter ved "Ja, slett"
+
