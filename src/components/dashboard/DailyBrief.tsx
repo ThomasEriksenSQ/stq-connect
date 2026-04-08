@@ -1075,51 +1075,64 @@ const DailyBrief = () => {
                   {/* ── Sone 4: Toggle-piller ── */}
                   <div className="py-5">
                     <div className="flex flex-wrap items-center gap-2">
-                      {/* Signal chips */}
-                      {SIGNAL_CATEGORIES.map((cat) => (
+                      {/* Signal */}
+                      <div className="relative">
                         <button
-                          key={cat.label}
-                          onClick={async () => {
-                            const isSelected = currentSignal === cat.label;
-                            const newSignal = isSelected ? "" : cat.label;
-                            const previousSignal = currentSignal;
-                            setLocalSignals((prev) => {
-                              const next = { ...prev };
-                              if (newSignal) next[current.contact.id] = newSignal;
-                              else delete next[current.contact.id];
-                              return next;
-                            });
-
-                            try {
-                              await persistSignalToFollowUp({
-                                contactId: current.contact.id,
-                                companyId: current.contact.company_id,
-                                signal: newSignal,
-                                task: current.nextTask,
-                                createIfMissing: !current.nextTask,
-                              });
-                            } catch (error) {
-                              console.error("Kunne ikke oppdatere signal i oppfolging:", error);
-                              setLocalSignals((prev) => {
-                                const next = { ...prev };
-                                if (previousSignal) next[current.contact.id] = previousSignal;
-                                else delete next[current.contact.id];
-                                return next;
-                              });
-                              toast.error("Kunne ikke oppdatere signal");
-                            }
-                          }}
+                          onClick={() => setActiveForm(activeForm === "signal" ? null : "signal")}
                           className={cn(
-                            "inline-flex items-center h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors",
-                            cat.badgeColor,
-                            currentSignal === cat.label
-                              ? "ring-2 ring-offset-1 ring-foreground/20"
-                              : "opacity-60 hover:opacity-100",
+                            "inline-flex items-center gap-1.5 h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors",
+                            currentSignal
+                              ? SIGNAL_CATEGORIES.find((c) => c.label === currentSignal)?.badgeColor
+                              : "bg-background text-muted-foreground border-border hover:bg-secondary",
                           )}
                         >
-                          {cat.label}
+                          {currentSignal || "Signal"} <ChevronDown className="h-3 w-3" />
                         </button>
-                      ))}
+                        {activeForm === "signal" && (
+                          <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-xl shadow-lg py-1 min-w-[200px]">
+                            {SIGNAL_CATEGORIES.map((cat) => (
+                              <button
+                                key={cat.label}
+                                onClick={async () => {
+                                  const previousSignal = currentSignal;
+                                  setLocalSignals((prev) => ({ ...prev, [current.contact.id]: cat.label }));
+                                  setActiveForm(null);
+
+                                  try {
+                                    await persistSignalToFollowUp({
+                                      contactId: current.contact.id,
+                                      companyId: current.contact.company_id,
+                                      signal: cat.label,
+                                      task: current.nextTask,
+                                      createIfMissing: !current.nextTask,
+                                    });
+                                  } catch (error) {
+                                    console.error("Kunne ikke oppdatere signal i oppfolging:", error);
+                                    setLocalSignals((prev) => {
+                                      const next = { ...prev };
+                                      if (previousSignal) next[current.contact.id] = previousSignal;
+                                      else delete next[current.contact.id];
+                                      return next;
+                                    });
+                                    toast.error("Kunne ikke oppdatere signal");
+                                  }
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2.5 text-[0.8125rem] hover:bg-secondary transition-colors text-left"
+                              >
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold",
+                                    cat.badgeColor,
+                                  )}
+                                >
+                                  {cat.label}
+                                </span>
+                                {currentSignal === cat.label && <span className="ml-auto text-primary">✓</span>}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
 
                       {/* Innkjøper */}
                       <button
