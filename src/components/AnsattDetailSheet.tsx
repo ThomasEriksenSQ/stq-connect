@@ -98,6 +98,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
         bilde_url: "",
         erfaring_aar: "",
         tilgjengelig_fra: "",
+        fodselsdato: "",
       });
     } else if (ansatt) {
       setEditing(false);
