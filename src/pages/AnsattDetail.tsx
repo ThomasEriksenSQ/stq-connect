@@ -232,6 +232,13 @@ const AnsattDetail = () => {
         </div>
         <div className="ml-auto flex items-center gap-2">
           <button
+            onClick={() => setEditSheetOpen(true)}
+            className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Rediger
+          </button>
+          <button
             onClick={() => setMatchSheetOpen(true)}
             className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
           >
