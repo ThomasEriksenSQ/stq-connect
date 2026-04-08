@@ -65,11 +65,6 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
   const [kompChipsOverflow, setKompChipsOverflow] = useState(false);
   const kompChipsRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const el = kompChipsRef.current;
-    if (!el) return;
-    setKompChipsOverflow(el.scrollHeight > el.clientHeight + 2);
-  }, [form?.kompetanse, expandedKomp]);
   const [cvParsed, setCvParsed] = useState(false);
   const [finnLeads, setFinnLeads] = useState(false);
   const [leadsResults, setLeadsResults] = useState<any[] | null>(null);
