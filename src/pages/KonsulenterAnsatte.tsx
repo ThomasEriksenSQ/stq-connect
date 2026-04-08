@@ -362,7 +362,7 @@ export default function KonsulenterAnsatte() {
         )}
       </div>
 
-      <AnsattDetailSheet open={detailOpen} onClose={() => { setDetailOpen(false); setAutoRunMatch(false); }} ansatt={detailAnsatt} openInEditMode={openEditMode} autoRunMatch={autoRunMatch} />
+      <AnsattDetailSheet open={detailOpen} onClose={() => { setDetailOpen(false); }} ansatt={detailAnsatt} openInEditMode={openEditMode} autoRunMatch={false} />
     </div>
   );
 }
