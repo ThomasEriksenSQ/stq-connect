@@ -114,6 +114,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
         bilde_url: ansatt.bilde_url || "",
         erfaring_aar: ansatt.erfaring_aar?.toString() || "",
         tilgjengelig_fra: ansatt.tilgjengelig_fra || "",
+        fodselsdato: ansatt.fodselsdato || "",
       });
     }
     setTagInput("");
