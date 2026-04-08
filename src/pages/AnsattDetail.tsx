@@ -479,21 +479,21 @@ function OppdragRow({ o }: { o: any }) {
   }) : null;
 
   return (
-    <div className="flex items-center gap-4 py-2 px-3 rounded-lg bg-background border border-border">
-      <div className="flex-1 min-w-0">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-2 px-3 rounded-lg bg-background border border-border">
+      <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-0">
         <span className="text-[0.9375rem] font-medium text-foreground">{o.kunde || "Ukjent kunde"}</span>
         {o.start_dato && (
-          <span className="text-[0.8125rem] text-muted-foreground ml-2">
+          <span className="text-[0.8125rem] text-muted-foreground sm:ml-2">
             {fmt(o.start_dato)} – {fmt(o.slutt_dato)}
           </span>
         )}
       </div>
-      <div className="flex items-center gap-4 text-[0.8125rem]">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[0.8125rem]">
         {o.utpris != null && <span className="text-muted-foreground">Utpris: <span className="font-medium text-foreground">{o.utpris} kr</span></span>}
         {o.til_konsulent != null && <span className="text-muted-foreground">Til kons: <span className="font-medium text-foreground">{o.til_konsulent_override ?? o.til_konsulent} kr</span></span>}
         {margin != null && <span className="text-muted-foreground">Margin: <span className="font-medium text-emerald-600">{margin} kr</span></span>}
       </div>
-      <Badge variant="secondary" className={cn("text-xs",
+      <Badge variant="secondary" className={cn("text-xs self-start sm:self-auto",
         o.status === "Aktiv" ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
         o.status === "Oppstart" ? "bg-amber-100 text-amber-700 border-amber-200" :
         "bg-gray-100 text-gray-600 border-gray-200"
