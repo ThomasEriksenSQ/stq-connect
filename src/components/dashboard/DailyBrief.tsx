@@ -1111,9 +1111,10 @@ const DailyBrief = () => {
                           }}
                           className={cn(
                             "inline-flex items-center h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors",
+                            cat.badgeColor,
                             currentSignal === cat.label
-                              ? cat.badgeColor
-                              : "bg-background text-muted-foreground border-border hover:bg-secondary",
+                              ? "ring-2 ring-offset-1 ring-foreground/20"
+                              : "opacity-60 hover:opacity-100",
                           )}
                         >
                           {cat.label}
