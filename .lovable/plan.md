@@ -1,25 +1,32 @@
 
 
-## Plan: Endre "Erfaring (år)" til årstall-input med dynamisk beregning
+## Plan: Oppdater erfaring_aar til årstall for alle ansatte
 
-### Oversikt
-I stedet for å taste inn antall års erfaring, skal brukeren taste inn et årstall (f.eks. 2020). Antall år beregnes dynamisk som `nåværende år - årstall`.
+### Data-oppdateringer
 
-### Endringer
+Basert på bildet og dine tilleggsinput, settes `erfaring_aar = 2026 - års erfaring`:
 
-**1. `src/components/AnsattDetailSheet.tsx`**
-- **Redigeringsfeltet** (linje 476–484): Endre label til "Startet som konsulent (år)", placeholder til f.eks. "2018", og min/max-validering (1990–nåværende år). Verdien lagres som årstall i `erfaring_aar`-feltet.
-- **Visning i sheet** (hvis erfaring vises): Beregn og vis `new Date().getFullYear() - erfaring_aar` + " års erfaring".
+| Ansatt | År erfaring | Nytt årstall |
+|--------|------------|-------------|
+| Ida Abrahamsson | 8 | 2018 |
+| Mattis Spieler Asp | 9 | 2017 |
+| Karl Eirik Bang Fossberg | 7 | 2019 |
+| Anders Larsen | 22 | 2004 |
+| Tom Erik Lundesgaard | 20 | 2006 |
+| Anders Nilsen | 7 | 2019 |
+| Trine Ødegård Olsen | 6 | 2020 |
+| Christian Steffen Poljac | 10 | 2016 |
+| Lars Rudolfsen | 5 | 2021 |
+| Rikke Solbjørg | 5 | 2021 |
+| Henning Thorkildsen | 14 | 2012 |
+| Martin Tysseland | 5 | 2021 |
+| Kacper Wysocki | 20 | 2006 |
+| Trond Hübertz Emaus | 9 | 2017 |
+| Harald Ivarson Moldsvor | 7 | 2019 |
 
-**2. `src/pages/AnsattDetail.tsx`**
-- **Linje 270**: Endre fra `${ansatt.erfaring_aar} år` til dynamisk beregning: `${new Date().getFullYear() - ansatt.erfaring_aar} års erfaring` (med label endret til "Års erfaring" eller "Konsulent siden").
+Filip Dovland har ingen verdi i bildet — beholdes som null med mindre du ønsker noe annet.
 
-**3. Alle andre steder som viser `erfaring_aar`** (CvUploadFlow, edge functions som matcher på erfaring): Sikre at verdien tolkes som startår der det er relevant.
-
-### Eksisterende data
-Eksisterende verdier i databasen som er lagret som antall år (f.eks. 15) må konverteres til årstall. En liten migrasjon eller manuell oppdatering av de to brukernes data kan trenges. Alternativt kan vi anta at alle eksisterende verdier allerede er årstall basert på memory-notatet.
-
-### Teknisk detalj
-- DB-feltet `erfaring_aar` beholdes som integer, men verdien representerer nå et årstall
-- Beregning: `const erfaringAar = new Date().getFullYear() - erfaring_aar`
+### Teknisk
+- Én UPDATE-query per ansatt via Supabase insert-verktøyet
+- Ingen kodeendringer — UI-en beregner allerede `2026 - erfaring_aar` dynamisk
 
