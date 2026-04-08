@@ -1,19 +1,20 @@
 
 
-## Plan: Fikse lagring på ansattdetalj-siden
+## Plan: Blå "Se profil"-knapp
 
-### Problem
-`AnsattDetailSheet.handleSave` invaliderer kun `["stacq-ansatte"]` (listenøkkelen), men `AnsattDetail.tsx` bruker `["ansatt-detail", ansattId]` som query key. Etter lagring henter derfor detaljsiden aldri oppdaterte data.
+### Endring i `src/pages/KonsulenterAnsatte.tsx`
 
-### Løsning i `src/components/AnsattDetailSheet.tsx`
+Erstatt den nåværende tekst-lenken med en styled knapp:
 
-Legg til invalidering av detaljnøkkelen etter lagring (linje 265):
-
-```ts
-queryClient.invalidateQueries({ queryKey: ["stacq-ansatte"] });
-queryClient.invalidateQueries({ queryKey: ["ansatt-detail", ansatt?.id] });
+```tsx
+<button
+  onClick={(e) => { e.stopPropagation(); navigate(`/konsulenter/ansatte/${a.id}`); }}
+  className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.75rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+>
+  Se profil
+</button>
 ```
 
 ### Kun én fil endres
-- `src/components/AnsattDetailSheet.tsx`
+- `src/pages/KonsulenterAnsatte.tsx`
 
