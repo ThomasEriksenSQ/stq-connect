@@ -480,7 +480,7 @@ export type Database = {
           {
             foreignKeyName: "cv_access_tokens_ansatt_id_fkey"
             columns: ["ansatt_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "stacq_ansatte"
             referencedColumns: ["id"]
           },

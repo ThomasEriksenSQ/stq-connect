@@ -197,16 +197,21 @@ Deno.serve(async (req) => {
       const expiresAt = buildExpiryDate();
       const createdAt = new Date().toISOString();
 
-      const { error } = await serviceClient.from("cv_access_tokens").upsert(
-        {
-          ansatt_id: ansattId,
-          created_at: createdAt,
-          expires_at: expiresAt,
-          pin_hash: pinHash,
-          token,
-        },
-        { onConflict: "ansatt_id" },
-      );
+      const { error: cleanupError } = await serviceClient
+        .from("cv_access_tokens")
+        .delete()
+        .eq("ansatt_id", ansattId)
+        .lt("expires_at", createdAt);
+
+      if (cleanupError) throw cleanupError;
+
+      const { error } = await serviceClient.from("cv_access_tokens").insert({
+        ansatt_id: ansattId,
+        created_at: createdAt,
+        expires_at: expiresAt,
+        pin_hash: pinHash,
+        token,
+      });
 
       if (error) throw error;
 
