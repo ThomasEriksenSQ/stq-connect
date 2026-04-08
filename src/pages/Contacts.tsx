@@ -121,6 +121,7 @@ type ContactMatchLead = ContactRow & MatchLeadBase & {
 };
 type RequestMatchLead = MatchLeadBase & {
   leadType: "request";
+  name: string;
   requestId: number;
   requestStatus: string | null;
   requestTechnologyTags: string[];
