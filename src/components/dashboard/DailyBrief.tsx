@@ -856,21 +856,47 @@ const DailyBrief = () => {
                     {/* Snapshot-grid */}
                     <div className="flex flex-col gap-3">
                       {/* Siste */}
-                      <div className="flex items-baseline gap-2 flex-wrap">
+                      <div className="flex flex-col gap-1">
                         <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap">
-                          Siste
+                          Siste oppfølging
                         </p>
                         {current.lastAct ? (
-                          <>
+                          <div className="flex items-baseline gap-2 flex-wrap">
                             <p className="text-[0.9375rem] font-medium text-foreground leading-snug min-w-0">
                               &ldquo;{current.lastAct.subject}&rdquo;
                             </p>
-                            <p className="text-[0.75rem] text-muted-foreground whitespace-nowrap">
-                              {format(new Date(current.lastAct.created_at), "d. MMM yyyy", { locale: nb })}
-                              {" · "}
-                              {daysSinceLast === 999 ? "aldri" : `${daysSinceLast} dager siden`}
-                            </p>
-                          </>
+                            {(() => {
+                              const d = new Date(current.lastAct.created_at);
+                              const diffDays = Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
+                              const diffMonths = Math.floor(diffDays / 30);
+                              const diffYears = Math.floor(diffDays / 365);
+                              const remainMonths = Math.floor((diffDays % 365) / 30);
+                              const relText =
+                                diffDays < 1 ? "i dag"
+                                : diffDays === 1 ? "i går"
+                                : diffDays < 7 ? `${diffDays} dager siden`
+                                : diffDays < 28 ? `${Math.floor(diffDays / 7)} uker siden`
+                                : diffDays < 365 ? `${diffMonths} mnd siden`
+                                : remainMonths > 0 ? `${diffYears} år ${remainMonths} mnd siden`
+                                : `${diffYears} år siden`;
+                              const absText =
+                                diffDays < 30
+                                  ? format(d, "d. MMM yyyy", { locale: nb })
+                                  : diffDays < 365
+                                    ? format(d, "MMM yyyy", { locale: nb })
+                                    : format(d, "MMM yyyy", { locale: nb });
+                              const ageColor =
+                                diffDays < 30 ? "text-muted-foreground"
+                                : diffDays < 180 ? "text-amber-600"
+                                : "text-destructive/70";
+                              return (
+                                <p className="text-[0.75rem] whitespace-nowrap">
+                                  <span className={ageColor}>{relText}</span>
+                                  <span className="text-muted-foreground"> · {absText}</span>
+                                </p>
+                              );
+                            })()}
+                          </div>
                         ) : (
                           <p className="text-[0.8125rem] text-muted-foreground/60 italic">Ingen aktivitet</p>
                         )}
@@ -878,10 +904,10 @@ const DailyBrief = () => {
 
                       {/* Neste */}
                       <div className="flex flex-col gap-1.5">
+                        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap">
+                          Neste oppfølging
+                        </p>
                         <div className="flex items-baseline gap-2 flex-wrap">
-                          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap">
-                            Neste oppfølging
-                          </p>
                           {current.nextTask ? (
                             (() => {
                               const taskId = current.nextTask?.id;
