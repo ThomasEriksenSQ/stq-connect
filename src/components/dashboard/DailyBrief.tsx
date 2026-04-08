@@ -904,10 +904,10 @@ const DailyBrief = () => {
 
                       {/* Neste */}
                       <div className="flex flex-col gap-1.5">
+                        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap">
+                          Neste oppfølging
+                        </p>
                         <div className="flex items-baseline gap-2 flex-wrap">
-                          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap">
-                            Neste oppfølging
-                          </p>
                           {current.nextTask ? (
                             (() => {
                               const taskId = current.nextTask?.id;
