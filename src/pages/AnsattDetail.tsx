@@ -2,7 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Phone, Mail, MapPin, Calendar, Briefcase, MessageCircle, FileText, Plus, User, Pencil, Trash2, Check, X } from "lucide-react";
-import { format, differenceInMonths, differenceInYears } from "date-fns";
+import { format, differenceInMonths, differenceInYears, differenceInDays, addDays } from "date-fns";
 import { nb } from "date-fns/locale";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
 import { relativeDate } from "@/lib/relativeDate";
@@ -272,7 +272,7 @@ const AnsattDetail = () => {
           ) : (
             <div className="space-y-3">
               {activeOppdrag.map((o: any) => (
-                <OppdragRow key={o.id} o={o} />
+                <OppdragRow key={o.id} o={o} isActive />
               ))}
             </div>
           )}
@@ -281,8 +281,8 @@ const AnsattDetail = () => {
             <>
               <h2 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mt-6 mb-4">Tidligere oppdrag</h2>
               <div className="space-y-3">
-                {previousOppdrag.map((o: any) => (
-                  <OppdragRow key={o.id} o={o} />
+              {previousOppdrag.map((o: any) => (
+                  <OppdragRow key={o.id} o={o} isActive={false} />
                 ))}
               </div>
             </>
@@ -483,7 +483,7 @@ function InfoRow({ icon: Icon, label, value }: { icon: any; label: string; value
   );
 }
 
-function OppdragRow({ o }: { o: any }) {
+function OppdragRow({ o, isActive = false }: { o: any; isActive?: boolean }) {
   const margin = o.utpris ? calcStacqPris({
     utpris: o.utpris,
     til_konsulent: o.til_konsulent,
@@ -492,28 +492,62 @@ function OppdragRow({ o }: { o: any }) {
     ekstra_kostnad: o.ekstra_kostnad,
   }) : null;
 
+  // Renewal info for active assignments
+  const renewalDate = isActive
+    ? o.lopende_30_dager
+      ? addDays(new Date(), 30)
+      : o.forny_dato ? new Date(o.forny_dato) : null
+    : null;
+  const daysToRenewal = renewalDate ? differenceInDays(renewalDate, new Date()) : null;
+
+  // Duration for previous assignments
+  const duration = !isActive && o.start_dato && o.slutt_dato
+    ? differenceInMonths(new Date(o.slutt_dato), new Date(o.start_dato))
+    : null;
+
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-2 px-3 rounded-lg bg-background border border-border">
-      <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-0">
-        <span className="text-[0.9375rem] font-medium text-foreground">{o.kunde || "Ukjent kunde"}</span>
-        {o.start_dato && (
-          <span className="text-[0.8125rem] text-muted-foreground sm:ml-2">
-            {fmt(o.start_dato)} – {fmt(o.slutt_dato)}
+    <div className="flex flex-col gap-2 py-2 px-3 rounded-lg bg-background border border-border">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+        <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-0">
+          <span className="text-[0.9375rem] font-medium text-foreground">{o.kunde || "Ukjent kunde"}</span>
+          {o.start_dato && (
+            <span className="text-[0.8125rem] text-muted-foreground sm:ml-2">
+              {fmt(o.start_dato)} – {fmt(o.slutt_dato)}
+            </span>
+          )}
+          {duration != null && (
+            <span className="text-[0.8125rem] text-muted-foreground sm:ml-2">
+              · {formatMonths(duration)}
+            </span>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[0.8125rem]">
+          {o.utpris != null && <span className="text-muted-foreground">Utpris: <span className="font-medium text-foreground">{o.utpris} kr</span></span>}
+          {o.til_konsulent != null && <span className="text-muted-foreground">Til kons: <span className="font-medium text-foreground">{o.til_konsulent_override ?? o.til_konsulent} kr</span></span>}
+          {margin != null && <span className="text-muted-foreground">Margin: <span className="font-medium text-emerald-600">{margin} kr</span></span>}
+        </div>
+        <Badge variant="secondary" className={cn("text-xs self-start sm:self-auto",
+          o.status === "Aktiv" ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
+          o.status === "Oppstart" ? "bg-amber-100 text-amber-700 border-amber-200" :
+          "bg-gray-100 text-gray-600 border-gray-200"
+        )}>
+          {o.status || "–"}
+        </Badge>
+      </div>
+      {isActive && renewalDate && daysToRenewal != null && (
+        <div className="text-[0.8125rem]">
+          <span className="text-muted-foreground">Fornyes: </span>
+          <span className={cn(
+            daysToRenewal <= 0 ? "text-destructive font-semibold" :
+            daysToRenewal <= 30 ? "text-amber-600 font-semibold" :
+            "text-muted-foreground"
+          )}>
+            {format(renewalDate, "d. MMM yyyy", { locale: nb })}
+            {" "}({daysToRenewal <= 0 ? "utløpt" : `${daysToRenewal} dager`})
+            {o.lopende_30_dager && <span className="text-muted-foreground font-normal ml-1">· Løpende 30d</span>}
           </span>
-        )}
-      </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[0.8125rem]">
-        {o.utpris != null && <span className="text-muted-foreground">Utpris: <span className="font-medium text-foreground">{o.utpris} kr</span></span>}
-        {o.til_konsulent != null && <span className="text-muted-foreground">Til kons: <span className="font-medium text-foreground">{o.til_konsulent_override ?? o.til_konsulent} kr</span></span>}
-        {margin != null && <span className="text-muted-foreground">Margin: <span className="font-medium text-emerald-600">{margin} kr</span></span>}
-      </div>
-      <Badge variant="secondary" className={cn("text-xs self-start sm:self-auto",
-        o.status === "Aktiv" ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
-        o.status === "Oppstart" ? "bg-amber-100 text-amber-700 border-amber-200" :
-        "bg-gray-100 text-gray-600 border-gray-200"
-      )}>
-        {o.status || "–"}
-      </Badge>
+        </div>
+      )}
     </div>
   );
 }
