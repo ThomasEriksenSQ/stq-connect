@@ -19,6 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
 
 const fmt = (d: string | null) => d ? format(new Date(d), "d. MMM yyyy", { locale: nb }) : "–";
 
