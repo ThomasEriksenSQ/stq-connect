@@ -367,4 +367,41 @@ function OppdragRow({ o }: { o: any }) {
   );
 }
 
+function KompetanseCollapsible({ kompetanse }: { kompetanse: string[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [needsTruncation, setNeedsTruncation] = useState(false);
+
+  React.useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    // Check if content exceeds one line (~36px)
+    setNeedsTruncation(el.scrollHeight > 40);
+  }, [kompetanse]);
+
+  return (
+    <div className="mt-4">
+      <span className="text-[0.6875rem] text-muted-foreground uppercase tracking-[0.08em] font-medium">Kompetanse</span>
+      <div
+        ref={containerRef}
+        className={cn("flex flex-wrap gap-1.5 mt-1.5 overflow-hidden transition-all", !expanded && "max-h-[34px]")}
+      >
+        {kompetanse.map((k: string) => (
+          <Badge key={k} variant="secondary" className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold">
+            {k}
+          </Badge>
+        ))}
+      </div>
+      {needsTruncation && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-[0.75rem] text-primary hover:underline mt-1"
+        >
+          {expanded ? "Vis mindre" : "Vis mer"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default AnsattDetail;
