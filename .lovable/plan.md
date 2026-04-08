@@ -1,18 +1,26 @@
 
 
-## Plan: Vis kun første linje av kompetanse-chips i AnsattDetailSheet
+## Plan: Velg mellom "Match mot forespørsler" og "Finn leads" i overlayen
 
-Bruk samme `KompetanseCollapsible`-mønster som allerede finnes i `AnsattDetail.tsx` — én rad med chips, `max-h-[26px]` og en "Vis mer"-knapp.
+### Oversikt
+Når brukeren klikker "Finn oppdrag" på ansattsiden, åpnes overlayen uten å starte noe automatisk. I stedet vises to valg-knapper: "Match mot forespørsler" og "Finn leads for [Navn]". Først etter klikk på en av dem startes den aktuelle funksjonen.
 
-### Endring i `src/components/AnsattDetailSheet.tsx`
+### Endringer
 
-Erstatt den enkle `flex-wrap`-listen av tech tags (linje 615–627) med en collapsible variant:
+**1. `src/pages/AnsattDetail.tsx`**
+- Fjern `autoRunMatch={true}` fra `AnsattDetailSheet`-kallet (sett til `false` eller fjern prop)
 
-- Legg til `useState` for `expanded` og `useRef` + `useEffect` for å sjekke om innholdet overskrider én linje (scrollHeight > 40)
-- Vis chips i en `div` med `max-h-[26px] overflow-hidden` når ikke ekspandert
-- Legg til "Vis mer" / "Vis mindre"-knapp under (kun når det er nødvendig med trunkering)
-- Bruker identisk stil som `KompetanseCollapsible` i `AnsattDetail.tsx`
+**2. `src/components/AnsattDetailSheet.tsx`**
+- Legg til en `activeMode` state: `null | "oppdrag" | "leads"` (starter som `null`)
+- Når `activeMode === null`: vis to knapper side om side i content-området:
+  - **"Match mot forespørsler"** (med `Sparkles`-ikon) → setter `activeMode = "oppdrag"`
+  - **"Finn leads for [Fornavn]"** (med `Target`-ikon) → setter `activeMode = "leads"` og kaller `handleFinnLeads()`
+- Når `activeMode === "oppdrag"`: vis `OppdragsMatchPanel` med `autoRunMatch={true}` (som i dag)
+- Når `activeMode === "leads"`: vis leads-resultatene (eksisterende kode)
+- Fjern den separate "Finn leads"-knappen nederst — den er nå integrert i valg-visningen
+- Reset `activeMode` til `null` når sheeten lukkes
 
-### Kun én fil endres
+### Filer som endres
+- `src/pages/AnsattDetail.tsx`
 - `src/components/AnsattDetailSheet.tsx`
 
