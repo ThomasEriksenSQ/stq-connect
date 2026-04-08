@@ -687,6 +687,9 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                 </div>
               ) : activeMode === "oppdrag" ? (
                 <div>
+                  <button onClick={() => setActiveMode(null)} className="inline-flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground hover:text-foreground mb-3">
+                    <ArrowLeft className="h-3.5 w-3.5" /> Tilbake
+                  </button>
                   <OppdragsMatchPanel
                     konsulent={{
                       navn: ansatt?.navn || "",
