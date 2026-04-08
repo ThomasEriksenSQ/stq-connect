@@ -1,20 +1,25 @@
 
 
-## Plan: Flytt temperatur- og Finn.no-ikoner til toppen
+## Plan: Horisontale rader for Siste og Neste oppfølging
 
 ### Hva endres
-I salgssenteret (DailyBrief.tsx) flyttes de to indikator-stripene (temperatur: "Sovende"/"Hett"/etc. og Finn.no-stripen) fra sin nåværende posisjon (Sone 3, midt i kortet) opp til toppen av kortet, på samme linje som "Åpne kontakt"-knappen.
+Sone 2 i DailyBrief endres fra 2-kolonners grid til to stablede horisontale rader.
 
 ### Teknisk gjennomføring
 
-**Fil:** `src/components/dashboard/DailyBrief.tsx`
+**Fil:** `src/components/dashboard/DailyBrief.tsx` (linje 857–994)
 
-1. **Flytt stripene til header-raden (linje ~780-788):** Endre `<div className="flex justify-end ...">` til en `flex items-center`-rad med stripene til venstre og "Åpne kontakt" til høyre med `ml-auto`.
+1. **Erstatt grid med flex-col:** Bytt `grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6` → `flex flex-col gap-3`.
 
-2. **Komprimere stripene til kompakte ikoner/badges:** Siden de nå skal ligge på én linje med begrenset plass, gjøres de mer kompakte — emoji + kort label (uten reasons-tekst), og Finn.no-ikonet som en liten badge.
+2. **Siste-raden (linje 859–877):** Endre fra `space-y-1.5` til `flex items-baseline gap-2 flex-wrap`. Label "SISTE", sitat og dato legges på én horisontal linje. Legg til `whitespace-nowrap` på labelen og datoen, `min-w-0 truncate` på sitatteksten om nødvendig.
 
-3. **Fjern Sone 3 (linje 969-1047):** Hele den gamle sone 3-blokken med dividers slettes, da innholdet nå er flyttet opp.
+3. **Neste oppfølging-raden (linje 880–993):**
+   - Endre ytre `space-y-1.5` til `flex flex-col gap-1.5`.
+   - Første linje: `flex items-baseline gap-2 flex-wrap` med label "NESTE OPPFØLGING", tittel og dato horisontalt.
+   - Andre linje: Chips og date-input forblir på sin egen rad under (den eksisterende `flex flex-wrap`-blokken på linje 946–985 beholdes som den er).
 
 ### Resultat
-Temperatur-ikonet (f.eks. 💤 Sovende) og Finn.no-badgen vises øverst til venstre i kortet, på linje med "Åpne kontakt"-knappen øverst til høyre. Resten av kortets layout forblir uendret.
+- Rad 1: `SISTE · "Samtale om prosjekt" · 3. apr 2025 · 5 dager siden`
+- Rad 2 linje 1: `NESTE OPPFØLGING · Følg opp etter møte · 10. apr 2025`
+- Rad 2 linje 2: `[Følg opp på sikt] [1 uke] [2 uker] [1 måned] [3 måneder] [📅]`
 
