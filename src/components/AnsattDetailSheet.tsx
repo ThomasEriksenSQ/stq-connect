@@ -65,6 +65,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
   const [finnLeads, setFinnLeads] = useState(false);
   const [leadsResults, setLeadsResults] = useState<any[] | null>(null);
   const [leadsLoading, setLeadsLoading] = useState(false);
+  const [activeMode, setActiveMode] = useState<null | "oppdrag" | "leads">(null);
 
   const [form, setForm] = useState({
     navn: "",
@@ -121,6 +122,9 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
     setCvFile(null);
     setCvParsing(false);
     setCvParsed(false);
+    setActiveMode(null);
+    setFinnLeads(false);
+    setLeadsResults(null);
   }, [ansatt, open]);
 
   // Open directly in edit mode when requested
@@ -655,103 +659,117 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto px-6 py-5">
-              <div>
-                <OppdragsMatchPanel
-                  konsulent={{
-                    navn: ansatt?.navn || "",
-                    teknologier: ansatt?.kompetanse || [],
-                    cv_tekst: ansatt?.bio || null,
-                    geografi: ansatt?.geografi || null,
-                    ansatt_id: ansatt?.id,
-                    forny_dato: ansatt?.forny_dato || null,
-                    erfaring_aar: ansatt?.erfaring_aar || null,
-                    tilgjengelig_fra: ansatt?.tilgjengelig_fra || null,
-                  }}
-                  autoRunMatch={autoRunMatch}
-                />
-              </div>
-
-              {/* Finn leads */}
-              <div className="mt-6">
-                <button
-                  onClick={() => {
-                    setFinnLeads(!finnLeads);
-                    if (!finnLeads && !leadsResults) handleFinnLeads();
-                  }}
-                  className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.8125rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors w-full justify-center"
-                >
-                  {leadsLoading ? (
-                    <>
+              {activeMode === null ? (
+                <div className="flex flex-col items-center justify-center gap-4 py-12">
+                  <p className="text-[0.8125rem] text-muted-foreground mb-2">Velg hva du vil gjøre</p>
+                  <div className="grid grid-cols-2 gap-3 w-full max-w-md">
+                    <button
+                      onClick={() => setActiveMode("oppdrag")}
+                      className="flex flex-col items-center gap-2 rounded-lg border border-border bg-card p-5 hover:bg-muted transition-colors"
+                    >
+                      <Sparkles className="h-6 w-6 text-primary" />
+                      <span className="text-[0.875rem] font-semibold text-foreground">Match mot forespørsler</span>
+                      <span className="text-[0.75rem] text-muted-foreground text-center">Finn aktuelle forespørsler basert på kompetanse</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveMode("leads");
+                        setFinnLeads(true);
+                        if (!leadsResults) handleFinnLeads();
+                      }}
+                      className="flex flex-col items-center gap-2 rounded-lg border border-border bg-card p-5 hover:bg-muted transition-colors"
+                    >
+                      <Target className="h-6 w-6 text-primary" />
+                      <span className="text-[0.875rem] font-semibold text-foreground">Finn leads for {ansatt?.navn?.split(" ")[0]}</span>
+                      <span className="text-[0.75rem] text-muted-foreground text-center">Finn kontakter som kan ha behov</span>
+                    </button>
+                  </div>
+                </div>
+              ) : activeMode === "oppdrag" ? (
+                <div>
+                  <OppdragsMatchPanel
+                    konsulent={{
+                      navn: ansatt?.navn || "",
+                      teknologier: ansatt?.kompetanse || [],
+                      cv_tekst: ansatt?.bio || null,
+                      geografi: ansatt?.geografi || null,
+                      ansatt_id: ansatt?.id,
+                      forny_dato: ansatt?.forny_dato || null,
+                      erfaring_aar: ansatt?.erfaring_aar || null,
+                      tilgjengelig_fra: ansatt?.tilgjengelig_fra || null,
+                    }}
+                    autoRunMatch={true}
+                  />
+                </div>
+              ) : (
+                <div>
+                  {leadsLoading && (
+                    <div className="flex items-center gap-2 text-[0.8125rem] text-muted-foreground py-4">
                       <Loader2 className="h-3 w-3 animate-spin" />
                       Finner leads...
-                    </>
-                  ) : (
-                    <>
-                      <Target className="h-3 w-3 text-primary" />
-                      Finn leads for {ansatt?.navn?.split(" ")[0]}
-                    </>
-                  )}
-                </button>
-
-                {finnLeads && leadsResults !== null && (
-                  <div className="mt-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                        Beste leads · {leadsResults.length}
-                      </span>
-                      <button
-                        onClick={handleFinnLeads}
-                        className="text-[0.6875rem] text-muted-foreground hover:text-foreground"
-                      >
-                        Kjør på nytt
-                      </button>
                     </div>
+                  )}
 
-                    {leadsResults.length === 0 ? (
-                      <p className="text-[0.8125rem] text-muted-foreground">Ingen treff</p>
-                    ) : (
-                      leadsResults.map((m: any, i: number) => (
-                        <div key={`lead-${m.id || i}`} className="rounded-lg border border-border bg-card p-2.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
-                              <span className="text-[0.8125rem] font-semibold text-foreground truncate">{m.navn}</span>
-                              {m.er_innkjoper && (
-                                <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 px-1.5 py-0.5 text-[0.625rem] font-semibold shrink-0">
-                                  INN
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[0.75rem] text-muted-foreground truncate">{m.selskap}</p>
-                          </div>
-                          <div className="flex items-center justify-between mt-1">
-                            <div className="flex flex-wrap gap-1">
-                              {(m.match_tags || []).map((t: string) => (
-                                <span
-                                  key={t}
-                                  className="inline-flex items-center rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[0.625rem] font-medium"
-                                >
-                                  {t}
-                                </span>
-                              ))}
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              <span
-                                className={cn(
-                                  "inline-block h-2 w-2 rounded-full",
-                                  getConsultantMatchScoreColor(m.score),
+                  {leadsResults !== null && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                          Beste leads · {leadsResults.length}
+                        </span>
+                        <button
+                          onClick={handleFinnLeads}
+                          className="text-[0.6875rem] text-muted-foreground hover:text-foreground"
+                        >
+                          Kjør på nytt
+                        </button>
+                      </div>
+
+                      {leadsResults.length === 0 ? (
+                        <p className="text-[0.8125rem] text-muted-foreground">Ingen treff</p>
+                      ) : (
+                        leadsResults.map((m: any, i: number) => (
+                          <div key={`lead-${m.id || i}`} className="rounded-lg border border-border bg-card p-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
+                                <span className="text-[0.8125rem] font-semibold text-foreground truncate">{m.navn}</span>
+                                {m.er_innkjoper && (
+                                  <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 px-1.5 py-0.5 text-[0.625rem] font-semibold shrink-0">
+                                    INN
+                                  </span>
                                 )}
-                              />
-                              <span className="text-[0.75rem] font-bold">{m.score}/10</span>
+                              </div>
+                              <p className="text-[0.75rem] text-muted-foreground truncate">{m.selskap}</p>
                             </div>
+                            <div className="flex items-center justify-between mt-1">
+                              <div className="flex flex-wrap gap-1">
+                                {(m.match_tags || []).map((t: string) => (
+                                  <span
+                                    key={t}
+                                    className="inline-flex items-center rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[0.625rem] font-medium"
+                                  >
+                                    {t}
+                                  </span>
+                                ))}
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span
+                                  className={cn(
+                                    "inline-block h-2 w-2 rounded-full",
+                                    getConsultantMatchScoreColor(m.score),
+                                  )}
+                                />
+                                <span className="text-[0.75rem] font-bold">{m.score}/10</span>
+                              </div>
+                            </div>
+                            <p className="text-[0.75rem] text-muted-foreground mt-1 italic">{m.begrunnelse}</p>
                           </div>
-                          <p className="text-[0.75rem] text-muted-foreground mt-1 italic">{m.begrunnelse}</p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </>
         )}
