@@ -103,6 +103,36 @@ export type Database = {
           },
         ]
       }
+      ansatt_aktiviteter: {
+        Row: {
+          ansatt_id: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          subject: string
+          type: string
+        }
+        Insert: {
+          ansatt_id: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          subject: string
+          type?: string
+        }
+        Update: {
+          ansatt_id?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          subject?: string
+          type?: string
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           address: string | null
