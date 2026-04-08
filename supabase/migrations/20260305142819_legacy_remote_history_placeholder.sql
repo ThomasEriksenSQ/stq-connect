@@ -1,0 +1,3 @@
+-- Placeholder for a legacy remote migration that exists in Supabase history
+-- but is missing from this repository. It is intentionally a no-op so the
+-- repo and remote migration timelines can stay aligned.
