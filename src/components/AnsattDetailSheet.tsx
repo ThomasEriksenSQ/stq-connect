@@ -706,6 +706,9 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                 </div>
               ) : (
                 <div>
+                  <button onClick={() => { setActiveMode(null); setFinnLeads(false); }} className="inline-flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground hover:text-foreground mb-3">
+                    <ArrowLeft className="h-3.5 w-3.5" /> Tilbake
+                  </button>
                   {leadsLoading && (
                     <div className="flex items-center gap-2 text-[0.8125rem] text-muted-foreground py-4">
                       <Loader2 className="h-3 w-3 animate-spin" />
