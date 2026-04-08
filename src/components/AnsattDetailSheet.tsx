@@ -141,12 +141,12 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
   useEffect(() => {
     const el = kompChipsRef.current;
     if (!el) return;
-    // Check after a tick so the DOM has rendered
-    const raf = requestAnimationFrame(() => {
-      setKompChipsOverflow(el.scrollHeight > el.clientHeight + 2);
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [form.kompetanse, expandedKomp]);
+    const check = () => setKompChipsOverflow(el.scrollHeight > el.clientHeight + 2);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [form.kompetanse, expandedKomp, editing]);
 
   const handleSyncFromCV = async () => {
     if (!ansatt?.id) return;
