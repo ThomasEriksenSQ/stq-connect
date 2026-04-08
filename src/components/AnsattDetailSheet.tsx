@@ -514,35 +514,25 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                 </div>
               </div>
 
-              {/* Teknologier tag input */}
-              <div>
-                <div className="flex items-center justify-between gap-3">
-                  <label className={LABEL}>Kompetanse</label>
-                  {kompetanseStyresAvCv && (
-                    <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                      CV-styrt
-                    </span>
-                  )}
-                </div>
-                <p className="mt-1 text-[0.75rem] text-muted-foreground">
-                  {kompetanseStyresAvCv
-                    ? "Dette feltet oppdateres automatisk fra CV-editoren. Endre teknologier i CV-en for å oppdatere kompetansen her."
-                    : "Legg til kompetanse manuelt, eller hent den fra CV når CV-en er klar."}
-                </p>
-                <div
-                  ref={kompChipsRef}
-                  className={cn(
-                    "mt-1 flex flex-wrap items-center gap-1.5 p-2 border border-border rounded-lg bg-background min-h-[38px]",
-                    kompetanseStyresAvCv && !expandedKomp && "max-h-[38px] overflow-hidden"
-                  )}
-                >
-                  {form.kompetanse.map((t) => (
-                    <span
-                      key={t}
-                      className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-[0.75rem] text-foreground"
-                    >
-                      {t}
-                      {!kompetanseStyresAvCv && (
+              {/* Teknologier tag input – bare vis i redigeringsmodus når kompetansen IKKE er CV-styrt */}
+              {!kompetanseStyresAvCv && (
+                <div>
+                  <div className="flex items-center justify-between gap-3">
+                    <label className={LABEL}>Kompetanse</label>
+                  </div>
+                  <p className="mt-1 text-[0.75rem] text-muted-foreground">
+                    Legg til kompetanse manuelt, eller hent den fra CV når CV-en er klar.
+                  </p>
+                  <div
+                    ref={kompChipsRef}
+                    className="mt-1 flex flex-wrap items-center gap-1.5 p-2 border border-border rounded-lg bg-background min-h-[38px]"
+                  >
+                    {form.kompetanse.map((t) => (
+                      <span
+                        key={t}
+                        className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-[0.75rem] text-foreground"
+                      >
+                        {t}
                         <button
                           onClick={() =>
                             set(
@@ -554,10 +544,8 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                         >
                           <X className="h-3 w-3" />
                         </button>
-                      )}
-                    </span>
-                  ))}
-                  {!kompetanseStyresAvCv && (
+                      </span>
+                    ))}
                     <input
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}
@@ -569,18 +557,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                       }
                       className="flex-1 min-w-[100px] bg-transparent outline-none text-[0.8125rem] placeholder:text-muted-foreground"
                     />
-                  )}
-                </div>
-                {kompetanseStyresAvCv && kompChipsOverflow && (
-                  <button
-                    type="button"
-                    onClick={() => setExpandedKomp(!expandedKomp)}
-                    className="text-[0.75rem] text-primary hover:underline mt-0.5"
-                  >
-                    {expandedKomp ? "Vis mindre" : "Vis mer"}
-                  </button>
-                )}
-                {!kompetanseStyresAvCv && (
+                  </div>
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {SUGGESTED_TAGS.filter((s) => !form.kompetanse.includes(s))
                       .slice(0, 10)
@@ -594,8 +571,8 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                         </button>
                       ))}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Save / Cancel footer */}
