@@ -1661,10 +1661,10 @@ const Contacts = () => {
                       {contact.title && (
                         <p className="text-[0.8125rem] text-muted-foreground truncate">{contact.title}</p>
                       )}
-                      {selectedConsultant && "matchSources" in contact && contact.matchSources.length > 0 && (
+                      {selectedConsultant && "matchSources" in contact && (contact as any).matchSources.length > 0 && (
                         <p className="mt-1 text-[0.75rem] text-muted-foreground truncate">
-                          {contact.matchSources.map(getMatchSourceLabel).join(" · ")}
-                          {contact.matchTags.length > 0 ? ` · ${contact.matchTags.slice(0, 3).join(", ")}` : ""}
+                          {(contact as any).matchSources.map(getMatchSourceLabel).join(" · ")}
+                          {(contact as any).matchTags?.length > 0 ? ` · ${(contact as any).matchTags.slice(0, 3).join(", ")}` : ""}
                         </p>
                       )}
                     </div>
