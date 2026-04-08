@@ -338,13 +338,7 @@ export default function KonsulenterAnsatte() {
                 })()}
               </div>
               {/* ACTIONS */}
-              <div className="flex items-center gap-1.5 justify-end">
-                <button
-                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); setDetailAnsatt(a); setOpenEditMode(true); setDetailOpen(true); }}
-                  className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground border border-border"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
+              <div className="flex items-center justify-end">
                 <button
                   onClick={(e) => { e.stopPropagation(); navigate(`/konsulenter/ansatte/${a.id}`); }}
                   className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground"
