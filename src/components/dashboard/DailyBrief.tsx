@@ -854,7 +854,7 @@ const DailyBrief = () => {
                   {/* ── Sone 2: Siste + Neste oppfølging ── */}
                   <div className="py-6">
                     {/* Snapshot-grid */}
-                    <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-8">
                       {/* Siste */}
                       <div className="flex flex-col gap-1">
                         <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap">
