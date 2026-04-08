@@ -479,7 +479,7 @@ export function buildCvEditorImportDocument(
     paragraphs: string[];
     technologies: string;
   }>;
-  education: Array<{ period: string; primary: string; secondary: string }>;
+  education: Array<{ period: string; primary: string; secondary?: string }>;
   workExperience: Array<{ period: string; primary: string }>;
   additionalSections: Array<{
     title: string;
