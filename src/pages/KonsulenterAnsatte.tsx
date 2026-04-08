@@ -22,7 +22,7 @@ import {
 
 type Filter = "Alle" | "Aktiv" | "Kommende" | "Sluttet";
 
-const GRID_COLS = "grid grid-cols-[minmax(0,2.5fr)_100px_110px_100px_90px_90px]";
+const GRID_COLS = "grid grid-cols-[minmax(0,2.5fr)_minmax(90px,1fr)_minmax(90px,1fr)_minmax(80px,1fr)_minmax(80px,1fr)_minmax(80px,auto)]";
 
 export default function KonsulenterAnsatte() {
   const [filter, setFilter] = useState<Filter>("Aktiv");
