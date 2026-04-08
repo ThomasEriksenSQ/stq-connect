@@ -854,18 +854,18 @@ const DailyBrief = () => {
                   {/* ── Sone 2: Siste + Neste oppfølging ── */}
                   <div className="py-5">
                     {/* Snapshot-grid */}
-                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6">
+                    <div className="flex flex-col gap-3">
                       {/* Siste */}
-                      <div className="space-y-1.5">
-                        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap">
                           Siste
                         </p>
                         {current.lastAct ? (
                           <>
-                            <p className="text-[0.9375rem] font-medium text-foreground leading-snug">
+                            <p className="text-[0.9375rem] font-medium text-foreground leading-snug min-w-0">
                               &ldquo;{current.lastAct.subject}&rdquo;
                             </p>
-                            <p className="text-[0.75rem] text-muted-foreground">
+                            <p className="text-[0.75rem] text-muted-foreground whitespace-nowrap">
                               {format(new Date(current.lastAct.created_at), "d. MMM yyyy", { locale: nb })}
                               {" · "}
                               {daysSinceLast === 999 ? "aldri" : `${daysSinceLast} dager siden`}
@@ -877,119 +877,168 @@ const DailyBrief = () => {
                       </div>
 
                       {/* Neste */}
-                      <div className="space-y-1.5">
-                        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                          Neste oppfølging
-                        </p>
-                        {current.nextTask ? (
-                          (() => {
-                            const taskId = current.nextTask?.id;
-                            const chipOptions = [
-                              { label: "Følg opp på sikt", value: null },
-                              { label: "1 uke", value: format(addWeeks(new Date(), 1), "yyyy-MM-dd") },
-                              { label: "2 uker", value: format(addWeeks(new Date(), 2), "yyyy-MM-dd") },
-                              { label: "1 måned", value: format(addMonths(new Date(), 1), "yyyy-MM-dd") },
-                              { label: "3 måneder", value: format(addMonths(new Date(), 3), "yyyy-MM-dd") },
-                            ];
-                            const dueDateValue = current.nextTask?.due_date
-                              ? format(new Date(current.nextTask.due_date), "yyyy-MM-dd")
-                              : null;
-                            const activeChipValue = (taskId ? selectedChipDate[taskId] : undefined) ?? dueDateValue;
-                            const overdue =
-                              current.hasOverdue ||
-                              (current.nextTask.due_date
-                                ? isPast(new Date(current.nextTask.due_date)) &&
-                                  !isToday(new Date(current.nextTask.due_date))
-                                : false);
-                            const showChips =
-                              overdue ||
-                              chipOptions.some((chip) => chip.value === activeChipValue) ||
-                              !!activeChipValue;
-                            const isCustomSelected =
-                              !!activeChipValue && !chipOptions.some((chip) => chip.value === activeChipValue);
-                            const customInputValue = taskId
-                              ? (customChipDate[taskId] ?? (isCustomSelected && activeChipValue ? activeChipValue : ""))
-                              : "";
-                            const updateTaskDueDate = async (newDate: string | null) => {
-                              if (!taskId) return;
-                              setSelectedChipDate((prev) => ({ ...prev, [taskId]: newDate }));
-                              if (typeof newDate === "string") {
-                                setCustomChipDate((prev) => ({ ...prev, [taskId]: newDate }));
-                              }
-                              queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
-                                ...old,
-                                allTasks: old?.allTasks?.map((t: any) =>
-                                  t.id === taskId ? { ...t, due_date: newDate } : t,
-                                ),
-                              }));
-                              await supabase
-                                .from("tasks")
-                                .update({ due_date: newDate as any, updated_at: new Date().toISOString() })
-                                .eq("id", taskId);
-                            };
-                            return (
-                              <>
-                                <p className="text-[0.9375rem] font-medium text-foreground leading-snug">
-                                  {current.nextTask.title}
-                                </p>
-                                <span
-                                  className={cn(
-                                    "text-[0.75rem]",
-                                    overdue ? "text-destructive font-medium" : "text-muted-foreground italic",
-                                  )}
-                                >
-                                  {current.nextTask.due_date
-                                    ? format(new Date(current.nextTask.due_date), "d. MMM yyyy", { locale: nb })
-                                    : "Følg opp på sikt"}
-                                </span>
-                                {showChips && (
-                                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                                    {chipOptions.map((chip) => {
-                                      const isActive = chip.value === activeChipValue;
-                                      return (
-                                        <button
-                                          key={chip.label}
-                                          onClick={async (e) => {
-                                            e.stopPropagation();
-                                            await updateTaskDueDate(chip.value);
-                                          }}
-                                          className={cn(
-                                            "h-7 px-3 text-[0.75rem] rounded-full border transition-colors",
-                                            isActive
-                                              ? "bg-primary/10 text-primary border-primary/30 font-medium"
-                                              : "border-border text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30",
-                                          )}
-                                        >
-                                          {chip.label}
-                                        </button>
-                                      );
-                                    })}
-                                    <input
-                                      type="date"
-                                      value={customInputValue}
-                                      onClick={(e) => e.stopPropagation()}
-                                      onChange={async (e) => {
-                                        e.stopPropagation();
-                                        const newDate = e.target.value;
-                                        if (!newDate) return;
-                                        if (taskId) setCustomChipDate((prev) => ({ ...prev, [taskId]: newDate }));
-                                        await updateTaskDueDate(newDate);
-                                      }}
-                                      className={cn(
-                                        "h-7 px-2 text-[0.75rem] rounded-full border bg-background transition-colors",
-                                        isCustomSelected
-                                          ? "bg-primary/10 text-primary border-primary/30 font-medium"
-                                          : "border-border text-muted-foreground hover:border-primary/30",
-                                      )}
-                                    />
-                                  </div>
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap">
+                            Neste oppfølging
+                          </p>
+                          {current.nextTask ? (
+                            (() => {
+                              const taskId = current.nextTask?.id;
+                              const chipOptions = [
+                                { label: "Følg opp på sikt", value: null },
+                                { label: "1 uke", value: format(addWeeks(new Date(), 1), "yyyy-MM-dd") },
+                                { label: "2 uker", value: format(addWeeks(new Date(), 2), "yyyy-MM-dd") },
+                                { label: "1 måned", value: format(addMonths(new Date(), 1), "yyyy-MM-dd") },
+                                { label: "3 måneder", value: format(addMonths(new Date(), 3), "yyyy-MM-dd") },
+                              ];
+                              const dueDateValue = current.nextTask?.due_date
+                                ? format(new Date(current.nextTask.due_date), "yyyy-MM-dd")
+                                : null;
+                              const activeChipValue = (taskId ? selectedChipDate[taskId] : undefined) ?? dueDateValue;
+                              const overdue =
+                                current.hasOverdue ||
+                                (current.nextTask.due_date
+                                  ? isPast(new Date(current.nextTask.due_date)) &&
+                                    !isToday(new Date(current.nextTask.due_date))
+                                  : false);
+                              const showChips =
+                                overdue ||
+                                chipOptions.some((chip) => chip.value === activeChipValue) ||
+                                !!activeChipValue;
+                              const isCustomSelected =
+                                !!activeChipValue && !chipOptions.some((chip) => chip.value === activeChipValue);
+                              const customInputValue = taskId
+                                ? (customChipDate[taskId] ?? (isCustomSelected && activeChipValue ? activeChipValue : ""))
+                                : "";
+                              const updateTaskDueDate = async (newDate: string | null) => {
+                                if (!taskId) return;
+                                setSelectedChipDate((prev) => ({ ...prev, [taskId]: newDate }));
+                                if (typeof newDate === "string") {
+                                  setCustomChipDate((prev) => ({ ...prev, [taskId]: newDate }));
+                                }
+                                queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
+                                  ...old,
+                                  allTasks: old?.allTasks?.map((t: any) =>
+                                    t.id === taskId ? { ...t, due_date: newDate } : t,
+                                  ),
+                                }));
+                                await supabase
+                                  .from("tasks")
+                                  .update({ due_date: newDate as any, updated_at: new Date().toISOString() })
+                                  .eq("id", taskId);
+                              };
+                              return (
+                                <>
+                                  <p className="text-[0.9375rem] font-medium text-foreground leading-snug min-w-0">
+                                    {current.nextTask.title}
+                                  </p>
+                                  <span
+                                    className={cn(
+                                      "text-[0.75rem] whitespace-nowrap",
+                                      overdue ? "text-destructive font-medium" : "text-muted-foreground italic",
+                                    )}
+                                  >
+                                    {current.nextTask.due_date
+                                      ? format(new Date(current.nextTask.due_date), "d. MMM yyyy", { locale: nb })
+                                      : "Følg opp på sikt"}
+                                  </span>
+                                </>
+                              );
+                            })()
+                          ) : (
+                            <p className="text-[0.8125rem] text-muted-foreground/60 italic">Ingen planlagt</p>
+                          )}
+                        </div>
+                        {current.nextTask && (() => {
+                          const taskId = current.nextTask?.id;
+                          const chipOptions = [
+                            { label: "Følg opp på sikt", value: null },
+                            { label: "1 uke", value: format(addWeeks(new Date(), 1), "yyyy-MM-dd") },
+                            { label: "2 uker", value: format(addWeeks(new Date(), 2), "yyyy-MM-dd") },
+                            { label: "1 måned", value: format(addMonths(new Date(), 1), "yyyy-MM-dd") },
+                            { label: "3 måneder", value: format(addMonths(new Date(), 3), "yyyy-MM-dd") },
+                          ];
+                          const dueDateValue = current.nextTask?.due_date
+                            ? format(new Date(current.nextTask.due_date), "yyyy-MM-dd")
+                            : null;
+                          const activeChipValue = (taskId ? selectedChipDate[taskId] : undefined) ?? dueDateValue;
+                          const overdue =
+                            current.hasOverdue ||
+                            (current.nextTask.due_date
+                              ? isPast(new Date(current.nextTask.due_date)) &&
+                                !isToday(new Date(current.nextTask.due_date))
+                              : false);
+                          const showChips =
+                            overdue ||
+                            chipOptions.some((chip) => chip.value === activeChipValue) ||
+                            !!activeChipValue;
+                          const isCustomSelected =
+                            !!activeChipValue && !chipOptions.some((chip) => chip.value === activeChipValue);
+                          const customInputValue = taskId
+                            ? (customChipDate[taskId] ?? (isCustomSelected && activeChipValue ? activeChipValue : ""))
+                            : "";
+                          const updateTaskDueDate = async (newDate: string | null) => {
+                            if (!taskId) return;
+                            setSelectedChipDate((prev) => ({ ...prev, [taskId]: newDate }));
+                            if (typeof newDate === "string") {
+                              setCustomChipDate((prev) => ({ ...prev, [taskId]: newDate }));
+                            }
+                            queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
+                              ...old,
+                              allTasks: old?.allTasks?.map((t: any) =>
+                                t.id === taskId ? { ...t, due_date: newDate } : t,
+                              ),
+                            }));
+                            await supabase
+                              .from("tasks")
+                              .update({ due_date: newDate as any, updated_at: new Date().toISOString() })
+                              .eq("id", taskId);
+                          };
+                          if (!showChips) return null;
+                          return (
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {chipOptions.map((chip) => {
+                                const isActive = chip.value === activeChipValue;
+                                return (
+                                  <button
+                                    key={chip.label}
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      await updateTaskDueDate(chip.value);
+                                    }}
+                                    className={cn(
+                                      "h-7 px-3 text-[0.75rem] rounded-full border transition-colors",
+                                      isActive
+                                        ? "bg-primary/10 text-primary border-primary/30 font-medium"
+                                        : "border-border text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30",
+                                    )}
+                                  >
+                                    {chip.label}
+                                  </button>
+                                );
+                              })}
+                              <input
+                                type="date"
+                                value={customInputValue}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={async (e) => {
+                                  e.stopPropagation();
+                                  const newDate = e.target.value;
+                                  if (!newDate) return;
+                                  if (taskId) setCustomChipDate((prev) => ({ ...prev, [taskId]: newDate }));
+                                  await updateTaskDueDate(newDate);
+                                }}
+                                className={cn(
+                                  "h-7 px-2 text-[0.75rem] rounded-full border bg-background transition-colors",
+                                  isCustomSelected
+                                    ? "bg-primary/10 text-primary border-primary/30 font-medium"
+                                    : "border-border text-muted-foreground hover:border-primary/30",
                                 )}
-                              </>
-                            );
-                          })()
-                        ) : (
-                          <p className="text-[0.8125rem] text-muted-foreground/60 italic">Ingen planlagt</p>
-                        )}
+                              />
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
