@@ -1000,6 +1000,7 @@ export type Database = {
           cv_profil_hentet: boolean | null
           epost: string | null
           erfaring_aar: number | null
+          fodselsdato: string | null
           geografi: string | null
           id: number
           kommentar: string | null
@@ -1023,6 +1024,7 @@ export type Database = {
           cv_profil_hentet?: boolean | null
           epost?: string | null
           erfaring_aar?: number | null
+          fodselsdato?: string | null
           geografi?: string | null
           id?: number
           kommentar?: string | null
@@ -1046,6 +1048,7 @@ export type Database = {
           cv_profil_hentet?: boolean | null
           epost?: string | null
           erfaring_aar?: number | null
+          fodselsdato?: string | null
           geografi?: string | null
           id?: number
           kommentar?: string | null
