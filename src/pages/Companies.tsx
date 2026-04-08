@@ -12,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Search, ArrowUpDown, Loader2, X, MapPin, ChevronDown, Map } from "lucide-react";
+import { Plus, Search, ArrowUpDown, Loader2, X, MapPin, ChevronDown, Map as MapIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersistentState } from "@/hooks/usePersistentState";
@@ -666,7 +666,7 @@ const Companies = () => {
               onClick={() => navigate("/selskaper/kart")}
               className="flex items-center gap-1 text-[0.75rem] text-muted-foreground hover:text-foreground border border-border rounded-md px-2 py-0.5 hover:bg-secondary transition-colors ml-3"
             >
-              <Map className="w-3.5 h-3.5" />
+              <MapIcon className="w-3.5 h-3.5" />
               Kart
             </button>
           </div>
