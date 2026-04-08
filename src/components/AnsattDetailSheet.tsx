@@ -78,6 +78,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
     bilde_url: "",
     erfaring_aar: "",
     tilgjengelig_fra: "",
+    fodselsdato: "",
   });
   const kompetanseStyresAvCv = !isCreate && Boolean(ansatt?.cv_profil_hentet);
 
