@@ -962,7 +962,7 @@ const DailyBrief = () => {
                                   <span
                                     className={cn(
                                       "text-[0.8125rem] whitespace-nowrap",
-                                      overdue ? "text-destructive font-medium" : "text-muted-foreground italic",
+                                      overdue ? "text-destructive" : "text-muted-foreground italic",
                                     )}
                                   >
                                     {current.nextTask.due_date
