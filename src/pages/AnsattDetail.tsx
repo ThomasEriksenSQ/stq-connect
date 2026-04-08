@@ -309,7 +309,7 @@ const AnsattDetail = () => {
                         <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70 mt-0.5">{act.description}</p>
                       )}
                       <span className="text-[0.8125rem] text-muted-foreground">
-                        {format(new Date(act.created_at), "d. MMM yyyy", { locale: nb })}
+                        {format(new Date(act.created_at), "d. MMM yyyy", { locale: nb })} · {relativeDate(act.created_at)}
                       </span>
                     </div>
                   </div>
