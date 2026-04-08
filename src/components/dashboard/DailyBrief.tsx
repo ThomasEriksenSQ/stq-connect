@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { getEffectiveSignal, upsertTaskSignalDescription } from "@/lib/categoryUtils";
 import { CONTACT_CV_EMAIL_REQUIRED_MESSAGE, contactHasEmail } from "@/lib/contactCvEligibility";
 import { getHeatResult, TEMP_CONFIG } from "@/lib/heatScore";
-import { Flame, List, ChevronLeft, ChevronRight, Radio, Loader2, MapPin, ChevronDown, X, Bell } from "lucide-react";
+import { Flame, ChevronLeft, ChevronRight, Radio, Loader2, MapPin, ChevronDown, X, Bell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ContactCardContent } from "@/components/ContactCardContent";
