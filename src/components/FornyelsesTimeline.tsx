@@ -151,7 +151,6 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
                       })()}
                       <div className="min-w-0">
                         <p className="text-[0.8125rem] font-semibold text-foreground truncate">{r.navn}</p>
-                        <p className="text-[0.6875rem] text-muted-foreground truncate">{r.kunde}</p>
                       </div>
                     </div>
                     {MONTHS_SHORT.map((_, i) => (
