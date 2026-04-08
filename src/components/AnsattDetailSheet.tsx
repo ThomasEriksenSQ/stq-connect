@@ -497,7 +497,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
               </div>
 
               {/* Teknologier tag input – bare vis i redigeringsmodus når kompetansen IKKE er CV-styrt */}
-              {!kompetanseStyresAvCv && (
+              {!isCreate && !kompetanseStyresAvCv && (
                 <div>
                   <div className="flex items-center justify-between gap-3">
                     <label className={LABEL}>Kompetanse</label>
