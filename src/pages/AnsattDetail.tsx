@@ -35,6 +35,7 @@ const AnsattDetail = () => {
   const [editingActId, setEditingActId] = useState<string | null>(null);
   const [editActForm, setEditActForm] = useState({ type: "samtale", subject: "", description: "", created_at: "" });
   const [matchSheetOpen, setMatchSheetOpen] = useState(false);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
 
   const ansattId = Number(id);
 
@@ -230,6 +231,13 @@ const AnsattDetail = () => {
           </Badge>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setEditSheetOpen(true)}
+            className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Rediger
+          </button>
           <button
             onClick={() => setMatchSheetOpen(true)}
             className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
@@ -488,6 +496,7 @@ const AnsattDetail = () => {
         </CardContent>
       </Card>
       <AnsattDetailSheet open={matchSheetOpen} onClose={() => setMatchSheetOpen(false)} ansatt={ansatt} openInEditMode={false} autoRunMatch={false} />
+      <AnsattDetailSheet open={editSheetOpen} onClose={() => setEditSheetOpen(false)} ansatt={ansatt} openInEditMode={true} autoRunMatch={false} />
     </div>
   );
 };

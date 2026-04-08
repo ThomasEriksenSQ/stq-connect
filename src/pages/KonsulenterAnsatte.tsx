@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
 import { format, differenceInMonths, differenceInDays, isAfter } from "date-fns";
 import { nb } from "date-fns/locale";
-import { Pencil, Plus, User } from "lucide-react";
+import { Plus, User } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -22,13 +22,12 @@ import {
 
 type Filter = "Alle" | "Aktiv" | "Kommende" | "Sluttet";
 
-const GRID_COLS = "grid grid-cols-[minmax(0,2.2fr)_95px_100px_90px_80px_64px]";
+const GRID_COLS = "grid grid-cols-[minmax(0,2.2fr)_95px_100px_90px_80px_40px]";
 
 export default function KonsulenterAnsatte() {
   const [filter, setFilter] = useState<Filter>("Aktiv");
   const [detailAnsatt, setDetailAnsatt] = useState<any | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [openEditMode, setOpenEditMode] = useState(false);
   const navigate = useNavigate();
   const today = new Date();
 
@@ -179,7 +178,7 @@ export default function KonsulenterAnsatte() {
       <div className="flex items-center justify-between">
         <h1 className="text-[1.375rem] font-bold">Ansatte</h1>
         <button
-          onClick={() => { setDetailAnsatt(null); setOpenEditMode(false); setDetailOpen(true); }}
+          onClick={() => { setDetailAnsatt(null); setDetailOpen(true); }}
           className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
         >
           <Plus className="h-4 w-4" />
@@ -339,13 +338,7 @@ export default function KonsulenterAnsatte() {
                 })()}
               </div>
               {/* ACTIONS */}
-              <div className="flex items-center gap-1.5 justify-end">
-                <button
-                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); setDetailAnsatt(a); setOpenEditMode(true); setDetailOpen(true); }}
-                  className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground border border-border"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
+              <div className="flex items-center justify-end">
                 <button
                   onClick={(e) => { e.stopPropagation(); navigate(`/konsulenter/ansatte/${a.id}`); }}
                   className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground"
@@ -362,7 +355,7 @@ export default function KonsulenterAnsatte() {
         )}
       </div>
 
-      <AnsattDetailSheet open={detailOpen} onClose={() => { setDetailOpen(false); }} ansatt={detailAnsatt} openInEditMode={openEditMode} autoRunMatch={false} />
+      <AnsattDetailSheet open={detailOpen} onClose={() => { setDetailOpen(false); }} ansatt={detailAnsatt} openInEditMode={false} autoRunMatch={false} />
     </div>
   );
 }
