@@ -612,18 +612,9 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                 </div>
               </div>
 
-              {/* Tech tags */}
+              {/* Tech tags – collapsible */}
               {ansatt?.kompetanse?.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-3">
-                  {ansatt.kompetanse.map((t: string) => (
-                    <span
-                      key={t}
-                      className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.75rem] font-medium text-foreground"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
+                <SheetKompetanseCollapsible kompetanse={ansatt.kompetanse} />
               )}
 
               {ansatt?.tilgjengelig_fra && (
