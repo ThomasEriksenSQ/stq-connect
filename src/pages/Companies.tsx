@@ -590,6 +590,30 @@ const Companies = () => {
           </DialogContent>
         </Dialog>
       </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1 max-w-full sm:max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+          <Input
+            placeholder="Søk..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border"
+          />
+        </div>
+        <div className="md:hidden">
+          <select
+            value={mobileSortValue}
+            onChange={(e) => handleMobileSortChange(e.target.value)}
+            className="h-9 w-full rounded-lg border border-border bg-card px-3 text-[0.8125rem] text-foreground"
+          >
+            <option value="name:asc">Sorter: Navn A-Å</option>
+            <option value="name:desc">Sorter: Navn Å-A</option>
+            <option value="type:asc">Sorter: Type</option>
+            <option value="city:asc">Sorter: Sted A-Å</option>
+            <option value="last_activity:desc">Sorter: Siste aktivitet</option>
+          </select>
+        </div>
+      </div>
 
       {/* Chip filters */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start">
