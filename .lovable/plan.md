@@ -1,19 +1,24 @@
 
-## Plan: Optimaliser kolonnebredder i ansatt-tabellen
 
-### Endring i `src/pages/KonsulenterAnsatte.tsx`
+## Plan: Legg inn profilbilder for ansatte
 
-Endre `GRID_COLS` fra faste pikselverdier til en mer balansert fordeling som utnytter tilgjengelig plass bedre:
+### Bakgrunn
+Alle ansatte har `bilde_url = NULL` i `stacq_ansatte`, men bildene finnes allerede i `consultants`-tabellen. AnsattDetailSheet viser allerede bildet når `bilde_url` er satt — så det eneste som trengs er å populere feltet.
 
-```ts
-// Fra:
-const GRID_COLS = "grid grid-cols-[minmax(0,2.5fr)_100px_110px_100px_90px_90px]";
+### Endring: SQL-migrasjon
 
-// Til:
-const GRID_COLS = "grid grid-cols-[minmax(0,2.5fr)_minmax(90px,1fr)_minmax(90px,1fr)_minmax(80px,1fr)_minmax(80px,1fr)_minmax(80px,auto)]";
+Kjøre en UPDATE som kopierer `image_url` fra `consultants` til `stacq_ansatte.bilde_url` basert på navnematch (fornavn + etternavn). Dette dekker 11 av 16 ansatte. De resterende (Filip Dovland, Mattis Spieler Asp, Rikke Solbjørg, Harald Moldsvor, Trond Emaus) har litt avvikende navn i `consultants` og settes manuelt.
+
+```sql
+-- Manuell mapping for alle med kjent bilde
+UPDATE stacq_ansatte SET bilde_url = 'https://kbvzpcebfopqqrvmbiap.supabase.co/storage/v1/object/public/consultant-images/...' WHERE id = X;
 ```
 
-Kolonnene (NAVN, START, ANSETTELSE, OPPDRAG, FORNYES, knapp) får fleksible minimumsstørrelser med `1fr` som lar dem vokse proporsjonalt, mens NAVN beholder sin `2.5fr`-vekt for å forbli bredest.
+16 UPDATE-setninger totalt (én per ansatt som har bilde i consultants).
 
-### Kun én fil endres
-- `src/pages/KonsulenterAnsatte.tsx` (linje 25)
+### Ingen kodeendringer
+AnsattDetailSheet sjekker allerede `ansatt?.bilde_url` og viser bildet. Ingen frontend-endring nødvendig.
+
+### Kun én fil opprettes
+- Ny migrasjon i `supabase/migrations/`
+
