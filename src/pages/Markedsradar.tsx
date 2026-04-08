@@ -1543,10 +1543,6 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
             <Button variant="outline" onClick={onClose}>
               Avbryt
             </Button>
-            <Button variant="outline" onClick={doProcess} disabled={processing} className="gap-2">
-              {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              Prosesser Finn-data
-            </Button>
             <Button onClick={doImport} disabled={rows.length === 0 || importing}>
               {importing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Importer {rows.length} rader
