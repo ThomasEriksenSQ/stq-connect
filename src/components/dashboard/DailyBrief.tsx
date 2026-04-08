@@ -888,7 +888,7 @@ const DailyBrief = () => {
                               const ageColor =
                                 diffDays < 30 ? "text-muted-foreground"
                                 : diffDays < 180 ? "text-amber-600"
-                                : "text-destructive/70";
+                                : "text-destructive";
                               return (
                                 <p className="text-[0.8125rem] whitespace-nowrap">
                                   <span className={ageColor}>{relText}</span>
@@ -962,7 +962,7 @@ const DailyBrief = () => {
                                   <span
                                     className={cn(
                                       "text-[0.8125rem] whitespace-nowrap",
-                                      overdue ? "text-destructive font-medium" : "text-muted-foreground italic",
+                                      overdue ? "text-destructive" : "text-muted-foreground italic",
                                     )}
                                   >
                                     {current.nextTask.due_date
