@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -184,16 +184,7 @@ const AnsattDetail = () => {
             <InfoRow icon={User} label="Ansatt i" value={durationMonths != null ? formatMonths(durationMonths) : "–"} />
           </div>
           {ansatt.kompetanse && ansatt.kompetanse.length > 0 && (
-            <div className="mt-4">
-              <span className="text-[0.6875rem] text-muted-foreground uppercase tracking-[0.08em] font-medium">Kompetanse</span>
-              <div className="flex flex-wrap gap-1.5 mt-1.5">
-                {ansatt.kompetanse.map((k: string) => (
-                  <Badge key={k} variant="secondary" className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold">
-                    {k}
-                  </Badge>
-                ))}
-              </div>
-            </div>
+            <KompetanseCollapsible kompetanse={ansatt.kompetanse} />
           )}
         </CardContent>
       </Card>
@@ -372,6 +363,43 @@ function OppdragRow({ o }: { o: any }) {
       )}>
         {o.status || "–"}
       </Badge>
+    </div>
+  );
+}
+
+function KompetanseCollapsible({ kompetanse }: { kompetanse: string[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [needsTruncation, setNeedsTruncation] = useState(false);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    // Check if content exceeds one line (~36px)
+    setNeedsTruncation(el.scrollHeight > 40);
+  }, [kompetanse]);
+
+  return (
+    <div className="mt-4">
+      <span className="text-[0.6875rem] text-muted-foreground uppercase tracking-[0.08em] font-medium">Kompetanse</span>
+      <div
+        ref={containerRef}
+        className={cn("flex flex-wrap gap-1.5 mt-1.5 overflow-hidden transition-all", !expanded && "max-h-[34px]")}
+      >
+        {kompetanse.map((k: string) => (
+          <Badge key={k} variant="secondary" className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold">
+            {k}
+          </Badge>
+        ))}
+      </div>
+      {needsTruncation && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-[0.75rem] text-primary hover:underline mt-1"
+        >
+          {expanded ? "Vis mindre" : "Vis mer"}
+        </button>
+      )}
     </div>
   );
 }
