@@ -580,7 +580,7 @@ function KompetanseCollapsible({ kompetanse }: { kompetanse: string[] }) {
     const el = containerRef.current;
     if (!el) return;
     // Check if content exceeds one line (~36px)
-    setNeedsTruncation(el.scrollHeight > 40);
+    setNeedsTruncation(el.scrollHeight > 36);
   }, [kompetanse]);
 
   return (
