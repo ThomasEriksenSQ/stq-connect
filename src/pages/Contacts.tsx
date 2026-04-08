@@ -1877,10 +1877,10 @@ const Contacts = () => {
                     {selectedConsultant && "matchSources" in contact ? (
                       <div className="min-w-0">
                         <p className="text-[0.75rem] font-medium text-foreground truncate">
-                          {contact.matchSources.map(getMatchSourceLabel).join(" · ")}
+                          {(contact as any).matchSources.map(getMatchSourceLabel).join(" · ")}
                         </p>
                         <p className="text-[0.6875rem] text-muted-foreground truncate">
-                          {contact.matchTags.slice(0, 3).join(", ")}
+                          {(contact as any).matchTags?.slice(0, 3).join(", ")}
                         </p>
                       </div>
                     ) : (

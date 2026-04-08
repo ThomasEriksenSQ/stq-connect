@@ -1829,7 +1829,7 @@ function CompanyActivityRow({
     if (editDate) {
       updates.created_at = new Date(editDate).toISOString();
     }
-    await supabase.from("activities").update(updates).eq("id", activity.id);
+    await supabase.from("activities").update(updates as any).eq("id", activity.id);
     queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.activities(companyId) });
     queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.contactActivities(companyId) });
     setEditing(false);

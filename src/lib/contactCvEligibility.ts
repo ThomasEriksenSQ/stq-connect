@@ -21,8 +21,8 @@ export function sanitizeContactCvEmail(email?: string | null, cvEmail?: boolean 
 
 export function buildContactCvSafeUpdates<T extends ContactCvEligibilityInput>(
   current: T,
-  updates: Partial<T>,
-): Partial<T> {
+  updates: Partial<T> & Record<string, any>,
+): Partial<T> & Record<string, any> {
   const hasEmailUpdate = Object.prototype.hasOwnProperty.call(updates, "email");
   const normalizedNextEmail = hasEmailUpdate
     ? normalizeContactEmail(updates.email)

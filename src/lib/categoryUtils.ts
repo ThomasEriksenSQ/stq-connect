@@ -104,7 +104,7 @@ export function getSignalRank(category: string | null): number {
   if (!category) return SIGNAL_ORDER.length + 1;
 
   const normalized = normalizeCategoryLabel(category);
-  const rank = SIGNAL_ORDER.indexOf(normalized);
+  const rank = (SIGNAL_ORDER as readonly string[]).indexOf(normalized);
   return rank === -1 ? SIGNAL_ORDER.length : rank;
 }
 

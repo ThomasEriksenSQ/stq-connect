@@ -166,7 +166,7 @@ export function ImportCompaniesModal({ open, onOpenChange }: { open: boolean; on
         linkedin: r.linkedin || null,
         org_number: r.org_nr || null,
         status: "prospect",
-        category: "Ukjent om behov",
+        
         notes: [
           "[Must-have]",
           `Kilde: LinkedIn-import`,
