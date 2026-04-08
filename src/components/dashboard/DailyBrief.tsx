@@ -1272,22 +1272,6 @@ const DailyBrief = () => {
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
-
-              <div className="mt-4 rounded-2xl border border-border bg-card px-4 py-4 sm:px-6 flex items-start gap-3">
-                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center mt-0.5">
-                  <Flame className="h-3.5 w-3.5 text-amber-500" />
-                </div>
-                <div>
-                  <p className="text-[0.8125rem] font-semibold text-foreground mb-1">
-                    Skape den beste kontaktlisten som er mulig
-                  </p>
-                  <p className="text-[0.75rem] text-muted-foreground leading-relaxed">
-                    Agenten prioriterer kontaktene med høyest sannsynlighet for oppdrag – basert på timing, signaler,
-                    aktivitet og Finn.no-annonsering. Dette skaper en liste over det absolutt mest aktuelle å kontakte
-                    nå!
-                  </p>
-                </div>
-              </div>
             </div>
           ) : null}
         </div>
