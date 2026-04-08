@@ -5,6 +5,7 @@ import { ArrowLeft, Phone, Mail, MapPin, Calendar, Briefcase, MessageCircle, Fil
 import { format, differenceInMonths, differenceInYears } from "date-fns";
 import { nb } from "date-fns/locale";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
+import { relativeDate } from "@/lib/relativeDate";
 import { calcStacqPris } from "@/lib/stacqPris";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
