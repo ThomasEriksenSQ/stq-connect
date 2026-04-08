@@ -573,7 +573,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
             <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
               <button
                 onClick={() => {
-                  if (isCreate) onClose();
+                  if (isCreate || openInEditMode) onClose();
                   else setEditing(false);
                 }}
                 className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors"
