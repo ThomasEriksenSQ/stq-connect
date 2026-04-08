@@ -267,7 +267,7 @@ const AnsattDetail = () => {
 
             {/* Kolonne 2 */}
             <InfoRow icon={Phone} label="Telefon" value={ansatt.tlf} />
-            <InfoRow icon={Briefcase} label="Års erfaring" value={ansatt.erfaring_aar ? `${ansatt.erfaring_aar} år` : "–"} />
+            <InfoRow icon={Briefcase} label="Års erfaring" value={ansatt.erfaring_aar ? `${new Date().getFullYear() - ansatt.erfaring_aar} år` : "–"} />
             <InfoRow icon={User} label="Ansatt i" value={durationMonths != null ? formatMonths(durationMonths) : "–"} />
 
             {/* Kolonne 3 */}
