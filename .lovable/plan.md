@@ -1,28 +1,14 @@
 
 
-## Plan: Standardiser inaktiv chip-stil i Sone 4
+## Plan: Standardiser dato-chips til samme størrelse som toggle-chips
 
 ### Endring
 
 **Fil:** `src/components/dashboard/DailyBrief.tsx`
 
-Alle fire toggle-chips i Sone 4 (Signal, Innkjoper, CV-epost, Ikke relevant person) skal bruke identisk inaktiv stil. Innkjoper-knappens inaktive stil er malen:
+Dato-chipsene ("Følg opp på sikt", "1 uke", "2 uker" osv.) og date-inputen oppskaleres til samme stil som toggle-chipsene:
 
-```
-bg-background text-muted-foreground border-border hover:bg-secondary
-```
+1. **Chip-knapper (linje 1037):** Endre `h-7 px-3 text-[0.75rem]` → `h-9 px-4 text-[0.8125rem]`. Endre inaktiv hover fra `hover:bg-primary/10 hover:text-primary hover:border-primary/30` → `hover:bg-secondary`.
 
-Aktivert-stil forblir unik per chip (sine respektive farger).
-
-Konkrete linjer:
-
-1. **Signal-knappen (linje 1086):** Allerede korrekt — `bg-background text-muted-foreground border-border hover:bg-secondary`.
-
-2. **Innkjoper (linje 1158):** Allerede korrekt — dette er malen.
-
-3. **CV-epost (linje 1189):** Allerede korrekt — `bg-background text-muted-foreground border-border hover:bg-secondary`.
-
-4. **Ikke relevant person (linje 1215):** Endre fra `border-border text-muted-foreground hover:bg-secondary` til `bg-background text-muted-foreground border-border hover:bg-secondary` — mangler `bg-background`.
-
-Alle fire har allerede `h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors` som baseklasser, så de matcher i storrelse og form. Eneste faktiske endring er a legge til `bg-background` pa "Ikke relevant person"-knappens inaktive tilstand.
+2. **Date-input (linje 1059):** Endre `h-7 px-2 text-[0.75rem]` → `h-9 px-3 text-[0.8125rem]`. Endre inaktiv hover fra `hover:border-primary/30` → `hover:bg-secondary`.
 
