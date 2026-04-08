@@ -184,16 +184,7 @@ const AnsattDetail = () => {
             <InfoRow icon={User} label="Ansatt i" value={durationMonths != null ? formatMonths(durationMonths) : "–"} />
           </div>
           {ansatt.kompetanse && ansatt.kompetanse.length > 0 && (
-            <div className="mt-4">
-              <span className="text-[0.6875rem] text-muted-foreground uppercase tracking-[0.08em] font-medium">Kompetanse</span>
-              <div className="flex flex-wrap gap-1.5 mt-1.5">
-                {ansatt.kompetanse.map((k: string) => (
-                  <Badge key={k} variant="secondary" className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold">
-                    {k}
-                  </Badge>
-                ))}
-              </div>
-            </div>
+            <KompetanseCollapsible kompetanse={ansatt.kompetanse} />
           )}
         </CardContent>
       </Card>
