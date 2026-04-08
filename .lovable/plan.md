@@ -1,24 +1,20 @@
 
 
-## Plan: Legg inn profilbilder for ansatte
+## Plan: Kollaps kompetanse-chips i redigeringsmodus
 
-### Bakgrunn
-Alle ansatte har `bilde_url = NULL` i `stacq_ansatte`, men bildene finnes allerede i `consultants`-tabellen. AnsattDetailSheet viser allerede bildet når `bilde_url` er satt — så det eneste som trengs er å populere feltet.
+### Problem
+Når CV styrer kompetansefeltet i redigeringsmodus, vises alle chips uten begrensning. Det tar mye plass. Brukeren ønsker samme oppførsel som i visningsmodusen: én rad med "Vis mer"-knapp.
 
-### Endring: SQL-migrasjon
+### Endring i `src/components/AnsattDetailSheet.tsx`
 
-Kjøre en UPDATE som kopierer `image_url` fra `consultants` til `stacq_ansatte.bilde_url` basert på navnematch (fornavn + etternavn). Dette dekker 11 av 16 ansatte. De resterende (Filip Dovland, Mattis Spieler Asp, Rikke Solbjørg, Harald Moldsvor, Trond Emaus) har litt avvikende navn i `consultants` og settes manuelt.
+Når `kompetanseStyresAvCv` er `true` (feltet er låst), skal chip-containeren (linje 518) begrenses til én rad med `max-h-[26px]` og overflow hidden, med en "Vis mer/Vis mindre"-knapp under — akkurat som `SheetKompetanseCollapsible` allerede gjør i visningsmodusen.
 
-```sql
--- Manuell mapping for alle med kjent bilde
-UPDATE stacq_ansatte SET bilde_url = 'https://kbvzpcebfopqqrvmbiap.supabase.co/storage/v1/object/public/consultant-images/...' WHERE id = X;
-```
+Konkret:
+- Legg til en lokal `expandedKomp`-state
+- Legg til en `ref` og `useEffect` for å sjekke om innholdet overflyter
+- Når `kompetanseStyresAvCv`, begrens containeren med `max-h-[26px]` med mindre `expandedKomp` er true
+- Vis "Vis mer"/"Vis mindre"-knapp under når innholdet overflyter
 
-16 UPDATE-setninger totalt (én per ansatt som har bilde i consultants).
-
-### Ingen kodeendringer
-AnsattDetailSheet sjekker allerede `ansatt?.bilde_url` og viser bildet. Ingen frontend-endring nødvendig.
-
-### Kun én fil opprettes
-- Ny migrasjon i `supabase/migrations/`
+### Kun én fil endres
+- `src/components/AnsattDetailSheet.tsx`
 
