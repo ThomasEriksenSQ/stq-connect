@@ -35,6 +35,7 @@ const AnsattDetail = () => {
   const [editingActId, setEditingActId] = useState<string | null>(null);
   const [editActForm, setEditActForm] = useState({ type: "samtale", subject: "", description: "", created_at: "" });
   const [matchSheetOpen, setMatchSheetOpen] = useState(false);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
 
   const ansattId = Number(id);
 
