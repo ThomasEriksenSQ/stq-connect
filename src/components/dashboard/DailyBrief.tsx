@@ -961,7 +961,7 @@ const DailyBrief = () => {
                                   </p>
                                   <span
                                     className={cn(
-                                      "text-[0.75rem] whitespace-nowrap",
+                                      "text-[0.8125rem] whitespace-nowrap",
                                       overdue ? "text-destructive font-medium" : "text-muted-foreground italic",
                                     )}
                                   >
