@@ -1024,15 +1024,6 @@ export function CompanyCardContent({
                   {loc}
                 </a>
               ))}
-          {company.phone && (
-            <>
-              <span className="text-muted-foreground/40">·</span>
-              <a href={`tel:${company.phone}`} className="inline-flex items-center gap-1 hover:text-foreground">
-                <Phone className="h-3 w-3" />
-                {company.phone}
-              </a>
-            </>
-          )}
           {company.website && (
             <>
               <span className="text-muted-foreground/40">·</span>
