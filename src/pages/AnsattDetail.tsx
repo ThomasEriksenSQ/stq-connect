@@ -326,8 +326,8 @@ function InfoRow({ icon: Icon, label, value }: { icon: any; label: string; value
   return (
     <div className="flex items-center gap-2.5">
       <Icon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-      <span className="text-[0.6875rem] text-muted-foreground w-28 flex-shrink-0">{label}</span>
-      <span className="text-[0.8125rem] font-medium text-foreground">{value || "–"}</span>
+      <span className="text-[0.75rem] text-muted-foreground w-28 flex-shrink-0">{label}</span>
+      <span className="text-[0.875rem] font-medium text-foreground">{value || "–"}</span>
     </div>
   );
 }
