@@ -736,30 +736,6 @@ const DailyBrief = () => {
           ))}
         </div>
 
-        <div className="flex items-center self-stretch sm:ml-auto sm:self-auto">
-          <button
-            onClick={() => setViewMode("kort")}
-            className={cn(
-              "h-8 flex-1 px-3 text-[0.8125rem] rounded-l-full border transition-colors inline-flex items-center justify-center gap-1.5 sm:flex-none",
-              viewMode === "kort"
-                ? "bg-foreground text-background border-foreground font-medium"
-                : "border-border text-muted-foreground hover:bg-secondary",
-            )}
-          >
-            <Flame className="h-3.5 w-3.5" /> Agent
-          </button>
-          <button
-            onClick={() => setViewMode("liste")}
-            className={cn(
-              "h-8 flex-1 px-3 text-[0.8125rem] rounded-r-full border-t border-b border-r transition-colors inline-flex items-center justify-center gap-1.5 sm:flex-none",
-              viewMode === "liste"
-                ? "bg-foreground text-background border-foreground font-medium"
-                : "border-border text-muted-foreground hover:bg-secondary",
-            )}
-          >
-            <List className="h-3.5 w-3.5" /> Hot list
-          </button>
-        </div>
       </div>
 
       {/* ── KORTVISNING ── */}
