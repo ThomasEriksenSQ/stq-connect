@@ -303,7 +303,7 @@ export function CvUploadFlow({ onClose, onAddMessage }: CvUploadFlowProps) {
               <div className="min-w-0 flex-1">
                 <p className="text-[1rem] font-bold text-foreground">{cvData.navn}</p>
                 <p className="text-[0.8125rem] text-muted-foreground mt-0.5">
-                  {[cvData.rolle, cvData.erfaring_aar ? `${cvData.erfaring_aar} år` : null].filter(Boolean).join(" · ")}
+                  {[cvData.rolle, cvData.erfaring_aar ? `${new Date().getFullYear() - cvData.erfaring_aar} års erfaring` : null].filter(Boolean).join(" · ")}
                 </p>
                 <div className="flex flex-wrap gap-1 mt-2">
                   {cvData.kompetanse.map((t) => (
