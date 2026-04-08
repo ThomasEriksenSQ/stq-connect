@@ -1,26 +1,24 @@
 
 
-## Plan: Velg mellom "Match mot forespørsler" og "Finn leads" i overlayen
+## Plan: Flytt redigeringsknappen til ansattens profilside
 
 ### Oversikt
-Når brukeren klikker "Finn oppdrag" på ansattsiden, åpnes overlayen uten å starte noe automatisk. I stedet vises to valg-knapper: "Match mot forespørsler" og "Finn leads for [Navn]". Først etter klikk på en av dem startes den aktuelle funksjonen.
+Fjern blyant-ikonet (rediger) fra ansattlisten og legg det til i headeren på den individuelle ansattsiden, ved siden av "Finn oppdrag" og "CV-editor".
 
 ### Endringer
 
-**1. `src/pages/AnsattDetail.tsx`**
-- Fjern `autoRunMatch={true}` fra `AnsattDetailSheet`-kallet (sett til `false` eller fjern prop)
+**1. `src/pages/KonsulenterAnsatte.tsx`**
+- Fjern blyant-knappen fra ACTIONS-kolonnen (linje 343-348)
+- Fjern `openEditMode`-state og relatert logikk siden den kun brukes av redigeringsknappen
+- Oppdater `GRID_COLS` for å fjerne ekstra plass (reduser siste kolonne fra 64px til ~40px)
+- Behold kun profil-knappen (User-ikonet) i tabellen
 
-**2. `src/components/AnsattDetailSheet.tsx`**
-- Legg til en `activeMode` state: `null | "oppdrag" | "leads"` (starter som `null`)
-- Når `activeMode === null`: vis to knapper side om side i content-området:
-  - **"Match mot forespørsler"** (med `Sparkles`-ikon) → setter `activeMode = "oppdrag"`
-  - **"Finn leads for [Fornavn]"** (med `Target`-ikon) → setter `activeMode = "leads"` og kaller `handleFinnLeads()`
-- Når `activeMode === "oppdrag"`: vis `OppdragsMatchPanel` med `autoRunMatch={true}` (som i dag)
-- Når `activeMode === "leads"`: vis leads-resultatene (eksisterende kode)
-- Fjern den separate "Finn leads"-knappen nederst — den er nå integrert i valg-visningen
-- Reset `activeMode` til `null` når sheeten lukkes
+**2. `src/pages/AnsattDetail.tsx`**
+- Legg til en "Rediger"-knapp med Pencil-ikon i header-området (ml-auto flex-gruppen), ved siden av "Finn oppdrag"
+- Knappen åpner `AnsattDetailSheet` i edit-modus (`openInEditMode={true}`)
+- Legg til nødvendig state for å styre dette
 
 ### Filer som endres
+- `src/pages/KonsulenterAnsatte.tsx`
 - `src/pages/AnsattDetail.tsx`
-- `src/components/AnsattDetailSheet.tsx`
 
