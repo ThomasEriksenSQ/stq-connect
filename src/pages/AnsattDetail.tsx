@@ -234,14 +234,28 @@ const AnsattDetail = () => {
         <CardContent className="p-5">
           <h2 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4">Informasjon</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-3">
+            {/* Kolonne 1 */}
             <InfoRow icon={Mail} label="E-post" value={ansatt.epost} />
-            <InfoRow icon={Phone} label="Telefon" value={ansatt.tlf} />
-            <InfoRow icon={MapPin} label="Geografi" value={ansatt.geografi || "–"} />
-            <InfoRow icon={Calendar} label="Startdato" value={fmt(ansatt.start_dato)} />
-            <InfoRow icon={Calendar} label="Sluttdato" value={fmt(ansatt.slutt_dato)} />
             <InfoRow icon={Calendar} label="Tilgjengelig fra" value={fmt(ansatt.tilgjengelig_fra)} />
+            <InfoRow icon={Calendar} label="Startdato" value={fmt(ansatt.start_dato)} />
+
+            {/* Kolonne 2 */}
+            <InfoRow icon={Phone} label="Telefon" value={ansatt.tlf} />
             <InfoRow icon={Briefcase} label="Års erfaring" value={ansatt.erfaring_aar ? `${ansatt.erfaring_aar} år` : "–"} />
             <InfoRow icon={User} label="Ansatt i" value={durationMonths != null ? formatMonths(durationMonths) : "–"} />
+
+            {/* Kolonne 3 */}
+            <InfoRow icon={MapPin} label="Geografi" value={ansatt.geografi || "–"} />
+            <InfoRow
+              icon={Calendar}
+              label="Fødselsdato"
+              value={
+                (ansatt as any).fodselsdato
+                  ? `${fmt((ansatt as any).fodselsdato)} (${differenceInYears(new Date(), new Date((ansatt as any).fodselsdato))} år)`
+                  : "–"
+              }
+            />
+            <InfoRow icon={Calendar} label="Sluttdato" value={fmt(ansatt.slutt_dato)} />
           </div>
           {ansatt.kompetanse && ansatt.kompetanse.length > 0 && (
             <KompetanseCollapsible kompetanse={ansatt.kompetanse} />
