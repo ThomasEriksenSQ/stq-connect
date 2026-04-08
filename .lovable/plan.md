@@ -1,28 +1,20 @@
 
 
-## Plan: Legg til profilbilde i oppdragstabellen
+## Plan: Flytt temperatur- og Finn.no-ikoner til toppen
 
-### Endringer i `src/pages/KonsulenterOppdrag.tsx`
+### Hva endres
+I salgssenteret (DailyBrief.tsx) flyttes de to indikator-stripene (temperatur: "Sovende"/"Hett"/etc. og Finn.no-stripen) fra sin nåværende posisjon (Sone 3, midt i kortet) opp til toppen av kortet, på samme linje som "Åpne kontakt"-knappen.
 
-**1. Legg til queries for ansatte-navn og CV-portretter** (inne i `KonsulenterOppdrag`-komponenten, etter eksisterende queries):
-- Hent `stacq_ansatte` → `id, navn`
-- Hent `cv_documents` → `ansatt_id, portrait_url` (der portrait_url ikke er null)
+### Teknisk gjennomføring
 
-**2. Bygg lookup-maps i useMemo** (samme mønster som FornyelsesTimeline):
-- `nameToAnsattId: Map<string, number>` (lowercase trimmed navn → id)
-- `portraitByAnsattId: Map<number, string>` (ansatt_id → portrait_url)
+**Fil:** `src/components/dashboard/DailyBrief.tsx`
 
-**3. Oppdater KONSULENT-cellen** (linje 732-735):
-Erstatt den enkle `<p>` med en flex-rad med avatar + navn:
-- Slå opp `er_ansatt` på oppdragsraden
-- For ansatte: finn portrait via `nameToAnsattId` → `portraitByAnsattId`, vis `<img>` (w-7 h-7 rounded-full) eller initialer i primary-sirkel
-- For ikke-ansatte/partnere: vis initialer i muted sirkel
-- Behold navnet som truncated tekst ved siden av
+1. **Flytt stripene til header-raden (linje ~780-788):** Endre `<div className="flex justify-end ...">` til en `flex items-center`-rad med stripene til venstre og "Åpne kontakt" til høyre med `ml-auto`.
 
-### Tekniske detaljer
-- Avatar: `w-7 h-7 rounded-full object-cover border border-border`
-- Ansatt-initialer: `bg-primary/10 text-primary`
-- Partner-initialer: `bg-muted text-muted-foreground`
-- Bruker `getInitials()` fra `@/lib/utils` (allerede importert)
-- Konsulent-cellen wraps i `flex items-center gap-2 min-w-0`
+2. **Komprimere stripene til kompakte ikoner/badges:** Siden de nå skal ligge på én linje med begrenset plass, gjøres de mer kompakte — emoji + kort label (uten reasons-tekst), og Finn.no-ikonet som en liten badge.
+
+3. **Fjern Sone 3 (linje 969-1047):** Hele den gamle sone 3-blokken med dividers slettes, da innholdet nå er flyttet opp.
+
+### Resultat
+Temperatur-ikonet (f.eks. 💤 Sovende) og Finn.no-badgen vises øverst til venstre i kortet, på linje med "Åpne kontakt"-knappen øverst til høyre. Resten av kortets layout forblir uendret.
 
