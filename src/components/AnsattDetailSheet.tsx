@@ -656,11 +656,6 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
               )}
 
               {ansatt?.cv_profil_hentet && (
-                <div className="mt-3 flex items-center gap-2">
-                  <span className="text-[0.6875rem] text-muted-foreground">✓ Hentet fra CV</span>
-                </div>
-              )}
-              {ansatt?.cv_profil_hentet && (
                 <p className="mt-2 text-[0.75rem] text-muted-foreground">
                   Kompetansefeltet styres av CV-editoren. Endringer gjøres i CV-en og synkroniseres hit automatisk.
                 </p>
