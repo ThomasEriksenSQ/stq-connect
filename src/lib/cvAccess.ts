@@ -65,12 +65,100 @@ export function buildCvShareClipboardText(url: string, pin: string) {
   return `${url}\nPIN: ${pin} (${CV_SHARE_VALID_DAYS} dagers varighet)`;
 }
 
-export async function copyTextToClipboard(text: string) {
-  if (!navigator.clipboard?.writeText) {
+function getClipboardErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message.trim()) return error.message;
+  return "Utklippstavlen er ikke tilgjengelig i denne nettleseren.";
+}
+
+function copyTextWithExecCommand(text: string) {
+  if (typeof document === "undefined" || !document.body) {
     throw new Error("Utklippstavlen er ikke tilgjengelig i denne nettleseren.");
   }
 
-  await navigator.clipboard.writeText(text);
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.top = "0";
+  textarea.style.left = "-9999px";
+  textarea.style.opacity = "0";
+  textarea.style.pointerEvents = "none";
+
+  document.body.appendChild(textarea);
+
+  const selection = document.getSelection();
+  const previousRanges =
+    selection && selection.rangeCount > 0
+      ? Array.from({ length: selection.rangeCount }, (_, index) => selection.getRangeAt(index).cloneRange())
+      : [];
+  const previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+  textarea.focus();
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+
+  const execCommand = (document as Document & {
+    execCommand?: (commandId: string, showUI?: boolean, value?: string) => boolean;
+  }).execCommand;
+
+  const copied = execCommand?.call(document, "copy") ?? false;
+
+  document.body.removeChild(textarea);
+
+  selection?.removeAllRanges();
+  for (const range of previousRanges) {
+    selection?.addRange(range);
+  }
+
+  previousActiveElement?.focus();
+
+  if (!copied) {
+    throw new Error("Kunne ikke kopiere teksten automatisk.");
+  }
+}
+
+async function copyTextWithClipboardItem(text: string) {
+  if (
+    typeof navigator === "undefined" ||
+    !navigator.clipboard?.write ||
+    typeof ClipboardItem === "undefined" ||
+    typeof Blob === "undefined"
+  ) {
+    throw new Error("ClipboardItem er ikke tilgjengelig.");
+  }
+
+  const item = new ClipboardItem({
+    "text/plain": new Blob([text], { type: "text/plain" }),
+  });
+
+  await navigator.clipboard.write([item]);
+}
+
+export async function copyTextToClipboard(text: string) {
+  try {
+    copyTextWithExecCommand(text);
+    return;
+  } catch {
+    // Fall through to the async clipboard APIs below.
+  }
+
+  try {
+    await copyTextWithClipboardItem(text);
+    return;
+  } catch {
+    // Fall through to writeText as the broadest async clipboard API.
+  }
+
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch (error) {
+      throw new Error(getClipboardErrorMessage(error));
+    }
+  }
+
+  throw new Error("Utklippstavlen er ikke tilgjengelig i denne nettleseren.");
 }
 
 async function readFunctionErrorMessage(error?: { context?: { json?: () => Promise<unknown>; text?: () => Promise<string> }; message?: string } | null) {
