@@ -510,7 +510,7 @@ const Contacts = () => {
       delete pendingToggles.current[key];
       const { error } = await supabase
         .from("contacts")
-        .update({ [field]: newValue })
+        .update({ [field]: newValue } as any)
         .eq("id", contact.id);
       if (error) {
         toast.error("Kunne ikke oppdatere");
