@@ -1,14 +1,11 @@
 
 
-## Plan: Fjern kompetanse-seksjonen fra redigeringsmodus
-
-### Problem
-Kompetanse-feltet i redigeringsmodus kan ikke redigeres når det er CV-styrt, og tar unødvendig plass.
+## Plan: Flytt Status-seksjonen nederst i redigeringsoverlayen
 
 ### Endring i `src/components/AnsattDetailSheet.tsx`
 
-Wrap hele kompetanse-blokken (linje 517–598) i en `{!kompetanseStyresAvCv && (...)}` betingelse, slik at den kun vises når kompetansen **ikke** er CV-styrt (dvs. kun for nye ansatte eller ansatte uten CV-profil). Når CV styrer kompetansen, fjernes seksjonen helt fra redigeringsvisningen — brukeren ser den allerede i visningsmodusen med "Vis mer"-funksjonalitet.
+1. **Fjern** Status-blokken fra nåværende posisjon (linje 473–491)
+2. **Sett inn** samme blokk rett før Save/Cancel-footeren (før linje 578), etter kompetanse-seksjonen og før `</div>` som lukker innholdsområdet
 
-### Kun én fil endres
-- `src/components/AnsattDetailSheet.tsx` (linje 517–598)
+Kun én fil endres: `src/components/AnsattDetailSheet.tsx`
 
