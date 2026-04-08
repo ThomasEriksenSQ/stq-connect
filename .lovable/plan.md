@@ -1,17 +1,20 @@
 
-## Plan: Tre-kolonners info-grid
+## Plan: Vis relativ tid etter datoer i aktivitetstidslinjen
 
-Endrer info-grid i `src/pages/AnsattDetail.tsx` fra `grid-cols-2` til `grid-cols-3` for bedre utnyttelse av bredden.
+Legger til relativ tid (f.eks. "3 dager siden", "2 uker siden") etter den formaterte datoen i aktivitetsseksjonen på ansattsiden.
 
 ### Endring
-- `grid grid-cols-1 sm:grid-cols-2` → `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`
-- Rekkefølge optimalisert for 3 kolonner (8 felter = 3+3+2 rader):
 
-```text
-Rad 1:  E-post          | Telefon        | Geografi
-Rad 2:  Startdato       | Sluttdato      | Tilgjengelig fra
-Rad 3:  Års erfaring    | Ansatt i       | (tom)
-```
+**Fil:** `src/pages/AnsattDetail.tsx`
 
-### Fil
-`src/pages/AnsattDetail.tsx` — grid-klasse og rekkefølge på `InfoRow`-elementer.
+- Importere `relativeDate` fra `@/lib/relativeDate`
+- I aktivitetstidslinjen, endre dato-visningen fra:
+  ```
+  8. apr. 2026
+  ```
+  til:
+  ```
+  8. apr. 2026 · 3 dager siden
+  ```
+
+Én linje endres i renderingen av aktiviteter — legger til ` · {relativeDate(act.created_at)}` etter den eksisterende formaterte datoen.
