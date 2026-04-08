@@ -515,7 +515,13 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                     ? "Dette feltet oppdateres automatisk fra CV-editoren. Endre teknologier i CV-en for å oppdatere kompetansen her."
                     : "Legg til kompetanse manuelt, eller hent den fra CV når CV-en er klar."}
                 </p>
-                <div className="mt-1 flex flex-wrap items-center gap-1.5 p-2 border border-border rounded-lg bg-background min-h-[38px]">
+                <div
+                  ref={kompChipsRef}
+                  className={cn(
+                    "mt-1 flex flex-wrap items-center gap-1.5 p-2 border border-border rounded-lg bg-background min-h-[38px]",
+                    kompetanseStyresAvCv && !expandedKomp && "max-h-[38px] overflow-hidden"
+                  )}
+                >
                   {form.kompetanse.map((t) => (
                     <span
                       key={t}
@@ -537,21 +543,29 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                       )}
                     </span>
                   ))}
-                  <input
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={handleTagKeyDown}
-                    disabled={kompetanseStyresAvCv}
-                    placeholder={
-                      kompetanseStyresAvCv
-                        ? "Kompetanse styres av CV-editoren"
-                        : form.kompetanse.length === 0
+                  {!kompetanseStyresAvCv && (
+                    <input
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={handleTagKeyDown}
+                      placeholder={
+                        form.kompetanse.length === 0
                           ? "Legg til kompetanse..."
                           : ""
-                    }
-                    className="flex-1 min-w-[100px] bg-transparent outline-none text-[0.8125rem] placeholder:text-muted-foreground"
-                  />
+                      }
+                      className="flex-1 min-w-[100px] bg-transparent outline-none text-[0.8125rem] placeholder:text-muted-foreground"
+                    />
+                  )}
                 </div>
+                {kompetanseStyresAvCv && kompChipsOverflow && (
+                  <button
+                    type="button"
+                    onClick={() => setExpandedKomp(!expandedKomp)}
+                    className="text-[0.75rem] text-primary hover:underline mt-0.5"
+                  >
+                    {expandedKomp ? "Vis mindre" : "Vis mer"}
+                  </button>
+                )}
                 {!kompetanseStyresAvCv && (
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {SUGGESTED_TAGS.filter((s) => !form.kompetanse.includes(s))
