@@ -390,6 +390,15 @@ export default function KonsulenterAnsatte() {
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
               </div>
+              {/* PROFIL LINK */}
+              <div className="flex items-center justify-center">
+                <button
+                  onClick={(e) => { e.stopPropagation(); navigate(`/konsulenter/ansatte/${a.id}`); }}
+                  className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground"
+                >
+                  <User className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
           );
         })}
