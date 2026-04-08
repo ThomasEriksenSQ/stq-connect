@@ -347,20 +347,94 @@ const AnsattDetail = () => {
               {aktiviteter.map((act: any) => {
                 const Icon = act.type === "møte" ? FileText : MessageCircle;
                 const iconColor = act.type === "møte" ? "text-primary" : "text-[hsl(var(--success))]";
+                const isEditing = editingActId === act.id;
                 return (
-                  <div key={act.id} className="relative pl-7">
+                  <div key={act.id} className="group relative pl-7">
                     <div className={cn("absolute -left-7 top-[2px] w-[12px] h-[12px] bg-background rounded-full flex items-center justify-center")}>
                       <Icon className={cn("h-3 w-3", iconColor)} />
                     </div>
-                    <div>
-                      <span className="text-[1.0625rem] font-bold text-foreground">{act.subject}</span>
-                      {act.description && (
-                        <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70 mt-0.5">{act.description}</p>
-                      )}
-                      <span className="text-[0.8125rem] text-muted-foreground">
-                        {format(new Date(act.created_at), "d. MMM yyyy", { locale: nb })} · {relativeDate(act.created_at)}
-                      </span>
-                    </div>
+                    {isEditing ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Select value={editActForm.type} onValueChange={(v) => setEditActForm({ ...editActForm, type: v })}>
+                            <SelectTrigger className="w-32 h-8 text-[0.8125rem]"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="samtale">Samtale</SelectItem>
+                              <SelectItem value="møte">Møte</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            type="datetime-local"
+                            value={editActForm.created_at}
+                            onChange={(e) => setEditActForm({ ...editActForm, created_at: e.target.value })}
+                            className="w-52 h-8 text-[0.8125rem]"
+                          />
+                        </div>
+                        <Input
+                          value={editActForm.subject}
+                          onChange={(e) => setEditActForm({ ...editActForm, subject: e.target.value })}
+                          placeholder="Emne"
+                          className="text-[0.9375rem]"
+                        />
+                        <Textarea
+                          value={editActForm.description}
+                          onChange={(e) => setEditActForm({ ...editActForm, description: e.target.value })}
+                          placeholder="Beskrivelse"
+                          rows={3}
+                          className="text-[0.9375rem]"
+                        />
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() => updateActivityMutation.mutate(act.id)}
+                            disabled={updateActivityMutation.isPending || !editActForm.subject.trim()}
+                            className="p-1 rounded-md hover:bg-primary/10 text-primary transition-colors"
+                          >
+                            <Check className="h-4 w-4 stroke-[2]" />
+                          </button>
+                          <button onClick={() => setEditingActId(null)} className="p-1 rounded-md hover:bg-destructive/10 text-muted-foreground transition-colors">
+                            <X className="h-4 w-4 stroke-[2]" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <span className="text-[1.0625rem] font-bold text-foreground">{act.subject}</span>
+                            {act.description && (
+                              <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70 mt-0.5">{act.description}</p>
+                            )}
+                            <span className="text-[0.8125rem] text-muted-foreground">
+                              {format(new Date(act.created_at), "d. MMM yyyy", { locale: nb })} · {relativeDate(act.created_at)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
+                            <button onClick={() => startEditActivity(act)} className="p-1 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <button className="p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Er du sikker?</AlertDialogTitle>
+                                  <AlertDialogDescription>Aktiviteten "{act.subject}" vil bli permanent slettet.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => deleteActivityMutation.mutate(act.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                    Ja, slett
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
