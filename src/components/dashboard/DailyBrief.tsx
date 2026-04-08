@@ -777,10 +777,38 @@ const DailyBrief = () => {
                   <div className={cn("h-1", TEMP_CONFIG[current.temperature].bar)} />
                 </div>
 
-                <div className="flex justify-end px-4 pt-4 sm:px-5">
+                <div className="flex items-center gap-2 px-4 pt-4 sm:px-5">
+                  {/* Temperatur-badge */}
+                  {(() => {
+                    const tempBadge: Record<string, { bg: string; text: string }> = {
+                      hett: { bg: "bg-red-50 border-red-100", text: "text-red-800" },
+                      lovende: { bg: "bg-orange-50 border-orange-100", text: "text-orange-800" },
+                      mulig: { bg: "bg-amber-50 border-amber-100", text: "text-amber-800" },
+                      sovende: { bg: "bg-gray-50 border-gray-100", text: "text-gray-600" },
+                    };
+                    const emoji = current.temperature === "hett" ? "🔥" : current.temperature === "lovende" ? "⚡" : current.temperature === "mulig" ? "💡" : "💤";
+                    const tb = tempBadge[current.temperature];
+                    return (
+                      <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[0.75rem] font-medium", tb.bg, tb.text)}>
+                        {emoji} {TEMP_CONFIG[current.temperature].label}
+                      </span>
+                    );
+                  })()}
+                  {/* Finn.no-badge */}
+                  {(() => {
+                    const companyTech = techProfiles.find((tp: any) => tp.company_id === current.contact.company_id);
+                    if (!companyTech?.teknologier) return null;
+                    const hasTech = Object.keys(companyTech.teknologier as Record<string, number>).length > 0;
+                    if (!hasTech) return null;
+                    return (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-blue-100 bg-blue-50 text-[0.75rem] font-medium text-blue-800">
+                        <Radio className="h-3 w-3 text-blue-500" /> Finn.no
+                      </span>
+                    );
+                  })()}
                   <button
                     onClick={() => setPanelOpen(true)}
-                    className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg bg-secondary border border-border text-[0.75rem] text-muted-foreground hover:text-foreground transition-all"
+                    className="ml-auto inline-flex items-center gap-1.5 h-7 px-3 rounded-lg bg-secondary border border-border text-[0.75rem] text-muted-foreground hover:text-foreground transition-all"
                   >
                     <span>↗</span>
                     <span>Åpne kontakt</span>
@@ -966,85 +994,6 @@ const DailyBrief = () => {
                     </div>
                   </div>
 
-                  {/* Divider */}
-                  <div className="border-t border-border/50" />
-
-                  {/* ── Sone 3: Lovende + Finn.no strips ── */}
-                  <div className="py-5">
-                    <div className="flex flex-col gap-2">
-                      {/* Lovende-strip */}
-                      {(() => {
-                        const tempColors = {
-                          hett: {
-                            strip: "bg-red-50 border-red-100",
-                            label: "text-red-800 font-medium",
-                            reason: "text-red-600",
-                          },
-                          lovende: {
-                            strip: "bg-orange-50 border-orange-100",
-                            label: "text-orange-800 font-medium",
-                            reason: "text-orange-600",
-                          },
-                          mulig: {
-                            strip: "bg-amber-50 border-amber-100",
-                            label: "text-amber-800 font-medium",
-                            reason: "text-amber-600",
-                          },
-                          sovende: {
-                            strip: "bg-gray-50 border-gray-100",
-                            label: "text-gray-600 font-medium",
-                            reason: "text-gray-500",
-                          },
-                        };
-                        const tc = tempColors[current.temperature];
-                        const emoji =
-                          current.temperature === "hett"
-                            ? "🔥"
-                            : current.temperature === "lovende"
-                              ? "⚡"
-                              : current.temperature === "mulig"
-                                ? "💡"
-                                : "💤";
-                        return (
-                          <div className={cn("flex items-center gap-2 px-3 py-2 rounded-xl border", tc.strip)}>
-                            <span className="text-[0.875rem]">{emoji}</span>
-                            <span className={cn("text-[0.8125rem]", tc.label)}>
-                              {TEMP_CONFIG[current.temperature].label}
-                            </span>
-                            {reasonLine && (
-                              <>
-                                <span className={cn("text-[0.8125rem]", tc.reason)}>·</span>
-                                <span className={cn("text-[0.8125rem]", tc.reason)}>{reasonLine}</span>
-                              </>
-                            )}
-                          </div>
-                        );
-                      })()}
-
-                      {/* Finn.no-strip */}
-                      {(() => {
-                        const companyTech = techProfiles.find(
-                          (tp: any) => tp.company_id === current.contact.company_id,
-                        );
-                        if (!companyTech?.teknologier) return null;
-                        const topTech = Object.entries(companyTech.teknologier as Record<string, number>)
-                          .sort((a, b) => (b[1] as number) - (a[1] as number))
-                          .slice(0, 5)
-                          .map(([t]) => t);
-                        if (topTech.length === 0) return null;
-                        return (
-                          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-50 border border-blue-100">
-                            <Radio className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
-                            <span className="text-[0.8125rem] text-blue-800 font-medium">Finn.no</span>
-                            <span className="text-[0.75rem] text-blue-600">Søker: {topTech.join(", ")}</span>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
-
-                  {/* Divider */}
-                  <div className="border-t border-border/50" />
 
                   {/* ── Sone 4: Toggle-piller ── */}
                   <div className="py-5">
