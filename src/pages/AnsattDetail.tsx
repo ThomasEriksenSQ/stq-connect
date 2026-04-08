@@ -496,6 +496,7 @@ const AnsattDetail = () => {
         </CardContent>
       </Card>
       <AnsattDetailSheet open={matchSheetOpen} onClose={() => setMatchSheetOpen(false)} ansatt={ansatt} openInEditMode={false} autoRunMatch={false} />
+      <AnsattDetailSheet open={editSheetOpen} onClose={() => setEditSheetOpen(false)} ansatt={ansatt} openInEditMode={true} autoRunMatch={false} />
     </div>
   );
 };
