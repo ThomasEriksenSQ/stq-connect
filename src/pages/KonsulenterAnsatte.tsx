@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
+import { issueAndCopyCvShareLink } from "@/lib/cvAccess";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -173,23 +174,13 @@ export default function KonsulenterAnsatte() {
 
   const generateLink = async (ansatt: any) => {
     try {
-      const pin = Math.floor(1000 + Math.random() * 9000).toString();
-      const encoder = new TextEncoder();
-      const data = encoder.encode(pin);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const pinHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      const token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
-      const expires_at = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
-      const { error } = await supabase.from('cv_access_tokens').upsert(
-        { ansatt_id: ansatt.id, token, pin_hash: pinHash, expires_at },
-        { onConflict: 'ansatt_id' }
-      );
-      if (error) throw error;
-      await navigator.clipboard.writeText('https://crm.stacq.no/cv/' + token);
-      toast.success(`Link kopiert! PIN: ${pin} — del med ${ansatt.navn}`, { duration: 10000 });
-    } catch (err: any) {
-      toast.error('Kunne ikke generere link: ' + (err.message || 'Ukjent feil'));
+      const { pin, valid_days } = await issueAndCopyCvShareLink(supabase, ansatt.id);
+      toast.success(`Link og PIN kopiert for ${valid_days} dager. PIN: ${pin} — del med ${ansatt.navn}`, {
+        duration: 10000,
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Ukjent feil";
+      toast.error("Kunne ikke generere link: " + message);
     }
   };
 

@@ -7,41 +7,31 @@ import { Button } from "@/components/ui/button";
 import { History, RotateCcw, Download, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
-import { openCvPrintDialog } from "@/components/cv/CvRenderer";
 import { toast } from "sonner";
-import { hashPin } from "@/lib/pinHash";
+import {
+  invokeCvAccess,
+  type CvAccessDocumentResponse,
+  type CvAccessSaveResponse,
+  type CvAccessSession,
+  type CvAccessVersion,
+  type CvAccessVersionsResponse,
+} from "@/lib/cvAccess";
 import type { CVDocument } from "@/components/cv/CvRenderer";
 
-const SUPABASE_URL = "https://kbvzpcebfopqqrvmbiap.supabase.co";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://kbvzpcebfopqqrvmbiap.supabase.co";
 const SUPABASE_ANON_KEY =
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtidnpwY2ViZm9wcXFydm1iaWFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTgyNTEsImV4cCI6MjA4ODI5NDI1MX0.t_bvITh_RxMfYdutsqHD-IkArlcD8I7au5vxBkt0aVY";
 
 // Anon client — no auth session
-const anonClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const anonClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});
 
 const SESSION_KEY = "cv_session";
-
-type CvSession = {
-  ansatt_id: number;
-  cv_id: string;
-  token: string;
-  ansatt_name: string;
-};
-
-const EMPTY_CV: CVDocument = {
-  hero: {
-    name: "",
-    title: "",
-    contact: { title: "", name: "", phone: "", email: "" },
-  },
-  sidebarSections: [],
-  introParagraphs: [],
-  competenceGroups: [],
-  projects: [],
-  additionalSections: [],
-  education: [],
-  workExperience: [],
-};
 
 function formatUpdatedAt(value?: string | null) {
   if (!value) return "Ikke registrert ennå";
@@ -50,6 +40,30 @@ function formatUpdatedAt(value?: string | null) {
   if (Number.isNaN(date.getTime())) return "Ikke registrert ennå";
 
   return format(date, "d. MMM yyyy HH:mm", { locale: nb });
+}
+
+function readStoredSession(token?: string) {
+  if (!token) return null;
+
+  try {
+    const stored = sessionStorage.getItem(SESSION_KEY);
+    if (!stored) return null;
+
+    const parsed = JSON.parse(stored);
+    if (parsed?.token !== token || !parsed?.session_key) return null;
+
+    return parsed as CvAccessSession;
+  } catch {
+    return null;
+  }
+}
+
+function getRowUpdatedAt(row: Record<string, unknown> | null | undefined) {
+  return typeof row?.updated_at === "string" ? row.updated_at : null;
+}
+
+function getErrorMessage(error: unknown, fallback = "Ukjent feil") {
+  return error instanceof Error ? error.message : fallback;
 }
 
 async function syncCompetenceFromCv(ansattId: number) {
@@ -99,16 +113,7 @@ function cvDocToDbRow(doc: CVDocument) {
 
 export default function CvEditor() {
   const { token } = useParams<{ token: string }>();
-  const [session, setSession] = useState<CvSession | null>(() => {
-    try {
-      const stored = sessionStorage.getItem(SESSION_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed.token === token) return parsed;
-      }
-    } catch {}
-    return null;
-  });
+  const [session, setSession] = useState<CvAccessSession | null>(() => readStoredSession(token));
   const [pin, setPin] = useState(["", "", "", ""]);
   const [error, setError] = useState("");
   const [verifying, setVerifying] = useState(false);
@@ -117,7 +122,34 @@ export default function CvEditor() {
   const [imageUrl, setImageUrl] = useState<string | undefined>();
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const [versionsOpen, setVersionsOpen] = useState(false);
-  const [versions, setVersions] = useState<any[]>([]);
+  const [versions, setVersions] = useState<CvAccessVersion[]>([]);
+  const [restoringSession, setRestoringSession] = useState(() => Boolean(readStoredSession(token)));
+
+  const clearCvSession = useCallback((message?: string) => {
+    sessionStorage.removeItem(SESSION_KEY);
+    setSession(null);
+    setCvData(null);
+    setImageUrl(undefined);
+    setLastUpdatedAt(null);
+    setVersions([]);
+    setVersionsOpen(false);
+    setPin(["", "", "", ""]);
+    setRestoringSession(false);
+    if (message) setError(message);
+  }, []);
+
+  useEffect(() => {
+    const storedSession = readStoredSession(token);
+    setSession(storedSession);
+    setCvData(null);
+    setImageUrl(undefined);
+    setLastUpdatedAt(null);
+    setVersions([]);
+    setVersionsOpen(false);
+    setPin(["", "", "", ""]);
+    setError("");
+    setRestoringSession(Boolean(storedSession));
+  }, [token]);
 
   useEffect(() => {
     const name = cvData?.hero?.name || session?.ansatt_name;
@@ -129,17 +161,45 @@ export default function CvEditor() {
     };
   }, [cvData?.hero?.name, session?.ansatt_name]);
 
-  // Load CV data after session is set
   useEffect(() => {
-    if (!session) return;
-    (async () => {
-      const { data } = await anonClient.from("cv_documents").select("*").eq("id", session.cv_id).single();
-      if (data) {
-        setCvData(dbRowToCvDoc(data));
-        setLastUpdatedAt(data.updated_at || null);
+    if (!session || cvData) {
+      setRestoringSession(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadExistingSession = async () => {
+      setRestoringSession(true);
+
+      try {
+        const data = await invokeCvAccess<CvAccessDocumentResponse>(anonClient, {
+          action: "load",
+          session_key: session.session_key,
+          token: session.token,
+        });
+
+        if (cancelled) return;
+
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(data.session));
+        setSession(data.session);
+        setCvData(dbRowToCvDoc(data.document));
+        setLastUpdatedAt(getRowUpdatedAt(data.document));
+        setImageUrl(data.employee_image_url || undefined);
+      } catch (err: unknown) {
+        if (cancelled) return;
+        clearCvSession(getErrorMessage(err, "Økten er utløpt. Tast inn PIN-koden på nytt."));
+      } finally {
+        if (!cancelled) setRestoringSession(false);
       }
-    })();
-  }, [session]);
+    };
+
+    void loadExistingSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [clearCvSession, cvData, session]);
 
   const verifyPin = async (pinOverride?: string) => {
     if (!token) return;
@@ -150,56 +210,19 @@ export default function CvEditor() {
     setError("");
 
     try {
-      const { data: tokenRow } = await anonClient.from("cv_access_tokens").select("*").eq("token", token).single();
-
-      if (!tokenRow) {
-        showError("Ugyldig PIN");
-        return;
-      }
-      if (tokenRow.expires_at && new Date(tokenRow.expires_at) < new Date()) {
-        showError("Lenken har utløpt");
-        return;
-      }
-
-      const hash = await hashPin(pinStr);
-      if (hash !== tokenRow.pin_hash) {
-        showError("Feil PIN-kode");
-        return;
-      }
-
-      // Get CV document
-      const { data: cvRow } = await anonClient
-        .from("cv_documents")
-        .select("*")
-        .eq("ansatt_id", tokenRow.ansatt_id)
-        .single();
-
-      // Get ansatt name
-      const { data: ansattRow } = await anonClient
-        .from("stacq_ansatte")
-        .select("navn, bilde_url")
-        .eq("id", tokenRow.ansatt_id)
-        .single();
-
-      if (!cvRow) {
-        showError("CV ikke funnet");
-        return;
-      }
-
-      if (ansattRow?.bilde_url) setImageUrl(ansattRow.bilde_url);
-
-      const newSession: CvSession = {
-        ansatt_id: tokenRow.ansatt_id,
-        cv_id: cvRow.id,
+      const data = await invokeCvAccess<CvAccessDocumentResponse>(anonClient, {
+        action: "verify",
+        pin: pinStr,
         token,
-        ansatt_name: ansattRow?.navn || "Ansatt",
-      };
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(newSession));
-      setSession(newSession);
-      setCvData(dbRowToCvDoc(cvRow));
-      setLastUpdatedAt(cvRow.updated_at || null);
+      });
 
-      const ansattNavn = ansattRow?.navn || "Ukjent ansatt";
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(data.session));
+      setSession(data.session);
+      setCvData(dbRowToCvDoc(data.document));
+      setLastUpdatedAt(getRowUpdatedAt(data.document));
+      setImageUrl(data.employee_image_url || undefined);
+
+      const ansattNavn = data.session.ansatt_name || "Ukjent ansatt";
       const now = new Date();
       const timeStr = now.toLocaleString("nb-NO", {
         timeZone: "Europe/Oslo",
@@ -221,8 +244,8 @@ export default function CvEditor() {
           message: `${ansattNavn} logget inn på CV-editoren — ${timeStr}`,
         }),
       }).catch(() => {});
-    } catch {
-      showError("Noe gikk galt");
+    } catch (err: unknown) {
+      showError(getErrorMessage(err, "Noe gikk galt"));
     } finally {
       setVerifying(false);
     }
@@ -264,18 +287,24 @@ export default function CvEditor() {
 
   const loadVersions = useCallback(async () => {
     if (!session) return;
-    const { data, error } = await anonClient
-      .from("cv_versions")
-      .select("*")
-      .eq("cv_id", session.cv_id)
-      .order("created_at", { ascending: false });
-    if (error) {
-      toast.error("Kunne ikke laste versjonshistorikk");
+    try {
+      const data = await invokeCvAccess<CvAccessVersionsResponse>(anonClient, {
+        action: "versions",
+        cv_id: session.cv_id,
+        session_key: session.session_key,
+        token: session.token,
+      });
+      setVersions(data.versions || []);
+      setVersionsOpen(true);
+    } catch (err: unknown) {
+      const message = getErrorMessage(err, "Kunne ikke laste versjonshistorikk");
+      toast.error(message);
+      if (/Økten|utløpt|Lenken/.test(message)) {
+        clearCvSession(message);
+      }
       return;
     }
-    setVersions(data || []);
-    setVersionsOpen(true);
-  }, [session]);
+  }, [clearCvSession, session]);
 
   const runCompetenceSync = useCallback(async (ansattId: number) => {
     try {
@@ -286,7 +315,7 @@ export default function CvEditor() {
     }
   }, []);
 
-  const restoreVersion = useCallback((snapshot: any) => {
+  const restoreVersion = useCallback((snapshot: Record<string, unknown>) => {
     setCvData(dbRowToCvDoc(snapshot));
     setVersionsOpen(false);
     toast.info("Versjon gjenopprettet — autosave lagrer om noen sekunder.");
@@ -297,18 +326,34 @@ export default function CvEditor() {
     const savedAt = new Date().toISOString();
     const snapshot = { ...cvDocToDbRow(data), updated_at: savedAt };
 
-    await anonClient.from("cv_documents").update(snapshot).eq("id", session.cv_id);
-    // Create version snapshot
-    await anonClient.from("cv_versions").insert({
-      cv_id: session.cv_id,
-      snapshot: snapshot as any,
-      saved_by: savedByName,
-      source: "ansatt",
-      created_at: savedAt,
-    });
-    setLastUpdatedAt(savedAt);
-    await runCompetenceSync(session.ansatt_id);
+    try {
+      const result = await invokeCvAccess<CvAccessSaveResponse>(anonClient, {
+        action: "save",
+        cv_id: session.cv_id,
+        saved_by: savedByName,
+        session_key: session.session_key,
+        snapshot,
+        token: session.token,
+      });
+      setLastUpdatedAt(result.updated_at || savedAt);
+      await runCompetenceSync(session.ansatt_id);
+    } catch (err: unknown) {
+      const message = getErrorMessage(err, "Kunne ikke lagre CV");
+      toast.error(message);
+      if (/Økten|utløpt|Lenken/.test(message)) {
+        clearCvSession(message);
+      }
+      throw err;
+    }
   };
+
+  if (restoringSession && !cvData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">Laster CV...</p>
+      </div>
+    );
+  }
 
   // STATE 1 — PIN login
   if (!session) {
@@ -408,7 +453,7 @@ export default function CvEditor() {
                   Ingen versjoner lagret ennå. Versjoner lagres automatisk ved hver autosave.
                 </p>
               )}
-              {versions.map((version: any) => (
+              {versions.map((version) => (
                 <div key={version.id} className="border border-border rounded-lg p-3">
                   <div className="flex items-center justify-between">
                     <div>
