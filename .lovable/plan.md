@@ -1,30 +1,19 @@
 
 
-## Plan: Bedre kolonnebredder og "Se profil"-knapp
+## Plan: Fikse lagring på ansattdetalj-siden
 
-### Endringer i `src/pages/KonsulenterAnsatte.tsx`
+### Problem
+`AnsattDetailSheet.handleSave` invaliderer kun `["stacq-ansatte"]` (listenøkkelen), men `AnsattDetail.tsx` bruker `["ansatt-detail", ansattId]` som query key. Etter lagring henter derfor detaljsiden aldri oppdaterte data.
 
-**1. Oppdater grid-kolonner (linje 25)**
+### Løsning i `src/components/AnsattDetailSheet.tsx`
 
-Fra: `grid-cols-[minmax(0,2.2fr)_95px_100px_90px_80px_40px]`
-Til: `grid-cols-[minmax(0,2.5fr)_100px_110px_100px_90px_90px]`
+Legg til invalidering av detaljnøkkelen etter lagring (linje 265):
 
-Gir mer plass til NAVN-kolonnen og jevnere fordeling. Siste kolonne utvides for å romme en tekstknapp.
-
-**2. Erstatt ikon-knapp med "Se profil"-knapp (linje 341–348)**
-
-Bytt ut det lille User-ikonet med en tekstknapp:
-```tsx
-<button
-  onClick={(e) => { e.stopPropagation(); navigate(`/konsulenter/ansatte/${a.id}`); }}
-  className="inline-flex items-center gap-1.5 text-[0.75rem] font-medium text-muted-foreground hover:text-foreground transition-colors"
->
-  Se profil
-</button>
+```ts
+queryClient.invalidateQueries({ queryKey: ["stacq-ansatte"] });
+queryClient.invalidateQueries({ queryKey: ["ansatt-detail", ansatt?.id] });
 ```
 
-Fjern `User`-ikonet fra imports (hvis ikke brukt andre steder).
-
 ### Kun én fil endres
-- `src/pages/KonsulenterAnsatte.tsx`
+- `src/components/AnsattDetailSheet.tsx`
 
