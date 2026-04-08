@@ -1209,7 +1209,7 @@ const DailyBrief = () => {
                           }
                         }}
                         className={cn(
-                          "inline-flex items-center h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors cursor-pointer",
+                          "inline-flex items-center h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors cursor-pointer ml-auto",
                           (localIkkeAktuell[current.contact.id] ?? !!current.contact.ikke_aktuell_kontakt)
                             ? "bg-destructive/10 text-destructive border-destructive/30"
                             : "border-border text-muted-foreground hover:bg-secondary",
