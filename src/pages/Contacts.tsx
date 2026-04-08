@@ -1033,7 +1033,7 @@ const Contacts = () => {
       if (right.matchScore10 !== left.matchScore10) return right.matchScore10 - left.matchScore10;
       if (right.chipUrgency !== left.chipUrgency) return right.chipUrgency - left.chipUrgency;
 
-      const hotListCompare = compareByHotList(left, right);
+      const hotListCompare = compareByHotList(left as any, right as any);
       if (hotListCompare !== 0) return hotListCompare;
 
       return left.name.localeCompare(right.name, "nb");
