@@ -1,7 +1,7 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Phone, Mail, MapPin, Calendar, Briefcase, MessageCircle, FileText, Plus, User, Pencil, Trash2, Check, X, ExternalLink, Sparkles } from "lucide-react";
+import { ArrowLeft, Phone, Mail, MapPin, Calendar, Briefcase, MessageCircle, FileText, Plus, User, Pencil, Trash2, Check, X, ExternalLink, Sparkles, Send } from "lucide-react";
 import { format, differenceInMonths, differenceInYears, differenceInDays, addDays } from "date-fns";
 import { nb } from "date-fns/locale";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
@@ -98,6 +98,20 @@ const AnsattDetail = () => {
         .select("*")
         .eq("ansatt_id", ansattId)
         .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !isNaN(ansattId),
+  });
+
+  const { data: aktiveProsesser = [] } = useQuery({
+    queryKey: ["ansatt-aktive-prosesser", ansattId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("foresporsler_konsulenter")
+        .select("id, status, foresporsler_id, foresporsler(id, selskap_navn, teknologier, referanse)")
+        .eq("ansatt_id", ansattId)
+        .in("status", ["sendt_cv", "intervju"]);
       if (error) throw error;
       return data as any[];
     },
@@ -288,6 +302,44 @@ const AnsattDetail = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* AKTIVE PROSESSER */}
+      {aktiveProsesser.length > 0 && (
+        <Card className="bg-card border border-border rounded-lg shadow-card">
+          <CardContent className="p-5">
+            <h2 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4">Aktive prosesser</h2>
+            <div className="space-y-2">
+              {aktiveProsesser.map((ap: any) => {
+                const f = ap.foresporsler;
+                const statusLabel = ap.status === "intervju" ? "Intervju" : "Sendt CV";
+                const statusColor = ap.status === "intervju"
+                  ? "bg-amber-100 text-amber-800 border-amber-200"
+                  : "bg-blue-100 text-blue-800 border-blue-200";
+                return (
+                  <Link
+                    key={ap.id}
+                    to="/foresporsler"
+                    className="flex items-center justify-between p-3 rounded-lg hover:bg-background/60 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Send className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-[0.9375rem] font-medium text-foreground">{f?.selskap_navn || "Ukjent"}</p>
+                        {f?.referanse && (
+                          <p className="text-[0.75rem] text-muted-foreground">{f.referanse}</p>
+                        )}
+                      </div>
+                    </div>
+                    <Badge className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", statusColor)}>
+                      {statusLabel}
+                    </Badge>
+                  </Link>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* OPPDRAG */}
       <Card className="bg-card border border-border rounded-lg shadow-card">
