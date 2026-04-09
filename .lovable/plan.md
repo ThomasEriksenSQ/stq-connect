@@ -1,31 +1,18 @@
 
-
-## Plan: Oppdrag i faner (Tabs) i stedet for under hverandre
+## Plan: Flytt "Aktive prosesser" inn som fane
 
 ### Endring
-Refaktorer oppdragsseksjonen i `src/pages/AnsattDetail.tsx` (linje 344–369) til å bruke `Tabs`-komponenten fra `@/components/ui/tabs`.
+Flytt "Aktive prosesser"-seksjonen (linje 307–343) inn i fane-komponenten (linje 348–375) som en tredje fane etter "Tidligere oppdrag". Fjern det separate kortet.
 
-### Detaljer
+### Detaljer i `src/pages/AnsattDetail.tsx`
 
-1. **Import**: Legg til `Tabs, TabsList, TabsTrigger, TabsContent` fra `@/components/ui/tabs`.
+1. **Fjern** det frittstående "Aktive prosesser"-kortet (linje 307–343).
 
-2. **Erstatt oppdragsseksjonen** (linje 344–369) med:
-   - En `Card` med `Tabs` inni
-   - `TabsList` med to faner: "Aktive oppdrag" og "Tidligere oppdrag"
-   - Tidligere oppdrag-fanen viser antall i parentes
-   - Default-fane: "aktive"
-   - Hver `TabsContent` inneholder listen som i dag
+2. **Legg til ny TabsTrigger** etter "Tidligere oppdrag":
+   ```
+   <TabsTrigger value="prosesser">Aktive prosesser ({aktiveProsesser.length})</TabsTrigger>
+   ```
 
-3. **Struktur**:
-```text
-Card
-└── Tabs (defaultValue="aktive")
-    ├── TabsList
-    │   ├── TabsTrigger "Aktive oppdrag (N)"
-    │   └── TabsTrigger "Tidligere oppdrag (N)"
-    ├── TabsContent "aktive" → activeOppdrag liste
-    └── TabsContent "tidligere" → previousOppdrag liste
-```
+3. **Legg til ny TabsContent** med det eksisterende innholdet fra prosesser-seksjonen (uten Card-wrapping og overskrift, bare listen med Send-ikon, selskapsnavn, referanse og status-badge). Vis "Ingen aktive prosesser" om listen er tom.
 
-Kun én fil endres: `src/pages/AnsattDetail.tsx`.
-
+Kun én fil endres.
