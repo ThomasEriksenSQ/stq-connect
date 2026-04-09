@@ -326,6 +326,7 @@ const AnsattDetail = () => {
               <TabsTrigger value="aktive">Aktive oppdrag ({activeOppdrag.length})</TabsTrigger>
               <TabsTrigger value="tidligere">Tidligere oppdrag ({previousOppdrag.length})</TabsTrigger>
               <TabsTrigger value="prosesser">Aktive prosesser ({aktiveProsesser.length})</TabsTrigger>
+              <TabsTrigger value="tidl-prosesser">Tidligere prosesser ({tidligereProsesser.length})</TabsTrigger>
             </TabsList>
             <TabsContent value="aktive">
               {activeOppdrag.length === 0 ? (
