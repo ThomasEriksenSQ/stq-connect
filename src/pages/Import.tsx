@@ -5,7 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Papa from "papaparse";
 
+const NULL_SF = "000000000000000AAA";
+
 function sf(val: string | undefined | null): string | null {
+  if (!val || val.trim() === "" || val === NULL_SF) return null;
+  return val.trim();
+}
 
 function mapStatus(sfType: string | null): string {
   if (!sfType) return "active";
