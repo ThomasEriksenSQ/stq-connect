@@ -222,9 +222,10 @@ Deno.serve(async (req) => {
       const { companyBySfId, contactBySfId } = await buildLookups();
 
       const toInsert = records.map((r: any) => {
-        const { sf_who_id, sf_what_id, sf_account_id, ...rest } = r;
+        const { sf_who_id, sf_what_id, sf_account_id, sf_owner_id, ...rest } = r;
+        const owner = mapOwner(sf(sf_owner_id));
         const resolved = resolveCompanyAndContact({ sf_who_id, sf_what_id, sf_account_id }, companyBySfId, contactBySfId);
-        return { ...rest, ...resolved };
+        return { ...rest, created_by: rest.created_by || owner, ...resolved };
       });
 
       const inserted = await batchInsert("activities", toInsert);
@@ -236,9 +237,10 @@ Deno.serve(async (req) => {
       const { companyBySfId, contactBySfId } = await buildLookups();
 
       const toInsert = records.map((r: any) => {
-        const { sf_who_id, sf_what_id, sf_account_id, subject, ...rest } = r;
+        const { sf_who_id, sf_what_id, sf_account_id, sf_owner_id, subject, ...rest } = r;
+        const owner = mapOwner(sf(sf_owner_id));
         const resolved = resolveCompanyAndContact({ sf_who_id, sf_what_id, sf_account_id }, companyBySfId, contactBySfId);
-        return { ...rest, ...resolved };
+        return { ...rest, created_by: rest.created_by || owner, assigned_to: rest.assigned_to || owner, ...resolved };
       });
 
       const inserted = await batchInsert("tasks", toInsert);
