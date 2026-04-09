@@ -2,7 +2,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Phone, Mail, MapPin, Calendar, Briefcase, MessageCircle, FileText, Plus, User, Pencil, Trash2, Check, X, ExternalLink, Sparkles, Send } from "lucide-react";
+import { ArrowLeft, Phone, Mail, MapPin, Calendar, Briefcase, MessageCircle, FileText, Plus, User, Pencil, Trash2, Check, X, ExternalLink, Sparkles } from "lucide-react";
 import { format, differenceInMonths, differenceInYears, differenceInDays, addDays } from "date-fns";
 import { nb } from "date-fns/locale";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
@@ -365,20 +365,17 @@ const AnsattDetail = () => {
                       <Link
                         key={ap.id}
                         to="/foresporsler"
-                        className="flex items-center justify-between p-3 rounded-lg hover:bg-background/60 transition-colors"
+                        className="flex flex-col gap-1 py-2 px-3 rounded-lg bg-background border border-border transition-colors hover:bg-secondary/40"
                       >
-                        <div className="flex items-center gap-3">
-                          <Send className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="text-[0.9375rem] font-medium text-foreground">{f?.selskap_navn || "Ukjent"}</p>
-                            {f?.referanse && (
-                              <p className="text-[0.75rem] text-muted-foreground">{f.referanse}</p>
-                            )}
-                          </div>
+                        <div className="flex items-center justify-between">
+                          <p className="text-[0.9375rem] font-medium text-foreground">{f?.selskap_navn || "Ukjent"}</p>
+                          <Badge className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", statusColor)}>
+                            {statusLabel}
+                          </Badge>
                         </div>
-                        <Badge className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", statusColor)}>
-                          {statusLabel}
-                        </Badge>
+                        {f?.referanse && (
+                          <p className="text-[0.75rem] text-muted-foreground">{f.referanse}</p>
+                        )}
                       </Link>
                     );
                   })}
@@ -402,20 +399,17 @@ const AnsattDetail = () => {
                       <Link
                         key={ap.id}
                         to="/foresporsler"
-                        className="flex items-center justify-between p-3 rounded-lg hover:bg-background/60 transition-colors"
+                        className="flex flex-col gap-1 py-2 px-3 rounded-lg bg-background border border-border transition-colors hover:bg-secondary/40"
                       >
-                        <div className="flex items-center gap-3">
-                          <Send className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className={cn("text-[0.9375rem] font-medium text-foreground", ap.status === "bortfalt" && "line-through text-muted-foreground")}>{f?.selskap_navn || "Ukjent"}</p>
-                            {f?.referanse && (
-                              <p className="text-[0.75rem] text-muted-foreground">{f.referanse}</p>
-                            )}
-                          </div>
+                        <div className="flex items-center justify-between">
+                          <p className={cn("text-[0.9375rem] font-medium text-foreground", ap.status === "bortfalt" && "line-through text-muted-foreground")}>{f?.selskap_navn || "Ukjent"}</p>
+                          <Badge className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", statusColor, ap.status === "bortfalt" && "line-through")}>
+                            {statusLabel}
+                          </Badge>
                         </div>
-                        <Badge className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", statusColor, ap.status === "bortfalt" && "line-through")}>
-                          {statusLabel}
-                        </Badge>
+                        {f?.referanse && (
+                          <p className="text-[0.75rem] text-muted-foreground">{f.referanse}</p>
+                        )}
                       </Link>
                     );
                   })}
