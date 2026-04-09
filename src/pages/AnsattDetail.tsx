@@ -365,20 +365,17 @@ const AnsattDetail = () => {
                       <Link
                         key={ap.id}
                         to="/foresporsler"
-                        className="flex items-center justify-between p-3 rounded-lg hover:bg-background/60 transition-colors"
+                        className="flex flex-col gap-1 py-2 px-3 rounded-lg bg-background border border-border transition-colors hover:bg-secondary/40"
                       >
-                        <div className="flex items-center gap-3">
-                          <Send className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="text-[0.9375rem] font-medium text-foreground">{f?.selskap_navn || "Ukjent"}</p>
-                            {f?.referanse && (
-                              <p className="text-[0.75rem] text-muted-foreground">{f.referanse}</p>
-                            )}
-                          </div>
+                        <div className="flex items-center justify-between">
+                          <p className="text-[0.9375rem] font-medium text-foreground">{f?.selskap_navn || "Ukjent"}</p>
+                          <Badge className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", statusColor)}>
+                            {statusLabel}
+                          </Badge>
                         </div>
-                        <Badge className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", statusColor)}>
-                          {statusLabel}
-                        </Badge>
+                        {f?.referanse && (
+                          <p className="text-[0.75rem] text-muted-foreground">{f.referanse}</p>
+                        )}
                       </Link>
                     );
                   })}
