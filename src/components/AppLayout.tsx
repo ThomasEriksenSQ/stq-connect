@@ -212,14 +212,7 @@ export function AppLayout() {
           </div>
 
           <div className="flex items-center gap-1 md:gap-2 shrink-0">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setAiOpen(true)}
-              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
-            >
-              <Sparkles className="h-4 w-4 stroke-[1.5]" />
-            </Button>
+            
             <Button
               variant="ghost"
               size="icon"
