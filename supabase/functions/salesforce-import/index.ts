@@ -182,8 +182,14 @@ Deno.serve(async (req) => {
     }
 
     if (type === "companies") {
-      const inserted = await batchInsert("companies", records);
-      return new Response(JSON.stringify({ type: "companies", inserted, total: records.length }),
+      // Resolve owner_id and created_by from sf_owner_id
+      const resolved = records.map((r: any) => {
+        const { sf_owner_id, ...rest } = r;
+        const owner = mapOwner(sf(sf_owner_id));
+        return { ...rest, owner_id: rest.owner_id || owner, created_by: rest.created_by || owner };
+      });
+      const inserted = await batchInsert("companies", resolved);
+      return new Response(JSON.stringify({ type: "companies", inserted, total: resolved.length }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
