@@ -383,7 +383,7 @@ const AnsattDetail = () => {
               ) : (
                 <div className="space-y-3">
                   {previousOppdrag.map((o: any) => (
-                    <OppdragRow key={o.id} o={o} isActive={false} />
+                    <OppdragRow key={o.id} o={o} isActive={false} kontaktNavn={selskapIdToKontakt[o.selskap_id]} />
                   ))}
                 </div>
               )}
