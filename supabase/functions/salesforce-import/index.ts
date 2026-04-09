@@ -202,9 +202,12 @@ Deno.serve(async (req) => {
       }
 
       const toInsert = records.map((r: any) => {
-        const { sf_account_id, ...rest } = r;
+        const { sf_account_id, sf_owner_id, ...rest } = r;
+        const owner = mapOwner(sf(sf_owner_id));
         return {
           ...rest,
+          owner_id: rest.owner_id || owner,
+          created_by: rest.created_by || owner,
           cv_email: Boolean(rest.cv_email) && hasEmail(rest.email),
           company_id: sf_account_id ? sfAccMap[sf_account_id] || null : null,
         };
