@@ -395,6 +395,7 @@ const AnsattDetail = () => {
                 <div className="space-y-2">
                   {aktiveProsesser.map((ap: any) => {
                     const f = ap.foresporsler;
+                    const kontaktNavn = getContactName(f);
                     const statusLabel = ap.status === "intervju" ? "Intervju" : "Sendt CV";
                     const statusColor = ap.status === "intervju"
                       ? "bg-amber-100 text-amber-800 border-amber-200"
@@ -406,7 +407,10 @@ const AnsattDetail = () => {
                         className="flex flex-col gap-1 py-2 px-3 rounded-lg bg-background border border-border transition-colors hover:bg-secondary/40"
                       >
                         <div className="flex items-center justify-between">
-                          <p className="text-[0.9375rem] font-medium text-foreground">{f?.selskap_navn || "Ukjent"}</p>
+                          <div>
+                            <p className="text-[0.9375rem] font-medium text-foreground">{f?.selskap_navn || "Ukjent"}</p>
+                            {kontaktNavn && <p className="text-[0.75rem] text-muted-foreground">{kontaktNavn}</p>}
+                          </div>
                           <Badge className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", statusColor)}>
                             {statusLabel}
                           </Badge>
