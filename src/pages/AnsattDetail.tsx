@@ -680,18 +680,21 @@ function OppdragRow({ o, isActive = false, kontaktNavn }: { o: any; isActive?: b
   return (
     <div className="flex flex-col gap-2 py-2 px-3 rounded-lg bg-background border border-border">
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-        <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-0">
-          <span className="text-[0.9375rem] font-medium text-foreground">{o.kunde || "Ukjent kunde"}</span>
-          {o.start_dato && (
-            <span className="text-[0.8125rem] text-muted-foreground sm:ml-2">
-              {fmt(o.start_dato)} – {fmt(o.slutt_dato)}
-            </span>
-          )}
-          {duration != null && (
-            <span className="text-[0.8125rem] text-muted-foreground sm:ml-2">
-              · {formatMonths(duration)}
-            </span>
-          )}
+        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-0">
+            <span className="text-[0.9375rem] font-medium text-foreground">{o.kunde || "Ukjent kunde"}</span>
+            {o.start_dato && (
+              <span className="text-[0.8125rem] text-muted-foreground sm:ml-2">
+                {fmt(o.start_dato)} – {fmt(o.slutt_dato)}
+              </span>
+            )}
+            {duration != null && (
+              <span className="text-[0.8125rem] text-muted-foreground sm:ml-2">
+                · {formatMonths(duration)}
+              </span>
+            )}
+          </div>
+          {kontaktNavn && <p className="text-[0.75rem] text-muted-foreground">{kontaktNavn}</p>}
         </div>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-[0.8125rem]">
           {o.utpris != null && <span className="text-muted-foreground">Utpris: <span className="font-medium text-foreground">{o.utpris} kr</span></span>}
