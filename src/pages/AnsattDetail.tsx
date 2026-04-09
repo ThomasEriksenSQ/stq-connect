@@ -1,4 +1,5 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Phone, Mail, MapPin, Calendar, Briefcase, MessageCircle, FileText, Plus, User, Pencil, Trash2, Check, X, ExternalLink, Sparkles, Send } from "lucide-react";
@@ -344,27 +345,34 @@ const AnsattDetail = () => {
       {/* OPPDRAG */}
       <Card className="bg-card border border-border rounded-lg shadow-card">
         <CardContent className="p-5">
-          <h2 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4">Aktive oppdrag</h2>
-          {activeOppdrag.length === 0 ? (
-            <p className="text-[0.8125rem] text-muted-foreground">Ingen aktive oppdrag</p>
-          ) : (
-            <div className="space-y-3">
-              {activeOppdrag.map((o: any) => (
-                <OppdragRow key={o.id} o={o} isActive />
-              ))}
-            </div>
-          )}
-
-          {previousOppdrag.length > 0 && (
-            <>
-              <h2 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mt-6 mb-4">Tidligere oppdrag</h2>
-              <div className="space-y-3">
-              {previousOppdrag.map((o: any) => (
-                  <OppdragRow key={o.id} o={o} isActive={false} />
-                ))}
-              </div>
-            </>
-          )}
+          <Tabs defaultValue="aktive">
+            <TabsList>
+              <TabsTrigger value="aktive">Aktive oppdrag ({activeOppdrag.length})</TabsTrigger>
+              <TabsTrigger value="tidligere">Tidligere oppdrag ({previousOppdrag.length})</TabsTrigger>
+            </TabsList>
+            <TabsContent value="aktive">
+              {activeOppdrag.length === 0 ? (
+                <p className="text-[0.8125rem] text-muted-foreground">Ingen aktive oppdrag</p>
+              ) : (
+                <div className="space-y-3">
+                  {activeOppdrag.map((o: any) => (
+                    <OppdragRow key={o.id} o={o} isActive />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+            <TabsContent value="tidligere">
+              {previousOppdrag.length === 0 ? (
+                <p className="text-[0.8125rem] text-muted-foreground">Ingen tidligere oppdrag</p>
+              ) : (
+                <div className="space-y-3">
+                  {previousOppdrag.map((o: any) => (
+                    <OppdragRow key={o.id} o={o} isActive={false} />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
