@@ -2,7 +2,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Phone, Mail, MapPin, Calendar, Briefcase, MessageCircle, FileText, Plus, User, Pencil, Trash2, Check, X, ExternalLink, Sparkles, Send } from "lucide-react";
+import { ArrowLeft, Phone, Mail, MapPin, Calendar, Briefcase, MessageCircle, FileText, Plus, User, Pencil, Trash2, Check, X, ExternalLink, Sparkles } from "lucide-react";
 import { format, differenceInMonths, differenceInYears, differenceInDays, addDays } from "date-fns";
 import { nb } from "date-fns/locale";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
