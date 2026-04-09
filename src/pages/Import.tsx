@@ -122,8 +122,7 @@ const Import = () => {
           phone: sf(r.Phone),
           website: cleanUrl(r.Website),
           org_number: sf(r.Organization_number__c),
-          owner_id: mapOwner(sf(r.OwnerId)),
-          created_by: mapOwner(sf(r.OwnerId)),
+          sf_owner_id: sf(r.OwnerId),
           created_at: sfDateTime(r.CreatedDate) || "2024-01-01T00:00:00Z",
         }));
 
@@ -148,8 +147,7 @@ const Import = () => {
           title: sf(r.Title),
           linkedin: cleanUrl(r.Linkedin__c),
           notes: sf(r.Description),
-          owner_id: mapOwner(sf(r.OwnerId)),
-          created_by: mapOwner(sf(r.OwnerId)),
+          sf_owner_id: sf(r.OwnerId),
           call_list: r.Ringeliste__c === "1",
           cv_email: r.send_partner_email__c === "1",
         }));
