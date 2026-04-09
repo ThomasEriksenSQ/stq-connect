@@ -56,6 +56,24 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // --- Owner mapping (Salesforce OwnerId → Supabase user UUID) ---
+    const OWNER_MAP: Record<string, string> = {
+      "0057R00000EMEzwQAH": "877c63e8-a70c-4b78-9258-3dc8b1bf3c20", // Thomas
+      "0057R00000EMFiQQAX": "451cb75f-685d-433d-83f0-bb24941ff2a4", // JR
+    };
+    const DEFAULT_OWNER = "877c63e8-a70c-4b78-9258-3dc8b1bf3c20";
+    const NULL_SF = "000000000000000AAA";
+
+    function sf(val: string | undefined | null): string | null {
+      if (!val || val.trim() === "" || val === NULL_SF) return null;
+      return val.trim();
+    }
+
+    function mapOwner(sfOwnerId: string | null): string {
+      if (!sfOwnerId) return DEFAULT_OWNER;
+      return OWNER_MAP[sfOwnerId] || DEFAULT_OWNER;
+    }
+
     const { type, records } = await req.json();
 
     // --- Helpers ---
