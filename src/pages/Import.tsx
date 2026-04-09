@@ -5,24 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Papa from "papaparse";
 
-const THOMAS_ID = "877c63e8-a70c-4b78-9258-3dc8b1bf3c20";
-const JR_ID = "451cb75f-685d-433d-83f0-bb24941ff2a4";
-const NULL_SF = "000000000000000AAA";
-
-const OWNER_MAP: Record<string, string> = {
-  "0057R00000EMEzwQAH": THOMAS_ID,
-  "0057R00000EMFiQQAX": JR_ID,
-};
-
 function sf(val: string | undefined | null): string | null {
-  if (!val || val.trim() === "" || val === NULL_SF) return null;
-  return val.trim();
-}
-
-function mapOwner(sfOwnerId: string | null): string {
-  if (!sfOwnerId) return THOMAS_ID;
-  return OWNER_MAP[sfOwnerId] || THOMAS_ID;
-}
 
 function mapStatus(sfType: string | null): string {
   if (!sfType) return "active";
