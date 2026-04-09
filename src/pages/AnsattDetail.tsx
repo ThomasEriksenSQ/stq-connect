@@ -385,6 +385,43 @@ const AnsattDetail = () => {
                 </div>
               )}
             </TabsContent>
+            <TabsContent value="tidl-prosesser">
+              {tidligereProsesser.length === 0 ? (
+                <p className="text-[0.8125rem] text-muted-foreground">Ingen tidligere prosesser</p>
+              ) : (
+                <div className="space-y-2">
+                  {tidligereProsesser.map((ap: any) => {
+                    const f = ap.foresporsler;
+                    const statusLabel = ap.status === "vunnet" ? "Vunnet" : ap.status === "avslag" ? "Avslag" : "Bortfalt";
+                    const statusColor = ap.status === "vunnet"
+                      ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                      : ap.status === "avslag"
+                        ? "bg-red-100 text-red-800 border-red-200"
+                        : "bg-gray-100 text-gray-600 border-gray-200";
+                    return (
+                      <Link
+                        key={ap.id}
+                        to="/foresporsler"
+                        className="flex items-center justify-between p-3 rounded-lg hover:bg-background/60 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Send className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className={cn("text-[0.9375rem] font-medium text-foreground", ap.status === "bortfalt" && "line-through text-muted-foreground")}>{f?.selskap_navn || "Ukjent"}</p>
+                            {f?.referanse && (
+                              <p className="text-[0.75rem] text-muted-foreground">{f.referanse}</p>
+                            )}
+                          </div>
+                        </div>
+                        <Badge className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", statusColor, ap.status === "bortfalt" && "line-through")}>
+                          {statusLabel}
+                        </Badge>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
