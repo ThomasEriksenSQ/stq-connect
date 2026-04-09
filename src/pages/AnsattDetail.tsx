@@ -321,12 +321,23 @@ const AnsattDetail = () => {
       {/* OPPDRAG */}
       <Card className="bg-card border border-border rounded-lg shadow-card">
         <CardContent className="p-5">
-          <Tabs defaultValue="aktive">
+          <Tabs defaultValue={ansatt.tilgjengelig_fra ? "prosesser" : "aktive"}>
             <TabsList>
-              <TabsTrigger value="aktive">Aktive oppdrag ({activeOppdrag.length})</TabsTrigger>
-              <TabsTrigger value="tidligere">Tidligere oppdrag ({previousOppdrag.length})</TabsTrigger>
-              <TabsTrigger value="prosesser">Aktive prosesser ({aktiveProsesser.length})</TabsTrigger>
-              <TabsTrigger value="tidl-prosesser">Tidligere prosesser ({tidligereProsesser.length})</TabsTrigger>
+              {ansatt.tilgjengelig_fra ? (
+                <>
+                  <TabsTrigger value="prosesser">Aktive prosesser ({aktiveProsesser.length})</TabsTrigger>
+                  <TabsTrigger value="tidl-prosesser">Tidligere prosesser ({tidligereProsesser.length})</TabsTrigger>
+                  <TabsTrigger value="aktive">Aktive oppdrag ({activeOppdrag.length})</TabsTrigger>
+                  <TabsTrigger value="tidligere">Tidligere oppdrag ({previousOppdrag.length})</TabsTrigger>
+                </>
+              ) : (
+                <>
+                  <TabsTrigger value="aktive">Aktive oppdrag ({activeOppdrag.length})</TabsTrigger>
+                  <TabsTrigger value="tidligere">Tidligere oppdrag ({previousOppdrag.length})</TabsTrigger>
+                  <TabsTrigger value="prosesser">Aktive prosesser ({aktiveProsesser.length})</TabsTrigger>
+                  <TabsTrigger value="tidl-prosesser">Tidligere prosesser ({tidligereProsesser.length})</TabsTrigger>
+                </>
+              )}
             </TabsList>
             <TabsContent value="aktive">
               {activeOppdrag.length === 0 ? (
