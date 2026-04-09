@@ -110,7 +110,7 @@ const AnsattDetail = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("foresporsler_konsulenter")
-        .select("id, status, foresporsler_id, foresporsler(id, selskap_navn, teknologier, referanse)")
+        .select("id, status, foresporsler_id, foresporsler(id, selskap_navn, teknologier, referanse, kontakt_id, contacts(first_name, last_name))")
         .eq("ansatt_id", ansattId)
         .in("status", ["sendt_cv", "intervju"]);
       if (error) throw error;
@@ -124,9 +124,23 @@ const AnsattDetail = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("foresporsler_konsulenter")
-        .select("id, status, foresporsler_id, foresporsler(id, selskap_navn, teknologier, referanse)")
+        .select("id, status, foresporsler_id, foresporsler(id, selskap_navn, teknologier, referanse, kontakt_id, contacts(first_name, last_name))")
         .eq("ansatt_id", ansattId)
         .in("status", ["vunnet", "avslag", "bortfalt"]);
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !isNaN(ansattId),
+  });
+
+  const { data: vunnetKontakter = [] } = useQuery({
+    queryKey: ["ansatt-vunnet-kontakter", ansattId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("foresporsler_konsulenter")
+        .select("foresporsler(selskap_id, kontakt_id, contacts(first_name, last_name))")
+        .eq("ansatt_id", ansattId)
+        .eq("status", "vunnet");
       if (error) throw error;
       return data as any[];
     },
@@ -237,6 +251,19 @@ const AnsattDetail = () => {
       ? "bg-amber-100 text-amber-700 border-amber-200"
       : "bg-gray-100 text-gray-600 border-gray-200";
 
+  const selskapIdToKontakt: Record<string, string> = {};
+  for (const vk of vunnetKontakter) {
+    const f = vk.foresporsler;
+    if (f?.selskap_id && f?.contacts) {
+      selskapIdToKontakt[f.selskap_id] = `${f.contacts.first_name} ${f.contacts.last_name}`.trim();
+    }
+  }
+
+  const getContactName = (f: any) => {
+    if (!f?.contacts) return null;
+    return `${f.contacts.first_name} ${f.contacts.last_name}`.trim() || null;
+  };
+
   return (
     <div className="max-w-5xl space-y-6">
       <button onClick={() => navigate(-1)} className="inline-flex items-center gap-2 text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">
@@ -345,7 +372,7 @@ const AnsattDetail = () => {
               ) : (
                 <div className="space-y-3">
                   {activeOppdrag.map((o: any) => (
-                    <OppdragRow key={o.id} o={o} isActive />
+                    <OppdragRow key={o.id} o={o} isActive kontaktNavn={selskapIdToKontakt[o.selskap_id]} />
                   ))}
                 </div>
               )}
@@ -356,7 +383,7 @@ const AnsattDetail = () => {
               ) : (
                 <div className="space-y-3">
                   {previousOppdrag.map((o: any) => (
-                    <OppdragRow key={o.id} o={o} isActive={false} />
+                    <OppdragRow key={o.id} o={o} isActive={false} kontaktNavn={selskapIdToKontakt[o.selskap_id]} />
                   ))}
                 </div>
               )}
@@ -368,6 +395,7 @@ const AnsattDetail = () => {
                 <div className="space-y-2">
                   {aktiveProsesser.map((ap: any) => {
                     const f = ap.foresporsler;
+                    const kontaktNavn = getContactName(f);
                     const statusLabel = ap.status === "intervju" ? "Intervju" : "Sendt CV";
                     const statusColor = ap.status === "intervju"
                       ? "bg-amber-100 text-amber-800 border-amber-200"
@@ -379,7 +407,10 @@ const AnsattDetail = () => {
                         className="flex flex-col gap-1 py-2 px-3 rounded-lg bg-background border border-border transition-colors hover:bg-secondary/40"
                       >
                         <div className="flex items-center justify-between">
-                          <p className="text-[0.9375rem] font-medium text-foreground">{f?.selskap_navn || "Ukjent"}</p>
+                          <div>
+                            <p className="text-[0.9375rem] font-medium text-foreground">{f?.selskap_navn || "Ukjent"}</p>
+                            {kontaktNavn && <p className="text-[0.75rem] text-muted-foreground">{kontaktNavn}</p>}
+                          </div>
                           <Badge className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", statusColor)}>
                             {statusLabel}
                           </Badge>
@@ -397,6 +428,7 @@ const AnsattDetail = () => {
                 <div className="space-y-2">
                   {tidligereProsesser.map((ap: any) => {
                     const f = ap.foresporsler;
+                    const kontaktNavn = getContactName(f);
                     const statusLabel = ap.status === "vunnet" ? "Vunnet" : ap.status === "avslag" ? "Avslag" : "Bortfalt";
                     const statusColor = ap.status === "vunnet"
                       ? "bg-emerald-100 text-emerald-800 border-emerald-200"
@@ -410,7 +442,10 @@ const AnsattDetail = () => {
                         className="flex flex-col gap-1 py-2 px-3 rounded-lg bg-background border border-border transition-colors hover:bg-secondary/40"
                       >
                         <div className="flex items-center justify-between">
-                          <p className={cn("text-[0.9375rem] font-medium text-foreground", ap.status === "bortfalt" && "line-through text-muted-foreground")}>{f?.selskap_navn || "Ukjent"}</p>
+                          <div>
+                            <p className={cn("text-[0.9375rem] font-medium text-foreground", ap.status === "bortfalt" && "line-through text-muted-foreground")}>{f?.selskap_navn || "Ukjent"}</p>
+                            {kontaktNavn && <p className={cn("text-[0.75rem] text-muted-foreground", ap.status === "bortfalt" && "line-through")}>{kontaktNavn}</p>}
+                          </div>
                           <Badge className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", statusColor, ap.status === "bortfalt" && "line-through")}>
                             {statusLabel}
                           </Badge>
@@ -620,7 +655,7 @@ function InfoRow({ icon: Icon, label, value }: { icon: any; label: string; value
   );
 }
 
-function OppdragRow({ o, isActive = false }: { o: any; isActive?: boolean }) {
+function OppdragRow({ o, isActive = false, kontaktNavn }: { o: any; isActive?: boolean; kontaktNavn?: string }) {
   const margin = o.utpris ? calcStacqPris({
     utpris: o.utpris,
     til_konsulent: o.til_konsulent,
@@ -645,18 +680,21 @@ function OppdragRow({ o, isActive = false }: { o: any; isActive?: boolean }) {
   return (
     <div className="flex flex-col gap-2 py-2 px-3 rounded-lg bg-background border border-border">
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-        <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-0">
-          <span className="text-[0.9375rem] font-medium text-foreground">{o.kunde || "Ukjent kunde"}</span>
-          {o.start_dato && (
-            <span className="text-[0.8125rem] text-muted-foreground sm:ml-2">
-              {fmt(o.start_dato)} – {fmt(o.slutt_dato)}
-            </span>
-          )}
-          {duration != null && (
-            <span className="text-[0.8125rem] text-muted-foreground sm:ml-2">
-              · {formatMonths(duration)}
-            </span>
-          )}
+        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-0">
+            <span className="text-[0.9375rem] font-medium text-foreground">{o.kunde || "Ukjent kunde"}</span>
+            {o.start_dato && (
+              <span className="text-[0.8125rem] text-muted-foreground sm:ml-2">
+                {fmt(o.start_dato)} – {fmt(o.slutt_dato)}
+              </span>
+            )}
+            {duration != null && (
+              <span className="text-[0.8125rem] text-muted-foreground sm:ml-2">
+                · {formatMonths(duration)}
+              </span>
+            )}
+          </div>
+          {kontaktNavn && <p className="text-[0.75rem] text-muted-foreground">{kontaktNavn}</p>}
         </div>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-[0.8125rem]">
           {o.utpris != null && <span className="text-muted-foreground">Utpris: <span className="font-medium text-foreground">{o.utpris} kr</span></span>}
