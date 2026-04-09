@@ -5,23 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Papa from "papaparse";
 
-const THOMAS_ID = "877c63e8-a70c-4b78-9258-3dc8b1bf3c20";
-const JR_ID = "451cb75f-685d-433d-83f0-bb24941ff2a4";
 const NULL_SF = "000000000000000AAA";
-
-const OWNER_MAP: Record<string, string> = {
-  "0057R00000EMEzwQAH": THOMAS_ID,
-  "0057R00000EMFiQQAX": JR_ID,
-};
 
 function sf(val: string | undefined | null): string | null {
   if (!val || val.trim() === "" || val === NULL_SF) return null;
   return val.trim();
-}
-
-function mapOwner(sfOwnerId: string | null): string {
-  if (!sfOwnerId) return THOMAS_ID;
-  return OWNER_MAP[sfOwnerId] || THOMAS_ID;
 }
 
 function mapStatus(sfType: string | null): string {
@@ -134,8 +122,7 @@ const Import = () => {
           phone: sf(r.Phone),
           website: cleanUrl(r.Website),
           org_number: sf(r.Organization_number__c),
-          owner_id: mapOwner(sf(r.OwnerId)),
-          created_by: mapOwner(sf(r.OwnerId)),
+          sf_owner_id: sf(r.OwnerId),
           created_at: sfDateTime(r.CreatedDate) || "2024-01-01T00:00:00Z",
         }));
 
@@ -160,8 +147,7 @@ const Import = () => {
           title: sf(r.Title),
           linkedin: cleanUrl(r.Linkedin__c),
           notes: sf(r.Description),
-          owner_id: mapOwner(sf(r.OwnerId)),
-          created_by: mapOwner(sf(r.OwnerId)),
+          sf_owner_id: sf(r.OwnerId),
           call_list: r.Ringeliste__c === "1",
           cv_email: r.send_partner_email__c === "1",
         }));
@@ -180,7 +166,7 @@ const Import = () => {
 
       for (const r of taskRows) {
         if (!r.Subject?.trim()) continue;
-        const owner = mapOwner(sf(r.OwnerId));
+        const sfOwnerId = sf(r.OwnerId);
         const createdAt = sfDateTime(r.CreatedDate) || sfDateTime(r.ActivityDate) || "2024-01-01T00:00:00Z";
         const status = (r.Status || "").trim().toLowerCase();
         const isCompleted = status === "completed" || status === "ferdig utført" || r.IsClosed === "1";
@@ -190,17 +176,15 @@ const Import = () => {
           sf_who_id: sf(r.WhoId),
           sf_what_id: sf(r.WhatId),
           sf_account_id: sf(r.AccountId),
+          sf_owner_id: sfOwnerId,
           subject: r.Subject.trim(),
           description: sf(r.Description),
           created_at: createdAt,
-          created_by: owner,
         };
 
         if (isCompleted) {
-          // Completed tasks → activities. Infer type from Subject.
           activityRecordsFromTasks.push({ ...base, type: inferActivityType(base.subject) });
         } else {
-          // Open/Not Started/In Progress/Deferred → oppfølginger (tasks table)
           taskRecords.push({
             ...base,
             title: base.subject,
@@ -208,7 +192,6 @@ const Import = () => {
             priority: (r.Priority || "Normal").toLowerCase() === "high" ? "high" : "medium",
             due_date: sfDate(r.ActivityDate),
             completed_at: null,
-            assigned_to: owner,
           });
         }
       }
@@ -218,17 +201,17 @@ const Import = () => {
       const activityRecordsFromEvents: any[] = [];
       for (const r of eventRows) {
         if (!r.Subject?.trim()) continue;
-        const owner = mapOwner(sf(r.OwnerId));
+        const sfOwnerId = sf(r.OwnerId);
         activityRecordsFromEvents.push({
           sf_activity_id: sf(r.Id),
           sf_who_id: sf(r.WhoId),
           sf_what_id: sf(r.WhatId),
           sf_account_id: sf(r.AccountId),
+          sf_owner_id: sfOwnerId,
           subject: r.Subject.trim(),
           description: sf(r.Description),
           type: "meeting",
           created_at: sfDateTime(r.ActivityDateTime) || sfDateTime(r.ActivityDate) || sfDateTime(r.CreatedDate) || "2024-01-01T00:00:00Z",
-          created_by: owner,
         });
       }
 

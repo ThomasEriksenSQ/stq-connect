@@ -56,6 +56,24 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // --- Owner mapping (Salesforce OwnerId → Supabase user UUID) ---
+    const OWNER_MAP: Record<string, string> = {
+      "0057R00000EMEzwQAH": "877c63e8-a70c-4b78-9258-3dc8b1bf3c20", // Thomas
+      "0057R00000EMFiQQAX": "451cb75f-685d-433d-83f0-bb24941ff2a4", // JR
+    };
+    const DEFAULT_OWNER = "877c63e8-a70c-4b78-9258-3dc8b1bf3c20";
+    const NULL_SF = "000000000000000AAA";
+
+    function sf(val: string | undefined | null): string | null {
+      if (!val || val.trim() === "" || val === NULL_SF) return null;
+      return val.trim();
+    }
+
+    function mapOwner(sfOwnerId: string | null): string {
+      if (!sfOwnerId) return DEFAULT_OWNER;
+      return OWNER_MAP[sfOwnerId] || DEFAULT_OWNER;
+    }
+
     const { type, records } = await req.json();
 
     // --- Helpers ---
@@ -164,8 +182,14 @@ Deno.serve(async (req) => {
     }
 
     if (type === "companies") {
-      const inserted = await batchInsert("companies", records);
-      return new Response(JSON.stringify({ type: "companies", inserted, total: records.length }),
+      // Resolve owner_id and created_by from sf_owner_id
+      const resolved = records.map((r: any) => {
+        const { sf_owner_id, ...rest } = r;
+        const owner = mapOwner(sf(sf_owner_id));
+        return { ...rest, owner_id: rest.owner_id || owner, created_by: rest.created_by || owner };
+      });
+      const inserted = await batchInsert("companies", resolved);
+      return new Response(JSON.stringify({ type: "companies", inserted, total: resolved.length }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -178,9 +202,12 @@ Deno.serve(async (req) => {
       }
 
       const toInsert = records.map((r: any) => {
-        const { sf_account_id, ...rest } = r;
+        const { sf_account_id, sf_owner_id, ...rest } = r;
+        const owner = mapOwner(sf(sf_owner_id));
         return {
           ...rest,
+          owner_id: rest.owner_id || owner,
+          created_by: rest.created_by || owner,
           cv_email: Boolean(rest.cv_email) && hasEmail(rest.email),
           company_id: sf_account_id ? sfAccMap[sf_account_id] || null : null,
         };
@@ -195,9 +222,10 @@ Deno.serve(async (req) => {
       const { companyBySfId, contactBySfId } = await buildLookups();
 
       const toInsert = records.map((r: any) => {
-        const { sf_who_id, sf_what_id, sf_account_id, ...rest } = r;
+        const { sf_who_id, sf_what_id, sf_account_id, sf_owner_id, ...rest } = r;
+        const owner = mapOwner(sf(sf_owner_id));
         const resolved = resolveCompanyAndContact({ sf_who_id, sf_what_id, sf_account_id }, companyBySfId, contactBySfId);
-        return { ...rest, ...resolved };
+        return { ...rest, created_by: rest.created_by || owner, ...resolved };
       });
 
       const inserted = await batchInsert("activities", toInsert);
@@ -209,9 +237,10 @@ Deno.serve(async (req) => {
       const { companyBySfId, contactBySfId } = await buildLookups();
 
       const toInsert = records.map((r: any) => {
-        const { sf_who_id, sf_what_id, sf_account_id, subject, ...rest } = r;
+        const { sf_who_id, sf_what_id, sf_account_id, sf_owner_id, subject, ...rest } = r;
+        const owner = mapOwner(sf(sf_owner_id));
         const resolved = resolveCompanyAndContact({ sf_who_id, sf_what_id, sf_account_id }, companyBySfId, contactBySfId);
-        return { ...rest, ...resolved };
+        return { ...rest, created_by: rest.created_by || owner, assigned_to: rest.assigned_to || owner, ...resolved };
       });
 
       const inserted = await batchInsert("tasks", toInsert);
