@@ -443,10 +443,10 @@ const AnsattDetail = () => {
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className={cn("text-[0.9375rem] font-medium text-foreground", ap.status === "bortfalt" && "line-through text-muted-foreground")}>{f?.selskap_navn || "Ukjent"}</p>
-                            {kontaktNavn && <p className={cn("text-[0.75rem] text-muted-foreground", ap.status === "bortfalt" && "line-through")}>{kontaktNavn}</p>}
+                            <p className={cn("text-[0.9375rem] font-medium text-foreground", ap.status === "bortfalt" && "text-muted-foreground")}>{f?.selskap_navn || "Ukjent"}</p>
+                            {kontaktNavn && <p className="text-[0.75rem] text-muted-foreground">{kontaktNavn}</p>}
                           </div>
-                          <Badge className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", statusColor, ap.status === "bortfalt" && "line-through")}>
+                          <Badge className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", statusColor)}>
                             {statusLabel}
                           </Badge>
                         </div>
