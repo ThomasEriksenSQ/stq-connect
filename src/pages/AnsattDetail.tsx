@@ -699,7 +699,7 @@ function OppdragRow({ o, isActive = false, kontaktNavn }: { o: any; isActive?: b
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-[0.8125rem]">
           {o.utpris != null && <span className="text-muted-foreground">Utpris: <span className="font-medium text-foreground">{o.utpris} kr</span></span>}
           {o.til_konsulent != null && <span className="text-muted-foreground">Til kons: <span className="font-medium text-foreground">{o.til_konsulent_override ?? o.til_konsulent} kr</span></span>}
-          {margin != null && <span className="text-muted-foreground">Margin: <span className="font-medium text-emerald-600">{margin} kr</span></span>}
+          {margin != null && <span className="text-muted-foreground">Margin: <span className="font-medium text-emerald-600">{margin != null && <span className="text-muted-foreground">Margin: <span className="font-medium text-emerald-600">{margin.toFixed(2)} kr</span></span>}</span></span>}
         </div>
         <Badge variant="secondary" className={cn("text-xs self-start sm:self-auto",
           o.status === "Aktiv" ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
