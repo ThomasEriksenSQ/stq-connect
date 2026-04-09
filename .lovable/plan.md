@@ -1,10 +1,31 @@
 
-## Plan: Fjern kompetanse-seksjonen fra "Ny ansatt"-skjemaet
+
+## Plan: Oppdrag i faner (Tabs) i stedet for under hverandre
 
 ### Endring
-I `src/components/AnsattDetailSheet.tsx`, endre betingelsen på linje 500 fra `{!kompetanseStyresAvCv && (` til `{!isCreate && !kompetanseStyresAvCv && (` slik at kompetanse-seksjonen skjules helt ved opprettelse av nye ansatte.
+Refaktorer oppdragsseksjonen i `src/pages/AnsattDetail.tsx` (linje 344–369) til å bruke `Tabs`-komponenten fra `@/components/ui/tabs`.
 
-### Begrunnelse
-Kompetanse legges automatisk til via CV-editoren, så det er unødvendig å vise feltet ved opprettelse.
+### Detaljer
 
-Kun én linje endres i én fil.
+1. **Import**: Legg til `Tabs, TabsList, TabsTrigger, TabsContent` fra `@/components/ui/tabs`.
+
+2. **Erstatt oppdragsseksjonen** (linje 344–369) med:
+   - En `Card` med `Tabs` inni
+   - `TabsList` med to faner: "Aktive oppdrag" og "Tidligere oppdrag"
+   - Tidligere oppdrag-fanen viser antall i parentes
+   - Default-fane: "aktive"
+   - Hver `TabsContent` inneholder listen som i dag
+
+3. **Struktur**:
+```text
+Card
+└── Tabs (defaultValue="aktive")
+    ├── TabsList
+    │   ├── TabsTrigger "Aktive oppdrag (N)"
+    │   └── TabsTrigger "Tidligere oppdrag (N)"
+    ├── TabsContent "aktive" → activeOppdrag liste
+    └── TabsContent "tidligere" → previousOppdrag liste
+```
+
+Kun én fil endres: `src/pages/AnsattDetail.tsx`.
+
