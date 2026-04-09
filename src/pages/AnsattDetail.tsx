@@ -655,7 +655,7 @@ function InfoRow({ icon: Icon, label, value }: { icon: any; label: string; value
   );
 }
 
-function OppdragRow({ o, isActive = false }: { o: any; isActive?: boolean }) {
+function OppdragRow({ o, isActive = false, kontaktNavn }: { o: any; isActive?: boolean; kontaktNavn?: string }) {
   const margin = o.utpris ? calcStacqPris({
     utpris: o.utpris,
     til_konsulent: o.til_konsulent,
