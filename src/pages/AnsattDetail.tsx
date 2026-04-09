@@ -251,6 +251,19 @@ const AnsattDetail = () => {
       ? "bg-amber-100 text-amber-700 border-amber-200"
       : "bg-gray-100 text-gray-600 border-gray-200";
 
+  const selskapIdToKontakt: Record<string, string> = {};
+  for (const vk of vunnetKontakter) {
+    const f = vk.foresporsler;
+    if (f?.selskap_id && f?.contacts) {
+      selskapIdToKontakt[f.selskap_id] = `${f.contacts.first_name} ${f.contacts.last_name}`.trim();
+    }
+  }
+
+  const getContactName = (f: any) => {
+    if (!f?.contacts) return null;
+    return `${f.contacts.first_name} ${f.contacts.last_name}`.trim() || null;
+  };
+
   return (
     <div className="max-w-5xl space-y-6">
       <button onClick={() => navigate(-1)} className="inline-flex items-center gap-2 text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">
