@@ -110,7 +110,7 @@ const AnsattDetail = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("foresporsler_konsulenter")
-        .select("id, status, foresporsler_id, foresporsler(id, selskap_navn, teknologier, referanse)")
+        .select("id, status, foresporsler_id, foresporsler(id, selskap_navn, teknologier, referanse, kontakt_id, contacts(first_name, last_name))")
         .eq("ansatt_id", ansattId)
         .in("status", ["sendt_cv", "intervju"]);
       if (error) throw error;
@@ -124,9 +124,23 @@ const AnsattDetail = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("foresporsler_konsulenter")
-        .select("id, status, foresporsler_id, foresporsler(id, selskap_navn, teknologier, referanse)")
+        .select("id, status, foresporsler_id, foresporsler(id, selskap_navn, teknologier, referanse, kontakt_id, contacts(first_name, last_name))")
         .eq("ansatt_id", ansattId)
         .in("status", ["vunnet", "avslag", "bortfalt"]);
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !isNaN(ansattId),
+  });
+
+  const { data: vunnetKontakter = [] } = useQuery({
+    queryKey: ["ansatt-vunnet-kontakter", ansattId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("foresporsler_konsulenter")
+        .select("foresporsler(selskap_id, kontakt_id, contacts(first_name, last_name))")
+        .eq("ansatt_id", ansattId)
+        .eq("status", "vunnet");
       if (error) throw error;
       return data as any[];
     },
