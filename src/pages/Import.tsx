@@ -166,7 +166,7 @@ const Import = () => {
 
       for (const r of taskRows) {
         if (!r.Subject?.trim()) continue;
-        const owner = mapOwner(sf(r.OwnerId));
+        const sfOwnerId = sf(r.OwnerId);
         const createdAt = sfDateTime(r.CreatedDate) || sfDateTime(r.ActivityDate) || "2024-01-01T00:00:00Z";
         const status = (r.Status || "").trim().toLowerCase();
         const isCompleted = status === "completed" || status === "ferdig utført" || r.IsClosed === "1";
@@ -176,17 +176,15 @@ const Import = () => {
           sf_who_id: sf(r.WhoId),
           sf_what_id: sf(r.WhatId),
           sf_account_id: sf(r.AccountId),
+          sf_owner_id: sfOwnerId,
           subject: r.Subject.trim(),
           description: sf(r.Description),
           created_at: createdAt,
-          created_by: owner,
         };
 
         if (isCompleted) {
-          // Completed tasks → activities. Infer type from Subject.
           activityRecordsFromTasks.push({ ...base, type: inferActivityType(base.subject) });
         } else {
-          // Open/Not Started/In Progress/Deferred → oppfølginger (tasks table)
           taskRecords.push({
             ...base,
             title: base.subject,
@@ -194,7 +192,6 @@ const Import = () => {
             priority: (r.Priority || "Normal").toLowerCase() === "high" ? "high" : "medium",
             due_date: sfDate(r.ActivityDate),
             completed_at: null,
-            assigned_to: owner,
           });
         }
       }
@@ -204,17 +201,17 @@ const Import = () => {
       const activityRecordsFromEvents: any[] = [];
       for (const r of eventRows) {
         if (!r.Subject?.trim()) continue;
-        const owner = mapOwner(sf(r.OwnerId));
+        const sfOwnerId = sf(r.OwnerId);
         activityRecordsFromEvents.push({
           sf_activity_id: sf(r.Id),
           sf_who_id: sf(r.WhoId),
           sf_what_id: sf(r.WhatId),
           sf_account_id: sf(r.AccountId),
+          sf_owner_id: sfOwnerId,
           subject: r.Subject.trim(),
           description: sf(r.Description),
           type: "meeting",
           created_at: sfDateTime(r.ActivityDateTime) || sfDateTime(r.ActivityDate) || sfDateTime(r.CreatedDate) || "2024-01-01T00:00:00Z",
-          created_by: owner,
         });
       }
 
