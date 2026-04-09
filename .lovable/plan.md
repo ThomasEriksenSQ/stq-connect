@@ -1,12 +1,14 @@
 
-## Plan: Avrund margin til 2 desimaler
+
+## Plan: Fjern gjennomstrek fra "Tidligere prosesser"
 
 ### Endring i `src/pages/AnsattDetail.tsx`
 
-**Linje 702**: Endre `{margin}` til `{margin.toFixed(2)}` i margin-visningen:
+Fjern alle `line-through`-betingelser på linje 446, 447 og 449. Bortfalt-rader beholder sin grå farge og badge-stil, men uten gjennomstreking.
 
-```tsx
-{margin != null && <span className="text-muted-foreground">Margin: <span className="font-medium text-emerald-600">{margin.toFixed(2)} kr</span></span>}
-```
+**Linje 446**: Fjern `&& "line-through text-muted-foreground"` — behold kun base-klasser.
 
-Kun én linje endres.
+**Linje 447**: Fjern `&& "line-through"`.
+
+**Linje 449**: Fjern `&& "line-through"` fra Badge.
+
