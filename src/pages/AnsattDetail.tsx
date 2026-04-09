@@ -119,6 +119,20 @@ const AnsattDetail = () => {
     enabled: !isNaN(ansattId),
   });
 
+  const { data: tidligereProsesser = [] } = useQuery({
+    queryKey: ["ansatt-tidligere-prosesser", ansattId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("foresporsler_konsulenter")
+        .select("id, status, foresporsler_id, foresporsler(id, selskap_navn, teknologier, referanse)")
+        .eq("ansatt_id", ansattId)
+        .in("status", ["vunnet", "avslag", "bortfalt"]);
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !isNaN(ansattId),
+  });
+
   const saveNoteMutation = useMutation({
     mutationFn: async (kommentar: string) => {
       const { error } = await supabase
