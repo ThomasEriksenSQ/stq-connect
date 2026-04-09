@@ -335,6 +335,41 @@ const AnsattDetail = () => {
                 </div>
               )}
             </TabsContent>
+            <TabsContent value="prosesser">
+              {aktiveProsesser.length === 0 ? (
+                <p className="text-[0.8125rem] text-muted-foreground">Ingen aktive prosesser</p>
+              ) : (
+                <div className="space-y-2">
+                  {aktiveProsesser.map((ap: any) => {
+                    const f = ap.foresporsler;
+                    const statusLabel = ap.status === "intervju" ? "Intervju" : "Sendt CV";
+                    const statusColor = ap.status === "intervju"
+                      ? "bg-amber-100 text-amber-800 border-amber-200"
+                      : "bg-blue-100 text-blue-800 border-blue-200";
+                    return (
+                      <Link
+                        key={ap.id}
+                        to="/foresporsler"
+                        className="flex items-center justify-between p-3 rounded-lg hover:bg-background/60 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Send className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-[0.9375rem] font-medium text-foreground">{f?.selskap_navn || "Ukjent"}</p>
+                            {f?.referanse && (
+                              <p className="text-[0.75rem] text-muted-foreground">{f.referanse}</p>
+                            )}
+                          </div>
+                        </div>
+                        <Badge className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", statusColor)}>
+                          {statusLabel}
+                        </Badge>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
