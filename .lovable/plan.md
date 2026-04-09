@@ -1,13 +1,14 @@
 
 
-## Plan: Fjern "Cold call" (referanse-tekst) fra prosess-fanene
+## Plan: Betinget fanerekkefølge basert på "Tilgjengelig fra"
 
 ### Endring i `src/pages/AnsattDetail.tsx`
 
-Fjern referanse-linjene fra begge prosess-faner:
+1. **Beregn defaultValue og fanerekkefølge** basert på `ansatt.tilgjengelig_fra`:
+   - Hvis satt: defaultValue = `"prosesser"`, tabs i rekkefølge: Aktive prosesser → Tidligere prosesser → Aktive oppdrag → Tidligere oppdrag
+   - Hvis blank: defaultValue = `"aktive"`, tabs i nåværende rekkefølge: Aktive oppdrag → Tidligere oppdrag → Aktive prosesser → Tidligere prosesser
 
-1. **Linje 376–378**: Fjern `{f?.referanse && (<p>...</p>)}` fra "Aktive prosesser".
-2. **Linje 410–412**: Fjern `{f?.referanse && (<p>...</p>)}` fra "Tidligere prosesser".
+2. **Implementering**: Legg til en variabel `const isAvailable = !!ansatt.tilgjengelig_fra` og bruk den til å betinget rendre TabsTrigger-elementene i riktig rekkefølge, samt sette `defaultValue` på `<Tabs>`.
 
 Kun én fil endres.
 
