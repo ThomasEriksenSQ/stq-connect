@@ -373,9 +373,6 @@ const AnsattDetail = () => {
                             {statusLabel}
                           </Badge>
                         </div>
-                        {f?.referanse && (
-                          <p className="text-[0.75rem] text-muted-foreground">{f.referanse}</p>
-                        )}
                       </Link>
                     );
                   })}
