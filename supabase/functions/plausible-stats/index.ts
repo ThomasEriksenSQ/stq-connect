@@ -22,13 +22,13 @@ function buildQuery(queryType: string, dateRange: string) {
     case "timeseries":
       return { ...base, metrics: ["visitors", "pageviews"], dimensions: ["time:day"] };
     case "top_pages":
-      return { ...base, metrics: ["visitors", "pageviews"], dimensions: ["event:page"], order_by: [["visitors", "desc"]] };
+      return { ...base, metrics: ["visitors", "pageviews"], dimensions: ["event:page"] };
     case "top_sources":
-      return { ...base, metrics: ["visitors"], dimensions: ["visit:source"], order_by: [["visitors", "desc"]] };
+      return { ...base, metrics: ["visitors"], dimensions: ["visit:source"] };
     case "top_countries":
-      return { ...base, metrics: ["visitors"], dimensions: ["visit:country_name"], order_by: [["visitors", "desc"]] };
+      return { ...base, metrics: ["visitors"], dimensions: ["visit:country_name"] };
     case "devices":
-      return { ...base, metrics: ["visitors", "percentage"], dimensions: ["visit:device"] };
+      return { ...base, metrics: ["visitors"], dimensions: ["visit:device"] };
     default:
       return base;
   }
