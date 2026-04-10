@@ -41,6 +41,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import NettsideBesokTab from "@/components/nettside/NettsideBesokTab";
 import {
   Select,
   SelectContent,
@@ -1024,14 +1025,18 @@ const NettsideAI = () => {
         </p>
       </div>
 
-      <Tabs defaultValue="consultants">
+      <Tabs defaultValue="besok">
         <TabsList>
+          <TabsTrigger value="besok">Nettside besøk</TabsTrigger>
           <TabsTrigger value="consultants">Konsulenter</TabsTrigger>
           <TabsTrigger value="soknader">Søknader</TabsTrigger>
           <TabsTrigger value="leads">Tilgjengelighet Leads</TabsTrigger>
           
           <TabsTrigger value="innstillinger">Innstillinger</TabsTrigger>
         </TabsList>
+        <TabsContent value="besok" className="mt-5">
+          <NettsideBesokTab />
+        </TabsContent>
         <TabsContent value="consultants" className="mt-5">
           <ConsultantsTab />
         </TabsContent>
