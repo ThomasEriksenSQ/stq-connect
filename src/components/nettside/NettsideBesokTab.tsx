@@ -25,7 +25,6 @@ function usePlausible(queryType: string, dateRange: DateRange) {
       const { data, error } = await supabase.functions.invoke("plausible-stats", {
         body: { query_type: queryType, date_range: dateRange },
       });
-      console.log(`[plausible] ${queryType}:`, JSON.stringify(data));
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       return data;

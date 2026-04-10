@@ -13,8 +13,47 @@ const SITE_ID = "stacq.no";
 const ALLOWED_QUERY_TYPES = ["aggregate", "timeseries", "top_pages", "top_sources", "top_countries", "devices"];
 const ALLOWED_DATE_RANGES = ["7d", "30d", "6mo", "12mo", "all"];
 
+function formatOsloDate(date: Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Oslo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function resolveDateRange(dateRange: string) {
+  const now = new Date();
+
+  switch (dateRange) {
+    case "7d": {
+      const start = new Date(now);
+      start.setUTCDate(start.getUTCDate() - 6);
+      return [formatOsloDate(start), formatOsloDate(now)];
+    }
+    case "30d": {
+      const start = new Date(now);
+      start.setUTCDate(start.getUTCDate() - 29);
+      return [formatOsloDate(start), formatOsloDate(now)];
+    }
+    case "6mo": {
+      const start = new Date(now);
+      start.setUTCMonth(start.getUTCMonth() - 5, 1);
+      return [formatOsloDate(start), formatOsloDate(now)];
+    }
+    case "12mo": {
+      const start = new Date(now);
+      start.setUTCMonth(start.getUTCMonth() - 11, 1);
+      return [formatOsloDate(start), formatOsloDate(now)];
+    }
+    case "all":
+    default:
+      return "all";
+  }
+}
+
 function buildQuery(queryType: string, dateRange: string) {
-  const base = { site_id: SITE_ID, date_range: dateRange };
+  const base = { site_id: SITE_ID, date_range: resolveDateRange(dateRange) };
 
   switch (queryType) {
     case "aggregate":
@@ -84,7 +123,6 @@ serve(async (req) => {
     });
 
     const responseText = await response.text();
-    console.log(`[plausible] ${query_type} status=${response.status} body=${responseText.substring(0, 500)}`);
 
     let data;
     try {
@@ -102,6 +140,10 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    return new Response(JSON.stringify(data), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
 
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
