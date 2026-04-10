@@ -383,6 +383,14 @@ const Tasks = () => {
                   <Label className="text-label">Beskrivelse</Label>
                   <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="rounded-lg min-h-[60px]" />
                 </div>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <Checkbox
+                    checked={form.email_notify}
+                    onCheckedChange={(v) => setForm({ ...form, email_notify: !!v })}
+                    className="h-4 w-4"
+                  />
+                  <span className="text-[0.8125rem] text-foreground">Epostvarsling ved forfall</span>
+                </label>
                 <Button type="submit" className="w-full h-10 rounded-lg" disabled={createMutation.isPending || !form.title}>
                   {createMutation.isPending ? "Oppretter..." : "Opprett"}
                 </Button>
