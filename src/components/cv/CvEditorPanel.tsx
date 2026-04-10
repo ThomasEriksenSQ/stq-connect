@@ -56,15 +56,25 @@ interface CvEditorPanelProps {
 
 type SaveStatus = "idle" | "saving" | "saved";
 
-function SortableItem({ id, children }: { id: string; children: React.ReactNode }) {
+function SortableItem({
+  id,
+  children,
+  className,
+  handleClassName,
+}: {
+  id: string;
+  children: React.ReactNode;
+  className?: string;
+  handleClassName?: string;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
   const style = { transform: CSS.Transform.toString(transform), transition };
   return (
-    <div ref={setNodeRef} style={style} className="flex items-start gap-1">
+    <div ref={setNodeRef} style={style} className={className ?? "flex items-start gap-1"}>
       <button
         {...attributes}
         {...listeners}
-        className="mt-3 p-1 cursor-grab text-muted-foreground hover:text-foreground shrink-0"
+        className={handleClassName ?? "mt-3 p-1 cursor-grab text-muted-foreground hover:text-foreground shrink-0"}
       >
         <GripVertical className="h-4 w-4" />
       </button>
@@ -364,6 +374,21 @@ export function CvEditorPanel({
     [update],
   );
 
+  const updateSidebarSectionAt = useCallback(
+    (sectionIndex: number, updater: (section: SidebarSection) => SidebarSection) => {
+      update((prev) => {
+        const sidebarSections = [...prev.sidebarSections];
+        const currentSection = sidebarSections[sectionIndex];
+
+        if (!currentSection) return prev;
+
+        sidebarSections[sectionIndex] = updater(currentSection);
+        return { ...prev, sidebarSections };
+      });
+    },
+    [update],
+  );
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -376,6 +401,17 @@ export function CvEditorPanel({
       const oldIndex = prev.projects.findIndex((_, i) => `project-${i}` === active.id);
       const newIndex = prev.projects.findIndex((_, i) => `project-${i}` === over.id);
       return { ...prev, projects: arrayMove(prev.projects, oldIndex, newIndex) };
+    });
+  };
+
+  const handleIntroDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    update((prev) => {
+      const oldIndex = prev.introParagraphs.findIndex((_, i) => `intro-${i}` === active.id);
+      const newIndex = prev.introParagraphs.findIndex((_, i) => `intro-${i}` === over.id);
+      if (oldIndex < 0 || newIndex < 0) return prev;
+      return { ...prev, introParagraphs: arrayMove(prev.introParagraphs, oldIndex, newIndex) };
     });
   };
 
@@ -416,6 +452,29 @@ export function CvEditorPanel({
       const oldIndex = prev.workExperience.findIndex((_, i) => `work-${i}` === active.id);
       const newIndex = prev.workExperience.findIndex((_, i) => `work-${i}` === over.id);
       return { ...prev, workExperience: arrayMove(prev.workExperience, oldIndex, newIndex) };
+    });
+  };
+
+  const handleSidebarItemDragEnd = (sectionIndex: number, event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    update((prev) => {
+      const section = prev.sidebarSections[sectionIndex];
+      if (!section) return prev;
+
+      const oldIndex = section.items.findIndex((_, i) => `sidebar-${sectionIndex}-item-${i}` === active.id);
+      const newIndex = section.items.findIndex((_, i) => `sidebar-${sectionIndex}-item-${i}` === over.id);
+
+      if (oldIndex < 0 || newIndex < 0) return prev;
+
+      const sidebarSections = [...prev.sidebarSections];
+      sidebarSections[sectionIndex] = {
+        ...section,
+        items: arrayMove(section.items, oldIndex, newIndex),
+      };
+
+      return { ...prev, sidebarSections };
     });
   };
 
@@ -583,33 +642,42 @@ export function CvEditorPanel({
                         <Plus className="h-3 w-3" /> Legg til
                       </button>
                     </div>
-                    {doc.introParagraphs.map((para, i) => (
-                      <div key={i} className="flex gap-1 mb-2">
-                        <Textarea
-                          value={para}
-                          rows={3}
-                          onChange={(e) =>
-                            update((p) => {
-                              const arr = [...p.introParagraphs];
-                              arr[i] = e.target.value;
-                              return { ...p, introParagraphs: arr };
-                            })
-                          }
-                          className="text-[0.8125rem]"
-                        />
-                        <button
-                          onClick={() =>
-                            scheduleDelete(`intro-${i}`, "Intro-avsnitt", (p) => ({
-                              ...p,
-                              introParagraphs: p.introParagraphs.filter((_, j) => j !== i),
-                            }))
-                          }
-                          className="text-muted-foreground hover:text-destructive shrink-0 p-1"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleIntroDragEnd}>
+                      <SortableContext
+                        items={doc.introParagraphs.map((_, i) => `intro-${i}`)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        {doc.introParagraphs.map((para, i) => (
+                          <SortableItem key={`intro-${i}`} id={`intro-${i}`} className="flex gap-1 mb-2">
+                            <div className="flex flex-1 min-w-0 items-start gap-1">
+                              <Textarea
+                                value={para}
+                                rows={3}
+                                onChange={(e) =>
+                                  update((p) => {
+                                    const arr = [...p.introParagraphs];
+                                    arr[i] = e.target.value;
+                                    return { ...p, introParagraphs: arr };
+                                  })
+                                }
+                                className="text-[0.8125rem]"
+                              />
+                              <button
+                                onClick={() =>
+                                  scheduleDelete(`intro-${i}`, "Intro-avsnitt", (p) => ({
+                                    ...p,
+                                    introParagraphs: p.introParagraphs.filter((_, j) => j !== i),
+                                  }))
+                                }
+                                className="text-muted-foreground hover:text-destructive shrink-0 p-1"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </SortableItem>
+                        ))}
+                      </SortableContext>
+                    </DndContext>
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -1427,11 +1495,10 @@ export function CvEditorPanel({
                           value={section.heading}
                           placeholder="Overskrift"
                           onChange={(e) =>
-                            update((p) => {
-                              const arr = [...p.sidebarSections];
-                              arr[si] = { ...arr[si], heading: e.target.value };
-                              return { ...p, sidebarSections: arr };
-                            })
+                            updateSidebarSectionAt(si, (currentSection) => ({
+                              ...currentSection,
+                              heading: e.target.value,
+                            }))
                           }
                           className="text-[0.8125rem] font-medium"
                         />
@@ -1448,42 +1515,57 @@ export function CvEditorPanel({
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
-                      {section.items.map((item, ii) => (
-                        <div key={ii} className="flex gap-1">
-                          <Input
-                            value={item}
-                            onChange={(e) =>
-                              update((p) => {
-                                const arr = [...p.sidebarSections];
-                                const items = [...arr[si].items];
-                                items[ii] = e.target.value;
-                                arr[si] = { ...arr[si], items };
-                                return { ...p, sidebarSections: arr };
-                              })
-                            }
-                            className="text-[0.8125rem]"
-                          />
-                          <button
-                            onClick={() =>
-                              scheduleDelete(`sidebar-${si}-item-${ii}`, "Sidebar-punkt", (p) => {
-                                const arr = [...p.sidebarSections];
-                                arr[si] = { ...arr[si], items: arr[si].items.filter((_, j) => j !== ii) };
-                                return { ...p, sidebarSections: arr };
-                              })
-                            }
-                            className="text-muted-foreground hover:text-destructive shrink-0 p-1"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      ))}
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={(event) => handleSidebarItemDragEnd(si, event)}
+                      >
+                        <SortableContext
+                          items={section.items.map((_, ii) => `sidebar-${si}-item-${ii}`)}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          {section.items.map((item, ii) => (
+                            <SortableItem
+                              key={`sidebar-${si}-item-${ii}`}
+                              id={`sidebar-${si}-item-${ii}`}
+                              className="flex gap-1"
+                              handleClassName="mt-2 p-1 cursor-grab text-muted-foreground hover:text-foreground shrink-0"
+                            >
+                              <div className="flex flex-1 min-w-0 items-start gap-1">
+                                <Input
+                                  value={item}
+                                  onChange={(e) =>
+                                    updateSidebarSectionAt(si, (currentSection) => {
+                                      const items = [...currentSection.items];
+                                      items[ii] = e.target.value;
+                                      return { ...currentSection, items };
+                                    })
+                                  }
+                                  className="text-[0.8125rem]"
+                                />
+                                <button
+                                  onClick={() =>
+                                    scheduleDelete(`sidebar-${si}-item-${ii}`, "Sidebar-punkt", (p) => {
+                                      const arr = [...p.sidebarSections];
+                                      arr[si] = { ...arr[si], items: arr[si].items.filter((_, j) => j !== ii) };
+                                      return { ...p, sidebarSections: arr };
+                                    })
+                                  }
+                                  className="text-muted-foreground hover:text-destructive shrink-0 p-1"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </SortableItem>
+                          ))}
+                        </SortableContext>
+                      </DndContext>
                       <button
                         onClick={() =>
-                          update((p) => {
-                            const arr = [...p.sidebarSections];
-                            arr[si] = { ...arr[si], items: [...arr[si].items, ""] };
-                            return { ...p, sidebarSections: arr };
-                          })
+                          updateSidebarSectionAt(si, (currentSection) => ({
+                            ...currentSection,
+                            items: [...currentSection.items, ""],
+                          }))
                         }
                         className="text-primary text-[0.75rem] font-medium hover:underline flex items-center gap-0.5"
                       >
