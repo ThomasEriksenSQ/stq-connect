@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.cv-access]
 verify_jwt = false
+
+[functions.plausible-stats]
+verify_jwt = false
