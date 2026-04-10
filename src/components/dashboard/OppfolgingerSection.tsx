@@ -244,7 +244,7 @@ const OppfolgingerSection = () => {
     queryClient.invalidateQueries({ queryKey: ["oppfolginger-tasks-v1"] });
   };
 
-  const handleModalSubmit = async (data: { title: string; dueDate: Date; owner: string }) => {
+  const handleModalSubmit = async (data: { title: string; dueDate: Date; owner: string; emailNotify: boolean }) => {
     setModalOpen(false);
     if (modalData) {
       await supabase.from("tasks").insert({
@@ -254,6 +254,7 @@ const OppfolgingerSection = () => {
         company_id: modalData.companyId,
         assigned_to: data.owner,
         created_by: user?.id,
+        email_notify: data.emailNotify,
       });
       const firstName = modalData.name.split(" ")[0];
       toast.success(`Oppfølging opprettet for ${firstName}`);

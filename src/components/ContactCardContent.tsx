@@ -289,6 +289,7 @@ export function ContactCardContent({
   const [formCategory, setFormCategory] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formDate, setFormDate] = useState("");
+  const [formEmailNotify, setFormEmailNotify] = useState(false);
   const [selectedChipIdx, setSelectedChipIdx] = useState<number | null>(null);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
@@ -441,6 +442,7 @@ export function ContactCardContent({
         company_id: contact?.company_id || null,
         assigned_to: user?.id,
         created_by: user?.id,
+        email_notify: formEmailNotify,
       });
       if (error) throw error;
     },
@@ -576,6 +578,7 @@ export function ContactCardContent({
     setFormCategory("");
     setFormDescription("");
     setFormDate("");
+    setFormEmailNotify(false);
     setSelectedChipIdx(null);
   };
 
@@ -585,6 +588,7 @@ export function ContactCardContent({
     setFormCategory("");
     setFormDescription("");
     setFormDate("");
+    setFormEmailNotify(false);
     setSelectedChipIdx(null);
   };
 
@@ -1287,6 +1291,17 @@ export function ContactCardContent({
                       Dato: I dag, {format(new Date(), "d. MMMM", { locale: nb })}
                     </span>
                   </div>
+                )}
+
+                {activeForm === "task" && (
+                  <label className="flex items-center gap-2 cursor-pointer select-none mt-2">
+                    <Checkbox
+                      checked={formEmailNotify}
+                      onCheckedChange={(v) => setFormEmailNotify(!!v)}
+                      className="h-4 w-4"
+                    />
+                    <span className="text-[0.8125rem] text-foreground">Epostvarsling ved forfall</span>
+                  </label>
                 )}
 
                 <div className="flex items-center gap-2 mt-3">
