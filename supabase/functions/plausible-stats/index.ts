@@ -1,15 +1,19 @@
-import { corsHeaders } from "@supabase/supabase-js/cors";
-import { createClient } from "@supabase/supabase-js";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
 
 const PLAUSIBLE_API = "https://plausible.io/api/v2/query";
 const SITE_ID = "stacq.no";
 
-const ALLOWED_QUERY_TYPES = ["aggregate", "timeseries", "top_pages", "top_sources", "top_countries", "devices"] as const;
-type QueryType = (typeof ALLOWED_QUERY_TYPES)[number];
+const ALLOWED_QUERY_TYPES = ["aggregate", "timeseries", "top_pages", "top_sources", "top_countries", "devices"];
+const ALLOWED_DATE_RANGES = ["7d", "30d", "6mo", "12mo", "all"];
 
-const ALLOWED_DATE_RANGES = ["7d", "30d", "6mo", "12mo", "all"] as const;
-
-function buildQuery(queryType: QueryType, dateRange: string) {
+function buildQuery(queryType: string, dateRange: string) {
   const base = { site_id: SITE_ID, date_range: dateRange };
 
   switch (queryType) {
@@ -25,15 +29,16 @@ function buildQuery(queryType: QueryType, dateRange: string) {
       return { ...base, metrics: ["visitors"], dimensions: ["visit:country_name"], order_by: [["visitors", "desc"]], limit: 15 };
     case "devices":
       return { ...base, metrics: ["visitors", "percentage"], dimensions: ["visit:device"] };
+    default:
+      return base;
   }
 }
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  // Auth check
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -45,9 +50,8 @@ Deno.serve(async (req) => {
     { global: { headers: { Authorization: authHeader } } }
   );
 
-  const token = authHeader.replace("Bearer ", "");
-  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-  if (claimsError || !claimsData?.claims) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
