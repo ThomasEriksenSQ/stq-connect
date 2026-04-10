@@ -83,7 +83,18 @@ serve(async (req) => {
       body: JSON.stringify(query),
     });
 
-    const data = await response.json();
+    const responseText = await response.text();
+    console.log(`[plausible] ${query_type} status=${response.status} body=${responseText.substring(0, 500)}`);
+
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON from Plausible" }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!response.ok) {
       return new Response(JSON.stringify({ error: data.error || "Plausible API error", status: response.status }), {
