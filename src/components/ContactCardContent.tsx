@@ -1508,6 +1508,7 @@ function TaskRow({
   const [editDesc, setEditDesc] = useState("");
   const [editDate, setEditDate] = useState(task.due_date || "");
   const [editChipIdx, setEditChipIdx] = useState<number | null>(null);
+  const [editEmailNotify, setEditEmailNotify] = useState(task.email_notify ?? false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const {
@@ -1544,6 +1545,7 @@ function TaskRow({
     } else {
       setEditChipIdx(null);
     }
+    setEditEmailNotify(task.email_notify ?? false);
     setEditing(true);
   };
 
@@ -1554,6 +1556,7 @@ function TaskRow({
       title: editTitle.trim(),
       description: descWithCat || null,
       due_date: editDate === "someday" ? null : editDate || null,
+      email_notify: editEmailNotify,
     });
     setEditing(false);
   };
@@ -1633,6 +1636,14 @@ function TaskRow({
             )}
           </div>
         </div>
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <Checkbox
+            checked={editEmailNotify}
+            onCheckedChange={(v) => setEditEmailNotify(!!v)}
+            className="h-4 w-4"
+          />
+          <span className="text-[0.8125rem] text-foreground">Epostvarsling ved forfall</span>
+        </label>
         <div className="flex items-center gap-2">
           <Button
             size="sm"
