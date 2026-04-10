@@ -28,7 +28,7 @@ function buildQuery(queryType: string, dateRange: string) {
     case "top_countries":
       return { ...base, metrics: ["visitors"], dimensions: ["visit:country_name"], order_by: [["visitors", "desc"]] };
     case "devices":
-      return { ...base, metrics: ["visitors", "percentage"], dimensions: ["visit:device"] };
+      return { ...base, metrics: ["visitors"], dimensions: ["visit:device"], order_by: [["visitors", "desc"]] };
     default:
       return base;
   }
