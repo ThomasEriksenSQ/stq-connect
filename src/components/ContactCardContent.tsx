@@ -1293,6 +1293,17 @@ export function ContactCardContent({
                   </div>
                 )}
 
+                {activeForm === "task" && (
+                  <label className="flex items-center gap-2 cursor-pointer select-none mt-2">
+                    <Checkbox
+                      checked={formEmailNotify}
+                      onCheckedChange={(v) => setFormEmailNotify(!!v)}
+                      className="h-4 w-4"
+                    />
+                    <span className="text-[0.8125rem] text-foreground">Epostvarsling ved forfall</span>
+                  </label>
+                )}
+
                 <div className="flex items-center gap-2 mt-3">
                   <Button
                     size="sm"

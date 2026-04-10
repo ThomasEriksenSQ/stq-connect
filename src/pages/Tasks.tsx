@@ -33,7 +33,7 @@ const Tasks = () => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("all");
-  const [form, setForm] = useState({ title: "", description: "", priority: "medium", due_date: "", contact_id: "", company_id: "" });
+  const [form, setForm] = useState({ title: "", description: "", priority: "medium", due_date: "", contact_id: "", company_id: "", email_notify: false });
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [pendingComplete, setPendingComplete] = useState<Set<string>>(new Set());
   const [showLater, setShowLater] = useState(false);
@@ -111,13 +111,14 @@ const Tasks = () => {
         title: form.title, description: form.description || null, priority: form.priority,
         due_date: form.due_date || null, contact_id: form.contact_id || null,
         company_id: companyId, assigned_to: user?.id, created_by: user?.id,
+        email_notify: form.email_notify,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       setOpen(false);
-      setForm({ title: "", description: "", priority: "medium", due_date: "", contact_id: "", company_id: "" });
+      setForm({ title: "", description: "", priority: "medium", due_date: "", contact_id: "", company_id: "", email_notify: false });
       setContactSearch("");
       toast.success("Oppfølging opprettet");
     },
