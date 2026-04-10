@@ -1,21 +1,41 @@
 
 
-## Plan: Fjern AI-kunnskap-fanen og fiks build-feil
+## Plan: Erstatt "Hot list"-knappen med "Alle" og fjern den gamle "Alle"-chippen
 
-### 1. Fjern KnowledgeTab fra `src/pages/NettsideAI.tsx`
+### Hva endres
 
-- **Fjern `KnowledgeTab`-funksjonen** (linje 858–1247) — hele komponenten.
-- **Fjern TabsTrigger** for "AI-kunnskap" (linje 1446).
-- **Fjern TabsContent** for "knowledge" (linje 1458–1460).
-- **Fjern ubrukte konstantene** øverst: `CHIP_BASE`, `CHIP_OFF`, `CHIP_ON`, `VisFilter`, `CatFilter`, `VIS_CHIPS`, `CAT_CHIPS`, `CATEGORIES_LIST` (linje 54–79) — dersom ingen andre komponenter bruker dem.
-- **Fjern ubrukte imports** som kun ble brukt av KnowledgeTab (f.eks. `pdfjs-dist`, `mammoth`, `FileText`, `Upload` etc.) — ryddes etter fjerning.
-- **Oppdater beskrivelsen** på linje 1437 fra "Administrer konsulentprofiler og AI-kunnskapsbase for stacq.no." til "Administrer konsulentprofiler for stacq.no."
-
-### 2. Fiks build-feil i `supabase/functions/salgsagent-paaminning/index.ts`
-
-Endre import fra `npm:resend@4.1.2` til `npm:resend@^4.0.0` (eller tilsvarende kompatibel versjon som finnes i cache).
+I Signal-filterraden på kontaktlisten:
+- **Fjern** den separate "Alle"-chippen (linje 1322)
+- **Fjern** den vertikale skillelinjen (linje 1326)
+- **Flytt** Hot list-knappen til plassen der "Alle" var — som første element i raden
+- **Endre utseende**: Knappen skal se ut som den nåværende "Alle"-chippen (samme stil som andre chips når aktiv/inaktiv), med label "Alle"
+- **Behold all logikk**: Toggle-funksjonaliteten for `hotListActive` beholdes, men knappen fungerer nå som "Alle"-filteret og aktiverer/deaktiverer prioriteringssortering som før
 
 ### Teknisk detalj
 
-Totalt fjernes ca. 400+ linjer kode. Kun én side-fil og én edge function berøres.
+**Fil**: `src/pages/Contacts.tsx`
+
+Erstatt linje 1322–1341 med én enkelt knapp:
+```tsx
+<button
+  onClick={() => {
+    setSignalFilter("all");
+    const next = !hotListActive;
+    setHotListActive(next);
+    setSort(next ? { field: "priority", dir: "desc" } : { field: "signal", dir: "asc" });
+  }}
+  className={cn(
+    "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
+    signalFilter === "all"
+      ? "bg-foreground text-background border-foreground font-medium"
+      : "border-border text-muted-foreground hover:bg-secondary",
+  )}
+>
+  Alle
+</button>
+```
+
+Når bruker klikker et signal-filter (f.eks. "Behov nå"), forblir `hotListActive` uendret. Når bruker klikker "Alle", settes `signalFilter` til "all" og prioriteringssortering aktiveres.
+
+`hotListActive` forblir `true` som default, slik at temperatur-indikatorer og ⚠-ikoner vises som normalt.
 
