@@ -51,32 +51,6 @@ import {
 
 const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1 block";
 
-/* ─── Knowledge base constants ─── */
-
-const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer select-none";
-const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
-const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground font-medium`;
-
-type VisFilter = "alle" | "public" | "ai_only";
-type CatFilter = "alle" | "skills" | "domain" | "services" | "availability" | "education" | "languages";
-
-const VIS_CHIPS: { value: VisFilter; label: string }[] = [
-  { value: "alle", label: "Alle" },
-  { value: "public", label: "Public" },
-  { value: "ai_only", label: "AI-only" },
-];
-
-const CAT_CHIPS: { value: CatFilter; label: string }[] = [
-  { value: "alle", label: "Alle" },
-  { value: "skills", label: "skills" },
-  { value: "domain", label: "domain" },
-  { value: "services", label: "services" },
-  { value: "availability", label: "availability" },
-  { value: "education", label: "education" },
-  { value: "languages", label: "languages" },
-];
-
-const CATEGORIES_LIST = ["skills", "domain", "services", "availability", "education", "languages"];
 
 /* ─── Shared components ─── */
 
@@ -855,7 +829,7 @@ function SoknaderTab() {
   );
 }
 
-function KnowledgeTab() {
+/* KnowledgeTab removed */
   const queryClient = useQueryClient();
   const [visFilter, setVisFilter] = useState<VisFilter>("alle");
   const [catFilter, setCatFilter] = useState<CatFilter>("alle");
@@ -1434,7 +1408,7 @@ const NettsideAI = () => {
       <div>
         <h1 className="text-[1.375rem] font-bold text-foreground">Nettside</h1>
         <p className="text-[0.8125rem] text-muted-foreground mt-1">
-          Administrer konsulentprofiler og AI-kunnskapsbase for stacq.no.
+          Administrer konsulentprofiler for stacq.no.
         </p>
       </div>
 
@@ -1443,7 +1417,7 @@ const NettsideAI = () => {
           <TabsTrigger value="consultants">Konsulenter</TabsTrigger>
           <TabsTrigger value="soknader">Søknader</TabsTrigger>
           <TabsTrigger value="leads">Tilgjengelighet Leads</TabsTrigger>
-          <TabsTrigger value="knowledge">AI-kunnskap</TabsTrigger>
+          
           <TabsTrigger value="innstillinger">Innstillinger</TabsTrigger>
         </TabsList>
         <TabsContent value="consultants" className="mt-5">
@@ -1454,9 +1428,6 @@ const NettsideAI = () => {
         </TabsContent>
         <TabsContent value="leads" className="mt-5">
           <TilgjengelighetLeadsTab />
-        </TabsContent>
-        <TabsContent value="knowledge" className="mt-5">
-          <KnowledgeTab />
         </TabsContent>
         <TabsContent value="innstillinger" className="mt-5">
           <InnstillingerTab />
