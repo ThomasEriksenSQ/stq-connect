@@ -552,7 +552,7 @@ export default function CvAdmin() {
                         onClick={() => cvUploadRef.current?.click()}
                       >
                         <Sparkles className="h-3.5 w-3.5 mr-1" />
-                        AI-analyse av original CV
+                        Importer CV
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Last opp eksisterende CV — teksten importeres inn i editoren</TooltipContent>
