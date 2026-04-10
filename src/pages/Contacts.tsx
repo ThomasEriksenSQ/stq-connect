@@ -1319,26 +1319,25 @@ const Contacts = () => {
                 <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
                   Signal
                 </span>
-                <Chip label="Alle" value="all" current={signalFilter} onSelect={setSignalFilter} />
-                {SIGNAL_OPTIONS.map((s) => (
-                  <Chip key={s.label} label={s.label} value={s.label} current={signalFilter} onSelect={setSignalFilter} />
-                ))}
-                <div className="w-px h-5 bg-border mx-1" />
                 <button
                   onClick={() => {
+                    setSignalFilter("all");
                     const next = !hotListActive;
                     setHotListActive(next);
                     setSort(next ? { field: "priority", dir: "desc" } : { field: "signal", dir: "asc" });
                   }}
                   className={cn(
-                    "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors inline-flex items-center gap-1.5 cursor-pointer",
-                    hotListActive
-                      ? "bg-red-500 text-white border-red-500 font-medium"
+                    "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
+                    signalFilter === "all"
+                      ? "bg-foreground text-background border-foreground font-medium"
                       : "border-border text-muted-foreground hover:bg-secondary",
                   )}
                 >
-                  🔥 Hot list
+                  Alle
                 </button>
+                {SIGNAL_OPTIONS.map((s) => (
+                  <Chip key={s.label} label={s.label} value={s.label} current={signalFilter} onSelect={setSignalFilter} />
+                ))}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
