@@ -1167,6 +1167,7 @@ export type Database = {
           created_by: string | null
           description: string | null
           due_date: string | null
+          email_notify: boolean | null
           id: string
           priority: string
           sf_activity_id: string | null
@@ -1183,6 +1184,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           due_date?: string | null
+          email_notify?: boolean | null
           id?: string
           priority?: string
           sf_activity_id?: string | null
@@ -1199,6 +1201,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           due_date?: string | null
+          email_notify?: boolean | null
           id?: string
           priority?: string
           sf_activity_id?: string | null
