@@ -46,7 +46,7 @@ export function EmailPulsBanner({
 
   // Reuse cached outlook emails query
   const { data: outlookEmails = [] } = useQuery({
-    queryKey: ["outlook-emails", contactEmail],
+    queryKey: ["email-puls-emails", contactEmail],
     queryFn: async () => {
       if (!contactEmail) return [];
       const { data, error } = await supabase.functions.invoke("outlook-mail", {
