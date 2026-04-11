@@ -1,17 +1,12 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState } from "react";
 import { cn, formatNOK, getInitials } from "@/lib/utils";
 import { format, differenceInDays, startOfDay } from "date-fns";
-import { Briefcase, CalendarCheck, BarChart2, Loader2, Plus } from "lucide-react";
+import { Briefcase, CalendarCheck, BarChart2, Plus } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { OppdragEditSheet } from "@/components/OppdragEditSheet";
 import { FornyelsesTimeline } from "@/components/FornyelsesTimeline";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
 
 type Filter = "Alle" | "Aktiv" | "Oppstart" | "Inaktiv";
 const TIMER_PER_DAG = 7.5;
