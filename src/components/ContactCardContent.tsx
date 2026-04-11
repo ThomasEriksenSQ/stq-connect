@@ -1473,6 +1473,7 @@ export function ContactCardContent({
             editable={editable}
             onDelete={(id) => deleteActivityMutation.mutate(id)}
             onUpdateActivity={(id, updates) => updateActivityMutation.mutate({ id, updates })}
+            contactEmail={contact.email || undefined}
           />
         </div>
       </div>
