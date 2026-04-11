@@ -42,7 +42,7 @@ export default function KonsulenterOppdrag() {
   const [filter, setFilter] = useState<Filter>("Aktiv");
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"oppdrag" | "innstillinger">("oppdrag");
+  
   const today = new Date();
 
   const { data: oppdrag = [], isLoading } = useQuery({
@@ -205,15 +205,13 @@ export default function KonsulenterOppdrag() {
             {stats.aktive + stats.oppstart}
           </span>
         </div>
-        {activeTab === "oppdrag" && (
-          <button
-            onClick={() => setCreateOpen(true)}
-            className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity shrink-0"
-          >
-            <Plus className="h-4 w-4" />
-            Nytt oppdrag
-          </button>
-        )}
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity shrink-0"
+        >
+          <Plus className="h-4 w-4" />
+          Nytt oppdrag
+        </button>
       </div>
 
       {/* Tab switcher */}
@@ -239,7 +237,7 @@ export default function KonsulenterOppdrag() {
         ))}
       </div>
 
-      {activeTab === "oppdrag" && (
+      {/* Stat cards */}
         <>
           {/* Stat cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
