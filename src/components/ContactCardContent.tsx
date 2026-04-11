@@ -1947,10 +1947,37 @@ function ActivityTimeline({
   );
 }
 
+/* ── Split email thread into latest message + rest ── */
+function splitEmailThread(bodyText: string): { latest: string; rest: string | null } {
+  // Look for common thread separator patterns
+  const threadPatterns = [
+    /\n\s*(?:From|Fra)\s*:/i,
+    /\n\s*_{5,}/,
+    /\n\s*-{5,}/,
+    /\n\s*On .+ wrote:/i,
+    /\n\s*Den .+ skrev:/i,
+  ];
+  let splitIndex = -1;
+  for (const pattern of threadPatterns) {
+    const match = bodyText.match(pattern);
+    if (match && match.index !== undefined && match.index > 20) {
+      if (splitIndex === -1 || match.index < splitIndex) {
+        splitIndex = match.index;
+      }
+    }
+  }
+  if (splitIndex > 0) {
+    return { latest: bodyText.slice(0, splitIndex).trim(), rest: bodyText.slice(splitIndex).trim() };
+  }
+  return { latest: bodyText, rest: null };
+}
+
 /* ── Email Row (read-only, collapsible) ── */
 function EmailRow({ email }: { email: any }) {
   const [expanded, setExpanded] = useState(false);
+  const [showThread, setShowThread] = useState(false);
   const d = new Date(email.created_at);
+  const { latest, rest } = useMemo(() => splitEmailThread(email.body_text || ""), [email.body_text]);
 
   return (
     <div className="relative group">
@@ -1981,8 +2008,25 @@ function EmailRow({ email }: { email: any }) {
             {expanded ? (
               <div className="mt-2 border-t border-border pt-2">
                 <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70">
-                  {email.body_text}
+                  {latest}
                 </p>
+                {rest && (
+                  <>
+                    <button
+                      className="mt-2 text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={(e) => { e.stopPropagation(); setShowThread(!showThread); }}
+                    >
+                      {showThread ? "Skjul tråd ▴" : "Vis hele tråden ▾"}
+                    </button>
+                    {showThread && (
+                      <div className="mt-2 bg-muted/30 rounded-lg p-3">
+                        <p className="text-[0.8125rem] leading-relaxed whitespace-pre-wrap text-muted-foreground">
+                          {rest}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             ) : email.preview ? (
               <p className="text-[0.9375rem] text-foreground/70 line-clamp-2 mt-0.5">{email.preview}</p>
