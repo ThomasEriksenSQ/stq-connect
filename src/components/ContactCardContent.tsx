@@ -1878,7 +1878,7 @@ function ActivityTimeline({
           {hasEmails && (
             <button
               onClick={() => setShowEmails((v) => !v)}
-              className="inline-flex items-center gap-1 text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors"
+              className={`inline-flex items-center gap-1.5 h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors ${showEmails ? "bg-primary/10 border-primary/30 text-primary font-medium" : "bg-background border-border text-muted-foreground hover:bg-secondary"}`}
             >
               <Mail className="w-3.5 h-3.5" />
               {showEmails ? "Skjul e-post" : "Vis e-post"}
@@ -1899,7 +1899,7 @@ function ActivityTimeline({
         {hasEmails && (
           <button
             onClick={() => setShowEmails((v) => !v)}
-            className="inline-flex items-center gap-1 text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors"
+            className={`inline-flex items-center gap-1.5 h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors ${showEmails ? "bg-primary/10 border-primary/30 text-primary font-medium" : "bg-background border-border text-muted-foreground hover:bg-secondary"}`}
           >
             <Mail className="w-3.5 h-3.5" />
             {showEmails ? "Skjul e-post" : "Vis e-post"}
