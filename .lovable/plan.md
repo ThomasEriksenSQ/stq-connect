@@ -1,97 +1,21 @@
 
 
-## Plan: E-post-puls — AI-analyse av e-poster for salgssignaler
+## Plan: Fiks to problemer med E-post-puls
 
-### Konsept
-Når kontaktsiden lastes og det finnes Outlook-e-poster, sendes de nyeste e-postene til AI som analyserer innholdet og returnerer:
-- Anbefalt salgssignal med begrunnelse
-- Teknologier nevnt i e-postene (auto-tagges)
-- Eventuell tidsramme nevnt ("Q3", "etter sommeren")
+### Problem 1: "rådgiver" i stedet for "konsulent"
+AI-en bruker ordet "rådgiver" i begrunnelsen fordi prompten ikke spesifiserer terminologi. Løsning: legg til instruksjon i system-prompten i både `aiEmailPuls.ts` og `aiSignal.ts`.
 
-Resultatet vises i et banner likt det eksisterende `AiSignalBanner`, men med e-post-ikon og ekstra info om identifiserte teknologier.
+### Problem 2: E-poster forsvinner fra tidslinjen
+`EmailPulsBanner` har sin egen `useQuery` med samme cache-key (`["outlook-emails", contactEmail]`) men returnerer rådata i et annet format enn `ContactCardContent`. Når begge bruker samme key, overskriver den ene den andres data — tidslinjen får feil format og viser ingenting.
 
-### Arkitektur
-
-```text
-ContactCardContent.tsx
-  └─ useQuery("outlook-emails")     ← allerede finnes
-  └─ <EmailPulsBanner>              ← NY komponent
-       └─ analyzeEmailSignal()      ← NY lib-funksjon
-            └─ POST /functions/v1/chat  ← gjenbruk eksisterende edge function
-```
-
-Ingen ny edge-funksjon trengs. Vi gjenbruker `chat`-funksjonen med en spesialisert system-prompt, akkurat som `analyzeSignal` gjør i dag.
+**Løsning:** Endre `EmailPulsBanner` til å bruke en annen query-key (f.eks. `["email-puls-emails", contactEmail]`) slik at den ikke kolliderer med timeline-cachen.
 
 ### Endringer
 
-**1. Ny fil: `src/lib/aiEmailPuls.ts`**
-- Eksporterer `analyzeEmailPuls()`-funksjonen
-- Tar inn: kontaktnavn, nåværende signal, teknologier, og de 5 nyeste e-postene (subject + body_text, maks 500 tegn per e-post)
-- System-prompt instruerer AI til å returnere JSON med tool calling:
-  - `anbefalt_signal` — et av de 5 standardsignalene
-  - `begrunnelse` — maks 20 ord, norsk, refererer til spesifikt e-postinnhold
-  - `konfidens` — høy/middels/lav
-  - `teknologier_funnet` — array med teknologier/rammeverk nevnt i e-postene
-  - `tidsramme` — valgfri streng ("Q3 2026", "etter sommeren" etc.)
-- Kaller `/functions/v1/chat` med `system` og `messages`, identisk mønster som `analyzeSignal`
-- Trunkerer e-postinnhold for å holde token-bruk lav
+**1. `src/lib/aiEmailPuls.ts`** — Legg til i system-prompt:
+`Bruk alltid "konsulent" — aldri "rådgiver", "ekspert" eller "spesialist".`
 
-**2. Ny fil: `src/components/EmailPulsBanner.tsx`**
-- Props: `contactId`, `contactName`, `currentSignal`, `currentTechnologies`, `emails`, `onUpdateSignal`, `onAddTechnologies`
-- Kaller `analyzeEmailPuls` i `useEffect` ved mount (med dismiss-sjekk via localStorage)
-- Viser resultat som banner med:
-  - Mail-ikon (ikke Sparkles) + "E-post-puls" label
-  - Anbefalt signal med badge (gjenbruk `getBadgeColor`)
-  - Begrunnelse med sitat fra e-post
-  - Teknologier funnet som klikkbare chips
-  - Tidsramme om identifisert
-  - "Oppdater signal"-knapp (oppdaterer kategori + logger aktivitet)
-  - "Legg til teknologier"-knapp (kun hvis nye teknologier funnet som ikke allerede er på kontakten)
-  - "Ignorer"-knapp (lagrer i localStorage med key `dismissed_email_puls_${contactId}`)
-- Vises IKKE hvis:
-  - Ingen e-poster
-  - Allerede dismissed
-  - Anbefalt signal === nåværende signal OG ingen nye teknologier
+**2. `src/lib/aiSignal.ts`** — Samme tillegg i system-prompt.
 
-**3. Oppdater `src/components/ContactCardContent.tsx`**
-- Importer `EmailPulsBanner`
-- Plasser rett under eksisterende `AiSignalBanner` (linje ~1133)
-- Send inn `outlookEmails` fra `ActivityTimeline` oppover (eller flytt e-post-fetching opp til `ContactCard`-nivå slik at begge har tilgang)
-- Alternativt: la `EmailPulsBanner` selv hente e-poster via `useQuery` med samme cache-key (`["outlook-emails", contactEmail]`), som allerede er cachet av `ActivityTimeline`
-
-**Valgt tilnærming for datadeling:** `EmailPulsBanner` bruker sin egen `useQuery` med samme cache-key. React Query returnerer cachet data uten nytt nettverkskall. Dette unngår refaktorering av prop-drilling.
-
-### System-prompt for e-post-puls
-
-```text
-Du er CRM-assistent for STACQ, et norsk IT-konsulentbyrå som leverer embedded/firmware/C/C++-konsulenter.
-Analyser e-postene mellom STACQ og kontakten. Identifiser:
-1. Salgssignal: Er det tegn til behov for konsulenter?
-2. Teknologier: Hvilke teknologier/rammeverk nevnes?
-3. Tidsramme: Nevnes det når et eventuelt behov oppstår?
-
-Svar KUN med JSON:
-{
-  "anbefalt_signal": "Behov nå" | "Får fremtidig behov" | "Får kanskje behov" | "Ukjent om behov" | "Ikke aktuelt",
-  "begrunnelse": "maks 20 ord, norsk, referer til konkret e-postinnhold",
-  "konfidens": "høy" | "middels" | "lav",
-  "teknologier_funnet": ["C++", "RTOS", ...],
-  "tidsramme": "Q3 2026" | null
-}
-```
-
-### Kostnad og ytelse
-- Gjenbruker cachet e-poster (ingen ekstra API-kall til Outlook)
-- Sender maks 5 e-poster × 500 tegn = ~2500 tegn til AI — svært lavt token-bruk
-- Dismiss-mekanisme i localStorage forhindrer gjentatte AI-kall for samme kontakt
-- Ny analyse trigges kun når `contactId` eller antall e-poster endres
-
-### Filer som endres/opprettes
-| Fil | Type |
-|-----|------|
-| `src/lib/aiEmailPuls.ts` | Ny |
-| `src/components/EmailPulsBanner.tsx` | Ny |
-| `src/components/ContactCardContent.tsx` | Oppdatert — legg til banner |
-
-Ingen database-endringer. Ingen nye edge-funksjoner. Ingen nye hemmeligheter.
+**3. `src/components/EmailPulsBanner.tsx`** — Endre queryKey fra `["outlook-emails", contactEmail]` til `["email-puls-emails", contactEmail]` for å unngå cache-konflikt med tidslinjen.
 
