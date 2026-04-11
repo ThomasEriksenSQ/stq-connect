@@ -50,7 +50,7 @@ export function EmailPulsBanner({
     queryFn: async () => {
       if (!contactEmail) return [];
       const { data, error } = await supabase.functions.invoke("outlook-mail", {
-        body: { contactEmail },
+        body: { email: contactEmail },
       });
       if (error) return [];
       return (data?.emails || []) as Array<{ subject: string; body_text: string; received_at: string }>;
