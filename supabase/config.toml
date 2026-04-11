@@ -59,3 +59,9 @@ verify_jwt = false
 
 [functions.plausible-stats]
 verify_jwt = false
+
+[functions.outlook-auth]
+verify_jwt = false
+
+[functions.outlook-mail]
+verify_jwt = false
