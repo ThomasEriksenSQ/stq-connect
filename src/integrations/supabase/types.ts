@@ -1190,6 +1190,7 @@ export type Database = {
       tasks: {
         Row: {
           assigned_to: string | null
+          calendar_synced: boolean | null
           company_id: string | null
           completed_at: string | null
           contact_id: string | null
@@ -1207,6 +1208,7 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          calendar_synced?: boolean | null
           company_id?: string | null
           completed_at?: string | null
           contact_id?: string | null
@@ -1224,6 +1226,7 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          calendar_synced?: boolean | null
           company_id?: string | null
           completed_at?: string | null
           contact_id?: string | null

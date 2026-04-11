@@ -477,6 +477,7 @@ export function ContactCardContent({
         assigned_to: user?.id,
         created_by: user?.id,
         email_notify: formEmailNotify,
+        calendar_synced: formCalendarSync && formDate && formDate !== "someday",
       });
       if (error) throw error;
     },
@@ -1727,18 +1728,15 @@ function TaskRow({
           />
           <span className="text-[0.8125rem] text-foreground">Epostvarsling ved forfall</span>
         </label>
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-          <Checkbox
-            checked={false}
-            onCheckedChange={() => {
-              // Calendar sync is one-time action — not stored, so always unchecked
-              // When checked and saved, will trigger calendar creation
-            }}
-            className="h-4 w-4"
-            disabled
-          />
-          <span className="text-[0.8125rem] text-muted-foreground">Outlook-kalender (kun ved opprettelse)</span>
-        </label>
+        {task.calendar_synced ? (
+          <div className="flex items-center gap-2">
+            <span className="text-[0.8125rem] text-muted-foreground">✓ Lagt til i Outlook-kalender</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="text-[0.8125rem] text-muted-foreground">Outlook-kalender ikke lagt til</span>
+          </div>
+        )}
         <div className="flex items-center gap-2">
           <Button
             size="sm"

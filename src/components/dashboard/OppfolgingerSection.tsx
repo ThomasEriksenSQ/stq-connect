@@ -256,6 +256,7 @@ const OppfolgingerSection = () => {
         assigned_to: data.owner,
         created_by: user?.id,
         email_notify: data.emailNotify,
+        calendar_synced: data.calendarSync,
       });
       const firstName = modalData.name.split(" ")[0];
       toast.success(`Oppfølging opprettet for ${firstName}`);
