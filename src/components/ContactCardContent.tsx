@@ -343,6 +343,38 @@ export function ContactCardContent({
   const profileMap = Object.fromEntries(allProfiles.map((p) => [p.id, p.full_name.split(" ")[0]]));
   const profileMapFull = Object.fromEntries(allProfiles.map((p) => [p.id, p.full_name]));
 
+  // Outlook connection status
+  const { data: outlookStatus } = useQuery({
+    queryKey: ["outlook-status"],
+    queryFn: async () => {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) return { connected: false };
+      const res = await fetch(
+        `https://kbvzpcebfopqqrvmbiap.supabase.co/functions/v1/outlook-auth?action=status`,
+        { headers: { Authorization: `Bearer ${token}`, apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtidnpwY2ViZm9wcXFydm1iaWFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTgyNTEsImV4cCI6MjA4ODI5NDI1MX0.t_bvITh_RxMfYdutsqHD-IkArlcD8I7au5vxBkt0aVY" } },
+      );
+      return res.json();
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const handleConnectOutlook = async () => {
+    const session = await supabase.auth.getSession();
+    const token = session.data.session?.access_token;
+    if (!token) { toast.error("Du må være logget inn"); return; }
+    const res = await fetch(
+      `https://kbvzpcebfopqqrvmbiap.supabase.co/functions/v1/outlook-auth?action=login`,
+      { headers: { Authorization: `Bearer ${token}`, apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtidnpwY2ViZm9wcXFydm1iaWFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTgyNTEsImV4cCI6MjA4ODI5NDI1MX0.t_bvITh_RxMfYdutsqHD-IkArlcD8I7au5vxBkt0aVY" } },
+    );
+    const data = await res.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      toast.error(data.error || "Kunne ikke starte Outlook-tilkobling");
+    }
+  };
+
   const { data: tasks = [] } = useQuery({
     queryKey: crmQueryKeys.contacts.tasks(contactId),
     queryFn: async () => {
@@ -1182,6 +1214,14 @@ export function ContactCardContent({
               >
                 <Clock className="h-[15px] w-[15px] text-[hsl(var(--warning))]" /> Ny oppfølging
               </button>
+              {!outlookStatus?.connected && (
+                <button
+                  onClick={handleConnectOutlook}
+                  className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-dashed border-border bg-background text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors ml-auto"
+                >
+                  <Mail className="h-[15px] w-[15px]" /> Koble til Outlook
+                </button>
+              )}
             </div>
 
             {/* Inline form */}
@@ -1473,6 +1513,7 @@ export function ContactCardContent({
             editable={editable}
             onDelete={(id) => deleteActivityMutation.mutate(id)}
             onUpdateActivity={(id, updates) => updateActivityMutation.mutate({ id, updates })}
+            contactEmail={contact.email || undefined}
           />
         </div>
       </div>
@@ -1750,20 +1791,57 @@ function ActivityTimeline({
   editable,
   onDelete,
   onUpdateActivity,
+  contactEmail,
 }: {
   activities: any[];
   profileMap: Record<string, string>;
   editable: boolean;
   onDelete: (id: string) => void;
   onUpdateActivity: (id: string, updates: Record<string, any>) => void;
+  contactEmail?: string;
 }) {
   const currentYear = getYear(new Date());
+
+  // Fetch Outlook emails for this contact
+  const { data: outlookEmails = [] } = useQuery({
+    queryKey: ["outlook-emails", contactEmail],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("outlook-mail", {
+        body: { email: contactEmail, top: 30 },
+      });
+      if (error) throw error;
+      if (data?.error === "no_outlook_connected") return [];
+      return (data?.emails || []).map((e: any) => ({
+        id: `outlook-${e.id}`,
+        type: "email" as const,
+        subject: e.subject,
+        created_at: e.date,
+        from: e.from,
+        from_name: e.from_name,
+        to: e.to,
+        preview: e.preview,
+        body_text: e.body_text,
+        is_read: e.is_read,
+      }));
+    },
+    enabled: !!contactEmail,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Merge activities and emails, sorted by date descending
+  const mergedItems = useMemo(() => {
+    const activityItems = activities.map((a) => ({ ...a, _source: "activity" as const }));
+    const emailItems = (outlookEmails || []).map((e: any) => ({ ...e, _source: "email" as const }));
+    return [...activityItems, ...emailItems].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
+  }, [activities, outlookEmails]);
 
   const grouped = useMemo(() => {
     const groups: { key: string; label: string; period: string; items: any[] }[] = [];
     let currentKey = "";
-    for (const act of activities) {
-      const d = new Date(act.created_at);
+    for (const item of mergedItems) {
+      const d = new Date(item.created_at);
       const monthKey = format(d, "yyyy-MM");
       if (monthKey !== currentKey) {
         currentKey = monthKey;
@@ -1774,12 +1852,14 @@ function ActivityTimeline({
         else if (yr < currentYear - 1) period = `${currentYear - yr} år siden`;
         groups.push({ key: monthKey, label, period, items: [] });
       }
-      groups[groups.length - 1].items.push(act);
+      groups[groups.length - 1].items.push(item);
     }
     return groups;
-  }, [activities, currentYear]);
+  }, [mergedItems, currentYear]);
 
-  if (activities.length === 0) {
+  const totalCount = mergedItems.length;
+
+  if (totalCount === 0) {
     return (
       <div>
         <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
@@ -1793,7 +1873,7 @@ function ActivityTimeline({
   return (
     <div>
       <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4 mt-8">
-        Aktiviteter · {activities.length}
+        Aktiviteter · {totalCount}
       </h3>
 
       {grouped.map((group, gi) => (
@@ -1813,21 +1893,81 @@ function ActivityTimeline({
             <div className="absolute left-[5px] top-[5px] bottom-0 w-[2px] bg-border" />
 
             <div className="space-y-6">
-              {group.items.map((activity) => (
-                <ActivityRow
-                  key={activity.id}
-                  activity={activity}
-                  currentYear={currentYear}
-                  profileMap={profileMap}
-                  editable={editable}
-                  onDelete={onDelete}
-                  onUpdateActivity={onUpdateActivity}
-                />
-              ))}
+              {group.items.map((item) =>
+                item._source === "email" ? (
+                  <EmailRow key={item.id} email={item} />
+                ) : (
+                  <ActivityRow
+                    key={item.id}
+                    activity={item}
+                    currentYear={currentYear}
+                    profileMap={profileMap}
+                    editable={editable}
+                    onDelete={onDelete}
+                    onUpdateActivity={onUpdateActivity}
+                  />
+                ),
+              )}
             </div>
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+/* ── Email Row (read-only, collapsible) ── */
+function EmailRow({ email }: { email: any }) {
+  const [expanded, setExpanded] = useState(false);
+  const d = new Date(email.created_at);
+
+  return (
+    <div className="relative group">
+      {/* Icon on spine */}
+      <div className="absolute -left-7 top-[2px] w-[12px] h-[12px] flex items-center justify-center bg-background rounded-full">
+        <Mail className="h-3.5 w-3.5 text-primary" />
+      </div>
+
+      <div
+        className="min-w-0 cursor-pointer"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[1.0625rem] font-bold text-foreground truncate">{email.subject}</span>
+              <ChevronDown
+                className={cn(
+                  "h-3.5 w-3.5 text-muted-foreground transition-transform flex-shrink-0",
+                  expanded && "rotate-180",
+                )}
+              />
+            </div>
+            <p className="text-[0.8125rem] text-muted-foreground mt-0.5">
+              {email.from_name || email.from} → {email.to}
+            </p>
+
+            {expanded ? (
+              <div className="mt-2 border-t border-border pt-2">
+                <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70">
+                  {email.body_text}
+                </p>
+              </div>
+            ) : email.preview ? (
+              <p className="text-[0.9375rem] text-foreground/70 line-clamp-2 mt-0.5">{email.preview}</p>
+            ) : null}
+          </div>
+
+          <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
+            <span className="text-[0.8125rem] text-muted-foreground">
+              {format(d, "d. MMM yyyy", { locale: nb })}
+            </span>
+            <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+              E-post
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
