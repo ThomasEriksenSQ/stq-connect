@@ -163,6 +163,16 @@ const JAKT_CHIPS: Array<{ value: HuntChipValue; label: string }> = [
   { value: "cold_call", label: "Cold call" },
 ];
 
+const JAKT_CHIP_HELP_TEXT: Record<HuntChipValue, string> = {
+  alle: "Beste tekniske treff på tvers av kilder, sortert på match først.",
+  foresporsler: "Aktive forespørsler de siste 45 dagene med teknisk match.",
+  finn: "Tekniske treff fra Finn-annonser og selskapets tekniske DNA.",
+  siste_aktivitet: "Kontakter med aktivitet de siste 45 dagene og teknisk match.",
+  innkjoper: "Innkjøpere med teknisk match.",
+  kunder: "Eksisterende kunder med teknisk match.",
+  cold_call: "Kalde leads med teknisk match og lite nylig aktivitet.",
+};
+
 function getMatchSourceLabel(source: HuntChipValue): string {
   switch (source) {
     case "foresporsler":
@@ -1384,21 +1394,23 @@ const Contacts = () => {
             </>
           )}
           {selectedConsultant && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
-                Match
-              </span>
-              {JAKT_CHIPS.map((chip) => (
-                <button
-                  key={chip.value}
-                  onClick={() => handleJaktChipSelect(chip.value)}
-                  className={jaktChip === chip.value ? CHIP_ON : CHIP_OFF}
-                >
-                  {chip.label}
-                </button>
-              ))}
-              <span className="text-[0.75rem] text-muted-foreground">
-                Match-modus sorterer først på matchscore, deretter på evidens, varme og ferskhet for {selectedConsultant.navn.split(" ")[0]}.
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+                  Match
+                </span>
+                {JAKT_CHIPS.map((chip) => (
+                  <button
+                    key={chip.value}
+                    onClick={() => handleJaktChipSelect(chip.value)}
+                    className={jaktChip === chip.value ? CHIP_ON : CHIP_OFF}
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+              <span className="text-[0.75rem] text-muted-foreground pl-[4.5rem]">
+                {JAKT_CHIP_HELP_TEXT[jaktChip]}
               </span>
             </div>
           )}
