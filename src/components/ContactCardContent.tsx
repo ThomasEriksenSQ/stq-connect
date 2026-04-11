@@ -290,6 +290,7 @@ export function ContactCardContent({
   const [formDescription, setFormDescription] = useState("");
   const [formDate, setFormDate] = useState("");
   const [formEmailNotify, setFormEmailNotify] = useState(false);
+  const [formCalendarSync, setFormCalendarSync] = useState(false);
   const [selectedChipIdx, setSelectedChipIdx] = useState<number | null>(null);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
