@@ -1,6 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { AiSignalBanner } from "@/components/AiSignalBanner";
-import { EmailPulsBanner } from "@/components/EmailPulsBanner";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
