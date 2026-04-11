@@ -146,10 +146,11 @@ serve(async (req) => {
     }
 
     // Redirect back to CRM
+    const returnUrl = Deno.env.get("OUTLOOK_RETURN_URL") || "https://stq-connect.lovable.app";
     return new Response(null, {
       status: 302,
       headers: {
-        Location: `${SUPABASE_URL.replace(".supabase.co", "").replace("https://kbvzpcebfopqqrvmbiap", "https://stq-connect.lovable.app")}/`,
+        Location: returnUrl,
       },
     });
   }
