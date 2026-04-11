@@ -630,6 +630,7 @@ export function ContactCardContent({
     setFormDescription("");
     setFormDate("");
     setFormEmailNotify(false);
+    setFormCalendarSync(false);
     setSelectedChipIdx(null);
   };
 
