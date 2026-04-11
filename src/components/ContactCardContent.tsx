@@ -1132,6 +1132,25 @@ export function ContactCardContent({
                 />
               );
             })()}
+          <EmailPulsBanner
+            contactId={contactId}
+            contactName={`${contact.first_name} ${contact.last_name}`}
+            contactEmail={contact.email || null}
+            currentSignal={effectiveSignal}
+            currentTechnologies={((contact as any).teknologier as string[]) || []}
+            onUpdateSignal={(signal) => {
+              updateSignalMutation.mutate(signal);
+            }}
+            onAddTechnologies={async (techs) => {
+              const existing = ((contact as any).teknologier as string[]) || [];
+              const merged = [...new Set([...existing, ...techs])];
+              await supabase
+                .from("contacts")
+                .update({ teknologier: merged })
+                .eq("id", contactId);
+              queryClient.invalidateQueries({ queryKey: ["contact", contactId] });
+            }}
+          />
         </div>
 
         {/* ── Notat ── */}
