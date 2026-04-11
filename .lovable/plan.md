@@ -1,55 +1,42 @@
 
 
-## Plan: Legg til Outlook-kalenderintegrasjon for oppfølginger
+## Plan: Flytt Varslingsinnstillinger til ny Innstillinger-side
 
 ### Konsept
-Ny avkrysningsboks "Legg til i Outlook-kalender" ved siden av eksisterende "Epostvarsling ved forfall". Når aktivert, opprettes en kalenderhendelse i CRM-brukerens Outlook-kalender med tittel "Følg opp KONTAKTNAVN, SELSKAPSNAVN" på forfallsdatoen.
+Flytt `VarslingsInnstillinger`-komponenten fra Aktive oppdrag-siden til en ny `/innstillinger`-side. Legg til et tannhjul-ikon i headeren som navigerer dit. Innstillinger-siden får to seksjoner: Outlook-tilkobling og Varslingsinnstillinger.
 
-### Forutsetning: OAuth-scope
-Dagens OAuth-flyt bruker kun `offline_access Mail.Read`. Vi må utvide til `offline_access Mail.Read Calendars.ReadWrite`. Brukerne (Jon Richard og Thomas) må re-autentisere én gang for å gi den nye tilgangen. Azure-appen i Entra må også ha `Calendars.ReadWrite` lagt til som tillatelse.
+### Endringer
 
-### Tekniske endringer
+**1. `src/components/VarslingsInnstillinger.tsx` (ny fil)**
+- Flytt hele `VarslingsInnstillinger`-funksjonen (linje 42–513) fra `KonsulenterOppdrag.tsx` til en egen komponent-fil
+- Eksporter som named export
 
-**1. `supabase/functions/outlook-auth/index.ts`** — Utvid SCOPES
-- Endre `SCOPES` fra `"offline_access Mail.Read"` til `"offline_access Mail.Read Calendars.ReadWrite"`
+**2. `src/pages/Innstillinger.tsx` (ny fil)**
+- Sidetittel: "Innstillinger"
+- Seksjon 1: **Outlook-tilkobling** — viser status via `outlook-auth?action=status`, knapp for å koble til/koble til på nytt
+- Seksjon 2: **Varslingsinnstillinger** — importerer og renderer `VarslingsInnstillinger`-komponenten
 
-**2. Ny edge-funksjon `supabase/functions/outlook-calendar/index.ts`**
-- Mottar: `{ title, date, userId }` (userId = den innloggede brukeren)
-- Henter brukerens Outlook-token fra `outlook_tokens`
-- Refresher token hvis utløpt (gjenbruk logikk fra `outlook-mail`)
-- Kaller Microsoft Graph: `POST /me/events` med:
-  - `subject`: "Følg opp KONTAKTNAVN, SELSKAPSNAVN"
-  - `start/end`: Forfallsdato som heldagshendelse
-  - `isAllDay: true`
-  - `isReminderOn: true`, `reminderMinutesBeforeStart: 480` (8 timer = morgen)
-- Returnerer `{ success: true }` eller feilmelding
+**3. `src/pages/KonsulenterOppdrag.tsx`**
+- Fjern `VarslingsInnstillinger`-funksjonen (linje 42–513)
+- Fjern tab-switcheren (linje 694–715) og `activeTab`-state
+- Fjern `{activeTab === "innstillinger" && ...}` (linje 1030)
+- Siden viser kun oppdragslisten direkte uten tabs
 
-**3. `src/components/ContactCardContent.tsx`** — Ny checkbox + kall
-- Legg til `formCalendarSync` state (default false)
-- Ny checkbox under "Epostvarsling ved forfall": "Legg til i Outlook-kalender"
-- Ved lagring av oppfølging: hvis `formCalendarSync` er true, kall `outlook-calendar` med tittel, dato og brukerens access_token
-- Samme mønster i inline-redigering (`TaskRow`)
+**4. `src/components/AppLayout.tsx`**
+- Importer `Settings` fra lucide-react og `useNavigate`
+- Legg til Settings-ikon mellom theme-toggle og profil-initialer: `<Button variant="ghost" size="icon" onClick={() => navigate("/innstillinger")}>`
+- Legg til "Innstillinger"-lenke i mobilmenyen
 
-**4. `src/components/dashboard/FollowUpModal.tsx`** — Ny checkbox
-- Legg til `calendarSync` state
-- Ny checkbox under "Epostvarsling ved forfall"
-- Utvid `onSubmit`-dataen med `calendarSync: boolean`
-
-**5. `src/components/dashboard/OppfolgingerSection.tsx`** — Håndter calendarSync
-- I `handleModalSubmit`: hvis `calendarSync` er true, kall edge-funksjonen etter opprettelse
-
-### Viktige detaljer
-- Kalenderkallet er fire-and-forget med toast ved suksess/feil — blokkerer ikke opprettelsen
-- Ingen ny databasekolonne nødvendig (kalendersynk lagres ikke, det er en engangsaksjons)
-- Brukerne må re-autentisere Outlook én gang etter deploy for å gi `Calendars.ReadWrite`-tilgang
-- Azure-appen i Entra admin center må ha `Calendars.ReadWrite` delegert tillatelse lagt til
+**5. `src/App.tsx`**
+- Lazy-importer `Innstillinger`
+- Legg til route: `<Route path="innstillinger" element={<Suspense><Innstillinger /></Suspense>} />`
 
 ### Filer
 | Fil | Endring |
 |-----|---------|
-| `supabase/functions/outlook-auth/index.ts` | Utvid SCOPES |
-| `supabase/functions/outlook-calendar/index.ts` | Ny edge-funksjon |
-| `src/components/ContactCardContent.tsx` | Ny checkbox + kall |
-| `src/components/dashboard/FollowUpModal.tsx` | Ny checkbox |
-| `src/components/dashboard/OppfolgingerSection.tsx` | Kall edge-funksjon |
+| `src/components/VarslingsInnstillinger.tsx` | Ny fil — uttrukket komponent |
+| `src/pages/Innstillinger.tsx` | Ny side med Outlook + varsling |
+| `src/pages/KonsulenterOppdrag.tsx` | Fjern VarslingsInnstillinger + tabs |
+| `src/components/AppLayout.tsx` | Settings-ikon i header |
+| `src/App.tsx` | Ny route |
 
