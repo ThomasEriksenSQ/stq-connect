@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,6 +46,14 @@ import {
   type MatchBand,
 } from "@/lib/contactMatchScore";
 import { getConsultantMatchScoreColor } from "@/lib/consultantMatches";
+import {
+  MATCH_OWNER_FILTER_NONE,
+  buildMatchLeadOwnerCandidate,
+  getMatchLeadOwnerLabel,
+  matchesMatchLeadOwnerFilter,
+  resolveMatchLeadOwner,
+  type MatchLeadOwnerSource,
+} from "@/lib/matchLeadOwners";
 
 type SortField = "name" | "company" | "title" | "signal" | "owner" | "last_activity" | "priority";
 type SortDir = "asc" | "desc";
@@ -53,7 +61,13 @@ type HuntConsultant = Pick<
   Database["public"]["Tables"]["stacq_ansatte"]["Row"],
   "id" | "navn" | "status" | "tilgjengelig_fra" | "kompetanse"
 >;
-type CompanyPreview = Pick<Database["public"]["Tables"]["companies"]["Row"], "id" | "name" | "status" | "ikke_relevant">;
+type OwnerPreview = { id: string; full_name: string } | null;
+type CompanyPreview = Pick<
+  Database["public"]["Tables"]["companies"]["Row"],
+  "id" | "name" | "status" | "ikke_relevant" | "owner_id"
+> & {
+  profiles: OwnerPreview;
+};
 type MatchLeadBase = {
   leadKey: string;
   leadType: "contact" | "company" | "request";
@@ -68,6 +82,9 @@ type MatchLeadBase = {
   sourceDates: string[];
   chipUrgency: number;
   summary: string;
+  ownerId: string | null;
+  ownerName: string | null;
+  ownerSource: MatchLeadOwnerSource;
 };
 type CompanyMatchLead = MatchLeadBase & {
   leadType: "company";
@@ -242,6 +259,7 @@ const Contacts = () => {
   const [jaktChip, setJaktChip] = useState<HuntChipValue>("alle");
   const [search, setSearch] = usePersistentState("stacq:contacts:search", "");
   const [ownerFilter, setOwnerFilter] = usePersistentState("stacq:contacts:ownerFilter", "all");
+  const [matchOwnerFilter, setMatchOwnerFilter] = usePersistentState("stacq:contacts:matchOwnerFilter", "all");
   const [signalFilter, setSignalFilter] = usePersistentState("stacq:contacts:signalFilter", "all");
   const [typeFilter, setTypeFilter] = usePersistentState("stacq:contacts:typeFilter", "all");
   const [sort, setSort] = usePersistentState<{ field: SortField; dir: SortDir }>("stacq:contacts:sort", {
@@ -262,7 +280,10 @@ const Contacts = () => {
     queryFn: async () => {
       const { data, error, count } = await supabase
         .from("contacts")
-        .select("*, companies(id, name, status, ikke_relevant), profiles!contacts_owner_id_fkey(id, full_name)", { count: "exact" })
+        .select(
+          "*, companies(id, name, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), profiles!contacts_owner_id_fkey(id, full_name)",
+          { count: "exact" },
+        )
         .order("first_name")
         .limit(2000);
       if (error) throw error;
@@ -284,14 +305,14 @@ const Contacts = () => {
         supabase
           .from("company_tech_profile")
           .select(
-            "company_id, sist_fra_finn, teknologier, companies!company_tech_profile_company_id_fkey(id, name, status, ikke_relevant)",
+            "company_id, sist_fra_finn, teknologier, companies!company_tech_profile_company_id_fkey(id, name, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name))",
           )
           .not("company_id", "is", null)
           .limit(5000),
         supabase
           .from("foresporsler")
           .select(
-            "id, selskap_id, kontakt_id, selskap_navn, sted, mottatt_dato, frist_dato, status, teknologier, companies!foresporsler_selskap_id_fkey(id, name, status, ikke_relevant), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title)",
+            "id, selskap_id, kontakt_id, selskap_navn, sted, mottatt_dato, frist_dato, status, teknologier, companies!foresporsler_selskap_id_fkey(id, name, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title)",
           )
           .order("mottatt_dato", { ascending: false })
           .limit(5000),
@@ -626,6 +647,29 @@ const Contacts = () => {
 
   const getOwnerId = (contact: any) => (contact.profiles as any)?.id || null;
   const getOwnerName = (contact: any) => (contact.profiles as any)?.full_name || null;
+  const getContactOwnerCandidate = (
+    contact: Pick<ContactRow, "owner_id" | "profiles"> | null | undefined,
+    source: Exclude<MatchLeadOwnerSource, "company" | "none"> = "contact",
+  ) =>
+    buildMatchLeadOwnerCandidate(
+      contact
+        ? {
+            owner_id: contact.owner_id,
+            profiles: contact.profiles,
+          }
+        : null,
+      source,
+    );
+  const getCompanyOwnerCandidate = (company: CompanyPreview | null | undefined) =>
+    buildMatchLeadOwnerCandidate(
+      company
+        ? {
+            owner_id: company.owner_id,
+            profiles: company.profiles,
+          }
+        : null,
+      "company",
+    );
 
   const ownerMap = new Map<string, string>();
   contacts.forEach((c) => {
@@ -633,7 +677,7 @@ const Contacts = () => {
     const name = getOwnerName(c);
     if (id && name) ownerMap.set(id, name);
   });
-  const uniqueOwners = Array.from(ownerMap.entries());
+  const uniqueOwners = Array.from(ownerMap.entries()).sort((left, right) => left[1].localeCompare(right[1], "nb"));
 
   const searchTerm = search.trim().toLowerCase();
   const searchFilteredContacts = useMemo(
@@ -684,6 +728,7 @@ const Contacts = () => {
   const matchResults = useMemo(() => {
     if (!selectedConsultant) {
       return {
+        allLeads: [] as MatchLead[],
         leads: [] as MatchLead[],
         emptyState: null as string | null,
       };
@@ -692,6 +737,7 @@ const Contacts = () => {
     const consultantTags = mergeTechnologyTags(selectedConsultant.kompetanse || []);
     if (consultantTags.length === 0) {
       return {
+        allLeads: [] as MatchLead[],
         leads: [] as MatchLead[],
         emptyState: `${selectedConsultant.navn} mangler teknisk DNA i CRM. Legg inn kompetanse på konsulenten for å få match-treff her.`,
       };
@@ -715,6 +761,7 @@ const Contacts = () => {
       foresporsler: new Map<number, RequestMatchLead>(),
     };
 
+    const allContactsById = new Map(contacts.map((contact) => [contact.id, contact]));
     const searchableContactById = new Map(matchBaseContacts.map((contact) => [contact.id, contact]));
     const searchableContactsByCompanyId = new Map<string, ContactRow[]>();
     matchBaseContacts.forEach((contact) => {
@@ -738,6 +785,20 @@ const Contacts = () => {
     const buildContactLeadTags = (contact: ContactRow) =>
       mergeTechnologyTags(contact.contactTechnologyTags, contact.companyTechnologyTags);
     const getLeadScore = (tags: string[]) => getContactMatchScore(consultantTags, tags);
+    const resolveLeadOwner = ({
+      contact,
+      company,
+      fallbackContact,
+    }: {
+      contact?: Pick<ContactRow, "owner_id" | "profiles"> | null;
+      company?: CompanyPreview | null;
+      fallbackContact?: Pick<ContactRow, "owner_id" | "profiles"> | null;
+    }) =>
+      resolveMatchLeadOwner(
+        getContactOwnerCandidate(contact, "contact"),
+        getCompanyOwnerCandidate(company),
+        getContactOwnerCandidate(fallbackContact, "fallback_contact"),
+      );
 
     const getBestCompanyContact = (companyId: string, sourceTags?: string[]) => {
       const candidates = searchableContactsByCompanyId.get(companyId) || [];
@@ -765,6 +826,7 @@ const Contacts = () => {
     ) => {
       const scoreResult = getLeadScore(leadTags);
       if (scoreResult.score10 < 4 || !scoreResult.matchBand) return;
+      const owner = resolveLeadOwner({ contact });
 
       const nextLead: ContactMatchLead = {
         ...contact,
@@ -782,6 +844,9 @@ const Contacts = () => {
         sourceDates: sourceDate ? [sourceDate] : [],
         chipUrgency: getSourceUrgency(chip, sourceDate, contact),
         summary: summary || contact.title || "Kontaktlead",
+        ownerId: owner.ownerId,
+        ownerName: owner.ownerName,
+        ownerSource: owner.ownerSource,
       };
 
       const existing = contactPools[chip].get(contact.id);
@@ -803,6 +868,9 @@ const Contacts = () => {
         sourceDates: mergeDates(existing.sourceDates, nextLead.sourceDates),
         chipUrgency: mergeUrgency(existing.chipUrgency, nextLead.chipUrgency),
         summary: existing.summary || nextLead.summary,
+        ownerId: existing.ownerId || nextLead.ownerId,
+        ownerName: existing.ownerName || nextLead.ownerName,
+        ownerSource: existing.ownerId || existing.ownerName ? existing.ownerSource : nextLead.ownerSource,
       });
     };
 
@@ -816,6 +884,7 @@ const Contacts = () => {
       sourceDate?: string | null,
       summary?: string,
       preferredContact?: { name?: string | null; title?: string | null },
+      fallbackContact?: ContactRow | null,
       minimumScore = 4,
     ) => {
       const companyName = company?.name || fallbackName || "Ukjent selskap";
@@ -823,6 +892,7 @@ const Contacts = () => {
 
       const scoreResult = getLeadScore(leadTags);
       if (scoreResult.score10 < minimumScore) return;
+      const owner = resolveLeadOwner({ company, fallbackContact });
 
       const nextLead: CompanyMatchLead = {
         leadKey: `company:${companyId}`,
@@ -843,6 +913,9 @@ const Contacts = () => {
         summary: summary || "Selskapslead uten registrert kontakt",
         preferredContactName: preferredContact?.name || null,
         preferredContactTitle: preferredContact?.title || null,
+        ownerId: owner.ownerId,
+        ownerName: owner.ownerName,
+        ownerSource: owner.ownerSource,
       };
 
       const existing = companyPools[chip].get(companyId);
@@ -866,6 +939,9 @@ const Contacts = () => {
         summary: existing.summary || nextLead.summary,
         preferredContactName: existing.preferredContactName || nextLead.preferredContactName || null,
         preferredContactTitle: existing.preferredContactTitle || nextLead.preferredContactTitle || null,
+        ownerId: existing.ownerId || nextLead.ownerId,
+        ownerName: existing.ownerName || nextLead.ownerName,
+        ownerSource: existing.ownerId || existing.ownerName ? existing.ownerSource : nextLead.ownerSource,
       });
     };
 
@@ -873,10 +949,16 @@ const Contacts = () => {
       const scoreResult = getLeadScore(request.technologyTags);
       if (scoreResult.score10 === 0 && request.technologyTags.length === 0) return;
 
+      const ownerContact = request.contactId ? allContactsById.get(request.contactId) || null : null;
       const linkedContact = request.contactId ? searchableContactById.get(request.contactId) || null : null;
       const bestCompanyContact =
         !linkedContact && request.companyId ? getBestCompanyContact(request.companyId, request.technologyTags) : null;
       const heatContact = linkedContact || bestCompanyContact;
+      const owner = resolveLeadOwner({
+        contact: ownerContact,
+        company: request.company,
+        fallbackContact: bestCompanyContact,
+      });
       const requestName = request.companyName || "Ukjent selskap";
       if (
         searchTerm &&
@@ -915,6 +997,9 @@ const Contacts = () => {
         temperature: heatContact?.temperature,
         needsReview: heatContact?.needsReview,
         signal: heatContact?.signal || null,
+        ownerId: owner.ownerId,
+        ownerName: owner.ownerName,
+        ownerSource: owner.ownerSource,
       });
     };
 
@@ -943,6 +1028,8 @@ const Contacts = () => {
         profile.companyTechnologyTags,
         profile.sistFraFinn,
         "Finn-teknologimatch uten registrert kontakt",
+        undefined,
+        undefined,
       );
     });
 
@@ -1001,6 +1088,7 @@ const Contacts = () => {
           name: bestContact ? `${bestContact.first_name} ${bestContact.last_name}`.trim() : null,
           title: bestContact?.title || null,
         },
+        bestContact,
         1,
       );
     });
@@ -1028,6 +1116,9 @@ const Contacts = () => {
             sourceDates: mergeDates(existing.sourceDates, lead.sourceDates),
             chipUrgency: mergeUrgency(existing.chipUrgency, lead.chipUrgency),
             summary: existing.summary || lead.summary,
+            ownerId: existing.ownerId || lead.ownerId,
+            ownerName: existing.ownerName || lead.ownerName,
+            ownerSource: existing.ownerId || existing.ownerName ? existing.ownerSource : lead.ownerSource,
           });
         });
       });
@@ -1057,6 +1148,9 @@ const Contacts = () => {
             sourceDates: mergeDates(existing.sourceDates, lead.sourceDates),
             chipUrgency: mergeUrgency(existing.chipUrgency, lead.chipUrgency),
             summary: existing.summary || lead.summary,
+            ownerId: existing.ownerId || lead.ownerId,
+            ownerName: existing.ownerName || lead.ownerName,
+            ownerSource: existing.ownerId || existing.ownerName ? existing.ownerSource : lead.ownerSource,
           });
         });
       });
@@ -1071,7 +1165,8 @@ const Contacts = () => {
       jaktChip === "alle" ? mergeCompanyPools(chipPoolKeys) : [...companyPools[jaktChip as Exclude<HuntChipValue, "alle">].values()];
     const requestResults = jaktChip === "alle" ? mergeRequestPools() : jaktChip === "foresporsler" ? [...requestPools.foresporsler.values()] : [];
 
-    const leads = [...contactResults, ...companyResults, ...requestResults].sort((left, right) => {
+    const allLeads = [...contactResults, ...companyResults, ...requestResults];
+    const leads = allLeads.filter((lead) => matchesMatchLeadOwnerFilter(lead.ownerId, matchOwnerFilter)).sort((left, right) => {
       if (right.matchScore10 !== left.matchScore10) return right.matchScore10 - left.matchScore10;
       if (right.confidenceScore !== left.confidenceScore) return right.confidenceScore - left.confidenceScore;
 
@@ -1085,39 +1180,92 @@ const Contacts = () => {
 
     let emptyState: string | null = null;
     if (leads.length === 0) {
-      switch (jaktChip) {
-        case "foresporsler":
-          emptyState = activeRequests.length === 0
-            ? "Ingen aktive forespørsler siste 45 dager akkurat nå."
-            : `Ingen aktive forespørsler er synlige for ${selectedConsultantFirstName} med dagens søk akkurat nå.`;
-          break;
-        case "finn":
-          emptyState = `Ingen Finn-annonser matcher ${selectedConsultantFirstName} sin tekniske profil akkurat nå.`;
-          break;
-        case "siste_aktivitet":
-          emptyState = `Ingen kontakter med nylig aktivitet matcher ${selectedConsultantFirstName} sin tekniske profil akkurat nå.`;
-          break;
-        case "innkjoper":
-          emptyState = `Ingen aktive innkjøpere matcher ${selectedConsultantFirstName} sin tekniske profil akkurat nå.`;
-          break;
-        case "kunder":
-          emptyState = `Ingen kundeselskaper med teknisk DNA matcher ${selectedConsultantFirstName} akkurat nå.`;
-          break;
-        case "cold_call":
-          emptyState = `Ingen cold call-treff matcher ${selectedConsultantFirstName} sin tekniske profil akkurat nå.`;
-          break;
-        case "alle":
-        default:
-          emptyState = `Ingen tekniske match-treff for ${selectedConsultantFirstName} akkurat nå.`;
-          break;
+      if (allLeads.length > 0 && matchOwnerFilter !== "all") {
+        emptyState = "Ingen match-treff for valgt eier akkurat nå.";
+      } else {
+        switch (jaktChip) {
+          case "foresporsler":
+            emptyState = activeRequests.length === 0
+              ? "Ingen aktive forespørsler siste 45 dager akkurat nå."
+              : `Ingen aktive forespørsler er synlige for ${selectedConsultantFirstName} med dagens søk akkurat nå.`;
+            break;
+          case "finn":
+            emptyState = `Ingen Finn-annonser matcher ${selectedConsultantFirstName} sin tekniske profil akkurat nå.`;
+            break;
+          case "siste_aktivitet":
+            emptyState = `Ingen kontakter med nylig aktivitet matcher ${selectedConsultantFirstName} sin tekniske profil akkurat nå.`;
+            break;
+          case "innkjoper":
+            emptyState = `Ingen aktive innkjøpere matcher ${selectedConsultantFirstName} sin tekniske profil akkurat nå.`;
+            break;
+          case "kunder":
+            emptyState = `Ingen kundeselskaper med teknisk DNA matcher ${selectedConsultantFirstName} akkurat nå.`;
+            break;
+          case "cold_call":
+            emptyState = `Ingen cold call-treff matcher ${selectedConsultantFirstName} sin tekniske profil akkurat nå.`;
+            break;
+          case "alle":
+          default:
+            emptyState = `Ingen tekniske match-treff for ${selectedConsultantFirstName} akkurat nå.`;
+            break;
+        }
       }
     }
 
     return {
+      allLeads,
       leads,
       emptyState,
     };
-  }, [companyTechProfiles, jaktChip, matchBaseContacts, requests, searchTerm, selectedConsultant, selectedConsultantFirstName]);
+  }, [
+    companyTechProfiles,
+    contacts,
+    jaktChip,
+    matchBaseContacts,
+    matchOwnerFilter,
+    requests,
+    searchTerm,
+    selectedConsultant,
+    selectedConsultantFirstName,
+  ]);
+
+  const matchOwnerOptions = useMemo(() => {
+    if (!selectedConsultant) {
+      return {
+        owners: [] as Array<{ value: string; label: string }>,
+        hasUnassigned: false,
+      };
+    }
+
+    const ownerMap = new Map<string, string>();
+    let hasUnassigned = false;
+
+    matchResults.allLeads.forEach((lead) => {
+      if (lead.ownerId) {
+        ownerMap.set(lead.ownerId, getMatchLeadOwnerLabel(lead.ownerId, lead.ownerName));
+      } else {
+        hasUnassigned = true;
+      }
+    });
+
+    return {
+      owners: Array.from(ownerMap.entries())
+        .map(([value, label]) => ({ value, label }))
+        .sort((left, right) => left.label.localeCompare(right.label, "nb")),
+      hasUnassigned,
+    };
+  }, [matchResults.allLeads, selectedConsultant]);
+
+  useEffect(() => {
+    if (!selectedConsultant || matchOwnerFilter === "all") return;
+
+    const validFilters = new Set(matchOwnerOptions.owners.map((owner) => owner.value));
+    if (matchOwnerOptions.hasUnassigned) validFilters.add(MATCH_OWNER_FILTER_NONE);
+
+    if (!validFilters.has(matchOwnerFilter)) {
+      setMatchOwnerFilter("all");
+    }
+  }, [matchOwnerFilter, matchOwnerOptions, selectedConsultant, setMatchOwnerFilter]);
 
   const sortedContacts = useMemo(() => {
     if (selectedConsultant) return [] as ContactRow[];
@@ -1394,24 +1542,49 @@ const Contacts = () => {
             </>
           )}
           {selectedConsultant && (
-            <div className="flex flex-col gap-1.5">
+            <div className="space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
-                  Match
+                  Eier
                 </span>
-                {JAKT_CHIPS.map((chip) => (
-                  <button
-                    key={chip.value}
-                    onClick={() => handleJaktChipSelect(chip.value)}
-                    className={jaktChip === chip.value ? CHIP_ON : CHIP_OFF}
-                  >
-                    {chip.label}
-                  </button>
+                <Chip label="Alle" value="all" current={matchOwnerFilter} onSelect={setMatchOwnerFilter} />
+                {matchOwnerOptions.owners.map((owner) => (
+                  <Chip
+                    key={owner.value}
+                    label={owner.label}
+                    value={owner.value}
+                    current={matchOwnerFilter}
+                    onSelect={setMatchOwnerFilter}
+                  />
                 ))}
+                {matchOwnerOptions.hasUnassigned && (
+                  <Chip
+                    label="Uten eier"
+                    value={MATCH_OWNER_FILTER_NONE}
+                    current={matchOwnerFilter}
+                    onSelect={setMatchOwnerFilter}
+                  />
+                )}
               </div>
-              <span className="text-[0.75rem] text-muted-foreground pl-[4.5rem]">
-                {JAKT_CHIP_HELP_TEXT[jaktChip]}
-              </span>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+                    Match
+                  </span>
+                  {JAKT_CHIPS.map((chip) => (
+                    <button
+                      key={chip.value}
+                      onClick={() => handleJaktChipSelect(chip.value)}
+                      className={jaktChip === chip.value ? CHIP_ON : CHIP_OFF}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+                <span className="text-[0.75rem] text-muted-foreground pl-[4.5rem]">
+                  {JAKT_CHIP_HELP_TEXT[jaktChip]}
+                </span>
+              </div>
             </div>
           )}
         </div>
