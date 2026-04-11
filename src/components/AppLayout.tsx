@@ -28,6 +28,7 @@ const stacqItems = [
 ];
 
 export function AppLayout() {
+  const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { signOut, user } = useAuth();
   const location = useLocation();
@@ -223,6 +224,14 @@ export function AppLayout() {
               <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/innstillinger")}
+              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
+            >
+              <Settings className="h-4 w-4 stroke-[1.5]" />
+            </Button>
             <div className="h-7 w-7 rounded-full bg-primary/10 text-primary hidden sm:flex items-center justify-center text-[0.625rem] font-semibold select-none">
               {initials}
             </div>
@@ -327,6 +336,16 @@ export function AppLayout() {
               >
                 {theme === "dark" ? <Sun className="h-4 w-4 stroke-[1.5]" /> : <Moon className="h-4 w-4 stroke-[1.5]" />}
                 Bytt tema
+              </button>
+              <button
+                onClick={() => {
+                  navigate("/innstillinger");
+                  setNavOpen(false);
+                }}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[0.875rem] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <Settings className="h-4 w-4 stroke-[1.5]" />
+                Innstillinger
               </button>
               <button
                 onClick={() => {

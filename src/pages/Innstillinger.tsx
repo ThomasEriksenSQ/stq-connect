@@ -12,17 +12,6 @@ export default function Innstillinger() {
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return { connected: false };
-      const { data, error } = await supabase.functions.invoke("outlook-auth", {
-        body: {},
-        headers: {},
-      });
-      if (error) return { connected: false };
-      return data as { connected: boolean };
-    },
-    // Use a custom fetch to pass query param
-    queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return { connected: false };
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://kbvzpcebfopqqrvmbiap.supabase.co"}/functions/v1/outlook-auth?action=status`,
         {
