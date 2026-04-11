@@ -1,21 +1,22 @@
 
 
-## Plan: Legg til "Vis/Skjul e-post"-toggle i aktivitetstidslinjen
+## Plan: Gjør e-post-toggle mer synlig
 
-### Hva skal bygges
-En toggle-knapp til høyre for "AKTIVITETER · N"-overskriften som lar brukeren veksle mellom å vise eller skjule Outlook-e-poster i tidslinjen.
+### Endring
+Erstatt den nåværende tekst-knappen med en tydelig pill/chip-toggle med bakgrunnsfarge og aktiv/inaktiv tilstand.
 
 ### Design
-- Plasseres på samme linje som "AKTIVITETER · N", høyrejustert
-- Tekst: "Skjul e-post" (når e-post vises) / "Vis e-post" (når e-post er skjult)
-- Liten knapp med Mail-ikon, styling: `text-[0.75rem] text-muted-foreground hover:text-foreground`
-- Antallet i "AKTIVITETER · N" oppdateres dynamisk basert på filteret
+- Stil som en chip: `h-7 px-2.5 text-[0.75rem] rounded-full border` med Mail-ikon
+- Aktiv (e-post vises): `bg-primary/10 border-primary/30 text-primary font-medium`
+- Inaktiv (e-post skjult): `bg-background border-border text-muted-foreground hover:bg-secondary`
+- Beholder samme toggle-logikk
 
-### Teknisk endring
-**Fil: `src/components/ContactCardContent.tsx`** — i `ActivityTimeline`-komponenten:
+### Teknisk
+**Fil: `src/components/ContactCardContent.tsx`** — oppdater begge `<button>`-elementene (linje ~1879 og ~1900):
 
-1. Legg til `useState<boolean>(true)` for `showEmails`
-2. Filtrer `mergedItems` basert på toggle: når `showEmails` er false, ekskluder items med `_source === "email"`
-3. Oppdater `totalCount` og `grouped` til å bruke filtrerte items
-4. Legg til toggle-knapp i headeren ved siden av "AKTIVITETER · N"
+Erstatt className fra `inline-flex items-center gap-1 text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors` til:
+```
+inline-flex items-center gap-1.5 h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors
++ dynamisk: showEmails ? "bg-primary/10 border-primary/30 text-primary font-medium" : "bg-background border-border text-muted-foreground hover:bg-secondary"
+```
 
