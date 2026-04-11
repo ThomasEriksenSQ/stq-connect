@@ -106,25 +106,20 @@ serve(async (req) => {
 
     const accessToken = await refreshTokenIfNeeded(supabase, tokenRow);
 
-    // Create all-day calendar event — end must be next day for all-day events
-    const endDate = new Date(date);
-    endDate.setDate(endDate.getDate() + 1);
-    const endDateStr = endDate.toISOString().slice(0, 10);
-
+    // Create calendar event at 10:00–10:30
     const eventBody = {
       subject: title,
-      isAllDay: true,
       start: {
-        dateTime: `${date}T00:00:00`,
+        dateTime: `${date}T10:00:00`,
         timeZone: "Europe/Oslo",
       },
       end: {
-        dateTime: `${endDateStr}T00:00:00`,
+        dateTime: `${date}T10:30:00`,
         timeZone: "Europe/Oslo",
       },
       isReminderOn: true,
-      reminderMinutesBeforeStart: 480,
-      showAs: "free",
+      reminderMinutesBeforeStart: 15,
+      showAs: "busy",
     };
 
     const graphRes = await fetch(`${GRAPH_BASE}/me/events`, {
