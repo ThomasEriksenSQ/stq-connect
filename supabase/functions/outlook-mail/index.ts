@@ -149,9 +149,12 @@ serve(async (req) => {
     try {
       const accessToken = await refreshTokenIfNeeded(supabase, tokenRow);
 
-      // Build OData filter for emails involving the contact
-      const filter = `from/emailAddress/address eq '${emailAddr}' or toRecipients/any(r: r/emailAddress/address eq '${emailAddr}')`;
-      const graphUrl = `${GRAPH_BASE}/me/messages?$filter=${encodeURIComponent(filter)}&$top=${top}&$orderby=receivedDateTime desc&$select=id,subject,from,toRecipients,receivedDateTime,bodyPreview,body,isRead`;
+      // Use $search + $filter for from, and a second request for to
+      // Graph API doesn't support toRecipients/any filter on /me/messages
+      // Strategy: use two requests — one filtered by from, one by $search for to
+      const fromFilter = `from/emailAddress/address eq '${emailAddr}'`;
+      const fromUrl = `${GRAPH_BASE}/me/messages?$filter=${encodeURIComponent(fromFilter)}&$top=${top}&$orderby=receivedDateTime desc&$select=id,subject,from,toRecipients,receivedDateTime,bodyPreview,body,isRead`;
+      const toUrl = `${GRAPH_BASE}/me/messages?$search="${encodeURIComponent(`to:${emailAddr}`)}"&$top=${top}&$select=id,subject,from,toRecipients,receivedDateTime,bodyPreview,body,isRead`;
 
       const graphRes = await fetch(graphUrl, {
         headers: { Authorization: `Bearer ${accessToken}` },
