@@ -77,6 +77,26 @@ describe("technologyTags", () => {
     ).toEqual(expect.arrayContaining(["VHDL", "Xilinx", "Nordic nRF", "U-Boot"]));
   });
 
+  it("normalizes concrete embedded stack and security chips", () => {
+    expect(
+      normalizeTechnologyTags([
+        "board bringup",
+        "device tree",
+        "secure boot",
+        "trustzone",
+        "canopen",
+        "i.MX8",
+      ]),
+    ).toEqual(expect.arrayContaining([
+      "Board bring-up",
+      "Device Tree",
+      "Secure boot",
+      "TrustZone",
+      "CANopen",
+      "NXP i.MX",
+    ]));
+  });
+
   it("sorts parsed frequency maps by count", () => {
     expect(
       getSortedTechnologyEntries({

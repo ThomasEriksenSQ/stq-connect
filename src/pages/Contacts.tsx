@@ -42,6 +42,7 @@ import {
 import {
   getContactMatchScore,
   getMatchBand,
+  type ConfidenceBand,
   type MatchBand,
 } from "@/lib/contactMatchScore";
 import { getConsultantMatchScoreColor } from "@/lib/consultantMatches";
@@ -60,6 +61,8 @@ type MatchLeadBase = {
   companyName: string;
   matchScore10: number;
   matchBand: MatchBand | null;
+  confidenceScore: number;
+  confidenceBand: ConfidenceBand;
   matchSources: HuntChipValue[];
   matchTags: string[];
   sourceDates: string[];
@@ -193,6 +196,16 @@ function compareByHotList(
   if (rightHeatScore !== leftHeatScore) return rightHeatScore - leftHeatScore;
 
   return 0;
+}
+
+const CONFIDENCE_CONFIG: Record<ConfidenceBand, { label: string; tone: string }> = {
+  high: { label: "Høy evidens", tone: "text-emerald-700" },
+  medium: { label: "Middels evidens", tone: "text-amber-700" },
+  low: { label: "Lav evidens", tone: "text-muted-foreground" },
+};
+
+function getConfidenceConfig(confidenceBand: ConfidenceBand) {
+  return CONFIDENCE_CONFIG[confidenceBand];
 }
 
 function isContactMatchLead(lead: MatchLead): lead is ContactMatchLead {
@@ -721,9 +734,10 @@ const Contacts = () => {
       if (candidates.length === 0) return null;
 
       return [...candidates].sort((left, right) => {
-        const leftScore = getLeadScore(sourceTags || buildContactLeadTags(left)).score10;
-        const rightScore = getLeadScore(sourceTags || buildContactLeadTags(right)).score10;
-        if (rightScore !== leftScore) return rightScore - leftScore;
+        const leftScore = getLeadScore(sourceTags || buildContactLeadTags(left));
+        const rightScore = getLeadScore(sourceTags || buildContactLeadTags(right));
+        if (rightScore.score10 !== leftScore.score10) return rightScore.score10 - leftScore.score10;
+        if (rightScore.confidenceScore !== leftScore.confidenceScore) return rightScore.confidenceScore - leftScore.confidenceScore;
 
         const hotListCompare = compareByHotList(left, right);
         if (hotListCompare !== 0) return hotListCompare;
@@ -751,6 +765,8 @@ const Contacts = () => {
         companyName: contact.companies?.name || "",
         matchScore10: scoreResult.score10,
         matchBand: scoreResult.matchBand,
+        confidenceScore: scoreResult.confidenceScore,
+        confidenceBand: scoreResult.confidenceBand,
         matchSources: [chip],
         matchTags: scoreResult.matchTags,
         sourceDates: sourceDate ? [sourceDate] : [],
@@ -769,6 +785,9 @@ const Contacts = () => {
         ...existing,
         matchScore10: mergedScore,
         matchBand: getMatchBand(mergedScore) || existing.matchBand,
+        confidenceScore: Math.max(existing.confidenceScore, nextLead.confidenceScore),
+        confidenceBand:
+          existing.confidenceScore >= nextLead.confidenceScore ? existing.confidenceBand : nextLead.confidenceBand,
         matchSources: mergeSources(existing.matchSources, nextLead.matchSources),
         matchTags: mergeTags(existing.matchTags, nextLead.matchTags),
         sourceDates: mergeDates(existing.sourceDates, nextLead.sourceDates),
@@ -805,6 +824,8 @@ const Contacts = () => {
         companyTechnologyTags,
         matchScore10: scoreResult.score10,
         matchBand: scoreResult.matchBand,
+        confidenceScore: scoreResult.confidenceScore,
+        confidenceBand: scoreResult.confidenceBand,
         matchSources: [chip],
         matchTags: scoreResult.matchTags,
         sourceDates: sourceDate ? [sourceDate] : [],
@@ -825,6 +846,9 @@ const Contacts = () => {
         ...existing,
         matchScore10: mergedScore,
         matchBand: getMatchBand(mergedScore) || existing.matchBand,
+        confidenceScore: Math.max(existing.confidenceScore, nextLead.confidenceScore),
+        confidenceBand:
+          existing.confidenceScore >= nextLead.confidenceScore ? existing.confidenceBand : nextLead.confidenceBand,
         matchSources: mergeSources(existing.matchSources, nextLead.matchSources),
         matchTags: mergeTags(existing.matchTags, nextLead.matchTags),
         sourceDates: mergeDates(existing.sourceDates, nextLead.sourceDates),
@@ -862,6 +886,8 @@ const Contacts = () => {
         name: requestName,
         matchScore10: scoreResult.score10,
         matchBand: scoreResult.matchBand,
+        confidenceScore: scoreResult.confidenceScore,
+        confidenceBand: scoreResult.confidenceBand,
         matchSources: ["foresporsler"],
         matchTags: scoreResult.matchTags,
         requestTechnologyTags: request.technologyTags,
@@ -984,6 +1010,9 @@ const Contacts = () => {
             ...existing,
             matchScore10: mergedScore,
             matchBand: getMatchBand(mergedScore) || existing.matchBand,
+            confidenceScore: Math.max(existing.confidenceScore, lead.confidenceScore),
+            confidenceBand:
+              existing.confidenceScore >= lead.confidenceScore ? existing.confidenceBand : lead.confidenceBand,
             matchTags: mergeTags(existing.matchTags, lead.matchTags),
             matchSources: mergeSources(existing.matchSources, lead.matchSources),
             sourceDates: mergeDates(existing.sourceDates, lead.sourceDates),
@@ -1010,6 +1039,9 @@ const Contacts = () => {
             ...existing,
             matchScore10: mergedScore,
             matchBand: getMatchBand(mergedScore) || existing.matchBand,
+            confidenceScore: Math.max(existing.confidenceScore, lead.confidenceScore),
+            confidenceBand:
+              existing.confidenceScore >= lead.confidenceScore ? existing.confidenceBand : lead.confidenceBand,
             matchTags: mergeTags(existing.matchTags, lead.matchTags),
             matchSources: mergeSources(existing.matchSources, lead.matchSources),
             sourceDates: mergeDates(existing.sourceDates, lead.sourceDates),
@@ -1031,10 +1063,12 @@ const Contacts = () => {
 
     const leads = [...contactResults, ...companyResults, ...requestResults].sort((left, right) => {
       if (right.matchScore10 !== left.matchScore10) return right.matchScore10 - left.matchScore10;
-      if (right.chipUrgency !== left.chipUrgency) return right.chipUrgency - left.chipUrgency;
+      if (right.confidenceScore !== left.confidenceScore) return right.confidenceScore - left.confidenceScore;
 
       const hotListCompare = compareByHotList(left as any, right as any);
       if (hotListCompare !== 0) return hotListCompare;
+
+      if (right.chipUrgency !== left.chipUrgency) return right.chipUrgency - left.chipUrgency;
 
       return left.name.localeCompare(right.name, "nb");
     });
@@ -1364,7 +1398,7 @@ const Contacts = () => {
                 </button>
               ))}
               <span className="text-[0.75rem] text-muted-foreground">
-                Match-modus sorterer først på matchscore, deretter på ferskhet og varme for {selectedConsultant.navn.split(" ")[0]}.
+                Match-modus sorterer først på matchscore, deretter på evidens, varme og ferskhet for {selectedConsultant.navn.split(" ")[0]}.
               </span>
             </div>
           )}
@@ -1395,6 +1429,7 @@ const Contacts = () => {
             {visibleMatchLeads.map((lead) => {
               const leadDate = getMatchLeadDate(lead);
               const heatConfig = getMatchLeadHeatConfig(lead);
+              const confidenceConfig = getConfidenceConfig(lead.confidenceBand);
 
               return (
                 <button
@@ -1476,6 +1511,7 @@ const Contacts = () => {
                         />
                         Match {lead.matchScore10}/10
                       </div>
+                      <p className={cn("mt-1 text-[0.6875rem]", confidenceConfig.tone)}>{confidenceConfig.label}</p>
                       {leadDate && (
                         <p className="mt-1 text-[0.75rem] text-muted-foreground">{relativeDate(leadDate)}</p>
                       )}
@@ -1522,6 +1558,7 @@ const Contacts = () => {
               {visibleMatchLeads.map((lead) => {
                 const leadDate = getMatchLeadDate(lead);
                 const heatConfig = getMatchLeadHeatConfig(lead);
+                const confidenceConfig = getConfidenceConfig(lead.confidenceBand);
 
                 return (
                   <button
@@ -1587,15 +1624,18 @@ const Contacts = () => {
                       </p>
                     </div>
                     <div className="shrink-0">
-                      <span className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-[0.75rem] font-semibold text-foreground">
-                        <span
-                          className={cn(
-                            "inline-block h-2.5 w-2.5 rounded-full",
-                            getConsultantMatchScoreColor(lead.matchScore10),
-                          )}
-                        />
-                        {lead.matchScore10}/10
-                      </span>
+                      <div>
+                        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-[0.75rem] font-semibold text-foreground">
+                          <span
+                            className={cn(
+                              "inline-block h-2.5 w-2.5 rounded-full",
+                              getConsultantMatchScoreColor(lead.matchScore10),
+                            )}
+                          />
+                          {lead.matchScore10}/10
+                        </span>
+                        <p className={cn("mt-1 text-[0.6875rem]", confidenceConfig.tone)}>{confidenceConfig.label}</p>
+                      </div>
                     </div>
                     <div className="min-w-0">
                       {heatConfig ? (

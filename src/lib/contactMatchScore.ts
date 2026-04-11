@@ -3,10 +3,11 @@ import {
   getMatchBand,
   getMatchBandRank,
   normalizeScoredMatchTags,
+  type ConfidenceBand,
   type MatchBand,
 } from "../../supabase/functions/_shared/matchScore.ts";
 
-export type { MatchBand };
+export type { ConfidenceBand, MatchBand };
 
 export interface ContactMatchScoreResult {
   score10: number;
@@ -15,6 +16,11 @@ export interface ContactMatchScoreResult {
   coverage: number;
   precision: number;
   matchedWeight: number;
+  technicalFit: number;
+  evidence: number;
+  confidenceScore: number;
+  confidenceBand: ConfidenceBand;
+  matchedLayerCount: number;
 }
 
 export function normalizeMatchTags(values: Array<string | null | undefined> | string | null | undefined): string[] {
@@ -36,5 +42,10 @@ export function getContactMatchScore(
     coverage: result.targetCoverage,
     precision: result.sourceCoverage,
     matchedWeight: result.matchedWeight,
+    technicalFit: result.technicalFit,
+    evidence: result.evidenceScore,
+    confidenceScore: result.confidenceScore,
+    confidenceBand: result.confidenceBand,
+    matchedLayerCount: result.matchedLayerCount,
   };
 }
