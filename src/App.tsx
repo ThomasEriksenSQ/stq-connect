@@ -34,6 +34,7 @@ const CvAdmin = lazy(() => import("./pages/CvAdmin"));
 const Soknad = lazy(() => import("./pages/Soknad"));
 const CompaniesMap = lazy(() => import("./pages/CompaniesMap"));
 const AnsattDetail = lazy(() => import("./pages/AnsattDetail"));
+const Innstillinger = lazy(() => import("./pages/Innstillinger"));
 
 const queryClient = new QueryClient();
 
@@ -176,7 +177,15 @@ const App = () => (
                     </Suspense>
                   }
                 />
-              </Route>
+                </Route>
+                <Route
+                  path="innstillinger"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <Innstillinger />
+                    </Suspense>
+                  }
+                />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
