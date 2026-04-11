@@ -187,6 +187,9 @@ export function VarslingsInnstillinger() {
       <div className="border border-border rounded-xl bg-card p-6 shadow-[0_1px_3px_rgba(0,0,0,0.07)] space-y-6">
         <div className="space-y-3">
           <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Fornyelsesvarsler
+          </p>
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             E-postmottakere
           </p>
           <div className="space-y-2">
