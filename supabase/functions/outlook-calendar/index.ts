@@ -106,7 +106,11 @@ serve(async (req) => {
 
     const accessToken = await refreshTokenIfNeeded(supabase, tokenRow);
 
-    // Create all-day calendar event
+    // Create all-day calendar event — end must be next day for all-day events
+    const endDate = new Date(date);
+    endDate.setDate(endDate.getDate() + 1);
+    const endDateStr = endDate.toISOString().slice(0, 10);
+
     const eventBody = {
       subject: title,
       isAllDay: true,
@@ -115,7 +119,7 @@ serve(async (req) => {
         timeZone: "Europe/Oslo",
       },
       end: {
-        dateTime: `${date}T00:00:00`,
+        dateTime: `${endDateStr}T00:00:00`,
         timeZone: "Europe/Oslo",
       },
       isReminderOn: true,
