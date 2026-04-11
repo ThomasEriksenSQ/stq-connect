@@ -290,6 +290,7 @@ export function ContactCardContent({
   const [formDescription, setFormDescription] = useState("");
   const [formDate, setFormDate] = useState("");
   const [formEmailNotify, setFormEmailNotify] = useState(false);
+  const [formCalendarSync, setFormCalendarSync] = useState(false);
   const [selectedChipIdx, setSelectedChipIdx] = useState<number | null>(null);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
@@ -483,6 +484,23 @@ export function ContactCardContent({
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.tasks(contactId) });
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.generic.tasks() });
       toast.success("Oppfølging opprettet");
+
+      // Fire-and-forget calendar sync
+      if (formCalendarSync && formDate && formDate !== "someday") {
+        const contactName = contact ? `${contact.first_name} ${contact.last_name}` : "";
+        const companyName = (contact as any)?.companies?.name || "";
+        const calTitle = `Følg opp ${contactName}, ${companyName}`;
+        supabase.functions.invoke("outlook-calendar", {
+          body: { title: calTitle, date: formDate },
+        }).then(({ error }) => {
+          if (error) {
+            toast.error("Kunne ikke legge til i Outlook-kalender");
+          } else {
+            toast.success("Lagt til i Outlook-kalender");
+          }
+        });
+      }
+
       closeForm();
     },
     onError: () => toast.error("Kunne ikke opprette oppfølging"),
@@ -612,6 +630,7 @@ export function ContactCardContent({
     setFormDescription("");
     setFormDate("");
     setFormEmailNotify(false);
+    setFormCalendarSync(false);
     setSelectedChipIdx(null);
   };
 
@@ -622,6 +641,7 @@ export function ContactCardContent({
     setFormDescription("");
     setFormDate("");
     setFormEmailNotify(false);
+    setFormCalendarSync(false);
     setSelectedChipIdx(null);
   };
 
@@ -1346,14 +1366,24 @@ export function ContactCardContent({
                 )}
 
                 {activeForm === "task" && (
-                  <label className="flex items-center gap-2 cursor-pointer select-none mt-2">
-                    <Checkbox
-                      checked={formEmailNotify}
-                      onCheckedChange={(v) => setFormEmailNotify(!!v)}
-                      className="h-4 w-4"
-                    />
-                    <span className="text-[0.8125rem] text-foreground">Epostvarsling ved forfall</span>
-                  </label>
+                  <>
+                    <label className="flex items-center gap-2 cursor-pointer select-none mt-2">
+                      <Checkbox
+                        checked={formEmailNotify}
+                        onCheckedChange={(v) => setFormEmailNotify(!!v)}
+                        className="h-4 w-4"
+                      />
+                      <span className="text-[0.8125rem] text-foreground">Epostvarsling ved forfall</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <Checkbox
+                        checked={formCalendarSync}
+                        onCheckedChange={(v) => setFormCalendarSync(!!v)}
+                        className="h-4 w-4"
+                      />
+                      <span className="text-[0.8125rem] text-foreground">Legg til i Outlook-kalender</span>
+                    </label>
+                  </>
                 )}
 
                 <div className="flex items-center gap-2 mt-3">
@@ -1696,6 +1726,18 @@ function TaskRow({
             className="h-4 w-4"
           />
           <span className="text-[0.8125rem] text-foreground">Epostvarsling ved forfall</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <Checkbox
+            checked={false}
+            onCheckedChange={() => {
+              // Calendar sync is one-time action — not stored, so always unchecked
+              // When checked and saved, will trigger calendar creation
+            }}
+            className="h-4 w-4"
+            disabled
+          />
+          <span className="text-[0.8125rem] text-muted-foreground">Outlook-kalender (kun ved opprettelse)</span>
         </label>
         <div className="flex items-center gap-2">
           <Button

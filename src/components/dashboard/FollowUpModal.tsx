@@ -48,7 +48,7 @@ type Props = {
   open: boolean;
   onCancel: () => void;
   onClose: () => void;
-  onSubmit: (data: { title: string; dueDate: Date; owner: string; emailNotify: boolean }) => void;
+  onSubmit: (data: { title: string; dueDate: Date; owner: string; emailNotify: boolean; calendarSync: boolean }) => void;
   data: FollowUpModalData | null;
   profiles: Array<{ id: string; full_name: string }>;
 };
@@ -63,6 +63,7 @@ const FollowUpModal = ({ open, onCancel, onClose, onSubmit, data, profiles }: Pr
   const [customDate, setCustomDate] = useState<Date | undefined>(undefined);
   const [owner, setOwner] = useState("");
   const [emailNotify, setEmailNotify] = useState(false);
+  const [calendarSync, setCalendarSync] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggested, setAiSuggested] = useState(false);
   const userTypedRef = useRef(false);
@@ -297,6 +298,14 @@ const FollowUpModal = ({ open, onCancel, onClose, onSubmit, data, profiles }: Pr
             />
             <span className="text-[0.8125rem] text-foreground">Epostvarsling ved forfall</span>
           </label>
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <Checkbox
+              checked={calendarSync}
+              onCheckedChange={(v) => setCalendarSync(!!v)}
+              className="h-4 w-4"
+            />
+            <span className="text-[0.8125rem] text-foreground">Legg til i Outlook-kalender</span>
+          </label>
         </div>
 
         {/* Footer */}
@@ -323,6 +332,7 @@ const FollowUpModal = ({ open, onCancel, onClose, onSubmit, data, profiles }: Pr
                     dueDate: computedDate(),
                     owner,
                     emailNotify,
+                    calendarSync,
                   });
                 }
               }}
