@@ -1,60 +1,63 @@
 
 
-## Plan: Plausible Analytics-dashboard under stacq.no-fanen
+## Oppdatert plan: Outlook e-poster i aktivitetstidslinjen
 
-### Hva bygges
+### Evaluering: Ekspander/lukk per e-post
 
-En ny fane "Nettside besøk" som første fane i stacq.no-siden (`NettsideAI.tsx`), med et dashboard som viser besøksstatistikk fra Plausible.io API v2.
+**Anbefaling: Ja, e-poster skal vises kollapset som standard med ekspander/lukk.**
 
-### Arkitektur
+**Begrunnelse:**
 
-API-nøkkelen kan ikke sendes fra frontend (CORS + sikkerhet), så vi lager en **edge function** som proxy.
+1. **E-poster er lengre enn samtalenotater.** Dagens aktiviteter har korte beskrivelser (1-3 linjer). E-poster kan være 10-50+ linjer med signaturer, tråder og formatering. Å vise alt ekspandert ville drukne tidslinjen.
 
-### 1. Edge function: `plausible-stats`
+2. **Mønsteret finnes allerede.** `ActivityRow` har en `expanded`-state, og `DescriptionText`-komponenten bruker `line-clamp` for å kutte tekst. E-poster følger samme mønster.
 
-**Fil:** `supabase/functions/plausible-stats/index.ts`
+3. **Skanning vs. lesing.** Brukerne (Jon Richard/Thomas) skanner tidslinjen for kontekst. Subject-linjen er nok til å gjenkjenne en e-post. Klikk for å lese detaljer ved behov.
 
-- Tar imot POST med `{ query_type, date_range }` fra frontend
-- Videresender til `https://plausible.io/api/v2/query` med `site_id: "stacq.no"` og Bearer-token fra `PLAUSIBLE_API_KEY` secret
-- Returnerer JSON-responsen med CORS-headers
-- Støtter flere forhåndsdefinerte spørringer:
-  - **aggregate**: visitors, visits, pageviews, bounce_rate, visit_duration
-  - **timeseries**: visitors over tid med `time:day` dimensjon
-  - **top_pages**: topp sider (`event:page` dimensjon)
-  - **top_sources**: trafikkkilder (`visit:source` dimensjon)
-  - **top_countries**: land (`visit:country_name` dimensjon)
-  - **devices**: enhetstyper (`visit:device` dimensjon)
+### Hvordan e-poster vises i tidslinjen
 
-### 2. Secret: `PLAUSIBLE_API_KEY`
+**Kollapset (standard):**
+```text
+📧 Re: Rammeavtale konsulenter              14. mars 2026
+   Fra: erik@kunde.no → thomas@stacq.no
+```
 
-Be brukeren legge inn API-nøkkelen via secrets-verktøyet.
+**Ekspandert (etter klikk på chevron):**
+```text
+📧 Re: Rammeavtale konsulenter              14. mars 2026
+   Fra: erik@kunde.no → thomas@stacq.no
+   ─────
+   Hei Thomas,
+   Takk for CVene. Vi ønsker å kalle inn Karl Eirik
+   til intervju neste uke. Passer tirsdag?
+   
+   Mvh Erik
+```
 
-### 3. Frontend: `NettsideBesokTab` komponent
+### Implementasjonsdetaljer
 
-**Ny fil:** `src/components/nettside/NettsideBesokTab.tsx`
+- E-post-rader i tidslinjen får et **Mail-ikon** (lilla/blå) på spine
+- Subject som tittel, avsender/mottaker som metarad
+- Body vises med `line-clamp-2` kollapset, full tekst ekspandert
+- Chevron-ikon (ChevronDown) roterer ved ekspandering — samme mønster som `DescriptionText`
+- E-poster er **read-only** — klikk på rad åpner ikke inline-redigering, bare ekspander/lukk
+- HTML-body strippes til ren tekst for visning
 
-Dashboard med følgende seksjoner:
+### Resten av planen (uendret)
 
-- **Datovelger**: Chips for 7d / 30d / 6mo / 12mo
-- **KPI-kort** (4 stk): Besøkende, Sidevisninger, Avvisningsrate, Besøkstid
-- **Tidsserie-graf**: Linjediagram med besøkende over tid (bruker eksisterende `ChartContainer` fra `chart.tsx`)
-- **Topp sider**: Tabell med side og antall besøkende
-- **Trafikkkilder**: Tabell med kilde og besøkende
-- **Land**: Tabell med land og besøkende
-- **Enheter**: Enkel fordeling Desktop/Mobil/Tablet
+1. **Secrets**: Lagre `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_CLIENT_SECRET`
+2. **Database**: `outlook_tokens`-tabell med RLS
+3. **Edge function `outlook-auth`**: OAuth-flyt med callback
+4. **Redirect URI**: Bruker legger til i Entra-portalen
+5. **Edge function `outlook-mail`**: Henter e-poster fra Microsoft Graph, filtrert på kontaktens e-post
+6. **Frontend**: E-poster merges inn i `ActivityTimeline` i `ContactCardContent.tsx`, sortert kronologisk med eksisterende aktiviteter. E-poster vises kollapset med ekspander/lukk.
 
-### 4. Oppdater `NettsideAI.tsx`
+### Filer som endres/opprettes
 
-- Legg til ny `TabsTrigger` "Nettside besøk" som **første** tab (foran "Konsulenter")
-- Legg til tilhørende `TabsContent` som rendrer `NettsideBesokTab`
-- Endre `defaultValue` til `"besok"`
-
-### Tekniske detaljer
-
-- Edge function validerer input med enkel sjekk (ikke Zod da det er enkle predefinerte verdier)
-- Frontend bruker `@tanstack/react-query` for data-fetching
-- Recharts via eksisterende `ChartContainer`/`ChartTooltip` for graf
-- Alle tall formateres med `toLocaleString("nb-NO")`
-- Bounce rate vises som prosent, visit duration formateres til min:sek
-- Filer som endres/opprettes: 3 (1 edge function, 1 ny komponent, 1 eksisterende side)
+| Fil | Handling |
+|-----|----------|
+| `supabase/functions/outlook-auth/index.ts` | Ny |
+| `supabase/functions/outlook-mail/index.ts` | Ny |
+| Migration: `outlook_tokens`-tabell | Ny |
+| `src/components/ContactCardContent.tsx` | Endre ActivityTimeline til å støtte e-poster |
 
