@@ -1,22 +1,51 @@
 
 
-## Plan: Gjør e-post-toggle mer synlig
+## Plan: Forbedre formatering av e-poster i aktivitetstidslinjen
 
-### Endring
-Erstatt den nåværende tekst-knappen med en tydelig pill/chip-toggle med bakgrunnsfarge og aktiv/inaktiv tilstand.
+### Problem
+`stripHtml` i edge-funksjonen erstatter ALL whitespace (inkl. linjeskift) med ett mellomrom (`\s+` → `" "`). E-posttråder med From/To/Date/Subject-headere blir én uleselig tekstblokk.
 
-### Design
-- Stil som en chip: `h-7 px-2.5 text-[0.75rem] rounded-full border` med Mail-ikon
-- Aktiv (e-post vises): `bg-primary/10 border-primary/30 text-primary font-medium`
-- Inaktiv (e-post skjult): `bg-background border-border text-muted-foreground hover:bg-secondary`
-- Beholder samme toggle-logikk
+### Løsning — to endringer
 
-### Teknisk
-**Fil: `src/components/ContactCardContent.tsx`** — oppdater begge `<button>`-elementene (linje ~1879 og ~1900):
+**1. Backend: `supabase/functions/outlook-mail/index.ts` — forbedre `stripHtml`**
+- Sett inn linjeskift før `<br>`, `<p>`, `<div>`, `<tr>`, `<li>` og `<hr>` tags
+- Erstatt `\s+` bare for vanlige mellomrom, behold `\n`
+- Legg til linjeskift foran typiske e-post-headere (From:, To:, Date:, Subject:, Sendt:, Fra:, Til:, Dato:, Emne:)
 
-Erstatt className fra `inline-flex items-center gap-1 text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors` til:
+**2. Frontend: `src/components/ContactCardContent.tsx` — splitt e-posttråd i separate meldinger**
+- Parse `body_text` for å identifisere individuelle meldinger i tråden basert på "From:" / "Fra:" headere
+- Vis kun den nyeste meldingen som standard, med en "Vis hele tråden"-knapp
+- Vis hver melding i tråden med visuell separator og innrykk/bakgrunn for siterte deler
+- Alternativt: vis hele body med `whitespace-pre-wrap` som allerede er der, men nå faktisk med linjeskift bevart fra backend
+
+### Tekniske detaljer
+
+**stripHtml oppdatering:**
+```typescript
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|tr|li|h[1-6])>/gi, "\n")
+    .replace(/<(hr)\s*\/?>/gi, "\n---\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/[ \t]+/g, " ")          // bare horisontale mellomrom
+    .replace(/\n /g, "\n")            // trim start av linjer
+    .replace(/\n{3,}/g, "\n\n")       // maks 2 tomme linjer
+    .trim();
+}
 ```
-inline-flex items-center gap-1.5 h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors
-+ dynamisk: showEmails ? "bg-primary/10 border-primary/30 text-primary font-medium" : "bg-background border-border text-muted-foreground hover:bg-secondary"
-```
+
+**EmailRow — vis kun nyeste melding + "Vis tråd":**
+- Parse body_text og splitt på mønster som `\nFrom:` eller `\nFra:`
+- Vis første del (nyeste melding) direkte
+- Vis resten bak en "Vis hele tråden ▾" toggle med `bg-muted/30 rounded-lg p-3 mt-2` styling
+
+Krever re-deploy av edge-funksjonen etter endring.
 
