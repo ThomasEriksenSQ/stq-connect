@@ -343,6 +343,38 @@ export function ContactCardContent({
   const profileMap = Object.fromEntries(allProfiles.map((p) => [p.id, p.full_name.split(" ")[0]]));
   const profileMapFull = Object.fromEntries(allProfiles.map((p) => [p.id, p.full_name]));
 
+  // Outlook connection status
+  const { data: outlookStatus } = useQuery({
+    queryKey: ["outlook-status"],
+    queryFn: async () => {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) return { connected: false };
+      const res = await fetch(
+        `https://kbvzpcebfopqqrvmbiap.supabase.co/functions/v1/outlook-auth?action=status`,
+        { headers: { Authorization: `Bearer ${token}`, apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtidnpwY2ViZm9wcXFydm1iaWFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTgyNTEsImV4cCI6MjA4ODI5NDI1MX0.t_bvITh_RxMfYdutsqHD-IkArlcD8I7au5vxBkt0aVY" } },
+      );
+      return res.json();
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const handleConnectOutlook = async () => {
+    const session = await supabase.auth.getSession();
+    const token = session.data.session?.access_token;
+    if (!token) { toast.error("Du må være logget inn"); return; }
+    const res = await fetch(
+      `https://kbvzpcebfopqqrvmbiap.supabase.co/functions/v1/outlook-auth?action=login`,
+      { headers: { Authorization: `Bearer ${token}`, apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtidnpwY2ViZm9wcXFydm1iaWFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTgyNTEsImV4cCI6MjA4ODI5NDI1MX0.t_bvITh_RxMfYdutsqHD-IkArlcD8I7au5vxBkt0aVY" } },
+    );
+    const data = await res.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      toast.error(data.error || "Kunne ikke starte Outlook-tilkobling");
+    }
+  };
+
   const { data: tasks = [] } = useQuery({
     queryKey: crmQueryKeys.contacts.tasks(contactId),
     queryFn: async () => {
