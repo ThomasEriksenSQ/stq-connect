@@ -189,6 +189,8 @@ export function VarslingsInnstillinger() {
           <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             Fornyelsesvarsler
           </p>
+        </div>
+        <div className="space-y-3">
           <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             E-postmottakere
           </p>
