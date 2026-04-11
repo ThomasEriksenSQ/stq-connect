@@ -67,8 +67,8 @@ serve(async (req) => {
     }
 
     // Parse non-streaming response
-    const data = await response.json();
-    const text = data.choices?.[0]?.message?.content || "";
+    const result = await response.json();
+    const text = result.choices?.[0]?.message?.content || "";
 
     return new Response(JSON.stringify({ text }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
