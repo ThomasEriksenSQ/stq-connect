@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
-import { Sparkles, Check, X } from "lucide-react";
+import { Sparkles, Check, X, Plus, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { analyzeSignal, type AiSignalResult } from "@/lib/aiSignal";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const CATEGORIES = [
   { label: "Behov nå", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
@@ -18,26 +20,48 @@ function getBadgeColor(label: string) {
 interface AiSignalBannerProps {
   contactId: string;
   contactName: string;
+  contactEmail: string | null;
   currentSignal: string | null;
+  currentTechnologies: string[];
   activities: Array<{ type: string; subject: string; created_at: string }>;
   lastTaskDueDate: string | null;
   onUpdateSignal: (signal: string) => void;
+  onAddTechnologies: (techs: string[]) => void;
 }
 
 export function AiSignalBanner({
   contactId,
   contactName,
+  contactEmail,
   currentSignal,
+  currentTechnologies,
   activities,
   lastTaskDueDate,
   onUpdateSignal,
+  onAddTechnologies,
 }: AiSignalBannerProps) {
   const [result, setResult] = useState<AiSignalResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [applied, setApplied] = useState(false);
+  const [techsAdded, setTechsAdded] = useState(false);
 
   const dismissKey = `dismissed_signal_${contactId}`;
+
+  // Fetch emails for analysis (separate cache key to avoid collision with timeline)
+  const { data: outlookEmails = [] } = useQuery({
+    queryKey: ["email-puls-emails", contactEmail],
+    queryFn: async () => {
+      if (!contactEmail) return [];
+      const { data, error } = await supabase.functions.invoke("outlook-mail", {
+        body: { email: contactEmail },
+      });
+      if (error) return [];
+      return (data?.emails || []) as Array<{ subject: string; body_text: string; received_at: string }>;
+    },
+    enabled: !!contactEmail,
+    staleTime: 5 * 60 * 1000,
+  });
 
   useEffect(() => {
     const stored = localStorage.getItem(dismissKey);
@@ -46,20 +70,39 @@ export function AiSignalBanner({
       return;
     }
 
-    if (activities.length === 0) return;
+    if (activities.length === 0 && outlookEmails.length === 0) return;
 
     let cancelled = false;
     setLoading(true);
-    analyzeSignal({ currentSignal, activities, lastTaskDueDate, contactName }).then((r) => {
+    analyzeSignal({
+      currentSignal,
+      activities,
+      lastTaskDueDate,
+      contactName,
+      emails: outlookEmails,
+      currentTechnologies,
+    }).then((r) => {
       if (cancelled) return;
       setResult(r);
       setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [contactId, currentSignal, activities.length]);
+  }, [contactId, currentSignal, activities.length, outlookEmails.length]);
 
-  if (dismissed || applied || loading || !result) return null;
-  if (result.anbefalt_signal === currentSignal) return null;
+  if (dismissed || loading || !result) return null;
+
+  // Filter new technologies not already on contact
+  const normalizedExisting = new Set(currentTechnologies.map((t) => t.toLowerCase()));
+  const newTechs = (result.teknologier_funnet || []).filter(
+    (t) => !normalizedExisting.has(t.toLowerCase())
+  );
+
+  const signalChanged = result.anbefalt_signal !== currentSignal;
+  const hasNewTechs = newTechs.length > 0 && !techsAdded;
+
+  // Don't show if nothing actionable
+  if (applied && !hasNewTechs) return null;
+  if (!signalChanged && !hasNewTechs) return null;
 
   const borderColor =
     result.konfidens === "høy"
@@ -75,25 +118,67 @@ export function AiSignalBanner({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[0.8125rem] font-medium text-foreground">AI foreslår:</span>
-            <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold", getBadgeColor(result.anbefalt_signal))}>
-              {result.anbefalt_signal}
-            </span>
+            {signalChanged && !applied && (
+              <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold", getBadgeColor(result.anbefalt_signal))}>
+                {result.anbefalt_signal}
+              </span>
+            )}
             {result.konfidens === "lav" && (
               <span className="text-[0.6875rem] text-muted-foreground">(usikker)</span>
             )}
           </div>
+
           <p className="text-[0.75rem] text-muted-foreground mt-0.5">{result.begrunnelse}</p>
-          <div className="flex items-center gap-2 mt-1.5">
-            <button
-              onClick={() => {
-                onUpdateSignal(result.anbefalt_signal);
-                setApplied(true);
-              }}
-              className="inline-flex items-center gap-1 text-[0.75rem] font-medium text-primary hover:text-primary/80 transition-colors"
-            >
-              <Check className="h-3 w-3" />
-              Oppdater signal
-            </button>
+
+          {/* Tidsramme */}
+          {result.tidsramme && (
+            <div className="flex items-center gap-1 mt-1">
+              <Clock className="h-3 w-3 text-muted-foreground" />
+              <span className="text-[0.6875rem] text-muted-foreground">Tidsramme: {result.tidsramme}</span>
+            </div>
+          )}
+
+          {/* Nye teknologier */}
+          {hasNewTechs && (
+            <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+              <span className="text-[0.6875rem] text-muted-foreground">Teknologier:</span>
+              {newTechs.map((t) => (
+                <span
+                  key={t}
+                  className="inline-flex items-center rounded-full bg-secondary border border-border px-2 py-0.5 text-[0.6875rem] font-medium text-foreground"
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-3 mt-1.5">
+            {signalChanged && !applied && (
+              <button
+                onClick={() => {
+                  onUpdateSignal(result.anbefalt_signal);
+                  setApplied(true);
+                }}
+                className="inline-flex items-center gap-1 text-[0.75rem] font-medium text-primary hover:text-primary/80 transition-colors"
+              >
+                <Check className="h-3 w-3" />
+                Oppdater signal
+              </button>
+            )}
+            {hasNewTechs && (
+              <button
+                onClick={() => {
+                  onAddTechnologies(newTechs);
+                  setTechsAdded(true);
+                }}
+                className="inline-flex items-center gap-1 text-[0.75rem] font-medium text-primary hover:text-primary/80 transition-colors"
+              >
+                <Plus className="h-3 w-3" />
+                Legg til teknologier
+              </button>
+            )}
             <button
               onClick={() => {
                 localStorage.setItem(dismissKey, new Date().toISOString());
