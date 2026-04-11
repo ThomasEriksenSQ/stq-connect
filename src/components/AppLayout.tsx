@@ -1,7 +1,8 @@
 import { Outlet, NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import { FornyelsesVarsel } from "@/components/FornyelsesVarsel";
 import { useTheme } from "next-themes";
-import { Moon, Sun, LogOut, Building2, Users, LayoutDashboard, Sparkles, Briefcase, ChevronDown, Users2, TrendingUp, UserPlus, Radar, Globe, Menu } from "lucide-react";
+import { Moon, Sun, LogOut, Building2, Users, LayoutDashboard, Sparkles, Briefcase, ChevronDown, Users2, TrendingUp, UserPlus, Radar, Globe, Menu, Settings } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
