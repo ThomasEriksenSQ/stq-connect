@@ -177,7 +177,6 @@ const App = () => (
                     </Suspense>
                   }
                 />
-                </Route>
                 <Route
                   path="innstillinger"
                   element={
@@ -186,6 +185,7 @@ const App = () => (
                     </Suspense>
                   }
                 />
+              </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
