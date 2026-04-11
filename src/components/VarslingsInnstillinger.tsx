@@ -236,9 +236,6 @@ export function VarslingsInnstillinger() {
         </div>
 
         <div className="space-y-4">
-          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            Fornyelsesvarsler
-          </p>
           <div className="flex items-center justify-between">
             <Label className="text-[0.8125rem] text-foreground">Aktiver ukentlig e-postvarsel</Label>
             <Switch checked={renewalAktiv} onCheckedChange={(value) => setRenewalAktivLocal(value)} />
