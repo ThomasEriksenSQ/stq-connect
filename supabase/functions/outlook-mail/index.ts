@@ -181,6 +181,8 @@ serve(async (req) => {
       const seenIds = new Set<string>();
 
       for (const msg of messages) {
+        if (seenIds.has(msg.id)) continue;
+        seenIds.add(msg.id);
         allEmails.push({
           id: msg.id,
           subject: msg.subject || "(ingen emne)",
