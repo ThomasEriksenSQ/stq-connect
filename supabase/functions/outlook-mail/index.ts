@@ -149,24 +149,40 @@ serve(async (req) => {
     try {
       const accessToken = await refreshTokenIfNeeded(supabase, tokenRow);
 
-      // Build OData filter for emails involving the contact
-      const filter = `from/emailAddress/address eq '${emailAddr}' or toRecipients/any(r: r/emailAddress/address eq '${emailAddr}')`;
-      const graphUrl = `${GRAPH_BASE}/me/messages?$filter=${encodeURIComponent(filter)}&$top=${top}&$orderby=receivedDateTime desc&$select=id,subject,from,toRecipients,receivedDateTime,bodyPreview,body,isRead`;
+      // Use $search + $filter for from, and a second request for to
+      // Graph API doesn't support toRecipients/any filter on /me/messages
+      // Strategy: use two requests — one filtered by from, one by $search for to
+      const fromFilter = `from/emailAddress/address eq '${emailAddr}'`;
+      const fromUrl = `${GRAPH_BASE}/me/messages?$filter=${encodeURIComponent(fromFilter)}&$top=${top}&$orderby=receivedDateTime desc&$select=id,subject,from,toRecipients,receivedDateTime,bodyPreview,body,isRead`;
+      const toUrl = `${GRAPH_BASE}/me/messages?$search="${encodeURIComponent(`to:${emailAddr}`)}"&$top=${top}&$select=id,subject,from,toRecipients,receivedDateTime,bodyPreview,body,isRead`;
 
-      const graphRes = await fetch(graphUrl, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      const [fromRes, toRes] = await Promise.all([
+        fetch(fromUrl, { headers: { Authorization: `Bearer ${accessToken}` } }),
+        fetch(toUrl, { headers: { Authorization: `Bearer ${accessToken}` } }),
+      ]);
 
-      if (!graphRes.ok) {
-        const errText = await graphRes.text();
-        console.error(`Graph API error for user ${tokenRow.user_id}:`, errText);
-        continue;
+      const messages: any[] = [];
+
+      if (fromRes.ok) {
+        const d = await fromRes.json();
+        messages.push(...(d.value || []));
+      } else {
+        console.error(`Graph from-filter error for ${tokenRow.user_id}:`, await fromRes.text());
       }
 
-      const graphData = await graphRes.json();
-      const messages = graphData.value || [];
+      if (toRes.ok) {
+        const d = await toRes.json();
+        messages.push(...(d.value || []));
+      } else {
+        console.error(`Graph to-search error for ${tokenRow.user_id}:`, await toRes.text());
+      }
+
+      // Deduplicate within this account by message id
+      const seenIds = new Set<string>();
 
       for (const msg of messages) {
+        if (seenIds.has(msg.id)) continue;
+        seenIds.add(msg.id);
         allEmails.push({
           id: msg.id,
           subject: msg.subject || "(ingen emne)",
