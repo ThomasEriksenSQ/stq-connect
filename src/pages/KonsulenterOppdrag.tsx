@@ -214,31 +214,8 @@ export default function KonsulenterOppdrag() {
         </button>
       </div>
 
-      {/* Tab switcher */}
-      <div className="flex flex-wrap items-center gap-2 mb-6">
-        {(
-          [
-            { key: "oppdrag", label: "Oppdrag" },
-            { key: "innstillinger", label: "Varslingsinnstillinger" },
-          ] as const
-        ).map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={cn(
-              "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
-              activeTab === tab.key
-                ? "bg-foreground text-background border-foreground"
-                : "border-border text-muted-foreground hover:bg-secondary",
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
 
       {/* Stat cards */}
-        <>
           {/* Stat cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 rounded-xl px-5 py-4 shadow-sm">
@@ -547,10 +524,8 @@ export default function KonsulenterOppdrag() {
               />
             </SheetContent>
           </Sheet>
-        </>
-      )}
 
-      {activeTab === "innstillinger" && <VarslingsInnstillinger />}
+
     </div>
   );
 }
