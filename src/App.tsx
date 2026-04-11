@@ -177,7 +177,15 @@ const App = () => (
                     </Suspense>
                   }
                 />
-              </Route>
+                </Route>
+                <Route
+                  path="innstillinger"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <Innstillinger />
+                    </Suspense>
+                  }
+                />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
