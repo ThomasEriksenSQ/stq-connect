@@ -149,11 +149,9 @@ serve(async (req) => {
     try {
       const accessToken = await refreshTokenIfNeeded(supabase, tokenRow);
 
-      // Use $search + $filter for from, and a second request for to
-      // Graph API doesn't support toRecipients/any filter on /me/messages
-      // Strategy: use two requests — one filtered by from, one by $search for to
-      const fromFilter = `from/emailAddress/address eq '${emailAddr}'`;
-      const fromUrl = `${GRAPH_BASE}/me/messages?$filter=${encodeURIComponent(fromFilter)}&$top=${top}&$orderby=receivedDateTime desc&$select=id,subject,from,toRecipients,receivedDateTime,bodyPreview,body,isRead`;
+      // Use $search for both directions — $filter on from/emailAddress/address
+      // causes InefficientFilter when combined with $orderby
+      const fromUrl = `${GRAPH_BASE}/me/messages?$search="${encodeURIComponent(`from:${emailAddr}`)}"&$top=${top}&$select=id,subject,from,toRecipients,receivedDateTime,bodyPreview,body,isRead`;
       const toUrl = `${GRAPH_BASE}/me/messages?$search="${encodeURIComponent(`to:${emailAddr}`)}"&$top=${top}&$select=id,subject,from,toRecipients,receivedDateTime,bodyPreview,body,isRead`;
 
       const [fromRes, toRes] = await Promise.all([
