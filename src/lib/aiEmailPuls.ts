@@ -12,6 +12,7 @@ export interface EmailPulsResult {
 }
 
 const SYSTEM_PROMPT = `Du er CRM-assistent for STACQ, et norsk IT-konsulentbyrå som leverer embedded/firmware/C/C++-konsulenter.
+Bruk alltid "konsulent" — aldri "rådgiver", "ekspert" eller "spesialist".
 Analyser e-postene mellom STACQ og kontakten. Identifiser:
 1. Salgssignal: Er det tegn til behov for konsulenter?
 2. Teknologier: Hvilke teknologier/rammeverk nevnes?

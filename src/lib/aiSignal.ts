@@ -9,7 +9,9 @@ export interface AiSignalResult {
   konfidens: "høy" | "middels" | "lav";
 }
 
-const SYSTEM_PROMPT = `Du er CRM-assistent for STACQ, et norsk IT-konsulentbyrå. Analyser aktivitetshistorikken og anbefal riktig salgssignal. Svar KUN med JSON:
+const SYSTEM_PROMPT = `Du er CRM-assistent for STACQ, et norsk IT-konsulentbyrå. Analyser aktivitetshistorikken og anbefal riktig salgssignal.
+Bruk alltid "konsulent" — aldri "rådgiver", "ekspert" eller "spesialist".
+Svar KUN med JSON:
 {
   "anbefalt_signal": "Behov nå" | "Får fremtidig behov" | "Får kanskje behov" | "Ukjent om behov" | "Ikke aktuelt",
   "begrunnelse": "maks 15 ord, norsk",
