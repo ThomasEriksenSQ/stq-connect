@@ -1838,10 +1838,17 @@ function ActivityTimeline({
     );
   }, [activities, outlookEmails]);
 
+  const [showEmails, setShowEmails] = useState(true);
+
+  const filteredItems = useMemo(() => {
+    if (showEmails) return mergedItems;
+    return mergedItems.filter((item) => item._source !== "email");
+  }, [mergedItems, showEmails]);
+
   const grouped = useMemo(() => {
     const groups: { key: string; label: string; period: string; items: any[] }[] = [];
     let currentKey = "";
-    for (const item of mergedItems) {
+    for (const item of filteredItems) {
       const d = new Date(item.created_at);
       const monthKey = format(d, "yyyy-MM");
       if (monthKey !== currentKey) {
@@ -1856,16 +1863,28 @@ function ActivityTimeline({
       groups[groups.length - 1].items.push(item);
     }
     return groups;
-  }, [mergedItems, currentYear]);
+  }, [filteredItems, currentYear]);
 
-  const totalCount = mergedItems.length;
+  const totalCount = filteredItems.length;
+  const hasEmails = outlookEmails.length > 0;
 
   if (totalCount === 0) {
     return (
       <div>
-        <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-          Aktiviteter · 0
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+            Aktiviteter · 0
+          </h3>
+          {hasEmails && (
+            <button
+              onClick={() => setShowEmails((v) => !v)}
+              className="inline-flex items-center gap-1 text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Mail className="w-3.5 h-3.5" />
+              {showEmails ? "Skjul e-post" : "Vis e-post"}
+            </button>
+          )}
+        </div>
         <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen aktiviteter ennå</p>
       </div>
     );
@@ -1873,9 +1892,20 @@ function ActivityTimeline({
 
   return (
     <div>
-      <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4 mt-8">
-        Aktiviteter · {totalCount}
-      </h3>
+      <div className="flex items-center justify-between mb-4 mt-8">
+        <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+          Aktiviteter · {totalCount}
+        </h3>
+        {hasEmails && (
+          <button
+            onClick={() => setShowEmails((v) => !v)}
+            className="inline-flex items-center gap-1 text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Mail className="w-3.5 h-3.5" />
+            {showEmails ? "Skjul e-post" : "Vis e-post"}
+          </button>
+        )}
+      </div>
 
       {grouped.map((group, gi) => (
         <div key={group.key}>
