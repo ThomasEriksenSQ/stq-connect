@@ -1136,7 +1136,10 @@ export function ContactCardContent({
             contactId={contactId}
             contactName={`${contact.first_name} ${contact.last_name}`}
             contactEmail={contact.email || null}
-            currentSignal={effectiveSignal}
+            currentSignal={getEffectiveSignal(
+              activities.map((a) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+              tasks.map((t) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date })),
+            )}
             currentTechnologies={((contact as any).teknologier as string[]) || []}
             onUpdateSignal={(signal) => {
               updateSignalMutation.mutate(signal);
