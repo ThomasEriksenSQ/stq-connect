@@ -1214,6 +1214,14 @@ export function ContactCardContent({
               >
                 <Clock className="h-[15px] w-[15px] text-[hsl(var(--warning))]" /> Ny oppfølging
               </button>
+              {!outlookStatus?.connected && (
+                <button
+                  onClick={handleConnectOutlook}
+                  className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-dashed border-border bg-background text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors ml-auto"
+                >
+                  <Mail className="h-[15px] w-[15px]" /> Koble til Outlook
+                </button>
+              )}
             </div>
 
             {/* Inline form */}
