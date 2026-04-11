@@ -369,7 +369,8 @@ export function ContactCardContent({
     );
     const data = await res.json();
     if (data.url) {
-      window.location.href = data.url;
+      // Open in new tab — Microsoft login blocks iframe embedding
+      window.open(data.url, "_blank");
     } else {
       toast.error(data.error || "Kunne ikke starte Outlook-tilkobling");
     }
