@@ -33,7 +33,7 @@ async function refreshTokenIfNeeded(
       client_secret: CLIENT_SECRET,
       refresh_token: tokenRow.refresh_token,
       grant_type: "refresh_token",
-      scope: "offline_access Mail.Read",
+      scope: "offline_access Mail.Read Calendars.ReadWrite",
     }).toString(),
   });
 
