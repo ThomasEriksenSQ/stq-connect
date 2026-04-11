@@ -484,6 +484,23 @@ export function ContactCardContent({
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.tasks(contactId) });
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.generic.tasks() });
       toast.success("Oppfølging opprettet");
+
+      // Fire-and-forget calendar sync
+      if (formCalendarSync && formDate && formDate !== "someday") {
+        const contactName = contact ? `${contact.first_name} ${contact.last_name}` : "";
+        const companyName = (contact as any)?.companies?.name || "";
+        const calTitle = `Følg opp ${contactName}, ${companyName}`;
+        supabase.functions.invoke("outlook-calendar", {
+          body: { title: calTitle, date: formDate },
+        }).then(({ error }) => {
+          if (error) {
+            toast.error("Kunne ikke legge til i Outlook-kalender");
+          } else {
+            toast.success("Lagt til i Outlook-kalender");
+          }
+        });
+      }
+
       closeForm();
     },
     onError: () => toast.error("Kunne ikke opprette oppfølging"),
