@@ -1366,14 +1366,24 @@ export function ContactCardContent({
                 )}
 
                 {activeForm === "task" && (
-                  <label className="flex items-center gap-2 cursor-pointer select-none mt-2">
-                    <Checkbox
-                      checked={formEmailNotify}
-                      onCheckedChange={(v) => setFormEmailNotify(!!v)}
-                      className="h-4 w-4"
-                    />
-                    <span className="text-[0.8125rem] text-foreground">Epostvarsling ved forfall</span>
-                  </label>
+                  <>
+                    <label className="flex items-center gap-2 cursor-pointer select-none mt-2">
+                      <Checkbox
+                        checked={formEmailNotify}
+                        onCheckedChange={(v) => setFormEmailNotify(!!v)}
+                        className="h-4 w-4"
+                      />
+                      <span className="text-[0.8125rem] text-foreground">Epostvarsling ved forfall</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <Checkbox
+                        checked={formCalendarSync}
+                        onCheckedChange={(v) => setFormCalendarSync(!!v)}
+                        className="h-4 w-4"
+                      />
+                      <span className="text-[0.8125rem] text-foreground">Legg til i Outlook-kalender</span>
+                    </label>
+                  </>
                 )}
 
                 <div className="flex items-center gap-2 mt-3">
@@ -1716,6 +1726,18 @@ function TaskRow({
             className="h-4 w-4"
           />
           <span className="text-[0.8125rem] text-foreground">Epostvarsling ved forfall</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <Checkbox
+            checked={false}
+            onCheckedChange={() => {
+              // Calendar sync is one-time action — not stored, so always unchecked
+              // When checked and saved, will trigger calendar creation
+            }}
+            className="h-4 w-4"
+            disabled
+          />
+          <span className="text-[0.8125rem] text-muted-foreground">Outlook-kalender (kun ved opprettelse)</span>
         </label>
         <div className="flex items-center gap-2">
           <Button
