@@ -244,12 +244,13 @@ const OppfolgingerSection = () => {
     queryClient.invalidateQueries({ queryKey: ["oppfolginger-tasks-v1"] });
   };
 
-  const handleModalSubmit = async (data: { title: string; dueDate: Date; owner: string; emailNotify: boolean }) => {
+  const handleModalSubmit = async (data: { title: string; dueDate: Date; owner: string; emailNotify: boolean; calendarSync: boolean }) => {
     setModalOpen(false);
     if (modalData) {
+      const dueDateStr = format(data.dueDate, "yyyy-MM-dd");
       await supabase.from("tasks").insert({
         title: data.title,
-        due_date: format(data.dueDate, "yyyy-MM-dd"),
+        due_date: dueDateStr,
         contact_id: modalData.contactId,
         company_id: modalData.companyId,
         assigned_to: data.owner,
@@ -259,6 +260,20 @@ const OppfolgingerSection = () => {
       const firstName = modalData.name.split(" ")[0];
       toast.success(`Oppfølging opprettet for ${firstName}`);
       queryClient.invalidateQueries({ queryKey: ["oppfolginger-tasks-v1"] });
+
+      // Fire-and-forget calendar sync
+      if (data.calendarSync) {
+        const calTitle = `Følg opp ${modalData.name}, ${modalData.company}`;
+        supabase.functions.invoke("outlook-calendar", {
+          body: { title: calTitle, date: dueDateStr },
+        }).then(({ error }) => {
+          if (error) {
+            toast.error("Kunne ikke legge til i Outlook-kalender");
+          } else {
+            toast.success("Lagt til i Outlook-kalender");
+          }
+        });
+      }
     }
   };
 
