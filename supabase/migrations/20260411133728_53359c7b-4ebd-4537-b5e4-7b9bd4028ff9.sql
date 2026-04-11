@@ -1,0 +1,1 @@
+ALTER TABLE public.tasks ADD COLUMN calendar_synced boolean DEFAULT false;
