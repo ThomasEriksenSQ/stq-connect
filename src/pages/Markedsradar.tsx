@@ -338,46 +338,87 @@ function RadarTab({
       )}
 
       <div className="space-y-6">
+        {/* 1. Selskaper med sterkest signal */}
         <Card>
           <CardContent className="pt-5 pb-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Building2 className="h-4 w-4 text-primary" />
-              <div>
-                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                  Opprett i CRM
-                </p>
-                <p className="text-[0.8125rem] text-muted-foreground">Selskaper som ikke finnes i dag.</p>
-              </div>
+            <div className="mb-4">
+              <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                Selskaper med sterkest signal
+              </p>
+              <p className="text-[0.8125rem] text-muted-foreground">
+                Rangert etter annonsefrekvens, tilgjengelig kontaktinfo og relevante teknologier.
+              </p>
             </div>
-            <div className="divide-y divide-border">
-              {visibleNewCompanies.slice(0, 9).map((company) => (
-                <div key={company.key} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="min-w-0">
-                      <p className="text-[0.875rem] font-medium text-foreground">{company.name}</p>
-                      <p className="text-[0.75rem] text-muted-foreground truncate">
-                        {company.adCount} annonser · {company.topTechnologies.slice(0, 3).join(", ") || "Ingen teknologi tolket"}
-                      </p>
+            {filteredCompanies.length === 0 ? (
+              <p className="text-[0.8125rem] text-muted-foreground py-10 text-center">
+                Ingen selskaper matcher filteret.
+              </p>
+            ) : (
+              <div className="divide-y divide-border">
+                {filteredCompanies.slice(0, 8).map((company, index) => {
+                  const maxScore = filteredCompanies[0]?.score || 1;
+                  const pct = Math.round((company.score / maxScore) * 100);
+                  return (
+                    <div key={company.key} className="py-3 first:pt-0 last:pb-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                          <span className="text-[0.8125rem] font-bold text-muted-foreground mt-0.5 shrink-0 w-5 text-right">
+                            {index + 1}.
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <button
+                              onClick={() => {
+                                if (company.company) {
+                                  navigate(`/companies/${company.company.id}`);
+                                }
+                              }}
+                              className="text-[0.9375rem] font-bold text-foreground hover:text-primary transition-colors text-left truncate max-w-full block"
+                            >
+                              {company.name}
+                            </button>
+                            <div className="mt-1 h-1.5 w-full rounded-full bg-primary/10">
+                              <div
+                                className="h-full rounded-full bg-primary/60 transition-all"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
+                              {company.topTechnologies.slice(0, 3).map((tech) => (
+                                <span key={tech} className="text-[0.75rem] text-muted-foreground">
+                                  {tech}
+                                </span>
+                              ))}
+                              {company.contactableNow && (
+                                <span className="text-[0.75rem] text-primary font-medium">
+                                  {company.contacts.length} kontakt{company.contacts.length !== 1 ? "er" : ""}
+                                </span>
+                              )}
+                              {!company.inCrm && (
+                                <span className="text-[0.75rem] text-destructive font-medium">Ikke i CRM</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end shrink-0 text-right">
+                          <span className="text-[0.8125rem] font-medium text-foreground">
+                            {company.adCount} annonser
+                          </span>
+                          {company.currentWeekCount > 0 && (
+                            <span className="text-[0.75rem] text-primary font-medium">
+                              {company.currentWeekCount} denne uken
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => navigate(createCompanyRoute(company.name))}
-                    className="gap-1.5 shrink-0"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Opprett
-                  </Button>
-                </div>
-              ))}
-              {visibleNewCompanies.length === 0 && (
-                <p className="text-[0.8125rem] text-muted-foreground">Ingen nye selskaper i dette utvalget.</p>
-              )}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
+        {/* 2. Kontaktpersoner */}
         <Card>
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center gap-2 mb-4">
@@ -470,9 +511,8 @@ function RadarTab({
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      <div className="grid gap-6">
+        {/* 4. Teknologitrender over tid */}
         <Card>
           <CardContent className="pt-5 pb-4">
             <div className="mb-4">
@@ -509,110 +549,73 @@ function RadarTab({
           </CardContent>
         </Card>
 
+        {/* 5. Prioriterte selskaper */}
+        <Card>
+          <CardContent className="pt-5 pb-4 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                  Prioriterte selskaper
+                </p>
+                <p className="text-[0.8125rem] text-muted-foreground">Klare neste steg for salg og oppfølging.</p>
+              </div>
+              <Badge variant="outline">{filteredCompanies.length} selskaper</Badge>
+            </div>
+
+            <div className="space-y-3">
+              {filteredCompanies.slice(0, 14).map((company) => (
+                <PriorityCompanyCard key={company.key} company={company} navigate={navigate} />
+              ))}
+              {filteredCompanies.length === 0 && (
+                <p className="text-[0.8125rem] text-muted-foreground py-8 text-center">
+                  Ingen selskaper matcher dagens filter.
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 6. Opprett i CRM */}
         <Card>
           <CardContent className="pt-5 pb-4">
-            <div className="mb-4">
-              <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                Selskaper med sterkest signal
-              </p>
-              <p className="text-[0.8125rem] text-muted-foreground">
-                Rangert etter annonsefrekvens, tilgjengelig kontaktinfo og relevante teknologier.
-              </p>
-            </div>
-            {filteredCompanies.length === 0 ? (
-              <p className="text-[0.8125rem] text-muted-foreground py-10 text-center">
-                Ingen selskaper matcher filteret.
-              </p>
-            ) : (
-              <div className="divide-y divide-border">
-                {filteredCompanies.slice(0, 8).map((company, index) => {
-                  const maxScore = filteredCompanies[0]?.score || 1;
-                  const pct = Math.round((company.score / maxScore) * 100);
-                  return (
-                    <div key={company.key} className="py-3 first:pt-0 last:pb-0">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                          <span className="text-[0.8125rem] font-bold text-muted-foreground mt-0.5 shrink-0 w-5 text-right">
-                            {index + 1}.
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <button
-                              onClick={() => {
-                                if (company.company) {
-                                  navigate(`/companies/${company.company.id}`);
-                                }
-                              }}
-                              className="text-[0.9375rem] font-bold text-foreground hover:text-primary transition-colors text-left truncate max-w-full block"
-                            >
-                              {company.name}
-                            </button>
-                            <div className="mt-1 h-1.5 w-full rounded-full bg-primary/10">
-                              <div
-                                className="h-full rounded-full bg-primary/60 transition-all"
-                                style={{ width: `${pct}%` }}
-                              />
-                            </div>
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
-                              {company.topTechnologies.slice(0, 3).map((tech) => (
-                                <span key={tech} className="text-[0.75rem] text-muted-foreground">
-                                  {tech}
-                                </span>
-                              ))}
-                              {company.contactableNow && (
-                                <span className="text-[0.75rem] text-primary font-medium">
-                                  {company.contacts.length} kontakt{company.contacts.length !== 1 ? "er" : ""}
-                                </span>
-                              )}
-                              {!company.inCrm && (
-                                <span className="text-[0.75rem] text-destructive font-medium">Ikke i CRM</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end shrink-0 text-right">
-                          <span className="text-[0.8125rem] font-medium text-foreground">
-                            {company.adCount} annonser
-                          </span>
-                          {company.currentWeekCount > 0 && (
-                            <span className="text-[0.75rem] text-primary font-medium">
-                              {company.currentWeekCount} denne uken
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+            <div className="flex items-center gap-2 mb-4">
+              <Building2 className="h-4 w-4 text-primary" />
+              <div>
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                  Opprett i CRM
+                </p>
+                <p className="text-[0.8125rem] text-muted-foreground">Selskaper som ikke finnes i dag.</p>
               </div>
-            )}
+            </div>
+            <div className="divide-y divide-border">
+              {visibleNewCompanies.slice(0, 9).map((company) => (
+                <div key={company.key} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="min-w-0">
+                      <p className="text-[0.875rem] font-medium text-foreground">{company.name}</p>
+                      <p className="text-[0.75rem] text-muted-foreground truncate">
+                        {company.adCount} annonser · {company.topTechnologies.slice(0, 3).join(", ") || "Ingen teknologi tolket"}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate(createCompanyRoute(company.name))}
+                    className="gap-1.5 shrink-0"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Opprett
+                  </Button>
+                </div>
+              ))}
+              {visibleNewCompanies.length === 0 && (
+                <p className="text-[0.8125rem] text-muted-foreground">Ingen nye selskaper i dette utvalget.</p>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardContent className="pt-5 pb-4 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                Prioriterte selskaper
-              </p>
-              <p className="text-[0.8125rem] text-muted-foreground">Klare neste steg for salg og oppfølging.</p>
-            </div>
-            <Badge variant="outline">{filteredCompanies.length} selskaper</Badge>
-          </div>
-
-          <div className="space-y-3">
-            {filteredCompanies.slice(0, 14).map((company) => (
-              <PriorityCompanyCard key={company.key} company={company} navigate={navigate} />
-            ))}
-            {filteredCompanies.length === 0 && (
-              <p className="text-[0.8125rem] text-muted-foreground py-8 text-center">
-                Ingen selskaper matcher dagens filter.
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
