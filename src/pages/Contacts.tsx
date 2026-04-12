@@ -1321,9 +1321,11 @@ const Contacts = () => {
       if (huntSort.field === "match") {
         diff = (a.matchScore10 ?? 0) - (b.matchScore10 ?? 0);
       } else {
-        const aTemp = isContactMatchLead(a) ? a.temperature : (a as any).temperature;
-        const bTemp = isContactMatchLead(b) ? b.temperature : (b as any).temperature;
-        diff = tempToNum(aTemp) - tempToNum(bTemp);
+        const getTemp = (l: MatchLead) =>
+          l.leadType === "contact" ? l.temperature
+          : l.leadType === "request" ? (l.temperature ?? undefined)
+          : undefined;
+        diff = tempToNum(getTemp(a)) - tempToNum(getTemp(b));
       }
       return huntSort.dir === "desc" ? -diff : diff;
     });
