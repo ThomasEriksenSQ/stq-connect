@@ -1540,7 +1540,7 @@ const Contacts = () => {
                 <Chip label="Alle" value="all" current={typeFilter} onSelect={setTypeFilter} />
                 <Chip label="Innkjøper" value="call_list" current={typeFilter} onSelect={setTypeFilter} />
                 <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
-                <Chip label="Ikke relevant" value="ikke_aktuell" current={typeFilter} onSelect={setTypeFilter} />
+                <Chip label="Ikke relevant kontakt" value="ikke_aktuell" current={typeFilter} onSelect={setTypeFilter} />
               </div>
             </>
           )}
