@@ -587,8 +587,8 @@ export function CompanyCardContent({
         body: {
           teknologier,
           sted: company?.city || "",
-          interne: interne || [],
-          eksterne: eksterne || [],
+          interne: cachedInterne,
+          eksterne: cachedEksterne,
           kontakt_er_innkjoper: false,
           kontakt_signal: effectiveSignal || "Ukjent om behov",
           siste_kontakt_dato: activities[0]?.created_at
