@@ -88,11 +88,7 @@ Deno.serve(async (req) => {
     const planlegg = enriched.filter((o) => o.daysUntilForny > 30);
 
     // 4. Subject
-    const mostCritical = enriched[0];
-    const antallAndre = enriched.length - 1;
-    const subject = antallAndre === 0
-      ? `${mostCritical.kandidat} (${mostCritical.kunde}) — forny om ${mostCritical.daysUntilForny} dager`
-      : `${mostCritical.kandidat} (${mostCritical.kunde}) forny om ${mostCritical.daysUntilForny}d — og ${antallAndre} andre kontrakter`;
+    const subject = 'Kontraktfornyelser';
 
     // 5. Build HTML
     const datoNorsk = today.toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' });
