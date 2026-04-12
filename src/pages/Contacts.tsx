@@ -709,6 +709,7 @@ const Contacts = () => {
         const matchType =
           typeFilter === "all" ||
           (typeFilter === "call_list" && contact.call_list) ||
+          (typeFilter === "not_call_list" && !contact.call_list) ||
           (typeFilter === "cv_email" && contact.cv_email) ||
           (typeFilter === "ikke_aktuell" && contact.ikke_aktuell_kontakt);
         return matchOwner && matchSignal && matchType;
@@ -1562,7 +1563,20 @@ const Contacts = () => {
                   Type
                 </span>
                 <Chip label="Alle" value="all" current={typeFilter} onSelect={setTypeFilter} />
-                <Chip label="Innkjøper" value="call_list" current={typeFilter} onSelect={setTypeFilter} />
+                <button
+                  className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors ${
+                    typeFilter === "call_list" || typeFilter === "not_call_list"
+                      ? "bg-foreground text-background border-foreground"
+                      : "border-border text-muted-foreground hover:bg-secondary"
+                  }`}
+                  onClick={() => {
+                    if (typeFilter === "call_list") setTypeFilter("not_call_list");
+                    else if (typeFilter === "not_call_list") setTypeFilter("all");
+                    else setTypeFilter("call_list");
+                  }}
+                >
+                  {typeFilter === "not_call_list" ? "Ikke innkjøper" : "Innkjøper"}
+                </button>
                 <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
                 <Chip label="Ikke relevant kontakt" value="ikke_aktuell" current={typeFilter} onSelect={setTypeFilter} />
               </div>
