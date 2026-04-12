@@ -440,25 +440,26 @@ async function generateAiSummary(snapshot: MarketSnapshot): Promise<string | nul
 
 function renderBulletRows(rows: string[]): string {
   if (rows.length === 0) {
-    return `<p style="font-size:13px;color:#888888;margin:0">Ingen funn denne uken.</p>`;
+    return `<p style="font-size:13px;color:#94a3b8;margin:0;padding:8px 0">Ingen funn denne uken.</p>`;
   }
 
   return rows
     .map(
       (row) => `
-        <div style="padding:12px 0;border-top:1px solid #f5f5f5">
-          <p style="font-size:14px;color:#0a0a0a;margin:0;line-height:1.45">${row}</p>
-        </div>`,
+        <tr>
+          <td style="padding:10px 0 10px 14px;border-left:3px solid #2563eb;font-size:14px;color:#1e293b;line-height:1.5">${row}</td>
+        </tr>
+        <tr><td style="height:1px;background:#f1f5f9"></td></tr>`,
     )
     .join("");
 }
 
 function section(title: string, subtitle: string, body: string) {
   return `
-    <div style="padding:24px 40px 0">
-      <p style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#999999;margin:0 0 6px">${title}</p>
-      <p style="font-size:13px;color:#777777;margin:0 0 10px">${subtitle}</p>
-      ${body}
+    <div style="padding:28px 40px 0">
+      <p style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748b;margin:0 0 4px">${title}</p>
+      <p style="font-size:13px;color:#94a3b8;margin:0 0 14px">${subtitle}</p>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">${body}</table>
     </div>`;
 }
 
@@ -473,7 +474,7 @@ function buildHtml(snapshot: MarketSnapshot, aiSummary: string | null) {
       ? `https://crm.stacq.no/selskaper/${company.company.id}`
       : `https://crm.stacq.no/selskaper?ny=${encodeURIComponent(company.name)}`;
     const label = company.company ? company.name : `${company.name} (ikke i CRM)`;
-    return `<a href="${companyUrl}" style="color:#0a0a0a;text-decoration:none"><strong>${label}</strong></a> — ${company.adCount} annonser · ${company.topTechnologies.slice(0, 3).join(", ") || "ingen teknologi"}${company.latestRole ? ` · ${company.latestRole}` : ""}`;
+    return `<a href="${companyUrl}" style="color:#1e293b;text-decoration:none"><strong>${label}</strong></a> — ${company.adCount} annonser · ${company.topTechnologies.slice(0, 3).join(", ") || "ingen teknologi"}${company.latestRole ? ` · ${company.latestRole}` : ""}`;
   });
   const contactRows = snapshot.topContacts.map((contact) => {
     const parts = [
@@ -490,45 +491,85 @@ function buildHtml(snapshot: MarketSnapshot, aiSummary: string | null) {
       `<strong>${company.name}</strong> — ${company.adCount} annonser · ${company.topTechnologies.slice(0, 3).join(", ") || "ingen teknologi"}`,
   );
 
+  const statBox = (value: string | number, label: string) => `
+    <td style="text-align:center;padding:16px 0">
+      <div style="font-size:28px;font-weight:700;color:#2563eb;letter-spacing:-0.5px">${value}</div>
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#94a3b8;margin-top:4px">${label}</div>
+    </td>`;
+
   return `
 <!DOCTYPE html>
 <html>
-  <body style="margin:0;padding:0;background:#f5f4f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+  <body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Helvetica,Arial,sans-serif">
     <div style="padding:40px 20px">
       <div style="max-width:620px;margin:0 auto">
-        <div style="background:#ffffff;border-radius:4px;overflow:hidden">
-          <div style="background:#0a0a0a;padding:28px 40px;display:flex;align-items:center;justify-content:space-between">
-            <div>
-              <span style="font-size:20px;font-weight:700;letter-spacing:-0.5px;color:#ffffff">STACQ</span>
-              <span style="font-size:11px;color:#888888;margin-left:10px;letter-spacing:0.08em;text-transform:uppercase">CRM</span>
-            </div>
-            <span style="font-size:11px;color:#555555;letter-spacing:0.04em">${dateLabel}</span>
+        <div style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
+
+          <!-- Header -->
+          <div style="padding:24px 40px;border-bottom:2px solid #2563eb">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td>
+                  <span style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:#0f172a">STACQ</span>
+                  <span style="font-size:11px;font-weight:600;color:#2563eb;margin-left:8px;letter-spacing:0.1em;text-transform:uppercase">CRM</span>
+                </td>
+                <td style="text-align:right">
+                  <span style="font-size:12px;color:#94a3b8;letter-spacing:0.02em">${dateLabel}</span>
+                </td>
+              </tr>
+            </table>
           </div>
-          <div style="padding:32px 40px 24px;border-bottom:1px solid #f0f0f0">
-            <p style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#999999;margin:0 0 8px">Ukentlig rapport</p>
-            <h1 style="font-size:22px;font-weight:700;color:#0a0a0a;margin:0 0 6px;letter-spacing:-0.3px">Markedsradar ${snapshot.latestWeek || ""}</h1>
-            <p style="font-size:14px;color:#777777;margin:0">${snapshot.adsThisWeek} annonser denne uken · ${snapshot.uniqueCompanies30d} unike selskaper siste 30 dager</p>
+
+          <!-- Title -->
+          <div style="padding:28px 40px 20px">
+            <p style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2563eb;margin:0 0 8px">Ukentlig rapport</p>
+            <h1 style="font-size:24px;font-weight:700;color:#0f172a;margin:0 0 4px;letter-spacing:-0.3px">Markedsradar ${snapshot.latestWeek || ""}</h1>
           </div>
+
+          <!-- Stats -->
+          <div style="padding:0 40px 24px">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8fafc;border-radius:8px;overflow:hidden">
+              <tr>
+                ${statBox(snapshot.adsThisWeek, "Annonser denne uken")}
+                <td style="width:1px;background:#e2e8f0;padding:0"></td>
+                ${statBox(snapshot.uniqueCompanies30d, "Unike selskaper")}
+                <td style="width:1px;background:#e2e8f0;padding:0"></td>
+                ${statBox(snapshot.technologyTrends.filter(t => t.delta > 0).length, "Teknologier i vekst")}
+              </tr>
+            </table>
+          </div>
+
           ${
             aiSummary
-              ? section(
-                  "AI-oppsummering",
-                  "Det viktigste markedsbildet for STACQ akkurat nå.",
-                  `<div style="padding:14px 0;border-top:1px solid #f5f5f5"><p style="font-size:14px;color:#0a0a0a;margin:0;line-height:1.6">${aiSummary}</p></div>`,
-                )
+              ? `<div style="padding:0 40px 8px">
+                  <div style="background:#eff6ff;border-radius:8px;padding:20px 24px;border-left:3px solid #2563eb">
+                    <p style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2563eb;margin:0 0 10px">AI-oppsummering</p>
+                    <p style="font-size:14px;color:#1e293b;margin:0;line-height:1.65">${aiSummary}</p>
+                  </div>
+                </div>`
               : ""
           }
+
           ${section("Teknologier i vekst", "Hvilke signaler som øker i stillingsmarkedet.", renderBulletRows(techRows))}
           ${section("Selskaper å følge opp", "De mest relevante selskapene basert på annonser, kontaktdata og teknologi-fit.", renderBulletRows(companyRows))}
           ${section("Kontaktpersoner", "Direkte kontaktpunkter som er verdt å bruke denne uken.", renderBulletRows(contactRows))}
           ${section("Ikke i CRM", "Selskaper som kan være verdt å opprette som nye leads.", renderBulletRows(newCompanyRows))}
+
+          <!-- CTA -->
           <div style="padding:32px 40px">
-            <a href="https://crm.stacq.no/markedsradar" style="display:inline-block;background:#0a0a0a;color:#ffffff;font-size:13px;font-weight:600;padding:12px 24px;border-radius:4px;text-decoration:none;letter-spacing:0.02em">Åpne markedsradar →</a>
+            <a href="https://crm.stacq.no/markedsradar" style="display:inline-block;background:#2563eb;color:#ffffff;font-size:13px;font-weight:600;padding:12px 28px;border-radius:6px;text-decoration:none;letter-spacing:0.02em">Åpne markedsradar →</a>
           </div>
-          <div style="padding:20px 40px;border-top:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between">
-            <span style="font-size:12px;color:#bbbbbb">STACQ CRM · Automatisk rapport</span>
-            <span style="font-size:12px;color:#bbbbbb">crm.stacq.no</span>
+
+          <!-- Footer -->
+          <div style="padding:20px 40px;border-top:1px solid #e2e8f0">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td><span style="font-size:12px;color:#94a3b8">STACQ CRM · Automatisk rapport</span></td>
+                <td style="text-align:right"><span style="font-size:12px;color:#94a3b8">crm.stacq.no</span></td>
+              </tr>
+            </table>
           </div>
+
         </div>
       </div>
     </div>
