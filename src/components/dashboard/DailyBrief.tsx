@@ -1240,10 +1240,19 @@ const DailyBrief = () => {
                           options?: { requireSignalChoice?: boolean },
                         ) => {
                           setNudgeScenario(scenario);
-                          setNudgeSignal(options?.requireSignalChoice ? "" : currentSignal || "");
-                          setNudgeRequiresSignalChoice(!!options?.requireSignalChoice);
-                          setNudgeDate("someday");
-                          setNudgeCustomDate("");
+                          setNudgeSignal(currentSignal || "");
+                          setNudgeRequiresSignalChoice(!currentSignal && !!options?.requireSignalChoice);
+                          // Preserve date chip selection from the card
+                          const taskId = current.nextTask?.id;
+                          const chipVal = taskId ? selectedChipDate[taskId] : undefined;
+                          if (chipVal !== undefined) {
+                            // null means "Følg opp på sikt" on the card → "someday" in modal
+                            setNudgeDate(chipVal === null ? "someday" : chipVal);
+                            setNudgeCustomDate(taskId && customChipDate[taskId] ? customChipDate[taskId] : "");
+                          } else {
+                            setNudgeDate("someday");
+                            setNudgeCustomDate("");
+                          }
                           setNudgeOpen(true);
                         };
                         if (harForfalt) {
