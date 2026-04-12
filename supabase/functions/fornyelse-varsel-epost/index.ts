@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
 
   <!-- CTA -->
   <div style="padding:32px 40px">
-    <a href="https://crm.stacq.no/konsulenter-oppdrag?filter=Aktiv" style="display:inline-block;background:#2563eb;color:#ffffff;font-size:13px;font-weight:600;padding:12px 28px;border-radius:6px;text-decoration:none;letter-spacing:0.02em">Åpne aktive oppdrag →</a>
+    <a href="<a href="https://crm.stacq.no/konsulenter/i-oppdrag" style="display:inline-block;background:#2563eb;color:#ffffff;font-size:13px;font-weight:600;padding:12px 28px;border-radius:6px;text-decoration:none;letter-spacing:0.02em">Åpne aktive oppdrag →</a>" style="display:inline-block;background:#2563eb;color:#ffffff;font-size:13px;font-weight:600;padding:12px 28px;border-radius:6px;text-decoration:none;letter-spacing:0.02em">Åpne aktive oppdrag →</a>
   </div>
 
   <!-- Footer -->
