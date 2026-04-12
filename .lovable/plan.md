@@ -1,24 +1,31 @@
 
 
-## Tre-stegs toggle for Innkjøper-filteret
+## Fix: Innkjøper-chip design + forbudt-ikon
 
-### Oppførsel
-1. Klikk 1: Vis kun innkjøpere (`call_list === true`)
-2. Klikk 2: Vis kun IKKE-innkjøpere (`call_list !== true`)
-3. Klikk 3: Tilbake til "alle" (filter av)
+### Problem
+Innkjøper-chipen bruker `inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold` — avviker fra standard Chip-designet som bruker `CHIP_BASE` (`h-8 px-3 text-[0.8125rem] rounded-full border`).
 
 ### Endringer
 
-**Fil: `src/pages/Contacts.tsx`**
+**Fil: `src/pages/Contacts.tsx`**, linje 1566-1579:
 
-1. **Endre `typeFilter` fra enkel string til å støtte `not_call_list`-verdi.** Legg til ny verdi `"not_call_list"` som et tredje steg. Filtreringslogikken (linje ~709-713) utvides:
-   ```
-   (typeFilter === "not_call_list" && !contact.call_list)
-   ```
+Erstatt den egendefinerte `<button>` med samme `CHIP_BASE`/`CHIP_ON`/`CHIP_OFF`-klasser som de andre Chip-komponentene. Legg til et lite rødt forbudt-ikon (`Ban` fra lucide-react, size 14) foran teksten når `typeFilter === "not_call_list"`:
 
-2. **Endre Innkjøper-chipen** (linje 1565) fra standard `Chip` til en egendefinert `onClick` som sykler gjennom tre tilstander: `all → call_list → not_call_list → all`. Visuelt vises chipen som aktiv i begge filtertilstander, men med en liten indikator (f.eks. "Innkjøper" vs "Ikke innkjøper" label-bytte) for å vise hvilken retning filteret er i.
+```tsx
+<button
+  className={`${typeFilter === "call_list" || typeFilter === "not_call_list" ? CHIP_ON : CHIP_OFF} inline-flex items-center gap-1.5`}
+  onClick={() => {
+    if (typeFilter === "call_list") setTypeFilter("not_call_list");
+    else if (typeFilter === "not_call_list") setTypeFilter("all");
+    else setTypeFilter("call_list");
+  }}
+>
+  {typeFilter === "not_call_list" && <Ban className="w-3.5 h-3.5 text-red-500" />}
+  {typeFilter === "not_call_list" ? "Ikke innkjøper" : "Innkjøper"}
+</button>
+```
 
-3. **Chip-visning:** Når `typeFilter === "not_call_list"`, vis chipen som aktiv med label "Ikke innkjøper". Når `typeFilter === "call_list"`, vis "Innkjøper" som i dag.
+Legg til `Ban` i lucide-react-importen.
 
 Ingen andre endringer.
 
