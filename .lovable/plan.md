@@ -1,31 +1,35 @@
 
 
-## Fix: Innkjøper-chip design + forbudt-ikon
+## Tre-stegs toggle for CV-Epost-chipen
 
-### Problem
-Innkjøper-chipen bruker `inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold` — avviker fra standard Chip-designet som bruker `CHIP_BASE` (`h-8 px-3 text-[0.8125rem] rounded-full border`).
+### Oppførsel
+1. Klikk 1: Vis kun kontakter med CV-Epost aktivert (`cv_email === true`) — som i dag
+2. Klikk 2: Vis kun kontakter som IKKE har CV-Epost, men som HAR e-post (`!cv_email && email finnes`)
+3. Klikk 3: Filter av
 
 ### Endringer
 
-**Fil: `src/pages/Contacts.tsx`**, linje 1566-1579:
+**Fil: `src/pages/Contacts.tsx`**
 
-Erstatt den egendefinerte `<button>` med samme `CHIP_BASE`/`CHIP_ON`/`CHIP_OFF`-klasser som de andre Chip-komponentene. Legg til et lite rødt forbudt-ikon (`Ban` fra lucide-react, size 14) foran teksten når `typeFilter === "not_call_list"`:
+1. **Filtreringslogikk (linje 713):** Legg til ny verdi `"not_cv_email"`:
+   ```
+   (typeFilter === "not_cv_email" && !contact.cv_email && contactHasEmail(contact))
+   ```
 
-```tsx
-<button
-  className={`${typeFilter === "call_list" || typeFilter === "not_call_list" ? CHIP_ON : CHIP_OFF} inline-flex items-center gap-1.5`}
-  onClick={() => {
-    if (typeFilter === "call_list") setTypeFilter("not_call_list");
-    else if (typeFilter === "not_call_list") setTypeFilter("all");
-    else setTypeFilter("call_list");
-  }}
->
-  {typeFilter === "not_call_list" && <Ban className="w-3.5 h-3.5 text-red-500" />}
-  {typeFilter === "not_call_list" ? "Ikke innkjøper" : "Innkjøper"}
-</button>
-```
-
-Legg til `Ban` i lucide-react-importen.
+2. **Erstatt Chip med egendefinert button (linje 1577):**
+   ```tsx
+   <button
+     className={`${typeFilter === "cv_email" || typeFilter === "not_cv_email" ? CHIP_ON : CHIP_OFF} inline-flex items-center gap-1.5`}
+     onClick={() => {
+       if (typeFilter === "cv_email") setTypeFilter("not_cv_email");
+       else if (typeFilter === "not_cv_email") setTypeFilter("all");
+       else setTypeFilter("cv_email");
+     }}
+   >
+     {typeFilter === "not_cv_email" && <Ban className="w-3.5 h-3.5 text-red-500" />}
+     {typeFilter === "not_cv_email" ? "Ikke CV-Epost" : "CV-Epost"}
+   </button>
+   ```
 
 Ingen andre endringer.
 
