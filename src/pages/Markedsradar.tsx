@@ -511,14 +511,111 @@ function RadarTab({
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      <div className="grid gap-6">
+        {/* 4. Teknologitrender over tid */}
         <Card>
           <CardContent className="pt-5 pb-4">
             <div className="mb-4">
               <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
                 Teknologitrender over tid
+              </p>
+              <p className="text-[0.8125rem] text-muted-foreground">De mest synlige teknologisignalene i datasettet.</p>
+            </div>
+            {market.weeklyTechSeries.length === 0 || chartTechs.length === 0 ? (
+              <p className="text-[0.8125rem] text-muted-foreground py-10 text-center">
+                Ikke nok data til å tegne trendgraf ennå.
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height={320}>
+                <LineChart data={market.weeklyTechSeries}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="uke" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <ReTooltip />
+                  <Legend />
+                  {chartTechs.map((tech, index) => (
+                    <Line
+                      key={tech}
+                      type="monotone"
+                      dataKey={tech}
+                      stroke={techColor(index)}
+                      strokeWidth={2.25}
+                      dot={false}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* 5. Prioriterte selskaper */}
+        <Card>
+          <CardContent className="pt-5 pb-4 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                  Prioriterte selskaper
+                </p>
+                <p className="text-[0.8125rem] text-muted-foreground">Klare neste steg for salg og oppfølging.</p>
+              </div>
+              <Badge variant="outline">{filteredCompanies.length} selskaper</Badge>
+            </div>
+
+            <div className="space-y-3">
+              {filteredCompanies.slice(0, 14).map((company) => (
+                <PriorityCompanyCard key={company.key} company={company} navigate={navigate} />
+              ))}
+              {filteredCompanies.length === 0 && (
+                <p className="text-[0.8125rem] text-muted-foreground py-8 text-center">
+                  Ingen selskaper matcher dagens filter.
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 6. Opprett i CRM */}
+        <Card>
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Building2 className="h-4 w-4 text-primary" />
+              <div>
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                  Opprett i CRM
+                </p>
+                <p className="text-[0.8125rem] text-muted-foreground">Selskaper som ikke finnes i dag.</p>
+              </div>
+            </div>
+            <div className="divide-y divide-border">
+              {visibleNewCompanies.slice(0, 9).map((company) => (
+                <div key={company.key} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="min-w-0">
+                      <p className="text-[0.875rem] font-medium text-foreground">{company.name}</p>
+                      <p className="text-[0.75rem] text-muted-foreground truncate">
+                        {company.adCount} annonser · {company.topTechnologies.slice(0, 3).join(", ") || "Ingen teknologi tolket"}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate(createCompanyRoute(company.name))}
+                    className="gap-1.5 shrink-0"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Opprett
+                  </Button>
+                </div>
+              ))}
+              {visibleNewCompanies.length === 0 && (
+                <p className="text-[0.8125rem] text-muted-foreground">Ingen nye selskaper i dette utvalget.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
               </p>
               <p className="text-[0.8125rem] text-muted-foreground">De mest synlige teknologisignalene i datasettet.</p>
             </div>
