@@ -354,27 +354,26 @@ function RadarTab({
                 <p className="text-[0.8125rem] text-muted-foreground">Selskaper som ikke finnes i dag.</p>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="divide-y divide-border">
               {visibleNewCompanies.slice(0, 9).map((company) => (
-                <div key={company.key} className="rounded-lg border border-border bg-secondary/20 p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
+                <div key={company.key} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="min-w-0">
                       <p className="text-[0.875rem] font-medium text-foreground">{company.name}</p>
-                      <p className="text-[0.75rem] text-muted-foreground">
-                        {company.adCount} annonser ·{" "}
-                        {company.topTechnologies.slice(0, 3).join(", ") || "Ingen teknologi tolket"}
+                      <p className="text-[0.75rem] text-muted-foreground truncate">
+                        {company.adCount} annonser · {company.topTechnologies.slice(0, 3).join(", ") || "Ingen teknologi tolket"}
                       </p>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => navigate(createCompanyRoute(company.name))}
-                      className="gap-1.5"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Opprett
-                    </Button>
                   </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate(createCompanyRoute(company.name))}
+                    className="gap-1.5 shrink-0"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Opprett
+                  </Button>
                 </div>
               ))}
               {visibleNewCompanies.length === 0 && (
@@ -395,12 +394,15 @@ function RadarTab({
                 <p className="text-[0.8125rem] text-muted-foreground">De mest nyttige direkte kontaktpunktene.</p>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="divide-y divide-border">
               {visibleContacts.slice(0, 9).map((contact) => (
-                <div key={contact.key} className="rounded-lg border border-border bg-secondary/20 p-3 space-y-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-[0.875rem] font-medium text-foreground">{contact.name || "Kontaktperson"}</p>
+                <div key={contact.key} className="flex items-center justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[0.875rem] font-medium text-foreground">{contact.name || "Kontaktperson"}</p>
+                        {contact.role && <span className="text-[0.75rem] text-muted-foreground">· {contact.role}</span>}
+                      </div>
                       <button
                         onClick={() =>
                           navigate(
@@ -411,29 +413,22 @@ function RadarTab({
                       >
                         {contact.companyName}
                       </button>
-                      {contact.role && <p className="text-[0.75rem] text-muted-foreground">{contact.role}</p>}
                     </div>
-                    <Badge variant="outline">{contact.adCount} treff</Badge>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex items-center gap-4 shrink-0">
                     {contact.phone && (
-                      <a
-                        href={`tel:${contact.phone}`}
-                        className="inline-flex items-center gap-1.5 text-[0.75rem] text-foreground hover:text-primary"
-                      >
+                      <a href={`tel:${contact.phone}`} className="inline-flex items-center gap-1.5 text-[0.75rem] text-foreground hover:text-primary">
                         <Phone className="h-3.5 w-3.5" />
                         {contact.phone}
                       </a>
                     )}
                     {contact.email && (
-                      <a
-                        href={`mailto:${contact.email}`}
-                        className="inline-flex items-center gap-1.5 text-[0.75rem] text-foreground hover:text-primary"
-                      >
+                      <a href={`mailto:${contact.email}`} className="inline-flex items-center gap-1.5 text-[0.75rem] text-foreground hover:text-primary">
                         <Mail className="h-3.5 w-3.5" />
                         {contact.email}
                       </a>
                     )}
+                    <Badge variant="outline">{contact.adCount} treff</Badge>
                   </div>
                 </div>
               ))}
@@ -457,26 +452,24 @@ function RadarTab({
                 <p className="text-[0.8125rem] text-muted-foreground">Siste 30 dager sammenlignet med forrige 30.</p>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="divide-y divide-border">
               {visibleTechTrends.slice(0, 9).map((trend) => (
-                <div key={trend.name} className="rounded-lg border border-border bg-secondary/20 p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <button
-                        onClick={() => setTechFilter(trend.name)}
-                        className="text-[0.875rem] font-medium text-foreground hover:text-primary"
-                      >
-                        {trend.name}
-                      </button>
-                      <p className="text-[0.75rem] text-muted-foreground">{trend.current} annonser siste 30 dager</p>
-                    </div>
-                    <span className={cn("text-[0.75rem] font-medium", trendTone(trend.delta))}>
-                      {trend.momentumLabel}
-                    </span>
+                <div key={trend.name} className="flex items-center justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <button
+                      onClick={() => setTechFilter(trend.name)}
+                      className="text-[0.875rem] font-medium text-foreground hover:text-primary shrink-0"
+                    >
+                      {trend.name}
+                    </button>
+                    <span className="text-[0.75rem] text-muted-foreground">{trend.current} annonser</span>
+                    {trend.companies.length > 0 && (
+                      <span className="text-[0.75rem] text-muted-foreground truncate hidden sm:inline">{trend.companies.join(" · ")}</span>
+                    )}
                   </div>
-                  {trend.companies.length > 0 && (
-                    <p className="text-[0.75rem] text-muted-foreground mt-1">{trend.companies.join(" · ")}</p>
-                  )}
+                  <span className={cn("text-[0.75rem] font-medium shrink-0", trendTone(trend.delta))}>
+                    {trend.momentumLabel}
+                  </span>
                 </div>
               ))}
             </div>
