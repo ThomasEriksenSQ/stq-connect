@@ -529,23 +529,66 @@ function RadarTab({
                 Ingen selskaper matcher filteret.
               </p>
             ) : (
-              <ResponsiveContainer width="100%" height={Math.max(260, filteredCompanies.slice(0, 8).length * 34)}>
-                <BarChart
-                  data={filteredCompanies.slice(0, 8).map((company) => ({
-                    name: company.name,
-                    score: company.score,
-                    annonser: company.adCount,
-                  }))}
-                  layout="vertical"
-                  margin={{ left: 112, right: 8 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis type="number" tick={{ fontSize: 11 }} />
-                  <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11 }} />
-                  <ReTooltip />
-                  <Bar dataKey="score" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="divide-y divide-border">
+                {filteredCompanies.slice(0, 8).map((company, index) => {
+                  const maxScore = filteredCompanies[0]?.score || 1;
+                  const pct = Math.round((company.score / maxScore) * 100);
+                  return (
+                    <div key={company.key} className="py-3 first:pt-0 last:pb-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                          <span className="text-[0.8125rem] font-bold text-muted-foreground mt-0.5 shrink-0 w-5 text-right">
+                            {index + 1}.
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <button
+                              onClick={() => {
+                                if (company.company) {
+                                  navigate(`/companies/${company.company.id}`);
+                                }
+                              }}
+                              className="text-[0.9375rem] font-bold text-foreground hover:text-primary transition-colors text-left truncate max-w-full block"
+                            >
+                              {company.name}
+                            </button>
+                            <div className="mt-1 h-1.5 w-full rounded-full bg-primary/10">
+                              <div
+                                className="h-full rounded-full bg-primary/60 transition-all"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
+                              {company.topTechnologies.slice(0, 3).map((tech) => (
+                                <span key={tech} className="text-[0.75rem] text-muted-foreground">
+                                  {tech}
+                                </span>
+                              ))}
+                              {company.contactableNow && (
+                                <span className="text-[0.75rem] text-primary font-medium">
+                                  {company.contacts.length} kontakt{company.contacts.length !== 1 ? "er" : ""}
+                                </span>
+                              )}
+                              {!company.inCrm && (
+                                <span className="text-[0.75rem] text-destructive font-medium">Ikke i CRM</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end shrink-0 text-right">
+                          <span className="text-[0.8125rem] font-medium text-foreground">
+                            {company.adCount} annonser
+                          </span>
+                          {company.currentWeekCount > 0 && (
+                            <span className="text-[0.75rem] text-primary font-medium">
+                              {company.currentWeekCount} denne uken
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </CardContent>
         </Card>
