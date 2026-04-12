@@ -584,7 +584,7 @@ function buildHtml(snapshot: MarketSnapshot, aiSummary: string | null, consultan
                       </table>
                     </div>
                     <div style="font-size:12px;color:#64748b;line-height:1.5">
-                      ${techLabel} · ${company.adCount} annonser${company.currentWeekCount > 0 ? ` · ${company.currentWeekCount} denne uken` : ""} · ${crmLabel}
+                      ${techLabel} · ${company.adCount} annonser${company.currentWeekCount > 0 ? ` · ${company.currentWeekCount} denne uken` : ""}${crmLabel ? ` · ${crmLabel}` : ""}
                     </div>
                   </td>
                 </tr>
