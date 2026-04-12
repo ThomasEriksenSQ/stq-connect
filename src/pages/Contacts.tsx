@@ -711,6 +711,7 @@ const Contacts = () => {
           (typeFilter === "call_list" && contact.call_list) ||
           (typeFilter === "not_call_list" && !contact.call_list) ||
           (typeFilter === "cv_email" && contact.cv_email) ||
+          (typeFilter === "not_cv_email" && !contact.cv_email && contactHasEmail(contact)) ||
           (typeFilter === "ikke_aktuell" && contact.ikke_aktuell_kontakt);
         return matchOwner && matchSignal && matchType;
       }),
@@ -1574,7 +1575,17 @@ const Contacts = () => {
                   {typeFilter === "not_call_list" && <Ban className="w-3.5 h-3.5 text-red-500" />}
                   {typeFilter === "not_call_list" ? "Ikke innkjøper" : "Innkjøper"}
                 </button>
-                <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
+                <button
+                  className={`${typeFilter === "cv_email" || typeFilter === "not_cv_email" ? CHIP_ON : CHIP_OFF} inline-flex items-center gap-1.5`}
+                  onClick={() => {
+                    if (typeFilter === "cv_email") setTypeFilter("not_cv_email");
+                    else if (typeFilter === "not_cv_email") setTypeFilter("all");
+                    else setTypeFilter("cv_email");
+                  }}
+                >
+                  {typeFilter === "not_cv_email" && <Ban className="w-3.5 h-3.5 text-red-500" />}
+                  {typeFilter === "not_cv_email" ? "Ikke CV-Epost" : "CV-Epost"}
+                </button>
                 <Chip label="Ikke relevant kontakt" value="ikke_aktuell" current={typeFilter} onSelect={setTypeFilter} />
               </div>
             </>
