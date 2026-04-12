@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
 
     const { data: oppdrag } = await supabase
       .from("stacq_oppdrag")
-      .select("id, kandidat, kunde, forny_dato, status")
+      .select("id, kandidat, kunde, forny_dato, status, lopende_30_dager")
       .neq("status", "Inaktiv")
       .not("forny_dato", "is", null)
       .lte("forny_dato", threshold.toISOString().split("T")[0])
@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
             <p style="font-size:15px;font-weight:600;color:#0a0a0a;margin:0 0 2px">${o.kandidat}</p>
             <p style="font-size:13px;color:#888888;margin:0">${o.kunde} · Forny: ${fornyDato}</p>
           </div>
-          <span style="display:inline-block;background:${badgeBg};color:${badgeColor};font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;white-space:nowrap;margin-left:16px">Om ${o.daysUntilForny} dager</span>
+          <span style="display:inline-block;background:${badgeBg};color:${badgeColor};font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;white-space:nowrap;margin-left:16px">${o.lopende_30_dager ? 'Løpende 30 dager' : `Om ${o.daysUntilForny} dager`}</span>
         </div>`;
     }
 
