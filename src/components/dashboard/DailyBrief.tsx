@@ -1089,6 +1089,8 @@ const DailyBrief = () => {
                           {currentSignal || "Signal"} <ChevronDown className="h-3 w-3" />
                         </button>
                         {activeForm === "signal" && (
+                          <>
+                          <div className="fixed inset-0 z-40" onClick={() => setActiveForm(null)} />
                           <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-xl shadow-lg py-1 min-w-[200px]">
                             {SIGNAL_CATEGORIES.map((cat) => (
                               <button
@@ -1131,6 +1133,7 @@ const DailyBrief = () => {
                               </button>
                             ))}
                           </div>
+                          </>
                         )}
                       </div>
 
