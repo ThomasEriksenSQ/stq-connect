@@ -257,6 +257,8 @@ const Contacts = () => {
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [selectedConsultantId, setSelectedConsultantId] = useState<number | null>(null);
   const [jaktChip, setJaktChip] = useState<HuntChipValue>("alle");
+  type HuntSortField = "default" | "match" | "varme";
+  const [huntSort, setHuntSort] = useState<{ field: HuntSortField; dir: SortDir }>({ field: "default", dir: "desc" });
   const [search, setSearch] = usePersistentState("stacq:contacts:search", "");
   const [ownerFilter, setOwnerFilter] = usePersistentState("stacq:contacts:ownerFilter", "all");
   const [matchOwnerFilter, setMatchOwnerFilter] = usePersistentState("stacq:contacts:matchOwnerFilter", "all");
@@ -1308,7 +1310,27 @@ const Contacts = () => {
     });
   }, [filteredContacts, selectedConsultant, sort]);
 
-  const visibleMatchLeads = selectedConsultant ? matchResults.leads : [];
+  const visibleMatchLeads = useMemo(() => {
+    if (!selectedConsultant) return [];
+    const leads = [...matchResults.leads];
+    if (huntSort.field === "default") return leads;
+    const tempToNum = (t: string | undefined) =>
+      t === "hett" ? 4 : t === "lovende" ? 3 : t === "mulig" ? 2 : t === "sovende" ? 1 : 0;
+    leads.sort((a, b) => {
+      let diff = 0;
+      if (huntSort.field === "match") {
+        diff = (a.matchScore10 ?? 0) - (b.matchScore10 ?? 0);
+      } else {
+        const getTemp = (l: MatchLead) =>
+          l.leadType === "contact" ? l.temperature
+          : l.leadType === "request" ? (l.temperature ?? undefined)
+          : undefined;
+        diff = tempToNum(getTemp(a)) - tempToNum(getTemp(b));
+      }
+      return huntSort.dir === "desc" ? -diff : diff;
+    });
+    return leads;
+  }, [selectedConsultant, matchResults.leads, huntSort]);
   const hasVisibleResults = selectedConsultant ? visibleMatchLeads.length > 0 : sortedContacts.length > 0;
   const visibleResultCount = selectedConsultant
     ? visibleMatchLeads.length
@@ -1375,6 +1397,7 @@ const Contacts = () => {
     setSelectedConsultantId((current) => {
       const next = current === consultantId ? null : consultantId;
       if (next !== null) activatePriorityMode();
+      setHuntSort({ field: "default", dir: "desc" });
       return next;
     });
   };
@@ -1382,6 +1405,15 @@ const Contacts = () => {
   const handleJaktChipSelect = (value: HuntChipValue) => {
     setJaktChip(value);
     activatePriorityMode();
+    setHuntSort({ field: "default", dir: "desc" });
+  };
+
+  const toggleHuntSort = (field: "match" | "varme") => {
+    setHuntSort(prev =>
+      prev.field === field
+        ? { field, dir: prev.dir === "desc" ? "asc" : "desc" }
+        : { field, dir: "desc" }
+    );
   };
 
   const getMatchLeadHref = (lead: MatchLead) =>
@@ -1738,8 +1770,12 @@ const Contacts = () => {
               <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Lead</span>
               <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Selskap</span>
               <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Kilde</span>
-              <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Match</span>
-              <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Varme</span>
+              <button onClick={() => toggleHuntSort("match")} className="flex items-center gap-1 text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground hover:text-foreground transition-colors">
+                Match <ArrowUpDown className={cn("h-3 w-3", huntSort.field === "match" && "text-primary")} />
+              </button>
+              <button onClick={() => toggleHuntSort("varme")} className="flex items-center gap-1 text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground hover:text-foreground transition-colors">
+                Varme <ArrowUpDown className={cn("h-3 w-3", huntSort.field === "varme" && "text-primary")} />
+              </button>
               <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground text-right">Sist</span>
             </div>
             <div className="divide-y divide-border">
