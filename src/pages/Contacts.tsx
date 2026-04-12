@@ -1319,9 +1319,11 @@ const Contacts = () => {
     leads.sort((a, b) => {
       let diff = 0;
       if (huntSort.field === "match") {
-        diff = (a.matchScore ?? 0) - (b.matchScore ?? 0);
+        diff = (a.matchScore10 ?? 0) - (b.matchScore10 ?? 0);
       } else {
-        diff = tempToNum(a.temperature) - tempToNum(b.temperature);
+        const aTemp = isContactMatchLead(a) ? a.temperature : (a as any).temperature;
+        const bTemp = isContactMatchLead(b) ? b.temperature : (b as any).temperature;
+        diff = tempToNum(aTemp) - tempToNum(bTemp);
       }
       return huntSort.dir === "desc" ? -diff : diff;
     });
