@@ -690,7 +690,13 @@ function buildHtml(snapshot: MarketSnapshot, aiSummary: string | null, consultan
 
           
 
-          ${section("Selskaper å følge opp", "De mest relevante selskapene basert på annonser, kontaktdata og teknologi-fit.", renderBulletRows(companyRows))}
+          <div style="padding:28px 40px 0">
+            <p style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748b;margin:0 0 4px">Selskaper med sterkest signal</p>
+            <p style="font-size:13px;color:#94a3b8;margin:0 0 14px">Rangert etter annonsefrekvens, tilgjengelig kontaktinfo og relevante teknologier.</p>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">${signalRankingHtml}</table>
+          </div>
+
+          
 
           ${firstTimerRows.length > 0 ? section("Nye selskaper denne uken", "Selskaper som dukker opp for første gang i markedsradaren.", renderBulletRows(firstTimerRows)) : ""}
 
