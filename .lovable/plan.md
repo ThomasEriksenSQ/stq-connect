@@ -1,38 +1,41 @@
 
 
-## Husk valgt dato og signal i nudge-modalen
+## Sorterbare kolonner for MATCH og VARME i jaktmodus
 
 ### Problem
-Når brukeren velger f.eks. "2 uker" på kortet og trykker "Ok, neste" uten signal, åpnes nudge-modalen med "Følg opp på sikt" i stedet for "2 uker". Tilsvarende: hvis signal er valgt men ikke dato, vises ikke signalet i modalen.
+Kolonne-headerne MATCH og VARME i jaktmodus-tabellen er statisk tekst. Brukeren vil kunne klikke på dem for å sortere listen.
 
 ### Løsning
-Endre `openNudge`-funksjonen (linje 1238-1248 i `DailyBrief.tsx`) til å lese gjeldende verdier fra kortet:
+Legg til en lokal `huntSort` state med felt og retning. Gjør MATCH og VARME headers klikkbare med ArrowUpDown-ikon. Sorter `visibleMatchLeads` basert på valgt kolonne før rendering.
 
-**1. Dato: Les fra `selectedChipDate` / `customChipDate`**
+### Teknisk plan
 
-Før `setNudgeDate("someday")` (linje 1245), sjekk om brukeren har valgt en dato-chip på kortet:
-- Hent `taskId` fra `current.nextTask?.id`
-- Les `selectedChipDate[taskId]` — hvis den finnes, bruk den som `nudgeDate` (konverter `null` → `"someday"`)
-- Les `customChipDate[taskId]` for `nudgeCustomDate`
-- Hvis ingen chip er valgt, behold `"someday"` som default
+**Fil: `src/pages/Contacts.tsx`**
 
-**2. Signal: Les fra `currentSignal`**
+1. **Ny state** (ved linje ~259, nær andre state-variabler):
+   ```ts
+   type HuntSortField = "default" | "match" | "varme";
+   const [huntSort, setHuntSort] = useState<{ field: HuntSortField; dir: SortDir }>({ field: "default", dir: "desc" });
+   ```
 
-Linje 1243 setter allerede `nudgeSignal` til `currentSignal` når `requireSignalChoice` er false. Men når `requireSignalChoice` er true (mangler signal), settes den til `""`. Dette er korrekt — brukeren MÅ velge signal. Men hvis `currentSignal` allerede finnes (f.eks. satt av brukeren på kortet), bør den brukes uavhengig av `requireSignalChoice`.
+2. **Toggle-funksjon**:
+   ```ts
+   const toggleHuntSort = (field: "match" | "varme") => {
+     setHuntSort(prev =>
+       prev.field === field
+         ? { field, dir: prev.dir === "desc" ? "asc" : "desc" }
+         : { field, dir: "desc" }
+     );
+   };
+   ```
 
-Endre linje 1243 fra:
-```ts
-setNudgeSignal(options?.requireSignalChoice ? "" : currentSignal || "");
-```
-til:
-```ts
-setNudgeSignal(currentSignal || "");
-setNudgeRequiresSignalChoice(!currentSignal && !!options?.requireSignalChoice);
-```
+3. **Sortert liste** (etter linje ~1311 der `visibleMatchLeads` defineres):
+   Erstatt `const visibleMatchLeads = selectedConsultant ? matchResults.leads : [];` med en sortert versjon som anvender `huntSort` etter den eksisterende default-sorteringen. Map temperature til numerisk verdi (hett=4, lovende=3, mulig=2, sovende=1, null=0) for varme-sortering.
 
-### Fil som endres
-- `src/components/dashboard/DailyBrief.tsx` — kun `openNudge`-funksjonen (linje 1238-1248)
+4. **Klikkbare headers** (linje 1741-1742):
+   Endre MATCH og VARME `<span>` til `<button>` med `onClick={() => toggleHuntSort("match")}` etc. Legg til `ArrowUpDown`-ikon (allerede importert) ved siden av teksten. Vis aktiv retning med visuell indikator.
+
+5. **Nullstill huntSort** når konsulent byttes eller jaktChip endres (i eksisterende handlers).
 
 ### Ingen andre endringer
-Ingen logikk i nudge-modalen, salgsagenten eller andre steder endres.
-
+Ingen logikk, matchberegning, eller annen funksjonalitet endres.
