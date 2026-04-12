@@ -1438,14 +1438,6 @@ const Contacts = () => {
           <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             Tilgjengelig for oppdrag
           </p>
-          {selectedConsultant && (
-            <button
-              onClick={() => setSelectedConsultantId(null)}
-              className="text-[0.75rem] font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Nullstill valg
-            </button>
-          )}
         </div>
         <div className="flex flex-wrap gap-2">
           {huntConsultantsLoading
