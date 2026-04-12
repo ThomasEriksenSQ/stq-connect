@@ -13,6 +13,7 @@ import { relativeTime } from "@/lib/relativeDate";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useConsultantCache } from "@/hooks/useConsultantCache";
 import { getInitials, cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -180,6 +181,7 @@ export function ForespørselSheet({
   onExpandChange?: (expanded: boolean) => void;
 }) {
   const queryClient = useQueryClient();
+  const { interne: cachedInterne, eksterne: cachedEksterne } = useConsultantCache();
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -513,9 +515,13 @@ export function ForespørselSheet({
     setMatching(true);
     setMatchResults(null);
     try {
-      const [{ data: interne }, { data: eksterne }, kontaktData] = await Promise.all([
-        supabase.from("stacq_ansatte").select("id, navn, kompetanse, geografi, erfaring_aar, status").in("status", ["AKTIV/SIGNERT", "Ledig"]),
-        supabase.from("external_consultants").select("id, navn, teknologier, status").in("status", ["ledig", "aktiv"]),
+      const kontaktData = row.kontakt_id
+          ? await Promise.all([
+              supabase.from("activities").select("contact_id, created_at, subject, description").eq("contact_id", row.kontakt_id).order("created_at", { ascending: false }),
+              supabase.from("tasks").select("contact_id, created_at, title, description, due_date").eq("contact_id", row.kontakt_id).neq("status", "done"),
+              supabase.from("contacts").select("id, call_list").eq("id", row.kontakt_id).single(),
+            ])
+          : [{ data: [] }, { data: [] }, { data: null }];
         row.kontakt_id
           ? Promise.all([
               supabase.from("activities").select("contact_id, created_at, subject, description").eq("contact_id", row.kontakt_id).order("created_at", { ascending: false }),
