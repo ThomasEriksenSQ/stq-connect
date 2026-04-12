@@ -1,42 +1,38 @@
 
 
-## Plan: Flytt Varslingsinnstillinger til ny Innstillinger-side
+## Plan: Redesign markedsradar-ukesmail
 
-### Konsept
-Flytt `VarslingsInnstillinger`-komponenten fra Aktive oppdrag-siden til en ny `/innstillinger`-side. Legg til et tannhjul-ikon i headeren som navigerer dit. Innstillinger-siden får to seksjoner: Outlook-tilkobling og Varslingsinnstillinger.
+### Mål
+Oppgradere HTML-mailen til et profesjonelt, minimalistisk design som er gjenkjennbart som STACQ CRM. Beholder all eksisterende data og logikk, kun `buildHtml`, `section` og `renderBulletRows` endres.
 
-### Endringer
+### Designretning
+- Hvit bakgrunn (#ffffff) med subtil ytre ramme (#f5f5f5)
+- STACQ-logo som tekst i header med blå aksent (#2563eb, matching primary)
+- Rene seksjonsdelere, god luft, Inter-lignende systemfont
+- Statistikk-kort øverst (annonser denne uken, unike selskaper, teknologier i vekst) i en horisontal rad
+- Seksjonstitler med uppercase tracking som matcher CRM-designsystemet
+- Tabellaktig layout for selskaper/kontakter i stedet for bullet-lister
+- CTA-knapp i STACQ-blå (#2563eb) i stedet for svart
+- Footer med subtil grå linje og STACQ-branding
 
-**1. `src/components/VarslingsInnstillinger.tsx` (ny fil)**
-- Flytt hele `VarslingsInnstillinger`-funksjonen (linje 42–513) fra `KonsulenterOppdrag.tsx` til en egen komponent-fil
-- Eksporter som named export
+### Tekniske endringer
 
-**2. `src/pages/Innstillinger.tsx` (ny fil)**
-- Sidetittel: "Innstillinger"
-- Seksjon 1: **Outlook-tilkobling** — viser status via `outlook-auth?action=status`, knapp for å koble til/koble til på nytt
-- Seksjon 2: **Varslingsinnstillinger** — importerer og renderer `VarslingsInnstillinger`-komponenten
+**Fil: `supabase/functions/markedsradar-ukesmail/index.ts`**
 
-**3. `src/pages/KonsulenterOppdrag.tsx`**
-- Fjern `VarslingsInnstillinger`-funksjonen (linje 42–513)
-- Fjern tab-switcheren (linje 694–715) og `activeTab`-state
-- Fjern `{activeTab === "innstillinger" && ...}` (linje 1030)
-- Siden viser kun oppdragslisten direkte uten tabs
+Kun funksjonene `buildHtml` (linje 465-537), `section` (linje 456-463) og `renderBulletRows` (linje 441-454) endres:
 
-**4. `src/components/AppLayout.tsx`**
-- Importer `Settings` fra lucide-react og `useNavigate`
-- Legg til Settings-ikon mellom theme-toggle og profil-initialer: `<Button variant="ghost" size="icon" onClick={() => navigate("/innstillinger")}>`
-- Legg til "Innstillinger"-lenke i mobilmenyen
+1. **`renderBulletRows`** — Ny versjon med cleanere spacing, venstre blå aksent-linje per rad, bedre typografi
+2. **`section`** — Oppdatert med mer luft, tynnere delere, og uppercase titler som matcher CRM
+3. **`buildHtml`** — Ny layout:
+   - Header: Hvit bakgrunn, STACQ-logo venstrejustert, dato høyrejustert, tynn bunnlinje
+   - Statistikk-stripe: 3 nøkkeltall i en rad med tall + label
+   - AI-oppsummering i en subtil blåtonet boks
+   - Seksjoner med rene delere og bedre spacing
+   - CTA-knapp i blå (#2563eb) med avrundede hjørner
+   - Footer: Minimalistisk med STACQ CRM-tekst
 
-**5. `src/App.tsx`**
-- Lazy-importer `Innstillinger`
-- Legg til route: `<Route path="innstillinger" element={<Suspense><Innstillinger /></Suspense>} />`
+Ingen endringer i datalogikk, snapshot-bygging, eller utsendelseslogikk.
 
-### Filer
-| Fil | Endring |
-|-----|---------|
-| `src/components/VarslingsInnstillinger.tsx` | Ny fil — uttrukket komponent |
-| `src/pages/Innstillinger.tsx` | Ny side med Outlook + varsling |
-| `src/pages/KonsulenterOppdrag.tsx` | Fjern VarslingsInnstillinger + tabs |
-| `src/components/AppLayout.tsx` | Settings-ikon i header |
-| `src/App.tsx` | Ny route |
+### Etter implementering
+Deploy edge function, deretter kan du sende testmail fra Innstillinger-siden.
 
