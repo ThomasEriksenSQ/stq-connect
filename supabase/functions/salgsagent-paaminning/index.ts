@@ -146,7 +146,7 @@ Deno.serve(async (req: Request) => {
 
   <!-- CTA -->
   <div style="padding:16px 40px 32px">
-    <a href="https://crm.stacq.no/" style="display:inline-block;background:#2563eb;color:#ffffff;font-size:13px;font-weight:600;padding:12px 28px;border-radius:6px;text-decoration:none;letter-spacing:0.02em">Åpne STACQ →</a>
+    <a href="https://crm.stacq.no/" style="display:inline-block;background:#2563eb;color:#ffffff;font-size:13px;font-weight:600;padding:12px 28px;border-radius:6px;text-decoration:none;letter-spacing:0.02em"><a href="https://crm.stacq.no/" style="display:inline-block;background:#2563eb;color:#ffffff;font-size:13px;font-weight:600;padding:12px 28px;border-radius:6px;text-decoration:none;letter-spacing:0.02em">Åpne Salgsagent →</a></a>
   </div>
 
   <!-- Footer -->
