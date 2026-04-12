@@ -1,24 +1,38 @@
 
 
-## Plan: Juster markedsradar-epost (3 endringer)
+## Plan: Unifiser e-postdesign for fornyelsesvarsler, salgsagent-påminnelse og task-due-reminder
 
-### Endringer i `supabase/functions/markedsradar-ukesmail/index.ts`
+### Mål
+Oppdater HTML-designet i tre edge functions til å matche markedsradar-stilen: hvit bakgrunn, STACQ CRM header med blå aksent, 720px bredde, avrundede kort, og konsistent typografi.
 
-#### 1. Fjern "Ledige konsulenter"-seksjonen
-- Fjern linje 660 (seksjon-kallet for konsulenter)
-- Fjern konsulent-relatert kode: `consultantRows` (linje 589-592), `findConsultantMatches`-kallet og parameteren i `buildHtml`
-- Beholder `findConsultantMatches`-funksjonen for eventuell fremtidig bruk, men kaller den ikke
+### Filer som endres
 
-#### 2. Gjør teknologi-trendbaren mer lesbar
-Erstatt den numeriske heatmap-baren med en enklere visuell bar + uke-labels. Ny layout per teknologi:
-- **Navn — antall siste 30d — trendpil** (beholdes)
-- Under: erstattes med en enkel horisontal stolpediagram der bredden representerer antall, med uke-nummer som label over. Lettere å forstå enn fargekodede tall-ruter.
-- Alternativt: Fjern heatmap helt og vis kun tekst med trendpil + "siste 30d vs forrige 30d" som er umiddelbart forståelig
+#### 1. `supabase/functions/fornyelse-varsel-epost/index.ts`
+- Erstatt gammel HTML (linje 124-157) med markedsradar-designet:
+  - `max-width:720px`, `background:#f8fafc`, hvitt kort med `border-radius:8px` og `box-shadow`
+  - Header: STACQ + CRM med `border-bottom:2px solid #2563eb` (erstatter svart header)
+  - Tittel-seksjon med blå "Ukentlig rapport" label
+  - Stats-boks med antall oppdrag per segment (kritisk/snart/planlegg)
+  - Seksjoner bruker `<table>` layout i stedet for `display:flex` for bedre e-postklient-kompatibilitet
+  - CTA-knapp i blå (#2563eb) i stedet for svart
+  - Footer med `border-top:1px solid #e2e8f0` og `color:#94a3b8`
 
-#### 3. Øk bredden på e-posten
-- Endre `max-width:620px` (linje 610) til `max-width:720px`
-- Justér ikke annet — alle seksjoner flyter naturlig med bredere container
+#### 2. `supabase/functions/salgsagent-paaminning/index.ts`
+- Erstatt enkel HTML (linje 108-119) med full markedsradar-wrapper:
+  - Samme header, padding, og footer som markedsradar
+  - Tittel: "Salgsagent-påminnelse"
+  - Innholdstekst i en subtil info-boks (lik AI-oppsummering-boksen)
+  - CTA: "Åpne STACQ →" i blå knapp
+  - Lenke til `crm.stacq.no` i stedet for `stq-connect.lovable.app`
+
+#### 3. `supabase/functions/task-due-reminder/index.ts`
+- Erstatt enkel HTML (linje 68-76) med full markedsradar-wrapper:
+  - Samme header og footer
+  - Tittel: "Oppfølging forfaller" med oppgavetittel
+  - Kontakt og selskap i undertekst
+  - Forfaltdato med rød/normal fargekode
+  - CTA: "Åpne i CRM →" i blå knapp
 
 ### Deploy
-Deploy `markedsradar-ukesmail` edge function etter endringene.
+Deploy alle tre edge functions etter endringene.
 
