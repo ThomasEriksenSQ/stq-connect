@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, ArrowUpDown, ChevronDown, Radio } from "lucide-react";
+import { Search, ArrowUpDown, ChevronDown, Radio, Ban } from "lucide-react";
 import { cn, getInitials } from "@/lib/utils";
 import { BulkSignalModal } from "@/components/BulkSignalModal";
 import { toast } from "sonner";
@@ -1564,17 +1564,14 @@ const Contacts = () => {
                 </span>
                 <Chip label="Alle" value="all" current={typeFilter} onSelect={setTypeFilter} />
                 <button
-                  className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors ${
-                    typeFilter === "call_list" || typeFilter === "not_call_list"
-                      ? "bg-foreground text-background border-foreground"
-                      : "border-border text-muted-foreground hover:bg-secondary"
-                  }`}
+                  className={`${typeFilter === "call_list" || typeFilter === "not_call_list" ? CHIP_ON : CHIP_OFF} inline-flex items-center gap-1.5`}
                   onClick={() => {
                     if (typeFilter === "call_list") setTypeFilter("not_call_list");
                     else if (typeFilter === "not_call_list") setTypeFilter("all");
                     else setTypeFilter("call_list");
                   }}
                 >
+                  {typeFilter === "not_call_list" && <Ban className="w-3.5 h-3.5 text-red-500" />}
                   {typeFilter === "not_call_list" ? "Ikke innkjøper" : "Innkjøper"}
                 </button>
                 <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
