@@ -1,28 +1,23 @@
 
 
-## Fix: Horisontal forskyvning av navigasjonsmenyen
-
-### Årsak
-`<main>` har `overflow-auto`, som betyr at scrollbar kun vises når innholdet er høyere enn viewporten. Når scrollbar dukker opp/forsvinner ved sidebytte, forskyves hele layouten horisontalt fordi `max-w-6xl mx-auto` sentreres i en smalere/bredere flate.
-
-### Løsning
-Legg til `scrollbar-gutter: stable` på `<main>`-elementet (linje 256 i `AppLayout.tsx`). Dette reserverer plass til scrollbar permanent, slik at layouten aldri forskyves.
+## Fix: Lukk Signal-menyen ved klikk utenfor
 
 ### Endring
 
-**Fil: `src/components/AppLayout.tsx`**, linje 256:
+**Fil: `src/components/dashboard/DailyBrief.tsx`**
 
-Endre:
+Legg til en usynlig overlay `<div>` rett før Signal-dropdown-menyen (linje ~1091) som dekker hele skjermen og lukker menyen ved klikk:
+
 ```tsx
-<main className="flex-1 overflow-auto">
-```
-til:
-```tsx
-<main className="flex-1 overflow-auto" style={{ scrollbarGutter: "stable" }}>
+{activeForm === "signal" && (
+  <>
+    <div className="fixed inset-0 z-40" onClick={() => setActiveForm(null)} />
+    <div className="absolute top-full left-0 mt-1 z-50 ...">
+      ...
+    </div>
+  </>
+)}
 ```
 
-Alternativt kan dette legges som en Tailwind-klasse i `index.css` om ønskelig, men inline style er enklest og berører kun denne ene linjen.
-
-### Ingen andre endringer
-Ingen logikk, ingen andre filer.
+Ingen andre endringer.
 
