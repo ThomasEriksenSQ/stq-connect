@@ -1,53 +1,38 @@
 
 
-## Gjør AI-matching raskere uten å endre logikk
+## Husk valgt dato og signal i nudge-modalen
 
 ### Problem
-Hver gang brukeren klikker "Finn konsulent", "Finn match" eller "Finn oppdrag" skjer dette sekvensielt:
-1. **Hent konsulentlister fra DB** (stacq_ansatte + external_consultants) — 200-500ms
-2. **Hent tilleggsdata** (forespørsler, aktiviteter, tasks) — 200-500ms  
-3. **Kall AI edge function** — 3-8 sekunder (uunngåelig, AI-inferens)
+Når brukeren velger f.eks. "2 uker" på kortet og trykker "Ok, neste" uten signal, åpnes nudge-modalen med "Følg opp på sikt" i stedet for "2 uker". Tilsvarende: hvis signal er valgt men ikke dato, vises ikke signalet i modalen.
 
-Steg 1 og 2 gjentas identisk hver gang, selv om dataen sjelden endres. AI-kallet (steg 3) kan ikke gjøres raskere, men ventetiden FØR det kan elimineres.
+### Løsning
+Endre `openNudge`-funksjonen (linje 1238-1248 i `DailyBrief.tsx`) til å lese gjeldende verdier fra kortet:
 
-### Løsning: Pre-cache konsulentlister med React Query
+**1. Dato: Les fra `selectedChipDate` / `customChipDate`**
 
-Opprett en ny hook `src/hooks/useConsultantCache.ts` som bruker `useQuery` til å holde konsulentlistene varme i minnet:
+Før `setNudgeDate("someday")` (linje 1245), sjekk om brukeren har valgt en dato-chip på kortet:
+- Hent `taskId` fra `current.nextTask?.id`
+- Les `selectedChipDate[taskId]` — hvis den finnes, bruk den som `nudgeDate` (konverter `null` → `"someday"`)
+- Les `customChipDate[taskId]` for `nudgeCustomDate`
+- Hvis ingen chip er valgt, behold `"someday"` som default
 
-- **Interne konsulenter**: `stacq_ansatte` med status AKTIV/SIGNERT og Ledig
-- **Eksterne konsulenter**: `external_consultants` med status ledig/aktiv
-- **staleTime: 5 minutter** — dataen er varm og klar når brukeren klikker
+**2. Signal: Les fra `currentSignal`**
 
-Deretter oppdater de 5 stedene som henter konsulenter manuelt til å bruke cachen i stedet:
+Linje 1243 setter allerede `nudgeSignal` til `currentSignal` når `requireSignalChoice` er false. Men når `requireSignalChoice` er true (mangler signal), settes den til `""`. Dette er korrekt — brukeren MÅ velge signal. Men hvis `currentSignal` allerede finnes (f.eks. satt av brukeren på kortet), bør den brukes uavhengig av `requireSignalChoice`.
 
-### Filer som endres
+Endre linje 1243 fra:
+```ts
+setNudgeSignal(options?.requireSignalChoice ? "" : currentSignal || "");
+```
+til:
+```ts
+setNudgeSignal(currentSignal || "");
+setNudgeRequiresSignalChoice(!currentSignal && !!options?.requireSignalChoice);
+```
 
-**1. Ny fil: `src/hooks/useConsultantCache.ts`**
-- Hook som returnerer `{ interne, eksterne, isReady }`
-- Bruker `useQuery` med 5 min staleTime
+### Fil som endres
+- `src/components/dashboard/DailyBrief.tsx` — kun `openNudge`-funksjonen (linje 1238-1248)
 
-**2. `src/components/ContactCardContent.tsx`** (linje 588-597)
-- Erstatt `Promise.all([supabase.from("stacq_ansatte")..., supabase.from("external_consultants")...])` med data fra hooken
-- Sparer ~300ms per klikk
-
-**3. `src/components/CompanyCardContent.tsx`** (linje 569-580)
-- Samme endring — bruk cachen i stedet for fersk DB-henting
-
-**4. `src/components/ForespørselSheet.tsx`** (linje 516-518)
-- Samme endring
-
-**5. `src/components/OppdragsMatchPanel.tsx`** (linje 99-109)
-- Bruker ikke konsulentlisten, men henter kontakter/aktiviteter/tasks — disse er allerede potensielt cachet. Ingen endring nødvendig her.
-
-**6. `src/components/AIChatPanel.tsx`** (linje 536-539)
-- Erstatt inline DB-fetch med cachen
-
-### Hva dette IKKE endrer
-- Ingen logikk i edge functions
-- Ingen endring i matching-algoritmer eller prompts
-- Ingen endring i hva som sendes til AI
-- Ingen endring i UI eller visning av resultater
-
-### Forventet effekt
-Eliminerer 200-500ms DB-ventetid før hvert AI-kall. Brukeren merker at spinneren starter umiddelbart etter klikk, og AI-svaret kommer tilbake uten unødvendig forsinkelse foran.
+### Ingen andre endringer
+Ingen logikk i nudge-modalen, salgsagenten eller andre steder endres.
 
