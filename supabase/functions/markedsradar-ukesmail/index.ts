@@ -546,11 +546,11 @@ function actionPill(company: RadarCompany): string {
 function buildHtml(snapshot: MarketSnapshot, aiSummary: string | null, consultantMatches: ConsultantMatch[]) {
   const dateLabel = new Date().toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" });
 
-  // Tech rows with trend arrows and heatmap
+  // Tech rows with trend arrows and simple text comparison
   const techRows = snapshot.technologyTrends.slice(0, 6).map((trend) => {
     const arrow = trendArrow(trend.delta);
-    const heatmap = heatmapBar(trend.weekSeries);
-    return `<strong>${trend.name}</strong> — ${trend.current} annonser siste 30d ${arrow}<br>${heatmap}`;
+    const prevLabel = trend.previous > 0 ? `${trend.previous} forrige 30d` : "ny";
+    return `<strong>${trend.name}</strong> — ${trend.current} annonser siste 30d ${arrow}<br><span style="font-size:12px;color:#64748b">vs. ${prevLabel}</span>`;
   });
 
   // Company rows with action pills
@@ -607,7 +607,7 @@ function buildHtml(snapshot: MarketSnapshot, aiSummary: string | null, consultan
 <html>
   <body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Helvetica,Arial,sans-serif">
     <div style="padding:40px 20px">
-      <div style="max-width:620px;margin:0 auto">
+      <div style="max-width:720px;margin:0 auto">
         <div style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
 
           <!-- Header -->
@@ -657,7 +657,7 @@ function buildHtml(snapshot: MarketSnapshot, aiSummary: string | null, consultan
 
           ${section("Teknologier i vekst", "Signaler fra stillingsmarkedet med 8-ukers trendbar.", renderBulletRows(techRows))}
 
-          ${consultantRows.length > 0 ? section("Ledige konsulenter", "Konsulenter som matcher ukens etterspørsel.", renderBulletRows(consultantRows)) : ""}
+          
 
           ${section("Selskaper å følge opp", "De mest relevante selskapene basert på annonser, kontaktdata og teknologi-fit.", renderBulletRows(companyRows))}
 
