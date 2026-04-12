@@ -9,6 +9,7 @@ import { useState, useRef, useEffect } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AIChatPanel } from "@/components/AIChatPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useConsultantCache } from "@/hooks/useConsultantCache";
 
 const navItems = [
   { title: "Salgsagent", url: "/", icon: LayoutDashboard, end: true },
