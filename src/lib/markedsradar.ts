@@ -408,7 +408,14 @@ export function buildMarketRadar(
     .slice(0, 10);
 
   const technologyTrends = buildTechnologyTrends(cleanedAds, anchorDate);
-  const technologyOptions = technologyTrends.slice(0, 14).map((item) => item.name);
+  const strategicFirst = technologyTrends
+    .filter((t) => STRATEGIC_TECHNOLOGIES.has(t.name) && t.current > 0)
+    .sort((a, b) => b.current - a.current)
+    .map((t) => t.name);
+  const rest = technologyTrends
+    .filter((t) => !STRATEGIC_TECHNOLOGIES.has(t.name))
+    .map((t) => t.name);
+  const technologyOptions = [...strategicFirst, ...rest].slice(0, 14);
   const weeklyTechSeries = buildWeeklyTechSeries(cleanedAds, technologyOptions.slice(0, 6));
 
   const adsThisWeek = cleanedAds.filter((ad) => ad.uke === currentWeek).length;
