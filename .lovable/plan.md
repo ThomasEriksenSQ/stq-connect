@@ -1,26 +1,38 @@
 
 
-## Prioriter mest relevante teknologier i filterchips
+## Legg til "Uten eier" og "Ikke relevant kontakt" filter-chips
 
-### Problem
-Teknologifilteret viser de 14 teknologiene med høyest momentum (delta), som ofte gir generiske tags som "Testing" og "CI/CD" i stedet for kjernekompetansene til STACQ.
+### Endringer i `src/pages/Contacts.tsx`
 
-### Løsning
-Endre `technologyOptions` i `src/lib/markedsradar.ts` slik at strategiske teknologier (fra `STRATEGIC_TECHNOLOGIES`) prioriteres først, deretter fyller på med de mest populære trendene.
+**1. Eier-raden (linje 1508): Legg til "Uten eier" chip**
 
-### Teknisk endring
-
-**Fil:** `src/lib/markedsradar.ts` (linje 411)
-
-Erstatt:
-```ts
-const technologyOptions = technologyTrends.slice(0, 14).map((item) => item.name);
+Etter `uniqueOwners.map(...)` på linje 1508, legg til:
+```tsx
+<Chip label="Uten eier" value="__none__" current={ownerFilter} onSelect={setOwnerFilter} />
 ```
 
-Med logikk som:
-1. Filtrer `technologyTrends` til de som finnes i `STRATEGIC_TECHNOLOGIES` og har `current > 0`, sortert etter `current` (høyest først)
-2. Fyll på med resterende trender (sortert som før) til maks 14 totalt
-3. Dedupliser
+**2. Eier-filterlogikken (linje 705): Håndter `__none__` verdien**
 
-Dette sikrer at C++, C, Rust, FPGA, Embedded Linux, Yocto, Zephyr osv. alltid vises først når de har aktive annonser, mens andre populære teknologier fyller resten av plassen.
+Utvid `matchOwner`-sjekken til:
+```ts
+const matchOwner = ownerFilter === "all" 
+  || ownerFilter === "__none__" ? !getOwnerId(contact) 
+  : getOwnerId(contact) === ownerFilter;
+```
+
+**3. Type-raden (linje 1540): Legg til "Ikke relevant" chip**
+
+Etter CV-Epost-chipen, legg til:
+```tsx
+<Chip label="Ikke relevant" value="ikke_aktuell" current={typeFilter} onSelect={setTypeFilter} />
+```
+
+**4. Type-filterlogikken (linje 710): Håndter `ikke_aktuell`**
+
+Legg til i `matchType`:
+```ts
+|| (typeFilter === "ikke_aktuell" && contact.ikke_aktuell_kontakt)
+```
+
+Ingen andre endringer. Kun to nye filter-chips og tilhørende filterlogikk.
 
