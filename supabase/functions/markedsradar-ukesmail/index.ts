@@ -54,16 +54,28 @@ type RadarCompany = {
   scoreReasons: string[];
 };
 
+type TechTrend = {
+  name: string;
+  current: number;
+  previous: number;
+  delta: number;
+  weekSeries: number[];
+};
+
+type ConsultantMatch = {
+  navn: string;
+  kompetanse: string[];
+  tilgjengelig_fra: string | null;
+  matchedTechs: string[];
+};
+
 type MarketSnapshot = {
   latestWeek: string | null;
   adsThisWeek: number;
+  adsLastWeek: number;
+  weekDelta: number;
   uniqueCompanies30d: number;
-  technologyTrends: Array<{
-    name: string;
-    current: number;
-    previous: number;
-    delta: number;
-  }>;
+  technologyTrends: TechTrend[];
   topCompanies: RadarCompany[];
   topContacts: Array<{
     name: string | null;
@@ -76,6 +88,7 @@ type MarketSnapshot = {
     score: number;
   }>;
   newCompaniesNotInCrm: RadarCompany[];
+  firstTimerCompanies: RadarCompany[];
 };
 
 const TECH_RULES: Array<{ label: string; patterns: RegExp[] }> = [
@@ -197,18 +210,36 @@ function uniqueBy<T>(items: T[], keyFn: (item: T) => string): T[] {
   });
 }
 
+function getWeeksSorted(ads: FinnAnnonse[]): string[] {
+  return [...new Set(ads.map((ad) => ad.uke).filter(Boolean) as string[])].sort();
+}
+
 function buildMarketSnapshot(annonser: FinnAnnonse[], companies: CompanyRef[]): MarketSnapshot {
   const cleanedAds = annonser.filter((ad) => ad.dato && ad.selskap).sort((a, b) => b.dato.localeCompare(a.dato));
   const latestWeek = cleanedAds.find((ad) => ad.uke)?.uke || null;
+  const allWeeks = getWeeksSorted(cleanedAds);
+  const previousWeek = latestWeek ? allWeeks[allWeeks.indexOf(latestWeek) - 1] || null : null;
+  const last8Weeks = allWeeks.slice(-8);
   const anchorDate = cleanedAds[0]?.dato ? new Date(`${cleanedAds[0].dato}T12:00:00Z`) : new Date();
   const current30 = dateDaysAgo(anchorDate, 29);
   const previous30 = dateDaysAgo(anchorDate, 59);
   const previous30End = dateDaysAgo(anchorDate, 30);
 
+  const adsThisWeek = cleanedAds.filter((ad) => ad.uke === latestWeek).length;
+  const adsLastWeek = previousWeek ? cleanedAds.filter((ad) => ad.uke === previousWeek).length : 0;
+
   const findCompany = (name: string | null): CompanyRef | null => {
     if (!name) return null;
     return findBestCompanyMatch(name, companies) || null;
   };
+
+  // Track which companies appeared in weeks before latestWeek
+  const companiesInPreviousWeeks = new Set<string>();
+  cleanedAds.forEach((ad) => {
+    if (ad.uke && ad.uke !== latestWeek && ad.selskap) {
+      companiesInPreviousWeeks.add(normalizeCompanyName(ad.selskap));
+    }
+  });
 
   const grouped = new Map<
     string,
@@ -235,6 +266,7 @@ function buildMarketSnapshot(annonser: FinnAnnonse[], companies: CompanyRef[]): 
       >;
       currentWeekCount: number;
       recent30Count: number;
+      isFirstTimer: boolean;
     }
   >();
 
@@ -246,6 +278,7 @@ function buildMarketSnapshot(annonser: FinnAnnonse[], companies: CompanyRef[]): 
 
     let group = grouped.get(key);
     if (!group) {
+      const normalizedName = normalizeCompanyName(companyName);
       group = {
         key,
         name: companyName,
@@ -256,6 +289,7 @@ function buildMarketSnapshot(annonser: FinnAnnonse[], companies: CompanyRef[]): 
         contacts: new Map(),
         currentWeekCount: 0,
         recent30Count: 0,
+        isFirstTimer: !companiesInPreviousWeeks.has(normalizedName),
       };
       grouped.set(key, group);
     }
@@ -339,7 +373,8 @@ function buildMarketSnapshot(annonser: FinnAnnonse[], companies: CompanyRef[]): 
           strategicHits > 0 ? `${strategicHits} treff på kjernekompetanse` : null,
           directContacts > 0 ? `${directContacts} direkte kontaktpunkt` : null,
         ].filter(Boolean) as string[],
-      } satisfies RadarCompany;
+        _isFirstTimer: group.isFirstTimer,
+      } as RadarCompany & { _isFirstTimer: boolean };
     })
     .sort((a, b) => b.score - a.score || b.adCount - a.adCount || a.name.localeCompare(b.name, "nb"));
 
@@ -347,22 +382,27 @@ function buildMarketSnapshot(annonser: FinnAnnonse[], companies: CompanyRef[]): 
     (company) => !company.company || isActionableStatus(company.company.status),
   );
 
-  const techCounts = new Map<string, { current: number; previous: number }>();
+  // Build technology trends with 8-week series
+  const techCounts = new Map<string, { current: number; previous: number; weekCounts: Map<string, number> }>();
   cleanedAds.forEach((ad) => {
     extractNormalizedTechnologies(ad.teknologier).forEach((tech) => {
-      const entry = techCounts.get(tech) || { current: 0, previous: 0 };
+      const entry = techCounts.get(tech) || { current: 0, previous: 0, weekCounts: new Map<string, number>() };
       if (ad.dato >= current30) entry.current += 1;
       else if (ad.dato >= previous30 && ad.dato <= previous30End) entry.previous += 1;
+      if (ad.uke) {
+        entry.weekCounts.set(ad.uke, (entry.weekCounts.get(ad.uke) || 0) + 1);
+      }
       techCounts.set(tech, entry);
     });
   });
 
-  const technologyTrends = [...techCounts.entries()]
+  const technologyTrends: TechTrend[] = [...techCounts.entries()]
     .map(([name, entry]) => ({
       name,
       current: entry.current,
       previous: entry.previous,
       delta: entry.current - entry.previous,
+      weekSeries: last8Weeks.map((w) => entry.weekCounts.get(w) || 0),
     }))
     .filter((entry) => entry.current > 0)
     .sort((a, b) => b.delta - a.delta || b.current - a.current || a.name.localeCompare(b.name, "nb"))
@@ -381,9 +421,16 @@ function buildMarketSnapshot(annonser: FinnAnnonse[], companies: CompanyRef[]): 
     .sort((a, b) => b.score - a.score || a.companyName.localeCompare(b.companyName, "nb"))
     .slice(0, 5);
 
+  // First-timer companies: only appeared this week, with ads this week
+  const firstTimerCompanies = actionableCompanies
+    .filter((c) => (c as RadarCompany & { _isFirstTimer: boolean })._isFirstTimer && c.currentWeekCount > 0)
+    .slice(0, 5);
+
   return {
     latestWeek,
-    adsThisWeek: cleanedAds.filter((ad) => ad.uke === latestWeek).length,
+    adsThisWeek,
+    adsLastWeek,
+    weekDelta: adsThisWeek - adsLastWeek,
     uniqueCompanies30d: new Set(
       cleanedAds.filter((ad) => ad.dato >= current30).map((ad) => normalizeCompanyName(ad.selskap!)),
     ).size,
@@ -391,6 +438,7 @@ function buildMarketSnapshot(annonser: FinnAnnonse[], companies: CompanyRef[]): 
     topCompanies: actionableCompanies.slice(0, 5),
     topContacts,
     newCompaniesNotInCrm: actionableCompanies.filter((company) => !company.inCrm).slice(0, 5),
+    firstTimerCompanies,
   };
 }
 
@@ -463,37 +511,94 @@ function section(title: string, subtitle: string, body: string) {
     </div>`;
 }
 
-function buildHtml(snapshot: MarketSnapshot, aiSummary: string | null) {
+function trendArrow(delta: number): string {
+  if (delta > 0) return `<span style="color:#16a34a;font-weight:600">↑${delta}</span>`;
+  if (delta < 0) return `<span style="color:#dc2626;font-weight:600">↓${Math.abs(delta)}</span>`;
+  return `<span style="color:#94a3b8">–</span>`;
+}
+
+function heatmapBar(series: number[]): string {
+  const max = Math.max(...series, 1);
+  const cells = series.map((v) => {
+    const intensity = Math.round((v / max) * 100);
+    const bg = v === 0
+      ? "#f1f5f9"
+      : intensity < 33
+        ? "#bfdbfe"
+        : intensity < 66
+          ? "#60a5fa"
+          : "#2563eb";
+    const textColor = intensity >= 66 && v > 0 ? "#ffffff" : "#64748b";
+    return `<td style="width:28px;height:22px;background:${bg};text-align:center;font-size:10px;font-weight:600;color:${textColor};border-radius:3px">${v > 0 ? v : ""}</td>`;
+  }).join('<td style="width:2px"></td>');
+  return `<table cellpadding="0" cellspacing="0" border="0" style="margin-top:4px"><tr>${cells}</tr></table>`;
+}
+
+function actionPill(company: RadarCompany): string {
+  const url = company.company
+    ? `https://crm.stacq.no/selskaper/${company.company.id}`
+    : `https://crm.stacq.no/selskaper?ny=${encodeURIComponent(company.name)}`;
+  const label = company.company ? "Åpne" : "Opprett";
+  const bg = company.company ? "#2563eb" : "#16a34a";
+  return `<a href="${url}" style="display:inline-block;background:${bg};color:#ffffff;font-size:11px;font-weight:600;padding:4px 12px;border-radius:12px;text-decoration:none;margin-left:8px">${label}</a>`;
+}
+
+function buildHtml(snapshot: MarketSnapshot, aiSummary: string | null, consultantMatches: ConsultantMatch[]) {
   const dateLabel = new Date().toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" });
-  const techRows = snapshot.technologyTrends.slice(0, 5).map((trend) => {
-    const delta = trend.delta > 0 ? `+${trend.delta}` : `${trend.delta}`;
-    return `<strong>${trend.name}</strong> — ${trend.current} annonser siste 30 dager (${delta} mot forrige periode)`;
+
+  // Tech rows with trend arrows and heatmap
+  const techRows = snapshot.technologyTrends.slice(0, 6).map((trend) => {
+    const arrow = trendArrow(trend.delta);
+    const heatmap = heatmapBar(trend.weekSeries);
+    return `<strong>${trend.name}</strong> — ${trend.current} annonser siste 30d ${arrow}<br>${heatmap}`;
   });
+
+  // Company rows with action pills
   const companyRows = snapshot.topCompanies.map((company) => {
     const companyUrl = company.company
       ? `https://crm.stacq.no/selskaper/${company.company.id}`
       : `https://crm.stacq.no/selskaper?ny=${encodeURIComponent(company.name)}`;
-    const label = company.company ? company.name : `${company.name} (ikke i CRM)`;
-    return `<a href="${companyUrl}" style="color:#1e293b;text-decoration:none"><strong>${label}</strong></a> — ${company.adCount} annonser · ${company.topTechnologies.slice(0, 3).join(", ") || "ingen teknologi"}${company.latestRole ? ` · ${company.latestRole}` : ""}`;
+    const label = company.company ? company.name : `${company.name} <span style="color:#94a3b8;font-size:12px">(ikke i CRM)</span>`;
+    const pill = actionPill(company);
+    return `<a href="${companyUrl}" style="color:#1e293b;text-decoration:none"><strong>${label}</strong></a>${pill}<br><span style="font-size:12px;color:#64748b">${company.adCount} annonser · ${company.topTechnologies.slice(0, 3).join(", ") || "ingen teknologi"}${company.latestRole ? ` · ${company.latestRole}` : ""}</span>`;
   });
-  const contactRows = snapshot.topContacts.map((contact) => {
-    const parts = [
-      contact.name || "Kontaktperson",
-      contact.companyName,
-      contact.role,
-      contact.phone,
-      contact.email,
-    ].filter(Boolean);
-    return parts.join(" · ");
-  });
-  const newCompanyRows = snapshot.newCompaniesNotInCrm.map(
-    (company) =>
-      `<strong>${company.name}</strong> — ${company.adCount} annonser · ${company.topTechnologies.slice(0, 3).join(", ") || "ingen teknologi"}`,
-  );
 
-  const statBox = (value: string | number, label: string) => `
+  // Contact rows with clickable mailto/tel
+  const contactRows = snapshot.topContacts.map((contact) => {
+    const namePart = contact.name || "Kontaktperson";
+    const companyPart = contact.companyName;
+    const rolePart = contact.role ? ` · ${contact.role}` : "";
+    const emailPart = contact.email ? ` · <a href="mailto:${contact.email}" style="color:#2563eb;text-decoration:none">${contact.email}</a>` : "";
+    const phonePart = contact.phone ? ` · <a href="tel:${contact.phone}" style="color:#2563eb;text-decoration:none">${contact.phone}</a>` : "";
+    return `<strong>${namePart}</strong> — ${companyPart}${rolePart}${emailPart}${phonePart}`;
+  });
+
+  // New companies (not in CRM) with action pills
+  const newCompanyRows = snapshot.newCompaniesNotInCrm.map((company) => {
+    const pill = actionPill(company);
+    return `<strong>${company.name}</strong>${pill}<br><span style="font-size:12px;color:#64748b">${company.adCount} annonser · ${company.topTechnologies.slice(0, 3).join(", ") || "ingen teknologi"}</span>`;
+  });
+
+  // First-timer companies
+  const firstTimerRows = snapshot.firstTimerCompanies.map((company) => {
+    const pill = actionPill(company);
+    return `<strong>${company.name}</strong>${pill}<br><span style="font-size:12px;color:#64748b">${company.adCount} annonser · ${company.topTechnologies.slice(0, 3).join(", ") || "ingen teknologi"}</span>`;
+  });
+
+  // Consultant match rows
+  const consultantRows = consultantMatches.map((c) => {
+    const ledigLabel = c.tilgjengelig_fra ? `Ledig fra ${c.tilgjengelig_fra}` : "Ledig nå";
+    return `<strong>${c.navn}</strong> — ${c.matchedTechs.join(", ")} · <span style="color:#16a34a;font-weight:600">${ledigLabel}</span>`;
+  });
+
+  // Stats with week delta
+  const weekDeltaHtml = snapshot.weekDelta !== 0
+    ? ` ${trendArrow(snapshot.weekDelta)}`
+    : "";
+
+  const statBox = (value: string | number, label: string, extra = "") => `
     <td style="text-align:center;padding:16px 0">
-      <div style="font-size:28px;font-weight:700;color:#2563eb;letter-spacing:-0.5px">${value}</div>
+      <div style="font-size:28px;font-weight:700;color:#2563eb;letter-spacing:-0.5px">${value}${extra}</div>
       <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#94a3b8;margin-top:4px">${label}</div>
     </td>`;
 
@@ -530,7 +635,7 @@ function buildHtml(snapshot: MarketSnapshot, aiSummary: string | null) {
           <div style="padding:0 40px 24px">
             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8fafc;border-radius:8px;overflow:hidden">
               <tr>
-                ${statBox(snapshot.adsThisWeek, "Annonser denne uken")}
+                ${statBox(snapshot.adsThisWeek, "Annonser denne uken", ` <span style="font-size:14px">${weekDeltaHtml}</span>`)}
                 <td style="width:1px;background:#e2e8f0;padding:0"></td>
                 ${statBox(snapshot.uniqueCompanies30d, "Unike selskaper")}
                 <td style="width:1px;background:#e2e8f0;padding:0"></td>
@@ -550,8 +655,14 @@ function buildHtml(snapshot: MarketSnapshot, aiSummary: string | null) {
               : ""
           }
 
-          ${section("Teknologier i vekst", "Hvilke signaler som øker i stillingsmarkedet.", renderBulletRows(techRows))}
+          ${section("Teknologier i vekst", "Signaler fra stillingsmarkedet med 8-ukers trendbar.", renderBulletRows(techRows))}
+
+          ${consultantRows.length > 0 ? section("Ledige konsulenter", "Konsulenter som matcher ukens etterspørsel.", renderBulletRows(consultantRows)) : ""}
+
           ${section("Selskaper å følge opp", "De mest relevante selskapene basert på annonser, kontaktdata og teknologi-fit.", renderBulletRows(companyRows))}
+
+          ${firstTimerRows.length > 0 ? section("Nye selskaper denne uken", "Selskaper som dukker opp for første gang i markedsradaren.", renderBulletRows(firstTimerRows)) : ""}
+
           ${section("Kontaktpersoner", "Direkte kontaktpunkter som er verdt å bruke denne uken.", renderBulletRows(contactRows))}
           ${section("Ikke i CRM", "Selskaper som kan være verdt å opprette som nye leads.", renderBulletRows(newCompanyRows))}
 
@@ -575,6 +686,52 @@ function buildHtml(snapshot: MarketSnapshot, aiSummary: string | null) {
     </div>
   </body>
 </html>`;
+}
+
+async function findConsultantMatches(
+  supabase: ReturnType<typeof createClient>,
+  topTechs: string[],
+): Promise<ConsultantMatch[]> {
+  if (topTechs.length === 0) return [];
+
+  const today = new Date().toISOString().slice(0, 10);
+  const in30Days = dateDaysAgo(new Date(), -30);
+
+  const { data: ansatte } = await supabase
+    .from("stacq_ansatte")
+    .select("navn, kompetanse, tilgjengelig_fra, status")
+    .or("tilgjengelig_fra.is.null,tilgjengelig_fra.lte." + in30Days);
+
+  if (!ansatte || ansatte.length === 0) return [];
+
+  const topTechsLower = topTechs.map((t) => t.toLowerCase());
+  const matches: ConsultantMatch[] = [];
+
+  for (const a of ansatte) {
+    if (!a.kompetanse || a.kompetanse.length === 0) continue;
+    // Only include consultants who are available (tilgjengelig_fra is null or <= 30 days from now)
+    const isAvailable =
+      !a.tilgjengelig_fra || a.tilgjengelig_fra <= in30Days;
+    if (!isAvailable) continue;
+
+    const kompLower = a.kompetanse.map((k: string) => k.toLowerCase());
+    const matchedTechs = topTechs.filter((tech) =>
+      kompLower.some((k: string) => k.includes(tech.toLowerCase()) || tech.toLowerCase().includes(k)),
+    );
+
+    if (matchedTechs.length > 0) {
+      matches.push({
+        navn: a.navn,
+        kompetanse: a.kompetanse,
+        tilgjengelig_fra: a.tilgjengelig_fra && a.tilgjengelig_fra > today ? a.tilgjengelig_fra : null,
+        matchedTechs,
+      });
+    }
+  }
+
+  return matches
+    .sort((a, b) => b.matchedTechs.length - a.matchedTechs.length)
+    .slice(0, 5);
 }
 
 Deno.serve(async (req) => {
@@ -679,8 +836,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    const aiSummary = settings.markedsradar_inkluder_ai ? await generateAiSummary(snapshot) : null;
-    const html = buildHtml(snapshot, aiSummary);
+    // Fetch consultant matches and AI summary in parallel
+    const topGrowingTechs = snapshot.technologyTrends
+      .filter((t) => t.delta > 0)
+      .slice(0, 3)
+      .map((t) => t.name);
+
+    const [aiSummary, consultantMatches] = await Promise.all([
+      settings.markedsradar_inkluder_ai ? generateAiSummary(snapshot) : Promise.resolve(null),
+      findConsultantMatches(supabase, topGrowingTechs),
+    ]);
+
+    const html = buildHtml(snapshot, aiSummary, consultantMatches);
     const recipients = isTest ? ["thomas@stacq.no"] : (settings.markedsradar_epost_mottakere as string[]) || [];
     if (recipients.length === 0) {
       return new Response(
