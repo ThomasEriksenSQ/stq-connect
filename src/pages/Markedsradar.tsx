@@ -516,7 +516,7 @@ function RadarTab({
                 Selskaper med sterkest signal
               </p>
               <p className="text-[0.8125rem] text-muted-foreground">
-                Basert på antall annonser, recency, tech-match og kontaktdata.
+                Rangert etter annonsefrekvens, tilgjengelig kontaktinfo og relevante teknologier.
               </p>
             </div>
             {filteredCompanies.length === 0 ? (
