@@ -523,7 +523,7 @@ function buildHtml(snapshot: MarketSnapshot, aiSummary: string | null) {
           <!-- Title -->
           <div style="padding:28px 40px 20px">
             <p style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2563eb;margin:0 0 8px">Ukentlig rapport</p>
-            <h1 style="font-size:24px;font-weight:700;color:#0f172a;margin:0 0 4px;letter-spacing:-0.3px">Markedsradar ${snapshot.latestWeek || ""}</h1>
+            <h1 style="font-size:24px;font-weight:700;color:#0f172a;margin:0 0 4px;letter-spacing:-0.3px">Markedsradar ${(snapshot.latestWeek || "").replace(/(\d{4})-W(\d+)/, "$1 – Uke $2")}</h1>
           </div>
 
           <!-- Stats -->
@@ -634,7 +634,7 @@ Deno.serve(async (req) => {
         )
         .gte("dato", ninetyDaysAgo)
         .order("dato", { ascending: false }),
-      supabase.from("companies").select("id, name, status"),
+      supabase.from("companies").select("id, name, status, ikke_relevant").not("ikke_relevant", "eq", true),
       supabase.from("company_aliases").select("company_id, alias_name"),
     ]);
 
@@ -692,7 +692,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const subject = `Markedsradar ${snapshot.latestWeek} — ${snapshot.adsThisWeek} annonser, ${snapshot.newCompaniesNotInCrm.length} nye selskaper`;
+    const subject = `Markedsradar ${(snapshot.latestWeek || "").replace(/(\d{4})-W(\d+)/, "$1 – Uke $2")} — ${snapshot.adsThisWeek} annonser, ${snapshot.newCompaniesNotInCrm.length} nye selskaper`;
 
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
