@@ -472,7 +472,7 @@ function RadarTab({
         </Card>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.35fr_1fr]">
+      <div className="grid gap-6">
         <Card>
           <CardContent className="pt-5 pb-4">
             <div className="mb-4">
