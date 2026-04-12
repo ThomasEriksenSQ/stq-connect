@@ -9,6 +9,7 @@ import { useState, useRef, useEffect } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AIChatPanel } from "@/components/AIChatPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useConsultantCache } from "@/hooks/useConsultantCache";
 
 const navItems = [
   { title: "Salgsagent", url: "/", icon: LayoutDashboard, end: true },
@@ -37,6 +38,9 @@ export function AppLayout() {
   const [konsDropOpen, setKonsDropOpen] = useState(false);
   const konsRef = useRef<HTMLDivElement>(null);
   const isKonsActive = location.pathname.startsWith("/konsulenter") || location.pathname.startsWith("/stacq") || location.pathname.startsWith("/markedsradar") || location.pathname.startsWith("/nettside-ai") || location.pathname.startsWith("/cv-maker");
+
+  // Pre-fetch consultant lists so they're warm before user clicks any matching button
+  useConsultantCache();
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
