@@ -4,6 +4,7 @@ import { MergeCompanyDialog } from "@/components/company/MergeCompanyDialog";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useConsultantCache } from "@/hooks/useConsultantCache";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -214,6 +215,7 @@ export function CompanyCardContent({
 }: CompanyCardContentProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { interne: cachedInterne, eksterne: cachedEksterne } = useConsultantCache();
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
   const [newContactOpen, setNewContactOpen] = useState(false);
@@ -566,18 +568,11 @@ export function CompanyCardContent({
     setKonsulentResults(null);
     setKonsulentMatchUpdatedAt(null);
     try {
-      const [{ data: foresporslerData }, { data: interne }, { data: eksterne }] = await Promise.all([
-        supabase
-          .from("foresporsler")
-          .select("teknologier")
-          .eq("selskap_id", companyId)
-          .gte("mottatt_dato", new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)),
-        supabase
-          .from("stacq_ansatte")
-          .select("id, navn, kompetanse, geografi, erfaring_aar, status")
-          .in("status", ["AKTIV/SIGNERT"]),
-        supabase.from("external_consultants").select("id, navn, teknologier, status").in("status", ["ledig", "aktiv"]),
-      ]);
+      const { data: foresporslerData } = await supabase
+        .from("foresporsler")
+        .select("teknologier")
+        .eq("selskap_id", companyId)
+        .gte("mottatt_dato", new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
       const teknologier = mergeTechnologyTags(
         techProfile?.teknologier ? Object.keys(techProfile.teknologier as Record<string, number>) : [],
         ...(foresporslerData || []).map((foresporsel) => foresporsel.teknologier || []),

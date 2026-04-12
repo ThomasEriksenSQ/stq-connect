@@ -3,6 +3,7 @@ import { AiSignalBanner } from "@/components/AiSignalBanner";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useConsultantCache } from "@/hooks/useConsultantCache";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -282,6 +283,7 @@ export function ContactCardContent({
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { interne: cachedInterne, eksterne: cachedEksterne } = useConsultantCache();
 
   // Form states
   const [activeForm, setActiveForm] = useState<"call" | "meeting" | "task" | null>(null);
@@ -585,23 +587,12 @@ export function ContactCardContent({
     setConsultantResults(null);
     setMatchUpdatedAt(null);
     try {
-      const [{ data: interne }, { data: eksterne }] = await Promise.all([
-        supabase
-          .from("stacq_ansatte")
-          .select("id, navn, kompetanse, geografi, erfaring_aar, status")
-          .in("status", ["AKTIV/SIGNERT", "Ledig"]),
-        supabase
-          .from("external_consultants")
-          .select("id, navn, teknologier, status")
-          .in("status", ["ledig", "aktiv"]),
-      ]);
-
       const { data, error } = await supabase.functions.invoke("match-consultants", {
         body: {
           teknologier,
           sted: companyCity || "",
-          interne: interne || [],
-          eksterne: eksterne || [],
+          interne: cachedInterne,
+          eksterne: cachedEksterne,
         },
       });
       if (error) throw error;
