@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
   <div style="padding:28px 40px 20px">
     <p style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2563eb;margin:0 0 8px">Ukentlig rapport</p>
     <h1 style="font-size:24px;font-weight:700;color:#0f172a;margin:0 0 4px;letter-spacing:-0.3px">Kontraktfornyelser</h1>
-    <p style="font-size:14px;color:#64748b;margin:8px 0 0">${enriched.length} oppdrag krever oppfølging de neste 90 dagene</p>
+    
   </div>
 
   <!-- Stats -->
