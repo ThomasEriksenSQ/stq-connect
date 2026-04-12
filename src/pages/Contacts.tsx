@@ -702,12 +702,13 @@ const Contacts = () => {
   const filteredContacts = useMemo(
     () =>
       searchFilteredContacts.filter((contact) => {
-        const matchOwner = ownerFilter === "all" || getOwnerId(contact) === ownerFilter;
+        const matchOwner = ownerFilter === "all" || (ownerFilter === "__none__" ? !getOwnerId(contact) : getOwnerId(contact) === ownerFilter);
         const matchSignal = signalFilter === "all" || (contact as any).signal === signalFilter;
         const matchType =
           typeFilter === "all" ||
           (typeFilter === "call_list" && contact.call_list) ||
-          (typeFilter === "cv_email" && contact.cv_email);
+          (typeFilter === "cv_email" && contact.cv_email) ||
+          (typeFilter === "ikke_aktuell" && contact.ikke_aktuell_kontakt);
         return matchOwner && matchSignal && matchType;
       }),
     [ownerFilter, searchFilteredContacts, signalFilter, typeFilter],
@@ -1506,6 +1507,7 @@ const Contacts = () => {
                 {uniqueOwners.map(([id, name]) => (
                   <Chip key={id} label={name} value={id} current={ownerFilter} onSelect={setOwnerFilter} />
                 ))}
+                <Chip label="Uten eier" value="__none__" current={ownerFilter} onSelect={setOwnerFilter} />
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
@@ -1538,6 +1540,7 @@ const Contacts = () => {
                 <Chip label="Alle" value="all" current={typeFilter} onSelect={setTypeFilter} />
                 <Chip label="Innkjøper" value="call_list" current={typeFilter} onSelect={setTypeFilter} />
                 <Chip label="CV-Epost" value="cv_email" current={typeFilter} onSelect={setTypeFilter} />
+                <Chip label="Ikke relevant" value="ikke_aktuell" current={typeFilter} onSelect={setTypeFilter} />
               </div>
             </>
           )}
