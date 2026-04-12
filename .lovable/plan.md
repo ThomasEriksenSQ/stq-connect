@@ -1,41 +1,29 @@
 
 
-## Forbedre "Selskaper med sterkest signal"-seksjonen
+## Legg til "Selskaper med sterkest signal" i Markedsradar-eposten
 
-### Problem
-Det horisontale stolpediagrammet viser en abstrakt "score" (0-280) som ikke gir brukeren innsikt i *hvorfor* et selskap er rangert høyt. Lange selskapsnavn brytes over flere linjer og blir vanskelige å lese.
+### Hva
+Legge til en ny seksjon i ukentlig e-post som viser topp 8 selskaper rangert etter signalstyrke, med visuell score-bar, teknologier og kontaktinfo -- tilsvarende den nye listen på Markedsradar-siden.
 
-### Forslag: Erstatt diagrammet med en rangert liste med visuelle signaler
+### Endringer
 
-Fjern Recharts-diagrammet og erstatt med en kompakt, rangert liste der hver rad viser:
+**Fil:** `supabase/functions/markedsradar-ukesmail/index.ts`
 
-```text
-┌──────────────────────────────────────────────────────────────────────┐
-│ 1. AutoStore AS                    23 annonser · 4 denne uken       │
-│    ████████████████████████████████████████████░░░░░  (score-bar)    │
-│    C++ · FPGA · Embedded Linux        2 kontakter  ·  Ikke i CRM   │
-│                                                                      │
-│ 2. Kongsberg Discovery (avd Horten)  18 annonser · 2 denne uken    │
-│    ██████████████████████████████░░░░░░░░░░░░░░░░░░  (score-bar)    │
-│    C++ · RTOS · ARM Cortex-M          1 kontakt   ·  I CRM         │
-└──────────────────────────────────────────────────────────────────────┘
-```
+1. **Utvid `MarketSnapshot.topCompanies`** fra `.slice(0, 5)` til `.slice(0, 8)` (linje 438) for å gi nok data til den nye seksjonen.
 
-Hver rad inneholder:
-- **Rangeringsnummer** (1-8) for å vise prioritet
-- **Selskapsnavn** (klikkbart, navigerer til selskap/opprett)
-- **Nøkkeltall**: antall annonser, annonser denne uken
-- **Visuell score-bar**: tynn horisontal bar (relativ til høyeste score) som gir visuell sammenligning uten abstrakte tall
-- **Teknologier**: topp 3 tech-tags
-- **Kontakter + CRM-status**: badges
+2. **Ny renderfunksjon `renderSignalRanking`** som bygger en HTML-tabell med:
+   - Rangeringsnummer (1-8) og selskapsnavn i bold
+   - Horisontal score-bar via en `<td>` med inline `width: X%` og `background: #2563eb` (relativ til høyeste score)
+   - Topp 3 teknologier som tekst + antall kontakter i blått
+   - Antall annonser og "X denne uken" til høyre
+   - Klikkbart selskapsnavn (lenke til CRM)
 
-### Teknisk endring
+3. **Sett inn seksjonen** etter AI-oppsummeringen og før "Teknologier i vekst" (rundt linje 658), med tittelen "SELSKAPER MED STERKEST SIGNAL" og undertekst "Rangert etter annonsefrekvens, tilgjengelig kontaktinfo og relevante teknologier."
 
-**Fil:** `src/pages/Markedsradar.tsx` (linje 517-551)
+4. **Fjern den eksisterende "Selskaper å følge opp"-seksjonen** (linje 662) siden den nye seksjonen erstatter den med bedre visuell fremstilling.
 
-- Fjern `ResponsiveContainer`, `BarChart`, `Bar`, `XAxis`, `YAxis` for denne seksjonen
-- Erstatt med en `divide-y divide-border` liste
-- Hver rad bruker `flex` layout med en inline CSS-bredde progress-bar (`bg-primary/20 h-1.5 rounded-full`)
-- Selskapsnavn er klikkbare og navigerer til riktig side
-- Beholder filteredCompanies.slice(0, 8) logikken
+5. **Deploy** edge function etter endring.
+
+### Resultat
+E-posten får en visuelt tydelig rangert liste over de viktigste selskapene, med score-barer som gjør det enkelt å se hvilke selskaper som har sterkest signal -- samme format som på nettsiden.
 
