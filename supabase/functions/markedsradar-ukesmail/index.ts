@@ -435,7 +435,7 @@ function buildMarketSnapshot(annonser: FinnAnnonse[], companies: CompanyRef[]): 
       cleanedAds.filter((ad) => ad.dato >= current30).map((ad) => normalizeCompanyName(ad.selskap!)),
     ).size,
     technologyTrends,
-    topCompanies: actionableCompanies.slice(0, 5),
+    topCompanies: actionableCompanies.slice(0, 8),
     topContacts,
     newCompaniesNotInCrm: actionableCompanies.filter((company) => !company.inCrm).slice(0, 5),
     firstTimerCompanies,
@@ -553,15 +553,46 @@ function buildHtml(snapshot: MarketSnapshot, aiSummary: string | null, consultan
     return `<strong>${trend.name}</strong> — ${trend.current} annonser siste 30d ${arrow}<br><span style="font-size:12px;color:#64748b">vs. ${prevLabel}</span>`;
   });
 
-  // Company rows with action pills
-  const companyRows = snapshot.topCompanies.map((company) => {
-    const companyUrl = company.company
-      ? `https://crm.stacq.no/selskaper/${company.company.id}`
-      : `https://crm.stacq.no/selskaper?ny=${encodeURIComponent(company.name)}`;
-    const label = company.company ? company.name : `${company.name} <span style="color:#94a3b8;font-size:12px">(ikke i CRM)</span>`;
-    const pill = actionPill(company);
-    return `<a href="${companyUrl}" style="color:#1e293b;text-decoration:none"><strong>${label}</strong></a>${pill}<br><span style="font-size:12px;color:#64748b">${company.adCount} annonser · ${company.topTechnologies.slice(0, 3).join(", ") || "ingen teknologi"}${company.latestRole ? ` · ${company.latestRole}` : ""}</span>`;
-  });
+  // Signal ranking for top companies
+  const maxScore = Math.max(...snapshot.topCompanies.map(c => c.score), 1);
+  const signalRankingHtml = snapshot.topCompanies.length > 0
+    ? snapshot.topCompanies.map((company, i) => {
+        const companyUrl = company.company
+          ? `https://crm.stacq.no/selskaper/${company.company.id}`
+          : `https://crm.stacq.no/selskaper?ny=${encodeURIComponent(company.name)}`;
+        const pct = Math.round((company.score / maxScore) * 100);
+        const techLabel = company.topTechnologies.slice(0, 3).join(", ") || "—";
+        const contactCount = company.contactCount || 0;
+        const crmLabel = company.company
+          ? `<span style="color:#2563eb;font-size:11px;font-weight:600">${contactCount} kontakt${contactCount !== 1 ? "er" : ""}</span>`
+          : `<span style="color:#94a3b8;font-size:11px">Ikke i CRM</span>`;
+        return `
+          <tr>
+            <td style="padding:12px 14px;border-bottom:1px solid #f1f5f9">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="width:24px;vertical-align:top;font-size:13px;font-weight:700;color:#94a3b8">${i + 1}.</td>
+                  <td>
+                    <a href="${companyUrl}" style="font-size:14px;font-weight:700;color:#1e293b;text-decoration:none">${company.name}</a>
+                    ${actionPill(company)}
+                    <div style="margin:6px 0 4px">
+                      <table cellpadding="0" cellspacing="0" border="0" style="width:100%">
+                        <tr>
+                          <td style="width:${pct}%;height:6px;background:#2563eb;border-radius:3px"></td>
+                          <td style="width:${100 - pct}%;height:6px;background:#f1f5f9;border-radius:0 3px 3px 0"></td>
+                        </tr>
+                      </table>
+                    </div>
+                    <div style="font-size:12px;color:#64748b;line-height:1.5">
+                      ${techLabel} · ${company.adCount} annonser${company.currentWeekCount > 0 ? ` · ${company.currentWeekCount} denne uken` : ""} · ${crmLabel}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>`;
+      }).join("")
+    : `<tr><td style="padding:10px 14px;font-size:13px;color:#94a3b8">Ingen funn denne uken.</td></tr>`;
 
   // Contact rows with clickable mailto/tel
   const contactRows = snapshot.topContacts.map((contact) => {
@@ -659,7 +690,13 @@ function buildHtml(snapshot: MarketSnapshot, aiSummary: string | null, consultan
 
           
 
-          ${section("Selskaper å følge opp", "De mest relevante selskapene basert på annonser, kontaktdata og teknologi-fit.", renderBulletRows(companyRows))}
+          <div style="padding:28px 40px 0">
+            <p style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748b;margin:0 0 4px">Selskaper med sterkest signal</p>
+            <p style="font-size:13px;color:#94a3b8;margin:0 0 14px">Rangert etter annonsefrekvens, tilgjengelig kontaktinfo og relevante teknologier.</p>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">${signalRankingHtml}</table>
+          </div>
+
+          
 
           ${firstTimerRows.length > 0 ? section("Nye selskaper denne uken", "Selskaper som dukker opp for første gang i markedsradaren.", renderBulletRows(firstTimerRows)) : ""}
 
