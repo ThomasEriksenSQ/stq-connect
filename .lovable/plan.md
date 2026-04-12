@@ -1,17 +1,26 @@
 
 
-## Endre rekkefølge på seksjoner i Markedsradar
+## Prioriter mest relevante teknologier i filterchips
 
-### Endring i `src/pages/Markedsradar.tsx`
+### Problem
+Teknologifilteret viser de 14 teknologiene med høyest momentum (delta), som ofte gir generiske tags som "Testing" og "CI/CD" i stedet for kjernekompetansene til STACQ.
 
-Flytter de seks seksjonene under stat-kortene til ny rekkefølge:
+### Løsning
+Endre `technologyOptions` i `src/lib/markedsradar.ts` slik at strategiske teknologier (fra `STRATEGIC_TECHNOLOGIES`) prioriteres først, deretter fyller på med de mest populære trendene.
 
-1. **Selskaper med sterkest signal** (nå nr. 5 → flyttes til 1)
-2. **Kontaktpersoner** (beholder nr. 2)
-3. **Teknologier i vekst** (beholder nr. 3)
-4. **Teknologitrender over tid** (nå nr. 4 → beholder)
-5. **Prioriterte selskaper** (nå nr. 6 → flyttes til 5)
-6. **Opprett i CRM** (nå nr. 1 → flyttes til sist)
+### Teknisk endring
 
-Ren klippe-og-lim av JSX-blokker, ingen funksjonell endring.
+**Fil:** `src/lib/markedsradar.ts` (linje 411)
+
+Erstatt:
+```ts
+const technologyOptions = technologyTrends.slice(0, 14).map((item) => item.name);
+```
+
+Med logikk som:
+1. Filtrer `technologyTrends` til de som finnes i `STRATEGIC_TECHNOLOGIES` og har `current > 0`, sortert etter `current` (høyest først)
+2. Fyll på med resterende trender (sortert som før) til maks 14 totalt
+3. Dedupliser
+
+Dette sikrer at C++, C, Rust, FPGA, Embedded Linux, Yocto, Zephyr osv. alltid vises først når de har aktive annonser, mens andre populære teknologier fyller resten av plassen.
 
