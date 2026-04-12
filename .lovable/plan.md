@@ -1,38 +1,53 @@
 
 
-## Legg til "Uten eier" og "Ikke relevant kontakt" filter-chips
+## Gjør AI-matching raskere uten å endre logikk
 
-### Endringer i `src/pages/Contacts.tsx`
+### Problem
+Hver gang brukeren klikker "Finn konsulent", "Finn match" eller "Finn oppdrag" skjer dette sekvensielt:
+1. **Hent konsulentlister fra DB** (stacq_ansatte + external_consultants) — 200-500ms
+2. **Hent tilleggsdata** (forespørsler, aktiviteter, tasks) — 200-500ms  
+3. **Kall AI edge function** — 3-8 sekunder (uunngåelig, AI-inferens)
 
-**1. Eier-raden (linje 1508): Legg til "Uten eier" chip**
+Steg 1 og 2 gjentas identisk hver gang, selv om dataen sjelden endres. AI-kallet (steg 3) kan ikke gjøres raskere, men ventetiden FØR det kan elimineres.
 
-Etter `uniqueOwners.map(...)` på linje 1508, legg til:
-```tsx
-<Chip label="Uten eier" value="__none__" current={ownerFilter} onSelect={setOwnerFilter} />
-```
+### Løsning: Pre-cache konsulentlister med React Query
 
-**2. Eier-filterlogikken (linje 705): Håndter `__none__` verdien**
+Opprett en ny hook `src/hooks/useConsultantCache.ts` som bruker `useQuery` til å holde konsulentlistene varme i minnet:
 
-Utvid `matchOwner`-sjekken til:
-```ts
-const matchOwner = ownerFilter === "all" 
-  || ownerFilter === "__none__" ? !getOwnerId(contact) 
-  : getOwnerId(contact) === ownerFilter;
-```
+- **Interne konsulenter**: `stacq_ansatte` med status AKTIV/SIGNERT og Ledig
+- **Eksterne konsulenter**: `external_consultants` med status ledig/aktiv
+- **staleTime: 5 minutter** — dataen er varm og klar når brukeren klikker
 
-**3. Type-raden (linje 1540): Legg til "Ikke relevant" chip**
+Deretter oppdater de 5 stedene som henter konsulenter manuelt til å bruke cachen i stedet:
 
-Etter CV-Epost-chipen, legg til:
-```tsx
-<Chip label="Ikke relevant" value="ikke_aktuell" current={typeFilter} onSelect={setTypeFilter} />
-```
+### Filer som endres
 
-**4. Type-filterlogikken (linje 710): Håndter `ikke_aktuell`**
+**1. Ny fil: `src/hooks/useConsultantCache.ts`**
+- Hook som returnerer `{ interne, eksterne, isReady }`
+- Bruker `useQuery` med 5 min staleTime
 
-Legg til i `matchType`:
-```ts
-|| (typeFilter === "ikke_aktuell" && contact.ikke_aktuell_kontakt)
-```
+**2. `src/components/ContactCardContent.tsx`** (linje 588-597)
+- Erstatt `Promise.all([supabase.from("stacq_ansatte")..., supabase.from("external_consultants")...])` med data fra hooken
+- Sparer ~300ms per klikk
 
-Ingen andre endringer. Kun to nye filter-chips og tilhørende filterlogikk.
+**3. `src/components/CompanyCardContent.tsx`** (linje 569-580)
+- Samme endring — bruk cachen i stedet for fersk DB-henting
+
+**4. `src/components/ForespørselSheet.tsx`** (linje 516-518)
+- Samme endring
+
+**5. `src/components/OppdragsMatchPanel.tsx`** (linje 99-109)
+- Bruker ikke konsulentlisten, men henter kontakter/aktiviteter/tasks — disse er allerede potensielt cachet. Ingen endring nødvendig her.
+
+**6. `src/components/AIChatPanel.tsx`** (linje 536-539)
+- Erstatt inline DB-fetch med cachen
+
+### Hva dette IKKE endrer
+- Ingen logikk i edge functions
+- Ingen endring i matching-algoritmer eller prompts
+- Ingen endring i hva som sendes til AI
+- Ingen endring i UI eller visning av resultater
+
+### Forventet effekt
+Eliminerer 200-500ms DB-ventetid før hvert AI-kall. Brukeren merker at spinneren starter umiddelbart etter klikk, og AI-svaret kommer tilbake uten unødvendig forsinkelse foran.
 
