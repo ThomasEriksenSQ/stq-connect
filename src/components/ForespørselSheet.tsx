@@ -522,14 +522,6 @@ export function ForespørselSheet({
               supabase.from("contacts").select("id, call_list").eq("id", row.kontakt_id).single(),
             ])
           : [{ data: [] }, { data: [] }, { data: null }];
-        row.kontakt_id
-          ? Promise.all([
-              supabase.from("activities").select("contact_id, created_at, subject, description").eq("contact_id", row.kontakt_id).order("created_at", { ascending: false }),
-              supabase.from("tasks").select("contact_id, created_at, title, description, due_date").eq("contact_id", row.kontakt_id).neq("status", "done"),
-              supabase.from("contacts").select("id, call_list").eq("id", row.kontakt_id).single(),
-            ])
-          : Promise.resolve([{ data: [] }, { data: [] }, { data: null }]),
-      ]);
 
       const [aktiviteterRes, tasksRes, kontaktRes] = kontaktData as any;
       const aktiviteter = aktiviteterRes?.data || [];
@@ -551,8 +543,8 @@ export function ForespørselSheet({
         body: {
           teknologier: row.teknologier || [],
           sted: row.sted || "",
-          interne: interne || [],
-          eksterne: eksterne || [],
+          interne: cachedInterne,
+          eksterne: cachedEksterne,
           kontakt_er_innkjoper: kontakt?.call_list || false,
           kontakt_signal: signal || "Ukjent om behov",
           siste_kontakt_dato: sisteKontakt,
