@@ -342,7 +342,7 @@ function RadarTab({
         </Card>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="space-y-6">
         <Card>
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center gap-2 mb-4">
@@ -354,8 +354,8 @@ function RadarTab({
                 <p className="text-[0.8125rem] text-muted-foreground">Selskaper som ikke finnes i dag.</p>
               </div>
             </div>
-            <div className="space-y-3">
-              {visibleNewCompanies.slice(0, 6).map((company) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {visibleNewCompanies.slice(0, 9).map((company) => (
                 <div key={company.key} className="rounded-lg border border-border bg-secondary/20 p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -395,8 +395,8 @@ function RadarTab({
                 <p className="text-[0.8125rem] text-muted-foreground">De mest nyttige direkte kontaktpunktene.</p>
               </div>
             </div>
-            <div className="space-y-3">
-              {visibleContacts.slice(0, 6).map((contact) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {visibleContacts.slice(0, 9).map((contact) => (
                 <div key={contact.key} className="rounded-lg border border-border bg-secondary/20 p-3 space-y-2">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -457,8 +457,8 @@ function RadarTab({
                 <p className="text-[0.8125rem] text-muted-foreground">Siste 30 dager sammenlignet med forrige 30.</p>
               </div>
             </div>
-            <div className="space-y-3">
-              {visibleTechTrends.slice(0, 6).map((trend) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {visibleTechTrends.slice(0, 9).map((trend) => (
                 <div key={trend.name} className="rounded-lg border border-border bg-secondary/20 p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
