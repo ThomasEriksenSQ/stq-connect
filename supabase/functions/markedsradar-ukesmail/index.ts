@@ -435,7 +435,7 @@ function buildMarketSnapshot(annonser: FinnAnnonse[], companies: CompanyRef[]): 
       cleanedAds.filter((ad) => ad.dato >= current30).map((ad) => normalizeCompanyName(ad.selskap!)),
     ).size,
     technologyTrends,
-    topCompanies: actionableCompanies.slice(0, 5),
+    topCompanies: actionableCompanies.slice(0, 8),
     topContacts,
     newCompaniesNotInCrm: actionableCompanies.filter((company) => !company.inCrm).slice(0, 5),
     firstTimerCompanies,
