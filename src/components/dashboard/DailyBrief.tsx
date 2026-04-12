@@ -128,7 +128,7 @@ const DailyBrief = () => {
   const [completedAll, setCompletedAll] = useState(false);
   const [treated, setTreated] = useState<Set<string>>(new Set());
   const [activeForm, setActiveForm] = useState<"snooze" | "signal" | null>(null);
-  const [reminderDismissed, setReminderDismissed] = useState(false);
+  
   const [isAnimating, setIsAnimating] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [localSignals, setLocalSignals] = useState<Record<string, string>>({});
@@ -668,42 +668,9 @@ const DailyBrief = () => {
     };
   }, [isAnimating, goNext]);
 
-  const showReminder = useMemo(() => {
-    if (reminderDismissed) return false;
-    if (isLoading) return false;
-    if (rawContacts.length === 0) return false;
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const userContacts = rawContacts.filter((c: any) => c.owner_id === user?.id);
-    if (userContacts.length === 0) return true;
-    const hasRecentReview = userContacts.some(
-      (c: any) => c.next_review_at && new Date(c.next_review_at) > sevenDaysAgo,
-    );
-    return !hasRecentReview;
-  }, [rawContacts, user?.id, reminderDismissed, isLoading]);
 
   return (
     <div className="space-y-4">
-      {/* ── Ukentlig påminnelse ── */}
-      {viewMode === "kort" && !completedAll && showReminder && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 sm:px-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-start gap-3">
-            <Bell className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="font-semibold text-amber-900 text-[0.875rem]">Påminnelse!</p>
-              <p className="text-amber-800 text-[0.8125rem] mt-0.5">
-                Viktig at vi bruker salgsagenten jevnlig for å opprettholde en god kontaktliste.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setReminderDismissed(true)}
-            className="self-end text-amber-400 hover:text-amber-700 flex-shrink-0 sm:self-auto sm:mt-0.5"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
 
       {/* ── Filter + visningsvalg ── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
