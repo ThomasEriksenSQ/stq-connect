@@ -235,7 +235,7 @@ function RadarTab({
 
   return (
     <div className="space-y-6 mt-4">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Annonser denne uken" value={market.adsThisWeek} />
         <StatCard
           label="Endring fra forrige uke"
@@ -245,11 +245,6 @@ function RadarTab({
         />
         <StatCard label="Unike selskaper (30d)" value={market.uniqueCompanies30d} />
         <StatCard label="Nye selskaper ikke i CRM" value={market.newCompaniesNotInCrm.length} />
-        <StatCard
-          label="Kontaktpunkter med info"
-          value={totalContactable}
-          sub={market.hottestTech ? `Varmest: ${market.hottestTech}` : undefined}
-        />
       </div>
 
       <Card>
