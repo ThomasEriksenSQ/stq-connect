@@ -253,7 +253,7 @@ export function AppLayout() {
       </header>
 
       <FornyelsesVarsel />
-      <main className="flex-1 overflow-auto" style={{ scrollbarGutter: "stable" }}>
+      <main className="flex-1 overflow-auto">
         <div className="max-w-6xl mx-auto px-4 md:px-8 py-5 md:py-7 animate-fade-up">
           <Outlet />
         </div>
