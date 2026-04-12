@@ -1133,6 +1133,7 @@ const DailyBrief = () => {
                               </button>
                             ))}
                           </div>
+                          </>
                         )}
                       </div>
 
