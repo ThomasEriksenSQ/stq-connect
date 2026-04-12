@@ -124,32 +124,74 @@ Deno.serve(async (req) => {
     const html = `
 <!DOCTYPE html>
 <html>
-<body style="margin:0;padding:0;background:#f5f4f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Helvetica,Arial,sans-serif">
 <div style="padding:40px 20px">
-<div style="max-width:580px;margin:0 auto">
-<div style="background:#ffffff;border-radius:4px;overflow:hidden">
-  <div style="background:#0a0a0a;padding:28px 40px;display:flex;align-items:center;justify-content:space-between">
-    <div>
-      <span style="font-size:20px;font-weight:700;letter-spacing:-0.5px;color:#ffffff">STACQ</span>
-      <span style="font-size:11px;color:#888888;margin-left:10px;letter-spacing:0.08em;text-transform:uppercase">CRM</span>
-    </div>
-    <span style="font-size:11px;color:#555555;letter-spacing:0.04em">${datoNorsk}</span>
+<div style="max-width:720px;margin:0 auto">
+<div style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
+
+  <!-- Header -->
+  <div style="padding:24px 40px;border-bottom:2px solid #2563eb">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td>
+          <span style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:#0f172a">STACQ</span>
+          <span style="font-size:11px;font-weight:600;color:#2563eb;margin-left:8px;letter-spacing:0.1em;text-transform:uppercase">CRM</span>
+        </td>
+        <td style="text-align:right">
+          <span style="font-size:12px;color:#94a3b8;letter-spacing:0.02em">${datoNorsk}</span>
+        </td>
+      </tr>
+    </table>
   </div>
-  <div style="padding:32px 40px 24px;border-bottom:1px solid #f0f0f0">
-    <p style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#999999;margin:0 0 8px">Ukentlig rapport</p>
-    <h1 style="font-size:22px;font-weight:700;color:#0a0a0a;margin:0 0 6px;letter-spacing:-0.3px">Kontraktfornyelser</h1>
-    <p style="font-size:14px;color:#777777;margin:0">${enriched.length} oppdrag krever oppfølging de neste 90 dagene</p>
+
+  <!-- Title -->
+  <div style="padding:28px 40px 20px">
+    <p style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2563eb;margin:0 0 8px">Ukentlig rapport</p>
+    <h1 style="font-size:24px;font-weight:700;color:#0f172a;margin:0 0 4px;letter-spacing:-0.3px">Kontraktfornyelser</h1>
+    <p style="font-size:14px;color:#64748b;margin:8px 0 0">${enriched.length} oppdrag krever oppfølging de neste 90 dagene</p>
   </div>
+
+  <!-- Stats -->
+  <div style="padding:0 40px 24px">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8fafc;border-radius:8px;overflow:hidden">
+      <tr>
+        <td style="text-align:center;padding:16px 0">
+          <div style="font-size:28px;font-weight:700;color:#DC2626;letter-spacing:-0.5px">${kritisk.length}</div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#94a3b8;margin-top:4px">Kritisk</div>
+        </td>
+        <td style="width:1px;background:#e2e8f0;padding:0"></td>
+        <td style="text-align:center;padding:16px 0">
+          <div style="font-size:28px;font-weight:700;color:#D97706;letter-spacing:-0.5px">${snart.length}</div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#94a3b8;margin-top:4px">Snart</div>
+        </td>
+        <td style="width:1px;background:#e2e8f0;padding:0"></td>
+        <td style="text-align:center;padding:16px 0">
+          <div style="font-size:28px;font-weight:700;color:#2563eb;letter-spacing:-0.5px">${planlegg.length}</div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#94a3b8;margin-top:4px">Planlegg</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
   ${seksjon('Kritisk — under 7 dager', '#DC2626', '#FEF2F2', kritisk)}
   ${seksjon('Snart — under 30 dager', '#D97706', '#FFFBEB', snart)}
   ${seksjon('Planlegg — under 90 dager', '#CA8A04', '#FEFCE8', planlegg)}
+
+  <!-- CTA -->
   <div style="padding:32px 40px">
-    <a href="https://crm.stacq.no/konsulenter-oppdrag?filter=Aktiv" style="display:inline-block;background:#0a0a0a;color:#ffffff;font-size:13px;font-weight:600;padding:12px 24px;border-radius:4px;text-decoration:none;letter-spacing:0.02em">Åpne aktive oppdrag →</a>
+    <a href="https://crm.stacq.no/konsulenter-oppdrag?filter=Aktiv" style="display:inline-block;background:#2563eb;color:#ffffff;font-size:13px;font-weight:600;padding:12px 28px;border-radius:6px;text-decoration:none;letter-spacing:0.02em">Åpne aktive oppdrag →</a>
   </div>
-  <div style="padding:20px 40px;border-top:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between">
-    <span style="font-size:12px;color:#bbbbbb">STACQ CRM · Automatisk rapport</span>
-    <span style="font-size:12px;color:#bbbbbb">crm.stacq.no</span>
+
+  <!-- Footer -->
+  <div style="padding:20px 40px;border-top:1px solid #e2e8f0">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td><span style="font-size:12px;color:#94a3b8">STACQ CRM · Automatisk rapport</span></td>
+        <td style="text-align:right"><span style="font-size:12px;color:#94a3b8">crm.stacq.no</span></td>
+      </tr>
+    </table>
   </div>
+
 </div>
 </div>
 </div>
