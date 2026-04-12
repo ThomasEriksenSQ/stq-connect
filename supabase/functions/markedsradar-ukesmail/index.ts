@@ -563,9 +563,9 @@ function buildHtml(snapshot: MarketSnapshot, aiSummary: string | null, consultan
         const pct = Math.round((company.score / maxScore) * 100);
         const techLabel = company.topTechnologies.slice(0, 3).join(", ") || "—";
         const contactCount = company.contactCount || 0;
-        const crmLabel = company.company
+        const crmLabel = contactCount > 0
           ? `<span style="color:#2563eb;font-size:11px;font-weight:600">${contactCount} kontakt${contactCount !== 1 ? "er" : ""}</span>`
-          : `<span style="color:#94a3b8;font-size:11px">Ikke i CRM</span>`;
+          : (!company.company ? `<span style="color:#94a3b8;font-size:11px">Ikke i CRM</span>` : "");
         return `
           <tr>
             <td style="padding:12px 14px;border-bottom:1px solid #f1f5f9">
