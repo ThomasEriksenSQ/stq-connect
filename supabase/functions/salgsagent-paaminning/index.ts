@@ -105,18 +105,65 @@ Deno.serve(async (req: Request) => {
       ? "[TEST] Salgsagent-påminnelse"
       : "Påminnelse: Salgsagenten har ikke blitt brukt på 7 dager";
 
+    const datoNorsk = new Date().toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' });
     const html = `
-      <div style="font-family: sans-serif; max-width: 560px;">
-        <h2 style="color: #1a1a1a;">Salgsagent-påminnelse</h2>
-        <p style="color: #555; line-height: 1.6;">
-          ${test ? "<strong>[TEST]</strong> " : ""}Salgsagenten har ikke blitt brukt de siste 7 dagene.
-          Husk å bruke den regelmessig for å holde oversikt over salgsaktiviteter.
-        </p>
-        <a href="https://stq-connect.lovable.app/" style="display: inline-block; margin-top: 16px; padding: 10px 20px; background: #2563eb; color: #fff; border-radius: 8px; text-decoration: none; font-weight: 500;">
-          Åpne STACQ
-        </a>
-      </div>
-    `;
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Helvetica,Arial,sans-serif">
+<div style="padding:40px 20px">
+<div style="max-width:720px;margin:0 auto">
+<div style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
+
+  <!-- Header -->
+  <div style="padding:24px 40px;border-bottom:2px solid #2563eb">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td>
+          <span style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:#0f172a">STACQ</span>
+          <span style="font-size:11px;font-weight:600;color:#2563eb;margin-left:8px;letter-spacing:0.1em;text-transform:uppercase">CRM</span>
+        </td>
+        <td style="text-align:right">
+          <span style="font-size:12px;color:#94a3b8;letter-spacing:0.02em">${datoNorsk}</span>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Title -->
+  <div style="padding:28px 40px 20px">
+    <p style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2563eb;margin:0 0 8px">Påminnelse</p>
+    <h1 style="font-size:24px;font-weight:700;color:#0f172a;margin:0;letter-spacing:-0.3px">Salgsagent-påminnelse</h1>
+  </div>
+
+  <!-- Content -->
+  <div style="padding:0 40px 24px">
+    <div style="background:#eff6ff;border-radius:8px;padding:20px 24px;border-left:3px solid #2563eb">
+      <p style="font-size:14px;color:#1e293b;margin:0;line-height:1.65">
+        ${test ? "<strong>[TEST]</strong> " : ""}Salgsagenten har ikke blitt brukt de siste 7 dagene. Husk å bruke den regelmessig for å holde oversikt over salgsaktiviteter.
+      </p>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div style="padding:16px 40px 32px">
+    <a href="https://crm.stacq.no/" style="display:inline-block;background:#2563eb;color:#ffffff;font-size:13px;font-weight:600;padding:12px 28px;border-radius:6px;text-decoration:none;letter-spacing:0.02em">Åpne STACQ →</a>
+  </div>
+
+  <!-- Footer -->
+  <div style="padding:20px 40px;border-top:1px solid #e2e8f0">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td><span style="font-size:12px;color:#94a3b8">STACQ CRM · Automatisk påminnelse</span></td>
+        <td style="text-align:right"><span style="font-size:12px;color:#94a3b8">crm.stacq.no</span></td>
+      </tr>
+    </table>
+  </div>
+
+</div>
+</div>
+</div>
+</body>
+</html>`;
 
     for (const email of recipients) {
       await resend.emails.send({

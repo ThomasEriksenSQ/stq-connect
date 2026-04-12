@@ -65,15 +65,64 @@ Deno.serve(async (req: Request) => {
         const isOverdue = task.due_date < today;
         const dueLine = isOverdue ? `⚠️ Forfalt (${task.due_date})` : `Forfaller i dag`;
 
+        const datoNorsk = new Date().toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' });
         const html = `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto;">
-            <h2 style="font-size: 18px; color: #1a1a1a; margin-bottom: 4px;">Oppfølging: ${task.title}</h2>
-            <p style="font-size: 14px; color: #666; margin: 4px 0 16px;">${contactLine}</p>
-            <p style="font-size: 14px; color: ${isOverdue ? '#dc2626' : '#1a1a1a'};">${dueLine}</p>
-            <a href="${contactUrl}" style="display: inline-block; margin-top: 16px; padding: 10px 20px; background: #1a1a1a; color: #fff; text-decoration: none; border-radius: 8px; font-size: 14px;">Åpne i CRM →</a>
-            <p style="font-size: 12px; color: #999; margin-top: 24px;">STACQ CRM</p>
-          </div>
-        `;
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Helvetica,Arial,sans-serif">
+<div style="padding:40px 20px">
+<div style="max-width:720px;margin:0 auto">
+<div style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
+
+  <!-- Header -->
+  <div style="padding:24px 40px;border-bottom:2px solid #2563eb">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td>
+          <span style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:#0f172a">STACQ</span>
+          <span style="font-size:11px;font-weight:600;color:#2563eb;margin-left:8px;letter-spacing:0.1em;text-transform:uppercase">CRM</span>
+        </td>
+        <td style="text-align:right">
+          <span style="font-size:12px;color:#94a3b8;letter-spacing:0.02em">${datoNorsk}</span>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Title -->
+  <div style="padding:28px 40px 20px">
+    <p style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2563eb;margin:0 0 8px">Oppfølging</p>
+    <h1 style="font-size:24px;font-weight:700;color:#0f172a;margin:0 0 4px;letter-spacing:-0.3px">${task.title}</h1>
+    <p style="font-size:14px;color:#64748b;margin:8px 0 0">${contactLine}</p>
+  </div>
+
+  <!-- Status -->
+  <div style="padding:0 40px 24px">
+    <div style="background:${isOverdue ? '#fef2f2' : '#eff6ff'};border-radius:8px;padding:20px 24px;border-left:3px solid ${isOverdue ? '#dc2626' : '#2563eb'}">
+      <p style="font-size:14px;color:${isOverdue ? '#dc2626' : '#1e293b'};margin:0;font-weight:600">${dueLine}</p>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div style="padding:16px 40px 32px">
+    <a href="${contactUrl}" style="display:inline-block;background:#2563eb;color:#ffffff;font-size:13px;font-weight:600;padding:12px 28px;border-radius:6px;text-decoration:none;letter-spacing:0.02em">Åpne i CRM →</a>
+  </div>
+
+  <!-- Footer -->
+  <div style="padding:20px 40px;border-top:1px solid #e2e8f0">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td><span style="font-size:12px;color:#94a3b8">STACQ CRM · Oppfølgingspåminnelse</span></td>
+        <td style="text-align:right"><span style="font-size:12px;color:#94a3b8">crm.stacq.no</span></td>
+      </tr>
+    </table>
+  </div>
+
+</div>
+</div>
+</div>
+</body>
+</html>`;
 
         const res = await fetch("https://api.resend.com/emails", {
           method: "POST",
