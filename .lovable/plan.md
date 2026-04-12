@@ -1,38 +1,26 @@
 
 
-## Plan: Redesign markedsradar-ukesmail
+## Plan: Blacklist rekrutteringsselskaper + endre e-posttittel
 
-### Mål
-Oppgradere HTML-mailen til et profesjonelt, minimalistisk design som er gjenkjennbart som STACQ CRM. Beholder all eksisterende data og logikk, kun `buildHtml`, `section` og `renderBulletRows` endres.
+### Problem
+1. Rekrutteringsselskaper (f.eks. Jobzone) dukker opp som "Ikke i CRM" i ukentlig e-post fordi edge-funksjonen ikke filtrerer på `ikke_relevant`-flagget
+2. E-posttittelen viser `Markedsradar 2026-W15` i stedet for `Markedsradar 2026 - Uke 15`
 
-### Designretning
-- Hvit bakgrunn (#ffffff) med subtil ytre ramme (#f5f5f5)
-- STACQ-logo som tekst i header med blå aksent (#2563eb, matching primary)
-- Rene seksjonsdelere, god luft, Inter-lignende systemfont
-- Statistikk-kort øverst (annonser denne uken, unike selskaper, teknologier i vekst) i en horisontal rad
-- Seksjonstitler med uppercase tracking som matcher CRM-designsystemet
-- Tabellaktig layout for selskaper/kontakter i stedet for bullet-lister
-- CTA-knapp i STACQ-blå (#2563eb) i stedet for svart
-- Footer med subtil grå linje og STACQ-branding
-
-### Tekniske endringer
+### Løsning
 
 **Fil: `supabase/functions/markedsradar-ukesmail/index.ts`**
 
-Kun funksjonene `buildHtml` (linje 465-537), `section` (linje 456-463) og `renderBulletRows` (linje 441-454) endres:
+#### 1. Filtrer ut `ikke_relevant`-selskaper
+- Endre company-queryen (linje 637) fra `.select("id, name, status")` til `.select("id, name, status, ikke_relevant")`
+- Legg til `.not("ikke_relevant", "eq", true)` for å ekskludere blacklistede selskaper allerede i queryen, slik at de aldri matcher finn-annonser og aldri vises i noen seksjon
 
-1. **`renderBulletRows`** — Ny versjon med cleanere spacing, venstre blå aksent-linje per rad, bedre typografi
-2. **`section`** — Oppdatert med mer luft, tynnere delere, og uppercase titler som matcher CRM
-3. **`buildHtml`** — Ny layout:
-   - Header: Hvit bakgrunn, STACQ-logo venstrejustert, dato høyrejustert, tynn bunnlinje
-   - Statistikk-stripe: 3 nøkkeltall i en rad med tall + label
-   - AI-oppsummering i en subtil blåtonet boks
-   - Seksjoner med rene delere og bedre spacing
-   - CTA-knapp i blå (#2563eb) med avrundede hjørner
-   - Footer: Minimalistisk med STACQ CRM-tekst
+#### 2. Endre tittelformat
+- Linje 526: Endre `Markedsradar ${snapshot.latestWeek}` til å formatere `2026-W15` som `2026 - Uke 15`
+- Linje 695 (e-post subject): Samme formatering for subject-linjen
 
-Ingen endringer i datalogikk, snapshot-bygging, eller utsendelseslogikk.
+#### 3. Deploy
+- Deploy `markedsradar-ukesmail` edge function
 
-### Etter implementering
-Deploy edge function, deretter kan du sende testmail fra Innstillinger-siden.
+### Hvordan blackliste selskaper
+Eksisterende `ikke_relevant`-flagg på companies-tabellen brukes allerede i CRM-frontenden. For å blackliste et rekrutteringsselskap: opprett det i CRM og merk det som "ikke relevant". Da filtreres det bort fra både CRM-visninger og e-posten.
 
