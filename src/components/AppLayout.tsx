@@ -39,6 +39,9 @@ export function AppLayout() {
   const konsRef = useRef<HTMLDivElement>(null);
   const isKonsActive = location.pathname.startsWith("/konsulenter") || location.pathname.startsWith("/stacq") || location.pathname.startsWith("/markedsradar") || location.pathname.startsWith("/nettside-ai") || location.pathname.startsWith("/cv-maker");
 
+  // Pre-fetch consultant lists so they're warm before user clicks any matching button
+  useConsultantCache();
+
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (konsRef.current && !konsRef.current.contains(e.target as Node))
