@@ -1004,6 +1004,11 @@ export function ContactCardContent({
           >
             {(contact as any).cv_email ? "✓ CV-Epost" : "CV-Epost"}
           </button>
+          {((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned") && (
+            <span className="inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium bg-red-50 text-red-700 border-red-200">
+              Avmeldt
+            </span>
+          )}
           {/* Innkjøper */}
           <button
             onClick={() => updateMutation.mutate({ call_list: !(contact as any).call_list })}

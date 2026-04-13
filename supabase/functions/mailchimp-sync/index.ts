@@ -13,19 +13,6 @@ function json(body: unknown, status = 200) {
   });
 }
 
-function md5Hex(email: string): string {
-  // Mailchimp subscriber hash = MD5 of lowercase email
-  const encoder = new TextEncoder();
-  const data = encoder.encode(email.trim().toLowerCase());
-  let hash = 0x67452301;
-  let a, b, c, d;
-  // Simple MD5 — use crypto API
-  // Actually Deno has crypto.subtle
-  // We'll use a simpler approach: just use the Web Crypto API isn't MD5.
-  // Mailchimp needs MD5. Let's implement a tiny MD5.
-  return md5(email.trim().toLowerCase());
-}
-
 // Minimal MD5 implementation for subscriber hash
 function md5(input: string): string {
   const k = new Uint32Array([
@@ -175,7 +162,6 @@ async function syncContactToMailchimp(
 
   const ownerName = await getOwnerName(supabaseAdmin, contact.owner_id);
   const subscriberHash = md5(contact.email.trim().toLowerCase());
-  const status = contact.cv_email ? "subscribed" : "unsubscribed";
 
   const mergeFields: Record<string, string> = {
     FNAME: contact.first_name || "",
@@ -188,16 +174,17 @@ async function syncContactToMailchimp(
     MMERGE13: contact.cv_email ? "TRUE" : "FALSE",
   };
 
+  const putBody: Record<string, unknown> = {
+    email_address: contact.email.trim().toLowerCase(),
+    status_if_new: contact.cv_email ? "subscribed" : "unsubscribed",
+    merge_fields: mergeFields,
+  };
+
   const res = await mcFetch(
     mc,
     `/lists/${mc.audienceId}/members/${subscriberHash}`,
     "PUT",
-    {
-      email_address: contact.email.trim().toLowerCase(),
-      status_if_new: status,
-      status,
-      merge_fields: mergeFields,
-    },
+    putBody,
   );
 
   if (!res.ok) {
@@ -207,7 +194,14 @@ async function syncContactToMailchimp(
     );
   }
 
-  return { email: contact.email, status };
+  // Update mailchimp_status in CRM
+  const newMcStatus = contact.cv_email ? "subscribed" : "unsubscribed";
+  await supabaseAdmin
+    .from("contacts")
+    .update({ mailchimp_status: newMcStatus })
+    .eq("id", contactId);
+
+  return { email: contact.email, status: newMcStatus };
 }
 
 async function syncAllToMailchimp(
@@ -218,30 +212,43 @@ async function syncAllToMailchimp(
     throw new Error("Mailchimp API-nøkkel eller Audience ID mangler");
   }
 
-  // Fetch all contacts with cv_email = true
-  const { data: contacts, error } = await supabaseAdmin
+  // Fetch contacts with cv_email = true
+  const { data: activeContacts, error: err1 } = await supabaseAdmin
     .from("contacts")
     .select("id, first_name, last_name, email, phone, title, owner_id, cv_email, companies(name, status)")
     .eq("cv_email", true)
     .not("email", "is", null);
-  if (error) throw error;
+  if (err1) throw err1;
 
-  if (!contacts || contacts.length === 0) {
+  // Fetch contacts with cv_email = false that have email (to update MMERGE13=FALSE)
+  const { data: inactiveContacts, error: err2 } = await supabaseAdmin
+    .from("contacts")
+    .select("id, first_name, last_name, email, phone, title, owner_id, cv_email, companies(name, status)")
+    .eq("cv_email", false)
+    .not("email", "is", null);
+  if (err2) throw err2;
+
+  const allContacts = [
+    ...(activeContacts || []),
+    ...(inactiveContacts || []),
+  ];
+
+  if (allContacts.length === 0) {
     return { total: 0, batches: 0, message: "Ingen kontakter å synkronisere" };
   }
 
   // Build batch operations
   const operations = [];
-  for (const contact of contacts) {
+  for (const contact of allContacts) {
     const ownerName = await getOwnerName(supabaseAdmin, contact.owner_id);
     const subscriberHash = md5(contact.email!.trim().toLowerCase());
+    const isActive = contact.cv_email;
     operations.push({
       method: "PUT",
       path: `/lists/${mc.audienceId}/members/${subscriberHash}`,
       body: JSON.stringify({
         email_address: contact.email!.trim().toLowerCase(),
-        status_if_new: "subscribed",
-        status: "subscribed",
+        status_if_new: isActive ? "subscribed" : "unsubscribed",
         merge_fields: {
           FNAME: contact.first_name || "",
           LNAME: contact.last_name || "",
@@ -250,7 +257,7 @@ async function syncAllToMailchimp(
           COMPANY: (contact as any).companies?.name || "",
           OWNER: ownerName,
           ACCT_TYPE: mapAccountType((contact as any).companies?.status || null),
-          MMERGE13: "TRUE",
+          MMERGE13: isActive ? "TRUE" : "FALSE",
         },
       }),
     });
@@ -269,11 +276,30 @@ async function syncAllToMailchimp(
     batchIds.push(result.id);
   }
 
+  // Update mailchimp_status for all synced contacts
+  const activeIds = (activeContacts || []).map(c => c.id);
+  const inactiveIds = (inactiveContacts || []).map(c => c.id);
+
+  if (activeIds.length > 0) {
+    await supabaseAdmin
+      .from("contacts")
+      .update({ mailchimp_status: "subscribed" })
+      .in("id", activeIds);
+  }
+  if (inactiveIds.length > 0) {
+    await supabaseAdmin
+      .from("contacts")
+      .update({ mailchimp_status: "unsubscribed" })
+      .in("id", inactiveIds);
+  }
+
   return {
-    total: contacts.length,
+    total: allContacts.length,
+    active: activeIds.length,
+    inactive: inactiveIds.length,
     batches: batchIds.length,
     batchIds,
-    message: `${contacts.length} kontakter sendt til Mailchimp i ${batchIds.length} batch(er). Prosesseres i bakgrunnen.`,
+    message: `${allContacts.length} kontakter sendt til Mailchimp (${activeIds.length} aktive, ${inactiveIds.length} inaktive) i ${batchIds.length} batch(er).`,
   };
 }
 
@@ -283,17 +309,27 @@ async function handleWebhook(req: Request, supabaseAdmin: ReturnType<typeof crea
     return new Response("ok", { status: 200, headers: corsHeaders });
   }
 
-  // POST — parse form data (Mailchimp sends application/x-www-form-urlencoded)
-  const formData = await req.formData();
-  const type = formData.get("type") as string;
-  const email = (formData.get("data[email]") as string)?.trim().toLowerCase();
+  // POST — parse body. Mailchimp sends application/x-www-form-urlencoded
+  let type = "";
+  let email = "";
+
+  try {
+    const rawBody = await req.text();
+    console.log("Mailchimp webhook raw body:", rawBody);
+    const params = new URLSearchParams(rawBody);
+    type = params.get("type") || "";
+    email = (params.get("data[email]") || "").trim().toLowerCase();
+  } catch (e) {
+    console.error("Failed to parse webhook body:", e);
+    return json({ ok: true });
+  }
 
   console.log(`Mailchimp webhook: type=${type}, email=${email}`);
 
   if (!email) return json({ ok: true });
 
   if (type === "unsubscribe" || type === "cleaned") {
-    // Find contact by email and set cv_email = false
+    const mcStatus = type === "cleaned" ? "cleaned" : "unsubscribed";
     const { data: contacts } = await supabaseAdmin
       .from("contacts")
       .select("id")
@@ -303,10 +339,26 @@ async function handleWebhook(req: Request, supabaseAdmin: ReturnType<typeof crea
       for (const c of contacts) {
         await supabaseAdmin
           .from("contacts")
-          .update({ cv_email: false })
+          .update({ cv_email: false, mailchimp_status: mcStatus })
           .eq("id", c.id);
       }
-      console.log(`Set cv_email=false for ${contacts.length} contacts with email ${email}`);
+      console.log(`Set cv_email=false, mailchimp_status=${mcStatus} for ${contacts.length} contacts with email ${email}`);
+    }
+  }
+
+  if (type === "subscribe") {
+    const { data: contacts } = await supabaseAdmin
+      .from("contacts")
+      .select("id")
+      .ilike("email", email);
+
+    if (contacts && contacts.length > 0) {
+      for (const c of contacts) {
+        await supabaseAdmin
+          .from("contacts")
+          .update({ mailchimp_status: "subscribed" })
+          .eq("id", c.id);
+      }
     }
   }
 
