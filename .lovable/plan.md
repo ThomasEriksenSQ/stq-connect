@@ -1,21 +1,27 @@
 
 
-## Oppdater social preview-bilde (og:image)
+## Sorter aktive oppdrag etter fornyelsesdato
 
 ### Problem
-De nåværende `og:image` og `twitter:image` meta-taggene i `index.html` peker til et gammelt skjermbilde fra en tidligere versjon av innloggingssiden. Når linken deles (f.eks. i Slack/iMessage) vises det gamle bildet.
+Linje 168-171 prioriterer statusgruppe (Oppstart → Aktiv → Inaktiv) før dato. Et Oppstart-oppdrag med 30 dager igjen vises over et Aktiv-oppdrag med 10 dager igjen.
 
-### Plan
+### Endring
 
-1. **Ta et nytt skjermbilde** av den nåværende innloggingssiden via nettleseren.
-2. **Generer et polert produktbilde** med product-shot-scriptet (macOS-ramme + gradient-bakgrunn).
-3. **Lagre bildet som `/public/og-image.png`** i prosjektet.
-4. **Oppdater `index.html`** — endre `og:image` og `twitter:image` til å peke på `/og-image.png` (relativ path, som fungerer med både preview- og custom domain). Fjern også `twitter:site` Lovable-referansen.
+**Fil: `src/pages/KonsulenterOppdrag.tsx`, linje 167-179**
 
-### Teknisk detalj
-Endringer kun i `index.html`, linje 20 og 24:
-```html
-<meta property="og:image" content="/og-image.png">
-<meta name="twitter:image" content="/og-image.png">
+Slå sammen Oppstart og Aktiv til én gruppe og sorter alle etter `daysUntilForny` stigende (lavest først). Null-verdier (ingen fornyelsesdato) sorteres sist. Inaktive oppdrag legges til slutt.
+
+```typescript
+return [...items].sort((a: any, b: any) => {
+  const aActive = a.status === "Aktiv" || a.status === "Oppstart";
+  const bActive = b.status === "Aktiv" || b.status === "Oppstart";
+  if (aActive && !bActive) return -1;
+  if (!aActive && bActive) return 1;
+  if (!aActive && !bActive) return (b.slutt_dato || "").localeCompare(a.slutt_dato || "");
+  // Begge er aktive/oppstart — sorter etter fornyelsesdato
+  const af = a.forny_dato || "9999";
+  const bf = b.forny_dato || "9999";
+  return af.localeCompare(bf);
+});
 ```
 
