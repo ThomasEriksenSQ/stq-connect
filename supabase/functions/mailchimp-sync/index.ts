@@ -195,14 +195,15 @@ async function syncContactToMailchimp(
     );
   }
 
-  // Update mailchimp_status in CRM
-  const newMcStatus = contact.cv_email ? "subscribed" : "unsubscribed";
+  // Read actual status from Mailchimp response (handles compliance unsubscribes)
+  const mcResult = await res.json();
+  const actualStatus = mcResult.status || (contact.cv_email ? "subscribed" : "unsubscribed");
   await supabaseAdmin
     .from("contacts")
-    .update({ mailchimp_status: newMcStatus })
+    .update({ mailchimp_status: actualStatus })
     .eq("id", contactId);
 
-  return { email: contact.email, status: newMcStatus };
+  return { email: contact.email, status: actualStatus };
 }
 
 async function syncAllToMailchimp(
