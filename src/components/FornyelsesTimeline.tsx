@@ -60,10 +60,13 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
   }, [ansatteListe, cvPortraits]);
 
   const rows = useMemo(() => {
+    const now = new Date();
     return enriched
-      .filter((o: any) => (o.status === "Aktiv" || o.status === "Oppstart") && o.forny_dato)
+      .filter((o: any) => (o.status === "Aktiv" || o.status === "Oppstart") && (o.forny_dato || o.lopende_30_dager))
       .map((o: any) => {
-        const d = new Date(o.forny_dato);
+        const d = o.lopende_30_dager
+          ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+          : new Date(o.forny_dato);
         return {
           id: o.id,
           navn: o.kandidat || "?",
