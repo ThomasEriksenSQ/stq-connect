@@ -374,7 +374,13 @@ Deno.serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const action = url.searchParams.get("action");
+    const requestBody = req.method === "GET" || req.method === "HEAD"
+      ? null
+      : await req.clone().json().catch(() => null);
+    const actionFromBody = requestBody && typeof requestBody === "object" && "action" in requestBody
+      ? String((requestBody as { action?: unknown }).action || "")
+      : "";
+    const action = url.searchParams.get("action") || actionFromBody;
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -393,8 +399,9 @@ Deno.serve(async (req) => {
     }
 
     if (action === "sync-contact") {
-      const body = await req.json();
-      const contactId = body.contactId;
+      const contactId = requestBody && typeof requestBody === "object"
+        ? (requestBody as { contactId?: string }).contactId
+        : undefined;
       if (!contactId) return json({ error: "contactId required" }, 400);
       const result = await syncContactToMailchimp(supabaseAdmin, contactId);
       return json(result);

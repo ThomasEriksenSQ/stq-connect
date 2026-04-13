@@ -987,8 +987,8 @@ export function ContactCardContent({
               updateMutation.mutate({ cv_email: newVal }, {
                 onSuccess: () => {
                   // Sync to Mailchimp in background
-                  supabase.functions.invoke("mailchimp-sync?action=sync-contact", {
-                    body: { contactId },
+                  supabase.functions.invoke("mailchimp-sync", {
+                    body: { action: "sync-contact", contactId },
                   }).then(({ data, error: mcErr }) => {
                     if (mcErr) {
                       console.error("Mailchimp sync feilet:", mcErr);
