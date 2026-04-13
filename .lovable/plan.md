@@ -1,44 +1,76 @@
 
 
-## Fiks: "Løpende 30 dager"-oppdrag viser feil dato i kalendertidslinje
+## Mailchimp toveis-synk for CV-Epost
 
-### Problem
-I `FornyelsesTimeline.tsx` linje 64 filtreres oppdrag med `o.forny_dato` — men for "Løpende 30 dager"-oppdrag skal fornyelsesdatoen beregnes som **dagens dato + 30 dager**, ikke leses fra `forny_dato`-feltet. Christian har `lopende_30_dager = true` med en gammel `forny_dato` (21. april), så kalenderen viser feil dag.
+### Oversikt
+Integrer STACQ med Mailchimp slik at kontakter med `cv_email = true` automatisk holdes i synk med den eksisterende Mailchimp-audiencen. Endringer i STACQ pusher til Mailchimp, og unsubscribes i Mailchimp synkes tilbake.
 
-### Endring
+### Forutsetning: API-nøkkel og Audience ID
+Du trenger en Mailchimp API-nøkkel og Audience (List) ID. Disse lagres som secrets i Supabase Edge Functions.
 
-**Fil: `src/components/FornyelsesTimeline.tsx`, linje 62-82**
+---
 
-Oppdater `rows`-beregningen:
-1. Endre filteret (linje 64) til å inkludere oppdrag som har enten `forny_dato` eller `lopende_30_dager`
-2. Beregn effektiv dato (linje 66) som `new Date(Date.now() + 30*86400000)` for løpende oppdrag, ellers `new Date(o.forny_dato)`
+### Steg 1 — Lagre secrets
+Legg til to nye secrets:
+- `MAILCHIMP_API_KEY` — API-nøkkel fra Mailchimp (Account → Extras → API keys)
+- `MAILCHIMP_AUDIENCE_ID` — List/Audience ID fra Mailchimp (Audience → Settings → Audience name and defaults)
 
-```typescript
-const rows = useMemo(() => {
-  const now = new Date();
-  return enriched
-    .filter((o: any) => (o.status === "Aktiv" || o.status === "Oppstart") && (o.forny_dato || o.lopende_30_dager))
-    .map((o: any) => {
-      const d = o.lopende_30_dager
-        ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-        : new Date(o.forny_dato);
-      return {
-        id: o.id,
-        navn: o.kandidat || "?",
-        fullName: o.kandidat || "?",
-        kunde: o.kunde || "",
-        utpris: Number(o.utpris) || 0,
-        status: o.status,
-        erAnsatt: o.er_ansatt === true,
-        fornyDate: d,
-        fornyMonth: d.getFullYear() === year ? d.getMonth() : -1,
-        fornyDay: d.getDate(),
-        fullDate: format(d, "d. MMMM yyyy", { locale: nb }),
-      };
-    })
-    .sort((a, b) => a.fornyDate.getTime() - b.fornyDate.getTime());
-}, [enriched, year]);
+### Steg 2 — Edge Function: `mailchimp-sync`
+Ny Edge Function som håndterer tre operasjoner:
+
+**a) Enkel kontakt-synk (sanntid)**
+Kalles fra frontend når `cv_email` togles. Tar kontakt-ID, henter kontakten fra Supabase, og:
+- `cv_email = true` → PUT til Mailchimp (`/lists/{id}/members/{hash}`) med status `subscribed`, merge fields (FNAME, LNAME, PHONE, TITLE, COMPANY, OWNER, ACCT_TYPE)
+- `cv_email = false` → PUT med status `unsubscribed`
+
+**b) Full synk (manuell)**
+Henter alle kontakter med `cv_email = true` + tilhørende selskap. Bruker Mailchimp batch operations for å synke hele listen. Kontakter som finnes i Mailchimp men ikke lenger har `cv_email = true` settes til `unsubscribed`.
+
+**c) Webhook-mottaker (Mailchimp → STACQ)**
+Mottar Mailchimp webhook-events (`unsubscribe`, `cleaned`) og oppdaterer `cv_email = false` på matchende kontakt i Supabase (matcher på e-post).
+
+### Steg 3 — Felt-mapping (STACQ → Mailchimp merge fields)
+
+| Mailchimp merge tag | STACQ-kilde |
+|---|---|
+| FNAME | `contacts.first_name` |
+| LNAME | `contacts.last_name` |
+| PHONE | `contacts.phone` |
+| TITLE | `contacts.title` |
+| COMPANY | `companies.name` (via `company_id`) |
+| OWNER | `profiles.full_name` (via `owner_id`) |
+| ACCT_TYPE | Mappet fra `companies.status`: partner → "Partner", customer/kunde → "Privat direktekunde", prospect → "Potensiell kunde" |
+| CV_EMAIL | `true`/`false` (merge field for tracking) |
+
+Noen av disse merge fields finnes kanskje allerede i Mailchimp-listen (FNAME, LNAME finnes som standard). De resterende opprettes automatisk av Edge Function ved første synk.
+
+### Steg 4 — Frontend-integrasjon
+
+**Sanntid:** I `ContactCardContent.tsx`, etter vellykket `cv_email`-toggle, kall `supabase.functions.invoke('mailchimp-sync', { body: { action: 'sync-contact', contactId } })` i bakgrunnen (fire-and-forget, med toast ved feil).
+
+**Manuell full synk:** Ny knapp på Innstillinger-siden (`/innstillinger`) under en ny seksjon "MAILCHIMP". Knappen "Synk alle til Mailchimp" trigger full synk. Viser antall synkroniserte/oppdaterte kontakter som resultat.
+
+### Steg 5 — Mailchimp webhook-oppsett
+Edge Function `mailchimp-sync` eksponeres med `verify_jwt = false` for webhook-endepunktet. Webhook-URL (`https://kbvzpcebfopqqrvmbiap.supabase.co/functions/v1/mailchimp-sync?action=webhook`) registreres manuelt i Mailchimp (Audience → Settings → Webhooks). Verifisering via en `MAILCHIMP_WEBHOOK_SECRET` som sjekkes ved innkommende requests.
+
+### Steg 6 — Første import fra CSV (engangs)
+Kjør et script som matcher de 679 subscribed-kontaktene fra CSV-filen mot eksisterende kontakter i Supabase (match på e-post). For kontakter som finnes i STACQ men mangler `cv_email = true`, oppdater til `cv_email = true`. Rapporter kontakter som finnes i Mailchimp men ikke i STACQ (potensielt manuelle oppføringer).
+
+---
+
+### Teknisk detalj
+
+```text
+┌─────────┐   cv_email toggle    ┌──────────────────┐   PUT /members   ┌───────────┐
+│  STACQ  │ ──────────────────►  │ mailchimp-sync   │ ──────────────►  │ Mailchimp │
+│ (React) │                      │ (Edge Function)  │                  │           │
+│         │ ◄────────────────── │                  │ ◄────────────── │  Webhook  │
+└─────────┘   cv_email = false   └──────────────────┘   unsubscribe    └───────────┘
 ```
 
-Dette sikrer at Christian (og andre med "Løpende 30 dager") vises med riktig dato — i dag 13. mai (13. april + 30 dager).
+### Filer som endres/opprettes
+- `supabase/functions/mailchimp-sync/index.ts` — ny Edge Function
+- `src/components/ContactCardContent.tsx` — kall mailchimp-sync ved toggle
+- `src/pages/Innstillinger.tsx` — ny "Mailchimp"-seksjon med synk-knapp
+- `supabase/config.toml` — legg til `[functions.mailchimp-sync]` med `verify_jwt = false`
 
