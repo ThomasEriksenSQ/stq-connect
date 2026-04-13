@@ -1,0 +1,1 @@
+ALTER TABLE public.contacts ADD COLUMN mailchimp_status text DEFAULT null;
