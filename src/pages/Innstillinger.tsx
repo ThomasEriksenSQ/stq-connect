@@ -8,7 +8,7 @@ import { toast } from "sonner";
 export default function Innstillinger() {
   const [connecting, setConnecting] = useState(false);
   const [mcSyncing, setMcSyncing] = useState(false);
-  const [mcResult, setMcResult] = useState<{ synced: number; errors: number; total: number } | null>(null);
+  const [mcResult, setMcResult] = useState<{ total: number; active: number; inactive: number; batches: number } | null>(null);
 
   const { data: outlookStatus, isLoading: outlookLoading } = useQuery({
     queryKey: ["outlook-status"],
@@ -56,12 +56,12 @@ export default function Innstillinger() {
     setMcSyncing(true);
     setMcResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke("mailchimp-sync?action=sync-all", {
-        body: {},
+      const { data, error } = await supabase.functions.invoke("mailchimp-sync", {
+        body: { action: "sync-all" },
       });
       if (error) throw error;
       setMcResult(data);
-      toast.success(`${data.synced} kontakter synkronisert til Mailchimp`);
+      toast.success(`${data.total} kontakter sendt til Mailchimp`);
     } catch (e) {
       toast.error(`Mailchimp-synk feilet: ${(e as Error).message}`);
     } finally {
@@ -137,11 +137,9 @@ export default function Innstillinger() {
               </p>
               {mcResult && (
                 <div className="mt-3 text-[0.8125rem]">
-                  <span className="text-emerald-600 font-medium">{mcResult.synced} synkronisert</span>
-                  {mcResult.errors > 0 && (
-                    <span className="text-destructive ml-2">{mcResult.errors} feil</span>
-                  )}
-                  <span className="text-muted-foreground ml-2">av {mcResult.total} totalt</span>
+                  <span className="text-emerald-600 font-medium">{mcResult.active} aktive</span>
+                  <span className="text-muted-foreground ml-2">{mcResult.inactive} inaktive</span>
+                  <span className="text-muted-foreground ml-2">{mcResult.total} totalt</span>
                 </div>
               )}
               <button
