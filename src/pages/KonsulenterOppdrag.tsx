@@ -165,17 +165,15 @@ export default function KonsulenterOppdrag() {
     else if (filter !== "Alle") items = items.filter((o: any) => o.status === filter);
 
     return [...items].sort((a: any, b: any) => {
-      const order: Record<string, number> = { Oppstart: 0, Aktiv: 1, Inaktiv: 2 };
-      const oa = order[a.status] ?? 3;
-      const ob = order[b.status] ?? 3;
-      if (oa !== ob) return oa - ob;
-      if (a.status === "Oppstart") return (a.start_dato || "").localeCompare(b.start_dato || "");
-      if (a.status === "Aktiv") {
-        const af = a.forny_dato || "9999";
-        const bf = b.forny_dato || "9999";
-        return af.localeCompare(bf);
-      }
-      return (b.slutt_dato || "").localeCompare(a.slutt_dato || "");
+      const aActive = a.status === "Aktiv" || a.status === "Oppstart";
+      const bActive = b.status === "Aktiv" || b.status === "Oppstart";
+      if (aActive && !bActive) return -1;
+      if (!aActive && bActive) return 1;
+      if (!aActive && !bActive) return (b.slutt_dato || "").localeCompare(a.slutt_dato || "");
+      // Begge er aktive/oppstart — sorter etter fornyelsesdato
+      const af = a.forny_dato || "9999";
+      const bf = b.forny_dato || "9999";
+      return af.localeCompare(bf);
     });
   }, [enriched, filter]);
 
