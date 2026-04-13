@@ -989,8 +989,13 @@ export function ContactCardContent({
                   // Sync to Mailchimp in background
                   supabase.functions.invoke("mailchimp-sync?action=sync-contact", {
                     body: { contactId },
-                  }).then(({ error: mcErr }) => {
-                    if (mcErr) console.warn("Mailchimp sync feilet:", mcErr);
+                  }).then(({ data, error: mcErr }) => {
+                    if (mcErr) {
+                      console.error("Mailchimp sync feilet:", mcErr);
+                      toast.error("Mailchimp-synk feilet");
+                    } else {
+                      toast.success(`Mailchimp: ${data?.status || "synkronisert"}`);
+                    }
                   });
                 },
               });
