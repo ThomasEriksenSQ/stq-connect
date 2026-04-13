@@ -1,34 +1,48 @@
 
 
-## Plan: Fiks Mailchimp-synk og legg til synlig feilhåndtering
+## Plan: Fiks Mailchimp-synk fra alle steder CV-Epost toggles
 
-### Funn
-1. **Funksjonen har ingen nylige logger** — ingen kall er logget, noe som tyder på at den enten ikke ble kalt, eller at den forrige versjonen (uten `status`-feltet) var deployet da du testet.
-2. **Feil svelges stille** — Mailchimp-synk feil vises bare som `console.warn`, aldri som toast til bruker. Du ser aldri om noe gikk galt.
-3. **Funksjonen er nå deployet med riktig kode** (inkl. `status`-feltet) — jeg deployet den nettopp.
-4. **Koden ser ellers riktig ut** — `contactId` er tilgjengelig, `cv_email` oppdateres i DB før synk kalles.
+### Rotårsak
+Mailchimp-synk trigges **kun** fra kontaktdetaljsiden (`ContactCardContent.tsx`). Men CV-Epost kan toggles fra **tre steder**:
+
+1. **`ContactCardContent.tsx`** — har Mailchimp-synk ✓
+2. **`Contacts.tsx`** (kontaktlisten) — **mangler Mailchimp-synk** ✗
+3. **`DailyBrief.tsx`** (salgsagent) — **mangler Mailchimp-synk** ✗
+
+Brukeren toggler mest sannsynlig fra kontaktlisten (screenshot viser `/kontakter`), der synk aldri kalles.
 
 ### Endringer
 
-**`src/components/ContactCardContent.tsx`** — Vis feilmelding som toast:
+**1. `src/pages/Contacts.tsx` — Legg til Mailchimp-synk etter DB-oppdatering**
+
+I `handleToggle`-funksjonen (~linje 556-569), etter vellykket DB-oppdatering av `cv_email`, kall edge-funksjonen:
+
 ```ts
-supabase.functions.invoke("mailchimp-sync?action=sync-contact", {
-  body: { contactId },
-}).then(({ data, error: mcErr }) => {
-  if (mcErr) {
-    console.error("Mailchimp sync feilet:", mcErr);
-    toast.error("Mailchimp-synk feilet");
-  } else {
-    toast.success(`Mailchimp: ${data?.status || "synkronisert"}`);
-  }
-});
+if (!error && field === "cv_email") {
+  supabase.functions.invoke("mailchimp-sync", {
+    body: { action: "sync-contact", contactId: contact.id },
+  }).then(({ data, error: mcErr }) => {
+    if (mcErr) {
+      console.error("Mailchimp sync feilet:", mcErr);
+      toast.error("Mailchimp-synk feilet");
+    } else {
+      toast.success(`Mailchimp: ${data?.status || "synkronisert"}`);
+    }
+  });
+}
 ```
 
-### Test etter deploy
-- Toggle CV-Epost av for en kontakt → forvent toast «Mailchimp: unsubscribed»
-- Toggle CV-Epost på → forvent toast «Mailchimp: subscribed» (med mindre kontakten er i compliance state)
-- Sjekk i Mailchimp at statusen faktisk endret seg
+**2. `src/components/dashboard/DailyBrief.tsx` — Legg til Mailchimp-synk**
 
-### Risiko: Mailchimp compliance state
-Mailchimp tillater ikke å re-subscribe en kontakt som har unsubscribed via Mailchimp selv. Hvis dette skjer, vil vi nå se en tydelig feilmelding i stedet for stille feil.
+I CV-epost toggle (~linje 1142-1153), etter vellykket DB-oppdatering, kall edge-funksjonen med samme mønster.
+
+**3. Legg til console.log i edge-funksjonen for framtidig debugging**
+
+I `supabase/functions/mailchimp-sync/index.ts`, legg til en linje etter action-parsing:
+```ts
+console.log(`mailchimp-sync action=${action}, contactId=${requestBody?.contactId || "N/A"}`);
+```
+
+### Ingen andre endringer
+Edge-funksjonen fungerer korrekt — jeg har verifisert dette ved å kalle den direkte. Angelica er nå unsubscribed i Mailchimp etter min manuelle test.
 
