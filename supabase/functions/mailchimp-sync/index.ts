@@ -177,6 +177,7 @@ async function syncContactToMailchimp(
   const putBody: Record<string, unknown> = {
     email_address: contact.email.trim().toLowerCase(),
     status_if_new: contact.cv_email ? "subscribed" : "unsubscribed",
+    status: contact.cv_email ? "subscribed" : "unsubscribed",
     merge_fields: mergeFields,
   };
 
@@ -249,6 +250,7 @@ async function syncAllToMailchimp(
       body: JSON.stringify({
         email_address: contact.email!.trim().toLowerCase(),
         status_if_new: isActive ? "subscribed" : "unsubscribed",
+        status: isActive ? "subscribed" : "unsubscribed",
         merge_fields: {
           FNAME: contact.first_name || "",
           LNAME: contact.last_name || "",
