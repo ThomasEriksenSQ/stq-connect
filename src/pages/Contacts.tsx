@@ -2025,14 +2025,22 @@ const Contacts = () => {
 
                     <div className="ml-auto flex gap-1">
                       <button
-                        onClick={() => handleToggle(contact, "cv_email", !contact.cv_email)}
+                        onClick={() => {
+                          if (contact.cv_email && (contact.mailchimp_status === "unsubscribed" || contact.mailchimp_status === "cleaned")) {
+                            toast.info("Kontakten har avmeldt seg via Mailchimp og kan ikke re-abonneres.");
+                            return;
+                          }
+                          handleToggle(contact, "cv_email", !contact.cv_email);
+                        }}
                         className={
-                          contact.cv_email
-                            ? "rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
-                            : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
+                          contact.cv_email && (contact.mailchimp_status === "unsubscribed" || contact.mailchimp_status === "cleaned")
+                            ? "rounded-full bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
+                            : contact.cv_email
+                              ? "rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
+                              : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
                         }
                       >
-                        CV
+                        {contact.cv_email && (contact.mailchimp_status === "unsubscribed" || contact.mailchimp_status === "cleaned") ? "CV ✗" : "CV"}
                       </button>
                       <button
                         onClick={() => handleToggle(contact, "call_list", !contact.call_list)}
@@ -2174,14 +2182,22 @@ const Contacts = () => {
                     ) : (
                       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                         <button
-                          onClick={() => handleToggle(contact, "cv_email", !contact.cv_email)}
+                          onClick={() => {
+                            if (contact.cv_email && (contact.mailchimp_status === "unsubscribed" || contact.mailchimp_status === "cleaned")) {
+                              toast.info("Kontakten har avmeldt seg via Mailchimp og kan ikke re-abonneres.");
+                              return;
+                            }
+                            handleToggle(contact, "cv_email", !contact.cv_email);
+                          }}
                           className={
-                            contact.cv_email
-                              ? "rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
-                              : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
+                            contact.cv_email && (contact.mailchimp_status === "unsubscribed" || contact.mailchimp_status === "cleaned")
+                              ? "rounded-full bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
+                              : contact.cv_email
+                                ? "rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium cursor-pointer"
+                                : "rounded-full border border-border text-muted-foreground px-2 py-0.5 text-xs hover:bg-secondary cursor-pointer"
                           }
                         >
-                          CV
+                          {contact.cv_email && (contact.mailchimp_status === "unsubscribed" || contact.mailchimp_status === "cleaned") ? "CV ✗" : "CV"}
                         </button>
                         <button
                           onClick={() => handleToggle(contact, "call_list", !contact.call_list)}

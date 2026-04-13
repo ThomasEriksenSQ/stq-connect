@@ -979,6 +979,11 @@ export function ContactCardContent({
           {/* CV-Epost */}
           <button
             onClick={() => {
+              const isUnsubscribed = (contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned";
+              if ((contact as any).cv_email && isUnsubscribed) {
+                toast.info("Kontakten har avmeldt seg via Mailchimp og kan ikke re-abonneres.");
+                return;
+              }
               if (!contact.cv_email && !contactHasEmail(contact as any)) {
                 toast.error(CONTACT_CV_EMAIL_REQUIRED_MESSAGE);
                 return;
@@ -986,7 +991,6 @@ export function ContactCardContent({
               const newVal = !(contact as any).cv_email;
               updateMutation.mutate({ cv_email: newVal }, {
                 onSuccess: () => {
-                  // Sync to Mailchimp in background
                   supabase.functions.invoke("mailchimp-sync", {
                     body: { action: "sync-contact", contactId },
                   }).then(({ data, error: mcErr }) => {
@@ -1002,18 +1006,17 @@ export function ContactCardContent({
             }}
             className={cn(
               "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
-              (contact as any).cv_email
-                ? "bg-green-100 text-green-800 border-green-200"
-                : "bg-background text-muted-foreground border-border hover:bg-secondary",
+              (contact as any).cv_email && ((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned")
+                ? "bg-red-50 text-red-700 border-red-200"
+                : (contact as any).cv_email
+                  ? "bg-green-100 text-green-800 border-green-200"
+                  : "bg-background text-muted-foreground border-border hover:bg-secondary",
             )}
           >
-            {(contact as any).cv_email ? "✓ CV-Epost" : "CV-Epost"}
+            {(contact as any).cv_email && ((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned")
+              ? "CV-Epost ✗"
+              : (contact as any).cv_email ? "✓ CV-Epost" : "CV-Epost"}
           </button>
-          {((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned") && (
-            <span className="inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium bg-red-50 text-red-700 border-red-200">
-              Avmeldt
-            </span>
-          )}
           {/* Innkjøper */}
           <button
             onClick={() => updateMutation.mutate({ call_list: !(contact as any).call_list })}
