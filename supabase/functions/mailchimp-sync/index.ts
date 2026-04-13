@@ -226,52 +226,55 @@ async function syncAllToMailchimp(
     .not("email", "is", null);
   if (error) throw error;
 
-  let synced = 0;
-  let errors = 0;
-  const errorDetails: string[] = [];
-
-  for (const contact of contacts || []) {
-    try {
-      const ownerName = await getOwnerName(supabaseAdmin, contact.owner_id);
-      const subscriberHash = md5(contact.email!.trim().toLowerCase());
-
-      const mergeFields: Record<string, string> = {
-        FNAME: contact.first_name || "",
-        LNAME: contact.last_name || "",
-        PHONE: contact.phone || "",
-        TITLE: contact.title || "",
-        COMPANY: (contact as any).companies?.name || "",
-        OWNER: ownerName,
-        ACCT_TYPE: mapAccountType((contact as any).companies?.status || null),
-        MMERGE13: contact.cv_email ? "Ja" : "Nei",
-      };
-
-      const res = await mcFetch(
-        mc,
-        `/lists/${mc.audienceId}/members/${subscriberHash}`,
-        "PUT",
-        {
-          email_address: contact.email!.trim().toLowerCase(),
-          status_if_new: "subscribed",
-          status: "subscribed",
-          merge_fields: mergeFields,
-        },
-      );
-
-      if (res.ok) {
-        synced++;
-      } else {
-        errors++;
-        const err = await res.json().catch(() => ({}));
-        errorDetails.push(`${contact.email}: ${(err as any).detail || res.status}`);
-      }
-    } catch (e) {
-      errors++;
-      errorDetails.push(`${contact.email}: ${(e as Error).message}`);
-    }
+  if (!contacts || contacts.length === 0) {
+    return { total: 0, batches: 0, message: "Ingen kontakter å synkronisere" };
   }
 
-  return { synced, errors, total: contacts?.length || 0, errorDetails: errorDetails.slice(0, 10) };
+  // Build batch operations
+  const operations = [];
+  for (const contact of contacts) {
+    const ownerName = await getOwnerName(supabaseAdmin, contact.owner_id);
+    const subscriberHash = md5(contact.email!.trim().toLowerCase());
+    operations.push({
+      method: "PUT",
+      path: `/lists/${mc.audienceId}/members/${subscriberHash}`,
+      body: JSON.stringify({
+        email_address: contact.email!.trim().toLowerCase(),
+        status_if_new: "subscribed",
+        status: "subscribed",
+        merge_fields: {
+          FNAME: contact.first_name || "",
+          LNAME: contact.last_name || "",
+          PHONE: contact.phone || "",
+          TITLE: contact.title || "",
+          COMPANY: (contact as any).companies?.name || "",
+          OWNER: ownerName,
+          ACCT_TYPE: mapAccountType((contact as any).companies?.status || null),
+          MMERGE13: "Ja",
+        },
+      }),
+    });
+  }
+
+  // Send in chunks of 500 (Mailchimp batch limit)
+  const batchIds: string[] = [];
+  for (let i = 0; i < operations.length; i += 500) {
+    const chunk = operations.slice(i, i + 500);
+    const res = await mcFetch(mc, "/batches", "POST", { operations: chunk });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(`Mailchimp batch feil: ${res.status} ${(err as any).detail || ""}`);
+    }
+    const result = await res.json();
+    batchIds.push(result.id);
+  }
+
+  return {
+    total: contacts.length,
+    batches: batchIds.length,
+    batchIds,
+    message: `${contacts.length} kontakter sendt til Mailchimp i ${batchIds.length} batch(er). Prosesseres i bakgrunnen.`,
+  };
 }
 
 async function handleWebhook(req: Request, supabaseAdmin: ReturnType<typeof createClient>) {
