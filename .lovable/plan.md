@@ -1,22 +1,44 @@
 
 
-## Fiks sortering: bruk daysUntilForny i stedet for forny_dato
+## Fiks: "Løpende 30 dager"-oppdrag viser feil dato i kalendertidslinje
 
 ### Problem
-Sorteringslogikken (linje 174-176) bruker `a.forny_dato` direkte for å sortere. For oppdrag med "Løpende 30 dager" er `forny_dato` null, så den effektive fornyelsesdatoen (30 dager frem) brukes ikke. I stedet må vi bruke det allerede beregnede `daysUntilForny`-feltet som korrekt håndterer både vanlige og løpende oppdrag.
+I `FornyelsesTimeline.tsx` linje 64 filtreres oppdrag med `o.forny_dato` — men for "Løpende 30 dager"-oppdrag skal fornyelsesdatoen beregnes som **dagens dato + 30 dager**, ikke leses fra `forny_dato`-feltet. Christian har `lopende_30_dager = true` med en gammel `forny_dato` (21. april), så kalenderen viser feil dag.
 
 ### Endring
 
-**Fil: `src/pages/KonsulenterOppdrag.tsx`, linje 173-176**
+**Fil: `src/components/FornyelsesTimeline.tsx`, linje 62-82**
 
-Erstatt `forny_dato`-sorteringen med `daysUntilForny`:
+Oppdater `rows`-beregningen:
+1. Endre filteret (linje 64) til å inkludere oppdrag som har enten `forny_dato` eller `lopende_30_dager`
+2. Beregn effektiv dato (linje 66) som `new Date(Date.now() + 30*86400000)` for løpende oppdrag, ellers `new Date(o.forny_dato)`
 
 ```typescript
-// Begge er aktive/oppstart — sorter etter dager igjen
-const af = a.daysUntilForny ?? 9999;
-const bf = b.daysUntilForny ?? 9999;
-return af - bf;
+const rows = useMemo(() => {
+  const now = new Date();
+  return enriched
+    .filter((o: any) => (o.status === "Aktiv" || o.status === "Oppstart") && (o.forny_dato || o.lopende_30_dager))
+    .map((o: any) => {
+      const d = o.lopende_30_dager
+        ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+        : new Date(o.forny_dato);
+      return {
+        id: o.id,
+        navn: o.kandidat || "?",
+        fullName: o.kandidat || "?",
+        kunde: o.kunde || "",
+        utpris: Number(o.utpris) || 0,
+        status: o.status,
+        erAnsatt: o.er_ansatt === true,
+        fornyDate: d,
+        fornyMonth: d.getFullYear() === year ? d.getMonth() : -1,
+        fornyDay: d.getDate(),
+        fullDate: format(d, "d. MMMM yyyy", { locale: nb }),
+      };
+    })
+    .sort((a, b) => a.fornyDate.getTime() - b.fornyDate.getTime());
+}, [enriched, year]);
 ```
 
-Dette sikrer at et "Løpende 30 dager"-oppdrag (daysUntilForny = 30) sorteres etter et oppdrag med 10 dager igjen, som forventet.
+Dette sikrer at Christian (og andre med "Løpende 30 dager") vises med riktig dato — i dag 13. mai (13. april + 30 dager).
 
