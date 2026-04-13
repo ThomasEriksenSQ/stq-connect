@@ -1,36 +1,41 @@
 
 
-## Legg til «Avmeldt»-badge på kontaktprofilen
+## Plan: Fiks Mailchimp-synk ved avslåing + manglende oppgaver
 
-### Bakgrunn
-Når en kontakt avmelder seg i Mailchimp (unsubscribe/cleaned), skal dette vises visuelt i CRM-et som en rød «Avmeldt»-badge ved siden av CV-Epost-togglen.
+### Problem 1: Synk virker ikke ved av/på av CV-Epost
+`syncContactToMailchimp` bruker kun `status_if_new` som bare gjelder nye kontakter. Når en eksisterende abonnent skrus av i CRM-et, endres ikke statusen i Mailchimp fordi kontakten allerede finnes der.
+
+**Fiks**: Legg til `status: "unsubscribed"` i PUT-body når `cv_email = false`, og `status: "subscribed"` når `cv_email = true`. Behold `status_if_new` som fallback.
+
+### Problem 2: Bulk-synk (`sync-all`) har samme feil
+Batch-operasjonene bruker også bare `status_if_new`. Kontakter som skrus av vil ikke bli unsubscribed i Mailchimp ved bulk-synk.
+
+**Fiks**: Legg til `status`-felt i batch body basert på `isActive`.
+
+### Problem 3: `mailchimp_status` ikke oppdatert i CRM
+Etter vellykket synk settes `mailchimp_status` riktig for sync-all, men `syncContactToMailchimp` setter kun `subscribed`/`unsubscribed` basert på `cv_email`. Dette ser riktig ut, men bør verifiseres at det faktisk kjører.
 
 ### Endringer
 
-**1. Ny kolonne i `contacts`-tabellen**
-- Legg til `mailchimp_status text default null` — verdier: `subscribed`, `unsubscribed`, `cleaned`, eller `null` (aldri synket).
-- Migrasjon: `ALTER TABLE contacts ADD COLUMN mailchimp_status text DEFAULT null;`
+**`supabase/functions/mailchimp-sync/index.ts`**:
 
-**2. Edge Function (`supabase/functions/mailchimp-sync/index.ts`)**
-- **Webhook**: Når type=`unsubscribe` eller `cleaned`, sett `mailchimp_status` til `'unsubscribed'`/`'cleaned'` (i tillegg til `cv_email = false`).
-- **sync-contact**: Etter vellykket PUT til Mailchimp, sett `mailchimp_status = 'subscribed'` hvis cv_email=true.
-- **sync-all**: Etter batch-kall, oppdater alle synkede kontakter med `mailchimp_status = 'subscribed'`. For kontakter med cv_email=false, sett `mailchimp_status = 'unsubscribed'`.
+1. **`syncContactToMailchimp`** (~linje 177-180): Legg til `status`-felt i PUT-body:
+   ```ts
+   const putBody = {
+     email_address: contact.email.trim().toLowerCase(),
+     status_if_new: contact.cv_email ? "subscribed" : "unsubscribed",
+     status: contact.cv_email ? "subscribed" : "unsubscribed",
+     merge_fields: mergeFields,
+   };
+   ```
 
-**3. UI — ContactCardContent.tsx**
-- Vis en rød «Avmeldt»-badge etter CV-Epost-knappen når `mailchimp_status` er `unsubscribed` eller `cleaned`:
-```
-<span className="inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium bg-red-50 text-red-700 border-red-200">
-  Avmeldt
-</span>
-```
-- Badgen vises kun når kontakten aktivt har avmeldt seg, ikke når cv_email bare er av.
+2. **`syncAllToMailchimp`** batch body (~linje 249-251): Legg til `status`:
+   ```ts
+   status_if_new: isActive ? "subscribed" : "unsubscribed",
+   status: isActive ? "subscribed" : "unsubscribed",
+   ```
 
-### Teknisk detalj
-- Feltet `mailchimp_status` skiller mellom «aldri synket» (null), «aktivt abonnert» og «avmeldt av bruker/Mailchimp».
-- Når brukeren slår CV-Epost PÅ igjen i CRM-et og synker til Mailchimp, settes `mailchimp_status = 'subscribed'` og badgen forsvinner.
-
-### Filer som endres
-- `supabase/migrations/` — ny migrasjon for `mailchimp_status`-kolonne
-- `supabase/functions/mailchimp-sync/index.ts` — oppdater webhook + sync-funksjoner
-- `src/components/ContactCardContent.tsx` — vis «Avmeldt»-badge
+### Etter deploy
+- Kjør en test: Skru av CV-Epost for en kontakt, sjekk at Mailchimp-status endres til "Unsubscribed".
+- Kjør «Synk alle» for å oppdatere `mailchimp_status` i CRM for alle kontakter.
 
