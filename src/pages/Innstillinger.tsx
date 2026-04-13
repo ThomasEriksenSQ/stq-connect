@@ -1,11 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
-import { Mail, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Mail, Loader2, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
 import { VarslingsInnstillinger } from "@/components/VarslingsInnstillinger";
+import { toast } from "sonner";
 
 export default function Innstillinger() {
   const [connecting, setConnecting] = useState(false);
+  const [mcSyncing, setMcSyncing] = useState(false);
+  const [mcResult, setMcResult] = useState<{ synced: number; errors: number; total: number } | null>(null);
 
   const { data: outlookStatus, isLoading: outlookLoading } = useQuery({
     queryKey: ["outlook-status"],
@@ -46,6 +49,23 @@ export default function Innstillinger() {
       }
     } catch {
       setConnecting(false);
+    }
+  };
+
+  const handleMailchimpSyncAll = async () => {
+    setMcSyncing(true);
+    setMcResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("mailchimp-sync", {
+        body: {},
+      });
+      if (error) throw error;
+      setMcResult(data);
+      toast.success(`${data.synced} kontakter synkronisert til Mailchimp`);
+    } catch (e) {
+      toast.error(`Mailchimp-synk feilet: ${(e as Error).message}`);
+    } finally {
+      setMcSyncing(false);
     }
   };
 
@@ -93,6 +113,53 @@ export default function Innstillinger() {
                   : outlookStatus?.connected
                     ? "Koble til på nytt"
                     : "Koble til Outlook"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mailchimp section */}
+      <div className="mb-8">
+        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-3">
+          Mailchimp-synkronisering
+        </p>
+        <div className="border border-border rounded-xl bg-card p-6 shadow-[0_1px_3px_rgba(0,0,0,0.07)] max-w-md">
+          <div className="flex items-start gap-4">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <Mail className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[0.9375rem] font-semibold text-foreground">Mailchimp CV-Epost</p>
+              <p className="text-[0.8125rem] text-muted-foreground mt-1">
+                Synkroniser alle kontakter med CV-Epost aktivert til Mailchimp-audiencen.
+                Endringer synkroniseres automatisk ved toggle.
+              </p>
+              {mcResult && (
+                <div className="mt-3 text-[0.8125rem]">
+                  <span className="text-emerald-600 font-medium">{mcResult.synced} synkronisert</span>
+                  {mcResult.errors > 0 && (
+                    <span className="text-destructive ml-2">{mcResult.errors} feil</span>
+                  )}
+                  <span className="text-muted-foreground ml-2">av {mcResult.total} totalt</span>
+                </div>
+              )}
+              <button
+                onClick={handleMailchimpSyncAll}
+                disabled={mcSyncing}
+                className="mt-4 inline-flex items-center gap-2 bg-primary text-primary-foreground h-9 px-4 rounded-lg text-[0.8125rem] font-medium hover:opacity-90 disabled:opacity-50"
+              >
+                {mcSyncing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Synkroniserer...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4" />
+                    Synk alle til Mailchimp
+                  </>
+                )}
               </button>
             </div>
           </div>
