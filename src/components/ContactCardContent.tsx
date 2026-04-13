@@ -983,7 +983,17 @@ export function ContactCardContent({
                 toast.error(CONTACT_CV_EMAIL_REQUIRED_MESSAGE);
                 return;
               }
-              updateMutation.mutate({ cv_email: !(contact as any).cv_email });
+              const newVal = !(contact as any).cv_email;
+              updateMutation.mutate({ cv_email: newVal }, {
+                onSuccess: () => {
+                  // Sync to Mailchimp in background
+                  supabase.functions.invoke("mailchimp-sync?action=sync-contact", {
+                    body: { contactId },
+                  }).then(({ error: mcErr }) => {
+                    if (mcErr) console.warn("Mailchimp sync feilet:", mcErr);
+                  });
+                },
+              });
             }}
             className={cn(
               "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
