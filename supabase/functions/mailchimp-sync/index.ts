@@ -185,7 +185,7 @@ async function syncContactToMailchimp(
     COMPANY: (contact as any).companies?.name || "",
     OWNER: ownerName,
     ACCT_TYPE: mapAccountType((contact as any).companies?.status || null),
-    MMERGE13: contact.cv_email ? "Ja" : "Nei",
+    MMERGE13: contact.cv_email ? "TRUE" : "FALSE",
   };
 
   const res = await mcFetch(
@@ -250,7 +250,7 @@ async function syncAllToMailchimp(
           COMPANY: (contact as any).companies?.name || "",
           OWNER: ownerName,
           ACCT_TYPE: mapAccountType((contact as any).companies?.status || null),
-          MMERGE13: "Ja",
+          MMERGE13: "TRUE",
         },
       }),
     });
