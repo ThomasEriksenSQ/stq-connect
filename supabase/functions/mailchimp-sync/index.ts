@@ -381,6 +381,7 @@ Deno.serve(async (req) => {
       ? String((requestBody as { action?: unknown }).action || "")
       : "";
     const action = url.searchParams.get("action") || actionFromBody;
+    console.log(`mailchimp-sync action=${action}, contactId=${requestBody?.contactId || "N/A"}`);
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,

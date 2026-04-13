@@ -1143,14 +1143,26 @@ const DailyBrief = () => {
                             .from("contacts")
                             .update({ cv_email: newVal })
                             .eq("id", current.contact.id)
-                            .then(() =>
+                            .then(({ error }) => {
                               queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
                                 ...old,
                                 rawContacts: old?.rawContacts?.map((c: any) =>
                                   c.id === current.contact.id ? { ...c, cv_email: newVal } : c,
                                 ),
-                              })),
-                            );
+                              }));
+                              if (!error) {
+                                supabase.functions.invoke("mailchimp-sync", {
+                                  body: { action: "sync-contact", contactId: current.contact.id },
+                                }).then(({ data, error: mcErr }) => {
+                                  if (mcErr) {
+                                    console.error("Mailchimp sync feilet:", mcErr);
+                                    toast.error("Mailchimp-synk feilet");
+                                  } else {
+                                    toast.success(`Mailchimp: ${data?.status || "synkronisert"}`);
+                                  }
+                                });
+                              }
+                            });
                         }}
                         className={cn(
                           "inline-flex items-center h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors",
