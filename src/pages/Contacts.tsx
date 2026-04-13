@@ -565,6 +565,17 @@ const Contacts = () => {
           ...old,
           rows: old?.rows?.map((c: any) => (c.id === contact.id ? { ...c, [field]: !newValue } : c)),
         }));
+      } else if (field === "cv_email") {
+        supabase.functions.invoke("mailchimp-sync", {
+          body: { action: "sync-contact", contactId: contact.id },
+        }).then(({ data, error: mcErr }) => {
+          if (mcErr) {
+            console.error("Mailchimp sync feilet:", mcErr);
+            toast.error("Mailchimp-synk feilet");
+          } else {
+            toast.success(`Mailchimp: ${data?.status || "synkronisert"}`);
+          }
+        });
       }
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() });
     }, 10000);
