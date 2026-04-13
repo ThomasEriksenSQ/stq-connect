@@ -1,35 +1,21 @@
 
 
-## Tre-stegs toggle for CV-Epost-chipen
+## Oppdater social preview-bilde (og:image)
 
-### Oppførsel
-1. Klikk 1: Vis kun kontakter med CV-Epost aktivert (`cv_email === true`) — som i dag
-2. Klikk 2: Vis kun kontakter som IKKE har CV-Epost, men som HAR e-post (`!cv_email && email finnes`)
-3. Klikk 3: Filter av
+### Problem
+De nåværende `og:image` og `twitter:image` meta-taggene i `index.html` peker til et gammelt skjermbilde fra en tidligere versjon av innloggingssiden. Når linken deles (f.eks. i Slack/iMessage) vises det gamle bildet.
 
-### Endringer
+### Plan
 
-**Fil: `src/pages/Contacts.tsx`**
+1. **Ta et nytt skjermbilde** av den nåværende innloggingssiden via nettleseren.
+2. **Generer et polert produktbilde** med product-shot-scriptet (macOS-ramme + gradient-bakgrunn).
+3. **Lagre bildet som `/public/og-image.png`** i prosjektet.
+4. **Oppdater `index.html`** — endre `og:image` og `twitter:image` til å peke på `/og-image.png` (relativ path, som fungerer med både preview- og custom domain). Fjern også `twitter:site` Lovable-referansen.
 
-1. **Filtreringslogikk (linje 713):** Legg til ny verdi `"not_cv_email"`:
-   ```
-   (typeFilter === "not_cv_email" && !contact.cv_email && contactHasEmail(contact))
-   ```
-
-2. **Erstatt Chip med egendefinert button (linje 1577):**
-   ```tsx
-   <button
-     className={`${typeFilter === "cv_email" || typeFilter === "not_cv_email" ? CHIP_ON : CHIP_OFF} inline-flex items-center gap-1.5`}
-     onClick={() => {
-       if (typeFilter === "cv_email") setTypeFilter("not_cv_email");
-       else if (typeFilter === "not_cv_email") setTypeFilter("all");
-       else setTypeFilter("cv_email");
-     }}
-   >
-     {typeFilter === "not_cv_email" && <Ban className="w-3.5 h-3.5 text-red-500" />}
-     {typeFilter === "not_cv_email" ? "Ikke CV-Epost" : "CV-Epost"}
-   </button>
-   ```
-
-Ingen andre endringer.
+### Teknisk detalj
+Endringer kun i `index.html`, linje 20 og 24:
+```html
+<meta property="og:image" content="/og-image.png">
+<meta name="twitter:image" content="/og-image.png">
+```
 
