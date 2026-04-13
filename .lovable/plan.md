@@ -1,76 +1,57 @@
 
 
-## Mailchimp toveis-synk for CV-Epost
+## Implementer Mailchimp-synk Edge Function + Frontend
 
-### Oversikt
-Integrer STACQ med Mailchimp slik at kontakter med `cv_email = true` automatisk holdes i synk med den eksisterende Mailchimp-audiencen. Endringer i STACQ pusher til Mailchimp, og unsubscribes i Mailchimp synkes tilbake.
+Mailchimp gir 404 fordi `mailchimp-sync` ikke eksisterer ennå. Vi må opprette alt fra planen.
 
-### Forutsetning: API-nøkkel og Audience ID
-Du trenger en Mailchimp API-nøkkel og Audience (List) ID. Disse lagres som secrets i Supabase Edge Functions.
+### Forutsetning: Secrets
 
----
+Du trenger å legge til disse secrets i Supabase (hvis ikke allerede gjort):
+- `MAILCHIMP_API_KEY` — fra Mailchimp Account → Extras → API keys
+- `MAILCHIMP_AUDIENCE_ID` — fra Audience → Settings → Audience name and defaults
+- `MAILCHIMP_WEBHOOK_SECRET` — en selvvalgt streng for å verifisere webhook-kall
 
-### Steg 1 — Lagre secrets
-Legg til to nye secrets:
-- `MAILCHIMP_API_KEY` — API-nøkkel fra Mailchimp (Account → Extras → API keys)
-- `MAILCHIMP_AUDIENCE_ID` — List/Audience ID fra Mailchimp (Audience → Settings → Audience name and defaults)
+### Steg 1 — Edge Function `mailchimp-sync/index.ts`
 
-### Steg 2 — Edge Function: `mailchimp-sync`
-Ny Edge Function som håndterer tre operasjoner:
+Oppretter en Edge Function med tre actions:
 
-**a) Enkel kontakt-synk (sanntid)**
-Kalles fra frontend når `cv_email` togles. Tar kontakt-ID, henter kontakten fra Supabase, og:
-- `cv_email = true` → PUT til Mailchimp (`/lists/{id}/members/{hash}`) med status `subscribed`, merge fields (FNAME, LNAME, PHONE, TITLE, COMPANY, OWNER, ACCT_TYPE)
-- `cv_email = false` → PUT med status `unsubscribed`
+**`sync-contact`** — Sanntid ved toggle av `cv_email`:
+- Henter kontakten + selskap + eier fra Supabase
+- PUT til Mailchimp med status `subscribed`/`unsubscribed` + merge fields (FNAME, LNAME, PHONE, TITLE, COMPANY, OWNER, ACCT_TYPE)
 
-**b) Full synk (manuell)**
-Henter alle kontakter med `cv_email = true` + tilhørende selskap. Bruker Mailchimp batch operations for å synke hele listen. Kontakter som finnes i Mailchimp men ikke lenger har `cv_email = true` settes til `unsubscribed`.
+**`sync-all`** — Manuell full synk:
+- Henter alle kontakter med `cv_email = true` + selskap/eier
+- Batch-oppdaterer Mailchimp via PUT for hver kontakt
+- Returnerer antall synkroniserte
 
-**c) Webhook-mottaker (Mailchimp → STACQ)**
-Mottar Mailchimp webhook-events (`unsubscribe`, `cleaned`) og oppdaterer `cv_email = false` på matchende kontakt i Supabase (matcher på e-post).
+**`webhook`** — Mailchimp → STACQ:
+- Mottar GET (Mailchimp verifikasjon) og POST (events)
+- Ved `unsubscribe`/`cleaned`: setter `cv_email = false` på matchende kontakt
 
-### Steg 3 — Felt-mapping (STACQ → Mailchimp merge fields)
+CORS-headers inkludert. `verify_jwt = false` i config.toml for webhook-tilgang.
 
-| Mailchimp merge tag | STACQ-kilde |
-|---|---|
-| FNAME | `contacts.first_name` |
-| LNAME | `contacts.last_name` |
-| PHONE | `contacts.phone` |
-| TITLE | `contacts.title` |
-| COMPANY | `companies.name` (via `company_id`) |
-| OWNER | `profiles.full_name` (via `owner_id`) |
-| ACCT_TYPE | Mappet fra `companies.status`: partner → "Partner", customer/kunde → "Privat direktekunde", prospect → "Potensiell kunde" |
-| CV_EMAIL | `true`/`false` (merge field for tracking) |
+### Steg 2 — Frontend: ContactCardContent.tsx
 
-Noen av disse merge fields finnes kanskje allerede i Mailchimp-listen (FNAME, LNAME finnes som standard). De resterende opprettes automatisk av Edge Function ved første synk.
+Etter vellykket `cv_email`-toggle, kall `supabase.functions.invoke('mailchimp-sync', { body: { action: 'sync-contact', contactId } })` i bakgrunnen. Toast ved feil.
 
-### Steg 4 — Frontend-integrasjon
+### Steg 3 — Frontend: Innstillinger.tsx
 
-**Sanntid:** I `ContactCardContent.tsx`, etter vellykket `cv_email`-toggle, kall `supabase.functions.invoke('mailchimp-sync', { body: { action: 'sync-contact', contactId } })` i bakgrunnen (fire-and-forget, med toast ved feil).
+Ny seksjon "Mailchimp" med:
+- Knapp "Synk alle til Mailchimp"
+- Viser resultat (antall synkroniserte/oppdaterte)
+- Loading-state under synk
 
-**Manuell full synk:** Ny knapp på Innstillinger-siden (`/innstillinger`) under en ny seksjon "MAILCHIMP". Knappen "Synk alle til Mailchimp" trigger full synk. Viser antall synkroniserte/oppdaterte kontakter som resultat.
+### Steg 4 — Config
 
-### Steg 5 — Mailchimp webhook-oppsett
-Edge Function `mailchimp-sync` eksponeres med `verify_jwt = false` for webhook-endepunktet. Webhook-URL (`https://kbvzpcebfopqqrvmbiap.supabase.co/functions/v1/mailchimp-sync?action=webhook`) registreres manuelt i Mailchimp (Audience → Settings → Webhooks). Verifisering via en `MAILCHIMP_WEBHOOK_SECRET` som sjekkes ved innkommende requests.
+Legg til `[functions.mailchimp-sync]` med `verify_jwt = false` i `supabase/config.toml`.
 
-### Steg 6 — Første import fra CSV (engangs)
-Kjør et script som matcher de 679 subscribed-kontaktene fra CSV-filen mot eksisterende kontakter i Supabase (match på e-post). For kontakter som finnes i STACQ men mangler `cv_email = true`, oppdater til `cv_email = true`. Rapporter kontakter som finnes i Mailchimp men ikke i STACQ (potensielt manuelle oppføringer).
+### Steg 5 — Deploy + Webhook
 
----
+Etter deploy kan du opprette webhook i Mailchimp på nytt — URLen vil da returnere 200.
 
-### Teknisk detalj
-
-```text
-┌─────────┐   cv_email toggle    ┌──────────────────┐   PUT /members   ┌───────────┐
-│  STACQ  │ ──────────────────►  │ mailchimp-sync   │ ──────────────►  │ Mailchimp │
-│ (React) │                      │ (Edge Function)  │                  │           │
-│         │ ◄────────────────── │                  │ ◄────────────── │  Webhook  │
-└─────────┘   cv_email = false   └──────────────────┘   unsubscribe    └───────────┘
-```
-
-### Filer som endres/opprettes
-- `supabase/functions/mailchimp-sync/index.ts` — ny Edge Function
-- `src/components/ContactCardContent.tsx` — kall mailchimp-sync ved toggle
-- `src/pages/Innstillinger.tsx` — ny "Mailchimp"-seksjon med synk-knapp
-- `supabase/config.toml` — legg til `[functions.mailchimp-sync]` med `verify_jwt = false`
+### Filer
+- `supabase/functions/mailchimp-sync/index.ts` (ny)
+- `src/components/ContactCardContent.tsx` (legg til sync-kall)
+- `src/pages/Innstillinger.tsx` (ny Mailchimp-seksjon)
+- `supabase/config.toml` (ny function entry)
 
