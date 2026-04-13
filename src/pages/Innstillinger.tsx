@@ -56,7 +56,7 @@ export default function Innstillinger() {
     setMcSyncing(true);
     setMcResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke("mailchimp-sync", {
+      const { data, error } = await supabase.functions.invoke("mailchimp-sync?action=sync-all", {
         body: {},
       });
       if (error) throw error;
