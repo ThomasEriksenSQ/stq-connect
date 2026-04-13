@@ -190,9 +190,19 @@ async function syncContactToMailchimp(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(
-      `Mailchimp feil: ${res.status} ${(err as any).detail || ""}`,
-    );
+    const detail = (err as any).detail || "";
+    const isCompliance = detail.includes("compliance state");
+
+    if (isCompliance) {
+      // Contact cannot be subscribed — update CRM to reflect actual state
+      await supabaseAdmin
+        .from("contacts")
+        .update({ mailchimp_status: "unsubscribed", cv_email: false })
+        .eq("id", contactId);
+      return { email: contact.email, status: "unsubscribed", compliance: true };
+    }
+
+    throw new Error(`Mailchimp feil: ${res.status} ${detail}`);
   }
 
   // Read actual status from Mailchimp response (handles compliance unsubscribes)
