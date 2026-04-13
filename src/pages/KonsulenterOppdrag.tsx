@@ -170,10 +170,10 @@ export default function KonsulenterOppdrag() {
       if (aActive && !bActive) return -1;
       if (!aActive && bActive) return 1;
       if (!aActive && !bActive) return (b.slutt_dato || "").localeCompare(a.slutt_dato || "");
-      // Begge er aktive/oppstart — sorter etter fornyelsesdato
-      const af = a.forny_dato || "9999";
-      const bf = b.forny_dato || "9999";
-      return af.localeCompare(bf);
+      // Begge er aktive/oppstart — sorter etter dager igjen
+      const af = a.daysUntilForny ?? 9999;
+      const bf = b.daysUntilForny ?? 9999;
+      return af - bf;
     });
   }, [enriched, filter]);
 
