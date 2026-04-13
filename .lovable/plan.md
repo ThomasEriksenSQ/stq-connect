@@ -1,41 +1,34 @@
 
 
-## Plan: Fiks Mailchimp-synk ved avslåing + manglende oppgaver
+## Plan: Fiks Mailchimp-synk og legg til synlig feilhåndtering
 
-### Problem 1: Synk virker ikke ved av/på av CV-Epost
-`syncContactToMailchimp` bruker kun `status_if_new` som bare gjelder nye kontakter. Når en eksisterende abonnent skrus av i CRM-et, endres ikke statusen i Mailchimp fordi kontakten allerede finnes der.
-
-**Fiks**: Legg til `status: "unsubscribed"` i PUT-body når `cv_email = false`, og `status: "subscribed"` når `cv_email = true`. Behold `status_if_new` som fallback.
-
-### Problem 2: Bulk-synk (`sync-all`) har samme feil
-Batch-operasjonene bruker også bare `status_if_new`. Kontakter som skrus av vil ikke bli unsubscribed i Mailchimp ved bulk-synk.
-
-**Fiks**: Legg til `status`-felt i batch body basert på `isActive`.
-
-### Problem 3: `mailchimp_status` ikke oppdatert i CRM
-Etter vellykket synk settes `mailchimp_status` riktig for sync-all, men `syncContactToMailchimp` setter kun `subscribed`/`unsubscribed` basert på `cv_email`. Dette ser riktig ut, men bør verifiseres at det faktisk kjører.
+### Funn
+1. **Funksjonen har ingen nylige logger** — ingen kall er logget, noe som tyder på at den enten ikke ble kalt, eller at den forrige versjonen (uten `status`-feltet) var deployet da du testet.
+2. **Feil svelges stille** — Mailchimp-synk feil vises bare som `console.warn`, aldri som toast til bruker. Du ser aldri om noe gikk galt.
+3. **Funksjonen er nå deployet med riktig kode** (inkl. `status`-feltet) — jeg deployet den nettopp.
+4. **Koden ser ellers riktig ut** — `contactId` er tilgjengelig, `cv_email` oppdateres i DB før synk kalles.
 
 ### Endringer
 
-**`supabase/functions/mailchimp-sync/index.ts`**:
+**`src/components/ContactCardContent.tsx`** — Vis feilmelding som toast:
+```ts
+supabase.functions.invoke("mailchimp-sync?action=sync-contact", {
+  body: { contactId },
+}).then(({ data, error: mcErr }) => {
+  if (mcErr) {
+    console.error("Mailchimp sync feilet:", mcErr);
+    toast.error("Mailchimp-synk feilet");
+  } else {
+    toast.success(`Mailchimp: ${data?.status || "synkronisert"}`);
+  }
+});
+```
 
-1. **`syncContactToMailchimp`** (~linje 177-180): Legg til `status`-felt i PUT-body:
-   ```ts
-   const putBody = {
-     email_address: contact.email.trim().toLowerCase(),
-     status_if_new: contact.cv_email ? "subscribed" : "unsubscribed",
-     status: contact.cv_email ? "subscribed" : "unsubscribed",
-     merge_fields: mergeFields,
-   };
-   ```
+### Test etter deploy
+- Toggle CV-Epost av for en kontakt → forvent toast «Mailchimp: unsubscribed»
+- Toggle CV-Epost på → forvent toast «Mailchimp: subscribed» (med mindre kontakten er i compliance state)
+- Sjekk i Mailchimp at statusen faktisk endret seg
 
-2. **`syncAllToMailchimp`** batch body (~linje 249-251): Legg til `status`:
-   ```ts
-   status_if_new: isActive ? "subscribed" : "unsubscribed",
-   status: isActive ? "subscribed" : "unsubscribed",
-   ```
-
-### Etter deploy
-- Kjør en test: Skru av CV-Epost for en kontakt, sjekk at Mailchimp-status endres til "Unsubscribed".
-- Kjør «Synk alle» for å oppdatere `mailchimp_status` i CRM for alle kontakter.
+### Risiko: Mailchimp compliance state
+Mailchimp tillater ikke å re-subscribe en kontakt som har unsubscribed via Mailchimp selv. Hvis dette skjer, vil vi nå se en tydelig feilmelding i stedet for stille feil.
 
