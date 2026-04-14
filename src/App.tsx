@@ -56,6 +56,13 @@ function ProtectedRoutes() {
   return <AppLayout />;
 }
 
+function ProtectedMinimal() {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><p className="text-muted-foreground">Laster...</p></div>;
+  if (!user) return <Navigate to="/login" replace />;
+  return <Outlet />;
+}
+
 function AuthRoute() {
   const { user, loading } = useAuth();
   if (loading) return null;
