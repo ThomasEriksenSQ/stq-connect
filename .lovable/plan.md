@@ -1,148 +1,136 @@
 
 
-# Plan: Neste-generasjons CRM Design Lab — Kontakter
+# Plan: Radikal redesign — "STACQ Studio"
 
-## Ekspertteamets analyse
+## Teamets mandat
 
-**Visuell designer (Lea)**: Den eksisterende Design Lab-siden er en god start, men den lener seg for mye på grå nøytralfarger og mangler den "premium SaaS"-følelsen. Vi trenger mer kontrast, bedre bruk av negative space, og en distinkt visuell identitet — ikke bare "ren". Tenk Vercel's mørke/lyse kontraster, Linear's presisjon, Attio's datarikdom uten kaos.
+Det nåværende Design Lab-designet er en oppusset versjon av det eksisterende CRMet: hvit bakgrunn, grå tekst, tradisjonell tabell. Vi kaster det og starter fra null.
 
-**Typografi-spesialist (Marcus)**: Inter er riktig valg, men vi bruker det feil. For mange størrelser (10px, 11px, 12px, 13px, 14px) uten system. Vi trenger en strict type scale: 11/12/13/15/20/28px med klare roller. Vektene bør begrenses til 400/500/600/700.
+## Nytt konseptteam
 
-**Interaksjonsdesigner (Sara)**: Detaljpanelet fungerer, men det er for passivt. Det bør føles som en "arbeidsflate", ikke bare en visning. Kontaktdetalj-siden (når man klikker seg inn) mangler helt — vi trenger den som en fullskjerm premium-opplevelse med tydelige handlingssoner.
+**Art Director (Yuki)**: CRM-er ser ut som regneark. Vi bygger et *instrument* — som et musikkstudio eller en cockpit. Mørk bakgrunn gir fokus og premium-følelse. Hvit tekst på mørkt er mer behagelig over lange arbeidsøkter.
 
-**Lesbarhetsspesialist (Henrik)**: Grå tekst på lys bakgrunn (#9CA3AF på #FAFAFA) gir for lav kontrast. Sekundærtekst bør være minimum #6B7280. Radene i listen trenger mer vertikal padding for touch-vennlighet og visuell ro.
+**Informasjonsarkitekt (Priya)**: Tabeller er feil primitiv for kontakter. En kontakt er en *relasjon med historie* — ikke en rad. Vi grupperer kontakter etter signal-status som vertikale "lanes" (kanban-inspirert), men rendret som en kompakt liste innenfor hver gruppe.
 
-**Intuitivitetsekspert (Nora)**: Hover-actions som erstatter tidsstempel er problematisk — brukeren mister kontekst. Vis begge deler. Sortering bør ha visuell indikator for aktiv retning. Filterpillene trenger en "Nullstill alle"-knapp.
+**Typografi/lesbarhet (Emil)**: På mørk bakgrunn må vi bruke en lettere font-vekt (400 for brødtekst, 500 for emphasis) og øke linjeavstand. Geist Sans (Vercels font) gir en skarpere, mer teknisk følelse enn Inter.
 
-## Teamets enstemmige designbeslutninger
+**Interaksjonsdesigner (Noor)**: Keyboard-first. `⌘K` for alt. Kontakter navigeres med piltaster. Escape lukker paneler. Ingen dropdown-menyer — alt er inline eller via command palette.
 
-### 1. To nye sider, fullstendig redesign
-
-**Erstatt** eksisterende `DesignLabContacts.tsx` med nytt design. Legg til ny side for kontaktdetalj.
-
-- `/design-lab/kontakter` — Kontaktlisten (redesignet fra bunnen)
-- `/design-lab/kontakter/:id` — Kontaktdetalj (helt ny)
-
-### 2. Visuelt konsept: "Precision Workspace"
-
-Inspirert av Linear's ro, Vercel's kontraster, og Attio's datarikdom.
+## Visuelt konsept: Mørk, immersiv arbeidsflate
 
 ```text
 ┌──────────────────────────────────────────────────────────────────┐
-│  STACQ · Design Lab                                    ◯ ◯ ◯   │
+│  STACQ                           ⌘K Søk…              ◯ JRN   │
 ├──────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  Kontakter                                    12 kontakter       │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐    │
-│  │ 🔍  Søk kontakter, selskaper, teknologier…        ⌘K    │    │
+│  ┌─ BEHOV NÅ (4) ──────────────────────────────────────────┐    │
+│  │                                                          │    │
+│  │  Erik Solberg        Aker Solutions     Python ML    1d  │    │
+│  │  Kari Hansen         DNB               Java Kotlin  3d  │    │
+│  │  Silje Strand        Schibsted         Spark        2d  │    │
+│  │  Camilla Roth        Vipps             Kotlin Swift i dag│    │
+│  │                                                          │    │
+│  ├─ FREMTIDIG (3) ─────────────────────────────────────────┤    │
+│  │                                                          │    │
+│  │  Lars Moen           Equinor           Azure DevOps 1u  │    │
+│  │  Marte Olsen         Telenor Digital   React TS     2u  │    │
+│  │  ...                                                     │    │
+│  │                                                          │    │
+│  ├─ KANSKJE (2) ───────────────────────────────────────────┤    │
+│  │  ...                                                     │    │
 │  └──────────────────────────────────────────────────────────┘    │
 │                                                                  │
-│  [Eier ▾]  [Signal ▾]  [CV ▾]               Nullstill           │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐    │
-│  │ KONTAKT              SIGNAL        EIER         SIST    │    │
-│  ├──────────────────────────────────────────────────────────┤    │
-│  │ ◯ Erik Solberg       ● Behov nå    JRN          1d      │    │
-│  │   Tech Lead · Aker Solutions                     📞 ✉ ⏰ │    │
-│  ├──────────────────────────────────────────────────────────┤    │
-│  │ ◯ Ola Nordmann    CV ● Behov nå    JRN          3d      │    │
-│  │   CTO · Equinor ASA                                     │    │
-│  └──────────────────────────────────────────────────────────┘    │
-│                                                                  │
-│                  ┌─────────────────────────┐                     │
-│                  │  DETALJPANEL (40%)       │                     │
-│                  │  Navn, signal, kontakt   │                     │
-│                  │  Oppfølginger            │                     │
-│                  │  Aktiviteter             │                     │
-│                  │  [Logg samtale] [Ny opp] │                     │
-│                  └─────────────────────────┘                     │
+│          ┌────────────────────────────────────────┐              │
+│          │  ERIK SOLBERG                          │              │
+│          │  Tech Lead · Aker Solutions            │              │
+│          │                                        │              │
+│          │  ● Behov nå   CV   JRN                │              │
+│          │                                        │              │
+│          │  erik.solberg@aker.no  +47 900 11 222  │              │
+│          │  Python · ML · GCP                     │              │
+│          │                                        │              │
+│          │  ─── Neste ────────────────────────    │              │
+│          │  □ Finn ML-kandidat      16. apr       │              │
+│          │                                        │              │
+│          │  ─── Siste ────────────────────────    │              │
+│          │  📞 Hastebehov ML        13. apr       │              │
+│          │     Prosjektet er forsinket...         │              │
+│          └────────────────────────────────────────┘              │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-### 3. Kontaktdetalj-side (ny)
+## Nøkkelinnovasjoner vs. nåværende
 
-Når brukeren klikker kontaktens navn (ikke bare raden), åpnes en fullskjerm detaljside:
+| Aspekt | Nåværende Design Lab | Ny "Studio" |
+|--------|---------------------|-------------|
+| Bakgrunn | Hvit (#FAFBFC) | Mørk (#0A0A0F) |
+| Layout | Flat tabell med kolonner | Signal-grupperte seksjoner |
+| Fargebruk | Grå + indigo aksent | Mørk base + luminøse aksenter |
+| Rad-design | Alle like, sorteres | Gruppert etter status, kontekst synlig |
+| Typografi | Inter | Geist Sans (system-ui fallback) |
+| Navigasjon | Egen topbar "Design Lab" | Minimal topbar, maks plass til data |
+| Detaljpanel | Slide-over fra høyre | Sentrert modal-overlay med blur-bakgrunn |
+| Kontaktside | Hvite kort på grå bg | Mørk helside med tydelige seksjoner |
+| Filtre | Horisontale pills | Inline i søkefelt (type-ahead facets) |
+| Interaksjon | Klikk-basert | Keyboard-first + klikk |
 
-```text
-┌──────────────────────────────────────────────────────────────────┐
-│  ← Tilbake til kontakter                                        │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ◯  Erik Solberg                          [Logg samtale]        │
-│     Tech Lead · Aker Solutions             [Ny oppfølging]      │
-│     ● Behov nå    CV    Eier: Jon Richard Nygaard               │
-│                                                                  │
-│  ┌─────────────────────────┬────────────────────────────┐       │
-│  │  KONTAKTINFO            │  SNAPSHOT                  │       │
-│  │  erik@aker... ✉ 📋      │  Siste: 1d · Samtale       │       │
-│  │  +47 900... 📞           │  Neste: 16. apr · Finn ML  │       │
-│  │  Python · ML · GCP      │                            │       │
-│  ├─────────────────────────┴────────────────────────────┤       │
-│  │                                                      │       │
-│  │  OPPFØLGINGER                                        │       │
-│  │  □ Finn ML-kandidat               16. apr 2026       │       │
-│  │                                                      │       │
-│  │  AKTIVITETER                                         │       │
-│  │  ── April 2026 ──────────────────────────────        │       │
-│  │  📞 Hastebehov ML                 13. apr 2026       │       │
-│  │     Prosjektet er forsinket...                       │       │
-│  │                                                      │       │
-│  │  NOTATER                                             │       │
-│  │  Haster — trenger ML-ingeniør innen 2 uker.         │       │
-│  └──────────────────────────────────────────────────────┘       │
-└──────────────────────────────────────────────────────────────────┘
-```
+## Fargepalett — "Obsidian"
 
-### 4. Designsystem-endringer fra V1
+- **Base**: `#0A0A0F` (nesten svart, varm undertone)
+- **Surface**: `#16161F` (kort, paneler)
+- **Elevated**: `#1E1E2A` (hover, aktive elementer)
+- **Border**: `#2A2A3C` (subtil, kun der nødvendig)
+- **Tekst primær**: `#EDEDF0` (98% hvit, ikke ren hvit)
+- **Tekst sekundær**: `#8B8B9E`
+- **Tekst tertiær**: `#55556A`
+- **Aksent**: `#6C5CE7` (varm lilla — skiller seg fra indigo)
+- **Signal Behov nå**: `#00D68F` (neon-grønn)
+- **Signal Fremtidig**: `#4DA6FF` (klar blå)
+- **Signal Kanskje**: `#FFB347` (varm gul)
+- **Signal Ukjent**: `#55556A` (muted)
+- **Signal Aldri**: `#FF6B6B` (myk rød)
 
-| Element | V1 (nåværende) | V2 (ny) |
-|---------|---------------|---------|
-| Bakgrunn | #FAFAFA gjennomgående | Hvit header, #FAFBFC liste |
-| Rader | 52px, hover → 64px (ustabilt) | Fast 56px, ingen ekspansjon |
-| Hover-actions | Erstatter tidsstempel | Vises i tillegg, til høyre |
-| Eier-kolonne | Mangler i listen | Ny kolonne med initialer-pill |
-| CV-badge | Bare i rad, liten | Tydeligere, med ✗ for avmeldt |
-| Sortering | Ingen visuell indikator | Pil opp/ned på aktiv kolonne |
-| Radklikk | Toggle panel | Klikk rad → panel, klikk navn → detaljside |
-| Filtre | Ingen nullstill-knapp | "Nullstill"-lenke når filtre er aktive |
-| Tekst-kontrast | #9CA3AF sekundær | #6B7280 sekundær (bedre kontrast) |
-| Type scale | 7 størrelser | 6 størrelser med klare roller |
-| Kontaktdetalj | Kun i sidepanel | Egen fullskjerm-side |
-| Header | Flat | Subtil shadow ved scroll |
-
-### 5. Fargepalett V2
-
-- **Primær aksent**: `#4F46E5` (dypere indigo, mer autoritet enn #6366F1)
-- **Primær tekst**: `#111827`
-- **Sekundær tekst**: `#6B7280` (oppgradert fra #9CA3AF)
-- **Tertiær tekst**: `#9CA3AF` (kun for timestamps)
-- **Overflate**: `#FFFFFF` (kort, header, panel)
-- **Bakgrunn**: `#FAFBFC` (listebakgrunn)
-- **Border**: `#E5E7EB` (primær), `#F3F4F6` (subtil)
-- **Signal-dots**: Emerald-500, Blue-500, Amber-500, Gray-400, Red-500
-
-### 6. Typografi-scale
+## Typografi — Geist Sans
 
 | Rolle | Størrelse | Vekt | Farge |
 |-------|----------|------|-------|
-| Sidetittel | 28px | 700 | #111827 |
-| Kontaktnavn (detalj) | 20px | 700 | #111827 |
-| Kontaktnavn (rad) | 14px | 600 | #111827 |
-| Seksjonstittel | 11px | 700 | #6B7280, uppercase, tracking 0.08em |
-| Brødtekst | 13px | 400 | #374151 |
-| Meta/tid | 12px | 500 | #9CA3AF |
+| Sidetittel | 24px | 600 | #EDEDF0 |
+| Gruppe-header | 11px | 600 | signal-farge, uppercase, tracking 0.12em |
+| Kontaktnavn (rad) | 14px | 500 | #EDEDF0 |
+| Selskap (rad) | 13px | 400 | #8B8B9E |
+| Tech-tags | 11px | 400 | #8B8B9E, border #2A2A3C |
+| Tid | 12px | 400 | #55556A |
+| Panel-tittel | 18px | 600 | #EDEDF0 |
+| Panel-brødtekst | 13px | 400 | #8B8B9E |
+
+## Kontaktlisten — signal-gruppert
+
+I stedet for en flat tabell, grupperes kontakter etter signal. Hver gruppe har:
+- En tynn, farget header-linje med signal-navn og antall
+- Kompakte rader under (kontaktnavn, selskap, tech-tags, relativ tid)
+- Grupper kan kollapses
+- Raden har en subtil glow-effekt ved hover
+
+## Kontaktdetalj — immersiv fullside
+
+Mørk helside med:
+- Stort navn øverst, subtle gradient-linje under i signal-farge
+- To-kolonne layout: venstre = kontaktinfo + tech, høyre = snapshot
+- Under: oppfølginger som interaktive kort med checkbox
+- Under: aktivitetstidslinje med fargekodet ikon per type
+- Notater som et redigerbart felt med monospace-font
 
 ## Implementering
 
-### Filer som endres/opprettes
+### Filer
 
-1. **`src/pages/DesignLabContacts.tsx`** — Fullstendig omskrivning med nytt design, 4-kolonne grid (kontakt, signal, eier, sist), fast radhøyde, hover-actions uten layout-shift, scrollbar-aware header shadow
-2. **`src/pages/DesignLabContactDetail.tsx`** — Ny side for fullskjerm kontaktdetalj med snapshot-rad, oppfølginger, aktivitetstidslinje, notater
-3. **`src/App.tsx`** — Legg til rute for `/design-lab/kontakter/:id`
+1. **`src/pages/DesignLabContacts.tsx`** — fullstendig omskrivning med mørkt tema, signal-gruppering, Geist Sans, keyboard-navigering, sentrert detaljoverlay
+2. **`src/pages/DesignLabContactDetail.tsx`** — fullstendig omskrivning med mørk immersiv layout
+3. **`src/App.tsx`** — ingen endring (ruter finnes allerede)
 
-### Ikke berørt
-- Ingen endringer i eksisterende CRM-kode
-- Ingen database-tilkobling
-- Alt er mockdata
+### Avgrensning
+- Ingen endringer i eksisterende CRM
+- Alt mockdata, ingen database
+- Geist Sans lastes via Google Fonts CDN-link i komponenten
+- All styling er inline Tailwind med arbitrary values, scoped til `.design-lab`
 
