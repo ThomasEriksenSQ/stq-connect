@@ -28,7 +28,9 @@ const SIGNAL_ORDER: Record<Signal, number> = {
 };
 
 const SIGNALS: Signal[] = ["Behov nå", "Får fremtidig behov", "Får kanskje behov", "Ukjent om behov", "Ikke aktuelt"];
-const OWNERS = ["Alle", "Jon Richard Nygaard", "Thomas Eriksen"];
+const OWNERS = ["Alle", "Jon Richard Nygaard", "Thomas Eriksen", "Uten eier"];
+const TYPES = ["Alle", "Innkjøper", "CV-Epost", "Ikke relevant kontakt"] as const;
+type TypeFilter = typeof TYPES[number];
 
 type SortField = "name" | "signal" | "company" | "title" | "owner" | "last_activity";
 type SortDir = "asc" | "desc";
