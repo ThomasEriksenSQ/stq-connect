@@ -1,108 +1,38 @@
 
 
-# Plan: Design Lab V8 — "Linear meets B2B Sales"
+# Plan: Legg til Type-filtre i Design Lab filterrad
 
-## Konsept
+## Hva skal gjøres
 
-Fullstendig visuell overhaul basert på Linear's light mode-filosofi: varm off-white, muted teal accent, ultra-subtile borders, og en 3-sone layout der kontaktdetaljer glir inn som et høyre-panel — ikke en separat side.
+Utvide filterraden i Design Lab med en tredje filtergruppe **"Type"** med pillene: **Alle**, **Innkjøper**, **CV-Epost**, **Ikke relevant kontakt** — matchende referansebildet. Samtidig endre filterraden fra dropdown-stil til den horisontale pill-baserte layouten vist i skjermbildet, der alle alternativer er synlige som klikkbare pills med label til venstre.
 
-## Arkitektur-endring
+## Visuell stil (Linear-konsistent)
 
-Dagens Design Lab har to separate sider (liste + detaljside). Ny versjon slår dem sammen til **én side med sliding detail panel**:
-
+Filterraden får en layout per rad:
 ```text
-┌─ AppLayout header ──────────────────────────────────────────────────────┐
-│  STACQ    Salgsagent  Selskaper  Kontakter  Forespørsler  ...          │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ┌─ Søkefelt (pill, sentrert) ─────────────────────────┐               │
-│                                                                         │
-│  Kontakter  142                      [+ Legg til kontakt]              │
-│  [Eier ▾] [Signal ▾]                                                   │
-│                                                                         │
-│  ┌─ KONTAKTLISTE ──────────────────┐  ┌─ DETALJPANEL (340px) ────────┐ │
-│  │ Navn          Selskap  Signal   │  │  ← Henrik Berg               │ │
-│  │─────────────────────────────────│  │  Platform Lead · Equinor     │ │
-│  │ Henrik Berg   Equinor  ● Behov  │  │  ● Behov nå                  │ │
-│  │ Kari Hansen   DNB      ● Ukjent │  │                              │ │
-│  │ ...                             │  │  [📞] [✉] [in]              │ │
-│  │                                 │  │                              │ │
-│  │                                 │  │  NESTE STEG                  │ │
-│  │                                 │  │  Presentere Kristian H.      │ │
-│  │                                 │  │                              │ │
-│  │                                 │  │  ── Kontakt ──               │ │
-│  │                                 │  │  henrik@equinor.com          │ │
-│  │                                 │  │  +47 966 77 888              │ │
-│  │                                 │  │                              │ │
-│  │                                 │  │  ── Aktivitet ──             │ │
-│  │                                 │  │  12. apr — DevOps-behov...   │ │
-│  │                                 │  │  14. mar — Første møte       │ │
-│  └─────────────────────────────────┘  └──────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────┘
+EIER      [Alle] [Jon Richard Nygaard] [Thomas Eriksen] [Uten eier]
+SIGNAL    [Alle] [Behov nå] [Får fremtidig behov] [Får kanskje behov] [Ukjent om behov] [Ikke aktuelt]    {count} kontakter
+TYPE      [Alle] [Innkjøper] [CV-Epost] [Ikke relevant kontakt]
 ```
 
-## Visuelt system (bryter med project-knowledge for Design Lab)
+- Label: uppercase, 11px, fontWeight 600, color `C.textMuted`, tracking 0.06em
+- Pill uvalgt: rounded-full, border `C.border`, color `C.textMuted`, 13px
+- Pill valgt: bg `C.accent`, color white, no border
+- Kontakttelling høyrejustert på signal-raden
+- Søkefelt flyttes over filterradene (allerede i header)
 
-| Element | Verdi |
-|---------|-------|
-| Bakgrunn | `#F7F6F2` (varm off-white) |
-| Tekst primær | `#28251D` (dyp grafitt) |
-| Tekst muted | `#7A7974` |
-| Tekst faint | `#BAB9B4` |
-| Accent (teal) | `#01696F` — kun aktiv nav, primærknapp, fokus |
-| Borders | `rgba(40,37,29,0.08)` — 1px |
-| Skygger | `0 1px 2px rgba(40,37,29,0.04)` kun på kort |
-| Border-radius | 8px kort, 6px inputs, full-rounded badges |
-| Font | Inter, 16px base |
-| Labels/nav | 13px / 500 |
-| Section headings | 18px / 600 |
-| Page title | 22px / 600 |
+## Tekniske endringer
 
-## Status-chips
+### `src/pages/DesignLabContacts.tsx`
 
-Bytt fra fargede badges til nøytrale + teal:
-- **Behov nå**: teal bakgrunn-tint (`#01696F` text, `rgba(1,105,111,0.08)` bg)
-- **Fremtidig/Kanskje/Ukjent**: nøytrale grå (`#7A7974` text, `rgba(40,37,29,0.06)` bg)
-- **Ikke aktuelt**: litt mørkere grå
-
-## Interaksjon
-
-- Klikk på rad → høyre detaljpanel glir inn (CSS transition, 340px)
-- Hover på rad: `#F3F0EC` bakgrunn, ingen border-endring
-- Aktiv rad: subtil teal venstre-border (2px)
-- Tom tilstand (ingen valgt): sentrert ikon + kort melding
-
-## Detaljpanelet (340px)
-
-Inneholder alt fra dagens detaljside, komprimert:
-- Navn, stilling, selskap
-- Signal-badge
-- Action-ikoner (telefon, e-post, LinkedIn)
-- "Neste steg" felt øverst (første oppfølging)
-- Kontaktinfo (e-post, telefon, sted)
-- Eier
-- Status-toggles
-- Teknisk DNA tags
-- Siste aktiviteter (kompakt liste, maks 5)
-
-## Ekte data
-
-Beholder alle eksisterende Supabase-queries fra nåværende implementasjon (contacts, activities, tasks). Detaljpanelet henter data on-demand når en rad velges.
-
-## Filer som endres
-
-1. **`src/pages/DesignLabContacts.tsx`** — Fullstendig omskrivning:
-   - 3-sone layout med kontaktliste + sliding detaljpanel
-   - Nytt fargesystem med CSS custom properties
-   - Pill-formet søkefelt
-   - Nye nøytrale status-chips
-   - Detaljpanel med all kontaktinfo, aktiviteter og oppfølginger
-   - Hover/aktiv states
-
-2. **`src/pages/DesignLabContactDetail.tsx`** — Tømmes til en redirect til `/design-lab/kontakter?contact=:id` (detaljvisningen er nå i panelet)
-
-3. **`src/App.tsx`** — Fjern ruten for `design-lab/kontakter/:id` (ikke lenger nødvendig)
-
-## Ikke berørt
-- AppLayout, eksisterende CRM-sider, Supabase-schema
+1. **Ny state**: `typeFilter` med verdier `"Alle" | "Innkjøper" | "CV-Epost" | "Ikke relevant kontakt"`
+2. **Ny state**: `ownerFilter` utvides med `"Uten eier"` som alternativ
+3. **Erstatte FilterPill-dropdown** med en ny `FilterRow`-komponent som renderer alle alternativer som horisontale pills
+4. **Filtrering**: Utvide `filtered` useMemo med typeFilter-logikk:
+   - "Innkjøper": `c.callList === true`
+   - "CV-Epost": `c.cvEmail === true`
+   - "Ikke relevant kontakt": fjerne `ikke_aktuell_kontakt`-filteret fra queryen og filtrere klientside
+5. **Fjerne `ikke_aktuell_kontakt`-filter** fra Supabase-queryen slik at "Ikke relevant kontakt" kan vises
+6. **Layout**: Filterraden utvides til 3 rader med vertikal spacing, ca 120px høyde totalt
+7. **Nullstill-knapp**: oppdateres til å også nullstille typeFilter
 
