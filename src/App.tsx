@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
@@ -87,22 +87,6 @@ const App = () => (
               <Route path="/cv/:token" element={<CvEditor />} />
               <Route path="/" element={<ProtectedRoutes />}>
                 <Route index element={<Dashboard />} />
-                <Route
-                  path="design-lab/kontakter"
-                  element={
-                    <Suspense fallback={<LazyFallback />}>
-                      <DesignLabContacts />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="design-lab/kontakter/:id"
-                  element={
-                    <Suspense fallback={<LazyFallback />}>
-                      <DesignLabContactDetail />
-                    </Suspense>
-                  }
-                />
                 <Route path="selskaper" element={<Companies />} />
                 <Route
                   path="selskaper/kart"
