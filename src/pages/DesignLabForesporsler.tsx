@@ -384,7 +384,7 @@ export default function DesignLabForesporsler() {
               </ResizablePanel>
             </ResizablePanelGroup>
           ) : (
-            <div className="h-full overflow-y-auto">
+            <div className="h-full overflow-y-auto" style={{ maxWidth: 1100, margin: "0 auto", width: "100%" }}>
               <TableHeader sort={sort} onSort={toggleSort} compact={false} />
               {isLoading ? <LoadingMsg /> : sorted.length === 0 ? <EmptyMsg /> : (
                 sorted.map((row: any) => (
