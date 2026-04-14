@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
@@ -56,6 +56,13 @@ function ProtectedRoutes() {
   return <AppLayout />;
 }
 
+function ProtectedMinimal() {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><p className="text-muted-foreground">Laster...</p></div>;
+  if (!user) return <Navigate to="/login" replace />;
+  return <Outlet />;
+}
+
 function AuthRoute() {
   const { user, loading } = useAuth();
   if (loading) return null;
@@ -80,22 +87,6 @@ const App = () => (
               <Route path="/cv/:token" element={<CvEditor />} />
               <Route path="/" element={<ProtectedRoutes />}>
                 <Route index element={<Dashboard />} />
-                <Route
-                  path="design-lab/kontakter"
-                  element={
-                    <Suspense fallback={<LazyFallback />}>
-                      <DesignLabContacts />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="design-lab/kontakter/:id"
-                  element={
-                    <Suspense fallback={<LazyFallback />}>
-                      <DesignLabContactDetail />
-                    </Suspense>
-                  }
-                />
                 <Route path="selskaper" element={<Companies />} />
                 <Route
                   path="selskaper/kart"
@@ -200,6 +191,24 @@ const App = () => (
                   element={
                     <Suspense fallback={<LazyFallback />}>
                       <Innstillinger />
+                    </Suspense>
+                  }
+                />
+              </Route>
+              <Route path="/design-lab" element={<ProtectedMinimal />}>
+                <Route
+                  path="kontakter"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <DesignLabContacts />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="kontakter/:id"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <DesignLabContactDetail />
                     </Suspense>
                   }
                 />
