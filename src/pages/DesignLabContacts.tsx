@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import {
-  Search, ChevronDown, ChevronUp, Check,
+  Search, ChevronDown, ChevronUp,
   Users, X,
   Building2, LayoutDashboard, Briefcase, Settings, LogOut,
   UserPlus, Radar, TrendingUp, Globe,
