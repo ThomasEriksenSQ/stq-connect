@@ -1,195 +1,102 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, ChevronDown, X, Phone, Mail, FileText } from "lucide-react";
+import { Search, ChevronDown, X, Phone, Mail } from "lucide-react";
 
 /* ── Minimal Top Strip ── */
 function TopStrip() {
   return (
-    <header
-      className="h-12 flex items-center justify-between px-6 border-b"
-      style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}
-    >
-      <span
-        className="tracking-tight"
-        style={{ fontWeight: 800, fontSize: 18, color: "#111827", fontFamily: "Inter, system-ui, sans-serif" }}
-      >
+    <header className="h-12 flex items-center justify-between px-6 border-b border-[#E5E7EB] bg-white">
+      <span className="tracking-tight font-extrabold text-lg text-[#111827]" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
         STACQ
       </span>
       <div className="relative w-full max-w-md mx-8">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#9CA3AF" }} />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
         <input
           placeholder="Søk kontakter, selskaper…  ⌘K"
-          className="w-full h-8 pl-9 pr-3 rounded-lg text-sm outline-none"
-          style={{
-            background: "#F3F4F6",
-            color: "#111827",
-            fontFamily: "Inter, system-ui, sans-serif",
-            border: "none",
-          }}
+          className="w-full h-8 pl-9 pr-3 rounded-lg text-sm outline-none bg-[#F3F4F6] text-[#111827]"
+          style={{ fontFamily: "Inter, system-ui, sans-serif", border: "none" }}
+          readOnly
         />
       </div>
-      <div
-        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold"
-        style={{ background: "#111827", color: "#FFFFFF" }}
-      >
+      <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold bg-[#111827] text-white">
         JR
       </div>
     </header>
   );
 }
 
-/* ── Signal type ── */
+/* ── Signal types & colors ── */
 type Signal = "Behov nå" | "Fremtidig behov" | "Har kanskje behov" | "Ukjent om behov" | "Aldri aktuelt";
 
-const SIGNAL_STYLES: Record<Signal, { bg: string; text: string; border: string }> = {
-  "Behov nå": { bg: "#D1FAE5", text: "#065F46", border: "#A7F3D0" },
-  "Fremtidig behov": { bg: "#DBEAFE", text: "#1E40AF", border: "#BFDBFE" },
-  "Har kanskje behov": { bg: "#FEF3C7", text: "#92400E", border: "#FDE68A" },
-  "Ukjent om behov": { bg: "#F3F4F6", text: "#4B5563", border: "#E5E7EB" },
-  "Aldri aktuelt": { bg: "#FEE2E2", text: "#991B1B", border: "#FECACA" },
+const SIGNAL_COLORS: Record<Signal, string> = {
+  "Behov nå": "#10B981",
+  "Fremtidig behov": "#3B82F6",
+  "Har kanskje behov": "#F59E0B",
+  "Ukjent om behov": "#9CA3AF",
+  "Aldri aktuelt": "#EF4444",
 };
 
-function SignalBadge({ signal }: { signal: Signal }) {
-  const s = SIGNAL_STYLES[signal];
-  return (
-    <span
-      className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
-      style={{ background: s.bg, color: s.text, border: `1px solid ${s.border}` }}
-    >
-      {signal}
-    </span>
-  );
-}
+const SIGNAL_TEXT_COLORS: Record<Signal, string> = {
+  "Behov nå": "#065F46",
+  "Fremtidig behov": "#1E40AF",
+  "Har kanskje behov": "#92400E",
+  "Ukjent om behov": "#6B7280",
+  "Aldri aktuelt": "#991B1B",
+};
 
 /* ── Mock data ── */
-interface MockContact {
+interface Contact {
   id: string;
   navn: string;
   stilling: string;
   selskap: string;
   signal: Signal;
   eier: string;
-  sisteAktivitet: string;
-  sisteType: "Samtale" | "Møte" | "E-post";
   nesteSteg: string | null;
-  nesteDato: string | null;
-  lokasjon: string;
-  tags: string[];
-  harCv: boolean;
-  selskapstype: "Kunde" | "Potensiell";
-  aktiveOppdrag: number;
+  sisteKontaktDager: number;
+  sisteType: "Samtale" | "Møte" | "E-post";
 }
 
-const CONTACTS: MockContact[] = [
-  {
-    id: "1", navn: "Erik Solberg", stilling: "Tech Lead", selskap: "Aker Solutions",
-    signal: "Behov nå", eier: "Jon Richard Nygaard", sisteAktivitet: "11. apr 2026",
-    sisteType: "Samtale", nesteSteg: "Send CV-er ML-kandidater", nesteDato: "16. apr 2026",
-    lokasjon: "Oslo", tags: ["Python", "ML", "GCP", "TensorFlow"],
-    harCv: false, selskapstype: "Kunde", aktiveOppdrag: 2,
-  },
-  {
-    id: "2", navn: "Kari Hansen", stilling: "Engineering Manager", selskap: "DNB",
-    signal: "Behov nå", eier: "Thomas Eriksen", sisteAktivitet: "10. apr 2026",
-    sisteType: "Møte", nesteSteg: "Book demo med teamleder", nesteDato: "18. apr 2026",
-    lokasjon: "Oslo", tags: ["Java", "Kotlin", "AWS", "Microservices"],
-    harCv: true, selskapstype: "Kunde", aktiveOppdrag: 3,
-  },
-  {
-    id: "3", navn: "Silje Strand", stilling: "Data Engineering Lead", selskap: "Schibsted",
-    signal: "Behov nå", eier: "Jon Richard Nygaard", sisteAktivitet: "9. apr 2026",
-    sisteType: "Samtale", nesteSteg: "Sende profil Spark-konsulent", nesteDato: "15. apr 2026",
-    lokasjon: "Oslo", tags: ["Spark", "Kafka", "Databricks", "Python"],
-    harCv: false, selskapstype: "Kunde", aktiveOppdrag: 1,
-  },
-  {
-    id: "4", navn: "Magnus Pedersen", stilling: "VP Engineering", selskap: "Cognite",
-    signal: "Fremtidig behov", eier: "Jon Richard Nygaard", sisteAktivitet: "5. apr 2026",
-    sisteType: "Møte", nesteSteg: "Følg opp Q3-behov", nesteDato: "1. mai 2026",
-    lokasjon: "Oslo", tags: ["TypeScript", "React", "Rust", "Kubernetes"],
-    harCv: false, selskapstype: "Potensiell", aktiveOppdrag: 0,
-  },
-  {
-    id: "5", navn: "Ingrid Moe", stilling: "CTO", selskap: "Vipps",
-    signal: "Fremtidig behov", eier: "Thomas Eriksen", sisteAktivitet: "3. apr 2026",
-    sisteType: "E-post", nesteSteg: "Lunsj i mai", nesteDato: "8. mai 2026",
-    lokasjon: "Oslo", tags: ["Go", "Kubernetes", "Azure", "Fintech"],
-    harCv: false, selskapstype: "Potensiell", aktiveOppdrag: 0,
-  },
-  {
-    id: "6", navn: "Henrik Berg", stilling: "Platform Lead", selskap: "Equinor",
-    signal: "Behov nå", eier: "Jon Richard Nygaard", sisteAktivitet: "12. apr 2026",
-    sisteType: "Samtale", nesteSteg: "Presentere 2 DevOps-profiler", nesteDato: "17. apr 2026",
-    lokasjon: "Stavanger", tags: ["Azure", "Terraform", "DevOps", "Python"],
-    harCv: true, selskapstype: "Kunde", aktiveOppdrag: 4,
-  },
-  {
-    id: "7", navn: "Lene Johansen", stilling: "Head of Digital", selskap: "Storebrand",
-    signal: "Har kanskje behov", eier: "Thomas Eriksen", sisteAktivitet: "28. mar 2026",
-    sisteType: "Møte", nesteSteg: null, nesteDato: null,
-    lokasjon: "Oslo", tags: ["Java", "Spring Boot", "AWS"],
-    harCv: false, selskapstype: "Potensiell", aktiveOppdrag: 0,
-  },
-  {
-    id: "8", navn: "Andreas Dahl", stilling: "Senior Engineering Manager", selskap: "Telenor",
-    signal: "Fremtidig behov", eier: "Jon Richard Nygaard", sisteAktivitet: "1. apr 2026",
-    sisteType: "Samtale", nesteSteg: "Sjekk 5G-prosjekt status", nesteDato: "25. apr 2026",
-    lokasjon: "Fornebu", tags: ["Java", "React", "5G", "Cloud Native"],
-    harCv: false, selskapstype: "Kunde", aktiveOppdrag: 1,
-  },
-  {
-    id: "9", navn: "Marte Eriksen", stilling: "Tech Director", selskap: "Kahoot!",
-    signal: "Ukjent om behov", eier: "Thomas Eriksen", sisteAktivitet: "15. mar 2026",
-    sisteType: "E-post", nesteSteg: "Intro-møte", nesteDato: "22. apr 2026",
-    lokasjon: "Oslo", tags: ["TypeScript", "Node.js", "React", "AWS"],
-    harCv: false, selskapstype: "Potensiell", aktiveOppdrag: 0,
-  },
-  {
-    id: "10", navn: "Ola Kristiansen", stilling: "IT-sjef", selskap: "Posten",
-    signal: "Har kanskje behov", eier: "Jon Richard Nygaard", sisteAktivitet: "20. mar 2026",
-    sisteType: "Samtale", nesteSteg: null, nesteDato: null,
-    lokasjon: "Oslo", tags: ["SAP", ".NET", "Azure", "Logistics"],
-    harCv: false, selskapstype: "Potensiell", aktiveOppdrag: 0,
-  },
-  {
-    id: "11", navn: "Camilla Vik", stilling: "VP Technology", selskap: "Statkraft",
-    signal: "Fremtidig behov", eier: "Thomas Eriksen", sisteAktivitet: "8. apr 2026",
-    sisteType: "Møte", nesteSteg: "Send rammeavtale-info", nesteDato: "28. apr 2026",
-    lokasjon: "Oslo", tags: ["Python", "Data Science", "Energy", "Azure"],
-    harCv: false, selskapstype: "Potensiell", aktiveOppdrag: 0,
-  },
-  {
-    id: "12", navn: "Thomas Lie", stilling: "CTO", selskap: "Color Line",
-    signal: "Aldri aktuelt", eier: "Jon Richard Nygaard", sisteAktivitet: "10. feb 2026",
-    sisteType: "E-post", nesteSteg: null, nesteDato: null,
-    lokasjon: "Sandefjord", tags: [".NET", "Azure"],
-    harCv: false, selskapstype: "Potensiell", aktiveOppdrag: 0,
-  },
+const CONTACTS: Contact[] = [
+  { id: "1", navn: "Erik Solberg", stilling: "Tech Lead", selskap: "Aker Solutions", signal: "Behov nå", eier: "Jon Richard Nygaard", nesteSteg: "Send 2 ML-profiler", sisteKontaktDager: 1, sisteType: "Samtale" },
+  { id: "6", navn: "Henrik Berg", stilling: "Platform Lead", selskap: "Equinor", signal: "Behov nå", eier: "Jon Richard Nygaard", nesteSteg: "Presentere 2 DevOps-profiler", sisteKontaktDager: 2, sisteType: "Samtale" },
+  { id: "3", navn: "Silje Strand", stilling: "Data Engineering Lead", selskap: "Schibsted", signal: "Behov nå", eier: "Jon Richard Nygaard", nesteSteg: "Sende profil Spark-konsulent", sisteKontaktDager: 5, sisteType: "Samtale" },
+  { id: "2", navn: "Kari Hansen", stilling: "Engineering Manager", selskap: "DNB", signal: "Behov nå", eier: "Thomas Eriksen", nesteSteg: "Book demo med teamleder", sisteKontaktDager: 4, sisteType: "Møte" },
+  { id: "4", navn: "Magnus Pedersen", stilling: "VP Engineering", selskap: "Cognite", signal: "Fremtidig behov", eier: "Jon Richard Nygaard", nesteSteg: "Følg opp Q3-behov", sisteKontaktDager: 9, sisteType: "Møte" },
+  { id: "5", navn: "Ingrid Moe", stilling: "CTO", selskap: "Vipps", signal: "Fremtidig behov", eier: "Thomas Eriksen", nesteSteg: "Lunsj i mai", sisteKontaktDager: 11, sisteType: "E-post" },
+  { id: "8", navn: "Andreas Dahl", stilling: "Sr. Engineering Manager", selskap: "Telenor", signal: "Fremtidig behov", eier: "Jon Richard Nygaard", nesteSteg: "Sjekk 5G-prosjekt status", sisteKontaktDager: 13, sisteType: "Samtale" },
+  { id: "11", navn: "Camilla Vik", stilling: "VP Technology", selskap: "Statkraft", signal: "Fremtidig behov", eier: "Thomas Eriksen", nesteSteg: "Send rammeavtale-info", sisteKontaktDager: 6, sisteType: "Møte" },
+  { id: "7", navn: "Lene Johansen", stilling: "Head of Digital", selskap: "Storebrand", signal: "Har kanskje behov", eier: "Thomas Eriksen", nesteSteg: null, sisteKontaktDager: 17, sisteType: "Møte" },
+  { id: "10", navn: "Ola Kristiansen", stilling: "IT-sjef", selskap: "Posten", signal: "Har kanskje behov", eier: "Jon Richard Nygaard", nesteSteg: null, sisteKontaktDager: 25, sisteType: "Samtale" },
+  { id: "9", navn: "Marte Eriksen", stilling: "Tech Director", selskap: "Kahoot!", signal: "Ukjent om behov", eier: "Thomas Eriksen", nesteSteg: "Intro-møte", sisteKontaktDager: 30, sisteType: "E-post" },
+  { id: "12", navn: "Thomas Lie", stilling: "CTO", selskap: "Color Line", signal: "Aldri aktuelt", eier: "Jon Richard Nygaard", nesteSteg: null, sisteKontaktDager: 63, sisteType: "E-post" },
 ];
 
 const OWNERS = ["Alle", "Jon Richard Nygaard", "Thomas Eriksen"];
 const SIGNALS: Signal[] = ["Behov nå", "Fremtidig behov", "Har kanskje behov", "Ukjent om behov", "Aldri aktuelt"];
 
-const ACTIVITY_ICON: Record<string, typeof Phone> = {
-  Samtale: Phone,
-  Møte: FileText,
-  "E-post": Mail,
-};
+/* ── Relative time ── */
+function relTime(days: number): string {
+  if (days === 0) return "I dag";
+  if (days === 1) return "1d";
+  if (days < 7) return `${days}d`;
+  if (days < 30) return `${Math.floor(days / 7)}u`;
+  return `${Math.floor(days / 30)}m`;
+}
 
-/* ── Filter pill ── */
-function FilterPill({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: string[];
-  onChange: (v: string) => void;
+function urgencyColor(days: number): string {
+  if (days <= 3) return "#6B7280";
+  if (days <= 7) return "#92400E";
+  if (days <= 14) return "#B45309";
+  return "#DC2626";
+}
+
+/* ── Filter dropdown ── */
+function FilterPill({ label, value, options, onChange }: {
+  label: string; value: string; options: string[]; onChange: (v: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const active = value !== "Alle" && value !== "";
+  const active = value !== "Alle";
   return (
     <div className="relative">
       <button
@@ -201,30 +108,19 @@ function FilterPill({
           border: `1px solid ${active ? "#111827" : "#E5E7EB"}`,
         }}
       >
-        {label}{value !== "Alle" && value !== "" ? `: ${value}` : ""}
+        {label}{active ? `: ${value}` : ""}
         <ChevronDown className="w-3.5 h-3.5" />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div
-            className="absolute top-10 left-0 z-20 rounded-lg py-1 min-w-[180px]"
-            style={{
-              background: "#FFFFFF",
-              border: "1px solid #E5E7EB",
-              boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
-            }}
-          >
+          <div className="absolute top-10 left-0 z-20 rounded-lg py-1 min-w-[200px] bg-white border border-[#E5E7EB]" style={{ boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }}>
             {options.map((opt) => (
               <button
                 key={opt}
                 onClick={() => { onChange(opt); setOpen(false); }}
-                className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors"
-                style={{
-                  color: "#111827",
-                  fontWeight: (value === opt) ? 600 : 400,
-                  fontFamily: "Inter, system-ui, sans-serif",
-                }}
+                className="block w-full text-left px-3 py-2 text-sm hover:bg-[#F9FAFB] transition-colors"
+                style={{ color: "#111827", fontWeight: value === opt ? 600 : 400 }}
               >
                 {opt}
               </button>
@@ -232,6 +128,109 @@ function FilterPill({
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/* ── Priority Card ── */
+function PriorityCard({ contact, onClick }: { contact: Contact; onClick: () => void }) {
+  const borderColor = SIGNAL_COLORS[contact.signal];
+  return (
+    <div
+      onClick={onClick}
+      className="flex-1 min-w-0 bg-white cursor-pointer transition-shadow hover:shadow-md group"
+      style={{
+        borderLeft: `3px solid ${borderColor}`,
+        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+        padding: "20px 20px 16px",
+      }}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className="min-w-0">
+          <div className="text-[17px] font-semibold text-[#111827] truncate">{contact.navn}</div>
+          <div className="text-[13px] text-[#6B7280] truncate">{contact.selskap}</div>
+        </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); }}
+          className="w-8 h-8 rounded-full flex items-center justify-center bg-[#10B981] text-white opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2"
+        >
+          <Phone className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      <div className="text-[14px] font-medium text-[#111827] mb-3 line-clamp-1">{contact.nesteSteg}</div>
+      <div className="flex items-center gap-2 text-[12px]">
+        <span style={{ color: urgencyColor(contact.sisteKontaktDager) }} className="font-medium">
+          {relTime(contact.sisteKontaktDager)}
+        </span>
+        <span className="text-[#D1D5DB]">·</span>
+        <span className="text-[#9CA3AF]">{contact.sisteType}</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── Contact Row ── */
+function ContactRow({ contact, onClick }: { contact: Contact; onClick: () => void }) {
+  const borderColor = SIGNAL_COLORS[contact.signal];
+  const signalTextColor = SIGNAL_TEXT_COLORS[contact.signal];
+  return (
+    <div
+      onClick={onClick}
+      className="flex items-center cursor-pointer transition-colors hover:bg-[#F9FAFB] group"
+      style={{
+        borderLeft: `3px solid ${borderColor}`,
+        minHeight: 64,
+        borderBottom: "1px solid #F3F4F6",
+      }}
+    >
+      {/* Name + role + company */}
+      <div className="flex-[2] min-w-0 px-4 py-3">
+        <div className="text-[14px] font-semibold text-[#111827] truncate">{contact.navn}</div>
+        <div className="text-[12px] text-[#9CA3AF] truncate">{contact.stilling} · {contact.selskap}</div>
+      </div>
+
+      {/* Next action */}
+      <div className="flex-[2] min-w-0 px-3">
+        {contact.nesteSteg ? (
+          <>
+            <div className="text-[14px] font-medium text-[#111827] truncate">{contact.nesteSteg}</div>
+            <div className="text-[12px] font-medium" style={{ color: signalTextColor }}>{contact.signal}</div>
+          </>
+        ) : (
+          <>
+            <div className="text-[13px] text-[#D1D5DB]">Ingen neste steg</div>
+            <div className="text-[12px] font-medium" style={{ color: signalTextColor }}>{contact.signal}</div>
+          </>
+        )}
+      </div>
+
+      {/* Owner */}
+      <div className="flex-[1.2] min-w-0 px-3">
+        <span className="text-[13px] text-[#6B7280] truncate block">{contact.eier}</span>
+      </div>
+
+      {/* Time + hover actions */}
+      <div className="w-[100px] px-3 flex items-center justify-end gap-2">
+        <div className="group-hover:hidden">
+          <span className="text-[13px] font-medium" style={{ color: urgencyColor(contact.sisteKontaktDager) }}>
+            {relTime(contact.sisteKontaktDager)}
+          </span>
+        </div>
+        <div className="hidden group-hover:flex items-center gap-1">
+          <button
+            onClick={(e) => e.stopPropagation()}
+            className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-[#F3F4F6] text-[#6B7280] hover:text-[#111827] transition-colors"
+          >
+            <Phone className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={(e) => e.stopPropagation()}
+            className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-[#F3F4F6] text-[#6B7280] hover:text-[#111827] transition-colors"
+          >
+            <Mail className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -251,189 +250,95 @@ export default function DesignLabContacts() {
       if (signalFilter !== "Alle" && c.signal !== signalFilter) return false;
       if (search) {
         const q = search.toLowerCase();
-        return (
-          c.navn.toLowerCase().includes(q) ||
-          c.selskap.toLowerCase().includes(q) ||
-          c.tags.some((t) => t.toLowerCase().includes(q))
-        );
+        return c.navn.toLowerCase().includes(q) || c.selskap.toLowerCase().includes(q);
       }
       return true;
     });
   }, [search, ownerFilter, signalFilter]);
 
-  const font = "Inter, system-ui, sans-serif";
+  // Top 3 priority: have nesteSteg, sorted by urgency
+  const priorities = useMemo(() => {
+    return CONTACTS
+      .filter((c) => c.nesteSteg && (c.signal === "Behov nå"))
+      .sort((a, b) => a.sisteKontaktDager - b.sisteKontaktDager)
+      .slice(0, 3);
+  }, []);
+
+  const goTo = (id: string) => navigate(`/design-lab/kontakter/${id}`);
 
   return (
-    <div className="min-h-screen" style={{ background: "#FAFAFA", fontFamily: font }}>
+    <div className="min-h-screen bg-white" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
       <TopStrip />
 
-      <div className="max-w-[1400px] mx-auto px-6 py-8">
-        {/* Page header */}
-        <div className="mb-6">
-          <h1 className="mb-1" style={{ fontSize: 28, fontWeight: 700, color: "#111827" }}>
-            Kontakter
-          </h1>
-          <p style={{ fontSize: 14, color: "#6B7280" }}>
-            {filtered.length} kontakter
-          </p>
-        </div>
-
-        {/* Search + filters */}
-        <div className="flex items-center gap-3 mb-6 flex-wrap">
-          <div className="relative flex-1 min-w-[280px] max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#9CA3AF" }} />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Søk etter navn, selskap eller teknologi…"
-              className="w-full h-10 pl-9 pr-3 rounded-lg text-sm outline-none"
-              style={{
-                background: "#FFFFFF",
-                color: "#111827",
-                border: "1px solid #E5E7EB",
-                fontFamily: font,
-              }}
-            />
+      <div className="max-w-[1200px] mx-auto px-6 py-8">
+        {/* Priority cards */}
+        <div className="mb-10">
+          <div className="flex items-baseline justify-between mb-4">
+            <h2 className="text-[20px] font-bold text-[#111827]">Ring neste</h2>
+            <span className="text-[13px] text-[#9CA3AF]">
+              {new Date().toLocaleDateString("nb-NO", { day: "numeric", month: "short" })}
+            </span>
           </div>
-          <FilterPill label="Eier" value={ownerFilter} options={OWNERS} onChange={setOwnerFilter} />
-          <FilterPill label="Signal" value={signalFilter} options={["Alle", ...SIGNALS]} onChange={setSignalFilter} />
-          {hasFilters && (
-            <button
-              onClick={() => { setSearch(""); setOwnerFilter("Alle"); setSignalFilter("Alle"); }}
-              className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded hover:bg-gray-100 transition-colors"
-              style={{ color: "#6B7280" }}
-            >
-              <X className="w-3 h-3" />
-              Nullstill
-            </button>
-          )}
+          <div className="flex gap-4">
+            {priorities.map((c) => (
+              <PriorityCard key={c.id} contact={c} onClick={() => goTo(c.id)} />
+            ))}
+          </div>
         </div>
 
-        {/* Table */}
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{
-            background: "#FFFFFF",
-            border: "1px solid #E5E7EB",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-          }}
-        >
-          {/* Table header */}
+        {/* All contacts */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[16px] font-semibold text-[#111827]">
+              Alle kontakter
+              <span className="ml-2 text-[13px] font-normal text-[#9CA3AF]">{filtered.length}</span>
+            </h2>
+            <div className="flex items-center gap-2">
+              <div className="relative mr-2">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9CA3AF]" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Søk…"
+                  className="h-8 pl-8 pr-3 rounded-lg text-sm outline-none bg-white border border-[#E5E7EB] w-48 focus:w-64 transition-all text-[#111827]"
+                  style={{ fontFamily: "Inter, system-ui, sans-serif" }}
+                />
+              </div>
+              <FilterPill label="Eier" value={ownerFilter} options={OWNERS} onChange={setOwnerFilter} />
+              <FilterPill label="Signal" value={signalFilter} options={["Alle", ...SIGNALS]} onChange={setSignalFilter} />
+              {hasFilters && (
+                <button
+                  onClick={() => { setSearch(""); setOwnerFilter("Alle"); setSignalFilter("Alle"); }}
+                  className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded hover:bg-[#F3F4F6] text-[#9CA3AF] transition-colors"
+                >
+                  <X className="w-3 h-3" /> Nullstill
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Column header */}
           <div
-            className="grid items-center px-5 h-10"
-            style={{
-              gridTemplateColumns: "minmax(0,2fr) minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1.6fr)",
-              borderBottom: "1px solid #E5E7EB",
-              background: "#FAFAFA",
-            }}
+            className="flex items-center h-9 text-[11px] font-semibold text-[#9CA3AF] uppercase tracking-[0.06em]"
+            style={{ borderBottom: "1px solid #E5E7EB" }}
           >
-            {["KONTAKT", "SELSKAP", "SIGNAL", "EIER", "SISTE AKTIVITET", "NESTE STEG"].map((col) => (
-              <span
-                key={col}
-                style={{ fontSize: 11, fontWeight: 600, color: "#9CA3AF", letterSpacing: "0.06em", textTransform: "uppercase" as const }}
-              >
-                {col}
-              </span>
-            ))}
+            <div className="flex-[2] px-4 pl-[19px]">Kontakt</div>
+            <div className="flex-[2] px-3">Neste steg</div>
+            <div className="flex-[1.2] px-3">Eier</div>
+            <div className="w-[100px] px-3 text-right">Sist</div>
           </div>
 
           {/* Rows */}
-          {filtered.map((c) => {
-            const Icon = ACTIVITY_ICON[c.sisteType] || Phone;
-            return (
-              <div
-                key={c.id}
-                onClick={() => navigate(`/design-lab/kontakter/${c.id}`)}
-                className="grid items-center px-5 cursor-pointer transition-colors hover:bg-[#F9FAFB]"
-                style={{
-                  gridTemplateColumns: "minmax(0,2fr) minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1.6fr)",
-                  minHeight: 64,
-                  borderBottom: "1px solid #F3F4F6",
-                }}
-              >
-                {/* Contact */}
-                <div className="flex items-center gap-3 py-3">
-                  <div
-                    className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
-                    style={{ background: "#F3F4F6", color: "#6B7280" }}
-                  >
-                    {c.navn.split(" ").map((w) => w[0]).join("").slice(0, 2)}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate" style={{ fontSize: 15, fontWeight: 600, color: "#111827" }}>
-                        {c.navn}
-                      </span>
-                      {c.harCv && (
-                        <span
-                          className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold"
-                          style={{ background: "#DBEAFE", color: "#1E40AF" }}
-                        >
-                          CV
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="truncate" style={{ fontSize: 13, color: "#6B7280" }}>
-                        {c.stilling}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Company */}
-                <div className="min-w-0">
-                  <span className="truncate block" style={{ fontSize: 14, color: "#111827", fontWeight: 500 }}>
-                    {c.selskap}
-                  </span>
-                  <span style={{ fontSize: 12, color: "#9CA3AF" }}>
-                    {c.selskapstype}{c.aktiveOppdrag > 0 ? ` · ${c.aktiveOppdrag} oppdrag` : ""}
-                  </span>
-                </div>
-
-                {/* Signal */}
-                <div>
-                  <SignalBadge signal={c.signal} />
-                </div>
-
-                {/* Owner */}
-                <span className="truncate" style={{ fontSize: 13, color: "#6B7280" }}>
-                  {c.eier}
-                </span>
-
-                {/* Last activity */}
-                <div className="flex items-center gap-2 min-w-0">
-                  <Icon className="w-3.5 h-3.5 shrink-0" style={{ color: "#9CA3AF" }} />
-                  <div className="min-w-0">
-                    <span className="block truncate" style={{ fontSize: 13, color: "#6B7280" }}>
-                      {c.sisteType}
-                    </span>
-                    <span style={{ fontSize: 12, color: "#9CA3AF" }}>{c.sisteAktivitet}</span>
-                  </div>
-                </div>
-
-                {/* Next step */}
-                <div className="min-w-0">
-                  {c.nesteSteg ? (
-                    <>
-                      <span className="block truncate" style={{ fontSize: 13, color: "#111827", fontWeight: 500 }}>
-                        {c.nesteSteg}
-                      </span>
-                      <span style={{ fontSize: 12, color: "#9CA3AF" }}>{c.nesteDato}</span>
-                    </>
-                  ) : (
-                    <span style={{ fontSize: 13, color: "#D1D5DB" }}>—</span>
-                  )}
-                </div>
+          <div>
+            {filtered.map((c) => (
+              <ContactRow key={c.id} contact={c} onClick={() => goTo(c.id)} />
+            ))}
+            {filtered.length === 0 && (
+              <div className="py-16 text-center text-[14px] text-[#9CA3AF]">
+                Ingen kontakter funnet
               </div>
-            );
-          })}
-
-          {filtered.length === 0 && (
-            <div className="py-16 text-center" style={{ color: "#9CA3AF", fontSize: 14 }}>
-              Ingen kontakter funnet
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
