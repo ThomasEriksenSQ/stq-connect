@@ -359,7 +359,7 @@ export default function DesignLabContacts() {
       </aside>
 
       {/* ═══ MAIN ═══ */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ fontSize: SCALE_MAP[textSize] }}>
         {/* Header bar */}
         <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 48, borderBottom: `1px solid ${C.border}` }}>
           <div className="flex items-baseline gap-2.5">
