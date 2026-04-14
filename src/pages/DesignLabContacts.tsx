@@ -560,7 +560,7 @@ function DetailPanel({ contact, onClose, onNavigate }: {
         {nextTask && (
           <PanelSection title="Neste steg">
             <div className="flex items-start gap-2">
-              <Calendar style={{ width: 13, height: 13, color: C.accent, marginTop: 2, shrink: 0 }} />
+              <Calendar style={{ width: 13, height: 13, color: C.accent, marginTop: 2, flexShrink: 0 }} />
               <div className="min-w-0">
                 <p style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{nextTask.title}</p>
                 {nextTask.due_date && (
