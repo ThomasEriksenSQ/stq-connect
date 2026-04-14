@@ -369,104 +369,151 @@ export default function DesignLabContacts() {
         </div>
 
         {/* Content: list + detail */}
-        <div className="flex-1 flex min-h-0">
-          {/* Contact list */}
-          <div className="flex-1 min-w-0 overflow-y-auto">
-            {/* Table header */}
-            <div
-              className="grid items-center sticky top-0 z-10"
-              style={{
-                gridTemplateColumns: sel
-                  ? "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) 64px"
-                  : "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1fr) 64px",
-                height: 32, borderBottom: `1px solid ${C.border}`,
-                background: C.bg, paddingLeft: 16, paddingRight: 16,
-              }}
-            >
-              <ColHeader label="Navn" field="name" sort={sort} onSort={toggleSort} />
-              <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
-              <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
-              {!sel && <ColHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />}
-              {!sel && <ColHeader label="Eier" field="owner" sort={sort} onSort={toggleSort} />}
-              <ColHeader label="Siste" field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
-            </div>
-
-            {/* Rows */}
-            {isLoading ? (
-              <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster kontakter…</div>
-            ) : sorted.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen kontakter funnet</div>
-            ) : (
-              sorted.map((c) => {
-                const isActive = selectedId === c.id;
-                return (
+        <div className="flex-1 min-h-0">
+          {sel ? (
+            <ResizablePanelGroup direction="horizontal" className="h-full">
+              <ResizablePanel defaultSize={35} minSize={20} maxSize={60}>
+                <div className="h-full overflow-y-auto">
+                  {/* Table header */}
                   <div
-                    key={c.id}
-                    onClick={() => setSelectedId(isActive ? null : c.id)}
-                    className="grid items-center cursor-pointer group"
+                    className="grid items-center sticky top-0 z-10"
                     style={{
-                      gridTemplateColumns: sel
-                        ? "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) 64px"
-                        : "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1fr) 64px",
-                      height: 38, paddingLeft: 16, paddingRight: 16,
-                      borderBottom: `1px solid ${C.borderLight}`,
-                      borderLeft: isActive ? `2px solid ${C.accent}` : "2px solid transparent",
-                      background: isActive ? C.activeBg : undefined,
-                      transition: "background 50ms",
+                      gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) 64px",
+                      height: 32, borderBottom: `1px solid ${C.border}`,
+                      background: C.bg, paddingLeft: 16, paddingRight: 16,
                     }}
-                    onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = C.hoverBg; }}
-                    onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = isActive ? C.activeBg : ""; }}
                   >
-                    <div className="truncate pr-3">
-                      <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{c.firstName} {c.lastName}</span>
+                    <ColHeader label="Navn" field="name" sort={sort} onSort={toggleSort} />
+                    <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
+                    <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
+                    <ColHeader label="Siste" field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
+                  </div>
+                  {isLoading ? (
+                    <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster kontakter…</div>
+                  ) : sorted.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen kontakter funnet</div>
+                  ) : (
+                    sorted.map((c) => {
+                      const isActive = selectedId === c.id;
+                      return (
+                        <div
+                          key={c.id}
+                          onClick={() => setSelectedId(isActive ? null : c.id)}
+                          className="grid items-center cursor-pointer group"
+                          style={{
+                            gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) 64px",
+                            height: 38, paddingLeft: 16, paddingRight: 16,
+                            borderBottom: `1px solid ${C.borderLight}`,
+                            borderLeft: isActive ? `2px solid ${C.accent}` : "2px solid transparent",
+                            background: isActive ? C.activeBg : undefined,
+                            transition: "background 50ms",
+                          }}
+                          onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = C.hoverBg; }}
+                          onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = isActive ? C.activeBg : ""; }}
+                        >
+                          <div className="truncate pr-3">
+                            <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{c.firstName} {c.lastName}</span>
+                          </div>
+                          <div className="pr-3"><SignalChip signal={c.signal} /></div>
+                          <div className="truncate pr-3"><span style={{ fontSize: 13, color: C.textMuted }}>{c.company}</span></div>
+                          <div className="text-right">
+                            <span style={{
+                              fontSize: 12, color: c.daysSince < 7 ? C.textMuted : c.daysSince < 30 ? C.textFaint : C.textGhost,
+                            }}>
+                              {c.daysSince < 999 ? relTime(c.daysSince) : "—"}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </ResizablePanel>
+              <ResizableHandle
+                withHandle
+                className="bg-transparent hover:bg-[rgba(40,37,29,0.06)] transition-colors data-[resize-handle-active]:bg-[rgba(1,105,111,0.12)]"
+              />
+              <ResizablePanel defaultSize={65} minSize={40}>
+                <div className="h-full flex flex-col" style={{ background: C.surface }}>
+                  {/* Linear-styled header */}
+                  <div className="shrink-0 flex items-center justify-between px-6" style={{ height: 48, borderBottom: `1px solid ${C.border}` }}>
+                    <div className="flex items-center gap-2">
+                      <h2 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{sel.firstName} {sel.lastName}</h2>
+                      <SignalChip signal={sel.signal} size="md" />
                     </div>
-                    <div className="pr-3"><SignalChip signal={c.signal} /></div>
-                    <div className="truncate pr-3"><span style={{ fontSize: 13, color: C.textMuted }}>{c.company}</span></div>
-                    {!sel && (
+                    <div className="flex items-center gap-0.5">
+                      <IconBtn icon={<ArrowUpRight style={{ width: 15, height: 15 }} />} title="Åpne i CRM" onClick={() => navigate(`/kontakter/${sel.id}`)} />
+                      <IconBtn icon={<X style={{ width: 15, height: 15 }} />} title="Lukk" onClick={() => setSelectedId(null)} />
+                    </div>
+                  </div>
+                  {/* Full ContactCardContent */}
+                  <div className="flex-1 overflow-y-auto px-6 py-5">
+                    <ContactCardContent contactId={sel.id} editable />
+                  </div>
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          ) : (
+            <div className="h-full overflow-y-auto">
+              {/* Table header — full width */}
+              <div
+                className="grid items-center sticky top-0 z-10"
+                style={{
+                  gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1fr) 64px",
+                  height: 32, borderBottom: `1px solid ${C.border}`,
+                  background: C.bg, paddingLeft: 16, paddingRight: 16,
+                }}
+              >
+                <ColHeader label="Navn" field="name" sort={sort} onSort={toggleSort} />
+                <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
+                <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
+                <ColHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />
+                <ColHeader label="Eier" field="owner" sort={sort} onSort={toggleSort} />
+                <ColHeader label="Siste" field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
+              </div>
+              {isLoading ? (
+                <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster kontakter…</div>
+              ) : sorted.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen kontakter funnet</div>
+              ) : (
+                sorted.map((c) => {
+                  const isActive = selectedId === c.id;
+                  return (
+                    <div
+                      key={c.id}
+                      onClick={() => setSelectedId(isActive ? null : c.id)}
+                      className="grid items-center cursor-pointer group"
+                      style={{
+                        gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1fr) 64px",
+                        height: 38, paddingLeft: 16, paddingRight: 16,
+                        borderBottom: `1px solid ${C.borderLight}`,
+                        borderLeft: isActive ? `2px solid ${C.accent}` : "2px solid transparent",
+                        background: isActive ? C.activeBg : undefined,
+                        transition: "background 50ms",
+                      }}
+                      onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = C.hoverBg; }}
+                      onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = isActive ? C.activeBg : ""; }}
+                    >
+                      <div className="truncate pr-3">
+                        <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{c.firstName} {c.lastName}</span>
+                      </div>
+                      <div className="pr-3"><SignalChip signal={c.signal} /></div>
+                      <div className="truncate pr-3"><span style={{ fontSize: 13, color: C.textMuted }}>{c.company}</span></div>
                       <div className="truncate pr-3"><span style={{ fontSize: 13, color: C.textMuted }}>{c.title}</span></div>
-                    )}
-                    {!sel && (
                       <div className="truncate pr-3">
                         <span style={{ fontSize: 12, color: C.textFaint }}>{c.eier}</span>
                       </div>
-                    )}
-                    <div className="text-right">
-                      <span style={{
-                        fontSize: 12, color: c.daysSince < 7 ? C.textMuted : c.daysSince < 30 ? C.textFaint : C.textGhost,
-                      }}>
-                        {c.daysSince < 999 ? relTime(c.daysSince) : "—"}
-                      </span>
+                      <div className="text-right">
+                        <span style={{
+                          fontSize: 12, color: c.daysSince < 7 ? C.textMuted : c.daysSince < 30 ? C.textFaint : C.textGhost,
+                        }}>
+                          {c.daysSince < 999 ? relTime(c.daysSince) : "—"}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          {/* Detail panel */}
-          {sel && (
-            <div
-              className="shrink-0 overflow-y-auto flex flex-col"
-              style={{
-                width: "55%", maxWidth: 900, minWidth: 500,
-                borderLeft: `1px solid ${C.border}`, background: C.surface,
-              }}
-            >
-              {/* Linear-styled header */}
-              <div className="shrink-0 flex items-center justify-between px-6" style={{ height: 48, borderBottom: `1px solid ${C.border}` }}>
-                <div className="flex items-center gap-2">
-                  <h2 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{sel.firstName} {sel.lastName}</h2>
-                  <SignalChip signal={sel.signal} size="md" />
-                </div>
-                <div className="flex items-center gap-0.5">
-                  <IconBtn icon={<ArrowUpRight style={{ width: 15, height: 15 }} />} title="Åpne i CRM" onClick={() => navigate(`/kontakter/${sel.id}`)} />
-                  <IconBtn icon={<X style={{ width: 15, height: 15 }} />} title="Lukk" onClick={() => setSelectedId(null)} />
-                </div>
-              </div>
-              {/* Full ContactCardContent */}
-              <div className="flex-1 overflow-y-auto px-6 py-5">
-                <ContactCardContent contactId={sel.id} editable />
-              </div>
+                  );
+                })
+              )}
             </div>
           )}
         </div>
