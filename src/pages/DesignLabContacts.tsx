@@ -626,45 +626,34 @@ function IconBtn({ icon, title, onClick }: { icon: React.ReactNode; title: strin
 }
 
 
-function FilterPill({ label, value, options, open, setOpen, onChange }: {
-  label: string; value: string; options: string[]; open: boolean; setOpen: (v: boolean) => void; onChange: (v: string) => void;
+function FilterRow({ label, options, value, onChange }: {
+  label: string; options: string[]; value: string; onChange: (v: string) => void;
 }) {
-  const active = value !== "Alle";
   return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="inline-flex items-center gap-1 rounded transition-colors"
-        style={{
-          height: 26, paddingInline: 8, fontSize: 12, fontWeight: 500,
-          border: `1px solid ${active ? C.text : C.border}`,
-          background: active ? C.text : "transparent",
-          color: active ? C.bg : C.textMuted,
-        }}
-      >
-        {active ? `${label}: ${value}` : label}
-        <ChevronDown style={{ width: 12, height: 12 }} />
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute top-full left-0 mt-1 w-52 rounded-lg overflow-hidden z-50" style={{ background: C.surface, border: `1px solid ${C.border}`, boxShadow: "0 4px 16px rgba(40,37,29,0.1)" }}>
-            {options.map((opt) => (
-              <button
-                key={opt}
-                onClick={() => onChange(opt)}
-                className="flex items-center justify-between w-full px-3 py-1.5 transition-colors"
-                style={{ fontSize: 13, color: C.text }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}
-              >
-                {opt}
-                {value === opt && <Check style={{ width: 14, height: 14, color: C.accent }} />}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+    <div className="flex items-center gap-2 py-[3px]">
+      <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: C.textMuted, width: 56, flexShrink: 0 }}>{label}</span>
+      <div className="flex items-center gap-1 flex-wrap">
+        {options.map((opt) => {
+          const active = value === opt;
+          return (
+            <button
+              key={opt}
+              onClick={() => onChange(opt)}
+              className="inline-flex items-center rounded-full transition-colors"
+              style={{
+                height: 24, paddingInline: 10, fontSize: 12, fontWeight: 500,
+                border: active ? "none" : `1px solid ${C.border}`,
+                background: active ? C.accent : "transparent",
+                color: active ? "#fff" : C.textMuted,
+              }}
+              onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = C.hoverBg; }}
+              onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = active ? C.accent : "transparent"; }}
+            >
+              {opt}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
