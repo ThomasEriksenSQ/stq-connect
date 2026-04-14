@@ -203,7 +203,7 @@ export default function DesignLabContacts() {
 
   const sortedConsultants = useMemo(() => {
     const withAvail = availableConsultants.filter((c) => c.tilgjengelig_fra);
-    return sortHuntConsultants(withAvail as { navn: string; tilgjengelig_fra: string | null }[]);
+    return sortHuntConsultants(withAvail as { id: number; navn: string; tilgjengelig_fra: string | null }[]);
   }, [availableConsultants]);
 
   // ── Computed ──
