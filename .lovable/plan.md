@@ -1,127 +1,87 @@
 
 
-# Ærlig vurdering + Anbefalt retning
+# Plan: Design Lab — Kontaktdetaljside inspirert av Balkan.team
 
-## Diagnosen
+## Konsept
 
-Du har rett. Etter 7 iterasjoner har Design Lab-kontaktsiden nesten identisk **informasjonsarkitektur** som dagens CRM:
-
-```text
-DAGENS CRM                          DESIGN LAB V7
-─────────────────                    ─────────────────
-Navn + eier-badge                    Navn + eier-badge
-Selskap · Sted · Stilling            Selskap · Sted · Stilling
-Telefon | E-post | LinkedIn          Telefon | E-post | LinkedIn
-CV-Epost / Innkjøper / Ikke rel.    CV-Epost / Innkjøper / Ikke rel.
-Teknisk DNA tags                     Teknisk DNA tags
-Notat textarea                       Notat textarea
-Action-knapper                       Action-knapper
-Oppfølginger                         Oppfølginger
-Aktivitetstidslinje                  Aktivitetstidslinje
-Konsulentmatch                       Konsulentmatch
-```
-
-Det eneste som er endret er `border-border` → `rgba(0,0,0,0.06)` og `text-foreground` → `#111827`. Bokstavelig talt samme farger, bare skrevet annerledes.
-
-**Hvorfor**: Project-knowledge definerer et rigid typografi- og komponent-system som alle iterasjoner har fulgt slavisk. Resultatet er at "nytt design" alltid konvergerer til den eksisterende stilen.
-
-## Anbefalt retning: "Attio Record Page"
-
-Basert på research av Attios faktiske record page-arkitektur, som er **fundamentalt annerledes** i hvordan den organiserer informasjon:
-
-### Hva Attio gjør annerledes
-
-Attio bruker tre arkitektoniske grep vi ikke har:
-
-1. **Highlight-widgets øverst** — 3-6 nøkkelmetrikker som kort (Connection Strength, Siste interaksjon, Siste e-post). Ikke bare tekst-metadata, men visuelt fremhevede KPI-er med ikoner og farger.
-
-2. **Tab-basert innhold** — Oversikt / Aktivitet / E-post / Oppfølginger som faner. I stedet for én lang scrollbar med alt, ser du bare det du trenger.
-
-3. **Persistent høyre-sidebar** — Alle attributter (signal, eier, teknologier, status-toggles) som key-value par i et smalt sidebar-panel. Hovedinnholdet (sentrum) er rent og fokusert på handlinger og tidslinje.
-
-### Konkret layout
+Inspirert av referansebildet: en to-kolonne layout der **venstre kolonne** er en kompakt kontaktinfo-seksjon (avatar, navn, selskap, status, kontaktinfo, egenskaper), og **høyre kolonne** er tabulert innhold (Aktivitet, Oppfølginger, Konsulenter). Clean, hvitt, minimalt — men med EKTE data fra Supabase.
 
 ```text
-┌──────────────────────────────────────────────────────────────────────────┐
-│  ← Tilbake     STACQ     Kontakter  Selskaper  Oppdrag       [⌘K]  JR │
-├──────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  Henrik Berg                              [Ring] [E-post] [Logg]  [⋮]  │
-│  Platform Lead · Equinor                                                 │
-│                                                                          │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐       │
-│  │ SIGNAL      │ │ SISTE       │ │ NESTE       │ │ MATCH       │       │
-│  │ ● Behov nå  │ │ 2 dager     │ │ 15. apr     │ │ 93% best    │       │
-│  │             │ │ Samtale     │ │ Presentere  │ │ Kristian H  │       │
-│  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘       │
-│                                                                          │
-│  ┌─ Oversikt ─┬─ Aktivitet ─┬─ Oppfølginger ─┐    ┌─ DETALJER ────────┐│
-│  │                                             │    │                    ││
-│  │  NOTAT                                      │    │  Signal            ││
-│  │  ┌─────────────────────────────────────┐    │    │  ● Behov nå    ▾   ││
-│  │  │ Henrik har mandat til å bruke ...   │    │    │                    ││
-│  │  └─────────────────────────────────────┘    │    │  Eier              ││
-│  │                                             │    │  Jon Richard N.    ││
-│  │  KONSULENTMATCH                             │    │                    ││
-│  │  Kristian Haugen  93%  K8s Terraform Azure  │    │  Selskap           ││
-│  │  Emilie Aasen     87%  Docker CI/CD AWS      │    │  Equinor        →  ││
-│  │                                             │    │                    ││
-│  │  SISTE AKTIVITET                            │    │  Avdeling          ││
-│  │  12. apr — DevOps-behov for plattformteam   │    │  Digital Platform  ││
-│  │  14. mar — Første møte — kartlegging        │    │                    ││
-│  │                                             │    │  Stilling          ││
-│  │                                             │    │  Platform Lead     ││
-│  │                                             │    │                    ││
-│  │                                             │    │  Sted              ││
-│  │                                             │    │  Stavanger         ││
-│  │                                             │    │                    ││
-│  │                                             │    │  ── KONTAKT ─────  ││
-│  │                                             │    │  +47 966 77 888    ││
-│  │                                             │    │  henrik.berg@...   ││
-│  │                                             │    │  LinkedIn →        ││
-│  │                                             │    │                    ││
-│  │                                             │    │  ── STATUS ──────  ││
-│  │                                             │    │  CV-Epost    ✓     ││
-│  │                                             │    │  Innkjøper   ✓     ││
-│  │                                             │    │  Ikke relev. ✗     ││
-│  │                                             │    │                    ││
-│  │                                             │    │  ── TEKNISK DNA ─  ││
-│  │                                             │    │  K8s Terraform     ││
-│  │                                             │    │  Azure Docker      ││
-│  └─────────────────────────────────────────────┘    └────────────────────┘│
-└──────────────────────────────────────────────────────────────────────────┘
+┌─ AppLayout sidebar ─┬────────────────────────────────────────────────────────┐
+│  Dashboard           │  Kontakter › Erik Solberg                             │
+│  Kontakter           │                                                       │
+│  Selskaper           │  ┌─ VENSTRE (320px) ──┐  ┌─ HØYRE (flex) ──────────┐ │
+│  Oppdrag             │  │                     │  │                          │ │
+│  ...                 │  │  [Avatar]            │  │ Aktivitet│Oppfølginger  │ │
+│                      │  │  Erik Solberg        │  │                          │ │
+│                      │  │  Tech Lead           │  │ Erik Solberg             │ │
+│                      │  │  Aker Solutions      │  │ @Jon Richard Nygaard     │ │
+│                      │  │  ● Behov nå          │  │ Diskuterte ML-behov...   │ │
+│                      │  │                     │  │                          │ │
+│                      │  │  [📞] [✉] [in] [📋] │  │ Kari Hansen              │ │
+│                      │  │                     │  │ @Thomas Eriksen          │ │
+│                      │  │  Kontaktinfo         │  │ Gjennomgang av team...   │ │
+│                      │  │  erik@aker...     📋 │  │                          │ │
+│                      │  │  +47 901 23 456      │  │                          │ │
+│                      │  │  Oslo                │  │                          │ │
+│                      │  │                     │  │                          │ │
+│                      │  │  Eier                │  │                          │ │
+│                      │  │  Jon Richard N.  ▾   │  │                          │ │
+│                      │  │                     │  │                          │ │
+│                      │  │  Signal              │  │                          │ │
+│                      │  │  ● Behov nå      ▾   │  │                          │ │
+│                      │  │                     │  │                          │ │
+│                      │  │  ── Status ──        │  │                          │ │
+│                      │  │  CV-Epost    ✓       │  │                          │ │
+│                      │  │  Innkjøper   ✗       │  │                          │ │
+│                      │  │                     │  │                          │ │
+│                      │  │  ── Teknisk DNA ──   │  │                          │ │
+│                      │  │  Python PyTorch      │  │                          │ │
+│                      │  └─────────────────────┘  └──────────────────────────┘ │
+└──────────────────────┴────────────────────────────────────────────────────────┘
 ```
 
-### Hva er GENUINT annerledes
+## Hva er genuint annerledes
 
-| Element | Dagens CRM | Ny retning |
-|---------|-----------|------------|
-| **Layout** | Én kolonne, alt lineært | To-sone: innhold + sidebar |
-| **Metadata** | Inline tekst under navn | Key-value par i sidebar |
-| **Signal/Status** | Badge + toggles i innholdsstrømmen | Redigerbare felter i sidebar |
-| **Highlights** | Ingen | 4 KPI-kort øverst |
-| **Navigasjon** | Scroll alt | Fane-basert (Oversikt/Aktivitet/Oppfølginger) |
-| **Actions** | Midt i innholdet | Fast i header-baren |
-| **Konsulentmatch** | I høyre kolonne (V7) eller bunnen | I hovedinnholdet, fremhevet |
+| Element | Nåværende Design Lab | Ny retning |
+|---------|---------------------|------------|
+| **Meny** | Egen TopNav (duplikat) | Bruker AppLayout sidebar — ekte app-opplevelse |
+| **Data** | Mockdata (hardkodet) | Ekte Supabase-data via queries |
+| **Kontaktinfo** | Sidebar til høyre som key-value liste | Venstre kontaktkort med avatar, action-ikoner, properties |
+| **Innhold** | Tabs + highlight-kort | Ren tabulert innholdsseksjon til høyre, ingen KPI-kort |
+| **Actions** | Knapper i header | Ikonrad under avatar (telefon, e-post, linkedin, kopier) |
+| **Visuell stil** | Hardkodede hex-verdier | Ren hvit, subtile borders, avatar med initialer, clean properties |
 
-### Visuelt system (ny retning, bryter med project-knowledge)
+## Visuelt system
 
-For Design Lab ignorerer vi project-knowledge sine faste CSS-klasser og bruker:
+- Hvit bakgrunn, `border-border` for skillelinjer
+- Avatar: 80px rund sirkel med initialer, `bg-muted`
+- Breadcrumb: "Kontakter › Erik Solberg" med link tilbake
+- Kontaktinfo-properties: label-verdi par med copy-knapp på e-post
+- Action-ikoner: runde/kvadratiske ghost-knapper i en rad (telefon, e-post, linkedin, kalender, mer)
+- Tabs: understrek-stil, clean
+- Ingen highlight-kort / KPI-bokser — la dataen snakke
 
-- **Sidebar**: 280px fast bredde, `#FAFAFA` bakgrunn, key-value rader med label/verdi
-- **Highlight-kort**: Hvite med 1px `rgba(0,0,0,0.06)` border, 4 i rad
-- **Tabs**: Understrek-stil (ikke fane-kort), 13px medium
-- **Actions i header**: Svarte primær-knapper, inline med navnet
-- **Key-value sidebar**: Label 11px `#9CA3AF`, verdi 13px `#111827`, vertikalt stablet
-- **Generelt**: Ingen skygger, subtile borders, Inter font, tett spacing
+## Ekte data
 
-### Kontaktlisten
-
-Kontaktlisten (`DesignLabContacts.tsx`) beholder spreadsheet-stilen fra V7 men med oppdatert navigasjon til den nye detaljsiden.
+Bruker eksisterende Supabase-queries fra `ContactCardContent.tsx`:
+- `contacts` med join på `companies` og `profiles`
+- `activities` sortert synkende
+- `tasks` (oppfølginger) filtrert på ikke-done
+- Konsulentmatch via `match-consultants` edge function
 
 ## Filer som endres
 
-1. **`src/pages/DesignLabContactDetail.tsx`** — Fullstendig omskrivning med Attio-inspirert layout: highlight-widgets, tab-basert innhold, persistent sidebar med key-value attributter. Alle dagens data-felter beholdes men reorganiseres.
+1. **`src/pages/DesignLabContactDetail.tsx`** — Fullstendig omskrivning:
+   - Fjern TopNav, mock-data, highlight-widgets
+   - Hent ekte data fra Supabase (contacts, activities, tasks)
+   - To-kolonne layout: venstre kontaktkort (320px) + høyre tabulert innhold
+   - Avatar med initialer, action-ikonrad, property-liste
+   - Tabs: Aktivitet, Oppfølginger, Konsulenter
 
-2. **`src/pages/DesignLabContacts.tsx`** — Mindre justeringer: sikre at klikk navigerer til den nye detaljsiden (ikke sheet).
+2. **`src/pages/DesignLabContacts.tsx`** — Liten endring: fjern TopNav-wrapper, la den brukes innenfor AppLayout (rutene bruker allerede AppLayout)
+
+## Ikke berørt
+- Ingen endring i AppLayout, App.tsx, eller eksisterende CRM-sider
+- Kontaktlisten beholder spreadsheet-stil men med ekte data-navigasjon
 
