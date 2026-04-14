@@ -14,6 +14,7 @@ import { differenceInDays, format } from "date-fns";
 import { nb } from "date-fns/locale";
 import { getEffectiveSignal, normalizeCategoryLabel } from "@/lib/categoryUtils";
 import { toast } from "sonner";
+import { getConsultantAvailabilityMeta, sortHuntConsultants } from "@/lib/contactHunt";
 import { useAuth } from "@/hooks/useAuth";
 import { ContactCardContent } from "@/components/ContactCardContent";
 
