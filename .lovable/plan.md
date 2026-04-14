@@ -1,102 +1,100 @@
 
 
-# Plan: Design Lab V5 — "Action Queue"
+# Plan: Design Lab V6 — "Attio-elegansen"
 
-## Hvorfor alt til nå har feilet
+## Konsept
 
-Alle tidligere versjoner har vært **datalister med ulik farge**. Det eksisterende CRM-et er også en dataliste. Å endre bakgrunnsfarge fra hvit til mørk til varm — det er ikke redesign, det er theming.
+Inspirert av Attio: spreadsheet-aktig datadensitet i en ren, hvit, romslig ramme. Kontaktlisten er en ren tabell med inline-redigerbare celler. Detaljsiden er et **side-panel (sheet)** som glir inn fra hoyre, ikke en ny side — slik at du aldri mister konteksten i listen.
 
-Det genuint nye: **Kontaktlisten er ikke en tabell. Den er en prioritert handlingskø.**
+Nokkelprinsippene fra Attio:
+- Ren hvit bakgrunn, subtile borders (`#E8E8E8`), ingen skygger
+- Spreadsheet-logikk: kolonne-headers er sticky, rader er tette (44px) men lesbare
+- Inline-redigering pa hover (signal-badge, eier)
+- Detaljpanel som sheet fra hoyre (480px bred)
+- Svarte primary-knapper, gra sekundaere
+- Typografi: system font stack, 13-14px for data, 11px uppercase for headers
 
-## Konsept: "Hvem ringer jeg nå?"
-
-### Toppfelt — Daglig prioritet (nytt konsept)
-
-Øverst på siden: **3 prioritetskort** side ved side for de kontaktene som trenger oppmerksomhet FØRST. Ikke en tabell-rad — et kort med:
-- Stort navn + selskap
-- Konkret neste handling ("Send 2 ML-profiler til Erik")
-- Hvor lenge siden siste kontakt (fargkodet urgency)
-- **Ring**-knapp direkte på kortet
-
-Dette finnes IKKE i dagens CRM. Det er en ny interaksjonsmodell.
+## Visuelt system
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│  STACQ                    [Søk ⌘K]                              JR    │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  Ring neste                                                    12 apr   │
-│                                                                         │
-│  ┌─────────────────────┐ ┌─────────────────────┐ ┌─────────────────────┐
-│  │ ▌Erik Solberg       │ │ ▌Henrik Berg        │ │ ▌Silje Strand       │
-│  │  Aker Solutions     │ │  Equinor            │ │  Schibsted          │
-│  │                     │ │                     │ │                     │
-│  │  Send 2 ML-profiler │ │  2 DevOps-profiler  │ │  Spark-konsulent    │
-│  │                     │ │                     │ │                     │
-│  │  Sist: 1d · Samtale │ │  Sist: 2d · Samtale │ │  Sist: 3d · Samtale │
-│  │              [Ring] │ │              [Ring] │ │              [Ring] │
-│  └─────────────────────┘ └─────────────────────┘ └─────────────────────┘
-│                                                                         │
-│  Alle kontakter                                            Eier ▾  ▾   │
-│  ─────────────────────────────────────────────────────────────────────  │
-│                                                                         │
-│  ▌ Erik Solberg          Send 2 ML-profiler         Jon Richard    1d  │
-│    Tech Lead · Aker      Behov nå                   Nygaard            │
-│                                                                         │
-│  ▌ Kari Hansen           Book demo med teamleder    Thomas         3d  │
-│    Eng. Mgr · DNB        Behov nå                   Eriksen            │
-│                                                                         │
-│    Magnus Pedersen        Følg opp Q3-behov          Jon Richard   9d  │
-│    VP Eng. · Cognite      Fremtidig behov            Nygaard            │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
+Bakgrunn:        #FFFFFF
+Borders:         #E8E8E8 (1px)
+Text primar:     #1A1A1A
+Text sekundar:   #717171
+Text tertiar:    #A3A3A3
+Hover row:       #FAFAFA
+Selected row:    #F5F5F5 med 2px venstre blå border
+Primary button:  #171717 bg, #FFFFFF text
+Rad-hoyde:       44px
+Header-hoyde:    36px, 11px uppercase, #717171
+Font:            Inter, -apple-system
 ```
 
-### Hva er GENUINT NYTT her:
+## Layout
 
-1. **Prioritetskort øverst** — de 3 viktigste kontaktene fremhevet som handlingskort, ikke bare rader i en tabell. Med **direkte ring-knapp**.
+```text
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  STACQ          Kontakter   Selskaper   Oppdrag              [Søk ⌘K]  JR  │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Kontakter  142           [+ Ny kontakt]          Eier ▾  Signal ▾  Søk    │
+│                                                                              │
+│  ☐  NAVN              SELSKAP         SIGNAL        EIER           SIST     │
+│  ─────────────────────────────────────────────────────────────────────────   │
+│  ☐  Erik Solberg      Aker Solutions  ● Behov nå    Jon Richard    1d       │
+│     Tech Lead                                       Nygaard                  │
+│  ☐  Kari Hansen       DNB             ● Behov nå    Thomas         4d    ◄──┐
+│     Engineering Mgr                                 Eriksen             │   │
+│  ☐  Magnus Pedersen   Cognite         ● Fremtidig   Jon Richard    9d   │   │
+│     VP Engineering                                  Nygaard             │   │
+│  ...                                                                    │   │
+│                                                                         │   │
+│                                                              ┌──────────┘   │
+│                                                              │ SHEET PANEL  │
+│                                                              │ 480px        │
+│                                                              │              │
+│                                                              │ Kari Hansen  │
+│                                                              │ Eng. Mgr     │
+│                                                              │ DNB          │
+│                                                              │              │
+│                                                              │ ● Behov nå   │
+│                                                              │              │
+│                                                              │ NESTE STEG   │
+│                                                              │ □ Book demo  │
+│                                                              │              │
+│                                                              │ AKTIVITETER  │
+│                                                              │ ...          │
+│                                                              │              │
+│                                                              │ KONSULENTER  │
+│                                                              │ Martin O 91% │
+│                                                              └──────────────┘
+└──────────────────────────────────────────────────────────────────────────────┘
+```
 
-2. **Venstre signal-stripe på rader** — i stedet for en badge inne i raden, har hver rad en 3px farget venstrekant (grønn = behov nå, blå = fremtidig, etc). Gir umiddelbar visuell scanning uten å lese tekst.
+## Hva er genuint nytt (vs alle tidligere forsok)
 
-3. **Handlingen er kolonnen, ikke signalet** — den dominante kolonnen i tabellen er "neste steg" (hva du skal gjøre), ikke "signal" (hva statusen er). Signal vises som tekst under handlingen, nedtonet. Handlingen er bold.
+1. **Sheet-panel i stedet for navigasjon** — klikk pa rad apner detaljer i et 480px side-panel uten a forlate listen
+2. **Spreadsheet-estetikk** — 44px rader, checkbox-kolonne, sortbare headers med piler, tight data
+3. **Ingen fargede bakgrunner** — kun hvitt og subtile borders. Signal vises som en liten farget prikk + tekst
+4. **Toppmeny med navigasjon** — "Kontakter / Selskaper / Oppdrag" som tabs i toppstripen (ikke sidebar)
+5. **Inline signal-edit** — klikk pa signal-badge i tabellen for a endre direkte (dropdown)
+6. **Bulk-actions** — checkbox pa rader for fremtidig bulk-operasjoner
 
-4. **Relativ tid som primær tidsvisning** — "1d", "3d", "2u" i stedet for "11. apr 2026". Visuelt lettere å scanne urgency.
+## Realistiske data
 
-5. **Hover-actions** — ved hover vises ring/e-post-ikoner direkte i raden for umiddelbar handling.
+Bruker de 12 kontaktene som allerede finnes i mockdata (Erik Solberg/Aker, Kari Hansen/DNB, etc.) med:
+- Fullstendige aktivitetslogger per kontakt
+- Oppfolginger med datoer
+- Konsulentmatch med tech-tags
+- Eier alltid fullt navn
 
-6. **Ingen avatar-sirkler** — fjerner det visuelle støyet. Navnet er nok.
+## Filer som endres
 
-### Visuelt system (annerledes enn dagens CRM)
+1. **`src/pages/DesignLabContacts.tsx`** — fullstendig omskrivning: spreadsheet-tabell + sheet-panel for detaljer
+2. **`src/pages/DesignLabContactDetail.tsx`** — fjernes/tommes (detaljvisningen er na inne i sheet-panelet i DesignLabContacts)
 
-- **Bakgrunn**: `#FFFFFF` ren hvit — men med tydelig visuelt hierarki gjennom spacing, ikke farger
-- **Prioritetskort**: Hvite med `border-left: 3px solid signal-farge`, subtil skygge `0 2px 8px rgba(0,0,0,0.06)`
-- **Signal-stripe på rader**: 3px bred farget venstrekant — scannes mye raskere enn badges
-- **Typografi**: Inter — men med tydelig størrelses-hierarki:
-  - Seksjonstittel ("Ring neste"): 20px/700, mørk
-  - Kontaktnavn i kort: 17px/600
-  - Kontaktnavn i liste: 14px/600
-  - Handling (neste steg): 14px/500, `#111827`
-  - Signal-tekst: 12px/500, farget
-  - Meta (tid, eier): 13px/400, `#9CA3AF`
-- **Ingen avrundede hjørner på hovedcontainer** — skarp, profesjonell
-- **Hover**: Raden får en svak bakgrunn `#F9FAFB` og ring/mail-ikoner glir inn fra høyre
-
-### Kontaktdetalj — også nytt
-
-Detaljsiden redesignes med samme filosofi:
-- **Handlingsbar øverst**: "Ring", "E-post", "Logg samtale" som primære knapper
-- **Stor, tydelig "Neste steg"** som det første du ser under kontaktinfo
-- **Tidslinje** med aktiviteter gruppert per måned
-- **Konsulentmatch-panel** til høyre: hvilke STACQ-konsulenter matcher dette behovet
-
-## Implementering
-
-### Filer
-1. **`src/pages/DesignLabContacts.tsx`** — fullstendig omskrivning med prioritetskort + action-queue-tabell
-2. **`src/pages/DesignLabContactDetail.tsx`** — omskrivning med handlings-først layout
-
-### Ikke berørt
-- Ingen endring i App.tsx (ruter finnes)
+## Ikke beort
+- Ingen App.tsx-endringer (ruter finnes)
 - Ingen endring i eksisterende CRM
 - Alt mockdata
 
