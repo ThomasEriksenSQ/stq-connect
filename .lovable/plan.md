@@ -1,69 +1,45 @@
 
 
-# Plan: STACQ Prisen i Design Lab V8-stil
+# Plan: Global tekststørrelse-kontroll for Design Lab
 
-## Konsept
+## Hva skal gjøres
 
-STACQ Prisen-siden redesignet i V8-estetikken: varm off-white bakgrunn, dempede farger, 3-sone layout med sidebar, og samme visuelle språk som de andre Design Lab-sidene.
+Legge til en tekststørrelse-kontroll øverst til høyre i alle Design Lab-sider. Brukeren kan velge mellom nivåer som skalerer all tekst i V8-designet. Valget lagres med `usePersistentState` slik at det huskes mellom sidebesøk.
 
-## Visuell beskrivelse
+## Visuell plassering
+
+Øverst til høyre i header-området på alle Design Lab-sider, ved siden av tittel/søk. Enkle pill-knapper med nivåer:
 
 ```text
-┌──────────┬──────────────────────────────────────────────────────────────┐
-│ SIDEBAR  │  STACQ Prisen                                              │
-│ 216px    │                                                            │
-│          │  kr 4 639/t · 14 konsulenter · snitt 331/t · +210 oppstart │
-│ Kontakter│                                                            │
-│ Selskaper│  ┌──────────────────────────────────────────────────────┐   │
-│ Forespør.│  │  ▁▂▃▄▅▆▇█  (area chart, teal gradient)             │   │
-│ Ansatte  │  │  ─ ─ ─ ─ ─  Mål: 5 000                            │   │
-│▸STACQ Pr.│  └──────────────────────────────────────────────────────┘   │
-│          │                                                            │
-│          │  BIDRAG PER KONSULENT                                      │
-│          │  Konsulent   Kunde     Type  Utpris  STACQ   %   Status   │
-│          │  ─────────────────────────────────────────────────────────  │
-│          │  Ola N.      Equinor   DIR   1400    420    30%  Aktiv     │
-│          │  Kari S.     Telenor   VIA   1200    360    30%  Oppstart  │
-└──────────┴──────────────────────────────────────────────────────────────┘
+  STACQ Prisen                          [S] [M] [L] [XL]
 ```
 
-## V8-tilpasninger
+## Nivåer
 
-### Stat-kort → Stat-linje
-- Fjerner de fire fargede kortene. Erstattes med en enkel tekstlinje i `textMuted`-farge
-- Format: "kr 4 639/t · 14 konsulenter · snitt 331/t · +210 oppstart"
+| Nivå | CSS font-size scale | Beskrivelse |
+|------|-------------------|-------------|
+| S    | 0.875 (87.5%)     | Kompakt     |
+| M    | 1.0 (100%)        | Standard    |
+| L    | 1.125 (112.5%)    | Stor        |
+| XL   | 1.25 (125%)       | Ekstra stor |
 
-### Chart
-- Beholder area chart men med V8-farger: teal gradient istedenfor emerald
-- Borders: `C.border`, bakgrunn: `C.surface`
-- Aksene og tooltip i V8-typografi
+## Teknisk tilnærming
 
-### Tabell
-- 11px uppercase kolonneheadere, `C.textMuted`, weight 600
-- Rader med `C.border` dividers, hover `C.hoverBg`
-- Status-badges: desaturerte V8-farger (ikke mettede Tailwind)
-- Type-badges: nøytrale V8-toner
-- STACQ Pris-verdier: dempet teal for høye, nøytrale for lave (istedenfor emerald/blue/amber)
-- Klikk på rad åpner edit-dialog wrappet i `.dl-v8-theme`
+Wrapper-div rundt innholdet i hver Design Lab-side får en inline `style={{ fontSize: scale }}` som via CSS-arv skalerer all tekst. Alternativt bruker vi `rem`-base override via CSS custom property.
 
-### Edit-modal
-- Wrappet i `.dl-v8-theme` for automatisk reskinning
-- Pill-buttons, dempede inputs
+## Endringer
 
-## Tekniske endringer
+### 1. Ny komponent: `src/components/designlab/TextSizeControl.tsx`
+- Pill-knapper med V8-styling (aktiv = teal, inaktiv = border)
+- Props: `value`, `onChange`
+- Bruker `Type` lucide-ikon som label
 
-### 1. Ny fil: `src/pages/DesignLabStacqPrisen.tsx`
-- Kopierer datalogikk fra `StacqPrisen.tsx` (queries, beregninger, sortering)
-- Erstatter all styling med V8 `C.*` konstanter (inline styles)
-- Sidebar-navigasjon (delt med andre Design Lab-sider) med "STACQ Prisen" markert
-- Stat-linje istedenfor stat-kort
-- Chart med teal-gradient og V8-aksefarge
-- Tabell med V8-styling og desaturerte badges
-- Edit-modal med V8-tema
+### 2. Hook: `usePersistentState("dl-text-size", "M")`
+- Lagres i localStorage, deles på tvers av alle Design Lab-sider
 
-### 2. `src/App.tsx` — Ny rute
-- Legg til `/design-lab/stacq-prisen` i ProtectedMinimal-gruppen
-
-### 3. Sidebar-oppdatering
-- Legg til "STACQ Prisen"-lenke med TrendingUp-ikon i sidebar-navigasjonen i `DesignLabContacts.tsx` og `DesignLabForesporsler.tsx`
+### 3. Oppdater alle 3 Design Lab-sider
+- `DesignLabContacts.tsx`, `DesignLabForesporsler.tsx`, `DesignLabStacqPrisen.tsx`
+- Importer `TextSizeControl` og `usePersistentState`
+- Plasser kontroll øverst til høyre
+- Wrap hovedinnholdet i en div med `style={{ fontSize: scaleMap[size] }}`
 
