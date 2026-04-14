@@ -78,6 +78,22 @@ const App = () => (
             <Routes>
               <Route path="/login" element={<AuthRoute />} />
               <Route path="/cv/:token" element={<CvEditor />} />
+              <Route
+                path="/design-lab/kontakter"
+                element={
+                  <Suspense fallback={<LazyFallback />}>
+                    <DesignLabContacts />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/design-lab/kontakter/:id"
+                element={
+                  <Suspense fallback={<LazyFallback />}>
+                    <DesignLabContactDetail />
+                  </Suspense>
+                }
+              />
               <Route path="/" element={<ProtectedRoutes />}>
                 <Route index element={<Dashboard />} />
                 <Route path="selskaper" element={<Companies />} />
@@ -184,22 +200,6 @@ const App = () => (
                   element={
                     <Suspense fallback={<LazyFallback />}>
                       <Innstillinger />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="design-lab/kontakter"
-                  element={
-                    <Suspense fallback={<LazyFallback />}>
-                      <DesignLabContacts />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="design-lab/kontakter/:id"
-                  element={
-                    <Suspense fallback={<LazyFallback />}>
-                      <DesignLabContactDetail />
                     </Suspense>
                   }
                 />
