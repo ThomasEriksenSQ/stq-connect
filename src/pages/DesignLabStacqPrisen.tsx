@@ -391,7 +391,6 @@ export default function DesignLabStacqPrisen() {
               </div>
             </div>
           )}
-          </div>
         </div>
       </main>
 
