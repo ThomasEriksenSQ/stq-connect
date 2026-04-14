@@ -2,7 +2,8 @@ import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Phone, Mail, Linkedin, ExternalLink, MessageCircle,
-  FileText, Clock, ChevronDown, Check, Radio, MapPin, Plus,
+  FileText, Clock, ChevronDown, Check, MoreHorizontal, TrendingUp,
+  Calendar, Users, Zap,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -11,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Search } from "lucide-react";
-import { format, subDays, subMonths, isPast, isToday, addDays, addWeeks, addMonths, addYears } from "date-fns";
+import { format, subDays, subMonths, isPast, isToday } from "date-fns";
 import { nb } from "date-fns/locale";
 
 /* ═══════════════════════════════════════════════════════════
@@ -26,6 +27,14 @@ const SIGNAL_BADGE: Record<Signal, string> = {
   "Har kanskje behov": "bg-amber-100 text-amber-800 border-amber-200",
   "Ukjent om behov": "bg-gray-100 text-gray-600 border-gray-200",
   "Aldri aktuelt": "bg-red-50 text-red-700 border-red-200",
+};
+
+const SIGNAL_DOT: Record<Signal, string> = {
+  "Behov nå": "bg-emerald-500",
+  "Fremtidig behov": "bg-blue-500",
+  "Har kanskje behov": "bg-amber-500",
+  "Ukjent om behov": "bg-gray-400",
+  "Aldri aktuelt": "bg-red-500",
 };
 
 const SIGNALS: Signal[] = ["Behov nå", "Fremtidig behov", "Har kanskje behov", "Ukjent om behov", "Aldri aktuelt"];
@@ -146,7 +155,6 @@ const MOCK_CONTACTS: Record<string, ContactDetail> = {
   },
 };
 
-// Generate simple fallbacks for other IDs
 function getContact(id: string): ContactDetail {
   if (MOCK_CONTACTS[id]) return MOCK_CONTACTS[id];
   return {
@@ -160,12 +168,13 @@ function getContact(id: string): ContactDetail {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   TOP NAV (shared style)
+   TOP NAV
    ═══════════════════════════════════════════════════════════ */
 
 function TopNav() {
+  const navigate = useNavigate();
   const tabs = [
-    { label: "Kontakter", active: true },
+    { label: "Kontakter", active: true, href: "/design-lab/kontakter" },
     { label: "Selskaper", active: false },
     { label: "Oppdrag", active: false },
   ];
@@ -177,6 +186,7 @@ function TopNav() {
           {tabs.map((t) => (
             <button
               key={t.label}
+              onClick={() => t.href && navigate(t.href)}
               className={`h-[53px] px-3 text-[13px] font-medium transition-colors border-b-2 ${
                 t.active
                   ? "text-[#111827] border-[#111827]"
@@ -191,23 +201,53 @@ function TopNav() {
       <div className="flex items-center gap-4">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9CA3AF]" />
-          <input
-            placeholder="Søk…  ⌘K"
-            readOnly
-            className="h-8 pl-8 pr-3 rounded-md text-[13px] outline-none bg-[#FAFAFA] text-[#111827] w-52 border border-[rgba(0,0,0,0.06)]"
-          />
+          <input placeholder="Søk…  ⌘K" readOnly className="h-8 pl-8 pr-3 rounded-md text-[13px] outline-none bg-[#FAFAFA] text-[#111827] w-52 border border-[rgba(0,0,0,0.06)]" />
         </div>
-        <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold bg-[#111827] text-white">
-          JR
-        </div>
+        <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold bg-[#111827] text-white">JR</div>
       </div>
     </header>
   );
 }
 
 /* ═══════════════════════════════════════════════════════════
+   HIGHLIGHT CARD
+   ═══════════════════════════════════════════════════════════ */
+
+function HighlightCard({ icon, label, value, sub, color }: {
+  icon: React.ReactNode; label: string; value: string; sub: string; color?: string;
+}) {
+  return (
+    <div className="border border-[rgba(0,0,0,0.06)] rounded-lg p-4 bg-white hover:border-[rgba(0,0,0,0.1)] transition-colors">
+      <div className="flex items-center gap-2 mb-2.5">
+        <div className={`w-6 h-6 rounded-md flex items-center justify-center ${color || "bg-[#F3F4F6]"}`}>
+          {icon}
+        </div>
+        <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#9CA3AF]">{label}</span>
+      </div>
+      <p className="text-[15px] font-semibold text-[#111827] mb-0.5">{value}</p>
+      <p className="text-[12px] text-[#9CA3AF]">{sub}</p>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SIDEBAR KEY-VALUE ROW
+   ═══════════════════════════════════════════════════════════ */
+
+function KVRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="py-2.5">
+      <div className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#9CA3AF] mb-1">{label}</div>
+      <div className="text-[13px] text-[#111827]">{children}</div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
    MAIN PAGE
    ═══════════════════════════════════════════════════════════ */
+
+type Tab = "oversikt" | "aktivitet" | "oppfolginger";
 
 export default function DesignLabContactDetail() {
   const { id } = useParams<{ id: string }>();
@@ -218,6 +258,26 @@ export default function DesignLabContactDetail() {
   const [callList, setCallList] = useState(contact.callList);
   const [ikkeRelevant, setIkkeRelevant] = useState(contact.ikkeRelevant);
   const [notat, setNotat] = useState(contact.notat);
+  const [activeTab, setActiveTab] = useState<Tab>("oversikt");
+
+  // Derived data
+  const lastActivity = contact.activities[0];
+  const nextTask = contact.tasks.find((t) => !t.done);
+  const bestMatch = contact.consultantMatches[0];
+
+  const relDays = (d: Date) => {
+    const diff = Math.round((now.getTime() - d.getTime()) / 86400000);
+    if (diff === 0) return "I dag";
+    if (diff === 1) return "1 dag siden";
+    return `${diff} dager siden`;
+  };
+
+  const futureDays = (d: Date) => {
+    const diff = Math.round((d.getTime() - now.getTime()) / 86400000);
+    if (diff <= 0) return format(d, "d. MMM", { locale: nb });
+    if (diff === 1) return "I morgen";
+    return format(d, "d. MMM", { locale: nb });
+  };
 
   // Group activities by month
   const groupedActivities = useMemo(() => {
@@ -231,228 +291,209 @@ export default function DesignLabContactDetail() {
   }, [contact.activities]);
 
   const activityIcon = (type: string) => {
-    if (type === "Samtale") return <MessageCircle className="w-3 h-3 text-[hsl(var(--success))]" />;
-    if (type === "Møte") return <FileText className="w-3 h-3 text-primary" />;
+    if (type === "Samtale") return <MessageCircle className="w-3 h-3 text-emerald-600" />;
+    if (type === "Møte") return <FileText className="w-3 h-3 text-blue-600" />;
     return <Mail className="w-3 h-3 text-[#6B7280]" />;
   };
+
+  const TABS: { key: Tab; label: string }[] = [
+    { key: "oversikt", label: "Oversikt" },
+    { key: "aktivitet", label: "Aktivitet" },
+    { key: "oppfolginger", label: "Oppfølginger" },
+  ];
 
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: "Inter, -apple-system, system-ui, sans-serif" }}>
       <TopNav />
 
-      <div className="px-8 pt-6 pb-16 max-w-[1100px] mx-auto">
+      <div className="px-8 pt-5 pb-16 max-w-[1400px] mx-auto">
         {/* Back */}
         <button
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-1.5 text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors mb-5"
+          onClick={() => navigate("/design-lab/kontakter")}
+          className="inline-flex items-center gap-1.5 text-[13px] text-[#9CA3AF] hover:text-[#111827] transition-colors mb-4"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          Tilbake
+          Kontakter
         </button>
 
-        {/* Header */}
+        {/* ── HEADER ROW ── */}
         <div className="flex items-start justify-between mb-6">
           <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-[1.5rem] font-bold text-[#111827]">
-                {contact.firstName} {contact.lastName}
-              </h1>
-              <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
-                {contact.eier}
-              </span>
-            </div>
+            <h1 className="text-[22px] font-semibold text-[#111827] mb-0.5">
+              {contact.firstName} {contact.lastName}
+            </h1>
             <p className="text-[14px] text-[#6B7280]">
-              {contact.company}
-              {contact.location && <> · {contact.location}</>}
-              {contact.department && <> · {contact.department}</>}
-              {contact.title && <> · {contact.title}</>}
+              {contact.title} · {contact.company}
             </p>
           </div>
 
-          {/* Signal badge */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer ${SIGNAL_BADGE[signal]}`}>
-                {signal}
-                <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {SIGNALS.map((s) => (
-                <DropdownMenuItem key={s} onClick={() => setSignal(s)}>
-                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${SIGNAL_BADGE[s]}`}>
-                    {s}
-                  </span>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        {/* Contact info pills */}
-        <div className="flex items-center gap-3 mb-5">
-          <a href={`tel:${contact.phone}`} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[13px] text-[#111827] border border-[rgba(0,0,0,0.06)] hover:bg-[#FAFAFA] transition-colors">
-            <Phone className="w-3.5 h-3.5 text-[#6B7280]" />
-            {contact.phone}
-          </a>
-          <a href={`mailto:${contact.email}`} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[13px] text-[#111827] border border-[rgba(0,0,0,0.06)] hover:bg-[#FAFAFA] transition-colors">
-            <Mail className="w-3.5 h-3.5 text-[#6B7280]" />
-            {contact.email}
-          </a>
-          {contact.linkedin && (
-            <a href="#" className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[13px] text-[#3B82F6] border border-[rgba(0,0,0,0.06)] hover:bg-[#FAFAFA] transition-colors">
-              <Linkedin className="w-3.5 h-3.5" />
-              LinkedIn
-              <ExternalLink className="w-3 h-3" />
+          {/* Actions in header */}
+          <div className="flex items-center gap-2">
+            <a href={`tel:${contact.phone}`} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[13px] font-medium text-[#111827] border border-[rgba(0,0,0,0.08)] hover:bg-[#FAFAFA] transition-colors">
+              <Phone className="w-3.5 h-3.5 text-[#6B7280]" />
+              Ring
             </a>
-          )}
+            <a href={`mailto:${contact.email}`} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[13px] font-medium text-[#111827] border border-[rgba(0,0,0,0.08)] hover:bg-[#FAFAFA] transition-colors">
+              <Mail className="w-3.5 h-3.5 text-[#6B7280]" />
+              E-post
+            </a>
+            <button className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[13px] font-medium bg-[#111827] text-white hover:bg-[#1f2937] transition-colors">
+              <MessageCircle className="w-3.5 h-3.5" />
+              Logg
+            </button>
+            <button className="w-8 h-8 rounded-md border border-[rgba(0,0,0,0.08)] flex items-center justify-center hover:bg-[#FAFAFA] transition-colors">
+              <MoreHorizontal className="w-4 h-4 text-[#6B7280]" />
+            </button>
+          </div>
         </div>
 
-        {/* Status toggles */}
-        <div className="flex items-center gap-2 mb-6 pb-6 border-b border-[rgba(0,0,0,0.06)]">
-          <button
-            onClick={() => setCvEmail(!cvEmail)}
-            className={`rounded-full border px-2.5 py-0.5 text-xs font-medium cursor-pointer transition-colors ${
-              cvEmail
-                ? "bg-blue-100 text-blue-800 border-blue-200"
-                : "border-[rgba(0,0,0,0.1)] text-[#9CA3AF] hover:text-[#6B7280]"
-            }`}
-          >
-            CV-Epost
-          </button>
-          <button
-            onClick={() => setCallList(!callList)}
-            className={`rounded-full border px-2.5 py-0.5 text-xs font-medium cursor-pointer transition-colors ${
-              callList
-                ? "bg-amber-100 text-amber-800 border-amber-200"
-                : "border-[rgba(0,0,0,0.1)] text-[#9CA3AF] hover:text-[#6B7280]"
-            }`}
-          >
-            Innkjøper
-          </button>
-          <button
-            onClick={() => setIkkeRelevant(!ikkeRelevant)}
-            className={`rounded-full border px-2.5 py-0.5 text-xs font-medium cursor-pointer transition-colors ${
-              ikkeRelevant
-                ? "bg-red-50 text-red-700 border-red-200"
-                : "border-[rgba(0,0,0,0.1)] text-[#9CA3AF] hover:text-[#6B7280]"
-            }`}
-          >
-            Ikke relevant
-          </button>
+        {/* ── HIGHLIGHT WIDGETS ── */}
+        <div className="grid grid-cols-4 gap-3 mb-6">
+          <HighlightCard
+            icon={<Zap className="w-3.5 h-3.5 text-emerald-600" />}
+            label="Signal"
+            value={signal}
+            sub="Oppdatert 2 dager siden"
+            color="bg-emerald-100"
+          />
+          <HighlightCard
+            icon={<TrendingUp className="w-3.5 h-3.5 text-blue-600" />}
+            label="Siste aktivitet"
+            value={lastActivity ? relDays(lastActivity.date) : "—"}
+            sub={lastActivity ? lastActivity.type : "Ingen aktivitet"}
+            color="bg-blue-100"
+          />
+          <HighlightCard
+            icon={<Calendar className="w-3.5 h-3.5 text-amber-600" />}
+            label="Neste steg"
+            value={nextTask ? futureDays(nextTask.dueDate) : "—"}
+            sub={nextTask ? nextTask.title : "Ingen oppfølging"}
+            color="bg-amber-100"
+          />
+          <HighlightCard
+            icon={<Users className="w-3.5 h-3.5 text-violet-600" />}
+            label="Beste match"
+            value={bestMatch ? `${bestMatch.matchPct}%` : "—"}
+            sub={bestMatch ? bestMatch.name : "Ingen match"}
+            color="bg-violet-100"
+          />
         </div>
 
-        {/* Two-column layout */}
-        <div className="grid grid-cols-[1fr_340px] gap-10">
-          {/* Left column — main content */}
-          <div className="min-w-0">
-            {/* Teknisk DNA */}
-            {contact.teknologier.length > 0 && (
-              <div className="mb-8">
-                <h2 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-[#9CA3AF] mb-3">Teknisk DNA</h2>
-                <div className="flex flex-wrap gap-1.5">
-                  {contact.teknologier.map((tag) => (
-                    <span key={tag} className="rounded-full border border-[rgba(0,0,0,0.06)] bg-[#FAFAFA] px-2.5 py-1 text-[12px] text-[#111827] font-medium">
-                      {tag}
-                    </span>
-                  ))}
+        {/* ── MAIN CONTENT: TABS + SIDEBAR ── */}
+        <div className="grid grid-cols-[1fr_280px] gap-0">
+          {/* LEFT: Tabbed content */}
+          <div className="min-w-0 border-r border-[rgba(0,0,0,0.06)] pr-8">
+            {/* Tab bar */}
+            <div className="flex items-center gap-0 border-b border-[rgba(0,0,0,0.06)] mb-6">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`px-4 pb-2.5 pt-1 text-[13px] font-medium transition-colors border-b-2 -mb-px ${
+                    activeTab === tab.key
+                      ? "text-[#111827] border-[#111827]"
+                      : "text-[#9CA3AF] border-transparent hover:text-[#6B7280]"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* TAB: Oversikt */}
+            {activeTab === "oversikt" && (
+              <div>
+                {/* Notat */}
+                <div className="mb-8">
+                  <h2 className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#9CA3AF] mb-2.5">Notat</h2>
+                  <textarea
+                    value={notat}
+                    onChange={(e) => setNotat(e.target.value)}
+                    rows={3}
+                    className="w-full rounded-md border border-[rgba(0,0,0,0.06)] bg-white px-3 py-2.5 text-[14px] text-[#111827] resize-none focus:outline-none focus:border-[rgba(0,0,0,0.15)] transition-colors leading-relaxed"
+                    placeholder="Legg til notat…"
+                  />
                 </div>
+
+                {/* Konsulentmatch */}
+                {contact.consultantMatches.length > 0 && (
+                  <div className="mb-8">
+                    <h2 className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#9CA3AF] mb-2.5">Konsulentmatch</h2>
+                    <div className="space-y-1">
+                      {contact.consultantMatches.map((cm) => (
+                        <div key={cm.name} className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-[rgba(0,0,0,0.015)] transition-colors cursor-pointer">
+                          <div className="w-8 h-8 rounded-full bg-[#F3F4F6] flex items-center justify-center text-[12px] font-semibold text-[#6B7280]">
+                            {cm.name.split(" ").map(n => n[0]).join("")}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-medium text-[#111827]">{cm.name}</p>
+                            <p className="text-[12px] text-[#9CA3AF]">{cm.title}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex gap-1">
+                              {cm.tags.slice(0, 3).map((tag) => (
+                                <span key={tag} className="rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[11px] text-[#6B7280] font-medium">{tag}</span>
+                              ))}
+                            </div>
+                            <div className={`text-[13px] font-semibold tabular-nums ${
+                              cm.matchPct >= 90 ? "text-emerald-600" : cm.matchPct >= 80 ? "text-blue-600" : "text-amber-600"
+                            }`}>
+                              {cm.matchPct}%
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent activity preview */}
+                {contact.activities.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2.5">
+                      <h2 className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#9CA3AF]">Siste aktivitet</h2>
+                      <button onClick={() => setActiveTab("aktivitet")} className="text-[12px] text-[#9CA3AF] hover:text-[#111827] transition-colors">
+                        Se alle →
+                      </button>
+                    </div>
+                    <div className="space-y-0">
+                      {contact.activities.slice(0, 3).map((act) => (
+                        <div key={act.id} className="flex items-start gap-3 px-3 py-2.5 rounded-md hover:bg-[rgba(0,0,0,0.015)] transition-colors">
+                          <div className="mt-0.5">{activityIcon(act.type)}</div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-medium text-[#111827] mb-0.5">{act.subject}</p>
+                            <p className="text-[12px] text-[#9CA3AF]">
+                              {format(act.date, "d. MMM yyyy", { locale: nb })} · {act.createdBy}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Notat */}
-            <div className="mb-8">
-              <h2 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-[#9CA3AF] mb-3">Notat</h2>
-              <textarea
-                value={notat}
-                onChange={(e) => setNotat(e.target.value)}
-                rows={3}
-                className="w-full rounded-md border border-[rgba(0,0,0,0.06)] bg-white px-3 py-2 text-[14px] text-[#111827] resize-none focus:outline-none focus:border-[rgba(0,0,0,0.15)] transition-colors leading-relaxed"
-                placeholder="Legg til notat…"
-              />
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex items-center gap-2 mb-8">
-              <button className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-[hsl(var(--success))] text-white hover:opacity-90 transition-opacity">
-                <MessageCircle className="w-4 h-4" />
-                Logg samtale
-              </button>
-              <button className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-[#111827] text-white hover:bg-[#1f2937] transition-colors">
-                <FileText className="w-4 h-4" />
-                Logg møtereferat
-              </button>
-              <button className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-[rgba(0,0,0,0.06)] bg-white text-[#111827] hover:bg-[#FAFAFA] transition-colors">
-                <Clock className="w-4 h-4 text-[hsl(var(--warning))]" />
-                Ny oppfølging
-              </button>
-            </div>
-
-            {/* Oppfølginger */}
-            {contact.tasks.length > 0 && (
-              <div className="mb-8">
-                <h2 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-[#9CA3AF] mb-3">Oppfølginger</h2>
-                <div className="border border-[rgba(0,0,0,0.06)] rounded-lg divide-y divide-[rgba(0,0,0,0.04)]">
-                  {contact.tasks.map((task) => {
-                    const overdue = isPast(task.dueDate) && !isToday(task.dueDate);
-                    const today = isToday(task.dueDate);
-                    return (
-                      <div key={task.id} className="flex items-center gap-3 px-4 py-3 hover:bg-[rgba(0,0,0,0.015)] transition-colors cursor-pointer">
-                        <div
-                          className={`w-4 h-4 rounded border shrink-0 flex items-center justify-center ${
-                            task.done ? "bg-emerald-500 border-emerald-500" : "border-[rgba(0,0,0,0.15)]"
-                          }`}
-                        >
-                          {task.done && <Check className="w-2.5 h-2.5 text-white" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[1rem] font-bold text-[#111827]">{task.title}</p>
-                        </div>
-                        <span className={`text-[0.8125rem] font-medium shrink-0 ${
-                          overdue ? "text-destructive" : today ? "text-[hsl(var(--warning))]" : "text-[#9CA3AF]"
-                        }`}>
-                          {format(task.dueDate, "d. MMM yyyy", { locale: nb })}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Aktiviteter */}
-            <div className="mb-8">
-              <h2 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-[#9CA3AF] mb-4">Aktiviteter</h2>
+            {/* TAB: Aktivitet */}
+            {activeTab === "aktivitet" && (
               <div className="relative pl-8">
-                {/* Vertical line */}
                 <div className="absolute left-[5px] top-[5px] bottom-0 w-[2px] bg-[rgba(0,0,0,0.06)]" />
-
                 {Object.entries(groupedActivities).map(([month, activities], gi) => (
                   <div key={month} className={gi > 0 ? "mt-6" : ""}>
-                    {/* Month header */}
                     <div className="flex items-center gap-3 mb-4 -ml-8">
-                      <span className="text-[0.8125rem] font-bold tracking-[0.04em] text-[#111827] capitalize whitespace-nowrap">
-                        {month}
-                      </span>
+                      <span className="text-[13px] font-semibold tracking-[0.02em] text-[#111827] capitalize whitespace-nowrap">{month}</span>
                       <div className="flex-1 h-px bg-[rgba(0,0,0,0.06)]" />
                     </div>
-
                     <div className="space-y-5">
                       {activities.map((act) => (
                         <div key={act.id} className="relative">
-                          {/* Icon on line */}
                           <div className="absolute -left-7 top-[2px] w-[12px] h-[12px] bg-white rounded-full flex items-center justify-center">
                             {activityIcon(act.type)}
                           </div>
-
                           <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="text-[1.0625rem] font-bold text-[#111827]">{act.subject}</h3>
-                            </div>
-                            <p className="text-[0.9375rem] leading-relaxed text-[#111827]/70 whitespace-pre-wrap mb-1.5">
-                              {act.description}
-                            </p>
-                            <div className="flex items-center gap-2 text-[0.8125rem] text-[#9CA3AF]">
+                            <h3 className="text-[14px] font-semibold text-[#111827] mb-1">{act.subject}</h3>
+                            <p className="text-[13px] leading-relaxed text-[#6B7280] whitespace-pre-wrap mb-1.5">{act.description}</p>
+                            <div className="flex items-center gap-2 text-[12px] text-[#9CA3AF]">
                               <span>{format(act.date, "d. MMM yyyy", { locale: nb })}</span>
                               <span>·</span>
                               <span>{act.createdBy}</span>
@@ -464,41 +505,171 @@ export default function DesignLabContactDetail() {
                   </div>
                 ))}
               </div>
-            </div>
+            )}
+
+            {/* TAB: Oppfølginger */}
+            {activeTab === "oppfolginger" && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-[13px] text-[#6B7280]">{contact.tasks.length} oppfølginger</span>
+                  <button className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[13px] font-medium border border-[rgba(0,0,0,0.08)] text-[#111827] hover:bg-[#FAFAFA] transition-colors">
+                    <Clock className="w-3.5 h-3.5 text-amber-500" />
+                    Ny oppfølging
+                  </button>
+                </div>
+                {contact.tasks.length > 0 ? (
+                  <div className="border border-[rgba(0,0,0,0.06)] rounded-lg divide-y divide-[rgba(0,0,0,0.04)]">
+                    {contact.tasks.map((task) => {
+                      const overdue = isPast(task.dueDate) && !isToday(task.dueDate);
+                      const today = isToday(task.dueDate);
+                      return (
+                        <div key={task.id} className="flex items-center gap-3 px-4 py-3 hover:bg-[rgba(0,0,0,0.015)] transition-colors cursor-pointer">
+                          <div className={`w-4 h-4 rounded border shrink-0 flex items-center justify-center ${
+                            task.done ? "bg-emerald-500 border-emerald-500" : "border-[rgba(0,0,0,0.15)]"
+                          }`}>
+                            {task.done && <Check className="w-2.5 h-2.5 text-white" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-medium text-[#111827]">{task.title}</p>
+                            <p className="text-[12px] text-[#9CA3AF]">{task.owner}</p>
+                          </div>
+                          <span className={`text-[13px] font-medium shrink-0 ${
+                            overdue ? "text-red-600" : today ? "text-amber-600" : "text-[#9CA3AF]"
+                          }`}>
+                            {format(task.dueDate, "d. MMM yyyy", { locale: nb })}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-[13px] text-[#9CA3AF] py-8 text-center">Ingen oppfølginger</p>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Right column — Konsulentmatch */}
-          <div>
-            <h2 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-[#9CA3AF] mb-3">Konsulentmatch</h2>
-            {contact.consultantMatches.length > 0 ? (
-              <div className="border border-[rgba(0,0,0,0.06)] rounded-lg divide-y divide-[rgba(0,0,0,0.04)]">
-                {contact.consultantMatches.map((cm) => (
-                  <div key={cm.name} className="px-4 py-3">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div>
-                        <p className="text-[14px] font-medium text-[#111827]">{cm.name}</p>
-                        <p className="text-[12px] text-[#6B7280]">{cm.title}</p>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <div className={`w-2.5 h-2.5 rounded-full ${
-                          cm.matchPct >= 90 ? "bg-emerald-500" : cm.matchPct >= 80 ? "bg-blue-500" : "bg-amber-500"
-                        }`} />
-                        <span className="text-[13px] font-semibold text-[#111827]">{cm.matchPct}%</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {cm.tags.map((tag) => (
-                        <span key={tag} className="rounded-full border border-[rgba(0,0,0,0.06)] bg-[#FAFAFA] px-2 py-0.5 text-[11px] text-[#6B7280] font-medium">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+          {/* RIGHT: Persistent sidebar */}
+          <div className="pl-6">
+            <div className="sticky top-6">
+              <h2 className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#9CA3AF] mb-3">Detaljer</h2>
+
+              {/* Signal */}
+              <KVRow label="Signal">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="inline-flex items-center gap-1.5 cursor-pointer group">
+                      <span className={`w-2 h-2 rounded-full ${SIGNAL_DOT[signal]}`} />
+                      <span className="text-[13px] text-[#111827]">{signal}</span>
+                      <ChevronDown className="w-3 h-3 text-[#9CA3AF] opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {SIGNALS.map((s) => (
+                      <DropdownMenuItem key={s} onClick={() => setSignal(s)}>
+                        <span className={`w-2 h-2 rounded-full ${SIGNAL_DOT[s]} mr-2`} />
+                        {s}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </KVRow>
+
+              {/* Eier */}
+              <KVRow label="Eier">
+                <span className="text-[13px] font-medium">{contact.eier}</span>
+              </KVRow>
+
+              {/* Selskap */}
+              <KVRow label="Selskap">
+                <button className="text-[13px] text-[#111827] hover:text-blue-600 transition-colors inline-flex items-center gap-1">
+                  {contact.company}
+                  <ExternalLink className="w-3 h-3 text-[#9CA3AF]" />
+                </button>
+              </KVRow>
+
+              {/* Avdeling */}
+              {contact.department && (
+                <KVRow label="Avdeling">
+                  <span>{contact.department}</span>
+                </KVRow>
+              )}
+
+              {/* Stilling */}
+              <KVRow label="Stilling">
+                <span>{contact.title}</span>
+              </KVRow>
+
+              {/* Sted */}
+              {contact.location && (
+                <KVRow label="Sted">
+                  <span>{contact.location}</span>
+                </KVRow>
+              )}
+
+              {/* ── KONTAKT ── */}
+              <div className="border-t border-[rgba(0,0,0,0.06)] mt-3 pt-1">
+                <KVRow label="Telefon">
+                  <a href={`tel:${contact.phone}`} className="text-[13px] text-[#111827] hover:text-blue-600 transition-colors font-mono text-[12px]">{contact.phone}</a>
+                </KVRow>
+                <KVRow label="E-post">
+                  <a href={`mailto:${contact.email}`} className="text-[13px] text-[#111827] hover:text-blue-600 transition-colors truncate block">{contact.email}</a>
+                </KVRow>
+                {contact.linkedin && (
+                  <KVRow label="LinkedIn">
+                    <a href="#" className="text-[13px] text-blue-600 hover:text-blue-700 transition-colors inline-flex items-center gap-1">
+                      Profil <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </KVRow>
+                )}
               </div>
-            ) : (
-              <p className="text-[13px] text-[#9CA3AF]">Ingen konsulentmatch tilgjengelig</p>
-            )}
+
+              {/* ── STATUS ── */}
+              <div className="border-t border-[rgba(0,0,0,0.06)] mt-3 pt-1">
+                <div className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#9CA3AF] mt-2.5 mb-2">Status</div>
+                <div className="space-y-2">
+                  <label className="flex items-center justify-between cursor-pointer group">
+                    <span className="text-[13px] text-[#111827]">CV-Epost</span>
+                    <button
+                      onClick={() => setCvEmail(!cvEmail)}
+                      className={`w-8 h-[18px] rounded-full transition-colors relative ${cvEmail ? "bg-emerald-500" : "bg-[#D1D5DB]"}`}
+                    >
+                      <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-transform ${cvEmail ? "left-[16px]" : "left-[2px]"}`} />
+                    </button>
+                  </label>
+                  <label className="flex items-center justify-between cursor-pointer group">
+                    <span className="text-[13px] text-[#111827]">Innkjøper</span>
+                    <button
+                      onClick={() => setCallList(!callList)}
+                      className={`w-8 h-[18px] rounded-full transition-colors relative ${callList ? "bg-emerald-500" : "bg-[#D1D5DB]"}`}
+                    >
+                      <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-transform ${callList ? "left-[16px]" : "left-[2px]"}`} />
+                    </button>
+                  </label>
+                  <label className="flex items-center justify-between cursor-pointer group">
+                    <span className="text-[13px] text-[#111827]">Ikke relevant</span>
+                    <button
+                      onClick={() => setIkkeRelevant(!ikkeRelevant)}
+                      className={`w-8 h-[18px] rounded-full transition-colors relative ${ikkeRelevant ? "bg-red-500" : "bg-[#D1D5DB]"}`}
+                    >
+                      <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-transform ${ikkeRelevant ? "left-[16px]" : "left-[2px]"}`} />
+                    </button>
+                  </label>
+                </div>
+              </div>
+
+              {/* ── TEKNISK DNA ── */}
+              {contact.teknologier.length > 0 && (
+                <div className="border-t border-[rgba(0,0,0,0.06)] mt-3 pt-1">
+                  <div className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#9CA3AF] mt-2.5 mb-2">Teknisk DNA</div>
+                  <div className="flex flex-wrap gap-1">
+                    {contact.teknologier.map((tag) => (
+                      <span key={tag} className="rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[11px] text-[#6B7280] font-medium">{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
