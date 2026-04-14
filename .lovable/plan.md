@@ -1,60 +1,71 @@
 
 
-# Plan: V8 Linear-styling for kontaktdetalj i Design Lab
+# Plan: Forespørsler-side i Design Lab V8-stil
 
-## Hva skal gjøres
+## Konsept
 
-Kontaktdetalj-panelet i Design Lab bruker i dag produksjonskomponenten `ContactCardContent` direkte, som har standard Tailwind/shadcn-styling. Vi skal reskinne dette panelet til å matche V8-designet (off-white, grafitt, dempet teal) via en CSS-overrideklasse som wrapperen rundt `ContactCardContent` setter.
+Forespørsler-siden redesignet i Linear-inspirert V8-estetikk: varm off-white bakgrunn, ultra-subtile bordere, dempet teal-aksent, og samme 3-sone layout som Design Lab Kontakter (sidebar + tabell + detaljpanel).
 
-## Tilnærming
+## Visuell beskrivelse
 
-Istedenfor å skrive en kopi av den 2348-linjer store `ContactCardContent`, legger vi en CSS-klasse `.dl-v8-theme` rundt panelet som overstyrer nøkkelvariabler og Tailwind-klasser. Dette sikrer at all funksjonalitet beholdes mens utseendet tilpasses.
+```text
+┌──────────┬─────────────────────────────────────────┬──────────────────────┐
+│ SIDEBAR  │  Forespørsler                    22     │  DETALJPANEL         │
+│ 216px    │                                         │  (resizable)         │
+│          │  TID    ○ Aktive  ○ Utgåtte  ○ Alle     │                      │
+│ Kontakter│  TYPE   ○ Alle  ○ Direkte  ○ Partner    │  Selskap: Equinor    │
+│ Selskaper│                                         │  Kontakt: Ola N.     │
+│▸Forespør.│  ┌─────────────────────────────────────┐│  Teknologier: ...    │
+│ Ansatte  │  │ Mottatt  Selskap    Kontakt  Type   ││  Pipeline: ●──●──○   │
+│ Konsul.  │  │─────────────────────────────────────││  Konsulenter sendt:  │
+│          │  │ 2d       Equinor   Ola N.   DIR    ││  ...                 │
+│          │  │ 5d       Telenor   Kari S.  VIA    ││                      │
+│          │  │ 1u       DNB       Per H.   DIR    ││                      │
+│          │  └─────────────────────────────────────┘│                      │
+└──────────┴─────────────────────────────────────────┴──────────────────────┘
+```
+
+## V8-tilpasninger sammenlignet med dagens design
+
+### Stat-kort (fjernes eller forenkles)
+- De fire fargede stat-kortene (blå/amber/emerald) erstattes med en enkel tekstlinje: "22 aktive · 4 uten konsulent · 3 i prosess · 1 vunnet" i `textMuted`-farge, uten fargede bakgrunner
+
+### Filter-chips
+- Samme horisontale pill-layout som Design Lab Kontakter
+- Aktiv chip: teal (`#01696F`) bakgrunn med hvit tekst
+- Inaktiv chip: `rgba(40,37,29,0.08)` border, `textMuted` farge
+- Ingen `bg-foreground` / `text-background` (produksjons-stil)
+
+### Tabell
+- Bakgrunn: `C.surface` (#FFFFFF) med `C.border` ramme
+- Kolonneheadere: 11px uppercase, `textMuted`, weight 600, tracking 0.06em
+- Rader: `divide-y` med `C.borderLight`, hover `C.hoverBg`
+- Aktiv rad: `C.activeBg` (teal 4% opacity)
+- Type-badges: desaturerte V8-farger (ikke mettede Tailwind-farger)
+- Pipeline-dots: dempede, nøytrale farger istedenfor sterke amber/blue/green
+- Teknologi-tags: `C.border` outline, ingen fylt bakgrunn
+
+### Detaljpanel
+- Integrert i ResizablePanelGroup (som kontakter)
+- Wrappet i `.dl-v8-theme` for automatisk reskinning av ForespørselSheet
+- Åpnes ved klikk på rad, ikke i Sheet/modal
+
+### Sidebar
+- Gjenbruker samme sidebar-komponent som DesignLabContacts med "Forespørsler" markert som aktiv
 
 ## Tekniske endringer
 
-### 1. `src/index.css` — Legg til `.dl-v8-theme` override-blokk
+### 1. Ny fil: `src/pages/DesignLabForesporsler.tsx`
+- Kopierer datalogikk fra `Foresporsler.tsx` (query, filtrering, sortering)
+- Erstatter all styling med V8 `C.*` konstanter (inline styles)
+- 3-sone layout: sidebar + tabell + resizable detaljpanel
+- Stat-linje istedenfor stat-kort
+- V8-stilede filter-chips, tabellrader og badges
+- ForespørselSheet wrappet i `.dl-v8-theme`
 
-Definerer CSS custom properties innenfor `.dl-v8-theme` som overstyrer `--background`, `--foreground`, `--primary`, `--border`, `--muted-foreground`, `--secondary` osv. til V8-paletten:
-- Background: `#F7F6F2`
-- Foreground/text: `#28251D`
-- Primary/accent: `#01696F`
-- Border: `rgba(40,37,29,0.08)`
-- Muted foreground: `#6B6B66`
-- Secondary bg: `rgba(40,37,29,0.04)`
-- Destructive: `#9a4a4a`
-- Success: `#4a9a6a`
-- Warning: `#9a7a2a`
+### 2. `src/App.tsx` — Ny rute
+- Legg til `/design-lab/foresporsler` i ProtectedMinimal-gruppen
 
-Tilleggs-CSS-regler innenfor `.dl-v8-theme` for:
-- Knapper (rounded-full pills) → mer dempede border og farger
-- Badges → V8-fargetoner istedenfor Tailwind-fargene
-- Overskrifter → Inter font, V8-vekter
-- Inputs/textareas → subtilere borders
-- Action buttons (Logg samtale, etc.) → V8 teal/dempede toner
-- Kategori-badges → dempede, desaturerte farger
-
-### 2. `src/pages/DesignLabContacts.tsx` — Wrap ContactCardContent
-
-Endring i linje ~518: Wrap `ContactCardContent` i en `<div className="dl-v8-theme">` slik at alle CSS-overridene aktiveres kun i Design Lab-konteksten.
-
-```tsx
-<div className="flex-1 overflow-y-auto px-6 py-5 dl-v8-theme">
-  <ContactCardContent contactId={sel.id} editable />
-</div>
-```
-
-### Hva endres visuelt
-- Bakgrunn: varm off-white istedenfor ren hvit
-- Tekst: dyp grafitt istedenfor svart
-- Borders: ultra-subtile istedenfor standard grå
-- Primærknapper: dempet teal istedenfor default primary
-- Kategori-badges: dempede pasteller istedenfor mettede Tailwind-farger
-- Action-knapper: V8-palett (teal for samtale, grafitt for møte)
-- Teknologi-tags: nøytral bakgrunn med V8-border
-- Seksjonsheadere: 11px uppercase, V8 muted color
-
-### Hva endres IKKE
-- All funksjonalitet (inline edit, dropdowns, mutations)
-- Produksjons-ContactCardContent påvirkes ikke
-- Data-henting og state management
+### 3. Sidebar-oppdatering i DesignLabContacts
+- Legg til "Forespørsler"-lenke i sidebar-navigasjonen (delt mellom begge Design Lab-sider)
 
