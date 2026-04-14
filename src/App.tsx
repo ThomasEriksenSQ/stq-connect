@@ -195,6 +195,14 @@ const App = () => (
                     </Suspense>
                   }
                 />
+                <Route
+                  path="design-lab/kontakter/:id"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <DesignLabContactDetail />
+                    </Suspense>
+                  }
+                />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
