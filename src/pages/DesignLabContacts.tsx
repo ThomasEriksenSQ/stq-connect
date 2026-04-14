@@ -1,37 +1,18 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  Search, ChevronDown, Check, ArrowUpDown, ChevronUp,
+  Search, ChevronDown, Check, ChevronUp,
   Phone, Mail, Linkedin, Copy, Users, X,
+  Building2, LayoutDashboard, Briefcase, Settings, LogOut,
+  UserPlus, Radar, TrendingUp, Globe,
 } from "lucide-react";
 import { differenceInDays, format } from "date-fns";
 import { nb } from "date-fns/locale";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { getEffectiveSignal, normalizeCategoryLabel } from "@/lib/categoryUtils";
 import { toast } from "sonner";
-
-/* ═══════════════════════════════════════════════════════════
-   DESIGN TOKENS — Linear-inspired warm palette
-   ═══════════════════════════════════════════════════════════ */
-
-const T = {
-  bg: "#F7F6F2",
-  surface: "#FFFFFF",
-  text: "#28251D",
-  muted: "#7A7974",
-  faint: "#BAB9B4",
-  teal: "#01696F",
-  tealBg: "rgba(1,105,111,0.08)",
-  border: "rgba(40,37,29,0.08)",
-  hoverRow: "#F3F0EC",
-  shadow: "0 1px 2px rgba(40,37,29,0.04)",
-  chipNeutralBg: "rgba(40,37,29,0.06)",
-  chipNeutralText: "#7A7974",
-  chipDarkText: "#5A5954",
-} as const;
+import { useAuth } from "@/hooks/useAuth";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
@@ -64,22 +45,41 @@ function mapToSignal(raw: string): Signal {
   return "Ukjent om behov";
 }
 
-function signalChipStyle(signal: Signal): React.CSSProperties {
-  if (signal === "Behov nå") return { background: T.tealBg, color: T.teal, border: "none" };
-  if (signal === "Ikke aktuelt") return { background: T.chipNeutralBg, color: T.chipDarkText, border: "none" };
-  return { background: T.chipNeutralBg, color: T.chipNeutralText, border: "none" };
-}
+/* ═══════════════════════════════════════════════════════════
+   NAV ITEMS
+   ═══════════════════════════════════════════════════════════ */
+
+const sidebarNav = [
+  { label: "Salgsagent", icon: LayoutDashboard, href: "/" },
+  { label: "Selskaper", icon: Building2, href: "/selskaper" },
+  { label: "Kontakter", icon: Users, href: "/design-lab/kontakter", active: true },
+  { label: "Forespørsler", icon: Briefcase, href: "/foresporsler" },
+];
+
+const sidebarStacq = [
+  { label: "STACQ Prisen", icon: TrendingUp, href: "/stacq/prisen" },
+  { label: "Markedsradar", icon: Radar, href: "/markedsradar" },
+  { label: "Ansatte", icon: Users, href: "/konsulenter/ansatte" },
+  { label: "Eksterne", icon: UserPlus, href: "/konsulenter/eksterne" },
+  { label: "stacq.no", icon: Globe, href: "/nettside-ai" },
+];
 
 /* ═══════════════════════════════════════════════════════════
    MAIN PAGE
    ═══════════════════════════════════════════════════════════ */
 
 export default function DesignLabContacts() {
+  const navigate = useNavigate();
+  const { signOut, user } = useAuth();
   const [search, setSearch] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("Alle");
   const [signalFilter, setSignalFilter] = useState("Alle");
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "last_activity", dir: "asc" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [ownerOpen, setOwnerOpen] = useState(false);
+  const [signalOpen, setSignalOpen] = useState(false);
+
+  const initials = user?.email ? user.email.split("@")[0].slice(0, 2).toUpperCase() : "??";
 
   // ── Fetch contacts ──
   const { data: rawContacts = [], isLoading } = useQuery({
@@ -142,7 +142,6 @@ export default function DesignLabContacts() {
     enabled: contactIds.length > 0,
   });
 
-  // ── Build enriched contacts ──
   const contacts = useMemo(() => {
     const now = new Date();
     return rawContacts.map((c) => {
@@ -155,24 +154,14 @@ export default function DesignLabContacts() {
       const company = (c as any).companies;
       const owner = (c as any).profiles;
       return {
-        id: c.id,
-        firstName: c.first_name,
-        lastName: c.last_name,
-        title: c.title || "",
-        email: c.email || "",
-        phone: c.phone || "",
-        linkedin: c.linkedin || "",
-        location: c.location || "",
-        company: company?.name || "",
-        companyId: company?.id || null,
-        signal,
-        eier: owner?.full_name || "Ikke tildelt",
-        cvEmail: c.cv_email,
-        callList: c.call_list,
+        id: c.id, firstName: c.first_name, lastName: c.last_name,
+        title: c.title || "", email: c.email || "", phone: c.phone || "",
+        linkedin: c.linkedin || "", location: c.location || "",
+        company: company?.name || "", companyId: company?.id || null,
+        signal, eier: owner?.full_name || "Ikke tildelt",
+        cvEmail: c.cv_email, callList: c.call_list,
         teknologier: c.teknologier || [],
-        sisteAktivitetDager: daysSince,
-        activities: acts,
-        tasks,
+        sisteAktivitetDager: daysSince, activities: acts, tasks,
       };
     });
   }, [rawContacts, activitiesMap, tasksMap]);
@@ -218,136 +207,244 @@ export default function DesignLabContacts() {
   const selectedContact = selectedId ? contacts.find((c) => c.id === selectedId) : null;
 
   return (
-    <div style={{ fontFamily: "Inter, -apple-system, system-ui, sans-serif", background: T.bg, minHeight: "100vh" }}>
-      <div className="pt-4 pb-8 px-6 max-w-[1800px] mx-auto">
+    <div className="flex h-screen overflow-hidden" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: "#F7F6F2" }}>
 
-        {/* ── Search bar (pill, centered) ── */}
-        <div className="flex justify-center mb-6">
+      {/* ═══ LEFT SIDEBAR ═══ */}
+      <aside className="flex flex-col w-[220px] shrink-0 border-r" style={{ borderColor: "rgba(40,37,29,0.08)", background: "#F7F6F2" }}>
+        {/* Logo */}
+        <div className="px-5 pt-6 pb-5">
+          <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-0.01em", color: "#28251D" }}>STACQ</span>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
+          <p className="px-2 pt-1 pb-2" style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "#BAB9B4" }}>
+            CRM
+          </p>
+          {sidebarNav.map((item) => (
+            <button
+              key={item.label}
+              onClick={() => navigate(item.href)}
+              className="flex items-center gap-2.5 w-full rounded-md px-2.5 py-[7px] transition-colors"
+              style={{
+                fontSize: 13, fontWeight: 500,
+                color: item.active ? "#01696F" : "#7A7974",
+                background: item.active ? "rgba(1,105,111,0.06)" : "transparent",
+                borderLeft: item.active ? "2px solid #01696F" : "2px solid transparent",
+              }}
+              onMouseEnter={(e) => { if (!item.active) e.currentTarget.style.background = "rgba(40,37,29,0.04)"; }}
+              onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = "transparent"; }}
+            >
+              <item.icon style={{ width: 16, height: 16, strokeWidth: 1.5 }} />
+              {item.label}
+            </button>
+          ))}
+
+          <p className="px-2 pt-5 pb-2" style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "#BAB9B4" }}>
+            STACQ
+          </p>
+          {sidebarStacq.map((item) => (
+            <button
+              key={item.label}
+              onClick={() => navigate(item.href)}
+              className="flex items-center gap-2.5 w-full rounded-md px-2.5 py-[7px] transition-colors"
+              style={{ fontSize: 13, fontWeight: 500, color: "#7A7974", borderLeft: "2px solid transparent" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(40,37,29,0.04)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+            >
+              <item.icon style={{ width: 16, height: 16, strokeWidth: 1.5 }} />
+              {item.label}
+            </button>
+          ))}
+        </nav>
+
+        {/* Footer */}
+        <div className="px-3 pb-4 pt-2 space-y-1" style={{ borderTop: "1px solid rgba(40,37,29,0.08)" }}>
+          <button
+            onClick={() => navigate("/innstillinger")}
+            className="flex items-center gap-2.5 w-full rounded-md px-2.5 py-[7px] transition-colors"
+            style={{ fontSize: 13, fontWeight: 500, color: "#7A7974" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(40,37,29,0.04)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+          >
+            <Settings style={{ width: 16, height: 16, strokeWidth: 1.5 }} />
+            Innstillinger
+          </button>
+          <button
+            onClick={signOut}
+            className="flex items-center gap-2.5 w-full rounded-md px-2.5 py-[7px] transition-colors"
+            style={{ fontSize: 13, fontWeight: 500, color: "#BAB9B4" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(40,37,29,0.04)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+          >
+            <LogOut style={{ width: 16, height: 16, strokeWidth: 1.5 }} />
+            Logg ut
+          </button>
+          {user && (
+            <div className="flex items-center gap-2 px-2.5 pt-2">
+              <div className="flex items-center justify-center rounded-full" style={{ width: 26, height: 26, background: "rgba(1,105,111,0.08)", color: "#01696F", fontSize: 10, fontWeight: 600 }}>
+                {initials}
+              </div>
+              <span className="truncate" style={{ fontSize: 12, color: "#BAB9B4" }}>{user.email}</span>
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {/* ═══ MAIN AREA ═══ */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Top bar with search */}
+        <header className="flex items-center justify-center px-6 shrink-0" style={{ height: 56, borderBottom: "1px solid rgba(40,37,29,0.08)" }}>
           <div className="relative w-full max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: T.faint }} />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#BAB9B4" }} />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Søk kontakter…"
+              className="w-full outline-none"
               style={{
-                height: 38, paddingLeft: 36, paddingRight: 16, borderRadius: 19,
-                border: `1px solid ${T.border}`, background: T.surface, color: T.text,
-                fontSize: 14, outline: "none", width: "100%",
+                height: 36, paddingLeft: 36, paddingRight: 16, borderRadius: 18,
+                border: "1px solid rgba(40,37,29,0.08)", background: "#FFFFFF", color: "#28251D", fontSize: 13,
               }}
             />
           </div>
-        </div>
+        </header>
 
-        {/* ── Page header ── */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-baseline gap-3">
-            <h1 style={{ fontSize: 22, fontWeight: 600, color: T.text }}>Kontakter</h1>
-            <span style={{ fontSize: 13, fontWeight: 500, color: T.faint }}>{filtered.length}</span>
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-6 pt-5 pb-8">
+          {/* Page header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-baseline gap-3">
+              <h1 style={{ fontSize: 22, fontWeight: 600, color: "#28251D" }}>Kontakter</h1>
+              <span style={{ fontSize: 14, fontWeight: 500, color: "#BAB9B4" }}>{filtered.length}</span>
+            </div>
+            <button
+              className="inline-flex items-center gap-1.5 rounded-md transition-colors"
+              style={{ height: 34, paddingLeft: 14, paddingRight: 14, fontSize: 13, fontWeight: 500, background: "#01696F", color: "#FFFFFF", borderRadius: 6 }}
+            >
+              + Legg til kontakt
+            </button>
           </div>
-        </div>
 
-        {/* ── Filters ── */}
-        <div className="flex items-center gap-2.5 mb-4">
-          <FilterPill label="Eier" value={ownerFilter} options={OWNERS} onChange={setOwnerFilter} />
-          <FilterPill label="Signal" value={signalFilter} options={["Alle", ...SIGNALS]} onChange={setSignalFilter} />
-        </div>
+          {/* Filters */}
+          <div className="flex items-center gap-2 mb-4 relative">
+            <FilterPill label="Eier" value={ownerFilter} options={OWNERS} open={ownerOpen} setOpen={setOwnerOpen} onChange={(v) => { setOwnerFilter(v); setOwnerOpen(false); }} />
+            <FilterPill label="Signal" value={signalFilter} options={["Alle", ...SIGNALS]} open={signalOpen} setOpen={setSignalOpen} onChange={(v) => { setSignalFilter(v); setSignalOpen(false); }} />
+          </div>
 
-        {/* ── Main content: list + detail panel ── */}
-        <div className="flex gap-0">
-          {/* ── Contact list ── */}
-          <div className={`flex-1 min-w-0 transition-all duration-200 ${selectedContact ? "mr-[1px]" : ""}`}>
-            <div style={{ border: `1px solid ${T.border}`, borderRadius: 8, overflow: "hidden", background: T.surface, boxShadow: T.shadow }}>
-              {/* Header row */}
-              <div
-                className="grid items-center"
-                style={{
-                  gridTemplateColumns: "minmax(0,1.8fr) minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.2fr) 80px",
-                  height: 36, borderBottom: `1px solid ${T.border}`, background: "rgba(40,37,29,0.02)",
-                }}
-              >
-                <ColHeader label="Navn" field="name" sort={sort} onSort={toggleSort} className="px-4" />
-                <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} className="px-3" />
-                <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} className="px-3" />
-                <ColHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} className="px-3" />
-                <ColHeader label="Siste" field="last_activity" sort={sort} onSort={toggleSort} className="px-3 justify-end" />
+          {/* List + Detail panel */}
+          <div className="flex gap-0">
+            {/* Contact list */}
+            <div className={`flex-1 min-w-0 transition-all duration-200`}>
+              <div className="rounded-lg overflow-hidden" style={{ border: "1px solid rgba(40,37,29,0.08)", background: "#FFFFFF", boxShadow: "0 1px 2px rgba(40,37,29,0.04)" }}>
+                {/* Header */}
+                <div
+                  className="grid items-center"
+                  style={{
+                    gridTemplateColumns: "minmax(0,1.8fr) minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.2fr) 72px",
+                    height: 36, borderBottom: "1px solid rgba(40,37,29,0.06)", background: "rgba(40,37,29,0.015)",
+                  }}
+                >
+                  <ColHeader label="Navn" field="name" sort={sort} onSort={toggleSort} className="px-4" />
+                  <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} className="px-3" />
+                  <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} className="px-3" />
+                  <ColHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} className="px-3" />
+                  <ColHeader label="Siste" field="last_activity" sort={sort} onSort={toggleSort} className="px-3 justify-end" />
+                </div>
+
+                {/* Rows */}
+                {isLoading ? (
+                  <p style={{ color: "#7A7974", textAlign: "center", padding: "48px 0", fontSize: 13 }}>Laster kontakter…</p>
+                ) : sorted.length === 0 ? (
+                  <p style={{ color: "#7A7974", textAlign: "center", padding: "48px 0", fontSize: 13 }}>Ingen kontakter funnet</p>
+                ) : (
+                  sorted.map((contact) => {
+                    const isActive = selectedId === contact.id;
+                    return (
+                      <div
+                        key={contact.id}
+                        onClick={() => setSelectedId(isActive ? null : contact.id)}
+                        className="grid items-center cursor-pointer transition-colors duration-75"
+                        style={{
+                          gridTemplateColumns: "minmax(0,1.8fr) minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.2fr) 72px",
+                          height: 42,
+                          borderBottom: "1px solid rgba(40,37,29,0.05)",
+                          borderLeft: isActive ? "2px solid #01696F" : "2px solid transparent",
+                          background: isActive ? "rgba(1,105,111,0.04)" : undefined,
+                        }}
+                        onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = "#F3F0EC"; }}
+                        onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = ""; }}
+                      >
+                        <div className="px-4 truncate">
+                          <span style={{ fontSize: 13, fontWeight: 500, color: "#28251D" }}>
+                            {contact.firstName} {contact.lastName}
+                          </span>
+                        </div>
+                        <div className="px-3">
+                          <SignalChip signal={contact.signal} />
+                        </div>
+                        <div className="px-3 truncate">
+                          <span style={{ fontSize: 13, color: "#7A7974" }}>{contact.company}</span>
+                        </div>
+                        <div className="px-3 truncate">
+                          <span style={{ fontSize: 13, color: "#7A7974" }}>{contact.title}</span>
+                        </div>
+                        <div className="px-3 text-right">
+                          <span style={{ fontSize: 13, color: "#BAB9B4" }}>
+                            {contact.sisteAktivitetDager < 999 ? relTime(contact.sisteAktivitetDager) : "—"}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
 
-              {/* Rows */}
-              {isLoading ? (
-                <p style={{ color: T.muted, textAlign: "center", padding: "48px 0", fontSize: 14 }}>Laster kontakter…</p>
-              ) : sorted.length === 0 ? (
-                <p style={{ color: T.muted, textAlign: "center", padding: "48px 0", fontSize: 14 }}>Ingen kontakter funnet</p>
-              ) : (
-                sorted.map((contact) => {
-                  const isActive = selectedId === contact.id;
-                  return (
-                    <div
-                      key={contact.id}
-                      onClick={() => setSelectedId(isActive ? null : contact.id)}
-                      className="grid items-center cursor-pointer transition-colors duration-75"
-                      style={{
-                        gridTemplateColumns: "minmax(0,1.8fr) minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.2fr) 80px",
-                        height: 44,
-                        borderBottom: `1px solid ${T.border}`,
-                        borderLeft: isActive ? `2px solid ${T.teal}` : "2px solid transparent",
-                        background: isActive ? T.tealBg : undefined,
-                      }}
-                      onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = T.hoverRow; }}
-                      onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = ""; }}
-                    >
-                      <div className="px-4 truncate">
-                        <span style={{ fontSize: 13, fontWeight: 500, color: T.text }}>
-                          {contact.firstName} {contact.lastName}
-                        </span>
-                      </div>
-                      <div className="px-3">
-                        <span
-                          className="inline-flex items-center rounded-full px-2 py-0.5"
-                          style={{ fontSize: 11, fontWeight: 600, ...signalChipStyle(contact.signal) }}
-                        >
-                          {contact.signal}
-                        </span>
-                      </div>
-                      <div className="px-3 truncate">
-                        <span style={{ fontSize: 13, color: T.muted }}>{contact.company}</span>
-                      </div>
-                      <div className="px-3 truncate">
-                        <span style={{ fontSize: 13, color: T.muted }}>{contact.title}</span>
-                      </div>
-                      <div className="px-3 text-right">
-                        <span style={{ fontSize: 13, color: T.faint }}>
-                          {contact.sisteAktivitetDager < 999 ? relTime(contact.sisteAktivitetDager) : "—"}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
+              {/* Empty state */}
+              {!selectedContact && !isLoading && sorted.length > 0 && (
+                <div className="flex flex-col items-center justify-center py-14">
+                  <Users className="w-7 h-7 mb-2" style={{ color: "#BAB9B4" }} />
+                  <p style={{ fontSize: 13, color: "#7A7974" }}>Velg en kontakt for å se detaljer</p>
+                </div>
               )}
             </div>
-          </div>
 
-          {/* ── Detail panel (sliding) ── */}
-          <div
-            className="overflow-hidden transition-all duration-200 ease-in-out"
-            style={{
-              width: selectedContact ? 360 : 0,
-              minWidth: selectedContact ? 360 : 0,
-              opacity: selectedContact ? 1 : 0,
-            }}
-          >
-            {selectedContact && <DetailPanel contact={selectedContact} onClose={() => setSelectedId(null)} />}
+            {/* Detail panel */}
+            <div
+              className="overflow-hidden transition-all duration-200 ease-in-out shrink-0"
+              style={{
+                width: selectedContact ? 340 : 0,
+                minWidth: selectedContact ? 340 : 0,
+                opacity: selectedContact ? 1 : 0,
+                marginLeft: selectedContact ? 16 : 0,
+              }}
+            >
+              {selectedContact && <DetailPanel contact={selectedContact} onClose={() => setSelectedId(null)} />}
+            </div>
           </div>
         </div>
-
-        {/* ── Empty state when nothing selected ── */}
-        {!selectedContact && !isLoading && sorted.length > 0 && (
-          <div className="flex flex-col items-center justify-center py-16">
-            <Users className="w-8 h-8 mb-3" style={{ color: T.faint }} />
-            <p style={{ fontSize: 14, color: T.muted }}>Velg en kontakt for å se detaljer</p>
-          </div>
-        )}
       </div>
     </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SIGNAL CHIP
+   ═══════════════════════════════════════════════════════════ */
+
+function SignalChip({ signal }: { signal: Signal }) {
+  const isTeal = signal === "Behov nå";
+  return (
+    <span
+      className="inline-flex items-center rounded-full px-2 py-0.5"
+      style={{
+        fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
+        background: isTeal ? "rgba(1,105,111,0.08)" : "rgba(40,37,29,0.06)",
+        color: isTeal ? "#01696F" : signal === "Ikke aktuelt" ? "#5A5954" : "#7A7974",
+      }}
+    >
+      {signal}
+    </span>
   );
 }
 
@@ -374,143 +471,108 @@ function DetailPanel({ contact, onClose }: {
 
   return (
     <div
-      className="ml-4 overflow-y-auto"
+      className="overflow-y-auto rounded-lg"
       style={{
-        width: 360, background: T.surface, border: `1px solid ${T.border}`,
-        borderRadius: 8, boxShadow: T.shadow, maxHeight: "calc(100vh - 200px)",
+        width: 340, background: "#FFFFFF", border: "1px solid rgba(40,37,29,0.08)",
+        boxShadow: "0 1px 2px rgba(40,37,29,0.04)", maxHeight: "calc(100vh - 120px)",
       }}
     >
       {/* Header */}
       <div className="flex items-start justify-between p-5 pb-0">
         <div className="flex items-center gap-3">
           <div
-            className="flex items-center justify-center rounded-full"
-            style={{ width: 48, height: 48, background: T.tealBg, color: T.teal, fontSize: 16, fontWeight: 600 }}
+            className="flex items-center justify-center rounded-full shrink-0"
+            style={{ width: 44, height: 44, background: "rgba(1,105,111,0.08)", color: "#01696F", fontSize: 14, fontWeight: 600 }}
           >
             {initials}
           </div>
-          <div>
-            <h2 style={{ fontSize: 16, fontWeight: 600, color: T.text, lineHeight: 1.3 }}>
+          <div className="min-w-0">
+            <h2 className="truncate" style={{ fontSize: 15, fontWeight: 600, color: "#28251D", lineHeight: 1.3 }}>
               {contact.firstName} {contact.lastName}
             </h2>
-            <p style={{ fontSize: 13, color: T.muted }}>
+            <p className="truncate" style={{ fontSize: 12, color: "#7A7974" }}>
               {contact.title}{contact.title && contact.company ? " · " : ""}{contact.company}
             </p>
           </div>
         </div>
-        <button onClick={onClose} className="p-1 rounded hover:bg-black/5 transition-colors">
-          <X className="w-4 h-4" style={{ color: T.muted }} />
+        <button onClick={onClose} className="p-1 rounded hover:bg-black/5 transition-colors shrink-0">
+          <X className="w-4 h-4" style={{ color: "#7A7974" }} />
         </button>
       </div>
 
-      {/* Signal chip */}
+      {/* Signal */}
       <div className="px-5 pt-3">
-        <span
-          className="inline-flex items-center rounded-full px-2.5 py-0.5"
-          style={{ fontSize: 11, fontWeight: 600, ...signalChipStyle(contact.signal) }}
-        >
-          {contact.signal}
-        </span>
+        <SignalChip signal={contact.signal} />
       </div>
 
-      {/* Action icons */}
-      <div className="flex items-center gap-1.5 px-5 pt-3 pb-4" style={{ borderBottom: `1px solid ${T.border}` }}>
-        {contact.phone && (
-          <ActionIcon icon={<Phone className="w-3.5 h-3.5" />} label="Ring" onClick={() => window.open(`tel:${contact.phone}`)} />
-        )}
-        {contact.email && (
-          <ActionIcon icon={<Mail className="w-3.5 h-3.5" />} label="E-post" onClick={() => window.open(`mailto:${contact.email}`)} />
-        )}
-        {contact.linkedin && (
-          <ActionIcon icon={<Linkedin className="w-3.5 h-3.5" />} label="LinkedIn" onClick={() => window.open(contact.linkedin, "_blank")} />
-        )}
-        {contact.email && (
-          <ActionIcon
-            icon={<Copy className="w-3.5 h-3.5" />}
-            label="Kopier e-post"
-            onClick={() => { navigator.clipboard.writeText(contact.email); toast.success("E-post kopiert"); }}
-          />
-        )}
+      {/* Actions */}
+      <div className="flex items-center gap-1.5 px-5 pt-3 pb-4" style={{ borderBottom: "1px solid rgba(40,37,29,0.08)" }}>
+        {contact.phone && <ActionIcon icon={<Phone className="w-3.5 h-3.5" />} label="Ring" onClick={() => window.open(`tel:${contact.phone}`)} />}
+        {contact.email && <ActionIcon icon={<Mail className="w-3.5 h-3.5" />} label="E-post" onClick={() => window.open(`mailto:${contact.email}`)} />}
+        {contact.linkedin && <ActionIcon icon={<Linkedin className="w-3.5 h-3.5" />} label="LinkedIn" onClick={() => window.open(contact.linkedin, "_blank")} />}
+        {contact.email && <ActionIcon icon={<Copy className="w-3.5 h-3.5" />} label="Kopier" onClick={() => { navigator.clipboard.writeText(contact.email); toast.success("E-post kopiert"); }} />}
       </div>
 
       {/* Next step */}
       {nextTask && (
-        <div className="px-5 py-3" style={{ borderBottom: `1px solid ${T.border}` }}>
-          <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: T.faint, marginBottom: 4 }}>
-            Neste steg
-          </p>
-          <p style={{ fontSize: 13, fontWeight: 500, color: T.text }}>{nextTask.title}</p>
+        <Section title="Neste steg">
+          <p style={{ fontSize: 13, fontWeight: 500, color: "#28251D" }}>{nextTask.title}</p>
           {nextTask.due_date && (
-            <p style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>
+            <p style={{ fontSize: 12, color: "#7A7974", marginTop: 2 }}>
               {format(new Date(nextTask.due_date), "d. MMM yyyy", { locale: nb })}
             </p>
           )}
-        </div>
+        </Section>
       )}
 
       {/* Contact info */}
-      <div className="px-5 py-3" style={{ borderBottom: `1px solid ${T.border}` }}>
-        <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: T.faint, marginBottom: 8 }}>
-          Kontakt
-        </p>
+      <Section title="Kontakt">
         {contact.email && <InfoRow label="E-post" value={contact.email} />}
         {contact.phone && <InfoRow label="Telefon" value={contact.phone} />}
         {contact.location && <InfoRow label="Sted" value={contact.location} />}
         <InfoRow label="Eier" value={contact.eier} />
-      </div>
+      </Section>
 
       {/* Status */}
-      <div className="px-5 py-3" style={{ borderBottom: `1px solid ${T.border}` }}>
-        <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: T.faint, marginBottom: 8 }}>
-          Status
-        </p>
-        <div className="flex items-center gap-3">
+      <Section title="Status">
+        <div className="flex items-center gap-2.5">
           <StatusTag label="CV-Epost" active={contact.cvEmail} />
           <StatusTag label="Innkjøper" active={contact.callList} />
         </div>
-      </div>
+      </Section>
 
-      {/* Tech tags */}
+      {/* Tech */}
       {contact.teknologier.length > 0 && (
-        <div className="px-5 py-3" style={{ borderBottom: `1px solid ${T.border}` }}>
-          <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: T.faint, marginBottom: 8 }}>
-            Teknisk DNA
-          </p>
+        <Section title="Teknisk DNA">
           <div className="flex flex-wrap gap-1.5">
             {contact.teknologier.map((t: string) => (
-              <span
-                key={t}
-                className="rounded-full px-2 py-0.5"
-                style={{ fontSize: 11, fontWeight: 500, background: T.chipNeutralBg, color: T.muted }}
-              >
+              <span key={t} className="rounded-full px-2 py-0.5" style={{ fontSize: 11, fontWeight: 500, background: "rgba(40,37,29,0.06)", color: "#7A7974" }}>
                 {t}
               </span>
             ))}
           </div>
-        </div>
+        </Section>
       )}
 
       {/* Activities */}
       <div className="px-5 py-3">
-        <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: T.faint, marginBottom: 8 }}>
+        <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "#BAB9B4", marginBottom: 8 }}>
           Aktivitet
         </p>
         {recentActivities.length === 0 ? (
-          <p style={{ fontSize: 13, color: T.faint }}>Ingen aktiviteter</p>
+          <p style={{ fontSize: 13, color: "#BAB9B4" }}>Ingen aktiviteter</p>
         ) : (
           <div className="flex flex-col gap-3">
             {recentActivities.map((act: any) => (
               <div key={act.id}>
                 <div className="flex items-baseline justify-between gap-2">
-                  <p style={{ fontSize: 13, fontWeight: 500, color: T.text }} className="truncate flex-1">
-                    {act.subject}
-                  </p>
-                  <span style={{ fontSize: 11, color: T.faint, whiteSpace: "nowrap" }}>
+                  <p className="truncate flex-1" style={{ fontSize: 13, fontWeight: 500, color: "#28251D" }}>{act.subject}</p>
+                  <span style={{ fontSize: 11, color: "#BAB9B4", whiteSpace: "nowrap" }}>
                     {format(new Date(act.created_at), "d. MMM", { locale: nb })}
                   </span>
                 </div>
                 {act.description && (
-                  <p style={{ fontSize: 12, color: T.muted, marginTop: 2 }} className="line-clamp-2">
+                  <p className="line-clamp-2" style={{ fontSize: 12, color: "#7A7974", marginTop: 2 }}>
                     {act.description.replace(/^\[[^\]]*\]\n?/, "")}
                   </p>
                 )}
@@ -527,13 +589,24 @@ function DetailPanel({ contact, onClose }: {
    SUB-COMPONENTS
    ═══════════════════════════════════════════════════════════ */
 
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="px-5 py-3" style={{ borderBottom: "1px solid rgba(40,37,29,0.08)" }}>
+      <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "#BAB9B4", marginBottom: 8 }}>
+        {title}
+      </p>
+      {children}
+    </div>
+  );
+}
+
 function ActionIcon({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       title={label}
       className="flex items-center justify-center rounded-md transition-colors hover:bg-black/5"
-      style={{ width: 32, height: 32, color: T.muted }}
+      style={{ width: 32, height: 32, color: "#7A7974" }}
     >
       {icon}
     </button>
@@ -543,8 +616,8 @@ function ActionIcon({ icon, label, onClick }: { icon: React.ReactNode; label: st
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between py-1">
-      <span style={{ fontSize: 12, color: T.muted }}>{label}</span>
-      <span style={{ fontSize: 13, color: T.text, fontWeight: 400 }}>{value}</span>
+      <span style={{ fontSize: 12, color: "#7A7974" }}>{label}</span>
+      <span style={{ fontSize: 13, color: "#28251D" }}>{value}</span>
     </div>
   );
 }
@@ -555,8 +628,8 @@ function StatusTag({ label, active }: { label: string; active: boolean }) {
       className="inline-flex items-center rounded-full px-2.5 py-0.5"
       style={{
         fontSize: 11, fontWeight: 500,
-        background: active ? T.tealBg : T.chipNeutralBg,
-        color: active ? T.teal : T.faint,
+        background: active ? "rgba(1,105,111,0.08)" : "rgba(40,37,29,0.06)",
+        color: active ? "#01696F" : "#BAB9B4",
       }}
     >
       {active ? "✓" : "✗"} {label}
@@ -564,35 +637,46 @@ function StatusTag({ label, active }: { label: string; active: boolean }) {
   );
 }
 
-function FilterPill({ label, value, options, onChange }: {
-  label: string; value: string; options: string[]; onChange: (v: string) => void;
+function FilterPill({ label, value, options, open, setOpen, onChange }: {
+  label: string; value: string; options: string[]; open: boolean; setOpen: (v: boolean) => void; onChange: (v: string) => void;
 }) {
   const active = value !== "Alle";
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          className="inline-flex items-center gap-1.5 rounded-md transition-colors"
-          style={{
-            height: 28, paddingLeft: 10, paddingRight: 8, fontSize: 12, fontWeight: 500,
-            border: `1px solid ${active ? T.text : T.border}`,
-            background: active ? T.text : T.surface,
-            color: active ? T.bg : T.muted,
-          }}
-        >
-          {active ? `${label}: ${value}` : label}
-          <ChevronDown className="w-3 h-3" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="min-w-[200px]">
-        {options.map((opt) => (
-          <DropdownMenuItem key={opt} onClick={() => onChange(opt)} className="flex items-center justify-between">
-            <span style={{ fontSize: 13 }}>{opt}</span>
-            {value === opt && <Check className="w-3.5 h-3.5" />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="inline-flex items-center gap-1.5 rounded-md transition-colors"
+        style={{
+          height: 28, paddingLeft: 10, paddingRight: 8, fontSize: 12, fontWeight: 500,
+          border: `1px solid ${active ? "#28251D" : "rgba(40,37,29,0.08)"}`,
+          background: active ? "#28251D" : "#FFFFFF",
+          color: active ? "#F7F6F2" : "#7A7974",
+        }}
+      >
+        {active ? `${label}: ${value}` : label}
+        <ChevronDown className="w-3 h-3" />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute top-full left-0 mt-1 w-52 rounded-lg overflow-hidden z-50" style={{ background: "#FFFFFF", border: "1px solid rgba(40,37,29,0.08)", boxShadow: "0 4px 12px rgba(40,37,29,0.08)" }}>
+            {options.map((opt) => (
+              <button
+                key={opt}
+                onClick={() => onChange(opt)}
+                className="flex items-center justify-between w-full px-3 py-2 transition-colors"
+                style={{ fontSize: 13, color: "#28251D" }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "#F3F0EC"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}
+              >
+                {opt}
+                {value === opt && <Check className="w-3.5 h-3.5" style={{ color: "#01696F" }} />}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -607,7 +691,7 @@ function ColHeader({ label, field, sort, onSort, className }: {
       className={`flex items-center gap-1 transition-colors ${className || ""}`}
       style={{
         fontSize: 11, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.06em",
-        color: active ? T.text : T.muted,
+        color: active ? "#28251D" : "#7A7974",
       }}
     >
       {label}
