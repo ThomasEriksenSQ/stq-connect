@@ -462,12 +462,27 @@ export default function DesignLabContacts() {
           {/* Detail panel */}
           {sel && (
             <div
-              className="shrink-0 overflow-y-auto"
+              className="shrink-0 overflow-y-auto flex flex-col"
               style={{
-                width: 520, borderLeft: `1px solid ${C.border}`, background: C.surface,
+                width: "55%", maxWidth: 900, minWidth: 500,
+                borderLeft: `1px solid ${C.border}`, background: C.surface,
               }}
             >
-              <DetailPanel contact={sel} foresporsler={foresporslerForContact} onClose={() => setSelectedId(null)} onNavigate={navigate} />
+              {/* Linear-styled header */}
+              <div className="shrink-0 flex items-center justify-between px-6" style={{ height: 48, borderBottom: `1px solid ${C.border}` }}>
+                <div className="flex items-center gap-2">
+                  <h2 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{sel.firstName} {sel.lastName}</h2>
+                  <SignalChip signal={sel.signal} size="md" />
+                </div>
+                <div className="flex items-center gap-0.5">
+                  <IconBtn icon={<ArrowUpRight style={{ width: 15, height: 15 }} />} title="Åpne i CRM" onClick={() => navigate(`/kontakter/${sel.id}`)} />
+                  <IconBtn icon={<X style={{ width: 15, height: 15 }} />} title="Lukk" onClick={() => setSelectedId(null)} />
+                </div>
+              </div>
+              {/* Full ContactCardContent */}
+              <div className="flex-1 overflow-y-auto px-6 py-5">
+                <ContactCardContent contactId={sel.id} editable />
+              </div>
             </div>
           )}
         </div>
