@@ -1,83 +1,74 @@
 
 
-# Plan: Linear-strategi for ultrawide — faste kolonnebredder + fleksibel navnekolonne
+# Plan: Heat score, fargede signalbadges og UX-forbedringer i Design Lab Kontakter
 
-## Hva endres
+## Oversikt
 
-Fjern `maxWidth: 1100px` fra Forespørsler og STACQ Prisen. Erstatt med Linears faktiske strategi: alle kolonner unntatt den primære (navn/selskap) har **faste pikselbredder**. Den primære kolonnen bruker `minmax(0, 1fr)` og absorberer all tilgjengelig plass. På ultrawide strekkes bare navnekolonnen — resten holder seg kompakt.
+Legg til heat score-beregning og visning, fargekodede signalbadges, innkjøper/CV-badges i kontaktlisten, og implementer UX-forbedringene fra GPT/Claude-feedbacken — alt innenfor V8-designspråket.
 
-## Strategi per side
+## Endringer
 
-### Kontakter (DesignLabContacts.tsx)
-Allerede bra — bruker `minmax(0,2fr)` på Navn som fleksibel kolonne. Juster til `minmax(0,1fr)` og gi de øvrige kolonnene faste bredder:
+### 1. Beregn heat score per kontakt
 
-**Full tabell (uten detaljpanel):**
-| Kolonne | Bredde |
-|---------|--------|
-| Navn | `minmax(0, 1fr)` — fleksibel |
-| Signal | `120px` |
-| Selskap | `200px` |
-| Stilling | `180px` |
-| Eier | `160px` |
-| Siste | `64px` |
+I `contacts`-useMemo: importér `getHeatResult` og `getTaskStatus` fra `src/lib/heatScore.ts`. For hver kontakt beregn heat result basert på eksisterende data (signal, callList, daysSince, tasks). Legg til `heatResult` (temperature, score, reasons) på hvert kontakt-objekt.
 
-**Kompakt tabell (med detaljpanel):**
-| Kolonne | Bredde |
-|---------|--------|
-| Navn | `minmax(0, 1fr)` |
-| Signal | `100px` |
-| Selskap | `160px` |
-| Siste | `56px` |
+### 2. Fargekodede signalbadges i V8-stil
 
-### Forespørsler (DesignLabForesporsler.tsx)
-Fjern `maxWidth: 1100px`. Bruk faste kolonnebredder:
+Oppdater `SignalChip`-komponenten til å bruke desaturerte V8-farger per signal:
+- **Behov nå**: teal bg (nåværende) — beholdes
+- **Fremtidig**: dempet blå (rgba(59,130,246,0.08) + #3B6FA0)
+- **Kanskje**: dempet amber (rgba(180,140,40,0.08) + #8A7A3A)
+- **Ukjent**: nøytral grå (nåværende) — beholdes
+- **Ikke aktuelt**: dempet rød (rgba(154,74,74,0.08) + #8a5a5a)
 
-**Full tabell:**
-| Kolonne | Bredde |
-|---------|--------|
-| Mottatt | `80px` |
-| Selskap | `minmax(0, 1fr)` — fleksibel |
-| Kontakt | `180px` |
-| Type | `70px` |
-| Teknologier | `200px` |
-| Pipeline | `140px` |
+### 3. Heat-badge i kontaktlisten
 
-**Kompakt (med detaljpanel):**
-| Kolonne | Bredde |
-|---------|--------|
-| Mottatt | `80px` |
-| Selskap | `minmax(0, 1fr)` |
-| Kontakt | `140px` |
-| Type | `56px` |
+Erstatt «Siste»-kolonnen med en kombinert «Varme»-kolonne som viser temperatur-badge:
+- **Hett**: liten rød/korall pill
+- **Lovende**: amber pill  
+- **Mulig**: nøytral pill
+- **Sovende**: ghost-grå pill
 
-### STACQ Prisen (DesignLabStacqPrisen.tsx)
-Fjern `maxWidth: 1100px`. Chart beholder max-bredde (det er innhold, ikke tabell). Tabellen bruker faste kolonnebredder:
+Beholder «Siste»-info som tooltip på badgen.
 
-| Kolonne | Bredde |
-|---------|--------|
-| Konsulent | `minmax(0, 1fr)` — fleksibel |
-| Kunde | `200px` |
-| Type | `80px` |
-| Utpris | `80px` |
-| Ekstra | `80px` |
-| STACQ Pris | `100px` |
-| % | `56px` |
-| Status | `80px` |
+### 4. Innkjøper og CV-indikatorer i listen
 
-Chart-containeren beholder `maxWidth: 900px` for lesbarhet (Linear gjør dette for innholdsblokker).
+Legg til små ikoner/dots mellom navn og signal i tabellraden:
+- 🛒 Innkjøper: liten teal dot
+- 📧 CV: liten dot i annen farge
+
+Disse vises som kompakte 6px dots (ikke badges) for å holde listen ren.
+
+### 5. Forbedret detaljpanel-header (Claude/GPT-feedback)
+
+Oppdater headeren i detaljpanelet (linje 510-519):
+- Større navn (16px bold i stedet for 14px)
+- Undertekst med selskap · stilling · sted på én linje
+- Tags-rad under: signal-badge, innkjøper-pill, CV-pill
+- Heat score-visning med numerisk verdi og reasons-breakdown
+
+### 6. Kontaktlisten: vis firma under navn (GPT punkt 3)
+
+I tabellraden: vis selskapsnavn som sekundær tekst (12px, muted) under kontaktnavnet, i stedet for egen kolonne. Dette frigjør plass til heat-kolonnen. Full-bredde tabellen beholder selskapskolonnen, men kompakt-modus (med detaljpanel) bruker navn+firma i én celle.
+
+### 7. Sortering på varme
+
+Legg til `heat` som nytt SortField. Sorter primært på tier (ASC), sekundært på score (DESC). Gjør dette til default sortering.
 
 ## Tekniske endringer
 
-### 1. `DesignLabContacts.tsx`
-- Endre `gridTemplateColumns` i full- og kompakt-modus til faste px + `minmax(0,1fr)` for navnekolonnen
-- 4 steder: header + rader × 2 varianter
+### `src/pages/DesignLabContacts.tsx`
+- Importér `getHeatResult, getTaskStatus, calcHeatScore` fra `@/lib/heatScore`
+- Utvid contact-mapping med `heatResult`
+- Oppdater `SortField` type med `"heat"`
+- Endre default sort til `{ field: "heat", dir: "asc" }`
+- Oppdater `SignalChip` med fargekart per signal
+- Ny `HeatBadge`-komponent for temperatur-pill i V8-farger (desaturerte)
+- Oppdater grid-layout for full og kompakt modus:
+  - Kompakt: `Navn+firma | Signal | Varme` 
+  - Full: `Navn | Signal | Selskap | Stilling | Eier | Varme`
+- Oppdater detaljpanel-header med større navn, metadata-linje og tags
+- Legg til heat score-seksjon i detaljpanel-headeren
 
-### 2. `DesignLabForesporsler.tsx`
-- Fjern `maxWidth: 1100, margin: "0 auto"` fra wrapperen
-- Endre `gridTemplateColumns` i `TableHeader` og `ForespRow` til faste px + `minmax(0,1fr)` for selskapskolonnen
-
-### 3. `DesignLabStacqPrisen.tsx`
-- Fjern `maxWidth: 1100, margin: "0 auto"` wrapperen
-- Endre `gridTemplateColumns` i header, rader og total-rad til faste px + `minmax(0,1fr)` for konsulentkolonnen
-- Behold `maxWidth: 900px` kun på chart-blokken
+Ingen andre filer endres. All eksisterende query-logikk beholdes uendret.
 
