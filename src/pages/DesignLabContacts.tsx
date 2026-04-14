@@ -1,73 +1,41 @@
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, ChevronDown, ChevronUp, Check, Radio, ArrowUpDown } from "lucide-react";
-import { subDays, subMonths } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Search, ChevronDown, ChevronUp, Check, ArrowUpDown } from "lucide-react";
+import { differenceInDays } from "date-fns";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  getEffectiveSignal,
+  normalizeCategoryLabel,
+  getSignalBadge,
+} from "@/lib/categoryUtils";
 
 /* ═══════════════════════════════════════════════════════════
-   TYPES & DATA
+   TYPES & CONSTANTS
    ═══════════════════════════════════════════════════════════ */
 
-type Signal = "Behov nå" | "Fremtidig behov" | "Har kanskje behov" | "Ukjent om behov" | "Aldri aktuelt";
-
-const SIGNAL_DOT: Record<Signal, string> = {
-  "Behov nå": "bg-emerald-500",
-  "Fremtidig behov": "bg-blue-500",
-  "Har kanskje behov": "bg-amber-500",
-  "Ukjent om behov": "bg-gray-400",
-  "Aldri aktuelt": "bg-red-500",
-};
+type Signal = "Behov nå" | "Får fremtidig behov" | "Får kanskje behov" | "Ukjent om behov" | "Ikke aktuelt";
 
 const SIGNAL_BADGE: Record<Signal, string> = {
   "Behov nå": "bg-emerald-100 text-emerald-800 border-emerald-200",
-  "Fremtidig behov": "bg-blue-100 text-blue-800 border-blue-200",
-  "Har kanskje behov": "bg-amber-100 text-amber-800 border-amber-200",
+  "Får fremtidig behov": "bg-blue-100 text-blue-800 border-blue-200",
+  "Får kanskje behov": "bg-amber-100 text-amber-800 border-amber-200",
   "Ukjent om behov": "bg-gray-100 text-gray-600 border-gray-200",
-  "Aldri aktuelt": "bg-red-50 text-red-700 border-red-200",
+  "Ikke aktuelt": "bg-red-50 text-red-700 border-red-200",
 };
 
 const SIGNAL_ORDER: Record<Signal, number> = {
-  "Behov nå": 0, "Fremtidig behov": 1, "Har kanskje behov": 2, "Ukjent om behov": 3, "Aldri aktuelt": 4,
+  "Behov nå": 0, "Får fremtidig behov": 1, "Får kanskje behov": 2, "Ukjent om behov": 3, "Ikke aktuelt": 4,
 };
 
-interface Contact {
-  id: string;
-  firstName: string;
-  lastName: string;
-  title: string;
-  company: string;
-  signal: Signal;
-  eier: string;
-  cvEmail: boolean;
-  callList: boolean;
-  hasMarkedsradar: boolean;
-  sisteAktivitetDager: number;
-}
-
-const now = new Date();
-
-const CONTACTS: Contact[] = [
-  { id: "1", firstName: "Erik", lastName: "Solberg", title: "Tech Lead", company: "Aker Solutions", signal: "Behov nå", eier: "Jon Richard Nygaard", cvEmail: true, callList: false, hasMarkedsradar: true, sisteAktivitetDager: 1 },
-  { id: "2", firstName: "Kari", lastName: "Hansen", title: "Engineering Manager", company: "DNB", signal: "Behov nå", eier: "Thomas Eriksen", cvEmail: true, callList: true, hasMarkedsradar: false, sisteAktivitetDager: 4 },
-  { id: "3", firstName: "Silje", lastName: "Strand", title: "Data Engineering Lead", company: "Schibsted", signal: "Behov nå", eier: "Jon Richard Nygaard", cvEmail: false, callList: false, hasMarkedsradar: true, sisteAktivitetDager: 5 },
-  { id: "4", firstName: "Magnus", lastName: "Pedersen", title: "VP Engineering", company: "Cognite", signal: "Fremtidig behov", eier: "Jon Richard Nygaard", cvEmail: true, callList: false, hasMarkedsradar: false, sisteAktivitetDager: 9 },
-  { id: "5", firstName: "Ingrid", lastName: "Moe", title: "CTO", company: "Vipps", signal: "Fremtidig behov", eier: "Thomas Eriksen", cvEmail: false, callList: false, hasMarkedsradar: false, sisteAktivitetDager: 11 },
-  { id: "6", firstName: "Henrik", lastName: "Berg", title: "Platform Lead", company: "Equinor", signal: "Behov nå", eier: "Jon Richard Nygaard", cvEmail: true, callList: true, hasMarkedsradar: true, sisteAktivitetDager: 2 },
-  { id: "7", firstName: "Lene", lastName: "Johansen", title: "Head of Digital", company: "Storebrand", signal: "Har kanskje behov", eier: "Thomas Eriksen", cvEmail: false, callList: false, hasMarkedsradar: false, sisteAktivitetDager: 17 },
-  { id: "8", firstName: "Andreas", lastName: "Dahl", title: "Sr. Engineering Manager", company: "Telenor", signal: "Fremtidig behov", eier: "Jon Richard Nygaard", cvEmail: true, callList: false, hasMarkedsradar: false, sisteAktivitetDager: 13 },
-  { id: "9", firstName: "Marte", lastName: "Eriksen", title: "Tech Director", company: "Kahoot!", signal: "Ukjent om behov", eier: "Thomas Eriksen", cvEmail: false, callList: false, hasMarkedsradar: false, sisteAktivitetDager: 30 },
-  { id: "10", firstName: "Ola", lastName: "Kristiansen", title: "IT-sjef", company: "Posten", signal: "Har kanskje behov", eier: "Jon Richard Nygaard", cvEmail: false, callList: false, hasMarkedsradar: false, sisteAktivitetDager: 25 },
-  { id: "11", firstName: "Camilla", lastName: "Vik", title: "VP Technology", company: "Statkraft", signal: "Fremtidig behov", eier: "Thomas Eriksen", cvEmail: true, callList: false, hasMarkedsradar: true, sisteAktivitetDager: 6 },
-  { id: "12", firstName: "Thomas", lastName: "Lie", title: "CTO", company: "Color Line", signal: "Aldri aktuelt", eier: "Jon Richard Nygaard", cvEmail: false, callList: false, hasMarkedsradar: false, sisteAktivitetDager: 63 },
-];
-
+const SIGNALS: Signal[] = ["Behov nå", "Får fremtidig behov", "Får kanskje behov", "Ukjent om behov", "Ikke aktuelt"];
 const OWNERS = ["Alle", "Jon Richard Nygaard", "Thomas Eriksen"];
-const SIGNALS: Signal[] = ["Behov nå", "Fremtidig behov", "Har kanskje behov", "Ukjent om behov", "Aldri aktuelt"];
 
 type SortField = "name" | "signal" | "company" | "title" | "last_activity";
 type SortDir = "asc" | "desc";
@@ -77,53 +45,14 @@ function relTime(days: number): string {
   if (days === 1) return "1d";
   if (days < 7) return `${days}d`;
   if (days < 30) return `${Math.floor(days / 7)}u`;
-  return `${Math.floor(days / 30)} mnd`;
+  if (days < 365) return `${Math.floor(days / 30)} mnd`;
+  return `${Math.floor(days / 365)}å`;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   TOP NAV
-   ═══════════════════════════════════════════════════════════ */
-
-function TopNav() {
-  const tabs = [
-    { label: "Kontakter", active: true },
-    { label: "Selskaper", active: false },
-    { label: "Oppdrag", active: false },
-  ];
-  return (
-    <header className="h-[53px] flex items-center justify-between px-8 bg-white border-b border-[rgba(0,0,0,0.06)]">
-      <div className="flex items-center gap-8">
-        <span className="text-[15px] font-extrabold tracking-tight text-[#111827]">STACQ</span>
-        <nav className="flex items-center gap-1">
-          {tabs.map((t) => (
-            <button
-              key={t.label}
-              className={`h-[53px] px-3 text-[13px] font-medium transition-colors border-b-2 ${
-                t.active
-                  ? "text-[#111827] border-[#111827]"
-                  : "text-[#6B7280] border-transparent hover:text-[#111827]"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </nav>
-      </div>
-      <div className="flex items-center gap-4">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9CA3AF]" />
-          <input
-            placeholder="Søk…  ⌘K"
-            readOnly
-            className="h-8 pl-8 pr-3 rounded-md text-[13px] outline-none bg-[#FAFAFA] text-[#111827] w-52 border border-[rgba(0,0,0,0.06)]"
-          />
-        </div>
-        <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold bg-[#111827] text-white">
-          JR
-        </div>
-      </div>
-    </header>
-  );
+function mapToSignal(raw: string): Signal {
+  const normalized = normalizeCategoryLabel(raw);
+  if (Object.keys(SIGNAL_BADGE).includes(normalized)) return normalized as Signal;
+  return "Ukjent om behov";
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -136,8 +65,101 @@ export default function DesignLabContacts() {
   const [ownerFilter, setOwnerFilter] = useState("Alle");
   const [signalFilter, setSignalFilter] = useState("Alle");
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "last_activity", dir: "asc" });
-  const [contacts, setContacts] = useState(CONTACTS);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // ── Fetch contacts with company + owner ──
+  const { data: rawContacts = [], isLoading } = useQuery({
+    queryKey: ["design-lab-contacts-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("id, first_name, last_name, title, email, phone, cv_email, call_list, ikke_aktuell_kontakt, teknologier, company_id, companies(id, name), profiles:owner_id(id, full_name)")
+        .eq("ikke_aktuell_kontakt", false)
+        .order("updated_at", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // ── Fetch latest activity per contact for signal + recency ──
+  const contactIds = useMemo(() => rawContacts.map((c) => c.id), [rawContacts]);
+
+  const { data: activitiesMap = {} } = useQuery({
+    queryKey: ["design-lab-contacts-activities", contactIds.length],
+    queryFn: async () => {
+      if (contactIds.length === 0) return {};
+      const { data, error } = await supabase
+        .from("activities")
+        .select("id, contact_id, subject, description, created_at")
+        .in("contact_id", contactIds)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      const map: Record<string, typeof data> = {};
+      data.forEach((a) => {
+        if (a.contact_id) {
+          if (!map[a.contact_id]) map[a.contact_id] = [];
+          map[a.contact_id].push(a);
+        }
+      });
+      return map;
+    },
+    enabled: contactIds.length > 0,
+  });
+
+  const { data: tasksMap = {} } = useQuery({
+    queryKey: ["design-lab-contacts-tasks", contactIds.length],
+    queryFn: async () => {
+      if (contactIds.length === 0) return {};
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("id, contact_id, title, description, due_date, status, created_at, updated_at")
+        .in("contact_id", contactIds)
+        .neq("status", "done");
+      if (error) throw error;
+      const map: Record<string, typeof data> = {};
+      data.forEach((t) => {
+        if (t.contact_id) {
+          if (!map[t.contact_id]) map[t.contact_id] = [];
+          map[t.contact_id].push(t);
+        }
+      });
+      return map;
+    },
+    enabled: contactIds.length > 0,
+  });
+
+  // ── Build enriched contact list ──
+  const contacts = useMemo(() => {
+    const now = new Date();
+    return rawContacts.map((c) => {
+      const acts = (activitiesMap as any)[c.id] || [];
+      const tasks = (tasksMap as any)[c.id] || [];
+      const effectiveSignal = getEffectiveSignal(acts, tasks);
+      const signal = effectiveSignal ? mapToSignal(effectiveSignal) : "Ukjent om behov" as Signal;
+
+      const lastActivityDate = acts.length > 0 ? new Date(acts[0].created_at) : null;
+      const daysSince = lastActivityDate ? differenceInDays(now, lastActivityDate) : 999;
+
+      const company = (c as any).companies;
+      const owner = (c as any).profiles;
+
+      return {
+        id: c.id,
+        firstName: c.first_name,
+        lastName: c.last_name,
+        title: c.title || "",
+        company: company?.name || "",
+        companyId: company?.id || null,
+        signal,
+        eier: owner?.full_name || "Ikke tildelt",
+        cvEmail: c.cv_email,
+        callList: c.call_list,
+        teknologier: c.teknologier || [],
+        sisteAktivitetDager: daysSince,
+      };
+    });
+  }, [rawContacts, activitiesMap, tasksMap]);
 
   const toggleSort = useCallback((field: SortField) => {
     setSort((prev) =>
@@ -190,11 +212,11 @@ export default function DesignLabContacts() {
     else setSelectedIds(new Set(sorted.map((c) => c.id)));
   };
 
-  const handleSignalChange = (id: string, signal: Signal) => {
-    setContacts((prev) => prev.map((c) => (c.id === id ? { ...c, signal } : c)));
-  };
-
   const allSelected = sorted.length > 0 && selectedIds.size === sorted.length;
+
+  if (isLoading) {
+    return <p className="text-muted-foreground text-center py-12">Laster kontakter…</p>;
+  }
 
   return (
     <div style={{ fontFamily: "Inter, -apple-system, system-ui, sans-serif" }}>
@@ -202,12 +224,9 @@ export default function DesignLabContacts() {
         {/* Page header */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-baseline gap-3">
-            <h1 className="text-[20px] font-semibold text-[#111827]">Kontakter</h1>
-            <span className="text-[13px] text-[#9CA3AF] font-medium">{filtered.length}</span>
+            <h1 className="text-[20px] font-semibold text-foreground">Kontakter</h1>
+            <span className="text-[13px] text-muted-foreground font-medium">{filtered.length}</span>
           </div>
-          <button className="h-8 px-4 rounded-md text-[13px] font-medium bg-[#111827] text-white hover:bg-[#1f2937] transition-colors">
-            + Ny kontakt
-          </button>
         </div>
 
         {/* Filters */}
@@ -216,34 +235,33 @@ export default function DesignLabContacts() {
           <FilterPill label="Signal" value={signalFilter} options={["Alle", ...SIGNALS]} onChange={setSignalFilter} />
           <div className="flex-1" />
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9CA3AF]" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Søk kontakter…"
-              className="h-8 pl-8 pr-3 rounded-md text-[13px] outline-none bg-white text-[#111827] w-64 border border-[rgba(0,0,0,0.06)] focus:border-[rgba(0,0,0,0.15)] transition-colors"
+              className="h-8 pl-8 pr-3 rounded-md text-[13px] outline-none bg-background text-foreground w-64 border border-border focus:border-primary/30 transition-colors"
             />
           </div>
         </div>
 
         {/* Table */}
-        <div className="border border-[rgba(0,0,0,0.06)] rounded-lg overflow-hidden">
+        <div className="border border-border rounded-lg overflow-hidden">
           {/* Header */}
-          <div className="grid grid-cols-[40px_minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1fr)_90px] gap-0 items-center h-[36px] bg-[#FAFAFA] border-b border-[rgba(0,0,0,0.06)]">
+          <div className="grid grid-cols-[40px_minmax(0,1.8fr)_minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1fr)_90px] gap-0 items-center h-[36px] bg-muted/50 border-b border-border">
             <div className="flex items-center justify-center">
               <input
                 type="checkbox"
                 checked={allSelected}
                 onChange={toggleAll}
-                className="w-3.5 h-3.5 rounded border-[rgba(0,0,0,0.15)] accent-[#111827] cursor-pointer"
+                className="w-3.5 h-3.5 rounded cursor-pointer"
               />
             </div>
             <ColHeader label="Navn" field="name" sort={sort} onSort={toggleSort} className="px-3" />
             <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} className="px-3" />
-            <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#9CA3AF] px-1">Finn</span>
             <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} className="px-3" />
             <ColHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} className="px-3" />
-            <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#9CA3AF] px-3">Tags</span>
+            <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground px-3">Tags</span>
             <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} className="px-3 justify-end" />
           </div>
 
@@ -252,7 +270,8 @@ export default function DesignLabContacts() {
             {sorted.map((contact) => (
               <div
                 key={contact.id}
-                className="grid grid-cols-[40px_minmax(0,1.8fr)_minmax(0,1.4fr)_36px_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1fr)_90px] gap-0 items-center h-[44px] border-b border-[rgba(0,0,0,0.04)] hover:bg-[rgba(0,0,0,0.015)] transition-colors duration-75 group"
+                onClick={() => navigate(`/design-lab/kontakter/${contact.id}`)}
+                className="grid grid-cols-[40px_minmax(0,1.8fr)_minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1fr)_90px] gap-0 items-center h-[44px] border-b border-border/40 hover:bg-muted/30 transition-colors duration-75 cursor-pointer group"
               >
                 {/* Checkbox */}
                 <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
@@ -260,63 +279,33 @@ export default function DesignLabContacts() {
                     type="checkbox"
                     checked={selectedIds.has(contact.id)}
                     onChange={() => toggleSelect(contact.id)}
-                    className="w-3.5 h-3.5 rounded border-[rgba(0,0,0,0.15)] accent-[#111827] cursor-pointer"
+                    className="w-3.5 h-3.5 rounded cursor-pointer"
                   />
                 </div>
 
                 {/* Navn */}
-                <button
-                  onClick={() => navigate(`/design-lab/kontakter/${contact.id}`)}
-                  className="px-3 text-left cursor-pointer truncate"
-                >
-                  <span className="text-[13px] font-medium text-[#111827]">
+                <div className="px-3 truncate">
+                  <span className="text-[13px] font-medium text-foreground">
                     {contact.firstName} {contact.lastName}
                   </span>
-                </button>
-
-                {/* Signal */}
-                <div className="px-3" onClick={(e) => e.stopPropagation()}>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer ${SIGNAL_BADGE[contact.signal]}`}>
-                        {contact.signal}
-                        <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      {SIGNALS.map((s) => (
-                        <DropdownMenuItem key={s} onClick={() => handleSignalChange(contact.id, s)}>
-                          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${SIGNAL_BADGE[s]}`}>
-                            {s}
-                          </span>
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                 </div>
 
-                {/* Finn */}
-                <div className="flex items-center justify-center">
-                  {contact.hasMarkedsradar && (
-                    <Radio className="h-3.5 w-3.5 text-blue-500" />
-                  )}
+                {/* Signal */}
+                <div className="px-3">
+                  <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${SIGNAL_BADGE[contact.signal]}`}>
+                    {contact.signal}
+                  </span>
                 </div>
 
                 {/* Selskap */}
-                <button
-                  onClick={() => navigate(`/design-lab/kontakter/${contact.id}`)}
-                  className="px-3 text-left cursor-pointer truncate"
-                >
-                  <span className="text-[13px] text-[#6B7280]">{contact.company}</span>
-                </button>
+                <div className="px-3 truncate">
+                  <span className="text-[13px] text-muted-foreground">{contact.company}</span>
+                </div>
 
                 {/* Stilling */}
-                <button
-                  onClick={() => navigate(`/design-lab/kontakter/${contact.id}`)}
-                  className="px-3 text-left cursor-pointer truncate"
-                >
-                  <span className="text-[13px] text-[#6B7280]">{contact.title}</span>
-                </button>
+                <div className="px-3 truncate">
+                  <span className="text-[13px] text-muted-foreground">{contact.title}</span>
+                </div>
 
                 {/* Tags */}
                 <div className="px-3 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -334,7 +323,9 @@ export default function DesignLabContacts() {
 
                 {/* Siste akt. */}
                 <div className="px-3 text-right">
-                  <span className="text-[13px] text-[#9CA3AF]">{relTime(contact.sisteAktivitetDager)}</span>
+                  <span className="text-[13px] text-muted-foreground">
+                    {contact.sisteAktivitetDager < 999 ? relTime(contact.sisteAktivitetDager) : "—"}
+                  </span>
                 </div>
               </div>
             ))}
@@ -359,8 +350,8 @@ function FilterPill({ label, value, options, onChange }: {
         <button
           className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-md text-[12px] font-medium transition-colors border ${
             active
-              ? "bg-[#111827] text-white border-[#111827]"
-              : "bg-white text-[#6B7280] border-[rgba(0,0,0,0.06)] hover:border-[rgba(0,0,0,0.12)]"
+              ? "bg-foreground text-background border-foreground"
+              : "bg-background text-muted-foreground border-border hover:border-foreground/20"
           }`}
         >
           {active ? `${label}: ${value}` : label}
@@ -392,7 +383,7 @@ function ColHeader({ label, field, sort, onSort, className }: {
     <button
       onClick={() => onSort(field)}
       className={`flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.06em] transition-colors ${
-        active ? "text-[#111827]" : "text-[#9CA3AF] hover:text-[#6B7280]"
+        active ? "text-foreground" : "text-muted-foreground hover:text-foreground/70"
       } ${className || ""}`}
     >
       {label}
