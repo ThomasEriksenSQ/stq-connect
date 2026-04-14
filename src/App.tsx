@@ -35,6 +35,7 @@ const Soknad = lazy(() => import("./pages/Soknad"));
 const CompaniesMap = lazy(() => import("./pages/CompaniesMap"));
 const AnsattDetail = lazy(() => import("./pages/AnsattDetail"));
 const Innstillinger = lazy(() => import("./pages/Innstillinger"));
+const DesignLabContacts = lazy(() => import("./pages/DesignLabContacts"));
 
 const queryClient = new QueryClient();
 
@@ -182,6 +183,14 @@ const App = () => (
                   element={
                     <Suspense fallback={<LazyFallback />}>
                       <Innstillinger />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="design-lab/kontakter"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <DesignLabContacts />
                     </Suspense>
                   }
                 />
