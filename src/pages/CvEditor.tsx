@@ -16,6 +16,7 @@ import {
   type CvAccessVersion,
   type CvAccessVersionsResponse,
 } from "@/lib/cvAccess";
+import { normalizeProjectsSectionTitle } from "@/lib/cvProjectsTitle";
 import type { CVDocument } from "@/components/cv/CvRenderer";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://kbvzpcebfopqqrvmbiap.supabase.co";
@@ -87,6 +88,7 @@ function dbRowToCvDoc(row: any): CVDocument {
     sidebarSections: row.sidebar_sections || [],
     introParagraphs: row.intro_paragraphs || [],
     competenceGroups: row.competence_groups || [],
+    projectsTitle: normalizeProjectsSectionTitle(row.title),
     projects: row.projects || [],
     additionalSections: row.additional_sections || [],
     education: row.education || [],
@@ -102,6 +104,7 @@ function cvDocToDbRow(doc: CVDocument) {
     portrait_position: doc.hero.portrait_position || "50% 50%",
     intro_paragraphs: doc.introParagraphs,
     competence_groups: doc.competenceGroups,
+    title: normalizeProjectsSectionTitle(doc.projectsTitle) || null,
     projects: doc.projects,
     additional_sections: doc.additionalSections,
     education: doc.education,

@@ -8,6 +8,7 @@ const corsHeaders = {
 
 const CV_SHARE_VALID_DAYS = 90;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const LEGACY_CV_DOCUMENT_TITLE = "CV";
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -54,6 +55,12 @@ function isExpired(expiresAt: string | null) {
   return Boolean(expiresAt && new Date(expiresAt).getTime() < Date.now());
 }
 
+function normalizeProjectsSectionTitle(value: unknown) {
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  if (!trimmed || trimmed === LEGACY_CV_DOCUMENT_TITLE) return "";
+  return trimmed;
+}
+
 function normalizeSnapshot(snapshot: Record<string, unknown>, updatedAt: string) {
   return {
     additional_sections: snapshot.additional_sections ?? [],
@@ -66,6 +73,7 @@ function normalizeSnapshot(snapshot: Record<string, unknown>, updatedAt: string)
     portrait_url: typeof snapshot.portrait_url === "string" ? snapshot.portrait_url : null,
     projects: snapshot.projects ?? [],
     sidebar_sections: snapshot.sidebar_sections ?? [],
+    title: normalizeProjectsSectionTitle(snapshot.title) || null,
     updated_at: updatedAt,
     work_experience: snapshot.work_experience ?? [],
   };

@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Plus, Trash2, GripVertical, Download, Check, Loader2, Upload, Move } from "lucide-react";
 import { toast } from "sonner";
+import { DEFAULT_PROJECTS_SECTION_TITLE } from "@/lib/cvProjectsTitle";
 import { getInitials } from "@/lib/utils";
 import {
   DndContext,
@@ -756,6 +757,15 @@ export function CvEditorPanel({
                   Prosjekter
                 </AccordionTrigger>
                 <AccordionContent className="space-y-2 pt-2">
+                  <div>
+                    <label className={LABEL}>Seksjonstittel</label>
+                    <Input
+                      value={doc.projectsTitle}
+                      placeholder={DEFAULT_PROJECTS_SECTION_TITLE}
+                      onChange={(e) => update((p) => ({ ...p, projectsTitle: e.target.value }))}
+                      className="mt-1 text-[0.8125rem] font-medium"
+                    />
+                  </div>
                   <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleProjectDragEnd}>
                     <SortableContext
                       items={doc.projects.map((_, i) => `project-${i}`)}

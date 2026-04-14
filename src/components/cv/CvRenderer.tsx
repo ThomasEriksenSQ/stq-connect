@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { getProjectsSectionTitle } from "@/lib/cvProjectsTitle";
 
 // ═══════════════════════════════════════
 // Types
@@ -86,6 +87,7 @@ export type CVDocument = {
   sidebarSections: SidebarSection[];
   introParagraphs: string[];
   competenceGroups: CompetenceGroup[];
+  projectsTitle: string;
   projects: ProjectEntry[];
   additionalSections: AdditionalSection[];
   education: TimelineEntry[];
@@ -1176,6 +1178,7 @@ function FlowBlockView({ block }: { block: FlowBlock }) {
 
 function ContinuationPage({
   showProjectsTitle,
+  projectsSectionTitle,
   pageProjects,
   pageAdditionalSections,
   sections,
@@ -1184,6 +1187,7 @@ function ContinuationPage({
   portraitPosition,
 }: {
   showProjectsTitle: boolean;
+  projectsSectionTitle: string;
   pageProjects: ProjectFragment[];
   pageAdditionalSections: AdditionalSectionFragment[];
   sections: ContinuationSectionId[];
@@ -1201,7 +1205,7 @@ function ContinuationPage({
         <div style={continuationMainStyle}>
           {mergedProjects.length > 0 && (
             <>
-              {showProjectsTitle ? <SectionTitle marginTop="0">Prosjekter</SectionTitle> : null}
+              {showProjectsTitle ? <SectionTitle marginTop="0">{projectsSectionTitle}</SectionTitle> : null}
               {mergedProjects.map((project) => (
                 <ProjectBlock key={project.key} {...project} />
               ))}
@@ -1280,6 +1284,7 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
     () => doc.additionalSections.map((section) => buildAdditionalSectionFragments(section)),
     [doc.additionalSections],
   );
+  const projectsSectionTitle = useMemo(() => getProjectsSectionTitle(doc.projectsTitle), [doc.projectsTitle]);
   const additionalSectionMeasureTitle = useMemo(() => {
     const titles = doc.additionalSections
       .map((section) => section.title.trim())
@@ -1416,10 +1421,10 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
             </div>
           ))}
           <div ref={projectsTitleTopMeasureRef} style={{ display: "flow-root" }}>
-            <SectionTitle marginTop="0">Prosjekter</SectionTitle>
+            <SectionTitle marginTop="0">{projectsSectionTitle}</SectionTitle>
           </div>
           <div ref={projectsTitleAfterMeasureRef} style={{ display: "flow-root" }}>
-            <SectionTitle marginTop="6mm">Prosjekter</SectionTitle>
+            <SectionTitle marginTop="6mm">{projectsSectionTitle}</SectionTitle>
           </div>
           {projectFragments.flat().map((fragment) => (
             <div
@@ -1596,6 +1601,7 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
             <ContinuationPage
               key={page.key}
               showProjectsTitle={index === 0 && page.projects.length > 0}
+              projectsSectionTitle={projectsSectionTitle}
               pageProjects={page.projects}
               pageAdditionalSections={page.additionalSections}
               sections={page.sections}

@@ -22,6 +22,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CvEditorPanel } from "@/components/cv/CvEditorPanel";
 import { openCvPrintDialog, type CVDocument } from "@/components/cv/CvRenderer";
+import { normalizeProjectsSectionTitle } from "@/lib/cvProjectsTitle";
 import { extractCvPdfSegments } from "@/lib/cvPdfExtract";
 import { issueAndCopyCvShareLink } from "@/lib/cvAccess";
 import { toast } from "sonner";
@@ -42,6 +43,7 @@ const EMPTY_CV: CVDocument = {
   ],
   introParagraphs: [],
   competenceGroups: [{ label: "Programmeringsspråk", content: "" }],
+  projectsTitle: "",
   projects: [],
   additionalSections: [],
   education: [],
@@ -90,6 +92,7 @@ function dbRowToCvDoc(row: any): CVDocument {
     sidebarSections: row.sidebar_sections || [],
     introParagraphs: row.intro_paragraphs || [],
     competenceGroups: row.competence_groups || [],
+    projectsTitle: normalizeProjectsSectionTitle(row.title),
     projects: row.projects || [],
     additionalSections: row.additional_sections || [],
     education: row.education || [],
@@ -105,6 +108,7 @@ function cvDocToDbRow(doc: CVDocument) {
     portrait_position: doc.hero.portrait_position || "50% 50%",
     intro_paragraphs: doc.introParagraphs,
     competence_groups: doc.competenceGroups,
+    title: normalizeProjectsSectionTitle(doc.projectsTitle) || null,
     projects: doc.projects,
     additional_sections: doc.additionalSections,
     education: doc.education,
@@ -375,6 +379,7 @@ export default function CvAdmin() {
           },
           introParagraphs: Array.isArray(data.introParagraphs) ? data.introParagraphs : [],
           competenceGroups: Array.isArray(data.competenceGroups) ? data.competenceGroups : [],
+          projectsTitle: currentCv.projectsTitle || "",
           projects: Array.isArray(data.projects) ? data.projects : [],
           education: Array.isArray(data.education) ? data.education : [],
           workExperience: Array.isArray(data.workExperience) ? data.workExperience : [],
