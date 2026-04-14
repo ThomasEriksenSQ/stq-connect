@@ -187,8 +187,24 @@ export default function DesignLabContacts() {
     enabled: contactIds.length > 0,
   });
 
-  // Forespørsler (requests) for selected contact
-  // (forespørsler handled by ContactCardContent internally)
+  // ── Consultants available ──
+  const { data: availableConsultants = [] } = useQuery({
+    queryKey: ["dl-available-consultants"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("stacq_ansatte")
+        .select("id, navn, tilgjengelig_fra")
+        .eq("status", "Ledig")
+        .not("tilgjengelig_fra", "is", null);
+      return data || [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const sortedConsultants = useMemo(() => {
+    const withAvail = availableConsultants.filter((c) => c.tilgjengelig_fra);
+    return sortHuntConsultants(withAvail as { navn: string; tilgjengelig_fra: string | null }[]);
+  }, [availableConsultants]);
 
   // ── Computed ──
   const contacts = useMemo(() => {
