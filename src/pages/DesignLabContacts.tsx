@@ -400,6 +400,36 @@ export default function DesignLabContacts() {
           </div>
         </div>
 
+        {/* Available consultants bar */}
+        {sortedConsultants.length > 0 && (
+          <div className="shrink-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
+            <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: C.textGhost, marginBottom: 6 }}>Tilgjengelig for oppdrag</p>
+            <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+              {sortedConsultants.map((con) => {
+                const meta = getConsultantAvailabilityMeta(con.tilgjengelig_fra);
+                const nameParts = con.navn.split(" ");
+                const initials = (nameParts[0]?.[0] || "") + (nameParts[nameParts.length - 1]?.[0] || "");
+                const toneColor = meta.tone === "ready" ? C.success : meta.tone === "soon" ? C.warning : C.textFaint;
+                return (
+                  <div
+                    key={con.id ?? con.navn}
+                    className="flex items-center gap-2.5 shrink-0 rounded-lg"
+                    style={{ border: `1px solid ${C.border}`, padding: "8px 14px", background: C.surface }}
+                  >
+                    <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 36, height: 36, background: "rgba(40,37,29,0.08)", fontSize: 12, fontWeight: 600, color: C.text }}>
+                      {initials.toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text, maxWidth: 140 }}>{con.navn}</p>
+                      <p style={{ fontSize: 12, color: toneColor, fontWeight: 500 }}>{meta.label}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Content: list + detail */}
         <div className="flex-1 min-h-0">
           {sel ? (
