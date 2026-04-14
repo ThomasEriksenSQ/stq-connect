@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import { getConsultantAvailabilityMeta, sortHuntConsultants } from "@/lib/contactHunt";
 import { useAuth } from "@/hooks/useAuth";
 import { ContactCardContent } from "@/components/ContactCardContent";
+import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
+import { usePersistentState } from "@/hooks/usePersistentState";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
@@ -102,6 +104,7 @@ export default function DesignLabContacts() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { signOut, user } = useAuth();
+  const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [search, setSearch] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("Alle");
   const [signalFilter, setSignalFilter] = useState("Alle");
@@ -356,7 +359,7 @@ export default function DesignLabContacts() {
       </aside>
 
       {/* ═══ MAIN ═══ */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ fontSize: SCALE_MAP[textSize] }}>
         {/* Header bar */}
         <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 48, borderBottom: `1px solid ${C.border}` }}>
           <div className="flex items-baseline gap-2.5">
@@ -364,6 +367,7 @@ export default function DesignLabContacts() {
             <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>{filtered.length}</span>
           </div>
           <div className="flex items-center gap-2">
+            <TextSizeControl value={textSize} onChange={setTextSize} />
             <div className="relative" style={{ width: 220 }}>
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ width: 14, height: 14, color: C.textGhost }} />
               <input

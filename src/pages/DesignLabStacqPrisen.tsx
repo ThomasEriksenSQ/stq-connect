@@ -20,6 +20,8 @@ import {
   Dialog, DialogContent, DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
+import { usePersistentState } from "@/hooks/usePersistentState";
 
 /* ═══ V8 COLOR CONSTANTS ═══ */
 const C = {
@@ -125,6 +127,7 @@ export default function DesignLabStacqPrisen() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { signOut, user } = useAuth();
+  const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [editRow, setEditRow] = useState<any | null>(null);
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "stacq", dir: "desc" });
   const initials = user?.email ? user.email.split("@")[0].slice(0, 2).toUpperCase() : "??";
@@ -249,12 +252,13 @@ export default function DesignLabStacqPrisen() {
       </aside>
 
       {/* ═══ MAIN ═══ */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ fontSize: SCALE_MAP[textSize] }}>
         {/* Header */}
         <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 48, borderBottom: `1px solid ${C.border}` }}>
           <div className="flex items-baseline gap-2.5">
             <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>STACQ Prisen</h1>
           </div>
+          <TextSizeControl value={textSize} onChange={setTextSize} />
         </header>
 
         {/* Content */}

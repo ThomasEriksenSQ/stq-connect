@@ -13,6 +13,8 @@ import { nb } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
 import { ForespørselSheet } from "@/components/ForespørselSheet";
 import { crmQueryKeys } from "@/lib/queryKeys";
+import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
+import { usePersistentState } from "@/hooks/usePersistentState";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
@@ -130,6 +132,7 @@ export default function DesignLabForesporsler() {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("aktive");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "mottatt_dato", dir: "desc" });
@@ -287,7 +290,7 @@ export default function DesignLabForesporsler() {
       </aside>
 
       {/* ═══ MAIN ═══ */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ fontSize: SCALE_MAP[textSize] }}>
         {/* Header */}
         <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 48, borderBottom: `1px solid ${C.border}` }}>
           <div className="flex items-baseline gap-2.5">
@@ -295,6 +298,7 @@ export default function DesignLabForesporsler() {
             <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>{filtered.length}</span>
           </div>
           <div className="flex items-center gap-2">
+            <TextSizeControl value={textSize} onChange={setTextSize} />
             <div className="relative" style={{ width: 220 }}>
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ width: 14, height: 14, color: C.textGhost }} />
               <input
