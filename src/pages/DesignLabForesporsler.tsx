@@ -384,7 +384,7 @@ export default function DesignLabForesporsler() {
               </ResizablePanel>
             </ResizablePanelGroup>
           ) : (
-            <div className="h-full overflow-y-auto">
+            <div className="h-full overflow-y-auto" style={{ maxWidth: 1100, margin: "0 auto", width: "100%" }}>
               <TableHeader sort={sort} onSort={toggleSort} compact={false} />
               {isLoading ? <LoadingMsg /> : sorted.length === 0 ? <EmptyMsg /> : (
                 sorted.map((row: any) => (
@@ -405,8 +405,8 @@ export default function DesignLabForesporsler() {
 
 function TableHeader({ sort, onSort, compact }: { sort: { field: SortField; dir: SortDir }; onSort: (f: SortField) => void; compact: boolean }) {
   const cols = compact
-    ? "80px minmax(0,1fr) 140px 56px"
-    : "80px minmax(0,1fr) 180px 70px 200px 140px";
+    ? "90px minmax(0,1.5fr) minmax(0,1fr) 60px"
+    : "90px minmax(0,1.5fr) minmax(0,1fr) 70px minmax(0,1.2fr) minmax(0,1fr)";
 
   return (
     <div
@@ -435,8 +435,8 @@ function ForespRow({ row, isActive, onClick, compact }: { row: any; isActive: bo
   const sendt = row.foresporsler_konsulenter || [];
 
   const cols = compact
-    ? "80px minmax(0,1fr) 140px 56px"
-    : "80px minmax(0,1fr) 180px 70px 200px 140px";
+    ? "90px minmax(0,1.5fr) minmax(0,1fr) 60px"
+    : "90px minmax(0,1.5fr) minmax(0,1fr) 70px minmax(0,1.2fr) minmax(0,1fr)";
 
   return (
     <div

@@ -263,6 +263,8 @@ export default function DesignLabStacqPrisen() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto" style={{ padding: "24px 24px 48px" }}>
+          <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+
           {/* Stat line */}
           <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 20 }}>
             <span style={{ fontWeight: 600, color: C.text }}>kr {formatKr(Math.round(stacqTotalPerTime))}/t</span>
@@ -277,7 +279,7 @@ export default function DesignLabStacqPrisen() {
           </p>
 
           {/* Chart */}
-          <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, background: C.surface, padding: 20, marginBottom: 24, maxWidth: 900 }}>
+          <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, background: C.surface, padding: 20, marginBottom: 24 }}>
             <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: C.textMuted, marginBottom: 16 }}>
               STACQ Prisen — ukentlig utvikling
             </p>
@@ -323,8 +325,8 @@ export default function DesignLabStacqPrisen() {
               <div
                 className="grid items-center"
                 style={{
-                   gridTemplateColumns: "minmax(0,1fr) 200px 80px 80px 80px 100px 56px 80px",
-                   height: 34, paddingInline: 16, borderBottom: `1px solid ${C.border}`, background: C.bg,
+                  gridTemplateColumns: "minmax(0,2fr) minmax(0,1.5fr) 80px 80px 80px 100px 56px 80px",
+                  height: 34, paddingInline: 16, borderBottom: `1px solid ${C.border}`, background: C.bg,
                 }}
               >
                 <ColHeader label="Konsulent" field="kandidat" sort={sort} onSort={toggleSort} />
@@ -348,9 +350,9 @@ export default function DesignLabStacqPrisen() {
                     onClick={() => setEditRow(row)}
                     className="grid items-center cursor-pointer"
                     style={{
-                       gridTemplateColumns: "minmax(0,1fr) 200px 80px 80px 80px 100px 56px 80px",
-                       minHeight: 40, paddingInline: 16,
-                       borderBottom: `1px solid ${C.borderLight}`,
+                      gridTemplateColumns: "minmax(0,2fr) minmax(0,1.5fr) 80px 80px 80px 100px 56px 80px",
+                      minHeight: 40, paddingInline: 16,
+                      borderBottom: `1px solid ${C.borderLight}`,
                       transition: "background 50ms",
                     }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
@@ -378,9 +380,9 @@ export default function DesignLabStacqPrisen() {
               <div
                 className="grid items-center"
                 style={{
-                   gridTemplateColumns: "minmax(0,1fr) 200px 80px 80px 80px 100px 56px 80px",
-                   minHeight: 40, paddingInline: 16,
-                   background: C.bg, fontWeight: 600,
+                  gridTemplateColumns: "minmax(0,2fr) minmax(0,1.5fr) 80px 80px 80px 100px 56px 80px",
+                  minHeight: 40, paddingInline: 16,
+                  background: C.bg, fontWeight: 600,
                 }}
               >
                 <span style={{ fontSize: 13, color: C.text }}>TOTAL</span>
@@ -391,6 +393,7 @@ export default function DesignLabStacqPrisen() {
               </div>
             </div>
           )}
+          </div>
         </div>
       </main>
 
