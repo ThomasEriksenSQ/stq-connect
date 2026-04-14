@@ -1,31 +1,13 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Mail, Phone, Copy, ExternalLink, CheckSquare, Square, MessageCircle, FileText } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Copy, ExternalLink, Square, CheckSquare, MessageCircle, FileText, Clock, PhoneCall, Users } from "lucide-react";
 
-const fontLink = "https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap";
-
-const C = {
-  base: "#0A0A0F",
-  surface: "#16161F",
-  elevated: "#1E1E2A",
-  border: "#2A2A3C",
-  textPrimary: "#EDEDF0",
-  textSecondary: "#8B8B9E",
-  textTertiary: "#55556A",
-  accent: "#6C5CE7",
-  signalNow: "#00D68F",
-  signalFuture: "#4DA6FF",
-  signalMaybe: "#FFB347",
-  signalUnknown: "#55556A",
-  signalNever: "#FF6B6B",
-};
-
-const SIGNALS: Record<string, { label: string; color: string }> = {
-  now: { label: "Behov nå", color: C.signalNow },
-  future: { label: "Fremtidig behov", color: C.signalFuture },
-  maybe: { label: "Har kanskje behov", color: C.signalMaybe },
-  unknown: { label: "Ukjent om behov", color: C.signalUnknown },
-  never: { label: "Aldri aktuelt", color: C.signalNever },
+const SIGNALS: Record<string, { label: string; bg: string; text: string }> = {
+  now: { label: "Behov nå", bg: "bg-emerald-500", text: "text-white" },
+  future: { label: "Fremtidig", bg: "bg-blue-500", text: "text-white" },
+  maybe: { label: "Kanskje", bg: "bg-amber-400", text: "text-amber-950" },
+  unknown: { label: "Ukjent", bg: "bg-gray-300", text: "text-gray-700" },
+  never: { label: "Aldri", bg: "bg-red-500", text: "text-white" },
 };
 
 interface Activity { type: "call" | "meeting"; subject: string; description?: string; date: string; month: string; }
@@ -85,7 +67,11 @@ const MOCK: Record<string, {
 };
 
 function getFallback(id: string) {
-  return { name: `Kontakt ${id}`, title: "Ukjent", company: "Ukjent", email: "—", phone: "—", signal: "unknown", owner: "—", tech: [] as string[], cv: false, tasks: [] as Task[], activities: [] as Activity[], linkedin: undefined as string | undefined, notes: undefined as string | undefined };
+  return { name: `Kontakt ${id}`, title: "Ukjent", company: "Ukjent", email: "—", phone: "—", signal: "unknown", owner: "—", tech: [] as string[], cv: false, tasks: [] as Task[], activities: [] as Activity[] };
+}
+
+function getInitials(name: string) {
+  return name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
 }
 
 export default function DesignLabContactDetail() {
@@ -100,143 +86,149 @@ export default function DesignLabContactDetail() {
   }, {});
 
   return (
-    <>
-      <link rel="stylesheet" href={fontLink} />
-      <div className="min-h-screen" style={{ background: C.base, fontFamily: "'Geist', system-ui, sans-serif" }}>
-        <header className="sticky top-0 z-30 h-[52px] flex items-center px-6" style={{ background: C.base, borderBottom: `1px solid ${C.border}` }}>
-          <button className="flex items-center gap-2 text-[13px] transition-colors" style={{ color: C.textSecondary }}
-            onClick={() => navigate("/design-lab/kontakter")}
-            onMouseEnter={e => (e.currentTarget.style.color = C.textPrimary)}
-            onMouseLeave={e => (e.currentTarget.style.color = C.textSecondary)}
-          ><ArrowLeft size={15} />Tilbake</button>
-        </header>
+    <div className="min-h-screen" style={{ background: "#F8F7F4", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}>
+      {/* Top bar */}
+      <header className="h-14 flex items-center px-8 border-b" style={{ background: "#FFFFFF", borderColor: "#E8E6E1" }}>
+        <button
+          onClick={() => navigate("/design-lab/kontakter")}
+          className="flex items-center gap-2 text-[13px] font-medium transition-opacity hover:opacity-70"
+          style={{ color: "#6B6B6B" }}
+        >
+          <ArrowLeft size={16} /> Tilbake
+        </button>
+      </header>
 
-        <div className="max-w-[800px] mx-auto px-6 py-10">
-          {/* Hero */}
-          <div className="mb-8">
-            <div className="flex items-start justify-between">
+      <div className="max-w-[900px] mx-auto px-8 py-10">
+        {/* Hero card */}
+        <div className="rounded-xl border p-8 mb-8" style={{ background: "#FFFFFF", borderColor: "#E8E6E1", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-5">
+              {/* Avatar */}
+              <div className="w-14 h-14 rounded-full flex items-center justify-center text-[18px] font-bold flex-shrink-0" style={{ background: "#F0EFEB", color: "#6B6B6B" }}>
+                {getInitials(data.name)}
+              </div>
               <div>
-                <h1 className="text-[28px] font-semibold tracking-[-0.03em]" style={{ color: C.textPrimary }}>{data.name}</h1>
-                <p className="text-[15px] mt-1" style={{ color: C.textSecondary }}>{data.title} · {data.company}</p>
+                <h1 className="text-[26px] font-bold tracking-tight" style={{ color: "#1A1A1A" }}>{data.name}</h1>
+                <p className="text-[15px] mt-0.5" style={{ color: "#6B6B6B" }}>{data.title} · {data.company}</p>
                 <div className="flex items-center gap-3 mt-3">
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: signal.color }}>
-                    <span className="w-[7px] h-[7px] rounded-full" style={{ background: signal.color }} />{signal.label}
+                  <span className={`inline-flex items-center text-[12px] font-semibold px-2.5 py-1 rounded-full ${signal.bg} ${signal.text}`}>
+                    {signal.label}
                   </span>
-                  {data.cv && <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: `${C.accent}22`, color: C.accent }}>CV</span>}
-                  <span className="text-[12px]" style={{ color: C.textTertiary }}>{data.owner}</span>
+                  {data.cv && <span className="text-[11px] font-bold px-2 py-0.5 rounded" style={{ background: "#E8E6F9", color: "#5B4FC4" }}>CV</span>}
+                  <span className="text-[13px] font-medium" style={{ color: "#8A8780" }}>{data.owner}</span>
                 </div>
-              </div>
-              <div className="flex gap-2">
-                <button className="h-9 px-4 text-[13px] font-medium rounded-lg" style={{ background: C.signalNow, color: "#000" }}>Logg samtale</button>
-                <button className="h-9 px-4 text-[13px] font-medium rounded-lg" style={{ border: `1px solid ${C.border}`, color: C.textSecondary, background: "transparent" }}>Ny oppfølging</button>
               </div>
             </div>
-            <div className="h-[1px] mt-6" style={{ background: `linear-gradient(90deg, ${signal.color}, ${signal.color}22, transparent)` }} />
-          </div>
-
-          {/* Two-column */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            <div className="rounded-xl p-5" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] mb-4" style={{ color: C.textTertiary }}>Kontaktinfo</div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-[13px]" style={{ color: C.textSecondary }}><Mail size={13} style={{ color: C.textTertiary }} />{data.email}</div>
-                  <button className="p-1 rounded transition-colors" style={{ color: C.textTertiary }} onMouseEnter={e => (e.currentTarget.style.color = C.accent)} onMouseLeave={e => (e.currentTarget.style.color = C.textTertiary)}><Copy size={12} /></button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-[13px]" style={{ color: C.textSecondary }}><Phone size={13} style={{ color: C.textTertiary }} />{data.phone}</div>
-                  <button className="p-1 rounded transition-colors" style={{ color: C.textTertiary }} onMouseEnter={e => (e.currentTarget.style.color = C.accent)} onMouseLeave={e => (e.currentTarget.style.color = C.textTertiary)}><Copy size={12} /></button>
-                </div>
-                {data.linkedin && <div className="flex items-center gap-2 text-[13px]" style={{ color: C.textSecondary }}><ExternalLink size={13} style={{ color: C.textTertiary }} />{data.linkedin}</div>}
-              </div>
-              <div className="flex flex-wrap gap-1.5 mt-5">
-                {data.tech.map(t => <span key={t} className="text-[11px] px-2 py-0.5 rounded" style={{ color: C.textSecondary, border: `1px solid ${C.border}` }}>{t}</span>)}
-              </div>
-            </div>
-
-            <div className="rounded-xl p-5" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] mb-4" style={{ color: C.textTertiary }}>Snapshot</div>
-              {data.activities.length > 0 && (
-                <div className="mb-3">
-                  <div className="text-[11px] mb-1" style={{ color: C.textTertiary }}>Siste aktivitet</div>
-                  <div className="text-[13px]" style={{ color: C.textPrimary }}>{data.activities[0].type === "call" ? "📞" : "📋"} {data.activities[0].subject}</div>
-                  <div className="text-[12px]" style={{ color: C.textTertiary }}>{data.activities[0].date}</div>
-                </div>
-              )}
-              {data.tasks.length > 0 && (
-                <div>
-                  <div className="text-[11px] mb-1" style={{ color: C.textTertiary }}>Neste oppfølging</div>
-                  <div className="text-[13px]" style={{ color: C.textPrimary }}>{data.tasks[0].title}</div>
-                  <div className="text-[12px]" style={{ color: C.textTertiary }}>{data.tasks[0].date}</div>
-                </div>
-              )}
-              {data.activities.length === 0 && data.tasks.length === 0 && <p className="text-[13px]" style={{ color: C.textTertiary }}>Ingen data ennå</p>}
+            <div className="flex gap-2 flex-shrink-0">
+              <button className="h-10 px-5 text-[13px] font-semibold rounded-lg flex items-center gap-2" style={{ background: "#16A34A", color: "#FFFFFF" }}>
+                <PhoneCall size={14} /> Logg samtale
+              </button>
+              <button className="h-10 px-5 text-[13px] font-semibold rounded-lg flex items-center gap-2 border" style={{ borderColor: "#E8E6E1", color: "#6B6B6B", background: "#FFFFFF" }}>
+                <Clock size={14} style={{ color: "#D97706" }} /> Ny oppfølging
+              </button>
             </div>
           </div>
+        </div>
 
-          {/* Tasks */}
-          {data.tasks.length > 0 && (
-            <div className="mb-8">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] mb-3" style={{ color: C.textTertiary }}>Oppfølginger</div>
-              <div className="space-y-1">
-                {data.tasks.map((task, i) => (
-                  <div key={i} className="flex items-center justify-between h-11 px-4 rounded-lg transition-colors cursor-pointer" style={{ background: C.surface }}
-                    onMouseEnter={e => (e.currentTarget.style.background = C.elevated)}
-                    onMouseLeave={e => (e.currentTarget.style.background = C.surface)}>
-                    <div className="flex items-center gap-3">
-                      {task.done ? <CheckSquare size={15} style={{ color: C.accent }} /> : <Square size={15} style={{ color: C.textTertiary }} />}
-                      <span className="text-[13px]" style={{ color: task.done ? C.textTertiary : C.textPrimary, textDecoration: task.done ? "line-through" : "none" }}>{task.title}</span>
-                    </div>
-                    <span className="text-[12px]" style={{ color: C.textTertiary }}>{task.date}</span>
-                  </div>
+        {/* Two-column: Contact info + Next steps */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10">
+          {/* Contact info */}
+          <div className="rounded-xl border p-6" style={{ background: "#FFFFFF", borderColor: "#E8E6E1" }}>
+            <div className="text-[12px] font-semibold uppercase tracking-[0.08em] mb-4" style={{ color: "#8A8780" }}>Kontaktinfo</div>
+            <div className="space-y-3">
+              <InfoRow icon={<Mail size={15} />} text={data.email} />
+              <InfoRow icon={<Phone size={15} />} text={data.phone} />
+              {(data as any).linkedin && <InfoRow icon={<ExternalLink size={15} />} text={(data as any).linkedin} />}
+            </div>
+            {data.tech.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-5 pt-4" style={{ borderTop: "1px solid #F0EFEB" }}>
+                {data.tech.map(t => (
+                  <span key={t} className="text-[12px] px-2 py-0.5 rounded-md" style={{ background: "#F4F3F0", color: "#6B6B6B" }}>{t}</span>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          {/* Activities */}
-          {data.activities.length > 0 && (
-            <div className="mb-8">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] mb-4" style={{ color: C.textTertiary }}>Aktiviteter</div>
-              {Object.entries(activityMonths).map(([month, acts]) => (
-                <div key={month} className="mb-6">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-[12px] font-semibold" style={{ color: C.textSecondary }}>{month}</span>
-                    <div className="flex-1 h-[1px]" style={{ background: C.border }} />
+          {/* Next steps */}
+          <div className="rounded-xl border p-6" style={{ background: "#FFFFFF", borderColor: "#E8E6E1" }}>
+            <div className="text-[12px] font-semibold uppercase tracking-[0.08em] mb-4" style={{ color: "#8A8780" }}>Neste steg</div>
+            {data.tasks.length === 0 && <p className="text-[14px]" style={{ color: "#B0AEA6" }}>Ingen oppfølginger</p>}
+            <div className="space-y-1">
+              {data.tasks.map((task, i) => (
+                <div key={i} className="flex items-center justify-between py-2.5 px-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-50">
+                  <div className="flex items-center gap-3">
+                    {task.done
+                      ? <CheckSquare size={16} style={{ color: "#16A34A" }} />
+                      : <Square size={16} style={{ color: "#D1D0CB" }} />
+                    }
+                    <span className="text-[14px]" style={{ color: task.done ? "#B0AEA6" : "#1A1A1A", textDecoration: task.done ? "line-through" : "none" }}>{task.title}</span>
                   </div>
-                  <div className="relative pl-6">
-                    <div className="absolute left-[7px] top-2 bottom-2 w-[1.5px]" style={{ background: C.border }} />
-                    <div className="space-y-4">
-                      {acts.map((a, i) => (
-                        <div key={i} className="relative">
-                          <div className="absolute -left-6 top-[5px] w-[14px] h-[14px] rounded-full flex items-center justify-center" style={{ background: C.base }}>
-                            {a.type === "call" ? <MessageCircle size={10} style={{ color: C.signalNow }} /> : <FileText size={10} style={{ color: C.accent }} />}
-                          </div>
-                          <div className="flex items-baseline justify-between mb-1">
-                            <span className="text-[14px] font-medium" style={{ color: C.textPrimary }}>{a.subject}</span>
-                            <span className="text-[12px] ml-3 flex-shrink-0" style={{ color: C.textTertiary }}>{a.date}</span>
-                          </div>
-                          {a.description && <p className="text-[13px] leading-relaxed" style={{ color: C.textSecondary }}>{a.description}</p>}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <span className="text-[13px]" style={{ color: "#B0AEA6" }}>{task.date}</span>
                 </div>
               ))}
             </div>
-          )}
-
-          {/* Notes */}
-          {data.notes && (
-            <div className="mb-8">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] mb-3" style={{ color: C.textTertiary }}>Notater</div>
-              <div className="rounded-xl p-5" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
-                <p className="text-[13px] leading-relaxed whitespace-pre-wrap" style={{ color: C.textSecondary, fontFamily: "'Geist Mono', monospace" }}>{data.notes}</p>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
+
+        {/* Activities */}
+        {data.activities.length > 0 && (
+          <div className="mb-10">
+            <div className="text-[12px] font-semibold uppercase tracking-[0.08em] mb-5" style={{ color: "#8A8780" }}>Aktiviteter</div>
+            {Object.entries(activityMonths).map(([month, acts]) => (
+              <div key={month} className="mb-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="text-[13px] font-bold" style={{ color: "#1A1A1A" }}>{month}</span>
+                  <div className="flex-1 h-px" style={{ background: "#E8E6E1" }} />
+                </div>
+                <div className="relative pl-8">
+                  <div className="absolute left-[6px] top-1 bottom-1 w-[2px] rounded-full" style={{ background: "#E8E6E1" }} />
+                  <div className="space-y-5">
+                    {acts.map((a, i) => (
+                      <div key={i} className="relative">
+                        <div className="absolute -left-8 top-[3px] w-[14px] h-[14px] rounded-full flex items-center justify-center" style={{ background: "#FFFFFF", border: "2px solid #E8E6E1" }}>
+                          {a.type === "call"
+                            ? <MessageCircle size={8} style={{ color: "#16A34A" }} />
+                            : <FileText size={8} style={{ color: "#5B4FC4" }} />
+                          }
+                        </div>
+                        <div className="flex items-baseline justify-between mb-1">
+                          <span className="text-[15px] font-semibold" style={{ color: "#1A1A1A" }}>{a.subject}</span>
+                          <span className="text-[13px] ml-4 flex-shrink-0" style={{ color: "#B0AEA6" }}>{a.date}</span>
+                        </div>
+                        {a.description && <p className="text-[14px] leading-relaxed" style={{ color: "#6B6B6B" }}>{a.description}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Notes */}
+        {(data as any).notes && (
+          <div className="mb-10">
+            <div className="text-[12px] font-semibold uppercase tracking-[0.08em] mb-4" style={{ color: "#8A8780" }}>Notater</div>
+            <div className="rounded-xl border p-6" style={{ background: "#FFFFFF", borderColor: "#E8E6E1" }}>
+              <p className="text-[14px] leading-relaxed whitespace-pre-wrap" style={{ color: "#6B6B6B" }}>{(data as any).notes}</p>
+            </div>
+          </div>
+        )}
       </div>
-    </>
+    </div>
+  );
+}
+
+function InfoRow({ icon, text }: { icon: React.ReactNode; text: string }) {
+  return (
+    <div className="flex items-center justify-between group">
+      <div className="flex items-center gap-3">
+        <span style={{ color: "#B0AEA6" }}>{icon}</span>
+        <span className="text-[14px]" style={{ color: "#1A1A1A" }}>{text}</span>
+      </div>
+      <button className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-100">
+        <Copy size={13} style={{ color: "#B0AEA6" }} />
+      </button>
+    </div>
   );
 }
