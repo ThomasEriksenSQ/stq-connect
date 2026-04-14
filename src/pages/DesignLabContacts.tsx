@@ -201,9 +201,16 @@ export default function DesignLabContacts() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const MOCK_CONSULTANTS = [
+    { id: 1, navn: "Tom Erik Lundesgaard", tilgjengelig_fra: (() => { const d = new Date(); d.setDate(d.getDate() + 10); return d.toISOString().slice(0, 10); })() },
+    { id: 2, navn: "Harald Ivarson Moldsvor", tilgjengelig_fra: "2026-09-01" },
+    { id: 3, navn: "Trond Hübertz Emaus", tilgjengelig_fra: "2026-09-01" },
+  ];
+
   const sortedConsultants = useMemo(() => {
-    const withAvail = availableConsultants.filter((c) => c.tilgjengelig_fra);
-    return sortHuntConsultants(withAvail as { id: number; navn: string; tilgjengelig_fra: string | null }[]);
+    const real = availableConsultants.filter((c) => c.tilgjengelig_fra);
+    const source = real.length > 0 ? real : MOCK_CONSULTANTS;
+    return sortHuntConsultants(source as { id: number; navn: string; tilgjengelig_fra: string | null }[]);
   }, [availableConsultants]);
 
   // ── Computed ──
