@@ -118,10 +118,10 @@ export default function DesignLabContactDetail() {
 
   // ── Compute signal ──
   const signal = useMemo(() => {
-    if (!contact || !tasks) return "Ukjent om behov" as Signal;
-    const effective = getEffectiveSignal(contact, tasks);
+    if (!activities || !tasks) return "Ukjent om behov" as Signal;
+    const effective = getEffectiveSignal(activities, tasks);
     return mapSignal(effective);
-  }, [contact, tasks]);
+  }, [activities, tasks]);
 
   if (isLoading) {
     return <p className="text-muted-foreground py-12 text-center">Laster kontakt…</p>;
