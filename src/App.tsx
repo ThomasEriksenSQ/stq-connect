@@ -27,6 +27,7 @@ const KonsulenterAnsatte = lazy(() => import("./pages/KonsulenterAnsatte"));
 const KonsulenterOppdrag = lazy(() => import("./pages/KonsulenterOppdrag"));
 const EksterneKonsulenter = lazy(() => import("./pages/EksterneKonsulenter"));
 const StacqPrisen = lazy(() => import("./pages/StacqPrisen"));
+const DesignLabStacqPrisen = lazy(() => import("./pages/DesignLabStacqPrisen"));
 const ImporterCver = lazy(() => import("./pages/ImporterCver"));
 const ImporterSelskaper = lazy(() => import("./pages/ImporterSelskaper"));
 const Markedsradar = lazy(() => import("./pages/Markedsradar"));
