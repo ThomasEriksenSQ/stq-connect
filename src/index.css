@@ -169,3 +169,102 @@ html {
 .animate-shake {
   animation: shake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97);
 }
+
+/* ── Design Lab V8 Theme Override ── */
+.dl-v8-theme {
+  --background: 45 18% 96%;
+  --foreground: 43 18% 14%;
+  --card: 45 18% 96%;
+  --card-foreground: 43 18% 14%;
+  --popover: 45 20% 98%;
+  --popover-foreground: 43 18% 14%;
+  --primary: 183 98% 22%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 43 10% 95%;
+  --secondary-foreground: 43 18% 14%;
+  --muted: 43 10% 93%;
+  --muted-foreground: 50 2% 41%;
+  --accent: 43 10% 93%;
+  --accent-foreground: 43 18% 14%;
+  --destructive: 0 30% 45%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 150 35% 45%;
+  --success-foreground: 0 0% 100%;
+  --warning: 42 58% 38%;
+  --warning-foreground: 0 0% 100%;
+  --border: 43 10% 88%;
+  --input: 43 10% 88%;
+  --ring: 183 98% 22%;
+}
+
+/* V8 button overrides */
+.dl-v8-theme button {
+  border-radius: 9999px;
+}
+.dl-v8-theme button[class*="rounded-lg"] {
+  border-radius: 9999px;
+}
+
+/* V8 section headers */
+.dl-v8-theme .text-label,
+.dl-v8-theme [class*="uppercase"][class*="tracking"] {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: hsl(var(--muted-foreground));
+}
+
+/* V8 badge overrides — desaturated */
+.dl-v8-theme .bg-emerald-100 {
+  background-color: hsl(150 20% 92%);
+  color: hsl(150 25% 35%);
+  border-color: hsl(150 15% 85%);
+}
+.dl-v8-theme .bg-blue-100 {
+  background-color: hsl(210 20% 92%);
+  color: hsl(210 25% 40%);
+  border-color: hsl(210 15% 85%);
+}
+.dl-v8-theme .bg-amber-100 {
+  background-color: hsl(42 25% 92%);
+  color: hsl(42 30% 35%);
+  border-color: hsl(42 20% 85%);
+}
+.dl-v8-theme .bg-gray-100 {
+  background-color: hsl(40 8% 92%);
+  color: hsl(40 5% 45%);
+  border-color: hsl(40 5% 87%);
+}
+.dl-v8-theme .bg-red-50 {
+  background-color: hsl(0 15% 93%);
+  color: hsl(0 20% 45%);
+  border-color: hsl(0 12% 87%);
+}
+
+/* V8 input/textarea */
+.dl-v8-theme input,
+.dl-v8-theme textarea,
+.dl-v8-theme select {
+  border-color: hsl(var(--border));
+  background: hsl(var(--popover));
+}
+
+/* V8 tag styling */
+.dl-v8-theme [class*="tag-bg"] {
+  --tag-bg: 43 15% 93%;
+  --tag-text: 43 18% 30%;
+}
+
+/* V8 card surfaces */
+.dl-v8-theme .bg-card,
+.dl-v8-theme [class*="bg-card"] {
+  background-color: hsl(var(--card));
+}
+
+/* V8 scrollbar */
+.dl-v8-theme::-webkit-scrollbar-thumb {
+  background: hsl(43 10% 82%);
+}
+.dl-v8-theme::-webkit-scrollbar-thumb:hover {
+  background: hsl(43 10% 70%);
+}
