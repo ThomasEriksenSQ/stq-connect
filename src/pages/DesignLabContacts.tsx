@@ -4,17 +4,17 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Search, ChevronDown, ChevronUp, Check,
-  Phone, Mail, Linkedin, Copy, Users, X,
+  Users, X,
   Building2, LayoutDashboard, Briefcase, Settings, LogOut,
-  UserPlus, Radar, TrendingUp, Globe, Calendar,
-  MessageCircle, FileText, ArrowUpRight, Clock,
-  MapPin, ExternalLink, ChevronRight,
+  UserPlus, Radar, TrendingUp, Globe,
+  ArrowUpRight, Clock,
 } from "lucide-react";
-import { differenceInDays, format, isPast, isToday } from "date-fns";
+import { differenceInDays, format } from "date-fns";
 import { nb } from "date-fns/locale";
 import { getEffectiveSignal, normalizeCategoryLabel } from "@/lib/categoryUtils";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { ContactCardContent } from "@/components/ContactCardContent";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
@@ -186,23 +186,7 @@ export default function DesignLabContacts() {
   });
 
   // Forespørsler (requests) for selected contact
-  const { data: foresporslerForContact = [] } = useQuery({
-    queryKey: ["dl-foresporsler-contact", selectedId],
-    queryFn: async () => {
-      if (!selectedId) return [];
-      const contact = rawContacts.find(c => c.id === selectedId);
-      if (!contact?.company_id) return [];
-      const { data, error } = await supabase
-        .from("foresporsler")
-        .select("id, selskap_navn, referanse, mottatt_dato, status, teknologier, type, sted")
-        .eq("selskap_id", contact.company_id)
-        .order("mottatt_dato", { ascending: false })
-        .limit(5);
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!selectedId,
-  });
+  // (forespørsler handled by ContactCardContent internally)
 
   // ── Computed ──
   const contacts = useMemo(() => {
@@ -461,12 +445,27 @@ export default function DesignLabContacts() {
           {/* Detail panel */}
           {sel && (
             <div
-              className="shrink-0 overflow-y-auto"
+              className="shrink-0 overflow-y-auto flex flex-col"
               style={{
-                width: 520, borderLeft: `1px solid ${C.border}`, background: C.surface,
+                width: "55%", maxWidth: 900, minWidth: 500,
+                borderLeft: `1px solid ${C.border}`, background: C.surface,
               }}
             >
-              <DetailPanel contact={sel} foresporsler={foresporslerForContact} onClose={() => setSelectedId(null)} onNavigate={navigate} />
+              {/* Linear-styled header */}
+              <div className="shrink-0 flex items-center justify-between px-6" style={{ height: 48, borderBottom: `1px solid ${C.border}` }}>
+                <div className="flex items-center gap-2">
+                  <h2 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{sel.firstName} {sel.lastName}</h2>
+                  <SignalChip signal={sel.signal} size="md" />
+                </div>
+                <div className="flex items-center gap-0.5">
+                  <IconBtn icon={<ArrowUpRight style={{ width: 15, height: 15 }} />} title="Åpne i CRM" onClick={() => navigate(`/kontakter/${sel.id}`)} />
+                  <IconBtn icon={<X style={{ width: 15, height: 15 }} />} title="Lukk" onClick={() => setSelectedId(null)} />
+                </div>
+              </div>
+              {/* Full ContactCardContent */}
+              <div className="flex-1 overflow-y-auto px-6 py-5">
+                <ContactCardContent contactId={sel.id} editable />
+              </div>
             </div>
           )}
         </div>
@@ -505,277 +504,11 @@ function SignalChip({ signal, size = "sm" }: { signal: Signal; size?: "sm" | "md
   );
 }
 
-/* ═══════════════════════════════════════════════════════════
-   DETAIL PANEL — DATA-RICH
-   ═══════════════════════════════════════════════════════════ */
-
-function DetailPanel({ contact, foresporsler, onClose, onNavigate }: {
-  contact: {
-    id: string; firstName: string; lastName: string; title: string;
-    email: string; phone: string; linkedin: string; location: string;
-    locations: string[]; department: string; notes: string;
-    company: string; companyId: string | null; signal: Signal; eier: string; eierId: string | null;
-    cvEmail: boolean; callList: boolean; teknologier: string[];
-    activities: any[]; tasks: any[];
-  };
-  foresporsler: any[];
-  onClose: () => void;
-  onNavigate: (path: string) => void;
-}) {
-  const allTasks = contact.tasks;
-  const activeTasks = allTasks.filter((t: any) => t.status !== "done");
-  const doneTasks = allTasks.filter((t: any) => t.status === "done").slice(0, 3);
-
-  const initials = `${contact.firstName?.[0] || ""}${contact.lastName?.[0] || ""}`.toUpperCase();
-
-  return (
-    <div className="flex flex-col h-full">
-      {/* ── Header ── */}
-      <div className="shrink-0" style={{ borderBottom: `1px solid ${C.border}` }}>
-        <div className="flex items-start justify-between px-6 pt-5 pb-4">
-          <div className="flex items-start gap-3 min-w-0">
-            <div
-              className="flex items-center justify-center rounded-full shrink-0"
-              style={{ width: 40, height: 40, background: C.accentBg, color: C.accent, fontSize: 14, fontWeight: 600 }}
-            >
-              {initials}
-            </div>
-            <div className="min-w-0">
-              <h2 className="truncate" style={{ fontSize: 18, fontWeight: 600, color: C.text, lineHeight: 1.2 }}>
-                {contact.firstName} {contact.lastName}
-              </h2>
-              <p style={{ fontSize: 13, color: C.textMuted, marginTop: 2 }}>
-                {[contact.title, contact.company].filter(Boolean).join(" · ")}
-              </p>
-              <div className="flex items-center gap-2 mt-2">
-                <SignalChip signal={contact.signal} size="md" />
-                <StatusPill label="CV-Epost" active={contact.cvEmail} />
-                <StatusPill label="Innkjøper" active={contact.callList} />
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-0.5 shrink-0 ml-2">
-            <IconBtn icon={<ArrowUpRight style={{ width: 15, height: 15 }} />} title="Åpne i CRM" onClick={() => onNavigate(`/kontakter/${contact.id}`)} />
-            <IconBtn icon={<X style={{ width: 15, height: 15 }} />} title="Lukk" onClick={onClose} />
-          </div>
-        </div>
-
-        {/* Action row */}
-        <div className="flex items-center gap-1 px-6 pb-3">
-          {contact.phone && (
-            <ActionBtn icon={<Phone style={{ width: 13, height: 13 }} />} label={contact.phone} onClick={() => window.open(`tel:${contact.phone}`)} />
-          )}
-          {contact.email && (
-            <ActionBtn icon={<Mail style={{ width: 13, height: 13 }} />} label={contact.email.length > 28 ? contact.email.split("@")[0] + "@…" : contact.email} onClick={() => window.open(`mailto:${contact.email}`)} />
-          )}
-          {contact.linkedin && (
-            <ActionBtn icon={<Linkedin style={{ width: 13, height: 13 }} />} label="LinkedIn" onClick={() => window.open(contact.linkedin, "_blank")} />
-          )}
-          {contact.email && (
-            <ActionBtn icon={<Copy style={{ width: 12, height: 12 }} />} label="" onClick={() => { navigator.clipboard.writeText(contact.email); toast.success("E-post kopiert"); }} isIcon />
-          )}
-        </div>
-      </div>
-
-      {/* ── Scrollable body ── */}
-      <div className="flex-1 overflow-y-auto">
-
-        {/* Properties grid */}
-        <div className="px-6 py-4" style={{ borderBottom: `1px solid ${C.border}` }}>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-2.5">
-            <PropRow label="E-post" value={contact.email || "—"} copyable={!!contact.email} />
-            <PropRow label="Telefon" value={contact.phone || "—"} copyable={!!contact.phone} />
-            <PropRow label="Selskap" value={contact.company || "—"} link={contact.companyId ? `/selskaper/${contact.companyId}` : undefined} onNavigate={onNavigate} />
-            <PropRow label="Stilling" value={contact.title || "—"} />
-            <PropRow label="Sted" value={contact.location || "—"} />
-            <PropRow label="Avdeling" value={contact.department || "—"} />
-            <PropRow label="Eier" value={contact.eier || "—"} highlight />
-            {contact.locations && contact.locations.length > 0 && (
-              <PropRow label="Lokasjoner" value={contact.locations.join(", ")} />
-            )}
-          </div>
-        </div>
-
-        {/* Oppfølginger (Tasks) */}
-        <PanelSection title="Oppfølginger" count={activeTasks.length}>
-          {activeTasks.length === 0 ? (
-            <p style={{ fontSize: 13, color: C.textGhost }}>Ingen aktive oppfølginger</p>
-          ) : (
-            <div className="space-y-2">
-              {activeTasks.sort((a: any, b: any) => (a.due_date || "9999").localeCompare(b.due_date || "9999")).map((task: any) => {
-                const due = task.due_date ? new Date(task.due_date) : null;
-                const overdue = due && isPast(due) && !isToday(due);
-                const today = due && isToday(due);
-                return (
-                  <div key={task.id} className="rounded-lg" style={{ padding: "10px 12px", background: overdue ? C.dangerBg : today ? C.warningBg : "rgba(40,37,29,0.02)", border: `1px solid ${overdue ? "rgba(154,74,74,0.12)" : C.borderLight}` }}>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <p style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{task.title}</p>
-                        {task.description && (
-                          <p className="line-clamp-2" style={{ fontSize: 12, color: C.textMuted, marginTop: 2, lineHeight: 1.4 }}>{task.description}</p>
-                        )}
-                      </div>
-                      {due && (
-                        <span className="shrink-0" style={{ fontSize: 12, fontWeight: 500, color: overdue ? C.danger : today ? C.warning : C.textFaint }}>
-                          {format(due, "d. MMM yyyy", { locale: nb })}
-                        </span>
-                      )}
-                    </div>
-                    {(task.profiles as any)?.full_name && (
-                      <p style={{ fontSize: 11, color: C.textFaint, marginTop: 3 }}>
-                        Tildelt: {(task.profiles as any).full_name}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          {doneTasks.length > 0 && (
-            <div className="mt-3">
-              <p style={{ fontSize: 11, fontWeight: 500, color: C.textGhost, marginBottom: 4 }}>Fullførte</p>
-              {doneTasks.map((task: any) => (
-                <div key={task.id} className="flex items-center gap-2 py-1">
-                  <span style={{ fontSize: 12, color: C.textGhost, textDecoration: "line-through" }}>{task.title}</span>
-                  {task.due_date && <span style={{ fontSize: 11, color: C.textGhost }}>{format(new Date(task.due_date), "d. MMM", { locale: nb })}</span>}
-                </div>
-              ))}
-            </div>
-          )}
-        </PanelSection>
-
-        {/* Forespørsler */}
-        {foresporsler.length > 0 && (
-          <PanelSection title="Forespørsler" count={foresporsler.length}>
-            <div className="space-y-2">
-              {foresporsler.map((f: any) => (
-                <div key={f.id} className="rounded-lg" style={{ padding: "8px 12px", background: "rgba(40,37,29,0.02)", border: `1px solid ${C.borderLight}` }}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{f.referanse || f.selskap_navn}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {f.type && <span style={{ fontSize: 11, color: C.textFaint }}>{f.type}</span>}
-                        {f.sted && <span style={{ fontSize: 11, color: C.textFaint }}>· {f.sted}</span>}
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <span style={{ fontSize: 11, color: C.textGhost }}>{format(new Date(f.mottatt_dato), "d. MMM yyyy", { locale: nb })}</span>
-                      {f.status && (
-                        <p style={{ fontSize: 11, fontWeight: 500, color: f.status === "Aktiv" ? C.accent : C.textFaint, marginTop: 1 }}>{f.status}</p>
-                      )}
-                    </div>
-                  </div>
-                  {f.teknologier && f.teknologier.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {f.teknologier.slice(0, 6).map((t: string) => (
-                        <TechTag key={t} label={t} />
-                      ))}
-                      {f.teknologier.length > 6 && <span style={{ fontSize: 11, color: C.textGhost }}>+{f.teknologier.length - 6}</span>}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </PanelSection>
-        )}
-
-        {/* Teknisk DNA */}
-        {contact.teknologier.length > 0 && (
-          <PanelSection title="Teknisk DNA" count={contact.teknologier.length}>
-            <div className="flex flex-wrap gap-1.5">
-              {contact.teknologier.map((t) => (
-                <TechTag key={t} label={t} />
-              ))}
-            </div>
-          </PanelSection>
-        )}
-
-        {/* Notat */}
-        {contact.notes && (
-          <PanelSection title="Notat">
-            <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{contact.notes}</p>
-          </PanelSection>
-        )}
-
-        {/* Aktiviteter — full timeline */}
-        <div className="px-6 pt-4 pb-8">
-          <div className="flex items-center justify-between mb-3">
-            <SectionLabel>Aktivitet</SectionLabel>
-            <span style={{ fontSize: 11, color: C.textGhost }}>{contact.activities.length} totalt</span>
-          </div>
-          {contact.activities.length === 0 ? (
-            <p style={{ fontSize: 13, color: C.textGhost }}>Ingen aktiviteter ennå</p>
-          ) : (
-            <div className="relative">
-              {/* Timeline line */}
-              <div className="absolute" style={{ left: 8, top: 8, bottom: 8, width: 1, background: C.border }} />
-
-              {contact.activities.map((act: any, i: number) => {
-                const isCall = act.type === "call" || act.type === "samtale";
-                const isMeeting = act.type === "meeting" || act.type === "møte";
-                const createdBy = (act.profiles as any)?.full_name || "";
-                const description = act.description ? act.description.replace(/^\[[^\]]*\]\n?/, "") : "";
-
-                return (
-                  <div key={act.id} className="flex gap-3 relative" style={{ paddingBottom: 16 }}>
-                    {/* Icon */}
-                    <div className="shrink-0 relative z-10 flex items-center justify-center rounded-full" style={{ width: 17, height: 17, marginTop: 2, background: C.surface, border: `1px solid ${C.border}` }}>
-                      {isCall
-                        ? <MessageCircle style={{ width: 9, height: 9, color: C.success }} />
-                        : isMeeting
-                          ? <FileText style={{ width: 9, height: 9, color: C.accent }} />
-                          : <FileText style={{ width: 9, height: 9, color: C.textFaint }} />
-                      }
-                    </div>
-                    {/* Content */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <p style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{act.subject}</p>
-                        <span className="shrink-0" style={{ fontSize: 11, color: C.textGhost, whiteSpace: "nowrap" }}>
-                          {format(new Date(act.created_at), "d. MMM yyyy", { locale: nb })}
-                        </span>
-                      </div>
-                      {description && (
-                        <p style={{ fontSize: 12.5, color: C.textMuted, marginTop: 3, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
-                          {description}
-                        </p>
-                      )}
-                      {createdBy && (
-                        <p style={{ fontSize: 11, color: C.textGhost, marginTop: 3 }}>
-                          {createdBy}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+/* (DetailPanel removed — now using ContactCardContent directly) */
 
 /* ═══════════════════════════════════════════════════════════
    SUB-COMPONENTS
    ═══════════════════════════════════════════════════════════ */
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: C.textGhost }}>
-      {children}
-    </p>
-  );
-}
-
-function TechTag({ label }: { label: string }) {
-  return (
-    <span className="rounded-full" style={{ fontSize: 11, fontWeight: 500, padding: "2px 8px", background: "rgba(40,37,29,0.05)", color: C.textMuted }}>
-      {label}
-    </span>
-  );
-}
 
 function NavGroup({ items, navigate }: { items: typeof NAV_MAIN; navigate: (p: string) => void }) {
   return (
@@ -817,47 +550,7 @@ function SidebarBtn({ icon: Icon, label, onClick, muted }: { icon: any; label: s
   );
 }
 
-function PanelSection({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) {
-  return (
-    <div className="px-6 py-4" style={{ borderBottom: `1px solid ${C.border}` }}>
-      <div className="flex items-center justify-between mb-3">
-        <SectionLabel>{title}</SectionLabel>
-        {count !== undefined && <span style={{ fontSize: 11, color: C.textGhost }}>{count}</span>}
-      </div>
-      {children}
-    </div>
-  );
-}
 
-function PropRow({ label, value, copyable, link, onNavigate, highlight }: {
-  label: string; value: string; copyable?: boolean; link?: string; onNavigate?: (p: string) => void; highlight?: boolean;
-}) {
-  const handleCopy = copyable ? () => { navigator.clipboard.writeText(value); toast.success(`${label} kopiert`); } : undefined;
-  const handleClick = link && onNavigate ? () => onNavigate(link) : handleCopy;
-
-  return (
-    <div className="flex flex-col">
-      <span style={{ fontSize: 11, color: C.textGhost, marginBottom: 1 }}>{label}</span>
-      <span
-        onClick={handleClick}
-        className={handleClick ? "cursor-pointer" : ""}
-        style={{
-          fontSize: 13, color: link ? C.accent : highlight ? C.accent : C.text,
-          fontWeight: highlight ? 500 : 400,
-          textDecoration: link ? "underline" : "none",
-          textDecorationColor: link ? "rgba(1,105,111,0.3)" : undefined,
-          textUnderlineOffset: 2,
-        }}
-        onMouseEnter={(e) => { if (handleClick) e.currentTarget.style.opacity = "0.7"; }}
-        onMouseLeave={(e) => { if (handleClick) e.currentTarget.style.opacity = "1"; }}
-      >
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function IconBtn({ icon, title, onClick }: { icon: React.ReactNode; title: string; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
@@ -872,36 +565,6 @@ function IconBtn({ icon, title, onClick }: { icon: React.ReactNode; title: strin
   );
 }
 
-function ActionBtn({ icon, label, onClick, isIcon }: { icon: React.ReactNode; label: string; onClick: () => void; isIcon?: boolean }) {
-  return (
-    <button
-      onClick={(e) => { e.stopPropagation(); onClick(); }}
-      title={label || undefined}
-      className="inline-flex items-center gap-1.5 rounded-md transition-colors"
-      style={{
-        height: 28, paddingInline: isIcon ? 6 : 10, fontSize: 12, fontWeight: 500,
-        color: C.textMuted, border: `1px solid ${C.border}`, background: "transparent",
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-    >
-      {icon}
-      {label && <span>{label}</span>}
-    </button>
-  );
-}
-
-function StatusPill({ label, active }: { label: string; active: boolean }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full" style={{
-      fontSize: 11, fontWeight: 500, padding: "2px 8px",
-      background: active ? "rgba(1,105,111,0.08)" : "rgba(40,37,29,0.05)",
-      color: active ? C.accent : C.textGhost,
-    }}>
-      <span style={{ fontSize: 7 }}>{active ? "●" : "○"}</span> {label}
-    </span>
-  );
-}
 
 function FilterPill({ label, value, options, open, setOpen, onChange }: {
   label: string; value: string; options: string[]; open: boolean; setOpen: (v: boolean) => void; onChange: (v: string) => void;
