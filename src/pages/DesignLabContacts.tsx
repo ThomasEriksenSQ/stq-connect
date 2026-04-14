@@ -451,7 +451,7 @@ export default function DesignLabContacts() {
                   <div
                     className="grid items-center sticky top-0 z-10"
                     style={{
-                      gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) 64px",
+gridTemplateColumns: "minmax(0,1fr) 100px 160px 56px",
                       height: 32, borderBottom: `1px solid ${C.border}`,
                       background: C.bg, paddingLeft: 16, paddingRight: 16,
                     }}
@@ -474,8 +474,8 @@ export default function DesignLabContacts() {
                           onClick={() => setSelectedId(isActive ? null : c.id)}
                           className="grid items-center cursor-pointer group"
                           style={{
-                            gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) 64px",
-                            height: 38, paddingLeft: 16, paddingRight: 16,
+gridTemplateColumns: "minmax(0,1fr) 100px 160px 56px",
+                             height: 38, paddingLeft: 16, paddingRight: 16,
                             borderBottom: `1px solid ${C.borderLight}`,
                             background: isActive ? C.activeBg : undefined,
                             transition: "background 50ms",
@@ -531,8 +531,8 @@ export default function DesignLabContacts() {
               <div
                 className="grid items-center sticky top-0 z-10"
                 style={{
-                  gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1fr) 64px",
-                  height: 32, borderBottom: `1px solid ${C.border}`,
+gridTemplateColumns: "minmax(0,1fr) 120px 200px 180px 160px 64px",
+                   height: 32, borderBottom: `1px solid ${C.border}`,
                   background: C.bg, paddingLeft: 16, paddingRight: 16,
                 }}
               >
@@ -556,8 +556,8 @@ export default function DesignLabContacts() {
                       onClick={() => setSelectedId(isActive ? null : c.id)}
                       className="grid items-center cursor-pointer group"
                       style={{
-                        gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1fr) 64px",
-                        height: 38, paddingLeft: 16, paddingRight: 16,
+gridTemplateColumns: "minmax(0,1fr) 120px 200px 180px 160px 64px",
+                         height: 38, paddingLeft: 16, paddingRight: 16,
                         borderBottom: `1px solid ${C.borderLight}`,
                         background: isActive ? C.activeBg : undefined,
                         transition: "background 50ms",
