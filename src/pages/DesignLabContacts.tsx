@@ -87,7 +87,7 @@ const NAV_MAIN = [
 ];
 
 const NAV_STACQ = [
-  { label: "STACQ Prisen", icon: TrendingUp, href: "/stacq/prisen" },
+  { label: "STACQ Prisen", icon: TrendingUp, href: "/design-lab/stacq-prisen" },
   { label: "Markedsradar", icon: Radar, href: "/markedsradar" },
   { label: "Ansatte", icon: Users, href: "/konsulenter/ansatte" },
   { label: "Eksterne", icon: UserPlus, href: "/konsulenter/eksterne" },
