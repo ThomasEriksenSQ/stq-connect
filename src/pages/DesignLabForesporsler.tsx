@@ -13,6 +13,8 @@ import { nb } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
 import { ForespørselSheet } from "@/components/ForespørselSheet";
 import { crmQueryKeys } from "@/lib/queryKeys";
+import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
+import { usePersistentState } from "@/hooks/usePersistentState";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
@@ -295,6 +297,7 @@ export default function DesignLabForesporsler() {
             <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>{filtered.length}</span>
           </div>
           <div className="flex items-center gap-2">
+            <TextSizeControl value={textSize} onChange={setTextSize} />
             <div className="relative" style={{ width: 220 }}>
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ width: 14, height: 14, color: C.textGhost }} />
               <input

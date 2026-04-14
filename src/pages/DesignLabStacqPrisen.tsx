@@ -20,6 +20,8 @@ import {
   Dialog, DialogContent, DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
+import { usePersistentState } from "@/hooks/usePersistentState";
 
 /* ═══ V8 COLOR CONSTANTS ═══ */
 const C = {
@@ -255,6 +257,7 @@ export default function DesignLabStacqPrisen() {
           <div className="flex items-baseline gap-2.5">
             <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>STACQ Prisen</h1>
           </div>
+          <TextSizeControl value={textSize} onChange={setTextSize} />
         </header>
 
         {/* Content */}
