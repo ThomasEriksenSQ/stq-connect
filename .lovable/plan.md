@@ -1,38 +1,34 @@
 
 
-# Plan: Legg til Type-filtre i Design Lab filterrad
+# Plan: Legg til "Tilgjengelig for oppdrag"-seksjon i Design Lab
 
 ## Hva skal gjøres
 
-Utvide filterraden i Design Lab med en tredje filtergruppe **"Type"** med pillene: **Alle**, **Innkjøper**, **CV-Epost**, **Ikke relevant kontakt** — matchende referansebildet. Samtidig endre filterraden fra dropdown-stil til den horisontale pill-baserte layouten vist i skjermbildet, der alle alternativer er synlige som klikkbare pills med label til venstre.
+Legge til en horisontal rad med konsulenter som er tilgjengelige for oppdrag, plassert mellom header/filtre og kontaktlisten. Designet matcher referansebildet: konsulent-kort med initialer (avatar), fullt navn og tilgjengelighetsdato i en horisontal scrollbar.
 
-## Visuell stil (Linear-konsistent)
+## Visuell stil
 
-Filterraden får en layout per rad:
 ```text
-EIER      [Alle] [Jon Richard Nygaard] [Thomas Eriksen] [Uten eier]
-SIGNAL    [Alle] [Behov nå] [Får fremtidig behov] [Får kanskje behov] [Ukjent om behov] [Ikke aktuelt]    {count} kontakter
-TYPE      [Alle] [Innkjøper] [CV-Epost] [Ikke relevant kontakt]
+TILGJENGELIG FOR OPPDRAG
+┌──────────────────────┐  ┌──────────────────────┐  ┌──────────────────────┐
+│ [TL] Tom Erik ...    │  │ [HM] Harald Ivarson..│  │ [TE] Trond Hübertz.. │
+│ Tilgjengelig om 10d  │  │ Tilgjengelig 1. sep. │  │ Tilgjengelig 1. sep. │
+└──────────────────────┘  └──────────────────────┘  └──────────────────────┘
 ```
 
-- Label: uppercase, 11px, fontWeight 600, color `C.textMuted`, tracking 0.06em
-- Pill uvalgt: rounded-full, border `C.border`, color `C.textMuted`, 13px
-- Pill valgt: bg `C.accent`, color white, no border
-- Kontakttelling høyrejustert på signal-raden
-- Søkefelt flyttes over filterradene (allerede i header)
+- Seksjonstittel: 11px uppercase, fontWeight 600, tracking 0.06em, color `C.textMuted`
+- Kort: rounded-lg, border `C.border`, padding 10px 14px, horisontal layout med avatar + tekst
+- Avatar: 36px sirkel, bg `rgba(40,37,29,0.08)`, initialer 12px fontWeight 600
+- Tilgjengelighetstekst: 12px, fargekoding via `getConsultantAvailabilityMeta` (ready=emerald, soon=amber, later=muted)
+- Horisontal scroll med `overflow-x-auto`, ingen scrollbar synlig (webkit-scrollbar hidden)
 
 ## Tekniske endringer
 
 ### `src/pages/DesignLabContacts.tsx`
 
-1. **Ny state**: `typeFilter` med verdier `"Alle" | "Innkjøper" | "CV-Epost" | "Ikke relevant kontakt"`
-2. **Ny state**: `ownerFilter` utvides med `"Uten eier"` som alternativ
-3. **Erstatte FilterPill-dropdown** med en ny `FilterRow`-komponent som renderer alle alternativer som horisontale pills
-4. **Filtrering**: Utvide `filtered` useMemo med typeFilter-logikk:
-   - "Innkjøper": `c.callList === true`
-   - "CV-Epost": `c.cvEmail === true`
-   - "Ikke relevant kontakt": fjerne `ikke_aktuell_kontakt`-filteret fra queryen og filtrere klientside
-5. **Fjerne `ikke_aktuell_kontakt`-filter** fra Supabase-queryen slik at "Ikke relevant kontakt" kan vises
-6. **Layout**: Filterraden utvides til 3 rader med vertikal spacing, ca 120px høyde totalt
-7. **Nullstill-knapp**: oppdateres til å også nullstille typeFilter
+1. **Ny query**: Hent `stacq_ansatte` med status "Ledig" og `tilgjengelig_fra` not null, select `id, navn, tilgjengelig_fra`
+2. **Sortere og filtrere** med eksisterende `sortHuntConsultants` og `hasConsultantAvailability` fra `@/lib/contactHunt`
+3. **Ny komponent `AvailableConsultantsBar`**: Rendrer horisontalt scrollbar med kort, plassert rett under filterraden
+4. **Beregn initialer** fra konsulentens navn (første bokstav i for- og etternavn)
+5. **Import** `getConsultantAvailabilityMeta`, `hasConsultantAvailability`, `sortHuntConsultants` fra `@/lib/contactHunt`
 
