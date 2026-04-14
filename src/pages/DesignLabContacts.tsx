@@ -404,7 +404,6 @@ export default function DesignLabContacts() {
                             gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) 64px",
                             height: 38, paddingLeft: 16, paddingRight: 16,
                             borderBottom: `1px solid ${C.borderLight}`,
-                            borderLeft: isActive ? `2px solid ${C.accent}` : "2px solid transparent",
                             background: isActive ? C.activeBg : undefined,
                             transition: "background 50ms",
                           }}
@@ -487,7 +486,6 @@ export default function DesignLabContacts() {
                         gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1fr) 64px",
                         height: 38, paddingLeft: 16, paddingRight: 16,
                         borderBottom: `1px solid ${C.borderLight}`,
-                        borderLeft: isActive ? `2px solid ${C.accent}` : "2px solid transparent",
                         background: isActive ? C.activeBg : undefined,
                         transition: "background 50ms",
                       }}
@@ -567,13 +565,12 @@ function NavGroup({ items, navigate }: { items: typeof NAV_MAIN; navigate: (p: s
           onClick={() => navigate(item.href)}
           className="flex items-center gap-2 w-full rounded-md px-2 py-[6px] transition-colors"
           style={{
-            fontSize: 13, fontWeight: 500,
-            color: item.active ? C.accent : C.textMuted,
-            background: item.active ? C.accentBg : "transparent",
-            borderLeft: item.active ? `2px solid ${C.accent}` : "2px solid transparent",
+            fontSize: 13, fontWeight: item.active ? 600 : 500,
+            color: item.active ? C.text : C.textMuted,
+            background: item.active ? "rgba(40,37,29,0.06)" : "transparent",
           }}
           onMouseEnter={(e) => { if (!item.active) e.currentTarget.style.background = C.hoverBg; }}
-          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? C.accentBg : "transparent"; }}
+          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? "rgba(40,37,29,0.06)" : "transparent"; }}
         >
           <item.icon style={{ width: 15, height: 15, strokeWidth: 1.6 }} />
           {item.label}
@@ -667,8 +664,8 @@ function ColHeader({ label, field, sort, onSort, className }: {
       onClick={() => onSort(field)}
       className={`flex items-center gap-0.5 transition-colors ${className || ""}`}
       style={{
-        fontSize: 11, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em",
-        color: active ? C.text : C.textFaint,
+        fontSize: 11, fontWeight: active ? 700 : 600, textTransform: "uppercase", letterSpacing: "0.06em",
+        color: active ? C.text : C.textMuted,
       }}
     >
       {label}
