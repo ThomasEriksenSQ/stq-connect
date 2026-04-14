@@ -1,80 +1,102 @@
 
 
-# Plan: Design Lab V4 — Fullstendig redesign fra scratch
+# Plan: Design Lab V5 — "Action Queue"
 
-## Problemanalyse
+## Hvorfor alt til nå har feilet
 
-Tre feil med nåværende implementering:
-1. **DesignLabContacts.tsx bruker fortsatt det mørke "Obsidian"-temaet** (V2) med `#0A0A0F` bakgrunn, Geist Sans, og signal-grupperte lanes. Den ble aldri oppdatert til V3.
-2. **Sidene rendres inni AppLayout** (den gamle CRM-headeren) fordi rutene ligger under `<Route path="/" element={<ProtectedRoutes />}>`. Dette gir den gamle toppmenyen over Design Lab-innholdet.
-3. **Detaljsiden (V3)** har riktig lyst tema, men mangler realistiske data og har en for enkel toppmeny.
+Alle tidligere versjoner har vært **datalister med ulik farge**. Det eksisterende CRM-et er også en dataliste. Å endre bakgrunnsfarge fra hvit til mørk til varm — det er ikke redesign, det er theming.
 
-## Løsning
+Det genuint nye: **Kontaktlisten er ikke en tabell. Den er en prioritert handlingskø.**
 
-### 1. Flytt Design Lab-ruter ut av AppLayout
+## Konsept: "Hvem ringer jeg nå?"
 
-I `App.tsx`: Flytt `/design-lab/*`-rutene ut av `<ProtectedRoutes />`-noden slik at de IKKE rendres inni `AppLayout`. De får sin egen minimale toppstripe i stedet.
+### Toppfelt — Daglig prioritet (nytt konsept)
 
-### 2. Ny minimal toppstripe (felles for begge sider)
+Øverst på siden: **3 prioritetskort** side ved side for de kontaktene som trenger oppmerksomhet FØRST. Ikke en tabell-rad — et kort med:
+- Stort navn + selskap
+- Konkret neste handling ("Send 2 ML-profiler til Erik")
+- Hvor lenge siden siste kontakt (fargkodet urgency)
+- **Ring**-knapp direkte på kortet
 
-En tynn, ren stripe (48px) med:
-- **STACQ** logo til venstre (ren tekst, font-weight 800)
-- Søkefelt i midten (bred, ren, med ⌘K hint)
-- Brukerinitialer til høyre
+Dette finnes IKKE i dagens CRM. Det er en ny interaksjonsmodell.
 
-Hvit bakgrunn, subtil border-bottom. Ingen navigasjonslenker, ingen dropdown, ingen tema-toggle. Kun det nødvendige.
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│  STACQ                    [Søk ⌘K]                              JR    │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  Ring neste                                                    12 apr   │
+│                                                                         │
+│  ┌─────────────────────┐ ┌─────────────────────┐ ┌─────────────────────┐
+│  │ ▌Erik Solberg       │ │ ▌Henrik Berg        │ │ ▌Silje Strand       │
+│  │  Aker Solutions     │ │  Equinor            │ │  Schibsted          │
+│  │                     │ │                     │ │                     │
+│  │  Send 2 ML-profiler │ │  2 DevOps-profiler  │ │  Spark-konsulent    │
+│  │                     │ │                     │ │                     │
+│  │  Sist: 1d · Samtale │ │  Sist: 2d · Samtale │ │  Sist: 3d · Samtale │
+│  │              [Ring] │ │              [Ring] │ │              [Ring] │
+│  └─────────────────────┘ └─────────────────────┘ └─────────────────────┘
+│                                                                         │
+│  Alle kontakter                                            Eier ▾  ▾   │
+│  ─────────────────────────────────────────────────────────────────────  │
+│                                                                         │
+│  ▌ Erik Solberg          Send 2 ML-profiler         Jon Richard    1d  │
+│    Tech Lead · Aker      Behov nå                   Nygaard            │
+│                                                                         │
+│  ▌ Kari Hansen           Book demo med teamleder    Thomas         3d  │
+│    Eng. Mgr · DNB        Behov nå                   Eriksen            │
+│                                                                         │
+│    Magnus Pedersen        Følg opp Q3-behov          Jon Richard   9d  │
+│    VP Eng. · Cognite      Fremtidig behov            Nygaard            │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
-### 3. Kontaktlisten — ren tabell/worklist
+### Hva er GENUINT NYTT her:
 
-Helt nytt lyst design. Flat, sorterbar tabell med tydelige kolonner:
+1. **Prioritetskort øverst** — de 3 viktigste kontaktene fremhevet som handlingskort, ikke bare rader i en tabell. Med **direkte ring-knapp**.
 
-| KONTAKT | SELSKAP | SIGNAL | EIER | SISTE | NESTE STEG |
-|---------|---------|--------|------|-------|------------|
+2. **Venstre signal-stripe på rader** — i stedet for en badge inne i raden, har hver rad en 3px farget venstrekant (grønn = behov nå, blå = fremtidig, etc). Gir umiddelbar visuell scanning uten å lese tekst.
 
-- Hvit bakgrunn, `#FAFAFA` under header
-- Romslige rader (64px), tydelig hover
-- Store, lesbare signal-badges med fylt farge
-- Eier alltid fullt navn
-- Søkefelt + filtre (Eier, Signal, CV) som pills over tabellen
-- Klikk på rad → navigerer til detaljside
+3. **Handlingen er kolonnen, ikke signalet** — den dominante kolonnen i tabellen er "neste steg" (hva du skal gjøre), ikke "signal" (hva statusen er). Signal vises som tekst under handlingen, nedtonet. Handlingen er bold.
 
-### 4. Realistiske mockdata
+4. **Relativ tid som primær tidsvisning** — "1d", "3d", "2u" i stedet for "11. apr 2026". Visuelt lettere å scanne urgency.
 
-12 kontakter med:
-- Ekte norske selskaper (Aker Solutions, DNB, Equinor, Schibsted, Telenor, Vipps, Cognite, Storebrand, Kahoot!, Posten, Statkraft, Color Line)
-- Realistiske roller (Tech Lead, VP Engineering, CTO, Engineering Manager, etc.)
-- Salgsrelevant historikk: siste aktivitet med type og dato, neste oppfølging
-- Konsulentmatch-kontekst: tech-tags, CV-status, matchende konsulenter
-- Flere CRM-felter: lokasjon, selskapstype (Kunde/Potensiell), antall aktive oppdrag
+5. **Hover-actions** — ved hover vises ring/e-post-ikoner direkte i raden for umiddelbar handling.
 
-### 5. Kontaktdetaljside — oppdatert
+6. **Ingen avatar-sirkler** — fjerner det visuelle støyet. Navnet er nok.
 
-Beholder V3-strukturen (hero card, to-kolonne, aktivitetstidslinje) men:
-- Bruker den nye toppstripen i stedet for den enkle "← Tilbake"-headeren
-- Legger til tilbake-knapp under toppstripen
-- Mer realistiske data per kontakt (flere aktiviteter, oppfølginger, notater)
-- Konsulentmatch-seksjon: viser hvilke STACQ-konsulenter som matcher kontaktens behov
+### Visuelt system (annerledes enn dagens CRM)
 
-### 6. Visuelt system
+- **Bakgrunn**: `#FFFFFF` ren hvit — men med tydelig visuelt hierarki gjennom spacing, ikke farger
+- **Prioritetskort**: Hvite med `border-left: 3px solid signal-farge`, subtil skygge `0 2px 8px rgba(0,0,0,0.06)`
+- **Signal-stripe på rader**: 3px bred farget venstrekant — scannes mye raskere enn badges
+- **Typografi**: Inter — men med tydelig størrelses-hierarki:
+  - Seksjonstittel ("Ring neste"): 20px/700, mørk
+  - Kontaktnavn i kort: 17px/600
+  - Kontaktnavn i liste: 14px/600
+  - Handling (neste steg): 14px/500, `#111827`
+  - Signal-tekst: 12px/500, farget
+  - Meta (tid, eier): 13px/400, `#9CA3AF`
+- **Ingen avrundede hjørner på hovedcontainer** — skarp, profesjonell
+- **Hover**: Raden får en svak bakgrunn `#F9FAFB` og ring/mail-ikoner glir inn fra høyre
 
-- **Bakgrunn**: `#FAFAFA` (lys, nøytral)
-- **Overflater**: `#FFFFFF` med `border: 1px solid #E5E7EB`, `box-shadow: 0 1px 3px rgba(0,0,0,0.04)`
-- **Tekst primær**: `#111827` (ikke ren svart, men nær)
-- **Tekst sekundær**: `#6B7280`
-- **Tekst tertiær**: `#9CA3AF`
-- **Aksent**: `#2563EB` (profesjonell blå for primærhandlinger)
-- **Font**: Inter, system-ui fallback
-- **Typografi**: 28px/700 sidetittel, 15px/600 kontaktnavn i liste, 14px/400 brødtekst, 12px/500 uppercase seksjons-labels
-- **Signal-badges**: Fylt bakgrunn, border, rundet pill — emerald/blue/amber/gray/red
+### Kontaktdetalj — også nytt
 
-## Filer som endres
+Detaljsiden redesignes med samme filosofi:
+- **Handlingsbar øverst**: "Ring", "E-post", "Logg samtale" som primære knapper
+- **Stor, tydelig "Neste steg"** som det første du ser under kontaktinfo
+- **Tidslinje** med aktiviteter gruppert per måned
+- **Konsulentmatch-panel** til høyre: hvilke STACQ-konsulenter matcher dette behovet
 
-1. **`src/App.tsx`** — Flytt design-lab-ruter ut av ProtectedRoutes til en egen wrappet rute med autentisering men uten AppLayout
-2. **`src/pages/DesignLabContacts.tsx`** — Fullstendig omskrivning med lyst tema, flat tabell, ny toppstripe, realistiske data
-3. **`src/pages/DesignLabContactDetail.tsx`** — Oppdatert med ny toppstripe, mer realistiske data, konsulentmatch-seksjon
+## Implementering
 
-## Ikke berørt
-- Ingen endringer i eksisterende CRM-kode
-- Alt mockdata, ingen database
-- Kun design-lab-sider
+### Filer
+1. **`src/pages/DesignLabContacts.tsx`** — fullstendig omskrivning med prioritetskort + action-queue-tabell
+2. **`src/pages/DesignLabContactDetail.tsx`** — omskrivning med handlings-først layout
+
+### Ikke berørt
+- Ingen endring i App.tsx (ruter finnes)
+- Ingen endring i eksisterende CRM
+- Alt mockdata
 
