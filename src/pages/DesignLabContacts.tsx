@@ -210,6 +210,7 @@ export default function DesignLabContacts() {
         company: company?.name || "", companyId: company?.id || null,
         signal, eier: owner?.full_name || "", eierId: owner?.id || null,
         cvEmail: c.cv_email, callList: c.call_list,
+        ikkeAktuell: c.ikke_aktuell_kontakt ?? false,
         teknologier: c.teknologier || [],
         daysSince, lastActivitySubject: lastAct?.subject || "",
         activities: acts, tasks,
