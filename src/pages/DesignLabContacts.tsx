@@ -143,9 +143,8 @@ export default function DesignLabContacts() {
       const { data, error } = await supabase
         .from("contacts")
         .select("id, first_name, last_name, title, email, phone, cv_email, call_list, ikke_aktuell_kontakt, teknologier, company_id, location, linkedin, department, notes, locations, companies(id, name), profiles:owner_id(id, full_name)")
-        .eq("ikke_aktuell_kontakt", false)
         .order("updated_at", { ascending: false })
-        .limit(300);
+        .limit(500);
       if (error) throw error;
       return data;
     },
