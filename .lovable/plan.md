@@ -1,87 +1,108 @@
 
 
-# Plan: Design Lab — Kontaktdetaljside inspirert av Balkan.team
+# Plan: Design Lab V8 — "Linear meets B2B Sales"
 
 ## Konsept
 
-Inspirert av referansebildet: en to-kolonne layout der **venstre kolonne** er en kompakt kontaktinfo-seksjon (avatar, navn, selskap, status, kontaktinfo, egenskaper), og **høyre kolonne** er tabulert innhold (Aktivitet, Oppfølginger, Konsulenter). Clean, hvitt, minimalt — men med EKTE data fra Supabase.
+Fullstendig visuell overhaul basert på Linear's light mode-filosofi: varm off-white, muted teal accent, ultra-subtile borders, og en 3-sone layout der kontaktdetaljer glir inn som et høyre-panel — ikke en separat side.
+
+## Arkitektur-endring
+
+Dagens Design Lab har to separate sider (liste + detaljside). Ny versjon slår dem sammen til **én side med sliding detail panel**:
 
 ```text
-┌─ AppLayout sidebar ─┬────────────────────────────────────────────────────────┐
-│  Dashboard           │  Kontakter › Erik Solberg                             │
-│  Kontakter           │                                                       │
-│  Selskaper           │  ┌─ VENSTRE (320px) ──┐  ┌─ HØYRE (flex) ──────────┐ │
-│  Oppdrag             │  │                     │  │                          │ │
-│  ...                 │  │  [Avatar]            │  │ Aktivitet│Oppfølginger  │ │
-│                      │  │  Erik Solberg        │  │                          │ │
-│                      │  │  Tech Lead           │  │ Erik Solberg             │ │
-│                      │  │  Aker Solutions      │  │ @Jon Richard Nygaard     │ │
-│                      │  │  ● Behov nå          │  │ Diskuterte ML-behov...   │ │
-│                      │  │                     │  │                          │ │
-│                      │  │  [📞] [✉] [in] [📋] │  │ Kari Hansen              │ │
-│                      │  │                     │  │ @Thomas Eriksen          │ │
-│                      │  │  Kontaktinfo         │  │ Gjennomgang av team...   │ │
-│                      │  │  erik@aker...     📋 │  │                          │ │
-│                      │  │  +47 901 23 456      │  │                          │ │
-│                      │  │  Oslo                │  │                          │ │
-│                      │  │                     │  │                          │ │
-│                      │  │  Eier                │  │                          │ │
-│                      │  │  Jon Richard N.  ▾   │  │                          │ │
-│                      │  │                     │  │                          │ │
-│                      │  │  Signal              │  │                          │ │
-│                      │  │  ● Behov nå      ▾   │  │                          │ │
-│                      │  │                     │  │                          │ │
-│                      │  │  ── Status ──        │  │                          │ │
-│                      │  │  CV-Epost    ✓       │  │                          │ │
-│                      │  │  Innkjøper   ✗       │  │                          │ │
-│                      │  │                     │  │                          │ │
-│                      │  │  ── Teknisk DNA ──   │  │                          │ │
-│                      │  │  Python PyTorch      │  │                          │ │
-│                      │  └─────────────────────┘  └──────────────────────────┘ │
-└──────────────────────┴────────────────────────────────────────────────────────┘
+┌─ AppLayout header ──────────────────────────────────────────────────────┐
+│  STACQ    Salgsagent  Selskaper  Kontakter  Forespørsler  ...          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌─ Søkefelt (pill, sentrert) ─────────────────────────┐               │
+│                                                                         │
+│  Kontakter  142                      [+ Legg til kontakt]              │
+│  [Eier ▾] [Signal ▾]                                                   │
+│                                                                         │
+│  ┌─ KONTAKTLISTE ──────────────────┐  ┌─ DETALJPANEL (340px) ────────┐ │
+│  │ Navn          Selskap  Signal   │  │  ← Henrik Berg               │ │
+│  │─────────────────────────────────│  │  Platform Lead · Equinor     │ │
+│  │ Henrik Berg   Equinor  ● Behov  │  │  ● Behov nå                  │ │
+│  │ Kari Hansen   DNB      ● Ukjent │  │                              │ │
+│  │ ...                             │  │  [📞] [✉] [in]              │ │
+│  │                                 │  │                              │ │
+│  │                                 │  │  NESTE STEG                  │ │
+│  │                                 │  │  Presentere Kristian H.      │ │
+│  │                                 │  │                              │ │
+│  │                                 │  │  ── Kontakt ──               │ │
+│  │                                 │  │  henrik@equinor.com          │ │
+│  │                                 │  │  +47 966 77 888              │ │
+│  │                                 │  │                              │ │
+│  │                                 │  │  ── Aktivitet ──             │ │
+│  │                                 │  │  12. apr — DevOps-behov...   │ │
+│  │                                 │  │  14. mar — Første møte       │ │
+│  └─────────────────────────────────┘  └──────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Hva er genuint annerledes
+## Visuelt system (bryter med project-knowledge for Design Lab)
 
-| Element | Nåværende Design Lab | Ny retning |
-|---------|---------------------|------------|
-| **Meny** | Egen TopNav (duplikat) | Bruker AppLayout sidebar — ekte app-opplevelse |
-| **Data** | Mockdata (hardkodet) | Ekte Supabase-data via queries |
-| **Kontaktinfo** | Sidebar til høyre som key-value liste | Venstre kontaktkort med avatar, action-ikoner, properties |
-| **Innhold** | Tabs + highlight-kort | Ren tabulert innholdsseksjon til høyre, ingen KPI-kort |
-| **Actions** | Knapper i header | Ikonrad under avatar (telefon, e-post, linkedin, kopier) |
-| **Visuell stil** | Hardkodede hex-verdier | Ren hvit, subtile borders, avatar med initialer, clean properties |
+| Element | Verdi |
+|---------|-------|
+| Bakgrunn | `#F7F6F2` (varm off-white) |
+| Tekst primær | `#28251D` (dyp grafitt) |
+| Tekst muted | `#7A7974` |
+| Tekst faint | `#BAB9B4` |
+| Accent (teal) | `#01696F` — kun aktiv nav, primærknapp, fokus |
+| Borders | `rgba(40,37,29,0.08)` — 1px |
+| Skygger | `0 1px 2px rgba(40,37,29,0.04)` kun på kort |
+| Border-radius | 8px kort, 6px inputs, full-rounded badges |
+| Font | Inter, 16px base |
+| Labels/nav | 13px / 500 |
+| Section headings | 18px / 600 |
+| Page title | 22px / 600 |
 
-## Visuelt system
+## Status-chips
 
-- Hvit bakgrunn, `border-border` for skillelinjer
-- Avatar: 80px rund sirkel med initialer, `bg-muted`
-- Breadcrumb: "Kontakter › Erik Solberg" med link tilbake
-- Kontaktinfo-properties: label-verdi par med copy-knapp på e-post
-- Action-ikoner: runde/kvadratiske ghost-knapper i en rad (telefon, e-post, linkedin, kalender, mer)
-- Tabs: understrek-stil, clean
-- Ingen highlight-kort / KPI-bokser — la dataen snakke
+Bytt fra fargede badges til nøytrale + teal:
+- **Behov nå**: teal bakgrunn-tint (`#01696F` text, `rgba(1,105,111,0.08)` bg)
+- **Fremtidig/Kanskje/Ukjent**: nøytrale grå (`#7A7974` text, `rgba(40,37,29,0.06)` bg)
+- **Ikke aktuelt**: litt mørkere grå
+
+## Interaksjon
+
+- Klikk på rad → høyre detaljpanel glir inn (CSS transition, 340px)
+- Hover på rad: `#F3F0EC` bakgrunn, ingen border-endring
+- Aktiv rad: subtil teal venstre-border (2px)
+- Tom tilstand (ingen valgt): sentrert ikon + kort melding
+
+## Detaljpanelet (340px)
+
+Inneholder alt fra dagens detaljside, komprimert:
+- Navn, stilling, selskap
+- Signal-badge
+- Action-ikoner (telefon, e-post, LinkedIn)
+- "Neste steg" felt øverst (første oppfølging)
+- Kontaktinfo (e-post, telefon, sted)
+- Eier
+- Status-toggles
+- Teknisk DNA tags
+- Siste aktiviteter (kompakt liste, maks 5)
 
 ## Ekte data
 
-Bruker eksisterende Supabase-queries fra `ContactCardContent.tsx`:
-- `contacts` med join på `companies` og `profiles`
-- `activities` sortert synkende
-- `tasks` (oppfølginger) filtrert på ikke-done
-- Konsulentmatch via `match-consultants` edge function
+Beholder alle eksisterende Supabase-queries fra nåværende implementasjon (contacts, activities, tasks). Detaljpanelet henter data on-demand når en rad velges.
 
 ## Filer som endres
 
-1. **`src/pages/DesignLabContactDetail.tsx`** — Fullstendig omskrivning:
-   - Fjern TopNav, mock-data, highlight-widgets
-   - Hent ekte data fra Supabase (contacts, activities, tasks)
-   - To-kolonne layout: venstre kontaktkort (320px) + høyre tabulert innhold
-   - Avatar med initialer, action-ikonrad, property-liste
-   - Tabs: Aktivitet, Oppfølginger, Konsulenter
+1. **`src/pages/DesignLabContacts.tsx`** — Fullstendig omskrivning:
+   - 3-sone layout med kontaktliste + sliding detaljpanel
+   - Nytt fargesystem med CSS custom properties
+   - Pill-formet søkefelt
+   - Nye nøytrale status-chips
+   - Detaljpanel med all kontaktinfo, aktiviteter og oppfølginger
+   - Hover/aktiv states
 
-2. **`src/pages/DesignLabContacts.tsx`** — Liten endring: fjern TopNav-wrapper, la den brukes innenfor AppLayout (rutene bruker allerede AppLayout)
+2. **`src/pages/DesignLabContactDetail.tsx`** — Tømmes til en redirect til `/design-lab/kontakter?contact=:id` (detaljvisningen er nå i panelet)
+
+3. **`src/App.tsx`** — Fjern ruten for `design-lab/kontakter/:id` (ikke lenger nødvendig)
 
 ## Ikke berørt
-- Ingen endring i AppLayout, App.tsx, eller eksisterende CRM-sider
-- Kontaktlisten beholder spreadsheet-stil men med ekte data-navigasjon
+- AppLayout, eksisterende CRM-sider, Supabase-schema
 
