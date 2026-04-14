@@ -104,10 +104,9 @@ export default function DesignLabContacts() {
   const [search, setSearch] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("Alle");
   const [signalFilter, setSignalFilter] = useState("Alle");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "last_activity", dir: "asc" });
   const [selectedId, setSelectedId] = useState<string | null>(searchParams.get("contact"));
-  const [ownerOpen, setOwnerOpen] = useState(false);
-  const [signalOpen, setSignalOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const initials = user?.email ? user.email.split("@")[0].slice(0, 2).toUpperCase() : "??";
