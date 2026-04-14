@@ -1,139 +1,80 @@
 
 
-# Plan: Design Lab V3 — Total omstart
+# Plan: Design Lab V4 — Fullstendig redesign fra scratch
 
-## Problemet med V2
-Det mørke "Obsidian"-temaet er knapt lesbart: 11-13px tekst i grått på nesten-svart, signal-grupperte seksjoner som fragmenterer listen, og for mye visuell pynt uten funksjon. Det føles som et konseptdesign, ikke et arbeidsverktøy.
+## Problemanalyse
 
-## Ny retning: "Warm Workspace"
+Tre feil med nåværende implementering:
+1. **DesignLabContacts.tsx bruker fortsatt det mørke "Obsidian"-temaet** (V2) med `#0A0A0F` bakgrunn, Geist Sans, og signal-grupperte lanes. Den ble aldri oppdatert til V3.
+2. **Sidene rendres inni AppLayout** (den gamle CRM-headeren) fordi rutene ligger under `<Route path="/" element={<ProtectedRoutes />}>`. Dette gir den gamle toppmenyen over Design Lab-innholdet.
+3. **Detaljsiden (V3)** har riktig lyst tema, men mangler realistiske data og har en for enkel toppmeny.
 
-Inspirert av Notion's romslighet, Attio's datarikdom, og Folk's varme. Ikke mørkt, ikke sterilt hvitt — men et varmt, romslig arbeidsverktøy med tydelig hierarki.
+## Løsning
 
-### Kjerneprinsipp
-**Les alt uten å anstrenge deg. Finn hvem du trenger innen 2 sekunder. Handle umiddelbart.**
+### 1. Flytt Design Lab-ruter ut av AppLayout
 
-### Visuell identitet
+I `App.tsx`: Flytt `/design-lab/*`-rutene ut av `<ProtectedRoutes />`-noden slik at de IKKE rendres inni `AppLayout`. De får sin egen minimale toppstripe i stedet.
 
-- **Bakgrunn**: Varm off-white `#F8F7F4` (papir-aktig, ikke klinisk)
-- **Overflater**: Ren hvit `#FFFFFF` med subtil skygge
-- **Tekst**: Nesten svart `#1A1A1A` primær, `#6B6B6B` sekundær
-- **Aksent**: Dyp blå-sort `#1A1A2E` for primærknapper
-- **Signaler**: Store, lesbare fargeblokker — ikke prikker
+### 2. Ny minimal toppstripe (felles for begge sider)
 
-### Typografi
-- Font: **Inter** (trygt, lesbart, profesjonelt)
-- Navn i liste: **15px/600** — synlig uten å lete
-- Brødtekst: **14px/400** — komfortabel lesing
-- Labels: **12px/500 uppercase** — tydelig hierarki
-- Ingen tekst under 12px
+En tynn, ren stripe (48px) med:
+- **STACQ** logo til venstre (ren tekst, font-weight 800)
+- Søkefelt i midten (bred, ren, med ⌘K hint)
+- Brukerinitialer til høyre
 
-### Kontaktlisten — flat tabell, men gjort riktig
+Hvit bakgrunn, subtil border-bottom. Ingen navigasjonslenker, ingen dropdown, ingen tema-toggle. Kun det nødvendige.
 
-Ikke grupperte lanes. En flat, sorterbar liste som viser alt du trenger:
+### 3. Kontaktlisten — ren tabell/worklist
 
-```text
-┌──────────────────────────────────────────────────────────────────┐
-│                                                                  │
-│  Kontakter                                                       │
-│  12 kontakter                                                    │
-│                                                                  │
-│  ┌────────────────────────────────────────────────────────────┐  │
-│  │  Søk etter navn, selskap eller teknologi...               │  │
-│  └────────────────────────────────────────────────────────────┘  │
-│                                                                  │
-│  Eier ▾    Signal ▾    CV ▾                    Nullstill filtre  │
-│                                                                  │
-│  NAVN                    SIGNAL          EIER              SIST  │
-│  ─────────────────────────────────────────────────────────────── │
-│                                                                  │
-│  Erik Solberg            ██ Behov nå     Jon Richard       1d   │
-│  Tech Lead · Aker        Python ML GCP   Nygaard                │
-│                                                                  │
-│  Kari Hansen        CV   ██ Behov nå     Thomas            3d   │
-│  Eng. Manager · DNB      Java Kotlin     Eriksen                │
-│                                                                  │
-│  Silje Strand            ██ Behov nå     Jon Richard       2d   │
-│  Data Eng. · Schibsted   Spark Kafka     Nygaard                │
-│                                                                  │
-└──────────────────────────────────────────────────────────────────┘
-```
+Helt nytt lyst design. Flat, sorterbar tabell med tydelige kolonner:
 
-Hver rad er **72px høy** — romslig, lett å treffe, lett å lese. Hover viser en tynn linje under raden, ikke fargeskifte. Klikk → navigerer til detaljside.
+| KONTAKT | SELSKAP | SIGNAL | EIER | SISTE | NESTE STEG |
+|---------|---------|--------|------|-------|------------|
 
-### Signal-badges — store og tydelige
-Ikke prikker. Ikke tekst-bare. En tydelig badge med fylt bakgrunn:
-- Behov nå: grønn bakgrunn, hvit tekst
-- Fremtidig: blå bakgrunn, hvit tekst  
-- Kanskje: amber bakgrunn, mørk tekst
-- Ukjent: grå bakgrunn, mørk tekst
-- Aldri: rød bakgrunn, hvit tekst
+- Hvit bakgrunn, `#FAFAFA` under header
+- Romslige rader (64px), tydelig hover
+- Store, lesbare signal-badges med fylt farge
+- Eier alltid fullt navn
+- Søkefelt + filtre (Eier, Signal, CV) som pills over tabellen
+- Klikk på rad → navigerer til detaljside
 
-### Kontaktdetalj — fullbredde, oversiktlig
+### 4. Realistiske mockdata
 
-```text
-┌──────────────────────────────────────────────────────────────────┐
-│  ← Tilbake                                                       │
-│                                                                  │
-│  ┌────────────────────────────────────────────────────────────┐  │
-│  │                                                            │  │
-│  │  ES   Erik Solberg                                        │  │
-│  │       Tech Lead · Aker Solutions                          │  │
-│  │                                                            │  │
-│  │  ██ Behov nå    CV    Jon Richard Nygaard                 │  │
-│  │                                                            │  │
-│  │  [Logg samtale]  [Ny oppfølging]                          │  │
-│  │                                                            │  │
-│  └────────────────────────────────────────────────────────────┘  │
-│                                                                  │
-│  ┌─ KONTAKTINFO ──────┐  ┌─ NESTE STEG ──────────────────────┐ │
-│  │                     │  │                                    │ │
-│  │  erik@aker.no    📋 │  │  □ Finn ML-kandidat    16. apr    │ │
-│  │  +47 900 11 222  📋 │  │  □ Send CV til Erik    18. apr    │ │
-│  │  LinkedIn ↗         │  │  □ Book demomøte       22. apr    │ │
-│  │                     │  │                                    │ │
-│  │  Python · ML · GCP  │  │                                    │ │
-│  │  TensorFlow · Docker│  │                                    │ │
-│  └─────────────────────┘  └────────────────────────────────────┘ │
-│                                                                  │
-│  ─── AKTIVITETER ──────────────────────────────────────────────  │
-│                                                                  │
-│  April 2026                                                      │
-│  ─────────────────────────────────────────────────────────────── │
-│                                                                  │
-│  📞  Hastebehov ML                              13. apr 2026    │
-│      Prosjektet er 3 uker forsinket. Trenger senior             │
-│      ML-ingeniør med GCP-erfaring...                            │
-│                                                                  │
-│  📋  Kvartalsgjennomgang                         1. apr 2026    │
-│      Gikk gjennom pipeline og leveranser...                     │
-│                                                                  │
-│  ─── NOTATER ──────────────────────────────────────────────────  │
-│                                                                  │
-│  Haster — trenger ML-ingeniør innen 2 uker. Erik er             │
-│  besluttningstaker og foretrekker senior-profiler med            │
-│  erfaring fra energisektoren.                                    │
-│                                                                  │
-└──────────────────────────────────────────────────────────────────┘
-```
+12 kontakter med:
+- Ekte norske selskaper (Aker Solutions, DNB, Equinor, Schibsted, Telenor, Vipps, Cognite, Storebrand, Kahoot!, Posten, Statkraft, Color Line)
+- Realistiske roller (Tech Lead, VP Engineering, CTO, Engineering Manager, etc.)
+- Salgsrelevant historikk: siste aktivitet med type og dato, neste oppfølging
+- Konsulentmatch-kontekst: tech-tags, CV-status, matchende konsulenter
+- Flere CRM-felter: lokasjon, selskapstype (Kunde/Potensiell), antall aktive oppdrag
 
-## Hva som er NYTT (ikke bare "pent")
+### 5. Kontaktdetaljside — oppdatert
 
-1. **72px rader** — dobbelt så høye som V2, massivt bedre lesbarhet
-2. **Varm bakgrunn** — ikke hvit, ikke mørk, men papir-aktig `#F8F7F4`
-3. **Fylt signal-badges** — umiddelbart gjenkjennelige, ikke prikker
-4. **Detaljside med hero-kort** — kontaktinfo i et visuelt framtredende kort øverst
-5. **"Neste steg"-seksjon** — oppfølginger er viktigst, plassert ved siden av kontaktinfo
-6. **Monokrom aksent** — dyp mørk blå-sort for knapper, ikke lilla/indigo
-7. **Ingen gruppering** — flat liste med sortering, som et ekte arbeidsverktøy
+Beholder V3-strukturen (hero card, to-kolonne, aktivitetstidslinje) men:
+- Bruker den nye toppstripen i stedet for den enkle "← Tilbake"-headeren
+- Legger til tilbake-knapp under toppstripen
+- Mer realistiske data per kontakt (flere aktiviteter, oppfølginger, notater)
+- Konsulentmatch-seksjon: viser hvilke STACQ-konsulenter som matcher kontaktens behov
 
-## Implementering
+### 6. Visuelt system
 
-### Filer som skrives
-1. **`src/pages/DesignLabContacts.tsx`** — fullstendig omskrivning
-2. **`src/pages/DesignLabContactDetail.tsx`** — fullstendig omskrivning
+- **Bakgrunn**: `#FAFAFA` (lys, nøytral)
+- **Overflater**: `#FFFFFF` med `border: 1px solid #E5E7EB`, `box-shadow: 0 1px 3px rgba(0,0,0,0.04)`
+- **Tekst primær**: `#111827` (ikke ren svart, men nær)
+- **Tekst sekundær**: `#6B7280`
+- **Tekst tertiær**: `#9CA3AF`
+- **Aksent**: `#2563EB` (profesjonell blå for primærhandlinger)
+- **Font**: Inter, system-ui fallback
+- **Typografi**: 28px/700 sidetittel, 15px/600 kontaktnavn i liste, 14px/400 brødtekst, 12px/500 uppercase seksjons-labels
+- **Signal-badges**: Fylt bakgrunn, border, rundet pill — emerald/blue/amber/gray/red
 
-### Ikke berørt
-- `src/App.tsx` — ruter finnes allerede
-- Eksisterende CRM-kode — uendret
-- Ingen database — alt mockdata
+## Filer som endres
+
+1. **`src/App.tsx`** — Flytt design-lab-ruter ut av ProtectedRoutes til en egen wrappet rute med autentisering men uten AppLayout
+2. **`src/pages/DesignLabContacts.tsx`** — Fullstendig omskrivning med lyst tema, flat tabell, ny toppstripe, realistiske data
+3. **`src/pages/DesignLabContactDetail.tsx`** — Oppdatert med ny toppstripe, mer realistiske data, konsulentmatch-seksjon
+
+## Ikke berørt
+- Ingen endringer i eksisterende CRM-kode
+- Alt mockdata, ingen database
+- Kun design-lab-sider
 
