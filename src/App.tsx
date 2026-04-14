@@ -222,6 +222,14 @@ const App = () => (
                     </Suspense>
                   }
                 />
+                <Route
+                  path="stacq-prisen"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <DesignLabStacqPrisen />
+                    </Suspense>
+                  }
+                />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
