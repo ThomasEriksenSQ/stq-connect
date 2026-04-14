@@ -187,23 +187,7 @@ export default function DesignLabContacts() {
   });
 
   // Forespørsler (requests) for selected contact
-  const { data: foresporslerForContact = [] } = useQuery({
-    queryKey: ["dl-foresporsler-contact", selectedId],
-    queryFn: async () => {
-      if (!selectedId) return [];
-      const contact = rawContacts.find(c => c.id === selectedId);
-      if (!contact?.company_id) return [];
-      const { data, error } = await supabase
-        .from("foresporsler")
-        .select("id, selskap_navn, referanse, mottatt_dato, status, teknologier, type, sted")
-        .eq("selskap_id", contact.company_id)
-        .order("mottatt_dato", { ascending: false })
-        .limit(5);
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!selectedId,
-  });
+  // (forespørsler handled by ContactCardContent internally)
 
   // ── Computed ──
   const contacts = useMemo(() => {
