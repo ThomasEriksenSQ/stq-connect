@@ -15,6 +15,7 @@ import { nb } from "date-fns/locale";
 import { getEffectiveSignal, normalizeCategoryLabel } from "@/lib/categoryUtils";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { ContactCardContent } from "@/components/ContactCardContent";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
