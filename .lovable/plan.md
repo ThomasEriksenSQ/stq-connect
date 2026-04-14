@@ -1,136 +1,139 @@
 
 
-# Plan: Radikal redesign — "STACQ Studio"
+# Plan: Design Lab V3 — Total omstart
 
-## Teamets mandat
+## Problemet med V2
+Det mørke "Obsidian"-temaet er knapt lesbart: 11-13px tekst i grått på nesten-svart, signal-grupperte seksjoner som fragmenterer listen, og for mye visuell pynt uten funksjon. Det føles som et konseptdesign, ikke et arbeidsverktøy.
 
-Det nåværende Design Lab-designet er en oppusset versjon av det eksisterende CRMet: hvit bakgrunn, grå tekst, tradisjonell tabell. Vi kaster det og starter fra null.
+## Ny retning: "Warm Workspace"
 
-## Nytt konseptteam
+Inspirert av Notion's romslighet, Attio's datarikdom, og Folk's varme. Ikke mørkt, ikke sterilt hvitt — men et varmt, romslig arbeidsverktøy med tydelig hierarki.
 
-**Art Director (Yuki)**: CRM-er ser ut som regneark. Vi bygger et *instrument* — som et musikkstudio eller en cockpit. Mørk bakgrunn gir fokus og premium-følelse. Hvit tekst på mørkt er mer behagelig over lange arbeidsøkter.
+### Kjerneprinsipp
+**Les alt uten å anstrenge deg. Finn hvem du trenger innen 2 sekunder. Handle umiddelbart.**
 
-**Informasjonsarkitekt (Priya)**: Tabeller er feil primitiv for kontakter. En kontakt er en *relasjon med historie* — ikke en rad. Vi grupperer kontakter etter signal-status som vertikale "lanes" (kanban-inspirert), men rendret som en kompakt liste innenfor hver gruppe.
+### Visuell identitet
 
-**Typografi/lesbarhet (Emil)**: På mørk bakgrunn må vi bruke en lettere font-vekt (400 for brødtekst, 500 for emphasis) og øke linjeavstand. Geist Sans (Vercels font) gir en skarpere, mer teknisk følelse enn Inter.
+- **Bakgrunn**: Varm off-white `#F8F7F4` (papir-aktig, ikke klinisk)
+- **Overflater**: Ren hvit `#FFFFFF` med subtil skygge
+- **Tekst**: Nesten svart `#1A1A1A` primær, `#6B6B6B` sekundær
+- **Aksent**: Dyp blå-sort `#1A1A2E` for primærknapper
+- **Signaler**: Store, lesbare fargeblokker — ikke prikker
 
-**Interaksjonsdesigner (Noor)**: Keyboard-first. `⌘K` for alt. Kontakter navigeres med piltaster. Escape lukker paneler. Ingen dropdown-menyer — alt er inline eller via command palette.
+### Typografi
+- Font: **Inter** (trygt, lesbart, profesjonelt)
+- Navn i liste: **15px/600** — synlig uten å lete
+- Brødtekst: **14px/400** — komfortabel lesing
+- Labels: **12px/500 uppercase** — tydelig hierarki
+- Ingen tekst under 12px
 
-## Visuelt konsept: Mørk, immersiv arbeidsflate
+### Kontaktlisten — flat tabell, men gjort riktig
+
+Ikke grupperte lanes. En flat, sorterbar liste som viser alt du trenger:
 
 ```text
 ┌──────────────────────────────────────────────────────────────────┐
-│  STACQ                           ⌘K Søk…              ◯ JRN   │
-├──────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  ┌─ BEHOV NÅ (4) ──────────────────────────────────────────┐    │
-│  │                                                          │    │
-│  │  Erik Solberg        Aker Solutions     Python ML    1d  │    │
-│  │  Kari Hansen         DNB               Java Kotlin  3d  │    │
-│  │  Silje Strand        Schibsted         Spark        2d  │    │
-│  │  Camilla Roth        Vipps             Kotlin Swift i dag│    │
-│  │                                                          │    │
-│  ├─ FREMTIDIG (3) ─────────────────────────────────────────┤    │
-│  │                                                          │    │
-│  │  Lars Moen           Equinor           Azure DevOps 1u  │    │
-│  │  Marte Olsen         Telenor Digital   React TS     2u  │    │
-│  │  ...                                                     │    │
-│  │                                                          │    │
-│  ├─ KANSKJE (2) ───────────────────────────────────────────┤    │
-│  │  ...                                                     │    │
-│  └──────────────────────────────────────────────────────────┘    │
+│  Kontakter                                                       │
+│  12 kontakter                                                    │
 │                                                                  │
-│          ┌────────────────────────────────────────┐              │
-│          │  ERIK SOLBERG                          │              │
-│          │  Tech Lead · Aker Solutions            │              │
-│          │                                        │              │
-│          │  ● Behov nå   CV   JRN                │              │
-│          │                                        │              │
-│          │  erik.solberg@aker.no  +47 900 11 222  │              │
-│          │  Python · ML · GCP                     │              │
-│          │                                        │              │
-│          │  ─── Neste ────────────────────────    │              │
-│          │  □ Finn ML-kandidat      16. apr       │              │
-│          │                                        │              │
-│          │  ─── Siste ────────────────────────    │              │
-│          │  📞 Hastebehov ML        13. apr       │              │
-│          │     Prosjektet er forsinket...         │              │
-│          └────────────────────────────────────────┘              │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │  Søk etter navn, selskap eller teknologi...               │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  Eier ▾    Signal ▾    CV ▾                    Nullstill filtre  │
+│                                                                  │
+│  NAVN                    SIGNAL          EIER              SIST  │
+│  ─────────────────────────────────────────────────────────────── │
+│                                                                  │
+│  Erik Solberg            ██ Behov nå     Jon Richard       1d   │
+│  Tech Lead · Aker        Python ML GCP   Nygaard                │
+│                                                                  │
+│  Kari Hansen        CV   ██ Behov nå     Thomas            3d   │
+│  Eng. Manager · DNB      Java Kotlin     Eriksen                │
+│                                                                  │
+│  Silje Strand            ██ Behov nå     Jon Richard       2d   │
+│  Data Eng. · Schibsted   Spark Kafka     Nygaard                │
+│                                                                  │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-## Nøkkelinnovasjoner vs. nåværende
+Hver rad er **72px høy** — romslig, lett å treffe, lett å lese. Hover viser en tynn linje under raden, ikke fargeskifte. Klikk → navigerer til detaljside.
 
-| Aspekt | Nåværende Design Lab | Ny "Studio" |
-|--------|---------------------|-------------|
-| Bakgrunn | Hvit (#FAFBFC) | Mørk (#0A0A0F) |
-| Layout | Flat tabell med kolonner | Signal-grupperte seksjoner |
-| Fargebruk | Grå + indigo aksent | Mørk base + luminøse aksenter |
-| Rad-design | Alle like, sorteres | Gruppert etter status, kontekst synlig |
-| Typografi | Inter | Geist Sans (system-ui fallback) |
-| Navigasjon | Egen topbar "Design Lab" | Minimal topbar, maks plass til data |
-| Detaljpanel | Slide-over fra høyre | Sentrert modal-overlay med blur-bakgrunn |
-| Kontaktside | Hvite kort på grå bg | Mørk helside med tydelige seksjoner |
-| Filtre | Horisontale pills | Inline i søkefelt (type-ahead facets) |
-| Interaksjon | Klikk-basert | Keyboard-first + klikk |
+### Signal-badges — store og tydelige
+Ikke prikker. Ikke tekst-bare. En tydelig badge med fylt bakgrunn:
+- Behov nå: grønn bakgrunn, hvit tekst
+- Fremtidig: blå bakgrunn, hvit tekst  
+- Kanskje: amber bakgrunn, mørk tekst
+- Ukjent: grå bakgrunn, mørk tekst
+- Aldri: rød bakgrunn, hvit tekst
 
-## Fargepalett — "Obsidian"
+### Kontaktdetalj — fullbredde, oversiktlig
 
-- **Base**: `#0A0A0F` (nesten svart, varm undertone)
-- **Surface**: `#16161F` (kort, paneler)
-- **Elevated**: `#1E1E2A` (hover, aktive elementer)
-- **Border**: `#2A2A3C` (subtil, kun der nødvendig)
-- **Tekst primær**: `#EDEDF0` (98% hvit, ikke ren hvit)
-- **Tekst sekundær**: `#8B8B9E`
-- **Tekst tertiær**: `#55556A`
-- **Aksent**: `#6C5CE7` (varm lilla — skiller seg fra indigo)
-- **Signal Behov nå**: `#00D68F` (neon-grønn)
-- **Signal Fremtidig**: `#4DA6FF` (klar blå)
-- **Signal Kanskje**: `#FFB347` (varm gul)
-- **Signal Ukjent**: `#55556A` (muted)
-- **Signal Aldri**: `#FF6B6B` (myk rød)
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│  ← Tilbake                                                       │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │                                                            │  │
+│  │  ES   Erik Solberg                                        │  │
+│  │       Tech Lead · Aker Solutions                          │  │
+│  │                                                            │  │
+│  │  ██ Behov nå    CV    Jon Richard Nygaard                 │  │
+│  │                                                            │  │
+│  │  [Logg samtale]  [Ny oppfølging]                          │  │
+│  │                                                            │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  ┌─ KONTAKTINFO ──────┐  ┌─ NESTE STEG ──────────────────────┐ │
+│  │                     │  │                                    │ │
+│  │  erik@aker.no    📋 │  │  □ Finn ML-kandidat    16. apr    │ │
+│  │  +47 900 11 222  📋 │  │  □ Send CV til Erik    18. apr    │ │
+│  │  LinkedIn ↗         │  │  □ Book demomøte       22. apr    │ │
+│  │                     │  │                                    │ │
+│  │  Python · ML · GCP  │  │                                    │ │
+│  │  TensorFlow · Docker│  │                                    │ │
+│  └─────────────────────┘  └────────────────────────────────────┘ │
+│                                                                  │
+│  ─── AKTIVITETER ──────────────────────────────────────────────  │
+│                                                                  │
+│  April 2026                                                      │
+│  ─────────────────────────────────────────────────────────────── │
+│                                                                  │
+│  📞  Hastebehov ML                              13. apr 2026    │
+│      Prosjektet er 3 uker forsinket. Trenger senior             │
+│      ML-ingeniør med GCP-erfaring...                            │
+│                                                                  │
+│  📋  Kvartalsgjennomgang                         1. apr 2026    │
+│      Gikk gjennom pipeline og leveranser...                     │
+│                                                                  │
+│  ─── NOTATER ──────────────────────────────────────────────────  │
+│                                                                  │
+│  Haster — trenger ML-ingeniør innen 2 uker. Erik er             │
+│  besluttningstaker og foretrekker senior-profiler med            │
+│  erfaring fra energisektoren.                                    │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+```
 
-## Typografi — Geist Sans
+## Hva som er NYTT (ikke bare "pent")
 
-| Rolle | Størrelse | Vekt | Farge |
-|-------|----------|------|-------|
-| Sidetittel | 24px | 600 | #EDEDF0 |
-| Gruppe-header | 11px | 600 | signal-farge, uppercase, tracking 0.12em |
-| Kontaktnavn (rad) | 14px | 500 | #EDEDF0 |
-| Selskap (rad) | 13px | 400 | #8B8B9E |
-| Tech-tags | 11px | 400 | #8B8B9E, border #2A2A3C |
-| Tid | 12px | 400 | #55556A |
-| Panel-tittel | 18px | 600 | #EDEDF0 |
-| Panel-brødtekst | 13px | 400 | #8B8B9E |
-
-## Kontaktlisten — signal-gruppert
-
-I stedet for en flat tabell, grupperes kontakter etter signal. Hver gruppe har:
-- En tynn, farget header-linje med signal-navn og antall
-- Kompakte rader under (kontaktnavn, selskap, tech-tags, relativ tid)
-- Grupper kan kollapses
-- Raden har en subtil glow-effekt ved hover
-
-## Kontaktdetalj — immersiv fullside
-
-Mørk helside med:
-- Stort navn øverst, subtle gradient-linje under i signal-farge
-- To-kolonne layout: venstre = kontaktinfo + tech, høyre = snapshot
-- Under: oppfølginger som interaktive kort med checkbox
-- Under: aktivitetstidslinje med fargekodet ikon per type
-- Notater som et redigerbart felt med monospace-font
+1. **72px rader** — dobbelt så høye som V2, massivt bedre lesbarhet
+2. **Varm bakgrunn** — ikke hvit, ikke mørk, men papir-aktig `#F8F7F4`
+3. **Fylt signal-badges** — umiddelbart gjenkjennelige, ikke prikker
+4. **Detaljside med hero-kort** — kontaktinfo i et visuelt framtredende kort øverst
+5. **"Neste steg"-seksjon** — oppfølginger er viktigst, plassert ved siden av kontaktinfo
+6. **Monokrom aksent** — dyp mørk blå-sort for knapper, ikke lilla/indigo
+7. **Ingen gruppering** — flat liste med sortering, som et ekte arbeidsverktøy
 
 ## Implementering
 
-### Filer
+### Filer som skrives
+1. **`src/pages/DesignLabContacts.tsx`** — fullstendig omskrivning
+2. **`src/pages/DesignLabContactDetail.tsx`** — fullstendig omskrivning
 
-1. **`src/pages/DesignLabContacts.tsx`** — fullstendig omskrivning med mørkt tema, signal-gruppering, Geist Sans, keyboard-navigering, sentrert detaljoverlay
-2. **`src/pages/DesignLabContactDetail.tsx`** — fullstendig omskrivning med mørk immersiv layout
-3. **`src/App.tsx`** — ingen endring (ruter finnes allerede)
-
-### Avgrensning
-- Ingen endringer i eksisterende CRM
-- Alt mockdata, ingen database
-- Geist Sans lastes via Google Fonts CDN-link i komponenten
-- All styling er inline Tailwind med arbitrary values, scoped til `.design-lab`
+### Ikke berørt
+- `src/App.tsx` — ruter finnes allerede
+- Eksisterende CRM-kode — uendret
+- Ingen database — alt mockdata
 
