@@ -1,71 +1,69 @@
 
 
-# Plan: Forespørsler-side i Design Lab V8-stil
+# Plan: STACQ Prisen i Design Lab V8-stil
 
 ## Konsept
 
-Forespørsler-siden redesignet i Linear-inspirert V8-estetikk: varm off-white bakgrunn, ultra-subtile bordere, dempet teal-aksent, og samme 3-sone layout som Design Lab Kontakter (sidebar + tabell + detaljpanel).
+STACQ Prisen-siden redesignet i V8-estetikken: varm off-white bakgrunn, dempede farger, 3-sone layout med sidebar, og samme visuelle språk som de andre Design Lab-sidene.
 
 ## Visuell beskrivelse
 
 ```text
-┌──────────┬─────────────────────────────────────────┬──────────────────────┐
-│ SIDEBAR  │  Forespørsler                    22     │  DETALJPANEL         │
-│ 216px    │                                         │  (resizable)         │
-│          │  TID    ○ Aktive  ○ Utgåtte  ○ Alle     │                      │
-│ Kontakter│  TYPE   ○ Alle  ○ Direkte  ○ Partner    │  Selskap: Equinor    │
-│ Selskaper│                                         │  Kontakt: Ola N.     │
-│▸Forespør.│  ┌─────────────────────────────────────┐│  Teknologier: ...    │
-│ Ansatte  │  │ Mottatt  Selskap    Kontakt  Type   ││  Pipeline: ●──●──○   │
-│ Konsul.  │  │─────────────────────────────────────││  Konsulenter sendt:  │
-│          │  │ 2d       Equinor   Ola N.   DIR    ││  ...                 │
-│          │  │ 5d       Telenor   Kari S.  VIA    ││                      │
-│          │  │ 1u       DNB       Per H.   DIR    ││                      │
-│          │  └─────────────────────────────────────┘│                      │
-└──────────┴─────────────────────────────────────────┴──────────────────────┘
+┌──────────┬──────────────────────────────────────────────────────────────┐
+│ SIDEBAR  │  STACQ Prisen                                              │
+│ 216px    │                                                            │
+│          │  kr 4 639/t · 14 konsulenter · snitt 331/t · +210 oppstart │
+│ Kontakter│                                                            │
+│ Selskaper│  ┌──────────────────────────────────────────────────────┐   │
+│ Forespør.│  │  ▁▂▃▄▅▆▇█  (area chart, teal gradient)             │   │
+│ Ansatte  │  │  ─ ─ ─ ─ ─  Mål: 5 000                            │   │
+│▸STACQ Pr.│  └──────────────────────────────────────────────────────┘   │
+│          │                                                            │
+│          │  BIDRAG PER KONSULENT                                      │
+│          │  Konsulent   Kunde     Type  Utpris  STACQ   %   Status   │
+│          │  ─────────────────────────────────────────────────────────  │
+│          │  Ola N.      Equinor   DIR   1400    420    30%  Aktiv     │
+│          │  Kari S.     Telenor   VIA   1200    360    30%  Oppstart  │
+└──────────┴──────────────────────────────────────────────────────────────┘
 ```
 
-## V8-tilpasninger sammenlignet med dagens design
+## V8-tilpasninger
 
-### Stat-kort (fjernes eller forenkles)
-- De fire fargede stat-kortene (blå/amber/emerald) erstattes med en enkel tekstlinje: "22 aktive · 4 uten konsulent · 3 i prosess · 1 vunnet" i `textMuted`-farge, uten fargede bakgrunner
+### Stat-kort → Stat-linje
+- Fjerner de fire fargede kortene. Erstattes med en enkel tekstlinje i `textMuted`-farge
+- Format: "kr 4 639/t · 14 konsulenter · snitt 331/t · +210 oppstart"
 
-### Filter-chips
-- Samme horisontale pill-layout som Design Lab Kontakter
-- Aktiv chip: teal (`#01696F`) bakgrunn med hvit tekst
-- Inaktiv chip: `rgba(40,37,29,0.08)` border, `textMuted` farge
-- Ingen `bg-foreground` / `text-background` (produksjons-stil)
+### Chart
+- Beholder area chart men med V8-farger: teal gradient istedenfor emerald
+- Borders: `C.border`, bakgrunn: `C.surface`
+- Aksene og tooltip i V8-typografi
 
 ### Tabell
-- Bakgrunn: `C.surface` (#FFFFFF) med `C.border` ramme
-- Kolonneheadere: 11px uppercase, `textMuted`, weight 600, tracking 0.06em
-- Rader: `divide-y` med `C.borderLight`, hover `C.hoverBg`
-- Aktiv rad: `C.activeBg` (teal 4% opacity)
-- Type-badges: desaturerte V8-farger (ikke mettede Tailwind-farger)
-- Pipeline-dots: dempede, nøytrale farger istedenfor sterke amber/blue/green
-- Teknologi-tags: `C.border` outline, ingen fylt bakgrunn
+- 11px uppercase kolonneheadere, `C.textMuted`, weight 600
+- Rader med `C.border` dividers, hover `C.hoverBg`
+- Status-badges: desaturerte V8-farger (ikke mettede Tailwind)
+- Type-badges: nøytrale V8-toner
+- STACQ Pris-verdier: dempet teal for høye, nøytrale for lave (istedenfor emerald/blue/amber)
+- Klikk på rad åpner edit-dialog wrappet i `.dl-v8-theme`
 
-### Detaljpanel
-- Integrert i ResizablePanelGroup (som kontakter)
-- Wrappet i `.dl-v8-theme` for automatisk reskinning av ForespørselSheet
-- Åpnes ved klikk på rad, ikke i Sheet/modal
-
-### Sidebar
-- Gjenbruker samme sidebar-komponent som DesignLabContacts med "Forespørsler" markert som aktiv
+### Edit-modal
+- Wrappet i `.dl-v8-theme` for automatisk reskinning
+- Pill-buttons, dempede inputs
 
 ## Tekniske endringer
 
-### 1. Ny fil: `src/pages/DesignLabForesporsler.tsx`
-- Kopierer datalogikk fra `Foresporsler.tsx` (query, filtrering, sortering)
+### 1. Ny fil: `src/pages/DesignLabStacqPrisen.tsx`
+- Kopierer datalogikk fra `StacqPrisen.tsx` (queries, beregninger, sortering)
 - Erstatter all styling med V8 `C.*` konstanter (inline styles)
-- 3-sone layout: sidebar + tabell + resizable detaljpanel
+- Sidebar-navigasjon (delt med andre Design Lab-sider) med "STACQ Prisen" markert
 - Stat-linje istedenfor stat-kort
-- V8-stilede filter-chips, tabellrader og badges
-- ForespørselSheet wrappet i `.dl-v8-theme`
+- Chart med teal-gradient og V8-aksefarge
+- Tabell med V8-styling og desaturerte badges
+- Edit-modal med V8-tema
 
 ### 2. `src/App.tsx` — Ny rute
-- Legg til `/design-lab/foresporsler` i ProtectedMinimal-gruppen
+- Legg til `/design-lab/stacq-prisen` i ProtectedMinimal-gruppen
 
-### 3. Sidebar-oppdatering i DesignLabContacts
-- Legg til "Forespørsler"-lenke i sidebar-navigasjonen (delt mellom begge Design Lab-sider)
+### 3. Sidebar-oppdatering
+- Legg til "STACQ Prisen"-lenke med TrendingUp-ikon i sidebar-navigasjonen i `DesignLabContacts.tsx` og `DesignLabForesporsler.tsx`
 
