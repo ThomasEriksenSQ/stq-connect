@@ -566,36 +566,6 @@ function SidebarBtn({ icon: Icon, label, onClick, muted }: { icon: any; label: s
   );
 }
 
-function ActionBtn({ icon, label, onClick, isIcon }: { icon: React.ReactNode; label: string; onClick: () => void; isIcon?: boolean }) {
-  return (
-    <button
-      onClick={(e) => { e.stopPropagation(); onClick(); }}
-      title={label || undefined}
-      className="inline-flex items-center gap-1.5 rounded-md transition-colors"
-      style={{
-        height: 28, paddingInline: isIcon ? 6 : 10, fontSize: 12, fontWeight: 500,
-        color: C.textMuted, border: `1px solid ${C.border}`, background: "transparent",
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-    >
-      {icon}
-      {label && <span>{label}</span>}
-    </button>
-  );
-}
-
-function StatusPill({ label, active }: { label: string; active: boolean }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full" style={{
-      fontSize: 11, fontWeight: 500, padding: "2px 8px",
-      background: active ? "rgba(1,105,111,0.08)" : "rgba(40,37,29,0.05)",
-      color: active ? C.accent : C.textGhost,
-    }}>
-      <span style={{ fontSize: 7 }}>{active ? "●" : "○"}</span> {label}
-    </span>
-  );
-}
 
 function FilterPill({ label, value, options, open, setOpen, onChange }: {
   label: string; value: string; options: string[]; open: boolean; setOpen: (v: boolean) => void; onChange: (v: string) => void;
