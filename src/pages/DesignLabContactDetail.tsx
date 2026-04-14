@@ -85,7 +85,7 @@ const MOCK: Record<string, {
 };
 
 function getFallback(id: string) {
-  return { name: `Kontakt ${id}`, title: "Ukjent", company: "Ukjent", email: "—", phone: "—", signal: "unknown", owner: "—", tech: [], cv: false, tasks: [] as Task[], activities: [] as Activity[] };
+  return { name: `Kontakt ${id}`, title: "Ukjent", company: "Ukjent", email: "—", phone: "—", signal: "unknown", owner: "—", tech: [] as string[], cv: false, tasks: [] as Task[], activities: [] as Activity[], linkedin: undefined as string | undefined, notes: undefined as string | undefined };
 }
 
 export default function DesignLabContactDetail() {
