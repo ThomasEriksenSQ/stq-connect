@@ -361,20 +361,26 @@ export default function DesignLabContacts() {
         </header>
 
         {/* Filters bar */}
-        <div className="flex items-center gap-2 px-6 shrink-0" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
-          <FilterPill label="Eier" value={ownerFilter} options={OWNERS} open={ownerOpen} setOpen={setOwnerOpen} onChange={(v) => { setOwnerFilter(v); setOwnerOpen(false); }} />
-          <FilterPill label="Signal" value={signalFilter} options={["Alle", ...SIGNALS]} open={signalOpen} setOpen={setSignalOpen} onChange={(v) => { setSignalFilter(v); setSignalOpen(false); }} />
-          {(ownerFilter !== "Alle" || signalFilter !== "Alle") && (
-            <button
-              onClick={() => { setOwnerFilter("Alle"); setSignalFilter("Alle"); }}
-              className="inline-flex items-center gap-1 rounded transition-colors"
-              style={{ fontSize: 12, color: C.textFaint, padding: "2px 6px" }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = C.textFaint; }}
-            >
-              <X style={{ width: 12, height: 12 }} /> Nullstill
-            </button>
-          )}
+        <div className="shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
+          <FilterRow label="EIER" options={OWNERS} value={ownerFilter} onChange={setOwnerFilter} />
+          <div className="flex items-center justify-between">
+            <FilterRow label="SIGNAL" options={["Alle", ...SIGNALS]} value={signalFilter} onChange={setSignalFilter} />
+            <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500, whiteSpace: "nowrap", paddingLeft: 12 }}>{filtered.length} kontakter</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <FilterRow label="TYPE" options={[...TYPES]} value={typeFilter} onChange={(v) => setTypeFilter(v as TypeFilter)} />
+            {(ownerFilter !== "Alle" || signalFilter !== "Alle" || typeFilter !== "Alle") && (
+              <button
+                onClick={() => { setOwnerFilter("Alle"); setSignalFilter("Alle"); setTypeFilter("Alle"); }}
+                className="inline-flex items-center gap-1 rounded transition-colors shrink-0"
+                style={{ fontSize: 12, color: C.textFaint, padding: "2px 6px" }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = C.textFaint; }}
+              >
+                <X style={{ width: 12, height: 12 }} /> Nullstill
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Content: list + detail */}
