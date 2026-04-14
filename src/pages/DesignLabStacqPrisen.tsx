@@ -411,14 +411,14 @@ const thStyle: React.CSSProperties = {
 
 function TypeBadge({ status }: { status: string | null }) {
   let label = "—";
-  let bg = "rgba(40,37,29,0.05)";
-  let color = C.textFaint;
-  let border = C.border;
-  if (status === "partner") { label = "Partner"; bg = C.warningBg; color = C.warning; border = "rgba(154,122,42,0.15)"; }
-  else if (status === "customer" || status === "kunde") { label = "Kunde"; bg = C.successBg; color = C.success; border = "rgba(74,154,106,0.15)"; }
-  else if (status === "prospect") { label = "Potensiell"; bg = C.accentBg; color = C.accent; border = "rgba(1,105,111,0.15)"; }
+  let bg: string = "rgba(40,37,29,0.05)";
+  let color: string = C.textFaint;
+  let borderColor: string = C.border;
+  if (status === "partner") { label = "Partner"; bg = C.warningBg; color = C.warning; borderColor = "rgba(154,122,42,0.15)"; }
+  else if (status === "customer" || status === "kunde") { label = "Kunde"; bg = C.successBg; color = C.success; borderColor = "rgba(74,154,106,0.15)"; }
+  else if (status === "prospect") { label = "Potensiell"; bg = C.accentBg; color = C.accent; borderColor = "rgba(1,105,111,0.15)"; }
   return (
-    <span className="inline-flex items-center rounded-full" style={{ fontSize: 11, fontWeight: 500, paddingInline: 8, paddingBlock: 2, background: bg, color, border: `1px solid ${border}` }}>
+    <span className="inline-flex items-center rounded-full" style={{ fontSize: 11, fontWeight: 500, paddingInline: 8, paddingBlock: 2, background: bg, color, border: `1px solid ${borderColor}` }}>
       {label}
     </span>
   );
