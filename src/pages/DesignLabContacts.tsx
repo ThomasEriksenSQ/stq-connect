@@ -511,8 +511,47 @@ function SignalChip({ signal, size = "sm" }: { signal: Signal; size?: "sm" | "md
    SUB-COMPONENTS
    ═══════════════════════════════════════════════════════════ */
 
+function NavGroup({ items, navigate }: { items: typeof NAV_MAIN; navigate: (p: string) => void }) {
+  return (
+    <div className="space-y-px">
+      {items.map((item) => (
+        <button
+          key={item.label}
+          onClick={() => navigate(item.href)}
+          className="flex items-center gap-2 w-full rounded-md px-2 py-[6px] transition-colors"
+          style={{
+            fontSize: 13, fontWeight: 500,
+            color: item.active ? C.accent : C.textMuted,
+            background: item.active ? C.accentBg : "transparent",
+            borderLeft: item.active ? `2px solid ${C.accent}` : "2px solid transparent",
+          }}
+          onMouseEnter={(e) => { if (!item.active) e.currentTarget.style.background = C.hoverBg; }}
+          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? C.accentBg : "transparent"; }}
+        >
+          <item.icon style={{ width: 15, height: 15, strokeWidth: 1.6 }} />
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
-function IconBtn({ icon, title, onClick }: { icon: React.ReactNode; title: string; onClick: () => void }) {
+function SidebarBtn({ icon: Icon, label, onClick, muted }: { icon: any; label: string; onClick: () => void; muted?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-2 w-full rounded-md px-2 py-[6px] transition-colors"
+      style={{ fontSize: 13, fontWeight: 500, color: muted ? C.textGhost : C.textMuted }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+    >
+      <Icon style={{ width: 15, height: 15, strokeWidth: 1.6 }} />
+      {label}
+    </button>
+  );
+}
+
+
   return (
     <button
       onClick={onClick}
