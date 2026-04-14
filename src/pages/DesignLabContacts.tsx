@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import {
-  Search, ChevronDown, ChevronUp, Check,
+  Search, ChevronDown, ChevronUp,
   Users, X,
   Building2, LayoutDashboard, Briefcase, Settings, LogOut,
   UserPlus, Radar, TrendingUp, Globe,
@@ -28,7 +28,9 @@ const SIGNAL_ORDER: Record<Signal, number> = {
 };
 
 const SIGNALS: Signal[] = ["Behov nå", "Får fremtidig behov", "Får kanskje behov", "Ukjent om behov", "Ikke aktuelt"];
-const OWNERS = ["Alle", "Jon Richard Nygaard", "Thomas Eriksen"];
+const OWNERS = ["Alle", "Jon Richard Nygaard", "Thomas Eriksen", "Uten eier"];
+const TYPES = ["Alle", "Innkjøper", "CV-Epost", "Ikke relevant kontakt"] as const;
+type TypeFilter = typeof TYPES[number];
 
 type SortField = "name" | "signal" | "company" | "title" | "owner" | "last_activity";
 type SortDir = "asc" | "desc";
@@ -102,10 +104,9 @@ export default function DesignLabContacts() {
   const [search, setSearch] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("Alle");
   const [signalFilter, setSignalFilter] = useState("Alle");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "last_activity", dir: "asc" });
   const [selectedId, setSelectedId] = useState<string | null>(searchParams.get("contact"));
-  const [ownerOpen, setOwnerOpen] = useState(false);
-  const [signalOpen, setSignalOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const initials = user?.email ? user.email.split("@")[0].slice(0, 2).toUpperCase() : "??";
@@ -142,9 +143,8 @@ export default function DesignLabContacts() {
       const { data, error } = await supabase
         .from("contacts")
         .select("id, first_name, last_name, title, email, phone, cv_email, call_list, ikke_aktuell_kontakt, teknologier, company_id, location, linkedin, department, notes, locations, companies(id, name), profiles:owner_id(id, full_name)")
-        .eq("ikke_aktuell_kontakt", false)
         .order("updated_at", { ascending: false })
-        .limit(300);
+        .limit(500);
       if (error) throw error;
       return data;
     },
@@ -210,6 +210,7 @@ export default function DesignLabContacts() {
         company: company?.name || "", companyId: company?.id || null,
         signal, eier: owner?.full_name || "", eierId: owner?.id || null,
         cvEmail: c.cv_email, callList: c.call_list,
+        ikkeAktuell: c.ikke_aktuell_kontakt ?? false,
         teknologier: c.teknologier || [],
         daysSince, lastActivitySubject: lastAct?.subject || "",
         activities: acts, tasks,
@@ -223,6 +224,10 @@ export default function DesignLabContacts() {
 
   const filtered = useMemo(() => {
     let list = contacts;
+    // Default: hide ikke-relevante unless explicitly filtering for them
+    if (typeFilter !== "Ikke relevant kontakt") {
+      list = list.filter((c) => !c.ikkeAktuell);
+    }
     if (search) {
       const q = search.toLowerCase();
       list = list.filter((c) =>
@@ -232,10 +237,14 @@ export default function DesignLabContacts() {
         c.email.toLowerCase().includes(q)
       );
     }
-    if (ownerFilter !== "Alle") list = list.filter((c) => c.eier === ownerFilter);
+    if (ownerFilter === "Uten eier") list = list.filter((c) => !c.eier);
+    else if (ownerFilter !== "Alle") list = list.filter((c) => c.eier === ownerFilter);
     if (signalFilter !== "Alle") list = list.filter((c) => c.signal === signalFilter);
+    if (typeFilter === "Innkjøper") list = list.filter((c) => c.callList === true);
+    else if (typeFilter === "CV-Epost") list = list.filter((c) => c.cvEmail === true);
+    else if (typeFilter === "Ikke relevant kontakt") list = list.filter((c) => c.ikkeAktuell);
     return list;
-  }, [contacts, search, ownerFilter, signalFilter]);
+  }, [contacts, search, ownerFilter, signalFilter, typeFilter]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -352,20 +361,26 @@ export default function DesignLabContacts() {
         </header>
 
         {/* Filters bar */}
-        <div className="flex items-center gap-2 px-6 shrink-0" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
-          <FilterPill label="Eier" value={ownerFilter} options={OWNERS} open={ownerOpen} setOpen={setOwnerOpen} onChange={(v) => { setOwnerFilter(v); setOwnerOpen(false); }} />
-          <FilterPill label="Signal" value={signalFilter} options={["Alle", ...SIGNALS]} open={signalOpen} setOpen={setSignalOpen} onChange={(v) => { setSignalFilter(v); setSignalOpen(false); }} />
-          {(ownerFilter !== "Alle" || signalFilter !== "Alle") && (
-            <button
-              onClick={() => { setOwnerFilter("Alle"); setSignalFilter("Alle"); }}
-              className="inline-flex items-center gap-1 rounded transition-colors"
-              style={{ fontSize: 12, color: C.textFaint, padding: "2px 6px" }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = C.textFaint; }}
-            >
-              <X style={{ width: 12, height: 12 }} /> Nullstill
-            </button>
-          )}
+        <div className="shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
+          <FilterRow label="EIER" options={OWNERS} value={ownerFilter} onChange={setOwnerFilter} />
+          <div className="flex items-center justify-between">
+            <FilterRow label="SIGNAL" options={["Alle", ...SIGNALS]} value={signalFilter} onChange={setSignalFilter} />
+            <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500, whiteSpace: "nowrap", paddingLeft: 12 }}>{filtered.length} kontakter</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <FilterRow label="TYPE" options={[...TYPES]} value={typeFilter} onChange={(v) => setTypeFilter(v as TypeFilter)} />
+            {(ownerFilter !== "Alle" || signalFilter !== "Alle" || typeFilter !== "Alle") && (
+              <button
+                onClick={() => { setOwnerFilter("Alle"); setSignalFilter("Alle"); setTypeFilter("Alle"); }}
+                className="inline-flex items-center gap-1 rounded transition-colors shrink-0"
+                style={{ fontSize: 12, color: C.textFaint, padding: "2px 6px" }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = C.textFaint; }}
+              >
+                <X style={{ width: 12, height: 12 }} /> Nullstill
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Content: list + detail */}
@@ -611,45 +626,34 @@ function IconBtn({ icon, title, onClick }: { icon: React.ReactNode; title: strin
 }
 
 
-function FilterPill({ label, value, options, open, setOpen, onChange }: {
-  label: string; value: string; options: string[]; open: boolean; setOpen: (v: boolean) => void; onChange: (v: string) => void;
+function FilterRow({ label, options, value, onChange }: {
+  label: string; options: string[]; value: string; onChange: (v: string) => void;
 }) {
-  const active = value !== "Alle";
   return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="inline-flex items-center gap-1 rounded transition-colors"
-        style={{
-          height: 26, paddingInline: 8, fontSize: 12, fontWeight: 500,
-          border: `1px solid ${active ? C.text : C.border}`,
-          background: active ? C.text : "transparent",
-          color: active ? C.bg : C.textMuted,
-        }}
-      >
-        {active ? `${label}: ${value}` : label}
-        <ChevronDown style={{ width: 12, height: 12 }} />
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute top-full left-0 mt-1 w-52 rounded-lg overflow-hidden z-50" style={{ background: C.surface, border: `1px solid ${C.border}`, boxShadow: "0 4px 16px rgba(40,37,29,0.1)" }}>
-            {options.map((opt) => (
-              <button
-                key={opt}
-                onClick={() => onChange(opt)}
-                className="flex items-center justify-between w-full px-3 py-1.5 transition-colors"
-                style={{ fontSize: 13, color: C.text }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}
-              >
-                {opt}
-                {value === opt && <Check style={{ width: 14, height: 14, color: C.accent }} />}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+    <div className="flex items-center gap-2 py-[3px]">
+      <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: C.textMuted, width: 56, flexShrink: 0 }}>{label}</span>
+      <div className="flex items-center gap-1 flex-wrap">
+        {options.map((opt) => {
+          const active = value === opt;
+          return (
+            <button
+              key={opt}
+              onClick={() => onChange(opt)}
+              className="inline-flex items-center rounded-full transition-colors"
+              style={{
+                height: 24, paddingInline: 10, fontSize: 12, fontWeight: 500,
+                border: active ? "none" : `1px solid ${C.border}`,
+                background: active ? C.accent : "transparent",
+                color: active ? "#fff" : C.textMuted,
+              }}
+              onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = C.hoverBg; }}
+              onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = active ? C.accent : "transparent"; }}
+            >
+              {opt}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
