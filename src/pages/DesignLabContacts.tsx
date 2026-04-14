@@ -224,6 +224,10 @@ export default function DesignLabContacts() {
 
   const filtered = useMemo(() => {
     let list = contacts;
+    // Default: hide ikke-relevante unless explicitly filtering for them
+    if (typeFilter !== "Ikke relevant kontakt") {
+      list = list.filter((c) => !c.ikkeAktuell);
+    }
     if (search) {
       const q = search.toLowerCase();
       list = list.filter((c) =>
@@ -233,10 +237,14 @@ export default function DesignLabContacts() {
         c.email.toLowerCase().includes(q)
       );
     }
-    if (ownerFilter !== "Alle") list = list.filter((c) => c.eier === ownerFilter);
+    if (ownerFilter === "Uten eier") list = list.filter((c) => !c.eier);
+    else if (ownerFilter !== "Alle") list = list.filter((c) => c.eier === ownerFilter);
     if (signalFilter !== "Alle") list = list.filter((c) => c.signal === signalFilter);
+    if (typeFilter === "Innkjøper") list = list.filter((c) => c.callList === true);
+    else if (typeFilter === "CV-Epost") list = list.filter((c) => c.cvEmail === true);
+    else if (typeFilter === "Ikke relevant kontakt") list = list.filter((c) => c.ikkeAktuell);
     return list;
-  }, [contacts, search, ownerFilter, signalFilter]);
+  }, [contacts, search, ownerFilter, signalFilter, typeFilter]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
