@@ -19,6 +19,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ContactCardContent } from "@/components/ContactCardContent";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
+import { getHeatResult, getTaskStatus, getActivityStatus, type HeatResult } from "@/lib/heatScore";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
@@ -35,7 +36,7 @@ const OWNERS = ["Alle", "Jon Richard Nygaard", "Thomas Eriksen", "Uten eier"];
 const TYPES = ["Alle", "Innkjøper", "CV-Epost", "Ikke relevant kontakt"] as const;
 type TypeFilter = typeof TYPES[number];
 
-type SortField = "name" | "signal" | "company" | "title" | "owner" | "last_activity";
+type SortField = "name" | "signal" | "company" | "title" | "owner" | "last_activity" | "heat";
 type SortDir = "asc" | "desc";
 
 /* ── Colors ── */
@@ -60,6 +61,23 @@ const C = {
   warning: "#9a7a2a",
   warningBg: "rgba(154,122,42,0.06)",
 } as const;
+
+/* ── Signal color map (V8 desaturated) ── */
+const SIGNAL_COLORS: Record<Signal, { bg: string; color: string }> = {
+  "Behov nå": { bg: "rgba(1,105,111,0.08)", color: C.accent },
+  "Får fremtidig behov": { bg: "rgba(59,111,160,0.08)", color: "#3B6FA0" },
+  "Får kanskje behov": { bg: "rgba(154,122,42,0.08)", color: "#8A7A3A" },
+  "Ukjent om behov": { bg: "rgba(40,37,29,0.05)", color: C.textFaint },
+  "Ikke aktuelt": { bg: "rgba(154,74,74,0.06)", color: "#8a5a5a" },
+};
+
+/* ── Heat badge colors (V8 desaturated) ── */
+const HEAT_COLORS: Record<HeatResult["temperature"], { bg: string; color: string; label: string }> = {
+  hett: { bg: "rgba(180,60,60,0.10)", color: "#A04040", label: "Hett" },
+  lovende: { bg: "rgba(180,120,40,0.10)", color: "#9A7A2A", label: "Lovende" },
+  mulig: { bg: "rgba(40,37,29,0.06)", color: C.textMuted, label: "Mulig" },
+  sovende: { bg: "rgba(40,37,29,0.04)", color: C.textGhost, label: "Sovende" },
+};
 
 function relTime(days: number): string {
   if (days === 0) return "I dag";
@@ -109,7 +127,7 @@ export default function DesignLabContacts() {
   const [ownerFilter, setOwnerFilter] = useState("Alle");
   const [signalFilter, setSignalFilter] = useState("Alle");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
-  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "last_activity", dir: "asc" });
+  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "heat", dir: "asc" });
   const [selectedId, setSelectedId] = useState<string | null>(searchParams.get("contact"));
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -146,7 +164,7 @@ export default function DesignLabContacts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
-        .select("id, first_name, last_name, title, email, phone, cv_email, call_list, ikke_aktuell_kontakt, teknologier, company_id, location, linkedin, department, notes, locations, companies(id, name), profiles:owner_id(id, full_name)")
+        .select("id, first_name, last_name, title, email, phone, cv_email, call_list, ikke_aktuell_kontakt, teknologier, company_id, location, linkedin, department, notes, locations, companies(id, name, ikke_relevant), profiles:owner_id(id, full_name)")
         .order("updated_at", { ascending: false })
         .limit(500);
       if (error) throw error;
@@ -190,6 +208,23 @@ export default function DesignLabContacts() {
     enabled: contactIds.length > 0,
   });
 
+  // ── Forespørsler for heat score ──
+  const { data: foresporslerMap = {} } = useQuery({
+    queryKey: ["dl-foresporsler-v8", contactIds.length],
+    queryFn: async () => {
+      if (!contactIds.length) return {};
+      const { data, error } = await supabase
+        .from("foresporsler")
+        .select("id, kontakt_id, status")
+        .in("kontakt_id", contactIds);
+      if (error) throw error;
+      const map: Record<string, typeof data> = {};
+      data.forEach((f) => { if (f.kontakt_id) { (map[f.kontakt_id] ??= []).push(f); } });
+      return map;
+    },
+    enabled: contactIds.length > 0,
+  });
+
   // ── Consultants available ──
   const { data: availableConsultants = [] } = useQuery({
     queryKey: ["dl-available-consultants"],
@@ -216,18 +251,41 @@ export default function DesignLabContacts() {
     return sortHuntConsultants(source as { id: number; navn: string; tilgjengelig_fra: string | null }[]);
   }, [availableConsultants]);
 
-  // ── Computed ──
+  // ── Computed with heat score ──
   const contacts = useMemo(() => {
     const now = new Date();
     return rawContacts.map((c) => {
       const acts = (activitiesMap as any)[c.id] || [];
       const tasks = (tasksMap as any)[c.id] || [];
+      const foresps = (foresporslerMap as any)[c.id] || [];
       const effectiveSignal = getEffectiveSignal(acts, tasks);
       const signal = effectiveSignal ? mapToSignal(effectiveSignal) : "Ukjent om behov" as Signal;
       const lastAct = acts[0] || null;
       const daysSince = lastAct ? differenceInDays(now, new Date(lastAct.created_at)) : 999;
       const company = (c as any).companies;
       const owner = (c as any).profiles;
+
+      const hasOverdue = tasks.some((t: any) => t.status !== "done" && t.status !== "completed" && t.due_date && new Date(t.due_date) < now);
+      const hasAktivForespørsel = foresps.some((f: any) => f.status === "Aktiv" || f.status === "Ny");
+      const hasTidligereForespørsel = foresps.length > 0;
+      const hasMarkedsradar = false; // would need finn_annonser query
+      const taskStatus = getTaskStatus(tasks.map((t: any) => ({ due_date: t.due_date, status: t.status })));
+      const activityStatus = getActivityStatus(daysSince);
+
+      const heatResult = getHeatResult({
+        signal: signal,
+        isInnkjoper: c.call_list === true,
+        hasMarkedsradar,
+        hasAktivForespørsel,
+        hasOverdue,
+        daysSinceLastContact: daysSince,
+        hasTidligereForespørsel,
+        ikkeAktuellKontakt: c.ikke_aktuell_kontakt ?? false,
+        ikkeRelevantSelskap: company?.ikke_relevant ?? false,
+        taskStatus,
+        activityStatus,
+      });
+
       return {
         id: c.id, firstName: c.first_name, lastName: c.last_name,
         title: c.title || "", email: c.email || "", phone: c.phone || "",
@@ -241,9 +299,10 @@ export default function DesignLabContacts() {
         teknologier: c.teknologier || [],
         daysSince, lastActivitySubject: lastAct?.subject || "",
         activities: acts, tasks,
+        heatResult,
       };
     });
-  }, [rawContacts, activitiesMap, tasksMap]);
+  }, [rawContacts, activitiesMap, tasksMap, foresporslerMap]);
 
   const toggleSort = useCallback((field: SortField) => {
     setSort((p) => p.field === field ? { field, dir: p.dir === "asc" ? "desc" : "asc" } : { field, dir: "asc" });
@@ -284,6 +343,12 @@ export default function DesignLabContacts() {
         case "title": return d * a.title.localeCompare(b.title, "nb");
         case "owner": return d * a.eier.localeCompare(b.eier, "nb");
         case "last_activity": return d * (a.daysSince - b.daysSince);
+        case "heat": {
+          // Primary: tier ASC (lower = hotter), Secondary: score DESC (higher = better)
+          const tierDiff = a.heatResult.tier - b.heatResult.tier;
+          if (tierDiff !== 0) return d * tierDiff;
+          return d * (b.heatResult.score - a.heatResult.score);
+        }
         default: return 0;
       }
     });
@@ -447,19 +512,18 @@ export default function DesignLabContacts() {
             <ResizablePanelGroup direction="horizontal" className="h-full">
               <ResizablePanel defaultSize={35} minSize={20} maxSize={60}>
                 <div className="h-full overflow-y-auto">
-                  {/* Table header */}
+                  {/* Table header — compact */}
                   <div
                     className="grid items-center sticky top-0 z-10"
                     style={{
-                      gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) 64px",
+                      gridTemplateColumns: "minmax(0,1fr) 100px 72px",
                       height: 32, borderBottom: `1px solid ${C.border}`,
                       background: C.bg, paddingLeft: 16, paddingRight: 16,
                     }}
                   >
                     <ColHeader label="Navn" field="name" sort={sort} onSort={toggleSort} />
                     <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
-                    <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
-                    <ColHeader label="Siste" field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
+                    <ColHeader label="Varme" field="heat" sort={sort} onSort={toggleSort} className="justify-end" />
                   </div>
                   {isLoading ? (
                     <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster kontakter…</div>
@@ -474,8 +538,9 @@ export default function DesignLabContacts() {
                           onClick={() => setSelectedId(isActive ? null : c.id)}
                           className="grid items-center cursor-pointer group"
                           style={{
-                            gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) 64px",
-                            height: 38, paddingLeft: 16, paddingRight: 16,
+                            gridTemplateColumns: "minmax(0,1fr) 100px 72px",
+                            minHeight: 42, paddingLeft: 16, paddingRight: 16,
+                            paddingTop: 4, paddingBottom: 4,
                             borderBottom: `1px solid ${C.borderLight}`,
                             background: isActive ? C.activeBg : undefined,
                             transition: "background 50ms",
@@ -484,16 +549,15 @@ export default function DesignLabContacts() {
                           onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = isActive ? C.activeBg : ""; }}
                         >
                           <div className="truncate pr-3">
-                            <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{c.firstName} {c.lastName}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{c.firstName} {c.lastName}</span>
+                              <ContactIndicators callList={c.callList} cvEmail={c.cvEmail} />
+                            </div>
+                            <span style={{ fontSize: 12, color: C.textFaint, lineHeight: 1.2 }} className="truncate block">{c.company}</span>
                           </div>
                           <div className="pr-3"><SignalChip signal={c.signal} /></div>
-                          <div className="truncate pr-3"><span style={{ fontSize: 13, color: C.textMuted }}>{c.company}</span></div>
-                          <div className="text-right">
-                            <span style={{
-                              fontSize: 12, color: c.daysSince < 7 ? C.textMuted : c.daysSince < 30 ? C.textFaint : C.textGhost,
-                            }}>
-                              {c.daysSince < 999 ? relTime(c.daysSince) : "—"}
-                            </span>
+                          <div className="flex justify-end">
+                            <HeatBadge heat={c.heatResult} daysSince={c.daysSince} />
                           </div>
                         </div>
                       );
@@ -507,15 +571,40 @@ export default function DesignLabContacts() {
               />
               <ResizablePanel defaultSize={65} minSize={40}>
                 <div className="h-full flex flex-col" style={{ background: C.surface }}>
-                  {/* Linear-styled header */}
-                  <div className="shrink-0 flex items-center justify-between px-6" style={{ height: 48, borderBottom: `1px solid ${C.border}` }}>
-                    <div className="flex items-center gap-2">
-                      <h2 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{sel.firstName} {sel.lastName}</h2>
-                      <SignalChip signal={sel.signal} size="md" />
-                    </div>
-                    <div className="flex items-center gap-0.5">
-                      <IconBtn icon={<ArrowUpRight style={{ width: 15, height: 15 }} />} title="Åpne i CRM" onClick={() => navigate(`/kontakter/${sel.id}`)} />
-                      <IconBtn icon={<X style={{ width: 15, height: 15 }} />} title="Lukk" onClick={() => setSelectedId(null)} />
+                  {/* Enhanced detail header */}
+                  <div className="shrink-0 px-6 py-4" style={{ borderBottom: `1px solid ${C.border}` }}>
+                    <div className="flex items-start justify-between">
+                      <div className="min-w-0 flex-1">
+                        <h2 style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 2 }}>{sel.firstName} {sel.lastName}</h2>
+                        <p style={{ fontSize: 13, color: C.textMuted }}>
+                          {[sel.company, sel.title, sel.location].filter(Boolean).join(" · ")}
+                        </p>
+                        {/* Tags row */}
+                        <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+                          <SignalChip signal={sel.signal} size="md" />
+                          {sel.callList && (
+                            <span className="inline-flex items-center rounded-full" style={{ fontSize: 11, fontWeight: 500, padding: "2px 8px", background: "rgba(1,105,111,0.06)", color: C.accent }}>
+                              Innkjøper
+                            </span>
+                          )}
+                          {sel.cvEmail && (
+                            <span className="inline-flex items-center rounded-full" style={{ fontSize: 11, fontWeight: 500, padding: "2px 8px", background: "rgba(59,111,160,0.06)", color: "#3B6FA0" }}>
+                              CV
+                            </span>
+                          )}
+                          <HeatBadge heat={sel.heatResult} daysSince={sel.daysSince} showScore />
+                        </div>
+                        {/* Heat breakdown */}
+                        {sel.heatResult.reasons.length > 0 && (
+                          <p style={{ fontSize: 11, color: C.textFaint, marginTop: 4 }}>
+                            {sel.heatResult.reasons.join(" · ")} — poeng: {sel.heatResult.score}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-0.5 shrink-0 ml-4">
+                        <IconBtn icon={<ArrowUpRight style={{ width: 15, height: 15 }} />} title="Åpne i CRM" onClick={() => navigate(`/kontakter/${sel.id}`)} />
+                        <IconBtn icon={<X style={{ width: 15, height: 15 }} />} title="Lukk" onClick={() => setSelectedId(null)} />
+                      </div>
                     </div>
                   </div>
                   {/* Full ContactCardContent */}
@@ -531,7 +620,7 @@ export default function DesignLabContacts() {
               <div
                 className="grid items-center sticky top-0 z-10"
                 style={{
-                  gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1fr) 64px",
+                  gridTemplateColumns: "minmax(0,1fr) 120px 200px 180px 160px 72px",
                   height: 32, borderBottom: `1px solid ${C.border}`,
                   background: C.bg, paddingLeft: 16, paddingRight: 16,
                 }}
@@ -541,7 +630,7 @@ export default function DesignLabContacts() {
                 <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
                 <ColHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />
                 <ColHeader label="Eier" field="owner" sort={sort} onSort={toggleSort} />
-                <ColHeader label="Siste" field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
+                <ColHeader label="Varme" field="heat" sort={sort} onSort={toggleSort} className="justify-end" />
               </div>
               {isLoading ? (
                 <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster kontakter…</div>
@@ -556,7 +645,7 @@ export default function DesignLabContacts() {
                       onClick={() => setSelectedId(isActive ? null : c.id)}
                       className="grid items-center cursor-pointer group"
                       style={{
-                        gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1fr) 64px",
+                        gridTemplateColumns: "minmax(0,1fr) 120px 200px 180px 160px 72px",
                         height: 38, paddingLeft: 16, paddingRight: 16,
                         borderBottom: `1px solid ${C.borderLight}`,
                         background: isActive ? C.activeBg : undefined,
@@ -565,8 +654,9 @@ export default function DesignLabContacts() {
                       onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = C.hoverBg; }}
                       onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = isActive ? C.activeBg : ""; }}
                     >
-                      <div className="truncate pr-3">
+                      <div className="truncate pr-3 flex items-center gap-1.5">
                         <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{c.firstName} {c.lastName}</span>
+                        <ContactIndicators callList={c.callList} cvEmail={c.cvEmail} />
                       </div>
                       <div className="pr-3"><SignalChip signal={c.signal} /></div>
                       <div className="truncate pr-3"><span style={{ fontSize: 13, color: C.textMuted }}>{c.company}</span></div>
@@ -574,12 +664,8 @@ export default function DesignLabContacts() {
                       <div className="truncate pr-3">
                         <span style={{ fontSize: 12, color: C.textFaint }}>{c.eier}</span>
                       </div>
-                      <div className="text-right">
-                        <span style={{
-                          fontSize: 12, color: c.daysSince < 7 ? C.textMuted : c.daysSince < 30 ? C.textFaint : C.textGhost,
-                        }}>
-                          {c.daysSince < 999 ? relTime(c.daysSince) : "—"}
-                        </span>
+                      <div className="flex justify-end">
+                        <HeatBadge heat={c.heatResult} daysSince={c.daysSince} />
                       </div>
                     </div>
                   );
@@ -594,11 +680,11 @@ export default function DesignLabContacts() {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   SIGNAL CHIP
+   SIGNAL CHIP (V8 color-coded)
    ═══════════════════════════════════════════════════════════ */
 
 function SignalChip({ signal, size = "sm" }: { signal: Signal; size?: "sm" | "md" }) {
-  const isTeal = signal === "Behov nå";
+  const colors = SIGNAL_COLORS[signal];
   const shortLabels: Record<Signal, string> = {
     "Behov nå": "Behov nå",
     "Får fremtidig behov": "Fremtidig",
@@ -614,8 +700,8 @@ function SignalChip({ signal, size = "sm" }: { signal: Signal; size?: "sm" | "md
         fontWeight: 500,
         padding: size === "sm" ? "1px 7px" : "2px 10px",
         whiteSpace: "nowrap",
-        background: isTeal ? "rgba(1,105,111,0.08)" : "rgba(40,37,29,0.05)",
-        color: isTeal ? C.accent : signal === "Ikke aktuelt" ? "#8a5a5a" : C.textFaint,
+        background: colors.bg,
+        color: colors.color,
       }}
     >
       {size === "sm" ? shortLabels[signal] : signal}
@@ -623,7 +709,57 @@ function SignalChip({ signal, size = "sm" }: { signal: Signal; size?: "sm" | "md
   );
 }
 
-/* (DetailPanel removed — now using ContactCardContent directly) */
+/* ═══════════════════════════════════════════════════════════
+   HEAT BADGE
+   ═══════════════════════════════════════════════════════════ */
+
+function HeatBadge({ heat, daysSince, showScore }: { heat: HeatResult; daysSince: number; showScore?: boolean }) {
+  const config = HEAT_COLORS[heat.temperature];
+  const tooltip = `${config.label} (${heat.score}p) · Siste: ${daysSince < 999 ? relTime(daysSince) : "aldri"}`;
+  return (
+    <span
+      className="inline-flex items-center rounded-full"
+      title={tooltip}
+      style={{
+        fontSize: 11,
+        fontWeight: 500,
+        padding: "1px 7px",
+        whiteSpace: "nowrap",
+        background: config.bg,
+        color: config.color,
+      }}
+    >
+      {config.label}
+      {showScore && <span style={{ marginLeft: 4, opacity: 0.7 }}>{heat.score}</span>}
+    </span>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CONTACT INDICATORS (Innkjøper / CV dots)
+   ═══════════════════════════════════════════════════════════ */
+
+function ContactIndicators({ callList, cvEmail }: { callList: boolean; cvEmail: boolean }) {
+  if (!callList && !cvEmail) return null;
+  return (
+    <span className="inline-flex items-center gap-1 shrink-0">
+      {callList && (
+        <span
+          title="Innkjøper"
+          className="rounded-full inline-block"
+          style={{ width: 6, height: 6, background: C.accent }}
+        />
+      )}
+      {cvEmail && (
+        <span
+          title="CV-epost"
+          className="rounded-full inline-block"
+          style={{ width: 6, height: 6, background: "#3B6FA0" }}
+        />
+      )}
+    </span>
+  );
+}
 
 /* ═══════════════════════════════════════════════════════════
    SUB-COMPONENTS
