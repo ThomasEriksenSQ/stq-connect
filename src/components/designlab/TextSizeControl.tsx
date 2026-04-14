@@ -1,13 +1,14 @@
 import { Type } from "lucide-react";
 
-const SIZES = ["S", "M", "L", "XL"] as const;
+const SIZES = ["S", "M", "L", "XL", "XXL"] as const;
 export type TextSize = typeof SIZES[number];
 
-export const SCALE_MAP: Record<TextSize, string> = {
-  S: "87.5%",
-  M: "100%",
-  L: "112.5%",
-  XL: "125%",
+export const SCALE_MAP: Record<TextSize, number> = {
+  S: 0.875,
+  M: 1,
+  L: 1.125,
+  XL: 1.25,
+  XXL: 1.4,
 };
 
 const C = {
