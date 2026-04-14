@@ -4,13 +4,12 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Search, ChevronDown, ChevronUp, Check,
-  Phone, Mail, Linkedin, Copy, Users, X,
+  Users, X,
   Building2, LayoutDashboard, Briefcase, Settings, LogOut,
-  UserPlus, Radar, TrendingUp, Globe, Calendar,
-  MessageCircle, FileText, ArrowUpRight, Clock,
-  MapPin, ExternalLink, ChevronRight,
+  UserPlus, Radar, TrendingUp, Globe,
+  ArrowUpRight, Clock,
 } from "lucide-react";
-import { differenceInDays, format, isPast, isToday } from "date-fns";
+import { differenceInDays, format } from "date-fns";
 import { nb } from "date-fns/locale";
 import { getEffectiveSignal, normalizeCategoryLabel } from "@/lib/categoryUtils";
 import { toast } from "sonner";
