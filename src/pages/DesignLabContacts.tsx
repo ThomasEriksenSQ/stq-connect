@@ -197,10 +197,8 @@ export default function DesignLabContacts() {
   const allSelected = sorted.length > 0 && selectedIds.size === sorted.length;
 
   return (
-    <div className="min-h-screen bg-white" style={{ fontFamily: "Inter, -apple-system, system-ui, sans-serif" }}>
-      <TopNav />
-
-      <div className="px-8 pt-6 pb-8 max-w-[1600px] mx-auto">
+    <div style={{ fontFamily: "Inter, -apple-system, system-ui, sans-serif" }}>
+      <div className="pt-2 pb-8 max-w-[1600px]">
         {/* Page header */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-baseline gap-3">
