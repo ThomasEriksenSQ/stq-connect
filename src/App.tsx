@@ -37,6 +37,7 @@ const AnsattDetail = lazy(() => import("./pages/AnsattDetail"));
 const Innstillinger = lazy(() => import("./pages/Innstillinger"));
 const DesignLabContacts = lazy(() => import("./pages/DesignLabContacts"));
 const DesignLabContactDetail = lazy(() => import("./pages/DesignLabContactDetail"));
+const DesignLabForesporsler = lazy(() => import("./pages/DesignLabForesporsler"));
 
 const queryClient = new QueryClient();
 
@@ -204,11 +205,19 @@ const App = () => (
                     </Suspense>
                   }
                 />
-                <Route
+              <Route
                   path="kontakter/:id"
                   element={
                     <Suspense fallback={<LazyFallback />}>
                       <DesignLabContactDetail />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="foresporsler"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <DesignLabForesporsler />
                     </Suspense>
                   }
                 />
