@@ -104,6 +104,7 @@ export default function DesignLabContacts() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { signOut, user } = useAuth();
+  const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [search, setSearch] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("Alle");
   const [signalFilter, setSignalFilter] = useState("Alle");
