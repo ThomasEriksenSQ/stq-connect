@@ -550,7 +550,7 @@ function SidebarBtn({ icon: Icon, label, onClick, muted }: { icon: any; label: s
   );
 }
 
-
+function IconBtn({ icon, title, onClick }: { icon: React.ReactNode; title: string; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
