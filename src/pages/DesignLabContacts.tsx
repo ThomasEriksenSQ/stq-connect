@@ -8,8 +8,9 @@ import {
   Building2, LayoutDashboard, Briefcase, Settings, LogOut,
   UserPlus, Radar, TrendingUp, Globe, Calendar,
   MessageCircle, FileText, ArrowUpRight, Clock,
+  MapPin, ExternalLink, ChevronRight,
 } from "lucide-react";
-import { differenceInDays, format } from "date-fns";
+import { differenceInDays, format, isPast, isToday } from "date-fns";
 import { nb } from "date-fns/locale";
 import { getEffectiveSignal, normalizeCategoryLabel } from "@/lib/categoryUtils";
 import { toast } from "sonner";
@@ -46,6 +47,12 @@ const C = {
   hoverBg: "rgba(40,37,29,0.035)",
   activeBg: "rgba(1,105,111,0.04)",
   shadow: "0 1px 3px rgba(40,37,29,0.06)",
+  danger: "#9a4a4a",
+  dangerBg: "rgba(154,74,74,0.06)",
+  success: "#4a9a6a",
+  successBg: "rgba(74,154,106,0.06)",
+  warning: "#9a7a2a",
+  warningBg: "rgba(154,122,42,0.06)",
 } as const;
 
 function relTime(days: number): string {
@@ -99,7 +106,6 @@ export default function DesignLabContacts() {
   const [ownerOpen, setOwnerOpen] = useState(false);
   const [signalOpen, setSignalOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
 
   const initials = user?.email ? user.email.split("@")[0].slice(0, 2).toUpperCase() : "??";
 
@@ -134,7 +140,7 @@ export default function DesignLabContacts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
-        .select("id, first_name, last_name, title, email, phone, cv_email, call_list, ikke_aktuell_kontakt, teknologier, company_id, location, linkedin, department, notes, companies(id, name), profiles:owner_id(id, full_name)")
+        .select("id, first_name, last_name, title, email, phone, cv_email, call_list, ikke_aktuell_kontakt, teknologier, company_id, location, linkedin, department, notes, locations, companies(id, name), profiles:owner_id(id, full_name)")
         .eq("ikke_aktuell_kontakt", false)
         .order("updated_at", { ascending: false })
         .limit(300);
@@ -151,7 +157,7 @@ export default function DesignLabContacts() {
       if (!contactIds.length) return {};
       const { data, error } = await supabase
         .from("activities")
-        .select("id, contact_id, subject, description, created_at, type")
+        .select("id, contact_id, subject, description, created_at, type, created_by, profiles:created_by(full_name)")
         .in("contact_id", contactIds)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -168,15 +174,34 @@ export default function DesignLabContacts() {
       if (!contactIds.length) return {};
       const { data, error } = await supabase
         .from("tasks")
-        .select("id, contact_id, title, description, due_date, status, priority, created_at")
+        .select("id, contact_id, title, description, due_date, status, priority, created_at, assigned_to, profiles:assigned_to(full_name), companies:company_id(name)")
         .in("contact_id", contactIds)
-        .neq("status", "done");
+        .order("due_date", { ascending: true });
       if (error) throw error;
       const map: Record<string, typeof data> = {};
       data.forEach((t) => { if (t.contact_id) { (map[t.contact_id] ??= []).push(t); } });
       return map;
     },
     enabled: contactIds.length > 0,
+  });
+
+  // Forespørsler (requests) for selected contact
+  const { data: foresporslerForContact = [] } = useQuery({
+    queryKey: ["dl-foresporsler-contact", selectedId],
+    queryFn: async () => {
+      if (!selectedId) return [];
+      const contact = rawContacts.find(c => c.id === selectedId);
+      if (!contact?.company_id) return [];
+      const { data, error } = await supabase
+        .from("foresporsler")
+        .select("id, selskap_navn, referanse, mottatt_dato, status, teknologier, type, sted")
+        .eq("selskap_id", contact.company_id)
+        .order("mottatt_dato", { ascending: false })
+        .limit(5);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedId,
   });
 
   // ── Computed ──
@@ -195,9 +220,10 @@ export default function DesignLabContacts() {
         id: c.id, firstName: c.first_name, lastName: c.last_name,
         title: c.title || "", email: c.email || "", phone: c.phone || "",
         linkedin: c.linkedin || "", location: c.location || "",
+        locations: c.locations || [],
         department: c.department || "", notes: c.notes || "",
         company: company?.name || "", companyId: company?.id || null,
-        signal, eier: owner?.full_name || "",
+        signal, eier: owner?.full_name || "", eierId: owner?.id || null,
         cvEmail: c.cv_email, callList: c.call_list,
         teknologier: c.teknologier || [],
         daysSince, lastActivitySubject: lastAct?.subject || "",
@@ -360,13 +386,13 @@ export default function DesignLabContacts() {
         {/* Content: list + detail */}
         <div className="flex-1 flex min-h-0">
           {/* Contact list */}
-          <div ref={listRef} className="flex-1 min-w-0 overflow-y-auto">
+          <div className="flex-1 min-w-0 overflow-y-auto">
             {/* Table header */}
             <div
               className="grid items-center sticky top-0 z-10"
               style={{
                 gridTemplateColumns: sel
-                  ? "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.2fr) 64px"
+                  ? "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) 64px"
                   : "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1fr) 64px",
                 height: 32, borderBottom: `1px solid ${C.border}`,
                 background: C.bg, paddingLeft: 16, paddingRight: 16,
@@ -375,7 +401,7 @@ export default function DesignLabContacts() {
               <ColHeader label="Navn" field="name" sort={sort} onSort={toggleSort} />
               <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
               <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
-              <ColHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />
+              {!sel && <ColHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />}
               {!sel && <ColHeader label="Eier" field="owner" sort={sort} onSort={toggleSort} />}
               <ColHeader label="Siste" field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
             </div>
@@ -395,7 +421,7 @@ export default function DesignLabContacts() {
                     className="grid items-center cursor-pointer group"
                     style={{
                       gridTemplateColumns: sel
-                        ? "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.2fr) 64px"
+                        ? "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) 64px"
                         : "minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1fr) 64px",
                       height: 38, paddingLeft: 16, paddingRight: 16,
                       borderBottom: `1px solid ${C.borderLight}`,
@@ -411,10 +437,12 @@ export default function DesignLabContacts() {
                     </div>
                     <div className="pr-3"><SignalChip signal={c.signal} /></div>
                     <div className="truncate pr-3"><span style={{ fontSize: 13, color: C.textMuted }}>{c.company}</span></div>
-                    <div className="truncate pr-3"><span style={{ fontSize: 13, color: C.textMuted }}>{c.title}</span></div>
+                    {!sel && (
+                      <div className="truncate pr-3"><span style={{ fontSize: 13, color: C.textMuted }}>{c.title}</span></div>
+                    )}
                     {!sel && (
                       <div className="truncate pr-3">
-                        <span style={{ fontSize: 12, color: C.textFaint }}>{c.eier ? c.eier.split(" ")[0] : ""}</span>
+                        <span style={{ fontSize: 12, color: C.textFaint }}>{c.eier}</span>
                       </div>
                     )}
                     <div className="text-right">
@@ -435,10 +463,10 @@ export default function DesignLabContacts() {
             <div
               className="shrink-0 overflow-y-auto"
               style={{
-                width: 380, borderLeft: `1px solid ${C.border}`, background: C.surface,
+                width: 520, borderLeft: `1px solid ${C.border}`, background: C.surface,
               }}
             >
-              <DetailPanel contact={sel} onClose={() => setSelectedId(null)} onNavigate={navigate} />
+              <DetailPanel contact={sel} foresporsler={foresporslerForContact} onClose={() => setSelectedId(null)} onNavigate={navigate} />
             </div>
           )}
         </div>
@@ -478,175 +506,243 @@ function SignalChip({ signal, size = "sm" }: { signal: Signal; size?: "sm" | "md
 }
 
 /* ═══════════════════════════════════════════════════════════
-   DETAIL PANEL
+   DETAIL PANEL — DATA-RICH
    ═══════════════════════════════════════════════════════════ */
 
-function DetailPanel({ contact, onClose, onNavigate }: {
+function DetailPanel({ contact, foresporsler, onClose, onNavigate }: {
   contact: {
     id: string; firstName: string; lastName: string; title: string;
     email: string; phone: string; linkedin: string; location: string;
-    department: string; notes: string;
-    company: string; companyId: string | null; signal: Signal; eier: string;
+    locations: string[]; department: string; notes: string;
+    company: string; companyId: string | null; signal: Signal; eier: string; eierId: string | null;
     cvEmail: boolean; callList: boolean; teknologier: string[];
     activities: any[]; tasks: any[];
   };
+  foresporsler: any[];
   onClose: () => void;
   onNavigate: (path: string) => void;
 }) {
-  const nextTask = contact.tasks.length > 0
-    ? [...contact.tasks].sort((a, b) => (a.due_date || "9999").localeCompare(b.due_date || "9999"))[0]
-    : null;
+  const allTasks = contact.tasks;
+  const activeTasks = allTasks.filter((t: any) => t.status !== "done");
+  const doneTasks = allTasks.filter((t: any) => t.status === "done").slice(0, 3);
 
-  const recentActivities = contact.activities.slice(0, 8);
   const initials = `${contact.firstName?.[0] || ""}${contact.lastName?.[0] || ""}`.toUpperCase();
 
   return (
-    <div className="flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between px-5 shrink-0" style={{ height: 48, borderBottom: `1px solid ${C.border}` }}>
-        <div className="flex items-center gap-2 min-w-0">
-          <div
-            className="flex items-center justify-center rounded-full shrink-0"
-            style={{ width: 28, height: 28, background: C.accentBg, color: C.accent, fontSize: 11, fontWeight: 600 }}
-          >
-            {initials}
+    <div className="flex flex-col h-full">
+      {/* ── Header ── */}
+      <div className="shrink-0" style={{ borderBottom: `1px solid ${C.border}` }}>
+        <div className="flex items-start justify-between px-6 pt-5 pb-4">
+          <div className="flex items-start gap-3 min-w-0">
+            <div
+              className="flex items-center justify-center rounded-full shrink-0"
+              style={{ width: 40, height: 40, background: C.accentBg, color: C.accent, fontSize: 14, fontWeight: 600 }}
+            >
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <h2 className="truncate" style={{ fontSize: 18, fontWeight: 600, color: C.text, lineHeight: 1.2 }}>
+                {contact.firstName} {contact.lastName}
+              </h2>
+              <p style={{ fontSize: 13, color: C.textMuted, marginTop: 2 }}>
+                {[contact.title, contact.company].filter(Boolean).join(" · ")}
+              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <SignalChip signal={contact.signal} size="md" />
+                <StatusPill label="CV-Epost" active={contact.cvEmail} />
+                <StatusPill label="Innkjøper" active={contact.callList} />
+              </div>
+            </div>
           </div>
-          <span className="truncate" style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{contact.firstName} {contact.lastName}</span>
+          <div className="flex items-center gap-0.5 shrink-0 ml-2">
+            <IconBtn icon={<ArrowUpRight style={{ width: 15, height: 15 }} />} title="Åpne i CRM" onClick={() => onNavigate(`/kontakter/${contact.id}`)} />
+            <IconBtn icon={<X style={{ width: 15, height: 15 }} />} title="Lukk" onClick={onClose} />
+          </div>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={() => onNavigate(`/kontakter/${contact.id}`)}
-            title="Åpne i CRM"
-            className="flex items-center justify-center rounded transition-colors"
-            style={{ width: 28, height: 28, color: C.textFaint }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-          >
-            <ArrowUpRight style={{ width: 14, height: 14 }} />
-          </button>
-          <button
-            onClick={onClose}
-            className="flex items-center justify-center rounded transition-colors"
-            style={{ width: 28, height: 28, color: C.textFaint }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-          >
-            <X style={{ width: 14, height: 14 }} />
-          </button>
+
+        {/* Action row */}
+        <div className="flex items-center gap-1 px-6 pb-3">
+          {contact.phone && (
+            <ActionBtn icon={<Phone style={{ width: 13, height: 13 }} />} label={contact.phone} onClick={() => window.open(`tel:${contact.phone}`)} />
+          )}
+          {contact.email && (
+            <ActionBtn icon={<Mail style={{ width: 13, height: 13 }} />} label={contact.email.length > 28 ? contact.email.split("@")[0] + "@…" : contact.email} onClick={() => window.open(`mailto:${contact.email}`)} />
+          )}
+          {contact.linkedin && (
+            <ActionBtn icon={<Linkedin style={{ width: 13, height: 13 }} />} label="LinkedIn" onClick={() => window.open(contact.linkedin, "_blank")} />
+          )}
+          {contact.email && (
+            <ActionBtn icon={<Copy style={{ width: 12, height: 12 }} />} label="" onClick={() => { navigator.clipboard.writeText(contact.email); toast.success("E-post kopiert"); }} isIcon />
+          )}
         </div>
       </div>
 
-      {/* Body */}
+      {/* ── Scrollable body ── */}
       <div className="flex-1 overflow-y-auto">
-        {/* Identity block */}
-        <div className="px-5 pt-4 pb-3">
-          <p style={{ fontSize: 13, color: C.textMuted }}>
-            {contact.title}{contact.title && contact.company ? " · " : ""}{contact.company}
-          </p>
-          <div className="mt-2">
-            <SignalChip signal={contact.signal} size="md" />
+
+        {/* Properties grid */}
+        <div className="px-6 py-4" style={{ borderBottom: `1px solid ${C.border}` }}>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-2.5">
+            <PropRow label="E-post" value={contact.email || "—"} copyable={!!contact.email} />
+            <PropRow label="Telefon" value={contact.phone || "—"} copyable={!!contact.phone} />
+            <PropRow label="Selskap" value={contact.company || "—"} link={contact.companyId ? `/selskaper/${contact.companyId}` : undefined} onNavigate={onNavigate} />
+            <PropRow label="Stilling" value={contact.title || "—"} />
+            <PropRow label="Sted" value={contact.location || "—"} />
+            <PropRow label="Avdeling" value={contact.department || "—"} />
+            <PropRow label="Eier" value={contact.eier || "—"} highlight />
+            {contact.locations && contact.locations.length > 0 && (
+              <PropRow label="Lokasjoner" value={contact.locations.join(", ")} />
+            )}
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-1 px-5 pb-3" style={{ borderBottom: `1px solid ${C.border}` }}>
-          {contact.phone && <ActionBtn icon={<Phone style={{ width: 14, height: 14 }} />} label="Ring" onClick={() => window.open(`tel:${contact.phone}`)} />}
-          {contact.email && <ActionBtn icon={<Mail style={{ width: 14, height: 14 }} />} label="E-post" onClick={() => window.open(`mailto:${contact.email}`)} />}
-          {contact.linkedin && <ActionBtn icon={<Linkedin style={{ width: 14, height: 14 }} />} label="LinkedIn" onClick={() => window.open(contact.linkedin, "_blank")} />}
-          {contact.email && <ActionBtn icon={<Copy style={{ width: 14, height: 14 }} />} label="Kopier e-post" onClick={() => { navigator.clipboard.writeText(contact.email); toast.success("E-post kopiert"); }} />}
-        </div>
-
-        {/* Next step */}
-        {nextTask && (
-          <PanelSection title="Neste steg">
-            <div className="flex items-start gap-2">
-              <Calendar style={{ width: 13, height: 13, color: C.accent, marginTop: 2, flexShrink: 0 }} />
-              <div className="min-w-0">
-                <p style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{nextTask.title}</p>
-                {nextTask.due_date && (
-                  <p style={{ fontSize: 12, color: C.textFaint, marginTop: 1 }}>
-                    {format(new Date(nextTask.due_date), "d. MMM yyyy", { locale: nb })}
-                  </p>
-                )}
-              </div>
+        {/* Oppfølginger (Tasks) */}
+        <PanelSection title="Oppfølginger" count={activeTasks.length}>
+          {activeTasks.length === 0 ? (
+            <p style={{ fontSize: 13, color: C.textGhost }}>Ingen aktive oppfølginger</p>
+          ) : (
+            <div className="space-y-2">
+              {activeTasks.sort((a: any, b: any) => (a.due_date || "9999").localeCompare(b.due_date || "9999")).map((task: any) => {
+                const due = task.due_date ? new Date(task.due_date) : null;
+                const overdue = due && isPast(due) && !isToday(due);
+                const today = due && isToday(due);
+                return (
+                  <div key={task.id} className="rounded-lg" style={{ padding: "10px 12px", background: overdue ? C.dangerBg : today ? C.warningBg : "rgba(40,37,29,0.02)", border: `1px solid ${overdue ? "rgba(154,74,74,0.12)" : C.borderLight}` }}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{task.title}</p>
+                        {task.description && (
+                          <p className="line-clamp-2" style={{ fontSize: 12, color: C.textMuted, marginTop: 2, lineHeight: 1.4 }}>{task.description}</p>
+                        )}
+                      </div>
+                      {due && (
+                        <span className="shrink-0" style={{ fontSize: 12, fontWeight: 500, color: overdue ? C.danger : today ? C.warning : C.textFaint }}>
+                          {format(due, "d. MMM yyyy", { locale: nb })}
+                        </span>
+                      )}
+                    </div>
+                    {(task.profiles as any)?.full_name && (
+                      <p style={{ fontSize: 11, color: C.textFaint, marginTop: 3 }}>
+                        Tildelt: {(task.profiles as any).full_name}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          </PanelSection>
-        )}
-
-        {/* Properties */}
-        <PanelSection title="Kontaktinfo">
-          <div className="space-y-1.5">
-            {contact.email && <PropRow label="E-post" value={contact.email} />}
-            {contact.phone && <PropRow label="Telefon" value={contact.phone} />}
-            {contact.location && <PropRow label="Sted" value={contact.location} />}
-            {contact.department && <PropRow label="Avdeling" value={contact.department} />}
-            {contact.eier && <PropRow label="Eier" value={contact.eier} />}
-          </div>
+          )}
+          {doneTasks.length > 0 && (
+            <div className="mt-3">
+              <p style={{ fontSize: 11, fontWeight: 500, color: C.textGhost, marginBottom: 4 }}>Fullførte</p>
+              {doneTasks.map((task: any) => (
+                <div key={task.id} className="flex items-center gap-2 py-1">
+                  <span style={{ fontSize: 12, color: C.textGhost, textDecoration: "line-through" }}>{task.title}</span>
+                  {task.due_date && <span style={{ fontSize: 11, color: C.textGhost }}>{format(new Date(task.due_date), "d. MMM", { locale: nb })}</span>}
+                </div>
+              ))}
+            </div>
+          )}
         </PanelSection>
 
-        {/* Status toggles */}
-        <PanelSection title="Status">
-          <div className="flex items-center gap-2">
-            <StatusPill label="CV-Epost" active={contact.cvEmail} />
-            <StatusPill label="Innkjøper" active={contact.callList} />
-          </div>
-        </PanelSection>
-
-        {/* Tech DNA */}
-        {contact.teknologier.length > 0 && (
-          <PanelSection title="Teknisk DNA">
-            <div className="flex flex-wrap gap-1">
-              {contact.teknologier.map((t) => (
-                <span key={t} className="rounded-full" style={{ fontSize: 11, fontWeight: 500, padding: "1px 8px", background: "rgba(40,37,29,0.05)", color: C.textMuted }}>
-                  {t}
-                </span>
+        {/* Forespørsler */}
+        {foresporsler.length > 0 && (
+          <PanelSection title="Forespørsler" count={foresporsler.length}>
+            <div className="space-y-2">
+              {foresporsler.map((f: any) => (
+                <div key={f.id} className="rounded-lg" style={{ padding: "8px 12px", background: "rgba(40,37,29,0.02)", border: `1px solid ${C.borderLight}` }}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{f.referanse || f.selskap_navn}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {f.type && <span style={{ fontSize: 11, color: C.textFaint }}>{f.type}</span>}
+                        {f.sted && <span style={{ fontSize: 11, color: C.textFaint }}>· {f.sted}</span>}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span style={{ fontSize: 11, color: C.textGhost }}>{format(new Date(f.mottatt_dato), "d. MMM yyyy", { locale: nb })}</span>
+                      {f.status && (
+                        <p style={{ fontSize: 11, fontWeight: 500, color: f.status === "Aktiv" ? C.accent : C.textFaint, marginTop: 1 }}>{f.status}</p>
+                      )}
+                    </div>
+                  </div>
+                  {f.teknologier && f.teknologier.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {f.teknologier.slice(0, 6).map((t: string) => (
+                        <TechTag key={t} label={t} />
+                      ))}
+                      {f.teknologier.length > 6 && <span style={{ fontSize: 11, color: C.textGhost }}>+{f.teknologier.length - 6}</span>}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </PanelSection>
         )}
 
-        {/* Notes */}
-        {contact.notes && (
-          <PanelSection title="Notat">
-            <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{contact.notes}</p>
+        {/* Teknisk DNA */}
+        {contact.teknologier.length > 0 && (
+          <PanelSection title="Teknisk DNA" count={contact.teknologier.length}>
+            <div className="flex flex-wrap gap-1.5">
+              {contact.teknologier.map((t) => (
+                <TechTag key={t} label={t} />
+              ))}
+            </div>
           </PanelSection>
         )}
 
-        {/* Activities */}
-        <div className="px-5 pt-3 pb-6">
-          <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: C.textGhost, marginBottom: 10 }}>
-            Aktivitet
-          </p>
-          {recentActivities.length === 0 ? (
+        {/* Notat */}
+        {contact.notes && (
+          <PanelSection title="Notat">
+            <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{contact.notes}</p>
+          </PanelSection>
+        )}
+
+        {/* Aktiviteter — full timeline */}
+        <div className="px-6 pt-4 pb-8">
+          <div className="flex items-center justify-between mb-3">
+            <SectionLabel>Aktivitet</SectionLabel>
+            <span style={{ fontSize: 11, color: C.textGhost }}>{contact.activities.length} totalt</span>
+          </div>
+          {contact.activities.length === 0 ? (
             <p style={{ fontSize: 13, color: C.textGhost }}>Ingen aktiviteter ennå</p>
           ) : (
-            <div className="flex flex-col gap-0">
-              {recentActivities.map((act: any, i: number) => {
+            <div className="relative">
+              {/* Timeline line */}
+              <div className="absolute" style={{ left: 8, top: 8, bottom: 8, width: 1, background: C.border }} />
+
+              {contact.activities.map((act: any, i: number) => {
                 const isCall = act.type === "call" || act.type === "samtale";
+                const isMeeting = act.type === "meeting" || act.type === "møte";
+                const createdBy = (act.profiles as any)?.full_name || "";
+                const description = act.description ? act.description.replace(/^\[[^\]]*\]\n?/, "") : "";
+
                 return (
-                  <div key={act.id} className="flex gap-3 relative" style={{ paddingBottom: i < recentActivities.length - 1 ? 12 : 0, paddingTop: i > 0 ? 0 : 0 }}>
-                    {/* Timeline line */}
-                    {i < recentActivities.length - 1 && (
-                      <div className="absolute" style={{ left: 7, top: 18, bottom: 0, width: 1, background: C.border }} />
-                    )}
+                  <div key={act.id} className="flex gap-3 relative" style={{ paddingBottom: 16 }}>
                     {/* Icon */}
-                    <div className="shrink-0 relative z-10 flex items-center justify-center rounded-full" style={{ width: 16, height: 16, marginTop: 1, background: C.bg }}>
+                    <div className="shrink-0 relative z-10 flex items-center justify-center rounded-full" style={{ width: 17, height: 17, marginTop: 2, background: C.surface, border: `1px solid ${C.border}` }}>
                       {isCall
-                        ? <MessageCircle style={{ width: 10, height: 10, color: "#4a9a6a" }} />
-                        : <FileText style={{ width: 10, height: 10, color: C.accent }} />
+                        ? <MessageCircle style={{ width: 9, height: 9, color: C.success }} />
+                        : isMeeting
+                          ? <FileText style={{ width: 9, height: 9, color: C.accent }} />
+                          : <FileText style={{ width: 9, height: 9, color: C.textFaint }} />
                       }
                     </div>
                     {/* Content */}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-2">
-                        <p className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{act.subject}</p>
-                        <span style={{ fontSize: 11, color: C.textGhost, whiteSpace: "nowrap", flexShrink: 0 }}>
-                          {format(new Date(act.created_at), "d. MMM", { locale: nb })}
+                        <p style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{act.subject}</p>
+                        <span className="shrink-0" style={{ fontSize: 11, color: C.textGhost, whiteSpace: "nowrap" }}>
+                          {format(new Date(act.created_at), "d. MMM yyyy", { locale: nb })}
                         </span>
                       </div>
-                      {act.description && (
-                        <p className="line-clamp-2" style={{ fontSize: 12, color: C.textFaint, marginTop: 1, lineHeight: 1.4 }}>
-                          {act.description.replace(/^\[[^\]]*\]\n?/, "")}
+                      {description && (
+                        <p style={{ fontSize: 12.5, color: C.textMuted, marginTop: 3, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
+                          {description}
+                        </p>
+                      )}
+                      {createdBy && (
+                        <p style={{ fontSize: 11, color: C.textGhost, marginTop: 3 }}>
+                          {createdBy}
                         </p>
                       )}
                     </div>
@@ -664,6 +760,22 @@ function DetailPanel({ contact, onClose, onNavigate }: {
 /* ═══════════════════════════════════════════════════════════
    SUB-COMPONENTS
    ═══════════════════════════════════════════════════════════ */
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: C.textGhost }}>
+      {children}
+    </p>
+  );
+}
+
+function TechTag({ label }: { label: string }) {
+  return (
+    <span className="rounded-full" style={{ fontSize: 11, fontWeight: 500, padding: "2px 8px", background: "rgba(40,37,29,0.05)", color: C.textMuted }}>
+      {label}
+    </span>
+  );
+}
 
 function NavGroup({ items, navigate }: { items: typeof NAV_MAIN; navigate: (p: string) => void }) {
   return (
@@ -705,35 +817,76 @@ function SidebarBtn({ icon: Icon, label, onClick, muted }: { icon: any; label: s
   );
 }
 
-function PanelSection({ title, children }: { title: string; children: React.ReactNode }) {
+function PanelSection({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) {
   return (
-    <div className="px-5 py-3" style={{ borderBottom: `1px solid ${C.border}` }}>
-      <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: C.textGhost, marginBottom: 8 }}>{title}</p>
+    <div className="px-6 py-4" style={{ borderBottom: `1px solid ${C.border}` }}>
+      <div className="flex items-center justify-between mb-3">
+        <SectionLabel>{title}</SectionLabel>
+        {count !== undefined && <span style={{ fontSize: 11, color: C.textGhost }}>{count}</span>}
+      </div>
       {children}
     </div>
   );
 }
 
-function PropRow({ label, value }: { label: string; value: string }) {
+function PropRow({ label, value, copyable, link, onNavigate, highlight }: {
+  label: string; value: string; copyable?: boolean; link?: string; onNavigate?: (p: string) => void; highlight?: boolean;
+}) {
+  const handleCopy = copyable ? () => { navigator.clipboard.writeText(value); toast.success(`${label} kopiert`); } : undefined;
+  const handleClick = link && onNavigate ? () => onNavigate(link) : handleCopy;
+
   return (
-    <div className="flex items-baseline justify-between gap-3">
-      <span style={{ fontSize: 12, color: C.textFaint, flexShrink: 0 }}>{label}</span>
-      <span className="truncate text-right" style={{ fontSize: 13, color: C.text }}>{value}</span>
+    <div className="flex flex-col">
+      <span style={{ fontSize: 11, color: C.textGhost, marginBottom: 1 }}>{label}</span>
+      <span
+        onClick={handleClick}
+        className={handleClick ? "cursor-pointer" : ""}
+        style={{
+          fontSize: 13, color: link ? C.accent : highlight ? C.accent : C.text,
+          fontWeight: highlight ? 500 : 400,
+          textDecoration: link ? "underline" : "none",
+          textDecorationColor: link ? "rgba(1,105,111,0.3)" : undefined,
+          textUnderlineOffset: 2,
+        }}
+        onMouseEnter={(e) => { if (handleClick) e.currentTarget.style.opacity = "0.7"; }}
+        onMouseLeave={(e) => { if (handleClick) e.currentTarget.style.opacity = "1"; }}
+      >
+        {value}
+      </span>
     </div>
   );
 }
 
-function ActionBtn({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+function IconBtn({ icon, title, onClick }: { icon: React.ReactNode; title: string; onClick: () => void }) {
   return (
     <button
-      onClick={(e) => { e.stopPropagation(); onClick(); }}
-      title={label}
-      className="flex items-center justify-center rounded-md transition-colors"
-      style={{ width: 30, height: 30, color: C.textMuted }}
+      onClick={onClick}
+      title={title}
+      className="flex items-center justify-center rounded transition-colors"
+      style={{ width: 28, height: 28, color: C.textFaint }}
       onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
     >
       {icon}
+    </button>
+  );
+}
+
+function ActionBtn({ icon, label, onClick, isIcon }: { icon: React.ReactNode; label: string; onClick: () => void; isIcon?: boolean }) {
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      title={label || undefined}
+      className="inline-flex items-center gap-1.5 rounded-md transition-colors"
+      style={{
+        height: 28, paddingInline: isIcon ? 6 : 10, fontSize: 12, fontWeight: 500,
+        color: C.textMuted, border: `1px solid ${C.border}`, background: "transparent",
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+    >
+      {icon}
+      {label && <span>{label}</span>}
     </button>
   );
 }
@@ -745,7 +898,7 @@ function StatusPill({ label, active }: { label: string; active: boolean }) {
       background: active ? "rgba(1,105,111,0.08)" : "rgba(40,37,29,0.05)",
       color: active ? C.accent : C.textGhost,
     }}>
-      <span style={{ fontSize: 9 }}>{active ? "●" : "○"}</span> {label}
+      <span style={{ fontSize: 7 }}>{active ? "●" : "○"}</span> {label}
     </span>
   );
 }
