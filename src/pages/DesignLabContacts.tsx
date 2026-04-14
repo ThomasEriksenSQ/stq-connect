@@ -515,7 +515,7 @@ export default function DesignLabContacts() {
                     </div>
                   </div>
                   {/* Full ContactCardContent */}
-                  <div className="flex-1 overflow-y-auto px-6 py-5">
+                  <div className="flex-1 overflow-y-auto px-6 py-5 dl-v8-theme">
                     <ContactCardContent contactId={sel.id} editable />
                   </div>
                 </div>
