@@ -1,45 +1,31 @@
 
 
-# Plan: Global tekststørrelse-kontroll for Design Lab
+# Plan: Max-bredde og sentrert innhold for Design Lab på ultrawide
 
-## Hva skal gjøres
+## Problemet
 
-Legge til en tekststørrelse-kontroll øverst til høyre i alle Design Lab-sider. Brukeren kan velge mellom nivåer som skalerer all tekst i V8-designet. Valget lagres med `usePersistentState` slik at det huskes mellom sidebesøk.
+Linear løser ultrawide-skjermer ved å begrense innholdsbredden med en `max-width` (typisk ~1200px) og sentrere innholdet horisontalt. Tabeller strekkes ikke til full skjermbredde. Sidebaren forblir fast til venstre, men hovedinnholdet "flyter" sentrert i midten av det tilgjengelige rommet.
 
-## Visuell plassering
+## Løsning
 
-Øverst til høyre i header-området på alle Design Lab-sider, ved siden av tittel/søk. Enkle pill-knapper med nivåer:
+Legg til `max-width: 1100px` på innholds-wrapperen i alle tre Design Lab-sider (Kontakter, Forespørsler, STACQ Prisen). Innholdet sentreres med `margin: 0 auto`.
 
-```text
-  STACQ Prisen                          [S] [M] [L] [XL]
-```
+For Kontakter-siden som har et detaljpanel til høyre, beholdes nåværende layout (ResizablePanelGroup fyller tilgjengelig plass), men tabellinnholdet inne i panelet får max-bredde.
 
-## Nivåer
+## Tekniske endringer
 
-| Nivå | CSS font-size scale | Beskrivelse |
-|------|-------------------|-------------|
-| S    | 0.875 (87.5%)     | Kompakt     |
-| M    | 1.0 (100%)        | Standard    |
-| L    | 1.125 (112.5%)    | Stor        |
-| XL   | 1.25 (125%)       | Ekstra stor |
+### 1. `DesignLabStacqPrisen.tsx`
+- Wrap chart + tabell-innholdet i en `div` med `maxWidth: 1100px` og `margin: "0 auto"`
+- Padding beholdes som nå
 
-## Teknisk tilnærming
+### 2. `DesignLabForesporsler.tsx`
+- Samme `maxWidth: 1100px` + `margin: "0 auto"` på innholds-wrapperen inne i tabellpanelet
 
-Wrapper-div rundt innholdet i hver Design Lab-side får en inline `style={{ fontSize: scale }}` som via CSS-arv skalerer all tekst. Alternativt bruker vi `rem`-base override via CSS custom property.
+### 3. `DesignLabContacts.tsx`
+- Tabellpanelet (venstre del av ResizablePanelGroup) beholder full bredde for å fungere med resize
+- Ingen endring her — layouten med detaljpanel håndterer allerede bredden naturlig
 
-## Endringer
-
-### 1. Ny komponent: `src/components/designlab/TextSizeControl.tsx`
-- Pill-knapper med V8-styling (aktiv = teal, inaktiv = border)
-- Props: `value`, `onChange`
-- Bruker `Type` lucide-ikon som label
-
-### 2. Hook: `usePersistentState("dl-text-size", "M")`
-- Lagres i localStorage, deles på tvers av alle Design Lab-sider
-
-### 3. Oppdater alle 3 Design Lab-sider
-- `DesignLabContacts.tsx`, `DesignLabForesporsler.tsx`, `DesignLabStacqPrisen.tsx`
-- Importer `TextSizeControl` og `usePersistentState`
-- Plasser kontroll øverst til høyre
-- Wrap hovedinnholdet i en div med `style={{ fontSize: scaleMap[size] }}`
+### 4. `DesignLabStacqPrisen.tsx` — Tabell forbedring
+- Legg til `maxWidth: 1100px` slik at tabellen ikke strekkes uhensiktsmessig bredt
+- Chart og stat-linje følger samme max-bredde
 
