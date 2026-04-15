@@ -1297,19 +1297,19 @@ export function ContactCardContent({
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => openForm("call")}
-                className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg transition-colors bg-[hsl(var(--success))] text-white hover:opacity-90"
+                className="inline-flex items-center gap-1.5 h-[34px] px-4 text-[0.8125rem] font-medium rounded-lg transition-colors bg-[hsl(var(--success))] text-white hover:opacity-90"
               >
                 <MessageCircle className="h-[15px] w-[15px]" /> Logg samtale
               </button>
               <button
                 onClick={() => openForm("meeting")}
-                className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg transition-colors bg-primary text-primary-foreground hover:opacity-90"
+                className="inline-flex items-center gap-1.5 h-[34px] px-4 text-[0.8125rem] font-medium rounded-lg transition-colors bg-primary text-primary-foreground hover:opacity-90"
               >
                 <FileText className="h-[15px] w-[15px]" /> Logg møtereferat
               </button>
               <button
                 onClick={() => openForm("task")}
-                className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
+                className="inline-flex items-center gap-1.5 h-[34px] px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
               >
                 <Clock className="h-[15px] w-[15px] text-[hsl(var(--warning))]" /> Ny oppfølging
               </button>
