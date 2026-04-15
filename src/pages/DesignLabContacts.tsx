@@ -416,167 +416,71 @@ export default function DesignLabContacts() {
           </div>
         </header>
 
-        <div className="content-wrapper flex-1 flex flex-col min-h-0">
-        {/* Filters bar */}
-        <div className="shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
-          <FilterRow label="EIER" options={OWNERS} value={ownerFilter} onChange={setOwnerFilter} />
-          <div className="flex items-center justify-between">
-            <FilterRow label="SIGNAL" options={["Alle", ...SIGNALS]} value={signalFilter} onChange={setSignalFilter} />
-            <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500, whiteSpace: "nowrap", paddingLeft: 12 }}>{filtered.length} kontakter</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <FilterRow label="TYPE" options={[...TYPES]} value={typeFilter} onChange={(v) => setTypeFilter(v as TypeFilter)} />
-            {(ownerFilter !== "Alle" || signalFilter !== "Alle" || typeFilter !== "Alle") && (
-              <button
-                onClick={() => { setOwnerFilter("Alle"); setSignalFilter("Alle"); setTypeFilter("Alle"); }}
-                className="inline-flex items-center gap-1 rounded transition-colors shrink-0"
-                style={{ fontSize: 12, color: C.textFaint, padding: "2px 6px" }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = C.textFaint; }}
-              >
-                <X style={{ width: 12, height: 12 }} /> Nullstill
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Available consultants bar */}
-        {sortedConsultants.length > 0 && (
-          <div className="shrink-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
-            <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textGhost, marginBottom: 6 }}>Tilgjengelig for oppdrag</p>
-            <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
-              {sortedConsultants.map((con) => {
-                const meta = getConsultantAvailabilityMeta(con.tilgjengelig_fra);
-                const nameParts = con.navn.split(" ");
-                const initials = (nameParts[0]?.[0] || "") + (nameParts[nameParts.length - 1]?.[0] || "");
-                const toneColor = meta.tone === "ready" ? C.success : meta.tone === "soon" ? C.warning : C.textFaint;
-                return (
-                  <div
-                    key={con.id ?? con.navn}
-                    className="flex items-center gap-2.5 shrink-0 rounded-lg"
-                    style={{ border: `1px solid ${C.border}`, padding: "8px 14px", background: C.panel }}
-                  >
-                    <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 36, height: 36, background: "rgba(0,0,0,0.06)", fontSize: 12, fontWeight: 600, color: C.text }}>
-                      {initials.toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text, maxWidth: 140 }}>{con.navn}</p>
-                      <p style={{ fontSize: 12, color: toneColor, fontWeight: 500 }}>{meta.label}</p>
-                    </div>
-                  </div>
-                );
-              })}
+        <div className="content-wrapper contacts-layout">
+        {/* ═══ TOOLBAR ═══ */}
+        <div className="contacts-toolbar">
+          {/* Filters bar */}
+          <div className="shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
+            <FilterRow label="EIER" options={OWNERS} value={ownerFilter} onChange={setOwnerFilter} />
+            <div className="flex items-center justify-between">
+              <FilterRow label="SIGNAL" options={["Alle", ...SIGNALS]} value={signalFilter} onChange={setSignalFilter} />
+              <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500, whiteSpace: "nowrap", paddingLeft: 12 }}>{filtered.length} kontakter</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <FilterRow label="TYPE" options={[...TYPES]} value={typeFilter} onChange={(v) => setTypeFilter(v as TypeFilter)} />
+              {(ownerFilter !== "Alle" || signalFilter !== "Alle" || typeFilter !== "Alle") && (
+                <button
+                  onClick={() => { setOwnerFilter("Alle"); setSignalFilter("Alle"); setTypeFilter("Alle"); }}
+                  className="inline-flex items-center gap-1 rounded transition-colors shrink-0"
+                  style={{ fontSize: 12, color: C.textFaint, padding: "2px 6px" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = C.textFaint; }}
+                >
+                  <X style={{ width: 12, height: 12 }} /> Nullstill
+                </button>
+              )}
             </div>
           </div>
-        )}
 
-        {/* Content: list + detail */}
-        <div className="flex-1 min-h-0">
-          {sel ? (
-            <ResizablePanelGroup direction="horizontal" className="h-full">
-              <ResizablePanel defaultSize={35} minSize={20} maxSize={60}>
-                <div className="h-full overflow-y-auto">
-                  {/* Table header — compact */}
-                  <div
-                    className="grid items-center sticky top-0 z-10"
-                    style={{
-                      gridTemplateColumns: "minmax(0,1fr) 100px 72px",
-                      height: 32, borderBottom: `1px solid ${C.border}`,
-                      background: C.surfaceAlt, paddingLeft: 16, paddingRight: 16,
-                    }}
-                  >
-                    <ColHeader label="Navn" field="name" sort={sort} onSort={toggleSort} />
-                    <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
-                    <ColHeader label="Varme" field="heat" sort={sort} onSort={toggleSort} className="justify-end" />
-                  </div>
-                  {isLoading ? (
-                    <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster kontakter…</div>
-                  ) : sorted.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen kontakter funnet</div>
-                  ) : (
-                    sorted.map((c) => {
-                      const isActive = selectedId === c.id;
-                      return (
-                        <div
-                          key={c.id}
-                          onClick={() => setSelectedId(isActive ? null : c.id)}
-                          className="grid items-center cursor-pointer group"
-                          style={{
-                            gridTemplateColumns: "minmax(0,1fr) 100px 72px",
-                            minHeight: 38, paddingLeft: 16, paddingRight: 16,
-                            paddingTop: 4, paddingBottom: 4,
-                            borderBottom: `1px solid ${C.borderLight}`,
-                            background: isActive ? C.activeBg : undefined,
-                            transition: "background 50ms",
-                          }}
-                          onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = C.hoverBg; }}
-                          onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = isActive ? C.activeBg : ""; }}
-                        >
-                          <div className="truncate pr-3">
-                            <div className="flex items-center gap-1.5">
-                              <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{c.firstName} {c.lastName}</span>
-                              <ContactIndicators callList={c.callList} cvEmail={c.cvEmail} />
-                            </div>
-                            <span style={{ fontSize: 12, color: C.textFaint, lineHeight: 1.2 }} className="truncate block">{c.company}</span>
-                          </div>
-                          <div className="pr-3"><SignalChip signal={c.signal} /></div>
-                          <div className="flex justify-end">
-                            <HeatBadge heat={c.heatResult} daysSince={c.daysSince} />
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </ResizablePanel>
-              <ResizableHandle
-                withHandle
-                className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
-              />
-              <ResizablePanel defaultSize={65} minSize={40}>
-                <div className="h-full flex flex-col" style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}` }}>
-                  {/* Enhanced detail header */}
-                  <div className="shrink-0 px-6 py-4" style={{ borderBottom: `1px solid ${C.border}` }}>
-                    <div className="flex items-start justify-between">
-                      <div className="min-w-0 flex-1">
-                        <h2 style={{ fontSize: 16, fontWeight: 600, color: C.text, marginBottom: 2 }}>{sel.firstName} {sel.lastName}</h2>
-                        <p style={{ fontSize: 13, color: C.textMuted }}>
-                          {[sel.company, sel.title, sel.location].filter(Boolean).join(" · ")}
-                        </p>
-                        {/* Tags row */}
-                        <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
-                          <SignalChip signal={sel.signal} size="md" />
-                          {sel.callList && (
-                            <span className="inline-flex items-center rounded" style={{ fontSize: 11, fontWeight: 500, padding: "2px 6px", background: C.accentBg, color: C.accent }}>
-                              Innkjøper
-                            </span>
-                          )}
-                          {sel.cvEmail && (
-                            <span className="inline-flex items-center rounded" style={{ fontSize: 11, fontWeight: 500, padding: "2px 6px", background: C.infoBg, color: C.info }}>
-                              CV
-                            </span>
-                          )}
-                          <HeatBadge heat={sel.heatResult} daysSince={sel.daysSince} showScore />
-                        </div>
+          {/* Available consultants bar */}
+          {sortedConsultants.length > 0 && (
+            <div className="shrink-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
+              <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textGhost, marginBottom: 6 }}>Tilgjengelig for oppdrag</p>
+              <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+                {sortedConsultants.map((con) => {
+                  const meta = getConsultantAvailabilityMeta(con.tilgjengelig_fra);
+                  const nameParts = con.navn.split(" ");
+                  const initials = (nameParts[0]?.[0] || "") + (nameParts[nameParts.length - 1]?.[0] || "");
+                  const toneColor = meta.tone === "ready" ? C.success : meta.tone === "soon" ? C.warning : C.textFaint;
+                  return (
+                    <div
+                      key={con.id ?? con.navn}
+                      className="flex items-center gap-2.5 shrink-0 rounded-lg"
+                      style={{ border: `1px solid ${C.border}`, padding: "8px 14px", background: C.panel }}
+                    >
+                      <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 36, height: 36, background: "rgba(0,0,0,0.06)", fontSize: 12, fontWeight: 600, color: C.text }}>
+                        {initials.toUpperCase()}
                       </div>
-                      <div className="flex items-center gap-0.5 shrink-0 ml-4">
-                        <IconBtn icon={<ArrowUpRight style={{ width: 15, height: 15 }} />} title="Åpne i CRM" onClick={() => navigate(`/kontakter/${sel.id}`)} />
-                        <IconBtn icon={<X style={{ width: 15, height: 15 }} />} title="Lukk" onClick={() => setSelectedId(null)} />
+                      <div className="min-w-0">
+                        <p className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text, maxWidth: 140 }}>{con.navn}</p>
+                        <p style={{ fontSize: 12, color: toneColor, fontWeight: 500 }}>{meta.label}</p>
                       </div>
                     </div>
-                  </div>
-                  {/* Full ContactCardContent */}
-                  <div className="flex-1 overflow-y-auto px-6 py-5 dl-v8-theme">
-                    <ContactCardContent contactId={sel.id} editable />
-                  </div>
-                </div>
-              </ResizablePanel>
-            </ResizablePanelGroup>
-          ) : (
-            <div className="h-full overflow-y-auto">
-              {/* Table header — full width */}
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ═══ MASTER-DETAIL ═══ */}
+        <div className="master-detail-layout">
+          {/* Master pane */}
+          <section className="master-pane">
+            <div className="h-full flex flex-col">
+              {/* Table header — always 6 columns */}
               <div
-                className="grid items-center sticky top-0 z-10"
+                className="grid items-center shrink-0"
                 style={{
                   gridTemplateColumns: "minmax(0,1fr) 120px 200px 180px 160px 72px",
                   height: 32, borderBottom: `1px solid ${C.border}`,
@@ -590,47 +494,97 @@ export default function DesignLabContacts() {
                 <ColHeader label="Eier" field="owner" sort={sort} onSort={toggleSort} />
                 <ColHeader label="Varme" field="heat" sort={sort} onSort={toggleSort} className="justify-end" />
               </div>
-              {isLoading ? (
-                <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster kontakter…</div>
-              ) : sorted.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen kontakter funnet</div>
-              ) : (
-                sorted.map((c) => {
-                  const isActive = selectedId === c.id;
-                  return (
-                    <div
-                      key={c.id}
-                      onClick={() => setSelectedId(isActive ? null : c.id)}
-                      className="grid items-center cursor-pointer group"
-                      style={{
-                        gridTemplateColumns: "minmax(0,1fr) 120px 200px 180px 160px 72px",
-                        height: 36, paddingLeft: 16, paddingRight: 16,
-                        borderBottom: `1px solid ${C.borderLight}`,
-                        background: isActive ? C.activeBg : undefined,
-                        transition: "background 50ms",
-                      }}
-                      onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = C.hoverBg; }}
-                      onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = isActive ? C.activeBg : ""; }}
-                    >
-                      <div className="truncate pr-3 flex items-center gap-1.5">
-                        <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{c.firstName} {c.lastName}</span>
-                        <ContactIndicators callList={c.callList} cvEmail={c.cvEmail} />
+              {/* Scrollable rows */}
+              <div className="flex-1 overflow-y-auto">
+                {isLoading ? (
+                  <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster kontakter…</div>
+                ) : sorted.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen kontakter funnet</div>
+                ) : (
+                  sorted.map((c) => {
+                    const isActive = selectedId === c.id;
+                    return (
+                      <div
+                        key={c.id}
+                        onClick={() => setSelectedId(isActive ? null : c.id)}
+                        className="grid items-center cursor-pointer group"
+                        style={{
+                          gridTemplateColumns: "minmax(0,1fr) 120px 200px 180px 160px 72px",
+                          height: 36, paddingLeft: 16, paddingRight: 16,
+                          borderBottom: `1px solid ${C.borderLight}`,
+                          background: isActive ? C.activeBg : undefined,
+                          transition: "background 50ms",
+                        }}
+                        onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = C.hoverBg; }}
+                        onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = isActive ? C.activeBg : ""; }}
+                      >
+                        <div className="truncate pr-3 flex items-center gap-1.5">
+                          <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{c.firstName} {c.lastName}</span>
+                          <ContactIndicators callList={c.callList} cvEmail={c.cvEmail} />
+                        </div>
+                        <div className="pr-3"><SignalChip signal={c.signal} /></div>
+                        <div className="truncate pr-3"><span style={{ fontSize: 13, color: C.textMuted }}>{c.company}</span></div>
+                        <div className="truncate pr-3"><span style={{ fontSize: 13, color: C.textMuted }}>{c.title}</span></div>
+                        <div className="truncate pr-3">
+                          <span style={{ fontSize: 12, color: C.textFaint }}>{c.eier}</span>
+                        </div>
+                        <div className="flex justify-end">
+                          <HeatBadge heat={c.heatResult} daysSince={c.daysSince} />
+                        </div>
                       </div>
-                      <div className="pr-3"><SignalChip signal={c.signal} /></div>
-                      <div className="truncate pr-3"><span style={{ fontSize: 13, color: C.textMuted }}>{c.company}</span></div>
-                      <div className="truncate pr-3"><span style={{ fontSize: 13, color: C.textMuted }}>{c.title}</span></div>
-                      <div className="truncate pr-3">
-                        <span style={{ fontSize: 12, color: C.textFaint }}>{c.eier}</span>
-                      </div>
-                      <div className="flex justify-end">
-                        <HeatBadge heat={c.heatResult} daysSince={c.daysSince} />
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* Detail pane — always mounted */}
+          <aside className="detail-pane" data-empty={!sel ? "true" : undefined}>
+            {sel ? (
+              <div className="h-full flex flex-col" style={{ background: C.panel }}>
+                {/* Detail header */}
+                <div className="shrink-0 px-6 py-4" style={{ borderBottom: `1px solid ${C.border}` }}>
+                  <div className="flex items-start justify-between">
+                    <div className="min-w-0 flex-1">
+                      <h2 style={{ fontSize: 16, fontWeight: 600, color: C.text, marginBottom: 2 }}>{sel.firstName} {sel.lastName}</h2>
+                      <p style={{ fontSize: 13, color: C.textMuted }}>
+                        {[sel.company, sel.title, sel.location].filter(Boolean).join(" · ")}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+                        <SignalChip signal={sel.signal} size="md" />
+                        {sel.callList && (
+                          <span className="inline-flex items-center rounded" style={{ fontSize: 11, fontWeight: 500, padding: "2px 6px", background: C.accentBg, color: C.accent }}>
+                            Innkjøper
+                          </span>
+                        )}
+                        {sel.cvEmail && (
+                          <span className="inline-flex items-center rounded" style={{ fontSize: 11, fontWeight: 500, padding: "2px 6px", background: C.infoBg, color: C.info }}>
+                            CV
+                          </span>
+                        )}
+                        <HeatBadge heat={sel.heatResult} daysSince={sel.daysSince} showScore />
                       </div>
                     </div>
-                  );
-                })
-              )}
-            </div>
-          )}
+                    <div className="flex items-center gap-0.5 shrink-0 ml-4">
+                      <IconBtn icon={<ArrowUpRight style={{ width: 15, height: 15 }} />} title="Åpne i CRM" onClick={() => navigate(`/kontakter/${sel.id}`)} />
+                      <IconBtn icon={<X style={{ width: 15, height: 15 }} />} title="Lukk" onClick={() => setSelectedId(null)} />
+                    </div>
+                  </div>
+                </div>
+                {/* Full ContactCardContent */}
+                <div className="flex-1 overflow-y-auto px-6 py-5 dl-v8-theme">
+                  <ContactCardContent contactId={sel.id} editable />
+                </div>
+              </div>
+            ) : (
+              <div style={{ padding: "32px 24px" }}>
+                <Users style={{ width: 20, height: 20, color: C.textGhost, marginBottom: 8 }} />
+                <p style={{ fontSize: 13, fontWeight: 500, color: C.textFaint }}>Velg en kontakt</p>
+                <p style={{ fontSize: 12, color: C.textGhost, marginTop: 2 }}>Klikk på en rad i listen</p>
+              </div>
+            )}
+          </aside>
         </div>
         </div>
       </main>
