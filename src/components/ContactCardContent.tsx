@@ -732,10 +732,7 @@ export function ContactCardContent({
                     <DropdownMenuTrigger asChild>
                       {signalCat ? (
                         <button
-                          className={cn(
-                            "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer",
-                            signalCat.badgeColor,
-                          )}
+                          className="chip chip--action is-signal cursor-pointer"
                         >
                           {signalCat.label}
                           <ChevronDown className="h-3 w-3 ml-1" />
