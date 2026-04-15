@@ -1,47 +1,23 @@
 
 
-# Plan: Unified Shell + White Content Plane
+# Plan: Update Design Lab Surface Tokens
 
-## Problem
-Sidebar, canvas, and content are all slightly different grays creating a "triple-gray" effect. Should be: unified shell + white working surfaces.
+## Changes
 
-## Token changes in `theme.ts`
+**File: `src/components/designlab/theme.ts`**
+
+Update 3 tokens + add 1 new token:
 
 | Token | Current | New | Role |
 |-------|---------|-----|------|
-| `bg` (shell) | #F5F6F8 | **#F7F8FA** | Outermost shell |
-| `sidebarBg` | #F7F8FA | **#F7F8FA** | Same as shell (disappears) |
-| `surface` (bg-app) | #FAFBFC | **#FAFBFC** | Main canvas (keep) |
-| `surfaceAlt` → rename conceptually | #F4F5F8 | **#F4F5F8** | Elevated controls (keep) |
+| `bg` | `#F5F6F8` | `#F5F6F8` | No change (shell) |
+| `sidebarBg` | `#FFFFFF` | **`#F7F8FA`** | Sidebar gets its own subtle layer |
+| `surface` | `#FAFBFC` | **`#FFFFFF`** | Panels/detail views become white |
+| **`appBg`** | *(new)* | `#FAFBFC` | Main canvas background |
 
-Key: `bg` moves from #F5F6F8 → #F7F8FA so it matches `sidebarBg` exactly. Sidebar border-right stays `1px solid #E8EAEE`.
+**Files: `DesignLabContacts.tsx`, `DesignLabForesporsler.tsx`, `DesignLabStacqPrisen.tsx`**
 
-## Content surfaces → pure white
+- Change `<main>` background from `C.surface` → `C.appBg`
 
-All content areas that currently use `C.surface` (#FAFBFC) change to **#FFFFFF**:
-- Table body area
-- Detail/right panel
-- Consultant availability cards
-
-New token value:
-```
-surface: "#FFFFFF"   // was #FAFBFC — now pure white working surface
-```
-
-This creates the "lift" effect: white content on a #F7F8FA shell.
-
-## Table headers
-
-Table column headers currently use `C.bg` for background. They should use `C.surfaceAlt` (#F4F5F8) to sit between shell and white content.
-
-## Summary of file changes
-
-| File | Change |
-|------|--------|
-| `theme.ts` | `bg`: #F5F6F8 → #F7F8FA, `surface`: #FAFBFC → #FFFFFF |
-| `DesignLabContacts.tsx` | Table header bg: `C.bg` → `C.surfaceAlt` |
-| `DesignLabForesporsler.tsx` | Same table header fix |
-| `DesignLabStacqPrisen.tsx` | Same table header fix |
-
-No layout, spacing, or functional changes.
+Result: 4-layer hierarchy — Shell (`#F5F6F8`) → Sidebar (`#F7F8FA`) → Canvas (`#FAFBFC`) → Surface (`#FFFFFF`)
 
