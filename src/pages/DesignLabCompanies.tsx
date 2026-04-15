@@ -521,6 +521,26 @@ export default function DesignLabCompanies() {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   SIGNAL CHIP (V8 color-coded — matches contacts page)
+   ═══════════════════════════════════════════════════════════ */
+
+function SignalChip({ signal }: { signal: Signal }) {
+  const shortLabels: Record<Signal, string> = {
+    "Behov nå": "Behov nå",
+    "Får fremtidig behov": "Fremtidig",
+    "Får kanskje behov": "Kanskje",
+    "Ukjent om behov": "Ukjent",
+    "Ikke aktuelt": "Ikke aktuelt",
+  };
+  const modifier = signal === "Ikke aktuelt" ? " is-muted" : " is-signal";
+  return (
+    <span className={`chip chip--action${modifier}`}>
+      {shortLabels[signal]}
+    </span>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
    SUB-COMPONENTS
    ═══════════════════════════════════════════════════════════ */
 
