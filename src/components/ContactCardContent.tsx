@@ -314,6 +314,9 @@ export function ContactCardContent({
   const [consultantResults, setConsultantResults] = useState<ConsultantMatchResult[] | null>(null);
   const [matchSourceFilter, setMatchSourceFilter] = useState<"Alle" | "Ansatte" | "Eksterne">("Alle");
   const [matchUpdatedAt, setMatchUpdatedAt] = useState<string | null>(null);
+  const [showTechDna, setShowTechDna] = useState(!defaultHidden?.techDna);
+  const [showNotes, setShowNotes] = useState(!defaultHidden?.notes);
+  const [showConsultantMatch, setShowConsultantMatch] = useState(!defaultHidden?.consultantMatch);
 
   const { data: contact, isLoading } = useQuery({
     queryKey: crmQueryKeys.contacts.detail(contactId),
