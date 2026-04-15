@@ -569,7 +569,7 @@ export default function DesignLabContacts() {
                 <div
                   className="grid items-center sticky top-0 z-10"
                   style={{
-                    gridTemplateColumns: "minmax(140px,1fr) 120px 36px minmax(120px,1fr) minmax(100px,1fr) 100px 140px",
+                    gridTemplateColumns: "minmax(180px,2fr) minmax(120px,1fr) 130px 120px 90px 80px",
                     height: 32,
                     borderBottom: `1px solid ${C.border}`,
                     background: C.surfaceAlt,
@@ -577,30 +577,12 @@ export default function DesignLabContacts() {
                     paddingRight: 16,
                   }}
                 >
-                  <ColHeader label="Navn" field="name" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
-                  <span
-                    className="flex items-center"
-                    style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.01em", color: C.textMuted }}
-                  >
-                    Finn
-                  </span>
+                  <ColHeader label="Kontakt" field="name" sort={sort} onSort={toggleSort} />
                   <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
+                  <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
                   <ColHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />
-
-                  <span
-                    className="flex items-center"
-                    style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.01em", color: C.textMuted }}
-                  >
-                    Tags
-                  </span>
-                  <ColHeader
-                    label="Varme"
-                    field="last_activity"
-                    sort={sort}
-                    onSort={toggleSort}
-                    className="justify-end"
-                  />
+                  <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} />
+                  <ColHeader label="Varme" field="heat" sort={sort} onSort={toggleSort} className="justify-end" />
                 </div>
                 {isLoading ? (
                   <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>
