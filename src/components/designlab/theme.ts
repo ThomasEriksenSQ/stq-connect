@@ -12,7 +12,7 @@ export const C = {
   panel: "#FFFFFF",        // detail/right panel — white
   surface: "#FFFFFF",      // panels, detail views — white
   appBg: "#FCFCFD",        // main canvas background
-  surfaceAlt: "#F4F5F8",   // elevated controls, table headers
+  surfaceAlt: "#F3F3F4",   // elevated controls, table headers
   overlay: "#EDEEF2",      // overlay backgrounds
   hoverBg: "#F0F2F6",      // hover state
   activeBg: "#E8ECF5",     // active/pressed
