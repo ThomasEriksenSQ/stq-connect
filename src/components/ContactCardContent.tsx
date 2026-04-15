@@ -882,12 +882,16 @@ export function ContactCardContent({
             const contactLocations: string[] = (contact as any).locations || [];
             if (companyLocations.length === 0) return null;
             if (defaultHidden?.locationsIfEmpty && contactLocations.length === 0) return null;
+            const visibleLocations = defaultHidden
+              ? companyLocations.filter((loc) => contactLocations.includes(loc))
+              : companyLocations;
+            if (visibleLocations.length === 0) return null;
             return (
               <>
                 <span className="text-muted-foreground/40">·</span>
                 <div className="inline-flex items-center gap-1 flex-wrap">
                   <MapPin className="h-3 w-3 text-muted-foreground/50 shrink-0" />
-                  {companyLocations.map((loc) => {
+                  {visibleLocations.map((loc) => {
                     const isSelected = contactLocations.includes(loc);
                     return (
                       <button
