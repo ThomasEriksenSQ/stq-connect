@@ -416,6 +416,7 @@ export default function DesignLabContacts() {
           </div>
         </header>
 
+        <div className="content-wrapper flex-1 flex flex-col min-h-0">
         {/* Filters bar */}
         <div className="shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
           <FilterRow label="EIER" options={OWNERS} value={ownerFilter} onChange={setOwnerFilter} />
@@ -630,6 +631,7 @@ export default function DesignLabContacts() {
               )}
             </div>
           )}
+        </div>
         </div>
       </main>
     </div>
