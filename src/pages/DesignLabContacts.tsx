@@ -474,7 +474,7 @@ export default function DesignLabContacts() {
                 const meta = getConsultantAvailabilityMeta(con.tilgjengelig_fra);
                 const nameParts = con.navn.split(" ");
                 const initials = (nameParts[0]?.[0] || "") + (nameParts[nameParts.length - 1]?.[0] || "");
-                const toneColor = meta.tone === "ready" ? C.success : meta.tone === "soon" ? C.warning : C.textFaint;
+                const toneColor = meta.tone === "ready" ? C.dotSuccess : meta.tone === "soon" ? C.warning : C.textFaint;
                 return (
                   <div
                     key={con.id ?? con.navn}
