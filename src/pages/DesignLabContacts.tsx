@@ -510,10 +510,10 @@ export default function DesignLabContacts() {
                 >
                   <ColHeader label="Navn" field="name" sort={sort} onSort={toggleSort} />
                   <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
-                  <span style={{ fontSize: 11, fontWeight: 500, color: C.textFaint, textTransform: "uppercase", letterSpacing: "0.04em" }}>Finn</span>
+                  <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.01em", color: C.textMuted }}>Finn</span>
                   <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
                   <ColHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />
-                  <span style={{ fontSize: 11, fontWeight: 500, color: C.textFaint, textTransform: "uppercase", letterSpacing: "0.04em" }}>Tags</span>
+                  <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.01em", color: C.textMuted }}>Tags</span>
                   <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
                 </div>
                 {isLoading ? (
