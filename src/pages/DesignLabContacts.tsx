@@ -11,6 +11,7 @@ import {
   Users,
   X,
   ArrowUpRight,
+  Wifi,
 } from "lucide-react";
 import { differenceInDays, format } from "date-fns";
 import { nb } from "date-fns/locale";
@@ -45,7 +46,7 @@ const OWNERS = ["Alle", "Jon Richard Nygaard", "Thomas Eriksen", "Uten eier"];
 const TYPES = ["Alle", "Innkjøper", "CV-Epost", "Ikke relevant kontakt"] as const;
 type TypeFilter = (typeof TYPES)[number];
 
-type SortField = "name" | "signal" | "company" | "title" | "owner" | "last_activity" | "heat";
+type SortField = "name" | "signal" | "company" | "title" | "owner" | "last_activity";
 type SortDir = "asc" | "desc";
 
 /* Colors, signal colors, and heat colors imported from @/components/designlab/theme */
@@ -80,7 +81,7 @@ export default function DesignLabContacts() {
   const [ownerFilter, setOwnerFilter] = useState("Alle");
   const [signalFilter, setSignalFilter] = useState("Alle");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
-  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "heat", dir: "asc" });
+  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "signal", dir: "asc" });
   const [selectedId, setSelectedId] = useState<string | null>(searchParams.get("contact"));
   const searchRef = useRef<HTMLInputElement>(null);
   const [cmdOpen, setCmdOpen] = useState(false);
@@ -370,12 +371,6 @@ export default function DesignLabContacts() {
           return d * a.eier.localeCompare(b.eier, "nb");
         case "last_activity":
           return d * (a.daysSince - b.daysSince);
-        case "heat": {
-          // Primary: tier ASC (lower = hotter), Secondary: score DESC (higher = better)
-          const tierDiff = a.heatResult.tier - b.heatResult.tier;
-          if (tierDiff !== 0) return d * tierDiff;
-          return d * (b.heatResult.score - a.heatResult.score);
-        }
         default:
           return 0;
       }
@@ -568,7 +563,7 @@ export default function DesignLabContacts() {
                 <div
                   className="grid items-center sticky top-0 z-10"
                   style={{
-                    gridTemplateColumns: "minmax(180px,2fr) minmax(120px,1fr) 130px 120px 90px 80px",
+                    gridTemplateColumns: "minmax(160px,2fr) 130px 50px minmax(120px,1.5fr) minmax(100px,1fr) 120px 80px",
                     height: 32,
                     borderBottom: `1px solid ${C.border}`,
                     background: C.surfaceAlt,
@@ -576,12 +571,13 @@ export default function DesignLabContacts() {
                     paddingRight: 16,
                   }}
                 >
-                  <ColHeader label="Kontakt" field="name" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
+                  <ColHeader label="Navn" field="name" sort={sort} onSort={toggleSort} />
                   <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
+                  <span style={{ fontSize: 11, fontWeight: 500, color: C.textFaint }}>Finn</span>
+                  <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
                   <ColHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Varme" field="heat" sort={sort} onSort={toggleSort} className="justify-end" />
+                  <span style={{ fontSize: 11, fontWeight: 500, color: C.textFaint }}>Tags</span>
+                  <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
                 </div>
                 {isLoading ? (
                   <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>
@@ -600,7 +596,7 @@ export default function DesignLabContacts() {
                         onClick={() => setSelectedId(isActive ? null : c.id)}
                         className="grid items-center cursor-pointer group"
                         style={{
-                          gridTemplateColumns: "minmax(180px,2fr) minmax(120px,1fr) 130px 120px 90px 80px",
+                          gridTemplateColumns: "minmax(160px,2fr) 130px 50px minmax(120px,1.5fr) minmax(100px,1fr) 120px 80px",
                           minHeight: 34,
                           paddingLeft: 16,
                           paddingRight: 16,
@@ -614,16 +610,11 @@ export default function DesignLabContacts() {
                           if (!isActive) e.currentTarget.style.background = isActive ? C.activeBg : "transparent";
                         }}
                       >
-                        {/* Kontakt */}
+                        {/* Navn */}
                         <div className="min-w-0 flex items-center gap-2">
                           <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>
                             {c.firstName} {c.lastName}
                           </span>
-                        </div>
-
-                        {/* Selskap */}
-                        <div className="min-w-0">
-                          <span className="truncate" style={{ fontSize: 12, color: C.textMuted }}>{c.company}</span>
                         </div>
 
                         {/* Signal */}
@@ -631,18 +622,57 @@ export default function DesignLabContacts() {
                           <SignalChip signal={c.signal} />
                         </div>
 
+                        {/* Finn */}
+                        <div className="flex items-center" title="Aktiv på Finn">
+                          {c.hasMarkedsradar && (
+                            <Wifi style={{ width: 14, height: 14, color: C.textFaint }} />
+                          )}
+                        </div>
+
+                        {/* Selskap */}
+                        <div className="min-w-0">
+                          <span className="truncate block" style={{ fontSize: 12, color: C.textMuted }}>{c.company}</span>
+                        </div>
+
                         {/* Stilling */}
                         <span className="truncate" style={{ fontSize: 12, color: C.textMuted }}>{c.title}</span>
 
+                        {/* Tags */}
+                        <div className="flex items-center gap-1">
+                          {c.cvEmail && (
+                            <span
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 500,
+                                padding: "1px 6px",
+                                borderRadius: 3,
+                                background: C.toggleCv.activeBg,
+                                color: C.toggleCv.activeText,
+                              }}
+                            >
+                              CV
+                            </span>
+                          )}
+                          {c.callList && (
+                            <span
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 500,
+                                padding: "1px 6px",
+                                borderRadius: 3,
+                                background: C.toggleBuyer.activeBg,
+                                color: C.toggleBuyer.activeText,
+                              }}
+                            >
+                              Innkjøper
+                            </span>
+                          )}
+                        </div>
+
                         {/* Siste akt. */}
-                        <span style={{ fontSize: 12, color: C.textFaint }}>
+                        <span className="text-right" style={{ fontSize: 12, color: C.textFaint }}>
                           {c.daysSince < 999 ? relTime(c.daysSince) : ""}
                         </span>
-
-                        {/* Varme */}
-                        <div className="flex items-center justify-end">
-                          <HeatBadge heat={c.heatResult} daysSince={c.daysSince} />
-                        </div>
                       </div>
                     );
                   })
