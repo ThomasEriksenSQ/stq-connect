@@ -1,51 +1,72 @@
 
 
-# Plan: Unik farge per signal i Design Lab
+# Plan: ⌘K Command Palette for Design Lab
 
-## Problem
-Alle signaler i dropdown-menyen og signal-chipen bruker samme lilla accent-farge (`is-signal` → `#5E6AD2`). Det gjør det vanskelig å raskt skille mellom signaltyper.
+## Summary
+Create a self-contained command palette component at `src/components/designlab/CommandPalette.tsx` and mount it inside `DesignLabContacts.tsx`. The palette intercepts ⌘K (replacing current focus-search behavior) and provides 6 sections of searchable actions.
 
-## Løsning
-Bruk `SIGNAL_COLORS` fra `theme.ts` (som allerede har unike farger per signal) til å style hver signal individuelt — både i dropdown-menyen og på trigger-chipen.
+## Technical Design
 
-Fargekart (allerede definert i theme.ts):
-- **Behov nå** → Grønn (`#2D6A4F` på `rgba(45,106,79,0.08)`)
-- **Får fremtidig behov** → Blå (`#1A4FA0` på `rgba(26,79,160,0.08)`)
-- **Får kanskje behov** → Amber (`#7D4E00` på `rgba(125,78,0,0.08)`)
-- **Ukjent om behov** → Grå (`#8C929C` på `rgba(0,0,0,0.04)`)
-- **Ikke aktuelt** → Rød (`#8B1D20` på `rgba(139,29,32,0.08)`)
+### New file: `src/components/designlab/CommandPalette.tsx`
 
-## Endringer i `src/components/ContactCardContent.tsx`
+A single React component (~400 lines) using portal/fixed overlay pattern. No external dependencies beyond existing React, lucide-react, react-router-dom, and the Design Lab theme.
 
-### 1. Trigger-knappen (linje ~747)
-Erstatt `chip chip--action is-signal` med inline styles fra `SIGNAL_COLORS[signalCat.label]`:
-```tsx
-<button
-  className="chip chip--action cursor-pointer"
-  style={{
-    background: SIGNAL_COLORS[signalCat.label]?.bg,
-    color: SIGNAL_COLORS[signalCat.label]?.color,
-    border: "none",
-  }}
->
+**Props interface:**
+```ts
+interface CommandPaletteProps {
+  open: boolean;
+  onClose: () => void;
+  contacts: Array<{ id, firstName, lastName, company, companyId, email, phone, signal, daysSince }>;
+  companies: Array<{ id, name, contactCount: number }>;
+  selectedContact: { id, firstName, lastName, email, signal } | null;
+  onSelectContact: (id: string) => void;
+  onNavigate: (path: string) => void;
+}
 ```
 
-### 2. Dropdown-items (linje ~767-771)
-Erstatt `chip chip--action is-signal` med per-signal inline styles:
-```tsx
-<span
-  className="chip chip--action"
-  style={{
-    background: SIGNAL_COLORS[cat.label]?.bg,
-    color: SIGNAL_COLORS[cat.label]?.color,
-    border: "none",
-  }}
->
-```
+**Architecture:**
+- Fixed overlay (rgba(0,0,0,0.15), no blur) + centered 560px modal
+- Uncontrolled internal search state, filters all sections simultaneously
+- Keyboard nav via `activeIndex` tracking across flattened visible items
+- All styling inline using `C` tokens from theme.ts — zero Tailwind classes that could leak
 
-### 3. Import
-Legg til import av `SIGNAL_COLORS` fra `@/components/designlab/theme` (linje ~1).
+**6 Sections (rendered conditionally):**
 
-### Filer som endres
-- `src/components/ContactCardContent.tsx` — 3 steder (import + trigger + dropdown items)
+1. **Handlinger for [navn]** — Only when `selectedContact` is set. Items: Logg samtale, Logg møte, Ny oppfølging, Ny forespørsel, Kopier e-post, Endre signal. Actions dispatch to existing ContactCardContent action handlers by programmatically clicking the relevant buttons or using `navigator.clipboard` for email copy.
+
+2. **Varsler** — Skipped in v1. No standalone warning logic exists in design-lab outside ContactCardContent. Will be added in v2.
+
+3. **Kontakter** — Fuzzy search against `contacts` prop, top 5. Click → `onSelectContact(id)`.
+
+4. **Selskaper** — Derived from contacts' unique companies with count. Top 5. Click → filter contact list by company (set search to company name).
+
+5. **Opprett** — Static 4 items. For now: Ny kontakt, Nytt selskap, Ny forespørsel, Ny oppfølging. Actions use `toast.info("Kommer snart")` placeholder since Design Lab doesn't have creation dialogs yet.
+
+6. **Naviger til** — Static 4 items mapping to routes: `/design-lab/kontakter`, `/design-lab/foresporsler`, `/design-lab/stacq-prisen`, `/`.
+
+**Empty state:** "Ingen resultater for «[query]»" when all sections are empty after filtering.
+
+### Modified file: `src/pages/DesignLabContacts.tsx`
+
+Minimal changes:
+1. Import `CommandPalette`
+2. Add `const [cmdOpen, setCmdOpen] = useState(false)` state
+3. Update existing ⌘K handler (line 101-114): instead of focusing search input, toggle `setCmdOpen(true)`
+4. Derive `companiesList` from `contacts` (unique companies with contact count)
+5. Render `<CommandPalette>` at end of component with all props wired
+6. Sidebar ⌘K button (line 380-391): `onClick={() => setCmdOpen(true)}` instead of focusing search
+
+### Visual specs (all from the user's spec)
+- 560px wide, top 20vh, 8px radius, `C.shadowLg` shadow
+- 44px input, 14px font, no border, bottom divider `C.borderLight`
+- 34px result rows, 5px radius, `C.hoverBg` on hover/keyboard-active
+- Section headers: 11px/500, `C.textFaint`, 10px 16px 4px padding
+- Icons: 16px lucide, `C.textFaint`
+- Meta text: 12px, `C.textFaint`, right-aligned
+
+### Files changed
+- **New:** `src/components/designlab/CommandPalette.tsx`
+- **Modified:** `src/pages/DesignLabContacts.tsx` (import + state + handler changes)
+
+No other files affected.
 
