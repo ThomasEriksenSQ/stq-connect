@@ -472,68 +472,67 @@ export default function DesignLabContacts() {
 
         {/* Content: list + detail */}
         <div className="flex-1 min-h-0 flex">
-          {sel ? (
-            <ResizablePanelGroup direction="horizontal" className="h-full">
-              <ResizablePanel defaultSize={35} minSize={20} maxSize={60}>
-                <div className="h-full overflow-y-auto">
-                  {/* Table header — compact */}
-                  <div
-                    className="grid items-center sticky top-0 z-10"
-                    style={{
-                      gridTemplateColumns: "minmax(0,1fr) 100px 72px",
-                      height: 32, borderBottom: `1px solid ${C.border}`,
-                      background: C.surfaceAlt, paddingLeft: 16, paddingRight: 16,
-                    }}
-                  >
-                    <ColHeader label="Navn" field="name" sort={sort} onSort={toggleSort} />
-                    <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
-                    <ColHeader label="Varme" field="heat" sort={sort} onSort={toggleSort} className="justify-end" />
-                  </div>
-                  {isLoading ? (
-                    <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster kontakter…</div>
-                  ) : sorted.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen kontakter funnet</div>
-                  ) : (
-                    sorted.map((c) => {
-                      const isActive = selectedId === c.id;
-                      return (
-                        <div
-                          key={c.id}
-                          onClick={() => setSelectedId(isActive ? null : c.id)}
-                          className="grid items-center cursor-pointer group"
-                          style={{
-                            gridTemplateColumns: "minmax(0,1fr) 100px 72px",
-                            minHeight: 38, paddingLeft: 16, paddingRight: 16,
-                            paddingTop: 4, paddingBottom: 4,
-                            borderBottom: `1px solid ${C.borderLight}`,
-                            background: isActive ? C.activeBg : undefined,
-                            transition: "background 50ms",
-                          }}
-                          onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = C.hoverBg; }}
-                          onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = isActive ? C.activeBg : ""; }}
-                        >
-                          <div className="truncate pr-3">
-                            <div className="flex items-center gap-1.5">
-                              <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{c.firstName} {c.lastName}</span>
-                              <ContactIndicators callList={c.callList} cvEmail={c.cvEmail} />
-                            </div>
-                            <span style={{ fontSize: 12, color: C.textFaint, lineHeight: 1.2 }} className="truncate block">{c.company}</span>
-                          </div>
-                          <div className="pr-3"><SignalChip signal={c.signal} /></div>
-                          <div className="flex justify-end">
-                            <HeatBadge heat={c.heatResult} daysSince={c.daysSince} />
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
+          <ResizablePanelGroup direction="horizontal" className="h-full">
+            <ResizablePanel defaultSize={35} minSize={20} maxSize={60}>
+              <div className="h-full overflow-y-auto">
+                <div
+                  className="grid items-center sticky top-0 z-10"
+                  style={{
+                    gridTemplateColumns: "minmax(0,1fr) 100px 72px",
+                    height: 32, borderBottom: `1px solid ${C.border}`,
+                    background: C.surfaceAlt, paddingLeft: 16, paddingRight: 16,
+                  }}
+                >
+                  <ColHeader label="Navn" field="name" sort={sort} onSort={toggleSort} />
+                  <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
+                  <ColHeader label="Varme" field="heat" sort={sort} onSort={toggleSort} className="justify-end" />
                 </div>
-              </ResizablePanel>
-              <ResizableHandle
-                withHandle
-                className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
-              />
-              <ResizablePanel defaultSize={65} minSize={40}>
+                {isLoading ? (
+                  <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster kontakter…</div>
+                ) : sorted.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen kontakter funnet</div>
+                ) : (
+                  sorted.map((c) => {
+                    const isActive = selectedId === c.id;
+                    return (
+                      <div
+                        key={c.id}
+                        onClick={() => setSelectedId(isActive ? null : c.id)}
+                        className="grid items-center cursor-pointer group"
+                        style={{
+                          gridTemplateColumns: "minmax(0,1fr) 100px 72px",
+                          minHeight: 38, paddingLeft: 16, paddingRight: 16,
+                          paddingTop: 4, paddingBottom: 4,
+                          borderBottom: `1px solid ${C.borderLight}`,
+                          background: isActive ? C.activeBg : undefined,
+                          transition: "background 50ms",
+                        }}
+                        onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = C.hoverBg; }}
+                        onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = isActive ? C.activeBg : ""; }}
+                      >
+                        <div className="truncate pr-3">
+                          <div className="flex items-center gap-1.5">
+                            <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{c.firstName} {c.lastName}</span>
+                            <ContactIndicators callList={c.callList} cvEmail={c.cvEmail} />
+                          </div>
+                          <span style={{ fontSize: 12, color: C.textFaint, lineHeight: 1.2 }} className="truncate block">{c.company}</span>
+                        </div>
+                        <div className="pr-3"><SignalChip signal={c.signal} /></div>
+                        <div className="flex justify-end">
+                          <HeatBadge heat={c.heatResult} daysSince={c.daysSince} />
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </ResizablePanel>
+            <ResizableHandle
+              withHandle
+              className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
+            />
+            <ResizablePanel defaultSize={65} minSize={40}>
+              {sel ? (
                 <div className="h-full flex flex-col" style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}` }}>
                   <div className="shrink-0 px-6 py-4" style={{ borderBottom: `1px solid ${C.border}` }}>
                     <div className="flex items-start justify-between">
@@ -556,65 +555,11 @@ export default function DesignLabContacts() {
                     <ContactCardContent contactId={sel.id} editable />
                   </div>
                 </div>
-              </ResizablePanel>
-            </ResizablePanelGroup>
-          ) : (
-            <>
-              {/* Fixed-width table when no contact selected */}
-              <div className="h-full overflow-y-auto" style={{ width: 680, minWidth: 560, maxWidth: 780, flexShrink: 0 }}>
-                <div
-                  className="grid items-center sticky top-0 z-10"
-                  style={{
-                    gridTemplateColumns: "minmax(0,1fr) 120px 200px 180px 160px 72px",
-                    height: 32, borderBottom: `1px solid ${C.border}`,
-                    background: C.surfaceAlt, paddingLeft: 16, paddingRight: 16,
-                  }}
-                >
-                  <ColHeader label="Navn" field="name" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Eier" field="owner" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Varme" field="heat" sort={sort} onSort={toggleSort} className="justify-end" />
-                </div>
-                {isLoading ? (
-                  <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster kontakter…</div>
-                ) : sorted.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen kontakter funnet</div>
-                ) : (
-                  sorted.map((c) => (
-                    <div
-                      key={c.id}
-                      onClick={() => setSelectedId(c.id)}
-                      className="grid items-center cursor-pointer group"
-                      style={{
-                        gridTemplateColumns: "minmax(0,1fr) 120px 200px 180px 160px 72px",
-                        height: 36, paddingLeft: 16, paddingRight: 16,
-                        borderBottom: `1px solid ${C.borderLight}`,
-                        transition: "background 50ms",
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}
-                    >
-                      <div className="truncate pr-3 flex items-center gap-1.5">
-                        <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{c.firstName} {c.lastName}</span>
-                        <ContactIndicators callList={c.callList} cvEmail={c.cvEmail} />
-                      </div>
-                      <div className="pr-3"><SignalChip signal={c.signal} /></div>
-                      <div className="truncate pr-3"><span style={{ fontSize: 13, color: C.textMuted }}>{c.company}</span></div>
-                      <div className="truncate pr-3"><span style={{ fontSize: 13, color: C.textMuted }}>{c.title}</span></div>
-                      <div className="truncate pr-3"><span style={{ fontSize: 12, color: C.textFaint }}>{c.eier}</span></div>
-                      <div className="flex justify-end">
-                        <HeatBadge heat={c.heatResult} daysSince={c.daysSince} />
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-              {/* Empty right side */}
-              <div className="flex-1 min-w-0 h-full" style={{ borderLeft: `1px solid ${C.borderLight}`, background: C.appBg }} />
-            </>
-          )}
+              ) : (
+                <div className="h-full" style={{ borderLeft: `1px solid ${C.borderLight}`, background: C.appBg }} />
+              )}
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </div>
       </main>
     </div>
