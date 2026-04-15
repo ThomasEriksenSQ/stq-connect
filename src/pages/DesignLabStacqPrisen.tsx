@@ -84,21 +84,8 @@ function parseOppdragDate(value?: string | null): Date | null {
   return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
 }
 
-/* ═══ NAV ═══ */
-const NAV_MAIN = [
-  { label: "Salgsagent", icon: LayoutDashboard, href: "/" },
-  { label: "Selskaper", icon: Building2, href: "/selskaper" },
-  { label: "Kontakter", icon: Users, href: "/design-lab/kontakter" },
-  { label: "Forespørsler", icon: Briefcase, href: "/design-lab/foresporsler" },
-  { label: "Oppfølginger", icon: Clock, href: "/oppfolginger" },
-];
-const NAV_STACQ = [
-  { label: "STACQ Prisen", icon: TrendingUp, href: "/design-lab/stacq-prisen", active: true },
-  { label: "Markedsradar", icon: Radar, href: "/markedsradar" },
-  { label: "Ansatte", icon: Users, href: "/konsulenter/ansatte" },
-  { label: "Eksterne", icon: UserPlus, href: "/konsulenter/eksterne" },
-  { label: "stacq.no", icon: Globe, href: "/nettside-ai" },
-];
+
+
 
 /* ═══════════════════════════════════════════════════════════
    MAIN COMPONENT
