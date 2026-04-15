@@ -639,34 +639,32 @@ export default function DesignLabContacts() {
 
                         {/* Tags */}
                         <div className="flex items-center gap-1">
-                          {c.cvEmail && (
-                            <span
-                              style={{
-                                fontSize: 11,
-                                fontWeight: 500,
-                                padding: "1px 6px",
-                                borderRadius: 3,
-                                background: C.toggleCv.activeBg,
-                                color: C.toggleCv.activeText,
-                              }}
-                            >
-                              CV
-                            </span>
-                          )}
-                          {c.callList && (
-                            <span
-                              style={{
-                                fontSize: 11,
-                                fontWeight: 500,
-                                padding: "1px 6px",
-                                borderRadius: 3,
-                                background: C.toggleBuyer.activeBg,
-                                color: C.toggleBuyer.activeText,
-                              }}
-                            >
-                              Innkjøper
-                            </span>
-                          )}
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 500,
+                              padding: "1px 6px",
+                              borderRadius: 3,
+                              background: c.cvEmail ? C.toggleCv.activeBg : C.toggleInactive.bg,
+                              color: c.cvEmail ? C.toggleCv.activeText : C.toggleInactive.text,
+                              border: c.cvEmail ? "none" : `1px solid ${C.toggleInactive.border}`,
+                            }}
+                          >
+                            CV
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 500,
+                              padding: "1px 6px",
+                              borderRadius: 3,
+                              background: c.callList ? C.toggleBuyer.activeBg : C.toggleInactive.bg,
+                              color: c.callList ? C.toggleBuyer.activeText : C.toggleInactive.text,
+                              border: c.callList ? "none" : `1px solid ${C.toggleInactive.border}`,
+                            }}
+                          >
+                            Innkjøper
+                          </span>
                         </div>
 
                         {/* Siste akt. */}
