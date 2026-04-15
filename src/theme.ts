@@ -62,6 +62,12 @@ export const C = {
   iconStrong: "#5C636E",
   iconActive: "#1A1C1F",
 
+  /* Toggle states */
+  toggleCv:         { activeBg: "rgba(26,79,160,0.08)",  activeText: "#1A4FA0" },
+  toggleBuyer:      { activeBg: "rgba(94,106,210,0.08)", activeText: "#5E6AD2" },
+  toggleIrrelevant: { activeBg: "rgba(139,29,32,0.08)",  activeText: "#8B1D20" },
+  toggleInactive:   { bg: "transparent", text: "#8C929C", border: "#DDE0E7" },
+
   /* Shadows */
   shadow: "0 1px 2px rgba(0,0,0,0.05)",
   shadowMd: "0 4px 12px rgba(0,0,0,0.08)",
