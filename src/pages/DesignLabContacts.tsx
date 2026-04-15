@@ -574,7 +574,7 @@ export default function DesignLabContacts() {
             <ResizablePanel defaultSize={65} minSize={40}>
               {sel ? (
                 <div className="h-full flex flex-col" style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}` }}>
-                  <div className="shrink-0 flex items-center justify-end px-4 py-2" style={{ borderBottom: `1px solid ${C.border}` }}>
+                  <div className="shrink-0 flex items-center justify-end px-4" style={{ height: 32, borderBottom: `1px solid ${C.border}` }}>
                     <button
                       onClick={() => setSelectedId(null)}
                       className="rounded p-1 hover:bg-black/5 transition-colors"
