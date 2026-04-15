@@ -65,7 +65,7 @@ function mapToSignal(raw: string): Signal {
 
 const NAV_MAIN = [
   { label: "Salgsagent", icon: LayoutDashboard, href: "/" },
-  { label: "Selskaper", icon: Building2, href: "/selskaper" },
+  { label: "Selskaper", icon: Building2, href: "/design-lab/selskaper" },
   { label: "Kontakter", icon: Users, href: "/design-lab/kontakter", active: true },
   { label: "Forespørsler", icon: Briefcase, href: "/design-lab/foresporsler" },
   { label: "Oppfølginger", icon: Clock, href: "/oppfolginger" },
