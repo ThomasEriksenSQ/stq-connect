@@ -390,20 +390,6 @@ export default function DesignLabContacts() {
           <span style={{ fontSize: 14, fontWeight: 600, color: C.text, letterSpacing: "-0.01em" }}>STACQ</span>
         </div>
 
-        {/* Search trigger */}
-        <div className="px-3 mb-1">
-          <button
-            onClick={() => setCmdOpen(true)}
-            className="flex items-center gap-2 w-full rounded-md px-2 py-1.5 transition-colors"
-            style={{ fontSize: 13, color: C.textFaint, background: "transparent" }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-          >
-            <Search style={{ width: 14, height: 14 }} />
-            <span className="flex-1 text-left">Søk</span>
-            <kbd className="rounded px-1" style={{ fontSize: 10, color: C.textGhost, background: "rgba(0,0,0,0.06)" }}>⌘K</kbd>
-          </button>
-        </div>
 
         {/* Nav groups */}
         <nav className="flex-1 overflow-y-auto px-3 space-y-4 pb-3">
