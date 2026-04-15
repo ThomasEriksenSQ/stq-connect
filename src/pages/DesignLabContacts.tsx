@@ -555,12 +555,8 @@ export default function DesignLabContacts() {
                           <span style={{ fontSize: 13, color: C.textMuted }}>{c.title}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          {c.cvEmail && (
-                            <span className={`chip chip--action${c.cvEmail ? " is-active" : ""}`}>CV</span>
-                          )}
-                          {c.callList && (
-                            <span className={`chip chip--action${c.callList ? " is-active" : ""}`}>Innkjøper</span>
-                          )}
+                          <span className={`chip chip--action${c.cvEmail ? " is-active" : ""}`}>CV</span>
+                          <span className={`chip chip--action${c.callList ? " is-active" : ""}`}>Innkjøper</span>
                         </div>
                         <div className="flex justify-end">
                           <span style={{ fontSize: 12, color: C.textFaint }}>{c.daysSince < 999 ? relTime(c.daysSince) : ""}</span>
