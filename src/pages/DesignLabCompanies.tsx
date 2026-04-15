@@ -354,12 +354,7 @@ export default function DesignLabCompanies() {
 
         {/* Signal */}
         <div className="flex items-center gap-1.5">
-          {signal && signalColors && (
-            <>
-              <span className="rounded-full inline-block shrink-0" style={{ width: 7, height: 7, background: signalColors.color }} />
-              <span className="truncate" style={{ fontSize: 12, color: signalColors.color }}>{signal}</span>
-            </>
-          )}
+          {signal && <SignalChip signal={signal} />}
         </div>
 
         {/* City */}
@@ -522,6 +517,26 @@ export default function DesignLabCompanies() {
         </div>
       </main>
     </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SIGNAL CHIP (V8 color-coded — matches contacts page)
+   ═══════════════════════════════════════════════════════════ */
+
+function SignalChip({ signal }: { signal: Signal }) {
+  const shortLabels: Record<Signal, string> = {
+    "Behov nå": "Behov nå",
+    "Får fremtidig behov": "Fremtidig",
+    "Får kanskje behov": "Kanskje",
+    "Ukjent om behov": "Ukjent",
+    "Ikke aktuelt": "Ikke aktuelt",
+  };
+  const modifier = signal === "Ikke aktuelt" ? " is-muted" : " is-signal";
+  return (
+    <span className={`chip chip--action${modifier}`}>
+      {shortLabels[signal]}
+    </span>
   );
 }
 
