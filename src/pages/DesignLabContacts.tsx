@@ -380,7 +380,7 @@ export default function DesignLabContacts() {
         {/* Search trigger */}
         <div className="px-3 mb-1">
           <button
-            onClick={() => searchRef.current?.focus()}
+            onClick={() => setCmdOpen(true)}
             className="flex items-center gap-2 w-full rounded-md px-2 py-1.5 transition-colors"
             style={{ fontSize: 13, color: C.textFaint, background: "transparent" }}
             onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
