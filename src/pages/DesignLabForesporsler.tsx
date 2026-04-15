@@ -5,8 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import {
   Search, ChevronDown, ChevronUp, X,
-  Users, Building2, LayoutDashboard, Briefcase, Settings, LogOut,
-  UserPlus, Radar, TrendingUp, Globe, Clock, ArrowUpRight,
+  ArrowUpRight,
 } from "lucide-react";
 import { differenceInDays, format } from "date-fns";
 import { nb } from "date-fns/locale";
@@ -16,6 +15,7 @@ import { crmQueryKeys } from "@/lib/queryKeys";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { C } from "@/components/designlab/theme";
+import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
@@ -53,25 +53,8 @@ function relTime(days: number): string {
   return `${Math.floor(days / 365)}å`;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   SIDEBAR NAV
-   ═══════════════════════════════════════════════════════════ */
 
-const NAV_MAIN = [
-  { label: "Salgsagent", icon: LayoutDashboard, href: "/", active: false },
-  { label: "Selskaper", icon: Building2, href: "/selskaper", active: false },
-  { label: "Kontakter", icon: Users, href: "/design-lab/kontakter", active: false },
-  { label: "Forespørsler", icon: Briefcase, href: "/design-lab/foresporsler", active: true },
-  { label: "Oppfølginger", icon: Clock, href: "/oppfolginger", active: false },
-];
 
-const NAV_STACQ = [
-  { label: "STACQ Prisen", icon: TrendingUp, href: "/design-lab/stacq-prisen" },
-  { label: "Markedsradar", icon: Radar, href: "/markedsradar" },
-  { label: "Ansatte", icon: Users, href: "/konsulenter/ansatte" },
-  { label: "Eksterne", icon: UserPlus, href: "/konsulenter/eksterne" },
-  { label: "stacq.no", icon: Globe, href: "/nettside-ai" },
-];
 
 /* ═══════════════════════════════════════════════════════════
    PIPELINE
