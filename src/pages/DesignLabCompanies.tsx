@@ -458,94 +458,67 @@ export default function DesignLabCompanies() {
           </div>
         </div>
 
-        {/* Table + Detail Panel */}
-        <div className="flex-1 min-h-0 overflow-hidden">
-          {selectedId ? (
-            <ResizablePanelGroup direction="horizontal" key="with-detail">
-              {/* Panel 1: Table */}
-              <ResizablePanel defaultSize={35} minSize={20} maxSize={60}>
-                <div className="h-full overflow-y-auto" style={{ scrollbarColor: `${C.borderStrong} ${C.surfaceAlt}` }}>
-                  {/* Column headers */}
-                  <div
-                    className="grid items-center sticky top-0 z-10"
-                    style={{
-                      gridTemplateColumns: "minmax(180px,2fr) minmax(120px,1fr) 130px 120px 90px 80px",
-                      height: 32, borderBottom: `1px solid ${C.border}`,
-                      background: C.surfaceAlt, paddingLeft: 16, paddingRight: 16,
-                    }}
-                  >
-                    <ColHeader label="Selskap" field="name" sort={sort} onSort={toggleSort} />
-                    <ColHeader label="Type" field="type" sort={sort} onSort={toggleSort} />
-                    <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
-                    <ColHeader label="Sted" field="city" sort={sort} onSort={toggleSort} />
-                    <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} />
-                    <ColHeader label="Oppf." field="tasks" sort={sort} onSort={toggleSort} className="justify-end" />
-                  </div>
-
-                  {isLoading ? (
-                    <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster selskaper…</div>
-                  ) : sorted.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen selskaper funnet</div>
-                  ) : (
-                    sorted.map((company: any) => renderRow(company))
-                  )}
+        {/* Content: list + detail */}
+        <div className="flex-1 min-h-0 flex">
+          <ResizablePanelGroup direction="horizontal" className="h-full">
+            <ResizablePanel defaultSize={35} minSize={20} maxSize={60}>
+              <div className="h-full overflow-y-auto" style={{ scrollbarColor: `${C.borderStrong} ${C.surfaceAlt}` }}>
+                <div
+                  className="grid items-center sticky top-0 z-10"
+                  style={{
+                    gridTemplateColumns: "minmax(180px,2fr) minmax(120px,1fr) 130px 120px 90px 80px",
+                    height: 32, borderBottom: `1px solid ${C.border}`,
+                    background: C.surfaceAlt, paddingLeft: 16, paddingRight: 16,
+                  }}
+                >
+                  <ColHeader label="Selskap" field="name" sort={sort} onSort={toggleSort} />
+                  <ColHeader label="Type" field="type" sort={sort} onSort={toggleSort} />
+                  <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
+                  <ColHeader label="Sted" field="city" sort={sort} onSort={toggleSort} />
+                  <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} />
+                  <ColHeader label="Oppf." field="tasks" sort={sort} onSort={toggleSort} className="justify-end" />
                 </div>
-              </ResizablePanel>
-
-              <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={65} minSize={30}>
-                <div className="h-full flex flex-col" style={{ background: C.bg, borderLeft: `1px solid ${C.border}` }}>
-                  {/* Close bar */}
-                  <div className="flex items-center justify-end px-3 shrink-0" style={{ height: 32, borderBottom: `1px solid ${C.borderLight}` }}>
+                {isLoading ? (
+                  <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster selskaper…</div>
+                ) : sorted.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen selskaper funnet</div>
+                ) : (
+                  sorted.map((company: any) => renderRow(company))
+                )}
+              </div>
+            </ResizablePanel>
+            <ResizableHandle
+              withHandle
+              className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
+            />
+            <ResizablePanel defaultSize={65} minSize={30}>
+              {selectedId ? (
+                <div className="h-full flex flex-col" style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}` }}>
+                  <div className="shrink-0 flex items-center justify-end px-4" style={{ height: 32, borderBottom: `1px solid ${C.border}` }}>
                     <button
                       onClick={() => setSelectedId(null)}
-                      className="flex items-center justify-center rounded transition-colors"
-                      style={{ width: 24, height: 24, color: C.textFaint }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; e.currentTarget.style.color = C.text; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = C.textFaint; }}
+                      className="rounded p-1 hover:bg-black/5 transition-colors"
+                      style={{ color: C.textFaint }}
                     >
-                      <X style={{ width: 14, height: 14 }} />
+                      <X style={{ width: 16, height: 16 }} />
                     </button>
                   </div>
-                  {/* Content */}
-                  <div className="flex-1 min-h-0 overflow-y-auto">
+                  <div className="flex-1 overflow-y-auto px-6 py-5 dl-v8-theme">
                     <CompanyCardContent companyId={selectedId} editable onNavigateToFullPage={() => navigate(`/selskaper/${selectedId}`)} />
                   </div>
                 </div>
-              </ResizablePanel>
-              <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={0} minSize={0} maxSize={40}>
-                <div className="h-full" style={{ background: C.appBg }} />
-              </ResizablePanel>
-            </ResizablePanelGroup>
-          ) : (
-            <div className="h-full overflow-y-auto" style={{ scrollbarColor: `${C.borderStrong} ${C.surfaceAlt}` }}>
-              {/* Column headers */}
-              <div
-                className="grid items-center sticky top-0 z-10"
-                style={{
-                  gridTemplateColumns: "minmax(180px,2fr) minmax(120px,1fr) 130px 120px 90px 80px",
-                  height: 32, borderBottom: `1px solid ${C.border}`,
-                  background: C.surfaceAlt, paddingLeft: 16, paddingRight: 16,
-                }}
-              >
-                <ColHeader label="Selskap" field="name" sort={sort} onSort={toggleSort} />
-                <ColHeader label="Type" field="type" sort={sort} onSort={toggleSort} />
-                <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
-                <ColHeader label="Sted" field="city" sort={sort} onSort={toggleSort} />
-                <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} />
-                <ColHeader label="Oppf." field="tasks" sort={sort} onSort={toggleSort} className="justify-end" />
-              </div>
-
-              {isLoading ? (
-                <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster selskaper…</div>
-              ) : sorted.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen selskaper funnet</div>
               ) : (
-                sorted.map((company: any) => renderRow(company))
+                <div className="h-full" style={{ borderLeft: `1px solid ${C.borderLight}`, background: C.appBg }} />
               )}
-            </div>
-          )}
+            </ResizablePanel>
+            <ResizableHandle
+              withHandle
+              className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
+            />
+            <ResizablePanel defaultSize={0} minSize={0} maxSize={40}>
+              <div className="h-full" style={{ background: C.appBg }} />
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </div>
       </main>
     </div>
