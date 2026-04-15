@@ -26,6 +26,7 @@ import { usePersistentState } from "@/hooks/usePersistentState";
 /* ═══ V8 COLOR CONSTANTS ═══ */
 const C = {
   bg: "#f7f8f8",
+  sidebarBg: "#ecedf0",
   surface: "#ffffff",
   surfaceAlt: "#f3f4f5",
   text: "#1d2028",
