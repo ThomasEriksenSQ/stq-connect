@@ -601,51 +601,48 @@ export default function DesignLabContacts() {
                         onClick={() => setSelectedId(isActive ? null : c.id)}
                         className="grid items-center cursor-pointer group"
                         style={{
-                          gridTemplateColumns:
-                            "minmax(140px,1fr) 120px 36px minmax(120px,1fr) minmax(100px,1fr) 100px 140px",
-                          minHeight: 38,
+                          gridTemplateColumns: "minmax(180px,2fr) minmax(120px,1fr) 130px 120px 90px 80px",
+                          minHeight: 34,
                           paddingLeft: 16,
                           paddingRight: 16,
-                          paddingTop: 4,
-                          paddingBottom: 4,
-                          borderLeft: `3px solid ${c.heatResult.temperature === "sovende" ? "transparent" : HEAT_COLORS[c.heatResult.temperature].color}`,
                           borderBottom: `1px solid ${C.borderLight}`,
-                          background: isActive ? C.activeBg : undefined,
-                          transition: "background 50ms",
+                          background: isActive ? C.activeBg : "transparent",
                         }}
                         onMouseEnter={(e) => {
                           if (!isActive) e.currentTarget.style.background = C.hoverBg;
                         }}
                         onMouseLeave={(e) => {
-                          if (!isActive) e.currentTarget.style.background = isActive ? C.activeBg : "";
+                          if (!isActive) e.currentTarget.style.background = isActive ? C.activeBg : "transparent";
                         }}
                       >
-                        <div className="truncate pr-3">
-                          <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>
+                        {/* Kontakt */}
+                        <div className="min-w-0 flex items-center gap-2">
+                          <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>
                             {c.firstName} {c.lastName}
                           </span>
                         </div>
-                        <div className="pr-3">
+
+                        {/* Selskap */}
+                        <div className="min-w-0">
+                          <span className="truncate" style={{ fontSize: 12, color: C.textMuted }}>{c.company}</span>
+                        </div>
+
+                        {/* Signal */}
+                        <div className="flex items-center gap-1.5">
                           <SignalChip signal={c.signal} />
                         </div>
-                        <div className="flex items-center justify-center">
-                          {c.hasMarkedsradar && <Wifi style={{ width: 14, height: 14, color: C.textFaint }} />}
-                        </div>
-                        <div className="truncate pr-3">
-                          <span style={{ fontSize: 13, color: C.textMuted }}>{c.company}</span>
-                        </div>
-                        <div className="truncate pr-3">
-                          <span style={{ fontSize: 13, color: C.textMuted }}>{c.title}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className={`chip chip--action${c.cvEmail ? " is-active" : ""}`}>CV</span>
-                          <span className={`chip chip--action${c.callList ? " is-active" : ""}`}>Innkjøper</span>
-                        </div>
-                        <div className="flex items-center justify-end gap-2">
+
+                        {/* Stilling */}
+                        <span className="truncate" style={{ fontSize: 12, color: C.textMuted }}>{c.title}</span>
+
+                        {/* Siste akt. */}
+                        <span style={{ fontSize: 12, color: C.textFaint }}>
+                          {c.daysSince < 999 ? relTime(c.daysSince) : ""}
+                        </span>
+
+                        {/* Varme */}
+                        <div className="flex items-center justify-end">
                           <HeatBadge heat={c.heatResult} daysSince={c.daysSince} />
-                          <span style={{ fontSize: 11, color: C.textFaint }}>
-                            {c.daysSince < 999 ? relTime(c.daysSince) : ""}
-                          </span>
                         </div>
                       </div>
                     );
