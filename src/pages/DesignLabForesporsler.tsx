@@ -40,6 +40,7 @@ const TYPE_CHIPS: { value: TypeFilter; label: string }[] = [
 /* ── V8 Colors ── */
 const C = {
   bg: "#f7f8f8",
+  sidebarBg: "#ecedf0",
   surface: "#ffffff",
   surfaceAlt: "#f3f4f5",
   text: "#1d2028",
@@ -250,7 +251,7 @@ export default function DesignLabForesporsler() {
     <div className="flex h-screen overflow-hidden select-none" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}>
 
       {/* ═══ SIDEBAR ═══ */}
-      <aside className="flex flex-col shrink-0" style={{ width: 216, borderRight: `1px solid ${C.border}`, background: C.bg }}>
+      <aside className="flex flex-col shrink-0" style={{ width: 216, borderRight: `1px solid ${C.border}`, background: C.sidebarBg }}>
         <div className="flex items-center gap-2 px-4" style={{ height: 44 }}>
           <div className="flex items-center justify-center rounded" style={{ width: 22, height: 22, background: C.accent, color: "#fff", fontSize: 11, fontWeight: 700 }}>S</div>
           <span style={{ fontSize: 14, fontWeight: 600, color: C.text, letterSpacing: "-0.01em" }}>STACQ</span>
