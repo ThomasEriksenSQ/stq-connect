@@ -1,49 +1,35 @@
 
 
-# Fargeforslag for toggle-tilstander i V8
+# Plan: Oppdater kontakttabellen i Design Lab til å matche V1-kolonnestruktur
 
-Alle farger følger V8-paletten med desaturerte 8%-bakgrunner og dempede tekstfarger.
+## Mål
+Endre kolonnerekkefølge og innhold i kontakttabellen på `/design-lab/kontakter` slik at den matcher referansebildet (V1), men med V2-styling.
 
-## 1. CV-epost / CV
+## Kolonner (ny rekkefølge)
 
-| Tilstand | Bakgrunn | Tekst | Border |
-|----------|----------|-------|--------|
-| **Aktiv** | `rgba(26,79,160,0.08)` | `#1A4FA0` | ingen |
-| **Inaktiv** | `transparent` | `#8C929C` | `#DDE0E7` |
+| # | Header | Innhold | Bredde |
+|---|--------|---------|--------|
+| 1 | NAVN | Fornavn + etternavn | `minmax(160px, 2fr)` |
+| 2 | SIGNAL | SignalChip (som nå) | `130px` |
+| 3 | FINN | Wifi-ikon (((•))) hvis `hasMarkedsradar` | `50px` |
+| 4 | SELSKAP | Selskapsnavn | `minmax(120px, 1.5fr)` |
+| 5 | STILLING | Stillingstittel | `minmax(100px, 1fr)` |
+| 6 | TAGS | CV + Innkjøper pills side om side | `120px` |
+| 7 | SISTE AKT. | Relativ tid, høyrejustert | `80px` |
 
-Blå tone — matcher eksisterende `C.info`-prikken som allerede brukes for CV-epost-indikatoren.
+## Endringer i `src/pages/DesignLabContacts.tsx`
 
-## 2. Innkjøper
+1. **Fjern Varme-kolonnen** fra header og rader (HeatBadge fjernes fra tabellen)
+2. **Legg til FINN-kolonnen** — viser et lite wifi/signal-ikon med `C.textFaint` farge når `hasMarkedsradar === true`, ellers tom
+3. **Legg til TAGS-kolonnen** — viser kompakte pills for CV (blå, bruker `C.toggleCv`) og Innkjøper (lilla, bruker `C.toggleBuyer`) med V2-styling: 11px tekst, border-radius 3px, tynne pills
+4. **Endre kolonnerekkefølge** til NAVN → SIGNAL → FINN → SELSKAP → STILLING → TAGS → SISTE AKT.
+5. **Oppdater `gridTemplateColumns`** i både header og rader
+6. **Legg tilbake `Wifi` import** fra lucide-react
+7. **Fjern `heat`-sortering** som standard, sett default sort til `signal`
+8. **Oppdater `SortField` type** — fjern `heat`, legg til evt. nye felt
 
-| Tilstand | Bakgrunn | Tekst | Border |
-|----------|----------|-------|--------|
-| **Aktiv** | `rgba(94,106,210,0.08)` | `#5E6AD2` | ingen |
-| **Inaktiv** | `transparent` | `#8C929C` | `#DDE0E7` |
-
-Accent/lilla tone — matcher eksisterende `C.accent`-prikken som brukes for innkjøper-indikatoren.
-
-## 3. Ikke relevant person å kontakte igjen
-
-| Tilstand | Bakgrunn | Tekst | Border |
-|----------|----------|-------|--------|
-| **Aktiv** | `rgba(139,29,32,0.08)` | `#8B1D20` | ingen |
-| **Inaktiv** | `transparent` | `#8C929C` | `#DDE0E7` |
-
-Rød/danger tone — signaliserer tydelig negativ status uten å skrike.
-
-## Implementering
-
-Legg til tokens i `src/theme.ts`:
-
-```ts
-/* Toggle states */
-toggleCv:        { activeBg: "rgba(26,79,160,0.08)",  activeText: "#1A4FA0" },
-toggleBuyer:     { activeBg: "rgba(94,106,210,0.08)",  activeText: "#5E6AD2" },
-toggleIrrelevant:{ activeBg: "rgba(139,29,32,0.08)",   activeText: "#8B1D20" },
-toggleInactive:  { bg: "transparent", text: "#8C929C", border: "#DDE0E7" },
-```
-
-Alle inaktive tilstander bruker samme nøytrale stil (grå tekst + subtil border), mens aktive tilstander differensieres med farge.
-
-Oppdater filter-pills i `DesignLabContacts.tsx` FilterRow for TYPE-raden, og `ContactIndicators` for rad-indikatorer.
+## Visuell stil for TAGS (V2)
+- CV-pill: `background: C.toggleCv.activeBg`, `color: C.toggleCv.activeText`, `fontSize: 11`, `padding: 1px 6px`, `borderRadius: 3`
+- Innkjøper-pill: `background: C.toggleBuyer.activeBg`, `color: C.toggleBuyer.activeText`, samme sizing
+- Vises kun når aktiv (cv_email/call_list er true)
 
