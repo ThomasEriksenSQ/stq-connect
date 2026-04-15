@@ -568,7 +568,7 @@ export default function DesignLabContacts() {
               </ResizablePanel>
               <ResizableHandle
                 withHandle
-                className="bg-transparent hover:bg-[rgba(40,37,29,0.06)] transition-colors data-[resize-handle-active]:bg-[rgba(1,105,111,0.12)]"
+                className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(1,105,111,0.12)]"
               />
               <ResizablePanel defaultSize={65} minSize={40}>
                 <div className="h-full flex flex-col" style={{ background: C.surface }}>
@@ -773,14 +773,15 @@ function NavGroup({ items, navigate }: { items: typeof NAV_MAIN; navigate: (p: s
         <button
           key={item.label}
           onClick={() => navigate(item.href)}
-          className="flex items-center gap-2 w-full rounded-md px-2 py-[6px] transition-colors"
+          className="flex items-center gap-2 w-full px-2 py-[5px] transition-colors"
           style={{
             fontSize: 13, fontWeight: item.active ? 600 : 500,
             color: item.active ? C.text : C.textMuted,
-            background: item.active ? "rgba(40,37,29,0.06)" : "transparent",
+            background: item.active ? "rgba(0,0,0,0.05)" : "transparent",
+            borderRadius: 6,
           }}
           onMouseEnter={(e) => { if (!item.active) e.currentTarget.style.background = C.hoverBg; }}
-          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? "rgba(40,37,29,0.06)" : "transparent"; }}
+          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? "rgba(0,0,0,0.05)" : "transparent"; }}
         >
           <item.icon style={{ width: 15, height: 15, strokeWidth: 1.6 }} />
           {item.label}
@@ -794,8 +795,8 @@ function SidebarBtn({ icon: Icon, label, onClick, muted }: { icon: any; label: s
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-2 w-full rounded-md px-2 py-[6px] transition-colors"
-      style={{ fontSize: 13, fontWeight: 500, color: muted ? C.textGhost : C.textMuted }}
+      className="flex items-center gap-2 w-full px-2 py-[5px] transition-colors"
+      style={{ fontSize: 13, fontWeight: 500, color: muted ? C.textGhost : C.textMuted, borderRadius: 6 }}
       onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
     >
@@ -826,7 +827,7 @@ function FilterRow({ label, options, value, onChange }: {
 }) {
   return (
     <div className="flex items-center gap-2 py-[3px]">
-      <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: C.textMuted, width: 56, flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: C.textMuted, width: 56, flexShrink: 0 }}>{label}</span>
       <div className="flex items-center gap-1 flex-wrap">
         {options.map((opt) => {
           const active = value === opt;
@@ -834,9 +835,10 @@ function FilterRow({ label, options, value, onChange }: {
             <button
               key={opt}
               onClick={() => onChange(opt)}
-              className="inline-flex items-center rounded-full transition-colors"
+              className="inline-flex items-center transition-colors"
               style={{
                 height: 24, paddingInline: 10, fontSize: 12, fontWeight: 500,
+                borderRadius: 6,
                 border: active ? "none" : `1px solid ${C.border}`,
                 background: active ? C.accent : "transparent",
                 color: active ? "#fff" : C.textMuted,
@@ -863,7 +865,7 @@ function ColHeader({ label, field, sort, onSort, className }: {
       onClick={() => onSort(field)}
       className={`flex items-center gap-0.5 transition-colors ${className || ""}`}
       style={{
-        fontSize: 11, fontWeight: active ? 700 : 600, textTransform: "uppercase", letterSpacing: "0.06em",
+        fontSize: 11, fontWeight: active ? 700 : 600, textTransform: "uppercase", letterSpacing: "0.04em",
         color: active ? C.text : C.textMuted,
       }}
     >
