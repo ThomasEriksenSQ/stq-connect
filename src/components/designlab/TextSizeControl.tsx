@@ -28,7 +28,7 @@ export function TextSizeControl({ value, onChange }: Props) {
             key={s}
             onClick={() => onChange(s)}
             style={{
-              height: 24,
+              height: 28,
               minWidth: 28,
               padding: "0 6px",
               fontSize: 11,
