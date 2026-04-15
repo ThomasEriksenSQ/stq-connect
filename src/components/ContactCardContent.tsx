@@ -801,13 +801,13 @@ export function ContactCardContent({
             )}
             {/* 3-dot menu for Design Lab */}
             {defaultHidden && (
-              <DropdownMenu>
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <button className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-secondary transition-colors text-muted-foreground">
                     <MoreHorizontal className="h-4 w-4" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" sideOffset={4}>
                   <DropdownMenuItem onClick={() => {
                     const nameEl = document.querySelector('[data-contact-name-field]') as HTMLElement;
                     nameEl?.click();
@@ -919,7 +919,7 @@ export function ContactCardContent({
             </>
           )}
           {/* Avdeling · Stilling — same line */}
-          {showAvdeling && (
+          {showAvdeling && !(defaultHidden && !(contact as any).department) && (
             <>
               <span className="text-muted-foreground/40">·</span>
               {editable ? (
