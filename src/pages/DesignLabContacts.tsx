@@ -20,6 +20,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ContactCardContent } from "@/components/ContactCardContent";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
 import { C, SIGNAL_COLORS, HEAT_COLORS } from "@/components/designlab/theme";
+import { CommandPalette } from "@/components/designlab/CommandPalette";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { getHeatResult, getTaskStatus, getActivityStatus, type HeatResult } from "@/lib/heatScore";
 
@@ -94,24 +95,25 @@ export default function DesignLabContacts() {
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "heat", dir: "asc" });
   const [selectedId, setSelectedId] = useState<string | null>(searchParams.get("contact"));
   const searchRef = useRef<HTMLInputElement>(null);
+  const [cmdOpen, setCmdOpen] = useState(false);
 
   const initials = user?.email ? user.email.split("@")[0].slice(0, 2).toUpperCase() : "??";
 
-  // ⌘K shortcut
+  // ⌘K shortcut → open command palette
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        searchRef.current?.focus();
+        setCmdOpen(true);
       }
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !cmdOpen) {
         setSelectedId(null);
         searchRef.current?.blur();
       }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, []);
+  }, [cmdOpen]);
 
   // sync selectedId to URL
   useEffect(() => {
