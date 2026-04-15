@@ -558,7 +558,6 @@ export default function DesignLabContacts() {
                           <span className={`chip chip--action${c.cvEmail ? " is-active" : ""}`}>CV</span>
                           <span className={`chip chip--action${c.callList ? " is-active" : ""}`}>Innkjøper</span>
                         </div>
-                        </div>
                         <div className="flex justify-end">
                           <span style={{ fontSize: 12, color: C.textFaint }}>{c.daysSince < 999 ? relTime(c.daysSince) : ""}</span>
                         </div>
