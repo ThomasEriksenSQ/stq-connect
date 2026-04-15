@@ -1,72 +1,53 @@
 
 
-# Plan: ⌘K Command Palette for Design Lab
+# Plan: Design Lab Selskaper-side
 
-## Summary
-Create a self-contained command palette component at `src/components/designlab/CommandPalette.tsx` and mount it inside `DesignLabContacts.tsx`. The palette intercepts ⌘K (replacing current focus-search behavior) and provides 6 sections of searchable actions.
+## Sammendrag
+Opprett en ny `/design-lab/selskaper`-side som gjenspeiler funksjonaliteten fra `/selskaper`, men reskinnet i Design Lab V8 Linear-stilen. Ingen endringer på eksisterende `/selskaper`.
 
-## Technical Design
+## Ny fil: `src/pages/DesignLabCompanies.tsx`
 
-### New file: `src/components/designlab/CommandPalette.tsx`
+En frittstående side (~500 linjer) som følger samme arkitektur som `DesignLabContacts.tsx`:
+- Sidebar (220px) med navigasjon — gjenbruker samme `NAV_MAIN`/`NAV_STACQ`-mønster, med "Selskaper" markert som aktiv
+- Header bar (40px) med tittel, antall, søkefelt og "+ Nytt selskap"-knapp
+- Filter bar med EIER og TYPE pill-filtre (samme chip-mønster som kontakter)
+- Tabell med sorterbare kolonner: Selskap, Type, Signal, Sted, Siste akt., Oppfølginger
+- All styling via inline styles med `C`-tokens fra `theme.ts`
 
-A single React component (~400 lines) using portal/fixed overlay pattern. No external dependencies beyond existing React, lucide-react, react-router-dom, and the Design Lab theme.
+**Data:** Henter selskaper med kontakter, aktiviteter og oppgaver — samme query-mønster som `Companies.tsx` men med `crmQueryKeys`. Beregner `getEffectiveSignal` per selskap og viser signal som en prikk + tekst.
 
-**Props interface:**
+**Interaksjon:**
+- Klikk på rad → `navigate("/selskaper/{id}")` (bruker eksisterende detaljside)
+- Type-dropdown inline i tabellen med optimistisk oppdatering
+- Sortering: klikk kolonneheader (navn, type, sted, siste aktivitet)
+- Søk filtrerer på navn, org.nr, by
+
+**Visuell stil (V8):**
+- 34px radhøyde, 13px tekst, `C.hoverBg` hover
+- Signal-prikk (7px) + 12px tekst med `SIGNAL_COLORS` fra theme
+- Type som plain tekst med chevron-dropdown (ikke badge)
+- Seksjonstitler 11px/500/`C.textFaint`
+
+## Endring: `src/App.tsx`
+
+Legg til lazy import og route:
 ```ts
-interface CommandPaletteProps {
-  open: boolean;
-  onClose: () => void;
-  contacts: Array<{ id, firstName, lastName, company, companyId, email, phone, signal, daysSince }>;
-  companies: Array<{ id, name, contactCount: number }>;
-  selectedContact: { id, firstName, lastName, email, signal } | null;
-  onSelectContact: (id: string) => void;
-  onNavigate: (path: string) => void;
-}
+const DesignLabCompanies = lazy(() => import("./pages/DesignLabCompanies"));
+```
+Route under `/design-lab`:
+```tsx
+<Route path="selskaper" element={<Suspense fallback={<LazyFallback />}><DesignLabCompanies /></Suspense>} />
 ```
 
-**Architecture:**
-- Fixed overlay (rgba(0,0,0,0.15), no blur) + centered 560px modal
-- Uncontrolled internal search state, filters all sections simultaneously
-- Keyboard nav via `activeIndex` tracking across flattened visible items
-- All styling inline using `C` tokens from theme.ts — zero Tailwind classes that could leak
+## Endring: `src/pages/DesignLabContacts.tsx`
 
-**6 Sections (rendered conditionally):**
+Oppdater `NAV_MAIN` for å peke "Selskaper" til `/design-lab/selskaper` i stedet for `/selskaper`:
+```ts
+{ label: "Selskaper", icon: Building2, href: "/design-lab/selskaper" },
+```
 
-1. **Handlinger for [navn]** — Only when `selectedContact` is set. Items: Logg samtale, Logg møte, Ny oppfølging, Ny forespørsel, Kopier e-post, Endre signal. Actions dispatch to existing ContactCardContent action handlers by programmatically clicking the relevant buttons or using `navigator.clipboard` for email copy.
-
-2. **Varsler** — Skipped in v1. No standalone warning logic exists in design-lab outside ContactCardContent. Will be added in v2.
-
-3. **Kontakter** — Fuzzy search against `contacts` prop, top 5. Click → `onSelectContact(id)`.
-
-4. **Selskaper** — Derived from contacts' unique companies with count. Top 5. Click → filter contact list by company (set search to company name).
-
-5. **Opprett** — Static 4 items. For now: Ny kontakt, Nytt selskap, Ny forespørsel, Ny oppfølging. Actions use `toast.info("Kommer snart")` placeholder since Design Lab doesn't have creation dialogs yet.
-
-6. **Naviger til** — Static 4 items mapping to routes: `/design-lab/kontakter`, `/design-lab/foresporsler`, `/design-lab/stacq-prisen`, `/`.
-
-**Empty state:** "Ingen resultater for «[query]»" when all sections are empty after filtering.
-
-### Modified file: `src/pages/DesignLabContacts.tsx`
-
-Minimal changes:
-1. Import `CommandPalette`
-2. Add `const [cmdOpen, setCmdOpen] = useState(false)` state
-3. Update existing ⌘K handler (line 101-114): instead of focusing search input, toggle `setCmdOpen(true)`
-4. Derive `companiesList` from `contacts` (unique companies with contact count)
-5. Render `<CommandPalette>` at end of component with all props wired
-6. Sidebar ⌘K button (line 380-391): `onClick={() => setCmdOpen(true)}` instead of focusing search
-
-### Visual specs (all from the user's spec)
-- 560px wide, top 20vh, 8px radius, `C.shadowLg` shadow
-- 44px input, 14px font, no border, bottom divider `C.borderLight`
-- 34px result rows, 5px radius, `C.hoverBg` on hover/keyboard-active
-- Section headers: 11px/500, `C.textFaint`, 10px 16px 4px padding
-- Icons: 16px lucide, `C.textFaint`
-- Meta text: 12px, `C.textFaint`, right-aligned
-
-### Files changed
-- **New:** `src/components/designlab/CommandPalette.tsx`
-- **Modified:** `src/pages/DesignLabContacts.tsx` (import + state + handler changes)
-
-No other files affected.
+## Filer som endres
+- **Ny:** `src/pages/DesignLabCompanies.tsx`
+- **Endret:** `src/App.tsx` (import + route)
+- **Endret:** `src/pages/DesignLabContacts.tsx` (sidebar link)
 
