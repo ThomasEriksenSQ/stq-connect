@@ -503,7 +503,7 @@ export default function DesignLabContacts() {
                 <div
                   className="grid items-center sticky top-0 z-10"
                   style={{
-                    gridTemplateColumns: "minmax(140px,1fr) 120px 36px minmax(120px,1fr) minmax(100px,1fr) 100px 80px",
+                    gridTemplateColumns: "minmax(140px,1fr) 120px 36px minmax(120px,1fr) minmax(100px,1fr) 100px 140px",
                     height: 32, borderBottom: `1px solid ${C.border}`,
                     background: C.surfaceAlt, paddingLeft: 16, paddingRight: 16,
                   }}
@@ -514,7 +514,7 @@ export default function DesignLabContacts() {
                   <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
                   <ColHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />
                   <span className="flex items-center" style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.01em", color: C.textMuted }}>Tags</span>
-                  <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
+                  <ColHeader label="Varme" field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
                 </div>
                 {isLoading ? (
                   <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster kontakter…</div>
@@ -529,9 +529,10 @@ export default function DesignLabContacts() {
                         onClick={() => setSelectedId(isActive ? null : c.id)}
                         className="grid items-center cursor-pointer group"
                         style={{
-                          gridTemplateColumns: "minmax(140px,1fr) 120px 36px minmax(120px,1fr) minmax(100px,1fr) 100px 80px",
+                          gridTemplateColumns: "minmax(140px,1fr) 120px 36px minmax(120px,1fr) minmax(100px,1fr) 100px 140px",
                           minHeight: 38, paddingLeft: 16, paddingRight: 16,
                           paddingTop: 4, paddingBottom: 4,
+                          borderLeft: `3px solid ${c.heatResult.temperature === "sovende" ? "transparent" : HEAT_COLORS[c.heatResult.temperature].color}`,
                           borderBottom: `1px solid ${C.borderLight}`,
                           background: isActive ? C.activeBg : undefined,
                           transition: "background 50ms",
@@ -558,8 +559,9 @@ export default function DesignLabContacts() {
                           <span className={`chip chip--action${c.cvEmail ? " is-active" : ""}`}>CV</span>
                           <span className={`chip chip--action${c.callList ? " is-active" : ""}`}>Innkjøper</span>
                         </div>
-                        <div className="flex justify-end">
-                          <span style={{ fontSize: 12, color: C.textFaint }}>{c.daysSince < 999 ? relTime(c.daysSince) : ""}</span>
+                        <div className="flex items-center justify-end gap-2">
+                          <HeatBadge heat={c.heatResult} daysSince={c.daysSince} />
+                          <span style={{ fontSize: 11, color: C.textFaint }}>{c.daysSince < 999 ? relTime(c.daysSince) : ""}</span>
                         </div>
                       </div>
                     );
