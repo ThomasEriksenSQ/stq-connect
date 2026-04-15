@@ -1,72 +1,47 @@
 
 
-# Plan: Oppdater til Linear Design System v5
+# Plan: Unified Shell + White Content Plane
 
-## Oversikt
-Oppdater `theme.ts` og alle tre Design Lab-sider til v5-spesifikasjonen. Endringene er primært fargeverdier, radii, og komponent-geometri.
+## Problem
+Sidebar, canvas, and content are all slightly different grays creating a "triple-gray" effect. Should be: unified shell + white working surfaces.
 
-## 1. theme.ts — oppdaterte fargeverdier
+## Token changes in `theme.ts`
 
-| Token | Nåværende | Ny (v5) |
-|-------|-----------|---------|
-| bg | #F7F8FA | #F5F6F8 |
-| sidebarBg (bg-surface) | #F4F5F8 | #FFFFFF |
-| surface (bg-app) | #FFFFFF | #FAFBFC |
-| surfaceAlt (bg-elevated) | #EDEEF2 | #F4F5F8 |
-| overlay | #E6E8EE | #EDEEF2 |
-| hoverBg | #F2F4F8 | #F0F2F6 |
-| activeBg | #ECEFF5 | #E8ECF5 |
-| + selectedStrong | — | #E2E7F5 |
-| text | #222326 | #1A1C1F |
-| textMuted | #5E6470 | #5C636E |
-| textFaint | #8B92A1 | #8C929C |
-| textGhost | #C1C7D0 | #BEC4CC |
-| border | #E6E9EF | #DDE0E7 |
-| borderLight | #EDF0F5 | #E8EAEE |
-| borderStrong | #D4D9E3 | #C8CDD6 |
-| success | #30A46C | #1E7A4A |
-| warning | #DB8400 | #8F5A0A |
-| danger | #CE2C31 | #A02328 |
-| info | #006ADC | #1A56A8 |
-| status bgs | 12% opacity | 9% opacity |
-| shadow | 0.07 | 0.06 |
-| shadowMd | multi | 0 4px 16px rgba(0,0,0,0.09) |
-| shadowLg | 0.12 | 0 8px 40px rgba(0,0,0,0.12) |
+| Token | Current | New | Role |
+|-------|---------|-----|------|
+| `bg` (shell) | #F5F6F8 | **#F7F8FA** | Outermost shell |
+| `sidebarBg` | #F7F8FA | **#F7F8FA** | Same as shell (disappears) |
+| `surface` (bg-app) | #FAFBFC | **#FAFBFC** | Main canvas (keep) |
+| `surfaceAlt` → rename conceptually | #F4F5F8 | **#F4F5F8** | Elevated controls (keep) |
 
-Signal- og heat-farger oppdateres til å bruke de nye status-fargene og 9% opacity.
+Key: `bg` moves from #F5F6F8 → #F7F8FA so it matches `sidebarBg` exactly. Sidebar border-right stays `1px solid #E8EAEE`.
 
-## 2. Komponent-geometri (alle tre sider)
+## Content surfaces → pure white
 
-| Element | Nå | Ny (v5) |
-|---------|----|----|
-| Nav item height | py-[5px] ~30px | eksplisitt 28px |
-| Nav inactive weight | 500 | 400 |
-| Sidebar section labels | 600 uppercase | 500, **fjern uppercase** |
-| Border-radius xs | 4px | 3px |
-| Border-radius sm (buttons/inputs) | 6px | 5px |
-| Input height | 34px | 32px |
-| Input padding | 0 10px | 0 9px |
-| Filter chip height | 24px | 24px (ok) |
-| Filter chip radius | 4px | 3px |
-| Table row height | 36px | 34-36px |
-| ColHeader active weight | 700 | 600 |
-| Badge/chip radius | rounded (4px) | 3px |
-| Badge padding | 1px 7px → 2px 6px |
-| SidebarBtn radius | 6px | 3px |
-| Detail panel section header | — | 11px/600/textFaint |
+All content areas that currently use `C.surface` (#FAFBFC) change to **#FFFFFF**:
+- Table body area
+- Detail/right panel
+- Consultant availability cards
 
-## 3. Filer som endres
+New token value:
+```
+surface: "#FFFFFF"   // was #FAFBFC — now pure white working surface
+```
 
-| Fil | Endring |
-|-----|---------|
-| `src/components/designlab/theme.ts` | Alle fargeverdier, signal/heat maps |
-| `src/components/designlab/TextSizeControl.tsx` | Radius 4→3px |
-| `src/pages/DesignLabContacts.tsx` | Radii, weights, heights, input sizing |
-| `src/pages/DesignLabForesporsler.tsx` | Samme justeringer |
-| `src/pages/DesignLabStacqPrisen.tsx` | Samme justeringer |
+This creates the "lift" effect: white content on a #F7F8FA shell.
 
-## 4. Hva endres IKKE
-- Funksjonalitet, data, routing, keyboard shortcuts
-- Standard CRM-sider
-- Dark mode (kun light mode)
+## Table headers
+
+Table column headers currently use `C.bg` for background. They should use `C.surfaceAlt` (#F4F5F8) to sit between shell and white content.
+
+## Summary of file changes
+
+| File | Change |
+|------|--------|
+| `theme.ts` | `bg`: #F5F6F8 → #F7F8FA, `surface`: #FAFBFC → #FFFFFF |
+| `DesignLabContacts.tsx` | Table header bg: `C.bg` → `C.surfaceAlt` |
+| `DesignLabForesporsler.tsx` | Same table header fix |
+| `DesignLabStacqPrisen.tsx` | Same table header fix |
+
+No layout, spacing, or functional changes.
 
