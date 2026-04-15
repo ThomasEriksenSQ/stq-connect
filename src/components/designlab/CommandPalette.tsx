@@ -1,11 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
-import {
-  Search, Phone, FileText, Clock, Briefcase, Copy, Signal,
-  Users, Building2, Plus, ArrowRight,
-} from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { Search, Users, Building2 } from "lucide-react";
+
 import { C } from "@/components/designlab/theme";
 
 /* ═══════════════════════════════════════════════════════════
@@ -95,32 +91,7 @@ export function CommandPalette({
     const q = query.toLowerCase().trim();
     const result: PaletteItem[] = [];
 
-    // 1. Handlinger for kontakt
-    if (selectedContact) {
-      const name = `${selectedContact.firstName} ${selectedContact.lastName}`;
-      const sectionLabel = `Handlinger for ${name}`;
-      const actions: PaletteItem[] = [
-        { id: "act-call", label: `Logg telefonsamtale med ${name}`, icon: Phone, section: sectionLabel, action: () => { onClose(); toast.info("Åpne kontakten og bruk 'Logg samtale'"); } },
-        { id: "act-meeting", label: `Logg møte med ${name}`, icon: FileText, section: sectionLabel, action: () => { onClose(); toast.info("Åpne kontakten og bruk 'Logg møtereferat'"); } },
-        { id: "act-followup", label: `Ny oppfølging for ${name}`, icon: Clock, section: sectionLabel, action: () => { onClose(); toast.info("Åpne kontakten og bruk 'Ny oppfølging'"); } },
-        { id: "act-request", label: `Ny forespørsel for ${name}`, icon: Briefcase, section: sectionLabel, action: () => { onClose(); toast.info("Åpne kontakten og bruk 'Ny forespørsel'"); } },
-        { id: "act-email", label: "Kopier e-post", meta: selectedContact.email || "—", icon: Copy, section: sectionLabel, action: () => {
-          if (selectedContact.email) { navigator.clipboard.writeText(selectedContact.email); toast.success("E-post kopiert"); }
-          else { toast.info("Ingen e-post registrert"); }
-          onClose();
-        }},
-        { id: "act-signal", label: `Endre signal for ${name}`, icon: Signal, section: sectionLabel, action: () => { onClose(); toast.info("Bruk signal-dropdown i kontaktkortet"); } },
-      ];
-      if (q) {
-        result.push(...actions.filter((a) => a.label.toLowerCase().includes(q)));
-      } else {
-        result.push(...actions);
-      }
-    }
-
-    // 2. Varsler — skipped in v1
-
-    // 3. Kontakter
+    // Kontakter
     if (contacts.length > 0) {
       const matched = q
         ? contacts.filter((c) =>
@@ -142,7 +113,7 @@ export function CommandPalette({
       });
     }
 
-    // 4. Selskaper
+    // Selskaper
     if (companies.length > 0) {
       const matched = q
         ? companies.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 5)
@@ -160,34 +131,8 @@ export function CommandPalette({
       });
     }
 
-    // 5. Opprett
-    const createItems: PaletteItem[] = [
-      { id: "create-contact", label: "Ny kontakt", icon: Plus, section: "Opprett", action: () => { onClose(); toast.info("Kommer snart"); } },
-      { id: "create-company", label: "Nytt selskap", icon: Plus, section: "Opprett", action: () => { onClose(); toast.info("Kommer snart"); } },
-      { id: "create-request", label: "Ny forespørsel", icon: Plus, section: "Opprett", action: () => { onClose(); toast.info("Kommer snart"); } },
-      { id: "create-followup", label: "Ny oppfølging", icon: Plus, section: "Opprett", action: () => { onClose(); toast.info("Kommer snart"); } },
-    ];
-    if (q) {
-      result.push(...createItems.filter((i) => i.label.toLowerCase().includes(q)));
-    } else {
-      result.push(...createItems);
-    }
-
-    // 6. Naviger til
-    const navItems: PaletteItem[] = [
-      { id: "nav-contacts", label: "Kontakter", icon: ArrowRight, section: "Naviger til", action: () => { navigate("/design-lab/kontakter"); onClose(); } },
-      { id: "nav-requests", label: "Forespørsler", icon: ArrowRight, section: "Naviger til", action: () => { navigate("/design-lab/foresporsler"); onClose(); } },
-      { id: "nav-price", label: "STACQ Prisen", icon: ArrowRight, section: "Naviger til", action: () => { navigate("/design-lab/stacq-prisen"); onClose(); } },
-      { id: "nav-agent", label: "Salgsagent", icon: ArrowRight, section: "Naviger til", action: () => { navigate("/"); onClose(); } },
-    ];
-    if (q) {
-      result.push(...navItems.filter((i) => i.label.toLowerCase().includes(q)));
-    } else {
-      result.push(...navItems);
-    }
-
     return result;
-  }, [query, contacts, companies, selectedContact, onSelectContact, onFilterByCompany, onClose, navigate]);
+  }, [query, contacts, companies, onSelectContact, onFilterByCompany, onClose]);
 
   // Clamp activeIdx
   useEffect(() => {
