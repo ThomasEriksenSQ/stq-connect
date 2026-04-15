@@ -288,9 +288,10 @@ export default function DesignLabContacts() {
         daysSince, lastActivitySubject: lastAct?.subject || "",
         activities: acts, tasks,
         heatResult,
+        hasMarkedsradar,
       };
     });
-  }, [rawContacts, activitiesMap, tasksMap, foresporslerMap]);
+  }, [rawContacts, activitiesMap, tasksMap, foresporslerMap, techProfileMap]);
 
   const toggleSort = useCallback((field: SortField) => {
     setSort((p) => p.field === field ? { field, dir: p.dir === "asc" ? "desc" : "asc" } : { field, dir: "asc" });
