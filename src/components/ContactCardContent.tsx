@@ -1026,12 +1026,7 @@ export function ContactCardContent({
           {/* Ikke aktuell å kontakte */}
           <button
             onClick={() => updateMutation.mutate({ ikke_aktuell_kontakt: !(contact as any).ikke_aktuell_kontakt })}
-            className={cn(
-              "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
-              (contact as any).ikke_aktuell_kontakt
-                ? "bg-destructive/10 text-destructive border-destructive/30"
-                : "bg-background text-muted-foreground border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30",
-            )}
+            className={`chip chip--action is-muted`}
           >
             {(contact as any).ikke_aktuell_kontakt
               ? "✕ Ikke relevant person å kontakte igjen"
