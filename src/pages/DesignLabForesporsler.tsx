@@ -611,7 +611,7 @@ function ColHeader({ label, field, sort, onSort, className }: {
       onClick={() => onSort(field)}
       className={`flex items-center gap-0.5 transition-colors ${className || ""}`}
       style={{
-        fontSize: 11, fontWeight: active ? 700 : 600, textTransform: "uppercase", letterSpacing: "0.04em",
+        fontSize: 11, fontWeight: active ? 600 : 500, textTransform: "uppercase", letterSpacing: "0.04em",
         color: active ? C.text : C.textMuted,
       }}
     >
