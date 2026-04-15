@@ -9,8 +9,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import {
   ArrowUpDown, TrendingUp, ChevronUp, ChevronDown,
-  Users, Building2, LayoutDashboard, Briefcase, Clock,
-  Settings, LogOut, Radar, UserPlus, Globe, Search,
+  Search,
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
@@ -23,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { C } from "@/components/designlab/theme";
+import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 
 /* Colors imported from @/components/designlab/theme */
 
