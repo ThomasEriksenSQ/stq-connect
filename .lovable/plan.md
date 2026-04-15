@@ -1,30 +1,49 @@
 
 
-# Plan: Visuell paritet mellom Design Lab Selskaper og Kontakter
+# Plan: Collapsible sidebar for Design Lab
 
-## Problemet
-Selskapssiden har annen bakgrunn, spacing og struktur på detaljpanelet enn kontaktsiden. Tabellen bruker betinget rendering av `ResizablePanelGroup` i stedet for å alltid ha den montert.
+## Summary
+Extract the duplicated sidebar into a shared component with a collapse/expand toggle. When collapsed, the sidebar shrinks to ~48px showing only icons. A small toggle button (chevron) at the bottom triggers the transition. State persists via `usePersistentState`.
 
-## Endringer i `src/pages/DesignLabCompanies.tsx`
+## New file: `src/components/designlab/DesignLabSidebar.tsx`
 
-### 1. Alltid monter ResizablePanelGroup (som kontaktsiden)
-Fjern den betingede `selectedId ? <ResizablePanelGroup> : <div>` strukturen. Erstatt med en alltid-montert `ResizablePanelGroup` — identisk til kontaktsiden (linje 515-666). Tabellen er alltid i Panel 1, detaljpanel i Panel 2, spacer i Panel 3.
+A shared sidebar component used by all 4 Design Lab pages. Props: `navigate`, `signOut`, `user`, `activePath`.
 
-### 2. Detaljpanel-styling lik kontaktkortet
-Endre Panel 2 innholdet til å matche kontaktsiden:
-- `background: C.panel` (hvit) i stedet for `C.bg`
-- `borderLeft: 1px solid ${C.borderLight}` (ikke `C.border`)
-- Innhold wrappet i `<div className="flex-1 overflow-y-auto px-6 py-5 dl-v8-theme">`
-- Lukkeknapp: `className="rounded p-1 hover:bg-black/5 transition-colors"` (som kontakter)
+**Collapsed state:**
+- Width animates from 220px to 48px via CSS transition (`transition: width 200ms ease`)
+- Only icons visible (no labels, no group headers, no email)
+- STACQ logo shows just the "S" square
+- Nav items show only icons, centered
+- Footer: only Settings and LogOut icons
+- A small `ChevronsLeft`/`ChevronsRight` toggle button at the bottom of the sidebar
 
-### 3. ResizableHandle-styling
-Legg til samme klasser som kontaktsiden:
+**Expanded state:**
+- Current 220px layout, identical to what exists now
+- Toggle button shows `ChevronsLeft`
+
+**Persistence:** `usePersistentState('dl-sidebar-collapsed', false)`
+
+**Active item detection:** Derived from `activePath` prop instead of hardcoded `active: true` on nav items. Compare `item.href` with the current path.
+
+## Changes to each Design Lab page
+
+Replace the inline `<aside>...</aside>` block with:
+```tsx
+<DesignLabSidebar navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/kontakter" />
 ```
-className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
-```
 
-### 4. Panel-størrelser
-Beholdes som nå: defaultSize={35/65/0}, minSize={20/30/0}, maxSize={60/–/40}.
+Files affected:
+- `src/pages/DesignLabContacts.tsx`
+- `src/pages/DesignLabCompanies.tsx`
+- `src/pages/DesignLabForesporsler.tsx`
+- `src/pages/DesignLabStacqPrisen.tsx`
 
-Kun `src/pages/DesignLabCompanies.tsx` endres.
+Also remove the duplicated `NavGroup`, `SidebarBtn` helper functions from each page (they move into the shared component), and remove the `NAV_MAIN`/`NAV_STACQ` constants (also moved).
+
+## Design details
+
+- Toggle button: 28px height, positioned at sidebar footer area, subtle `C.textFaint` color, `hover:bg C.hoverBg`
+- Transition: `width` property with `200ms ease`, `overflow: hidden` to clip labels during animation
+- Collapsed nav items: `justify-center`, tooltip on hover showing the label (using `title` attribute for simplicity)
+- No layout shift in main content — main area uses `flex-1 min-w-0` which naturally fills remaining space
 
