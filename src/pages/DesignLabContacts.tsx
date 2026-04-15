@@ -348,6 +348,19 @@ export default function DesignLabContacts() {
 
   const sel = selectedId ? contacts.find((c) => c.id === selectedId) ?? null : null;
 
+  // Derived companies for command palette
+  const companiesList = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; count: number }>();
+    contacts.forEach((c) => {
+      if (c.companyId && c.company) {
+        const existing = map.get(c.companyId);
+        if (existing) existing.count++;
+        else map.set(c.companyId, { id: c.companyId, name: c.company, count: 1 });
+      }
+    });
+    return Array.from(map.values()).map((c) => ({ id: c.id, name: c.name, contactCount: c.count }));
+  }, [contacts]);
+
   // Keyboard nav
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
