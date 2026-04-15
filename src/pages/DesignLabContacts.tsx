@@ -1,23 +1,32 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import {
   Search,
   ChevronDown,
   ChevronUp,
-  Users,
   X,
-  ArrowUpRight,
   Wifi,
 } from "lucide-react";
 import { differenceInDays, format } from "date-fns";
 import { nb } from "date-fns/locale";
-import { getEffectiveSignal, normalizeCategoryLabel } from "@/lib/categoryUtils";
+import { getEffectiveSignal, normalizeCategoryLabel, upsertTaskSignalDescription } from "@/lib/categoryUtils";
 import { toast } from "sonner";
-import { getConsultantAvailabilityMeta, sortHuntConsultants } from "@/lib/contactHunt";
+import {
+  getConsultantAvailabilityMeta,
+  hasConsultantAvailability,
+  isActiveRequest,
+  sortHuntConsultants,
+} from "@/lib/contactHunt";
 import { useAuth } from "@/hooks/useAuth";
 import { ContactCardContent } from "@/components/ContactCardContent";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
@@ -26,6 +35,8 @@ import { CommandPalette } from "@/components/designlab/CommandPalette";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { getHeatResult, getTaskStatus, getActivityStatus, type HeatResult } from "@/lib/heatScore";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
+import { CONTACT_CV_EMAIL_REQUIRED_MESSAGE, contactHasEmail } from "@/lib/contactCvEligibility";
+import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/queryKeys";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
@@ -46,8 +57,17 @@ const OWNERS = ["Alle", "Jon Richard Nygaard", "Thomas Eriksen", "Uten eier"];
 const TYPES = ["Alle", "Innkjøper", "CV-Epost", "Ikke relevant kontakt"] as const;
 type TypeFilter = (typeof TYPES)[number];
 
-type SortField = "name" | "signal" | "company" | "title" | "owner" | "last_activity";
+type SortField = "name" | "signal" | "company" | "title" | "owner" | "last_activity" | "priority";
 type SortDir = "asc" | "desc";
+
+const DL_QUERY_KEYS = {
+  contacts: ["dl-contacts-v9"] as const,
+  activities: ["dl-activities-v9"] as const,
+  tasks: ["dl-tasks-v9"] as const,
+  foresporsler: ["dl-foresporsler-v9"] as const,
+  techProfiles: ["dl-tech-profiles-v9"] as const,
+  consultants: ["dl-available-consultants-v9"] as const,
+} as const;
 
 /* Colors, signal colors, and heat colors imported from @/components/designlab/theme */
 
@@ -66,6 +86,25 @@ function mapToSignal(raw: string): Signal {
   return "Ukjent om behov";
 }
 
+function compareByPriority(
+  left: { heatResult: HeatResult },
+  right: { heatResult: HeatResult },
+  dir: SortDir,
+) {
+  const diff =
+    left.heatResult.tier !== right.heatResult.tier
+      ? left.heatResult.tier - right.heatResult.tier
+      : right.heatResult.score - left.heatResult.score;
+  return dir === "desc" ? diff : -diff;
+}
+
+function getHeatBarColor(heat: HeatResult) {
+  if (heat.temperature === "hett") return C.danger;
+  if (heat.temperature === "lovende") return "#FB923C";
+  if (heat.temperature === "mulig") return "#FBBF24";
+  return "transparent";
+}
+
 
 
 /* ═══════════════════════════════════════════════════════════
@@ -76,15 +115,50 @@ export default function DesignLabContacts() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { signOut, user } = useAuth();
+  const queryClient = useQueryClient();
   const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [search, setSearch] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("Alle");
   const [signalFilter, setSignalFilter] = useState("Alle");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
-  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "signal", dir: "asc" });
+  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "priority", dir: "desc" });
   const [selectedId, setSelectedId] = useState<string | null>(searchParams.get("contact"));
   const searchRef = useRef<HTMLInputElement>(null);
   const [cmdOpen, setCmdOpen] = useState(false);
+  const pendingToggles = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  const invalidateDesignLabQueries = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: DL_QUERY_KEYS.contacts }),
+      queryClient.invalidateQueries({ queryKey: DL_QUERY_KEYS.activities }),
+      queryClient.invalidateQueries({ queryKey: DL_QUERY_KEYS.tasks }),
+      queryClient.invalidateQueries({ queryKey: DL_QUERY_KEYS.foresporsler }),
+      queryClient.invalidateQueries({ queryKey: DL_QUERY_KEYS.techProfiles }),
+      queryClient.invalidateQueries({ queryKey: DL_QUERY_KEYS.consultants }),
+    ]);
+  }, [queryClient]);
+
+  const updateCachedContactFields = useCallback(
+    (contactId: string, updates: Record<string, any>) => {
+      queryClient.setQueryData(DL_QUERY_KEYS.contacts, (old: any) =>
+        Array.isArray(old) ? old.map((contact) => (contact.id === contactId ? { ...contact, ...updates } : contact)) : old,
+      );
+      queryClient.setQueryData(crmQueryKeys.contacts.detail(contactId), (old: any) =>
+        old ? { ...old, ...updates } : old,
+      );
+      queryClient.setQueryData(crmQueryKeys.contacts.all(), (old: any) =>
+        old?.rows
+          ? {
+              ...old,
+              rows: old.rows.map((contact: any) =>
+                contact.id === contactId ? { ...contact, ...updates } : contact,
+              ),
+            }
+          : old,
+      );
+    },
+    [queryClient],
+  );
 
 
   // ⌘K shortcut → open command palette
@@ -110,16 +184,16 @@ export default function DesignLabContacts() {
     } else {
       setSearchParams({}, { replace: true });
     }
-  }, [selectedId]);
+  }, [selectedId, setSearchParams]);
 
   // ── Queries ──
   const { data: rawContacts = [], isLoading } = useQuery({
-    queryKey: ["dl-contacts-v8"],
+    queryKey: DL_QUERY_KEYS.contacts,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
         .select(
-          "id, first_name, last_name, title, email, phone, cv_email, call_list, ikke_aktuell_kontakt, teknologier, company_id, location, linkedin, department, notes, locations, companies(id, name, ikke_relevant), profiles:owner_id(id, full_name)",
+          "id, first_name, last_name, title, email, phone, cv_email, call_list, ikke_aktuell_kontakt, teknologier, company_id, location, linkedin, department, notes, locations, mailchimp_status, companies(id, name, ikke_relevant), profiles:owner_id(id, full_name)",
         )
         .order("updated_at", { ascending: false })
         .limit(500);
@@ -131,7 +205,7 @@ export default function DesignLabContacts() {
   const contactIds = useMemo(() => rawContacts.map((c) => c.id), [rawContacts]);
 
   const { data: activitiesMap = {} } = useQuery({
-    queryKey: ["dl-activities-v8", contactIds.length],
+    queryKey: [...DL_QUERY_KEYS.activities, contactIds.length],
     queryFn: async () => {
       if (!contactIds.length) return {};
       const { data, error } = await supabase
@@ -152,15 +226,16 @@ export default function DesignLabContacts() {
   });
 
   const { data: tasksMap = {} } = useQuery({
-    queryKey: ["dl-tasks-v8", contactIds.length],
+    queryKey: [...DL_QUERY_KEYS.tasks, contactIds.length],
     queryFn: async () => {
       if (!contactIds.length) return {};
       const { data, error } = await supabase
         .from("tasks")
         .select(
-          "id, contact_id, title, description, due_date, status, priority, created_at, assigned_to, profiles:assigned_to(full_name), companies:company_id(name)",
+          "id, contact_id, title, description, due_date, status, priority, created_at, updated_at, assigned_to, profiles:assigned_to(full_name), companies:company_id(name)",
         )
         .in("contact_id", contactIds)
+        .neq("status", "done")
         .order("due_date", { ascending: true });
       if (error) throw error;
       const map: Record<string, typeof data> = {};
@@ -174,28 +249,6 @@ export default function DesignLabContacts() {
     enabled: contactIds.length > 0,
   });
 
-  // ── Forespørsler for heat score ──
-  const { data: foresporslerMap = {} } = useQuery({
-    queryKey: ["dl-foresporsler-v8", contactIds.length],
-    queryFn: async () => {
-      if (!contactIds.length) return {};
-      const { data, error } = await supabase
-        .from("foresporsler")
-        .select("id, kontakt_id, status")
-        .in("kontakt_id", contactIds);
-      if (error) throw error;
-      const map: Record<string, typeof data> = {};
-      data.forEach((f) => {
-        if (f.kontakt_id) {
-          (map[f.kontakt_id] ??= []).push(f);
-        }
-      });
-      return map;
-    },
-    enabled: contactIds.length > 0,
-  });
-
-  // ── Company tech profiles for FINN column ──
   const companyIds = useMemo(() => {
     const ids = new Set<string>();
     rawContacts.forEach((c) => {
@@ -204,8 +257,31 @@ export default function DesignLabContacts() {
     return Array.from(ids);
   }, [rawContacts]);
 
+  // ── Forespørsler for heat score ──
+  const { data: foresporslerMap = {} } = useQuery({
+    queryKey: [...DL_QUERY_KEYS.foresporsler, companyIds.length],
+    queryFn: async () => {
+      if (!companyIds.length) return {};
+      const { data, error } = await supabase
+        .from("foresporsler")
+        .select("id, selskap_id, mottatt_dato, status")
+        .in("selskap_id", companyIds);
+      if (error) throw error;
+      const map: Record<string, typeof data> = {};
+      data.forEach((f) => {
+        if (f.selskap_id) {
+          (map[f.selskap_id] ??= []).push(f);
+        }
+      });
+      return map;
+    },
+    enabled: companyIds.length > 0,
+  });
+
+  // ── Company tech profiles for FINN column ──
+
   const { data: techProfileMap = {} } = useQuery({
-    queryKey: ["dl-tech-profiles-v8", companyIds.length],
+    queryKey: [...DL_QUERY_KEYS.techProfiles, companyIds.length],
     queryFn: async () => {
       if (!companyIds.length) return {};
       const { data, error } = await supabase
@@ -224,48 +300,54 @@ export default function DesignLabContacts() {
 
   // ── Consultants available ──
   const { data: availableConsultants = [] } = useQuery({
-    queryKey: ["dl-available-consultants"],
+    queryKey: DL_QUERY_KEYS.consultants,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("stacq_ansatte")
-        .select("id, navn, tilgjengelig_fra")
-        .eq("status", "Ledig")
+        .select("id, navn, status, tilgjengelig_fra")
+        .in("status", ["AKTIV/SIGNERT", "Ledig"])
         .not("tilgjengelig_fra", "is", null);
+      if (error) throw error;
       return data || [];
     },
     staleTime: 5 * 60 * 1000,
   });
 
-  const MOCK_CONSULTANTS = [
-    {
-      id: 1,
-      navn: "Tom Erik Lundesgaard",
-      tilgjengelig_fra: (() => {
-        const d = new Date();
-        d.setDate(d.getDate() + 10);
-        return d.toISOString().slice(0, 10);
-      })(),
-    },
-    { id: 2, navn: "Harald Ivarson Moldsvor", tilgjengelig_fra: "2026-09-01" },
-    { id: 3, navn: "Trond Hübertz Emaus", tilgjengelig_fra: "2026-09-01" },
-  ];
-
   const sortedConsultants = useMemo(() => {
-    const real = availableConsultants.filter((c) => c.tilgjengelig_fra);
-    const source = real.length > 0 ? real : MOCK_CONSULTANTS;
-    return sortHuntConsultants(source as { id: number; navn: string; tilgjengelig_fra: string | null }[]);
+    return sortHuntConsultants(
+      (availableConsultants as Array<{ id: number; navn: string; tilgjengelig_fra: string | null }>).filter((consultant) =>
+        hasConsultantAvailability(consultant.tilgjengelig_fra),
+      ),
+    );
   }, [availableConsultants]);
 
   // ── Computed with heat score ──
   const contacts = useMemo(() => {
     const now = new Date();
+    const nowIso = now.toISOString();
     return rawContacts.map((c) => {
       const acts = (activitiesMap as any)[c.id] || [];
       const tasks = (tasksMap as any)[c.id] || [];
-      const foresps = (foresporslerMap as any)[c.id] || [];
-      const effectiveSignal = getEffectiveSignal(acts, tasks);
-      const signal = effectiveSignal ? mapToSignal(effectiveSignal) : ("Ukjent om behov" as Signal);
-      const lastAct = acts[0] || null;
+      const companyId = (c as any).company_id || "";
+      const foresps = (foresporslerMap as any)[companyId] || [];
+      const effectiveSignal = getEffectiveSignal(
+        acts.map((activity: any) => ({
+          created_at: activity.created_at,
+          subject: activity.subject,
+          description: activity.description,
+        })),
+        tasks.map((task: any) => ({
+          created_at: task.created_at,
+          updated_at: task.updated_at,
+          title: task.title,
+          description: task.description,
+          due_date: task.due_date,
+          status: task.status,
+        })),
+      );
+      const signal = effectiveSignal ? mapToSignal(effectiveSignal) : "";
+      const pastActivities = acts.filter((activity: any) => activity.created_at <= nowIso);
+      const lastAct = pastActivities[0] || null;
       const daysSince = lastAct ? differenceInDays(now, new Date(lastAct.created_at)) : 999;
       const company = (c as any).companies;
       const owner = (c as any).profiles;
@@ -273,15 +355,23 @@ export default function DesignLabContacts() {
       const hasOverdue = tasks.some(
         (t: any) => t.status !== "done" && t.status !== "completed" && t.due_date && new Date(t.due_date) < now,
       );
-      const hasAktivForespørsel = foresps.some((f: any) => f.status === "Aktiv" || f.status === "Ny");
-      const hasTidligereForespørsel = foresps.length > 0;
-      const sistFraFinn = (techProfileMap as any)[(c as any).company_id || ""] || null;
+      const hasAktivForespørsel = foresps.some((request: any) => isActiveRequest(request.mottatt_dato, request.status));
+      const hasTidligereForespørsel =
+        foresps.length > 0 && foresps.some((request: any) => !isActiveRequest(request.mottatt_dato, request.status));
+      const sistFraFinn = (techProfileMap as any)[companyId] || null;
       const hasMarkedsradar = !!(sistFraFinn && differenceInDays(now, new Date(sistFraFinn)) <= 90);
       const taskStatus = getTaskStatus(tasks.map((t: any) => ({ due_date: t.due_date, status: t.status })));
       const activityStatus = getActivityStatus(daysSince);
+      const signalAct = acts.find((activity: any) => {
+        const normalizedSubject = normalizeCategoryLabel(activity.subject || "");
+        return SIGNALS.includes(normalizedSubject as Signal);
+      });
+      const signalSetAt = signalAct ? new Date(signalAct.created_at) : null;
+      const lastActDate = lastAct ? new Date(lastAct.created_at) : null;
+      const kes = Boolean(signalSetAt && lastActDate && lastActDate > signalSetAt);
 
       const heatResult = getHeatResult({
-        signal: signal,
+        signal,
         isInnkjoper: c.call_list === true,
         hasMarkedsradar,
         hasAktivForespørsel,
@@ -292,6 +382,7 @@ export default function DesignLabContacts() {
         ikkeRelevantSelskap: company?.ikke_relevant ?? false,
         taskStatus,
         activityStatus,
+        kes,
       });
 
       return {
@@ -313,9 +404,11 @@ export default function DesignLabContacts() {
         eierId: owner?.id || null,
         cvEmail: c.cv_email,
         callList: c.call_list,
+        mailchimpStatus: c.mailchimp_status || null,
         ikkeAktuell: c.ikke_aktuell_kontakt ?? false,
         teknologier: c.teknologier || [],
         daysSince,
+        lastActivityAt: lastAct?.created_at || null,
         lastActivitySubject: lastAct?.subject || "",
         activities: acts,
         tasks,
@@ -326,7 +419,11 @@ export default function DesignLabContacts() {
   }, [rawContacts, activitiesMap, tasksMap, foresporslerMap, techProfileMap]);
 
   const toggleSort = useCallback((field: SortField) => {
-    setSort((p) => (p.field === field ? { field, dir: p.dir === "asc" ? "desc" : "asc" } : { field, dir: "asc" }));
+    setSort((current) =>
+      current.field === field
+        ? { field, dir: current.dir === "asc" ? "desc" : "asc" }
+        : { field, dir: field === "last_activity" || field === "priority" ? "desc" : "asc" },
+    );
   }, []);
 
   const filtered = useMemo(() => {
@@ -361,8 +458,11 @@ export default function DesignLabContacts() {
       switch (sort.field) {
         case "name":
           return d * `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, "nb");
-        case "signal":
-          return d * (SIGNAL_ORDER[a.signal] - SIGNAL_ORDER[b.signal]);
+        case "signal": {
+          const leftRank = a.signal ? SIGNAL_ORDER[a.signal as Signal] : SIGNALS.length + 1;
+          const rightRank = b.signal ? SIGNAL_ORDER[b.signal as Signal] : SIGNALS.length + 1;
+          return d * (leftRank - rightRank);
+        }
         case "company":
           return d * a.company.localeCompare(b.company, "nb");
         case "title":
@@ -370,13 +470,153 @@ export default function DesignLabContacts() {
         case "owner":
           return d * a.eier.localeCompare(b.eier, "nb");
         case "last_activity":
-          return d * (a.daysSince - b.daysSince);
+          if (!a.lastActivityAt && !b.lastActivityAt) return 0;
+          if (!a.lastActivityAt) return 1;
+          if (!b.lastActivityAt) return -1;
+          return d * a.lastActivityAt.localeCompare(b.lastActivityAt);
+        case "priority":
+          return compareByPriority(a, b, sort.dir);
         default:
           return 0;
       }
     });
     return arr;
   }, [filtered, sort]);
+
+  const setSignalMutation = useMutation({
+    mutationFn: async ({
+      contactId,
+      companyId,
+      label,
+    }: {
+      contactId: string;
+      companyId: string | null;
+      label: Signal;
+    }) => {
+      const { data: existingTasks, error: taskLookupError } = await supabase
+        .from("tasks")
+        .select("id, description, due_date")
+        .eq("contact_id", contactId)
+        .neq("status", "done")
+        .order("due_date", { ascending: true, nullsFirst: false })
+        .limit(1);
+      if (taskLookupError) throw taskLookupError;
+
+      const primaryTask = existingTasks?.[0];
+      if (primaryTask) {
+        const { error } = await supabase
+          .from("tasks")
+          .update({
+            description: upsertTaskSignalDescription(primaryTask.description, label, !primaryTask.due_date),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", primaryTask.id);
+        if (error) throw error;
+        return;
+      }
+
+      const { error } = await supabase.from("tasks").insert({
+        title: "Følg opp om behov",
+        description: upsertTaskSignalDescription(null, label, true),
+        priority: "medium",
+        due_date: null,
+        contact_id: contactId,
+        company_id: companyId,
+        assigned_to: user?.id,
+        created_by: user?.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async (_, variables) => {
+      await Promise.all([
+        invalidateDesignLabQueries(),
+        queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.detail(variables.contactId) }),
+        queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.tasks(variables.contactId) }),
+        queryClient.invalidateQueries({ queryKey: crmQueryKeys.generic.tasks() }),
+        invalidateQueryGroup(queryClient, crmSummaryQueryKeys),
+      ]);
+      toast.success("Signal oppdatert");
+    },
+    onError: () => {
+      toast.error("Kunne ikke oppdatere signal");
+    },
+  });
+
+  const handleToggle = useCallback(
+    (contact: {
+      id: string;
+      email: string;
+      cvEmail: boolean | null;
+      callList: boolean | null;
+      mailchimpStatus: string | null;
+    }, field: "cv_email" | "call_list", newValue: boolean) => {
+      if (field === "cv_email" && newValue && !contactHasEmail(contact)) {
+        toast.error(CONTACT_CV_EMAIL_REQUIRED_MESSAGE);
+        return;
+      }
+
+      const key = `${contact.id}-${field}`;
+      const label = field === "cv_email" ? "CV-Epost" : "Innkjøper";
+      const message = newValue ? `${label} aktivert` : `${label} deaktivert`;
+
+      if (pendingToggles.current[key]) {
+        clearTimeout(pendingToggles.current[key]);
+        delete pendingToggles.current[key];
+      }
+
+      updateCachedContactFields(contact.id, { [field]: newValue });
+
+      const timeout = setTimeout(async () => {
+        delete pendingToggles.current[key];
+        const { error } = await supabase
+          .from("contacts")
+          .update({ [field]: newValue } as any)
+          .eq("id", contact.id);
+
+        if (error) {
+          updateCachedContactFields(contact.id, { [field]: !newValue });
+          toast.error("Kunne ikke oppdatere");
+          return;
+        }
+
+        if (field === "cv_email") {
+          supabase.functions
+            .invoke("mailchimp-sync", {
+              body: { action: "sync-contact", contactId: contact.id },
+            })
+            .then(({ data, error: mailchimpError }) => {
+              if (mailchimpError) {
+                console.error("Mailchimp sync feilet:", mailchimpError);
+                toast.error("Mailchimp-synk feilet");
+              } else {
+                toast.success(`Mailchimp: ${data?.status || "synkronisert"}`);
+              }
+            });
+        }
+
+        await Promise.all([
+          invalidateDesignLabQueries(),
+          queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.detail(contact.id) }),
+          queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() }),
+        ]);
+      }, 10000);
+
+      pendingToggles.current[key] = timeout;
+
+      toast(message, {
+        duration: 10000,
+        action: {
+          label: "Angre",
+          onClick: () => {
+            clearTimeout(pendingToggles.current[key]);
+            delete pendingToggles.current[key];
+            updateCachedContactFields(contact.id, { [field]: !newValue });
+          },
+        },
+      });
+    },
+    [invalidateDesignLabQueries, queryClient, updateCachedContactFields],
+  );
 
   const sel = selectedId ? (contacts.find((c) => c.id === selectedId) ?? null) : null;
 
@@ -563,7 +803,7 @@ export default function DesignLabContacts() {
                 <div
                   className="grid items-center sticky top-0 z-10"
                   style={{
-                    gridTemplateColumns: "minmax(160px,2fr) 130px 50px minmax(120px,1.5fr) minmax(100px,1fr) 120px 80px",
+                    gridTemplateColumns: "minmax(160px,2fr) 132px 52px minmax(120px,1.5fr) minmax(100px,1fr) 190px 80px",
                     height: 32,
                     borderBottom: `1px solid ${C.border}`,
                     background: C.surfaceAlt,
@@ -576,7 +816,7 @@ export default function DesignLabContacts() {
                   <span style={{ fontSize: 11, fontWeight: 500, color: C.textFaint }}>Finn</span>
                   <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
                   <ColHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />
-                  <span style={{ fontSize: 11, fontWeight: 500, color: C.textFaint }}>Tags</span>
+                  <ColHeader label="Heat / tags" field="priority" sort={sort} onSort={toggleSort} />
                   <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
                 </div>
                 {isLoading ? (
@@ -596,12 +836,13 @@ export default function DesignLabContacts() {
                         onClick={() => setSelectedId(isActive ? null : c.id)}
                         className="grid items-center cursor-pointer group"
                         style={{
-                          gridTemplateColumns: "minmax(160px,2fr) 130px 50px minmax(120px,1.5fr) minmax(100px,1fr) 120px 80px",
-                          minHeight: 34,
+                          gridTemplateColumns: "minmax(160px,2fr) 132px 52px minmax(120px,1.5fr) minmax(100px,1fr) 190px 80px",
+                          minHeight: 38,
                           paddingLeft: 16,
                           paddingRight: 16,
                           borderBottom: `1px solid ${C.borderLight}`,
                           background: isActive ? C.activeBg : "transparent",
+                          boxShadow: `inset 3px 0 0 ${getHeatBarColor(c.heatResult)}`,
                         }}
                         onMouseEnter={(e) => {
                           if (!isActive) e.currentTarget.style.background = C.hoverBg;
@@ -615,17 +856,72 @@ export default function DesignLabContacts() {
                           <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>
                             {c.firstName} {c.lastName}
                           </span>
+                          {c.heatResult.needsReview && (
+                            <span
+                              title="Trenger oppfølging"
+                              style={{ fontSize: 11, fontWeight: 700, color: C.warning, flexShrink: 0 }}
+                            >
+                              !
+                            </span>
+                          )}
                         </div>
 
                         {/* Signal */}
                         <div className="flex items-center gap-1.5">
-                          <SignalChip signal={c.signal} />
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                onClick={(event) => event.stopPropagation()}
+                                className="inline-flex items-center"
+                              >
+                                {c.signal ? (
+                                  <SignalChip signal={c.signal as Signal} />
+                                ) : (
+                                  <span
+                                    style={{
+                                      fontSize: 11,
+                                      fontWeight: 500,
+                                      padding: "2px 8px",
+                                      borderRadius: 999,
+                                      border: `1px dashed ${C.borderStrong}`,
+                                      color: C.textFaint,
+                                    }}
+                                  >
+                                    + Signal
+                                  </span>
+                                )}
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start">
+                              {SIGNALS.map((signalOption) => (
+                                <DropdownMenuItem
+                                  key={signalOption}
+                                  onClick={() =>
+                                    setSignalMutation.mutate({
+                                      contactId: c.id,
+                                      companyId: c.companyId,
+                                      label: signalOption,
+                                    })
+                                  }
+                                >
+                                  <SignalChip signal={signalOption} />
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
 
                         {/* Finn */}
-                        <div className="flex items-center" title="Aktiv på Finn">
+                        <div
+                          className="flex items-center justify-center"
+                          title={
+                            c.hasMarkedsradar
+                              ? "Selskapet har annonsert etter embedded på Finn.no siste 90 dager"
+                              : ""
+                          }
+                        >
                           {c.hasMarkedsradar && (
-                            <Wifi style={{ width: 14, height: 14, color: C.textFaint }} />
+                            <Wifi style={{ width: 14, height: 14, color: C.info }} />
                           )}
                         </div>
 
@@ -637,22 +933,82 @@ export default function DesignLabContacts() {
                         {/* Stilling */}
                         <span className="truncate" style={{ fontSize: 12, color: C.textMuted }}>{c.title}</span>
 
-                        {/* Tags */}
-                        <div className="flex items-center gap-1">
-                          <span
+                        {/* Heat / Tags */}
+                        <div className="flex items-center gap-1.5 min-w-0" onClick={(event) => event.stopPropagation()}>
+                          <HeatBadge heat={c.heatResult} daysSince={c.daysSince} />
+                          <button
+                            type="button"
+                            title={
+                              c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")
+                                ? "Kontakten har avmeldt seg via Mailchimp og kan ikke re-abonneres"
+                                : c.cvEmail
+                                  ? "CV-Epost aktiv"
+                                  : contactHasEmail(c)
+                                    ? "Aktiver CV-Epost"
+                                    : CONTACT_CV_EMAIL_REQUIRED_MESSAGE
+                            }
+                            onClick={() => {
+                              if (c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")) {
+                                toast.info("Kontakten har avmeldt seg via Mailchimp og kan ikke re-abonneres.");
+                                return;
+                              }
+                              handleToggle(
+                                {
+                                  id: c.id,
+                                  email: c.email,
+                                  cvEmail: c.cvEmail,
+                                  callList: c.callList,
+                                  mailchimpStatus: c.mailchimpStatus,
+                                },
+                                "cv_email",
+                                !c.cvEmail,
+                              );
+                            }}
                             style={{
                               fontSize: 11,
                               fontWeight: 500,
                               padding: "1px 6px",
                               borderRadius: 3,
-                              background: c.cvEmail ? C.toggleCv.activeBg : C.toggleInactive.bg,
-                              color: c.cvEmail ? C.toggleCv.activeText : C.toggleInactive.text,
-                              border: c.cvEmail ? "none" : `1px solid ${C.toggleInactive.border}`,
+                              background:
+                                c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")
+                                  ? C.dangerBg
+                                  : c.cvEmail
+                                    ? C.toggleCv.activeBg
+                                    : C.toggleInactive.bg,
+                              color:
+                                c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")
+                                  ? C.danger
+                                  : c.cvEmail
+                                    ? C.toggleCv.activeText
+                                    : C.toggleInactive.text,
+                              border:
+                                c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")
+                                  ? `1px solid ${C.danger}`
+                                  : c.cvEmail
+                                    ? "none"
+                                    : `1px solid ${C.toggleInactive.border}`,
                             }}
                           >
-                            CV
-                          </span>
-                          <span
+                            {c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")
+                              ? "CV ✗"
+                              : "CV"}
+                          </button>
+                          <button
+                            type="button"
+                            title={c.callList ? "Innkjøper aktiv" : "Aktiver innkjøper"}
+                            onClick={() =>
+                              handleToggle(
+                                {
+                                  id: c.id,
+                                  email: c.email,
+                                  cvEmail: c.cvEmail,
+                                  callList: c.callList,
+                                  mailchimpStatus: c.mailchimpStatus,
+                                },
+                                "call_list",
+                                !c.callList,
+                              )
+                            }
                             style={{
                               fontSize: 11,
                               fontWeight: 500,
@@ -664,11 +1020,15 @@ export default function DesignLabContacts() {
                             }}
                           >
                             Innkjøper
-                          </span>
+                          </button>
                         </div>
 
                         {/* Siste akt. */}
-                        <span className="text-right" style={{ fontSize: 12, color: C.textFaint }}>
+                        <span
+                          className="text-right"
+                          title={c.lastActivityAt ? format(new Date(c.lastActivityAt), "d. MMM yyyy", { locale: nb }) : ""}
+                          style={{ fontSize: 12, color: C.textFaint }}
+                        >
                           {c.daysSince < 999 ? relTime(c.daysSince) : ""}
                         </span>
                       </div>
@@ -703,6 +1063,9 @@ export default function DesignLabContacts() {
                     <ContactCardContent
                       contactId={sel.id}
                       editable
+                      onDataChanged={() => {
+                        void invalidateDesignLabQueries();
+                      }}
                       defaultHidden={{
                         techDna: true,
                         notes: true,

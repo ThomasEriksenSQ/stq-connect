@@ -200,6 +200,7 @@ interface ContactCardContentProps {
   onOpenCompany?: (companyId: string) => void;
   onNavigateToFullPage?: () => void;
   defaultHidden?: DefaultHiddenConfig;
+  onDataChanged?: () => void;
 }
 
 interface ConsultantMatchResult {
@@ -289,6 +290,7 @@ export function ContactCardContent({
   onOpenCompany,
   onNavigateToFullPage,
   defaultHidden,
+  onDataChanged,
 }: ContactCardContentProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -318,6 +320,9 @@ export function ContactCardContent({
   const [showTechDna, setShowTechDna] = useState(!defaultHidden?.techDna);
   const [showNotes, setShowNotes] = useState(!defaultHidden?.notes);
   const [showConsultantMatch, setShowConsultantMatch] = useState(!defaultHidden?.consultantMatch);
+  const notifyDataChanged = () => {
+    onDataChanged?.();
+  };
 
   const { data: contact, isLoading } = useQuery({
     queryKey: crmQueryKeys.contacts.detail(contactId),
@@ -416,6 +421,7 @@ export function ContactCardContent({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.detail(contactId) });
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() });
+      notifyDataChanged();
     },
     onError: () => toast.error("Kunne ikke oppdatere"),
   });
@@ -452,6 +458,7 @@ export function ContactCardContent({
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.tasks(contactId) });
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.generic.tasks() });
       invalidateQueryGroup(queryClient, crmSummaryQueryKeys);
+      notifyDataChanged();
       toast.success("Signal oppdatert");
       closeForm();
     },
@@ -474,6 +481,7 @@ export function ContactCardContent({
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.activities(contactId) });
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() });
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
+      notifyDataChanged();
       toast.success("Aktivitet registrert");
       closeForm();
     },
@@ -499,6 +507,7 @@ export function ContactCardContent({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.tasks(contactId) });
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.generic.tasks() });
+      notifyDataChanged();
       toast.success("Oppfølging opprettet");
 
       // Fire-and-forget calendar sync
@@ -537,6 +546,7 @@ export function ContactCardContent({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.tasks(contactId) });
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.generic.tasks() });
+      notifyDataChanged();
       toast.success("Oppfølging fullført", { duration: 2000 });
     },
   });
@@ -548,6 +558,7 @@ export function ContactCardContent({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.activities(contactId) });
+      notifyDataChanged();
       toast.success("Aktivitet slettet");
     },
   });
@@ -559,6 +570,7 @@ export function ContactCardContent({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.activities(contactId) });
+      notifyDataChanged();
       toast.success("Oppdatert");
     },
   });
@@ -571,6 +583,7 @@ export function ContactCardContent({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.tasks(contactId) });
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.generic.tasks() });
+      notifyDataChanged();
       toast.success("Oppfølging slettet");
     },
   });
@@ -586,6 +599,7 @@ export function ContactCardContent({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.tasks(contactId) });
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.generic.tasks() });
+      notifyDataChanged();
       toast.success("Oppdatert");
     },
   });
