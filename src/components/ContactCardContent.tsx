@@ -1472,7 +1472,7 @@ export function ContactCardContent({
         )}
 
         {/* ── Konsulent match-resultater ── */}
-        {consultantResults !== null && (
+        {(!defaultHidden?.consultantMatch || showConsultantMatch) && consultantResults !== null && (
           <div className="space-y-3 mb-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
