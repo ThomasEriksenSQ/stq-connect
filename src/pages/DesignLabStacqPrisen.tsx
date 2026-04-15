@@ -22,9 +22,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
-import { C } from "@/components/designlab/theme";
+import { C } from "@/theme";
 
-/* Colors imported from @/components/designlab/theme */
+/* Colors imported from @/theme */
 
 type SortField = "kandidat" | "kunde" | "stacq" | "utpris";
 type SortDir = "asc" | "desc";

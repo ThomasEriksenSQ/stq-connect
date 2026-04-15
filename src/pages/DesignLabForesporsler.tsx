@@ -15,7 +15,7 @@ import { ForespørselSheet } from "@/components/ForespørselSheet";
 import { crmQueryKeys } from "@/lib/queryKeys";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
-import { C } from "@/components/designlab/theme";
+import { C } from "@/theme";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
@@ -38,7 +38,7 @@ const TYPE_CHIPS: { value: TypeFilter; label: string }[] = [
   { value: "VIA", label: "Partner" },
 ];
 
-/* Colors imported from @/components/designlab/theme */
+/* Colors imported from @/theme */
 
 function getDaysAgo(d: string): number {
   return differenceInDays(new Date(), new Date(d));
