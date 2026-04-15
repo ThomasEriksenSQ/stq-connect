@@ -247,6 +247,35 @@ html {
   border-color: rgba(139,29,32,0.15);
 }
 
+/* V8 badge shape — compact rounded instead of pill */
+.dl-v8-theme .rounded-full[class*="border"][class*="px-2"] {
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+}
+.dl-v8-theme .rounded-full[class*="border"][class*="px-2.5"] {
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+}
+
+/* V8 owner badge — desaturated accent */
+.dl-v8-theme .bg-primary\/10 {
+  background-color: rgba(94,106,210,0.08);
+  border-color: rgba(94,106,210,0.15);
+}
+
+/* V8 "+ Ny kontakt" button — accent style */
+.dl-v8-theme button[class*="bg-primary"][class*="text-primary-foreground"] {
+  background-color: #5E6AD2;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  height: 28px;
+}
+
 /* V8 input/textarea */
 .dl-v8-theme input,
 .dl-v8-theme textarea,
