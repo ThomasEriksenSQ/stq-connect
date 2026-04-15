@@ -119,7 +119,7 @@ export function AiSignalBanner({
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[0.8125rem] font-medium text-foreground">AI foreslår:</span>
             {signalChanged && !applied && (
-              <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold", getBadgeColor(result.anbefalt_signal))}>
+              <span className="chip chip--action is-signal">
                 {result.anbefalt_signal}
               </span>
             )}
@@ -145,7 +145,7 @@ export function AiSignalBanner({
               {newTechs.map((t) => (
                 <span
                   key={t}
-                  className="inline-flex items-center rounded-full bg-secondary border border-border px-2 py-0.5 text-[0.6875rem] font-medium text-foreground"
+                  className="chip chip--tech"
                 >
                   {t}
                 </span>
