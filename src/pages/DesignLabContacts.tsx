@@ -623,9 +623,9 @@ export default function DesignLabContacts() {
                         </div>
 
                         {/* Finn */}
-                        <div className="flex items-center">
+                        <div className="flex items-center" title="Aktiv på Finn">
                           {c.hasMarkedsradar && (
-                            <Wifi style={{ width: 14, height: 14, color: C.textFaint }} title="Aktiv på Finn" />
+                            <Wifi style={{ width: 14, height: 14, color: C.textFaint }} />
                           )}
                         </div>
 
