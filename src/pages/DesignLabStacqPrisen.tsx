@@ -97,7 +97,6 @@ export default function DesignLabStacqPrisen() {
   const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [editRow, setEditRow] = useState<any | null>(null);
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "stacq", dir: "desc" });
-  const initials = user?.email ? user.email.split("@")[0].slice(0, 2).toUpperCase() : "??";
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["stacq-oppdrag-prisen"],
