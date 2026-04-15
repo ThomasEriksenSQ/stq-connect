@@ -268,7 +268,7 @@ html {
 }
 
 /* V8 "+ Ny kontakt" button — accent style */
-.dl-v8-theme button[class*="bg-primary"][class*="text-primary-foreground"] {
+.dl-v8-theme button[class*="bg-primary"][class*="text-primary-foreground"]:not([role="checkbox"]) {
   background-color: #5E6AD2;
   border-radius: 5px;
   font-size: 12px;
