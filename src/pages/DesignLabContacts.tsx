@@ -202,101 +202,120 @@ export default function DesignLabContacts() {
     },
   });
 
-  const contactIds = useMemo(() => rawContacts.map((c) => c.id), [rawContacts]);
+  const contactIds = useMemo(() => new Set(rawContacts.map((c) => c.id)), [rawContacts]);
 
-  const { data: activitiesMap = {} } = useQuery({
-    queryKey: [...DL_QUERY_KEYS.activities, contactIds.length],
+  const { data: allActivities = [] } = useQuery({
+    queryKey: DL_QUERY_KEYS.activities,
     queryFn: async () => {
-      if (!contactIds.length) return {};
       const { data, error } = await supabase
         .from("activities")
         .select("id, contact_id, subject, description, created_at, type, created_by, profiles:created_by(full_name)")
-        .in("contact_id", contactIds)
-        .order("created_at", { ascending: false });
+        .not("contact_id", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(5000);
       if (error) throw error;
-      const map: Record<string, typeof data> = {};
-      data.forEach((a) => {
-        if (a.contact_id) {
-          (map[a.contact_id] ??= []).push(a);
-        }
-      });
-      return map;
+      return data || [];
     },
-    enabled: contactIds.length > 0,
+    enabled: rawContacts.length > 0,
   });
 
-  const { data: tasksMap = {} } = useQuery({
-    queryKey: [...DL_QUERY_KEYS.tasks, contactIds.length],
+  const activitiesMap = useMemo(() => {
+    const map: Record<string, typeof allActivities> = {};
+    allActivities.forEach((activity) => {
+      if (activity.contact_id && contactIds.has(activity.contact_id)) {
+        (map[activity.contact_id] ??= []).push(activity);
+      }
+    });
+    return map;
+  }, [allActivities, contactIds]);
+
+  const { data: allTasks = [] } = useQuery({
+    queryKey: DL_QUERY_KEYS.tasks,
     queryFn: async () => {
-      if (!contactIds.length) return {};
       const { data, error } = await supabase
         .from("tasks")
         .select(
           "id, contact_id, title, description, due_date, status, priority, created_at, updated_at, assigned_to, profiles:assigned_to(full_name), companies:company_id(name)",
         )
-        .in("contact_id", contactIds)
+        .not("contact_id", "is", null)
         .neq("status", "done")
-        .order("due_date", { ascending: true });
+        .order("due_date", { ascending: true })
+        .limit(5000);
       if (error) throw error;
-      const map: Record<string, typeof data> = {};
-      data.forEach((t) => {
-        if (t.contact_id) {
-          (map[t.contact_id] ??= []).push(t);
-        }
-      });
-      return map;
+      return data || [];
     },
-    enabled: contactIds.length > 0,
+    enabled: rawContacts.length > 0,
   });
+
+  const tasksMap = useMemo(() => {
+    const map: Record<string, typeof allTasks> = {};
+    allTasks.forEach((task) => {
+      if (task.contact_id && contactIds.has(task.contact_id)) {
+        (map[task.contact_id] ??= []).push(task);
+      }
+    });
+    return map;
+  }, [allTasks, contactIds]);
 
   const companyIds = useMemo(() => {
     const ids = new Set<string>();
     rawContacts.forEach((c) => {
       if ((c as any).company_id) ids.add((c as any).company_id);
     });
-    return Array.from(ids);
+    return ids;
   }, [rawContacts]);
 
   // ── Forespørsler for heat score ──
-  const { data: foresporslerMap = {} } = useQuery({
-    queryKey: [...DL_QUERY_KEYS.foresporsler, companyIds.length],
+  const { data: allForesporsler = [] } = useQuery({
+    queryKey: DL_QUERY_KEYS.foresporsler,
     queryFn: async () => {
-      if (!companyIds.length) return {};
       const { data, error } = await supabase
         .from("foresporsler")
         .select("id, selskap_id, mottatt_dato, status")
-        .in("selskap_id", companyIds);
+        .not("selskap_id", "is", null)
+        .order("mottatt_dato", { ascending: false })
+        .limit(5000);
       if (error) throw error;
-      const map: Record<string, typeof data> = {};
-      data.forEach((f) => {
-        if (f.selskap_id) {
-          (map[f.selskap_id] ??= []).push(f);
-        }
-      });
-      return map;
+      return data || [];
     },
-    enabled: companyIds.length > 0,
+    enabled: companyIds.size > 0,
   });
+
+  const foresporslerMap = useMemo(() => {
+    const map: Record<string, typeof allForesporsler> = {};
+    allForesporsler.forEach((foresporsel) => {
+      if (foresporsel.selskap_id && companyIds.has(foresporsel.selskap_id)) {
+        (map[foresporsel.selskap_id] ??= []).push(foresporsel);
+      }
+    });
+    return map;
+  }, [allForesporsler, companyIds]);
 
   // ── Company tech profiles for FINN column ──
 
-  const { data: techProfileMap = {} } = useQuery({
-    queryKey: [...DL_QUERY_KEYS.techProfiles, companyIds.length],
+  const { data: allTechProfiles = [] } = useQuery({
+    queryKey: DL_QUERY_KEYS.techProfiles,
     queryFn: async () => {
-      if (!companyIds.length) return {};
       const { data, error } = await supabase
         .from("company_tech_profile")
         .select("company_id, sist_fra_finn")
-        .in("company_id", companyIds);
+        .not("company_id", "is", null)
+        .limit(5000);
       if (error) throw error;
-      const map: Record<string, string | null> = {};
-      data.forEach((p) => {
-        if (p.company_id) map[p.company_id] = p.sist_fra_finn;
-      });
-      return map;
+      return data || [];
     },
-    enabled: companyIds.length > 0,
+    enabled: companyIds.size > 0,
   });
+
+  const techProfileMap = useMemo(() => {
+    const map: Record<string, string | null> = {};
+    allTechProfiles.forEach((profile) => {
+      if (profile.company_id && companyIds.has(profile.company_id)) {
+        map[profile.company_id] = profile.sist_fra_finn;
+      }
+    });
+    return map;
+  }, [allTechProfiles, companyIds]);
 
   // ── Consultants available ──
   const { data: availableConsultants = [] } = useQuery({
