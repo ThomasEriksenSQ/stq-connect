@@ -281,6 +281,103 @@ export default function DesignLabCompanies() {
     return arr;
   }, [filtered, sort]);
 
+  const renderRow = useCallback((company: any) => {
+    const signal = company.signal ? mapToSignal(company.signal) : null;
+    const signalColors = signal ? SIGNAL_COLORS[signal] : null;
+    const daysSince = company.lastActivity ? differenceInDays(new Date(), new Date(company.lastActivity)) : null;
+    const typeLabel = TYPE_VALUE_TO_LABEL[company.status] || company.status;
+    const isSelected = selectedId === company.id;
+
+    return (
+      <div
+        key={company.id}
+        onClick={() => setSelectedId(isSelected ? null : company.id)}
+        className="grid items-center cursor-pointer group"
+        style={{
+          gridTemplateColumns: "minmax(180px,2fr) minmax(120px,1fr) 130px 120px 90px 80px",
+          minHeight: 34, paddingLeft: 16, paddingRight: 16,
+          borderBottom: `1px solid ${C.borderLight}`,
+          background: isSelected ? C.activeBg : "transparent",
+        }}
+        onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = C.hoverBg; }}
+        onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
+      >
+        {/* Name */}
+        <div className="min-w-0 flex items-center gap-2">
+          <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{company.name}</span>
+          {company.contactCount > 0 && (
+            <span style={{ fontSize: 11, color: C.textGhost }}>{company.contactCount}</span>
+          )}
+        </div>
+
+        {/* Type — inline dropdown */}
+        <div className="min-w-0 relative" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setTypeDropdownOpen(typeDropdownOpen === company.id ? null : company.id);
+            }}
+            className="inline-flex items-center gap-0.5 transition-colors"
+            style={{ fontSize: 12, color: C.textMuted, cursor: "pointer" }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = C.textMuted; }}
+          >
+            <span className="truncate">{typeLabel}</span>
+            <ChevronDown style={{ width: 12, height: 12, flexShrink: 0 }} />
+          </button>
+          {typeDropdownOpen === company.id && (
+            <>
+              <div className="fixed inset-0 z-20" onClick={() => setTypeDropdownOpen(null)} />
+              <div
+                className="absolute left-0 top-full mt-1 z-30 rounded-md overflow-hidden"
+                style={{ background: C.panel, border: `1px solid ${C.border}`, boxShadow: C.shadowMd, minWidth: 160 }}
+              >
+                {TYPE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => {
+                      setTypeMutation.mutate({ companyId: company.id, status: opt.value });
+                      setTypeDropdownOpen(null);
+                    }}
+                    className="block w-full text-left px-3 transition-colors"
+                    style={{ fontSize: 12, color: C.text, height: 30 }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Signal */}
+        <div className="flex items-center gap-1.5">
+          {signal && signalColors && (
+            <>
+              <span className="rounded-full inline-block shrink-0" style={{ width: 7, height: 7, background: signalColors.color }} />
+              <span className="truncate" style={{ fontSize: 12, color: signalColors.color }}>{signal}</span>
+            </>
+          )}
+        </div>
+
+        {/* City */}
+        <span className="truncate" style={{ fontSize: 12, color: C.textMuted }}>{company.city || ""}</span>
+
+        {/* Last activity */}
+        <span style={{ fontSize: 12, color: C.textFaint }}>
+          {daysSince !== null ? relTime(daysSince) : ""}
+        </span>
+
+        {/* Tasks */}
+        <span className="text-right" style={{ fontSize: 12, color: company.hasOverdue ? C.danger : company.taskCount > 0 ? C.textMuted : C.textGhost }}>
+          {company.taskCount > 0 ? company.taskCount : ""}
+        </span>
+      </div>
+    );
+  }, [selectedId, typeDropdownOpen, setTypeMutation]);
+
   /* ═══ RENDER ═══ */
   return (
     <div className="flex h-screen overflow-hidden select-none" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}>
