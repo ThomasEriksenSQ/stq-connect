@@ -1,35 +1,20 @@
 
 
-# Plan: Oppdater kontakttabellen i Design Lab til å matche V1-kolonnestruktur
+# Plan: Standardiser knappehøyder i Design Lab header
 
-## Mål
-Endre kolonnerekkefølge og innhold i kontakttabellen på `/design-lab/kontakter` slik at den matcher referansebildet (V1), men med V2-styling.
+## Problem
+TextSizeControl-knappene har `height: 24px` mens søkefeltet og handlingsknappen har `height: 30px`. V2-retningslinjene krever 30–32px for alle interaktive elementer.
 
-## Kolonner (ny rekkefølge)
+## Endringer
 
-| # | Header | Innhold | Bredde |
-|---|--------|---------|--------|
-| 1 | NAVN | Fornavn + etternavn | `minmax(160px, 2fr)` |
-| 2 | SIGNAL | SignalChip (som nå) | `130px` |
-| 3 | FINN | Wifi-ikon (((•))) hvis `hasMarkedsradar` | `50px` |
-| 4 | SELSKAP | Selskapsnavn | `minmax(120px, 1.5fr)` |
-| 5 | STILLING | Stillingstittel | `minmax(100px, 1fr)` |
-| 6 | TAGS | CV + Innkjøper pills side om side | `120px` |
-| 7 | SISTE AKT. | Relativ tid, høyrejustert | `80px` |
+### 1. `src/components/designlab/TextSizeControl.tsx`
+- Endre `height: 24` → `height: 28` på pill-knappene (28px passer bedre visuelt som sekundærkontroll uten å dominere headeren, men matcher vertikalt med 30px-elementer via `items-center`)
+- Alternativt: bruk `height: 30` for eksakt match med input og primærknapp
 
-## Endringer i `src/pages/DesignLabContacts.tsx`
+### 2. Verifisering
+- Søkefelt: allerede `height: 30` ✓
+- "+ Ny kontakt"-knapp: allerede `height: 30` ✓
+- TextSizeControl: oppdateres til `height: 28` (visuelt balansert sekundærkontroll)
 
-1. **Fjern Varme-kolonnen** fra header og rader (HeatBadge fjernes fra tabellen)
-2. **Legg til FINN-kolonnen** — viser et lite wifi/signal-ikon med `C.textFaint` farge når `hasMarkedsradar === true`, ellers tom
-3. **Legg til TAGS-kolonnen** — viser kompakte pills for CV (blå, bruker `C.toggleCv`) og Innkjøper (lilla, bruker `C.toggleBuyer`) med V2-styling: 11px tekst, border-radius 3px, tynne pills
-4. **Endre kolonnerekkefølge** til NAVN → SIGNAL → FINN → SELSKAP → STILLING → TAGS → SISTE AKT.
-5. **Oppdater `gridTemplateColumns`** i både header og rader
-6. **Legg tilbake `Wifi` import** fra lucide-react
-7. **Fjern `heat`-sortering** som standard, sett default sort til `signal`
-8. **Oppdater `SortField` type** — fjern `heat`, legg til evt. nye felt
-
-## Visuell stil for TAGS (V2)
-- CV-pill: `background: C.toggleCv.activeBg`, `color: C.toggleCv.activeText`, `fontSize: 11`, `padding: 1px 6px`, `borderRadius: 3`
-- Innkjøper-pill: `background: C.toggleBuyer.activeBg`, `color: C.toggleBuyer.activeText`, samme sizing
-- Vises kun når aktiv (cv_email/call_list er true)
+Én fil, én linje endret.
 
