@@ -201,7 +201,7 @@ export default function DesignLabStacqPrisen() {
 
       {/* ═══ SIDEBAR ═══ */}
       <aside className="flex flex-col shrink-0" style={{ width: 220, borderRight: `1px solid ${C.border}`, background: C.sidebarBg }}>
-        <div className="flex items-center gap-2 px-4" style={{ height: 44 }}>
+        <div className="flex items-center gap-2 px-4" style={{ height: 40 }}>
           <div className="flex items-center justify-center rounded" style={{ width: 22, height: 22, background: C.accent, color: "#fff", fontSize: 11, fontWeight: 600 }}>S</div>
           <span style={{ fontSize: 14, fontWeight: 600, color: C.text, letterSpacing: "-0.01em" }}>STACQ</span>
         </div>
@@ -234,7 +234,7 @@ export default function DesignLabStacqPrisen() {
       {/* ═══ MAIN ═══ */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ zoom: SCALE_MAP[textSize] }}>
         {/* Header */}
-        <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 44, borderBottom: `1px solid ${C.border}` }}>
+        <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
           <div className="flex items-baseline gap-2.5">
             <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>STACQ Prisen</h1>
           </div>
