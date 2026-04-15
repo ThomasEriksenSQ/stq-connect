@@ -86,7 +86,6 @@ export default function DesignLabContacts() {
   const searchRef = useRef<HTMLInputElement>(null);
   const [cmdOpen, setCmdOpen] = useState(false);
 
-  const initials = user?.email ? user.email.split("@")[0].slice(0, 2).toUpperCase() : "??";
 
   // ⌘K shortcut → open command palette
   useEffect(() => {
