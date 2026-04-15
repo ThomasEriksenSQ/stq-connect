@@ -189,6 +189,29 @@ export default function DesignLabContacts() {
     enabled: contactIds.length > 0,
   });
 
+  // ── Company tech profiles for FINN column ──
+  const companyIds = useMemo(() => {
+    const ids = new Set<string>();
+    rawContacts.forEach((c) => { if ((c as any).company_id) ids.add((c as any).company_id); });
+    return Array.from(ids);
+  }, [rawContacts]);
+
+  const { data: techProfileMap = {} } = useQuery({
+    queryKey: ["dl-tech-profiles-v8", companyIds.length],
+    queryFn: async () => {
+      if (!companyIds.length) return {};
+      const { data, error } = await supabase
+        .from("company_tech_profile")
+        .select("company_id, sist_fra_finn")
+        .in("company_id", companyIds);
+      if (error) throw error;
+      const map: Record<string, string | null> = {};
+      data.forEach((p) => { if (p.company_id) map[p.company_id] = p.sist_fra_finn; });
+      return map;
+    },
+    enabled: companyIds.length > 0,
+  });
+
   // ── Consultants available ──
   const { data: availableConsultants = [] } = useQuery({
     queryKey: ["dl-available-consultants"],
