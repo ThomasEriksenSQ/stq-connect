@@ -1,31 +1,51 @@
 
 
-# Plan: Gjør heat-indikatorer mer fargerike i Design Lab
+# Plan: Unik farge per signal i Design Lab
 
 ## Problem
-Nåværende heat-farger for "mulig" og "sovende" er nesten grå og uten fargenyanse — dette gjør heat-kolonnen lite verdifull visuelt. Kun "hett" (rød) og "lovende" (amber) har tydelig farge.
+Alle signaler i dropdown-menyen og signal-chipen bruker samme lilla accent-farge (`is-signal` → `#5E6AD2`). Det gjør det vanskelig å raskt skille mellom signaltyper.
 
 ## Løsning
-Oppdater `HEAT_COLORS` i theme.ts med desaturerte men distinkte fargenyanser som følger Linear-paletten:
+Bruk `SIGNAL_COLORS` fra `theme.ts` (som allerede har unike farger per signal) til å style hver signal individuelt — både i dropdown-menyen og på trigger-chipen.
 
-| Temperatur | Nå | Ny |
-|---|---|---|
-| **hett** | Rød 8% bg + #8B1D20 | Beholder — fungerer |
-| **lovende** | Amber 8% bg + #7D4E00 | Beholder — fungerer |
-| **mulig** | Grå 4% + textMuted | Blå 8% bg (`rgba(26,79,160,0.08)`) + info-farge (`#1A4FA0`) |
-| **sovende** | Grå 3% + textGhost | Nøytral 5% bg (`rgba(0,0,0,0.05)`) + `#8C929C` (textFaint) |
+Fargekart (allerede definert i theme.ts):
+- **Behov nå** → Grønn (`#2D6A4F` på `rgba(45,106,79,0.08)`)
+- **Får fremtidig behov** → Blå (`#1A4FA0` på `rgba(26,79,160,0.08)`)
+- **Får kanskje behov** → Amber (`#7D4E00` på `rgba(125,78,0,0.08)`)
+- **Ukjent om behov** → Grå (`#8C929C` på `rgba(0,0,0,0.04)`)
+- **Ikke aktuelt** → Rød (`#8B1D20` på `rgba(139,29,32,0.08)`)
 
-Dette bruker allerede definerte farger fra `C`-objektet (`infoBg`, `info`, `textFaint`) — konsistent med designsystemet. Nå har alle fire nivåer distinkte fargenyanser: rød → amber → blå → grå.
+## Endringer i `src/components/ContactCardContent.tsx`
 
-Venstrekanten på rader oppdateres tilsvarende — "sovende" forblir transparent, resten får tydelige farger.
+### 1. Trigger-knappen (linje ~747)
+Erstatt `chip chip--action is-signal` med inline styles fra `SIGNAL_COLORS[signalCat.label]`:
+```tsx
+<button
+  className="chip chip--action cursor-pointer"
+  style={{
+    background: SIGNAL_COLORS[signalCat.label]?.bg,
+    color: SIGNAL_COLORS[signalCat.label]?.color,
+    border: "none",
+  }}
+>
+```
 
-## Endringer
+### 2. Dropdown-items (linje ~767-771)
+Erstatt `chip chip--action is-signal` med per-signal inline styles:
+```tsx
+<span
+  className="chip chip--action"
+  style={{
+    background: SIGNAL_COLORS[cat.label]?.bg,
+    color: SIGNAL_COLORS[cat.label]?.color,
+    border: "none",
+  }}
+>
+```
 
-### `src/components/designlab/theme.ts`
-Oppdater `HEAT_COLORS`:
-- `mulig`: bg → `C.infoBg`, color → `C.info`
-- `sovende`: bg → `"rgba(0,0,0,0.05)"`, color → `C.textFaint` (allerede #8C929C — en tick mørkere enn nåværende textGhost)
+### 3. Import
+Legg til import av `SIGNAL_COLORS` fra `@/components/designlab/theme` (linje ~1).
 
 ### Filer som endres
-- `src/components/designlab/theme.ts` — 2 linjer i HEAT_COLORS
+- `src/components/ContactCardContent.tsx` — 3 steder (import + trigger + dropdown items)
 
