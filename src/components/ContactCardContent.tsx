@@ -1303,6 +1303,7 @@ export function ContactCardContent({
               </button>
               <button
                 onClick={() => openForm("meeting")}
+                style={{ height: 34 }}
                 className="inline-flex items-center gap-1.5 h-[34px] px-4 text-[0.8125rem] font-medium rounded-lg transition-colors bg-primary text-primary-foreground hover:opacity-90"
               >
                 <FileText className="h-[15px] w-[15px]" /> Logg møtereferat
