@@ -9,7 +9,7 @@ import {
   Users, X, Wifi,
   Building2, LayoutDashboard, Briefcase, Settings, LogOut,
   UserPlus, Radar, TrendingUp, Globe,
-  ArrowUpRight, Clock, Phone, Mail, Linkedin,
+  ArrowUpRight, Clock,
 } from "lucide-react";
 import { differenceInDays, format } from "date-fns";
 import { nb } from "date-fns/locale";
