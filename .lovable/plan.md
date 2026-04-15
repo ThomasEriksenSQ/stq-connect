@@ -1,64 +1,27 @@
 
 
-# Plan: Dropdown-meny og skjul/vis-logikk — kun Design Lab
+# Plan: Fiks layout-forskyving og default-skjuling i 3-prikker-menyen
 
-## Tilnærming
+## Problem
+1. Når man åpner 3-prikker-menyen forskyves layouten — trolig fordi DropdownMenu endrer scroll/layout
+2. Avdeling vises selv når feltet er tomt (f.eks. "Avdeling" placeholder)
+3. Steder som ikke er valgt (f.eks. "LILLESTRØM") vises selv om ingen er valgt
 
-Legge til en `defaultHidden`-prop på `ContactCardContent` som styrer standardvisning av valgfrie seksjoner. Design Lab sender denne propen — alle andre sider forblir uendret.
+## Endringer i `src/components/ContactCardContent.tsx`
 
-I tillegg flyttes 3-prikker-menyen inn i kontaktkortets header (kun synlig når `defaultHidden` er aktiv).
+### 1. Fiks layout-forskyving
+- Legg til `modal={false}` på `DropdownMenu` for 3-prikker-menyen (linje ~804), slik at den ikke skaper en overlay som påvirker scroll-posisjon
+- Legg til `sideOffset={4}` på `DropdownMenuContent` for å unngå at menyen dytter innhold
 
-## Endringer
-
-### 1. `src/components/ContactCardContent.tsx`
-
-**Ny prop:**
+### 2. Skjul avdeling når tom (defaultHidden aktiv)
+Linje ~922: Legg til betingelse slik at avdeling skjules når `defaultHidden` er satt og `(contact as any).department` er tomt/null:
 ```ts
-defaultHidden?: {
-  techDna?: boolean;
-  notes?: boolean;
-  consultantMatch?: boolean;
-  linkedinIfEmpty?: boolean;
-  locationsIfEmpty?: boolean;
-}
+{showAvdeling && !(defaultHidden && !(contact as any).department) && (
 ```
 
-**Ny state (kun når `defaultHidden` er satt):**
-- `showTechDna` — default `false`
-- `showNotes` — default `false`
-- `showConsultantMatch` — default `false`
+### 3. Skjul steder med ingen valgte (allerede fungerer?)
+Sjekke at linje 884 faktisk fanger opp korrekt — "LILLESTRØM" som ikke er valgt betyr `contactLocations.length === 0`, som allerede bør trigge skjuling. Men fra skjermbildet ser det ut som unselected locations likevel vises. Problemet er at `companyLocations` vises uansett — vi må skjule hele blokken når ingen er valgt og `defaultHidden` er aktiv (dette ser ut til å allerede være implementert på linje 884, men vi verifiserer og evt. fikser).
 
-**3-prikker-meny i headeren** (kun når `defaultHidden`-prop finnes):
-- Import `MoreHorizontal` fra lucide-react
-- Plasseres etter eier-badge i header-raden
-- Menyvalg:
-  - **Rediger profil** — scroller til navnfeltet
-  - **Finn konsulent** — toggler `showConsultantMatch` + trigger matching
-  - **Legg til notat** — toggler `showNotes` + åpner editor
-  - **Vis/skjul teknisk DNA** — toggler `showTechDna`
-  - **Vis/skjul notat** — toggler `showNotes` (synlig kun når notat finnes)
-
-**Betinget visning:**
-- Teknisk DNA + tech chips: wrap i `{(!defaultHidden?.techDna || showTechDna) && (...)}`
-- Notat: wrap i `{(!defaultHidden?.notes || showNotes) && (...)}`
-- Finn konsulent-resultater: wrap i `{(!defaultHidden?.consultantMatch || showConsultantMatch) && (...)}`
-- LinkedIn: skjul tom placeholder når `defaultHidden?.linkedinIfEmpty && !contact.linkedin`
-- Steder/locations: skjul når `defaultHidden?.locationsIfEmpty && contactLocations.length === 0`
-
-### 2. `src/pages/DesignLabContacts.tsx`
-
-Endre linje 587:
-```tsx
-<ContactCardContent
-  contactId={sel.id}
-  editable
-  defaultHidden={{ techDna: true, notes: true, consultantMatch: true, linkedinIfEmpty: true, locationsIfEmpty: true }}
-/>
-```
-
-### Filer som endres
-- `src/components/ContactCardContent.tsx` — ny prop, state, dropdown-meny, betinget visning
-- `src/pages/DesignLabContacts.tsx` — sender `defaultHidden`-prop
-
-Ingen andre filer endres. Standard kontaktsider (`ContactDetail.tsx`, `Contacts.tsx`) forblir uberørt.
+## Filer som endres
+- `src/components/ContactCardContent.tsx` — 3 små endringer
 
