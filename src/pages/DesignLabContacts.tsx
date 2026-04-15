@@ -10,7 +10,6 @@ import {
   ChevronUp,
   Users,
   X,
-  Wifi,
   ArrowUpRight,
 } from "lucide-react";
 import { differenceInDays, format } from "date-fns";
