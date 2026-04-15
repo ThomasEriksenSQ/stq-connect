@@ -753,10 +753,7 @@ export function ContactCardContent({
                           }}
                         >
                           <span
-                            className={cn(
-                              "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold mr-2",
-                              cat.badgeColor,
-                            )}
+                            className="chip chip--action is-signal"
                           >
                             {cat.label}
                           </span>
