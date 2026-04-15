@@ -496,7 +496,9 @@ export default function DesignLabContacts() {
         )}
 
         {/* Content: list + detail */}
-        <div className="flex-1 min-h-0 flex">
+        <div className="flex-1 min-h-0 flex relative" style={{ borderBottom: "none" }}>
+          {/* Continuous header divider line */}
+          <div className="absolute top-[32px] left-0 right-0 h-px z-20 pointer-events-none" style={{ background: C.border }} />
           <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel defaultSize={35} minSize={20} maxSize={60}>
               <div className="h-full overflow-y-auto">
