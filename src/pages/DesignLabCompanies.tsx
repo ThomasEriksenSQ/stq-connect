@@ -363,163 +363,92 @@ export default function DesignLabCompanies() {
 
         {/* Table + Detail Panel */}
         <div className="flex-1 min-h-0 overflow-hidden">
-          <ResizablePanelGroup direction="horizontal">
-            {/* Panel 1: Table */}
-            <ResizablePanel defaultSize={selectedId ? 35 : 100} minSize={20} maxSize={selectedId ? 60 : 100}>
-              <div className="h-full overflow-y-auto" style={{ scrollbarColor: `${C.borderStrong} ${C.surfaceAlt}` }}>
-                {/* Column headers */}
-                <div
-                  className="grid items-center sticky top-0 z-10"
-                  style={{
-                    gridTemplateColumns: "minmax(180px,2fr) minmax(120px,1fr) 130px 120px 90px 80px",
-                    height: 32, borderBottom: `1px solid ${C.border}`,
-                    background: C.surfaceAlt, paddingLeft: 16, paddingRight: 16,
-                  }}
-                >
-                  <ColHeader label="Selskap" field="name" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Type" field="type" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Sted" field="city" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Oppf." field="tasks" sort={sort} onSort={toggleSort} className="justify-end" />
-                </div>
-
-                {isLoading ? (
-                  <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster selskaper…</div>
-                ) : sorted.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen selskaper funnet</div>
-                ) : (
-                  sorted.map((company: any) => {
-                    const signal = company.signal ? mapToSignal(company.signal) : null;
-                    const signalColors = signal ? SIGNAL_COLORS[signal] : null;
-                    const daysSince = company.lastActivity ? differenceInDays(new Date(), new Date(company.lastActivity)) : null;
-                    const typeLabel = TYPE_VALUE_TO_LABEL[company.status] || company.status;
-                    const isSelected = selectedId === company.id;
-
-                    return (
-                      <div
-                        key={company.id}
-                        onClick={() => setSelectedId(isSelected ? null : company.id)}
-                        className="grid items-center cursor-pointer group"
-                        style={{
-                          gridTemplateColumns: "minmax(180px,2fr) minmax(120px,1fr) 130px 120px 90px 80px",
-                          minHeight: 34, paddingLeft: 16, paddingRight: 16,
-                          borderBottom: `1px solid ${C.borderLight}`,
-                          background: isSelected ? C.activeBg : "transparent",
-                        }}
-                        onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = C.hoverBg; }}
-                        onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
-                      >
-                        {/* Name */}
-                        <div className="min-w-0 flex items-center gap-2">
-                          <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{company.name}</span>
-                          {company.contactCount > 0 && (
-                            <span style={{ fontSize: 11, color: C.textGhost }}>{company.contactCount}</span>
-                          )}
-                        </div>
-
-                        {/* Type — inline dropdown */}
-                        <div className="min-w-0 relative" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setTypeDropdownOpen(typeDropdownOpen === company.id ? null : company.id);
-                            }}
-                            className="inline-flex items-center gap-0.5 transition-colors"
-                            style={{ fontSize: 12, color: C.textMuted, cursor: "pointer" }}
-                            onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.color = C.textMuted; }}
-                          >
-                            <span className="truncate">{typeLabel}</span>
-                            <ChevronDown style={{ width: 12, height: 12, flexShrink: 0 }} />
-                          </button>
-                          {typeDropdownOpen === company.id && (
-                            <>
-                              <div className="fixed inset-0 z-20" onClick={() => setTypeDropdownOpen(null)} />
-                              <div
-                                className="absolute left-0 top-full mt-1 z-30 rounded-md overflow-hidden"
-                                style={{ background: C.panel, border: `1px solid ${C.border}`, boxShadow: C.shadowMd, minWidth: 160 }}
-                              >
-                                {TYPE_OPTIONS.map((opt) => (
-                                  <button
-                                    key={opt.value}
-                                    onClick={() => {
-                                      setTypeMutation.mutate({ companyId: company.id, status: opt.value });
-                                      setTypeDropdownOpen(null);
-                                    }}
-                                    className="block w-full text-left px-3 transition-colors"
-                                    style={{ fontSize: 12, color: C.text, height: 30 }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                                  >
-                                    {opt.label}
-                                  </button>
-                                ))}
-                              </div>
-                            </>
-                          )}
-                        </div>
-
-                        {/* Signal */}
-                        <div className="flex items-center gap-1.5">
-                          {signal && signalColors && (
-                            <>
-                              <span className="rounded-full inline-block shrink-0" style={{ width: 7, height: 7, background: signalColors.color }} />
-                              <span className="truncate" style={{ fontSize: 12, color: signalColors.color }}>{signal}</span>
-                            </>
-                          )}
-                        </div>
-
-                        {/* City */}
-                        <span className="truncate" style={{ fontSize: 12, color: C.textMuted }}>{company.city || ""}</span>
-
-                        {/* Last activity */}
-                        <span style={{ fontSize: 12, color: C.textFaint }}>
-                          {daysSince !== null ? relTime(daysSince) : ""}
-                        </span>
-
-                        {/* Tasks */}
-                        <span className="text-right" style={{ fontSize: 12, color: company.hasOverdue ? C.danger : company.taskCount > 0 ? C.textMuted : C.textGhost }}>
-                          {company.taskCount > 0 ? company.taskCount : ""}
-                        </span>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </ResizablePanel>
-
-            {/* Detail panel (only when selected) */}
-            {selectedId && (
-              <>
-                <ResizableHandle withHandle />
-                <ResizablePanel defaultSize={65} minSize={30}>
-                  <div className="h-full flex flex-col" style={{ background: C.bg, borderLeft: `1px solid ${C.border}` }}>
-                    {/* Close bar */}
-                    <div className="flex items-center justify-end px-3 shrink-0" style={{ height: 32, borderBottom: `1px solid ${C.borderLight}` }}>
-                      <button
-                        onClick={() => setSelectedId(null)}
-                        className="flex items-center justify-center rounded transition-colors"
-                        style={{ width: 24, height: 24, color: C.textFaint }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; e.currentTarget.style.color = C.text; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = C.textFaint; }}
-                      >
-                        <X style={{ width: 14, height: 14 }} />
-                      </button>
-                    </div>
-                    {/* Content */}
-                    <div className="flex-1 min-h-0 overflow-y-auto">
-                      <CompanyCardContent companyId={selectedId} editable onNavigateToFullPage={() => navigate(`/selskaper/${selectedId}`)} />
-                    </div>
+          {selectedId ? (
+            <ResizablePanelGroup direction="horizontal" key="with-detail">
+              {/* Panel 1: Table */}
+              <ResizablePanel defaultSize={35} minSize={20} maxSize={60}>
+                <div className="h-full overflow-y-auto" style={{ scrollbarColor: `${C.borderStrong} ${C.surfaceAlt}` }}>
+                  {/* Column headers */}
+                  <div
+                    className="grid items-center sticky top-0 z-10"
+                    style={{
+                      gridTemplateColumns: "minmax(180px,2fr) minmax(120px,1fr) 130px 120px 90px 80px",
+                      height: 32, borderBottom: `1px solid ${C.border}`,
+                      background: C.surfaceAlt, paddingLeft: 16, paddingRight: 16,
+                    }}
+                  >
+                    <ColHeader label="Selskap" field="name" sort={sort} onSort={toggleSort} />
+                    <ColHeader label="Type" field="type" sort={sort} onSort={toggleSort} />
+                    <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
+                    <ColHeader label="Sted" field="city" sort={sort} onSort={toggleSort} />
+                    <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} />
+                    <ColHeader label="Oppf." field="tasks" sort={sort} onSort={toggleSort} className="justify-end" />
                   </div>
-                </ResizablePanel>
-                <ResizableHandle withHandle />
-                <ResizablePanel defaultSize={0} minSize={0} maxSize={40}>
-                  <div className="h-full" style={{ background: C.appBg }} />
-                </ResizablePanel>
-              </>
-            )}
-          </ResizablePanelGroup>
+
+                  {isLoading ? (
+                    <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster selskaper…</div>
+                  ) : sorted.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen selskaper funnet</div>
+                  ) : (
+                    sorted.map((company: any) => renderRow(company))
+                  )}
+                </div>
+              </ResizablePanel>
+
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={65} minSize={30}>
+                <div className="h-full flex flex-col" style={{ background: C.bg, borderLeft: `1px solid ${C.border}` }}>
+                  {/* Close bar */}
+                  <div className="flex items-center justify-end px-3 shrink-0" style={{ height: 32, borderBottom: `1px solid ${C.borderLight}` }}>
+                    <button
+                      onClick={() => setSelectedId(null)}
+                      className="flex items-center justify-center rounded transition-colors"
+                      style={{ width: 24, height: 24, color: C.textFaint }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; e.currentTarget.style.color = C.text; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = C.textFaint; }}
+                    >
+                      <X style={{ width: 14, height: 14 }} />
+                    </button>
+                  </div>
+                  {/* Content */}
+                  <div className="flex-1 min-h-0 overflow-y-auto">
+                    <CompanyCardContent companyId={selectedId} editable onNavigateToFullPage={() => navigate(`/selskaper/${selectedId}`)} />
+                  </div>
+                </div>
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={0} minSize={0} maxSize={40}>
+                <div className="h-full" style={{ background: C.appBg }} />
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          ) : (
+            <div className="h-full overflow-y-auto" style={{ scrollbarColor: `${C.borderStrong} ${C.surfaceAlt}` }}>
+              {/* Column headers */}
+              <div
+                className="grid items-center sticky top-0 z-10"
+                style={{
+                  gridTemplateColumns: "minmax(180px,2fr) minmax(120px,1fr) 130px 120px 90px 80px",
+                  height: 32, borderBottom: `1px solid ${C.border}`,
+                  background: C.surfaceAlt, paddingLeft: 16, paddingRight: 16,
+                }}
+              >
+                <ColHeader label="Selskap" field="name" sort={sort} onSort={toggleSort} />
+                <ColHeader label="Type" field="type" sort={sort} onSort={toggleSort} />
+                <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
+                <ColHeader label="Sted" field="city" sort={sort} onSort={toggleSort} />
+                <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} />
+                <ColHeader label="Oppf." field="tasks" sort={sort} onSort={toggleSort} className="justify-end" />
+              </div>
+
+              {isLoading ? (
+                <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster selskaper…</div>
+              ) : sorted.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen selskaper funnet</div>
+              ) : (
+                sorted.map((company: any) => renderRow(company))
+              )}
+            </div>
+          )}
         </div>
       </main>
     </div>
