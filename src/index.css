@@ -340,6 +340,24 @@ html {
   color: #1A1C1F;
   font-weight: 600;
 }
+.chip--action.is-cv-active {
+  background: rgba(26,79,160,0.08);
+  border: none;
+  color: #1A4FA0;
+  font-weight: 500;
+}
+.chip--action.is-buyer-active {
+  background: rgba(94,106,210,0.08);
+  border: none;
+  color: #5E6AD2;
+  font-weight: 500;
+}
+.chip--action.is-irrelevant-active {
+  background: rgba(193,53,56,0.08);
+  border: none;
+  color: #C13538;
+  font-weight: 500;
+}
 .chip--action.is-signal {
   background: rgba(94,106,210,0.08);
   border: none;

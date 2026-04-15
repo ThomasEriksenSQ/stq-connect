@@ -1067,7 +1067,7 @@ export function ContactCardContent({
               (contact as any).cv_email && ((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned")
                 ? " is-muted"
                 : (contact as any).cv_email
-                  ? " is-active"
+                  ? " is-cv-active"
                   : ""
             }`}
           >
@@ -1078,14 +1078,14 @@ export function ContactCardContent({
           {/* Innkjøper */}
           <button
             onClick={() => updateMutation.mutate({ call_list: !(contact as any).call_list })}
-            className={`chip chip--action${(contact as any).call_list ? " is-active" : ""}`}
+            className={`chip chip--action${(contact as any).call_list ? " is-buyer-active" : ""}`}
           >
             {(contact as any).call_list ? "✓ Innkjøper" : "Innkjøper"}
           </button>
           {/* Ikke aktuell å kontakte */}
           <button
             onClick={() => updateMutation.mutate({ ikke_aktuell_kontakt: !(contact as any).ikke_aktuell_kontakt })}
-            className={`chip chip--action is-muted`}
+            className={`chip chip--action${(contact as any).ikke_aktuell_kontakt ? " is-irrelevant-active" : ""}`}
           >
             {(contact as any).ikke_aktuell_kontakt
               ? "✕ Ikke relevant person å kontakte igjen"
