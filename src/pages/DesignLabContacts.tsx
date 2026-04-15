@@ -387,7 +387,7 @@ export default function DesignLabContacts() {
       </aside>
 
       {/* ═══ MAIN ═══ */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ zoom: SCALE_MAP[textSize] }}>
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ zoom: SCALE_MAP[textSize], background: C.surface }}>
         {/* Header bar */}
         <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
           <div className="flex items-baseline gap-2.5">
@@ -453,7 +453,7 @@ export default function DesignLabContacts() {
                   <div
                     key={con.id ?? con.navn}
                     className="flex items-center gap-2.5 shrink-0 rounded-lg"
-                    style={{ border: `1px solid ${C.border}`, padding: "8px 14px", background: C.surface }}
+                    style={{ border: `1px solid ${C.border}`, padding: "8px 14px", background: C.panel }}
                   >
                     <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 36, height: 36, background: "rgba(0,0,0,0.06)", fontSize: 12, fontWeight: 600, color: C.text }}>
                       {initials.toUpperCase()}
@@ -533,7 +533,7 @@ export default function DesignLabContacts() {
                 className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
               />
               <ResizablePanel defaultSize={65} minSize={40}>
-                <div className="h-full flex flex-col" style={{ background: C.surface }}>
+                <div className="h-full flex flex-col" style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}` }}>
                   {/* Enhanced detail header */}
                   <div className="shrink-0 px-6 py-4" style={{ borderBottom: `1px solid ${C.border}` }}>
                     <div className="flex items-start justify-between">
