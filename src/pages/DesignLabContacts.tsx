@@ -121,6 +121,23 @@ export default function DesignLabContacts() {
     }
   }, [selectedId]);
 
+  // Mobile scroll lock (<1024px)
+  useEffect(() => {
+    const check = () => {
+      if (window.innerWidth < 1024 && selectedId) {
+        document.body.classList.add("overflow-hidden");
+      } else {
+        document.body.classList.remove("overflow-hidden");
+      }
+    };
+    check();
+    window.addEventListener("resize", check);
+    return () => {
+      window.removeEventListener("resize", check);
+      document.body.classList.remove("overflow-hidden");
+    };
+  }, [selectedId]);
+
   // ── Queries ──
   const { data: rawContacts = [], isLoading } = useQuery({
     queryKey: ["dl-contacts-v8"],
