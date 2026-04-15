@@ -30,7 +30,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { ContactCardContent } from "@/components/ContactCardContent";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
-import { C, SIGNAL_COLORS, HEAT_COLORS } from "@/components/designlab/theme";
+import { C, SIGNAL_COLORS } from "@/components/designlab/theme";
 import { CommandPalette } from "@/components/designlab/CommandPalette";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { getHeatResult, getTaskStatus, getActivityStatus, type HeatResult } from "@/lib/heatScore";
@@ -1006,7 +1006,7 @@ export default function DesignLabContacts() {
                 <div
                   className="grid items-center sticky top-0 z-10"
                   style={{
-                    gridTemplateColumns: "minmax(160px,2fr) 132px 52px minmax(120px,1.5fr) minmax(100px,1fr) 190px 80px",
+                    gridTemplateColumns: "minmax(160px,2fr) 132px 52px minmax(120px,1.5fr) minmax(100px,1fr) 132px 80px",
                     height: 32,
                     borderBottom: `1px solid ${C.border}`,
                     background: C.surfaceAlt,
@@ -1019,7 +1019,7 @@ export default function DesignLabContacts() {
                   <span style={{ fontSize: 11, fontWeight: 500, color: C.textFaint }}>Finn</span>
                   <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
                   <ColHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Heat / tags" field="priority" sort={sort} onSort={toggleSort} />
+                  <ColHeader label="Tags" field="priority" sort={sort} onSort={toggleSort} />
                   <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
                 </div>
                 {isLoading || isLoadingParity ? (
@@ -1039,7 +1039,7 @@ export default function DesignLabContacts() {
                         onClick={() => setSelectedId(isActive ? null : c.id)}
                         className="grid items-center cursor-pointer group"
                         style={{
-                          gridTemplateColumns: "minmax(160px,2fr) 132px 52px minmax(120px,1.5fr) minmax(100px,1fr) 190px 80px",
+                          gridTemplateColumns: "minmax(160px,2fr) 132px 52px minmax(120px,1.5fr) minmax(100px,1fr) 132px 80px",
                           minHeight: 38,
                           paddingLeft: 16,
                           paddingRight: 16,
@@ -1138,7 +1138,6 @@ export default function DesignLabContacts() {
 
                         {/* Heat / Tags */}
                         <div className="flex items-center gap-1.5 min-w-0" onClick={(event) => event.stopPropagation()}>
-                          <HeatBadge heat={c.heatResult} daysSince={c.daysSince} />
                           <button
                             type="button"
                             title={
@@ -1335,32 +1334,6 @@ function SignalChip({ signal, size = "sm" }: { signal: Signal; size?: "sm" | "md
   };
   const modifier = signal === "Ikke aktuelt" ? " is-muted" : " is-signal";
   return <span className={`chip chip--action${modifier}`}>{size === "sm" ? shortLabels[signal] : signal}</span>;
-}
-
-/* ═══════════════════════════════════════════════════════════
-   HEAT BADGE
-   ═══════════════════════════════════════════════════════════ */
-
-function HeatBadge({ heat, daysSince, showScore }: { heat: HeatResult; daysSince: number; showScore?: boolean }) {
-  const config = HEAT_COLORS[heat.temperature];
-  const tooltip = `${config.label} (${heat.score}p) · Siste: ${daysSince < 999 ? relTime(daysSince) : "aldri"}`;
-  return (
-    <span
-      className="inline-flex items-center rounded"
-      title={tooltip}
-      style={{
-        fontSize: 11,
-        fontWeight: 500,
-        padding: "2px 6px",
-        whiteSpace: "nowrap",
-        background: config.bg,
-        color: config.color,
-      }}
-    >
-      {config.label}
-      {showScore && <span style={{ marginLeft: 4, opacity: 0.7 }}>{heat.score}</span>}
-    </span>
-  );
 }
 
 /* ═══════════════════════════════════════════════════════════
