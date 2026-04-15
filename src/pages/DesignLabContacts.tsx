@@ -607,7 +607,6 @@ export default function DesignLabContacts() {
    ═══════════════════════════════════════════════════════════ */
 
 function SignalChip({ signal, size = "sm" }: { signal: Signal; size?: "sm" | "md" }) {
-  const colors = SIGNAL_COLORS[signal];
   const shortLabels: Record<Signal, string> = {
     "Behov nå": "Behov nå",
     "Får fremtidig behov": "Fremtidig",
@@ -615,18 +614,9 @@ function SignalChip({ signal, size = "sm" }: { signal: Signal; size?: "sm" | "md
     "Ukjent om behov": "Ukjent",
     "Ikke aktuelt": "Ikke aktuelt",
   };
+  const modifier = signal === "Ikke aktuelt" ? " is-muted" : " is-signal";
   return (
-    <span
-      className="inline-flex items-center rounded"
-      style={{
-        fontSize: size === "sm" ? 11 : 12,
-        fontWeight: 500,
-        padding: size === "sm" ? "2px 6px" : "2px 8px",
-        whiteSpace: "nowrap",
-        background: colors.bg,
-        color: colors.color,
-      }}
-    >
+    <span className={`chip chip--action${modifier}`}>
       {size === "sm" ? shortLabels[signal] : signal}
     </span>
   );
