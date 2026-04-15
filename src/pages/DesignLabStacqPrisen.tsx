@@ -200,9 +200,9 @@ export default function DesignLabStacqPrisen() {
     <div className="flex h-screen overflow-hidden select-none" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}>
 
       {/* ═══ SIDEBAR ═══ */}
-      <aside className="flex flex-col shrink-0" style={{ width: 216, borderRight: `1px solid ${C.border}`, background: C.sidebarBg }}>
+      <aside className="flex flex-col shrink-0" style={{ width: 220, borderRight: `1px solid ${C.border}`, background: C.sidebarBg }}>
         <div className="flex items-center gap-2 px-4" style={{ height: 44 }}>
-          <div className="flex items-center justify-center rounded" style={{ width: 22, height: 22, background: C.accent, color: "#fff", fontSize: 11, fontWeight: 700 }}>S</div>
+          <div className="flex items-center justify-center rounded" style={{ width: 22, height: 22, background: C.accent, color: "#fff", fontSize: 11, fontWeight: 600 }}>S</div>
           <span style={{ fontSize: 14, fontWeight: 600, color: C.text, letterSpacing: "-0.01em" }}>STACQ</span>
         </div>
         <div className="px-3 mb-1">
@@ -452,11 +452,11 @@ function NavGroup({ items, navigate }: { items: { label: string; icon: any; href
           style={{
             fontSize: 13, fontWeight: item.active ? 600 : 500,
             color: item.active ? C.text : C.textMuted,
-            background: item.active ? "rgba(0,0,0,0.05)" : "transparent",
-            borderRadius: 6,
+            background: item.active ? C.activeBg : "transparent",
+            borderRadius: 4,
           }}
           onMouseEnter={(e) => { if (!item.active) e.currentTarget.style.background = C.hoverBg; }}
-          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? "rgba(0,0,0,0.05)" : "transparent"; }}
+          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? C.activeBg : "transparent"; }}
         >
           <item.icon style={{ width: 15, height: 15, strokeWidth: 1.6 }} />
           {item.label}

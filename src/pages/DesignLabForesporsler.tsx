@@ -232,9 +232,9 @@ export default function DesignLabForesporsler() {
     <div className="flex h-screen overflow-hidden select-none" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}>
 
       {/* ═══ SIDEBAR ═══ */}
-      <aside className="flex flex-col shrink-0" style={{ width: 216, borderRight: `1px solid ${C.border}`, background: C.sidebarBg }}>
+      <aside className="flex flex-col shrink-0" style={{ width: 220, borderRight: `1px solid ${C.border}`, background: C.sidebarBg }}>
         <div className="flex items-center gap-2 px-4" style={{ height: 44 }}>
-          <div className="flex items-center justify-center rounded" style={{ width: 22, height: 22, background: C.accent, color: "#fff", fontSize: 11, fontWeight: 700 }}>S</div>
+          <div className="flex items-center justify-center rounded" style={{ width: 22, height: 22, background: C.accent, color: "#fff", fontSize: 11, fontWeight: 600 }}>S</div>
           <span style={{ fontSize: 14, fontWeight: 600, color: C.text, letterSpacing: "-0.01em" }}>STACQ</span>
         </div>
 
@@ -290,12 +290,12 @@ export default function DesignLabForesporsler() {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Søk forespørsler…"
                 className="w-full outline-none placeholder:text-[#a2a5ab]"
-                style={{ height: 30, paddingLeft: 30, paddingRight: 10, borderRadius: 6, border: `1px solid ${C.border}`, background: C.surface, color: C.text, fontSize: 13 }}
+                style={{ height: 34, paddingLeft: 30, paddingRight: 10, borderRadius: 6, border: `1px solid ${C.border}`, background: C.surface, color: C.text, fontSize: 13 }}
               />
             </div>
             <button
               className="inline-flex items-center gap-1.5 rounded-md transition-opacity hover:opacity-90"
-              style={{ height: 30, paddingInline: 12, fontSize: 13, fontWeight: 500, background: C.accent, color: "#fff", borderRadius: 6 }}
+              style={{ height: 32, paddingInline: 12, fontSize: 13, fontWeight: 500, background: C.accent, color: "#fff", borderRadius: 6 }}
             >
               + Ny forespørsel
             </button>
@@ -342,7 +342,7 @@ export default function DesignLabForesporsler() {
               </ResizablePanel>
               <ResizableHandle
                 withHandle
-                className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(1,105,111,0.12)]"
+                className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
               />
               <ResizablePanel defaultSize={60} minSize={40}>
                 <div className="h-full flex flex-col" style={{ background: C.surface }}>
@@ -524,11 +524,11 @@ function NavGroup({ items, navigate }: { items: readonly { label: string; icon: 
           style={{
             fontSize: 13, fontWeight: item.active ? 600 : 500,
             color: item.active ? C.text : C.textMuted,
-            background: item.active ? "rgba(0,0,0,0.05)" : "transparent",
-            borderRadius: 6,
+            background: item.active ? C.activeBg : "transparent",
+            borderRadius: 4,
           }}
           onMouseEnter={(e) => { if (!item.active) e.currentTarget.style.background = C.hoverBg; }}
-          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? "rgba(0,0,0,0.05)" : "transparent"; }}
+          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? C.activeBg : "transparent"; }}
         >
           <item.icon style={{ width: 15, height: 15, strokeWidth: 1.6 }} />
           {item.label}
@@ -584,7 +584,7 @@ function FilterRow({ label, options, value, onChange }: {
               className="inline-flex items-center transition-colors"
               style={{
                 height: 24, paddingInline: 10, fontSize: 12, fontWeight: 500,
-                borderRadius: 6,
+                borderRadius: 4,
                 border: active ? "none" : `1px solid ${C.border}`,
                 background: active ? C.accent : "transparent",
                 color: active ? "#fff" : C.textMuted,
