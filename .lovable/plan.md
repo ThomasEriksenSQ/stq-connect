@@ -1,23 +1,38 @@
 
 
-# Plan: Update Design Lab Surface Tokens
+# Plan: Add `.content-wrapper` to Design Lab pages
 
-## Changes
+## What
 
-**File: `src/components/designlab/theme.ts`**
+Add a `<div className="content-wrapper">` inside each `<main>`, wrapping all content **after** the header bar. This constrains content to 1280px max-width, left-aligned.
 
-Update 3 tokens + add 1 new token:
+## CSS
 
-| Token | Current | New | Role |
-|-------|---------|-----|------|
-| `bg` | `#F5F6F8` | `#F5F6F8` | No change (shell) |
-| `sidebarBg` | `#FFFFFF` | **`#F7F8FA`** | Sidebar gets its own subtle layer |
-| `surface` | `#FAFBFC` | **`#FFFFFF`** | Panels/detail views become white |
-| **`appBg`** | *(new)* | `#FAFBFC` | Main canvas background |
+Add to `src/index.css` (scoped by class, only used in Design Lab):
 
-**Files: `DesignLabContacts.tsx`, `DesignLabForesporsler.tsx`, `DesignLabStacqPrisen.tsx`**
+```css
+.content-wrapper {
+  max-width: 1280px;
+  width: 100%;
+  margin-left: 0;
+  margin-right: auto;
+}
+```
 
-- Change `<main>` background from `C.surface` → `C.appBg`
+## File changes
 
-Result: 4-layer hierarchy — Shell (`#F5F6F8`) → Sidebar (`#F7F8FA`) → Canvas (`#FAFBFC`) → Surface (`#FFFFFF`)
+### `src/pages/DesignLabContacts.tsx`
+Wrap lines 419–633 (filter bar + availability cards + contact list/detail) in `<div className="content-wrapper flex-1 flex flex-col min-h-0">`. The flex properties transfer from what's currently on the content sections so the layout still fills available space.
+
+### `src/pages/DesignLabForesporsler.tsx`
+Wrap lines 305–379 (filters + content list/detail) in `<div className="content-wrapper flex-1 flex flex-col min-h-0">`.
+
+### `src/pages/DesignLabStacqPrisen.tsx`
+Wrap lines 244–377 (stat line + chart + table) in `<div className="content-wrapper flex-1 flex flex-col min-h-0">`.
+
+## Not changed
+- Backgrounds, typography, spacing tokens
+- Sidebar, topbar, page shell
+- Non-design-lab pages
+- No global CSS changes beyond the `.content-wrapper` class definition
 
