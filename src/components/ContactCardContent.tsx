@@ -111,13 +111,7 @@ function CategoryBadge({ label, className }: { label: string; className?: string
   const isKnown = CATEGORIES.some((c) => c.label === normalized);
   if (!isKnown) return null;
   return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
-        color,
-        className,
-      )}
-    >
+    <span className={cn("chip chip--action is-signal", className)}>
       {normalized}
     </span>
   );
@@ -732,10 +726,7 @@ export function ContactCardContent({
                     <DropdownMenuTrigger asChild>
                       {signalCat ? (
                         <button
-                          className={cn(
-                            "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer",
-                            signalCat.badgeColor,
-                          )}
+                          className="chip chip--action is-signal cursor-pointer"
                         >
                           {signalCat.label}
                           <ChevronDown className="h-3 w-3 ml-1" />
@@ -756,10 +747,7 @@ export function ContactCardContent({
                           }}
                         >
                           <span
-                            className={cn(
-                              "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold mr-2",
-                              cat.badgeColor,
-                            )}
+                            className="chip chip--action is-signal"
                           >
                             {cat.label}
                           </span>
@@ -772,7 +760,7 @@ export function ContactCardContent({
             {editable && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium whitespace-nowrap cursor-pointer">
+                  <button className="chip chip--action is-signal cursor-pointer whitespace-nowrap">
                     {contact.owner_id && profileMapFull[contact.owner_id] ? profileMapFull[contact.owner_id] : "Eier"}
                     <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
                   </button>
@@ -780,7 +768,7 @@ export function ContactCardContent({
                 <DropdownMenuContent align="end">
                   {allProfiles.map((p) => (
                     <DropdownMenuItem key={p.id} onClick={() => updateMutation.mutate({ owner_id: p.id })}>
-                      <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+                      <span className="chip chip--action is-signal">
                         {p.full_name}
                       </span>
                     </DropdownMenuItem>
@@ -1004,14 +992,13 @@ export function ContactCardContent({
                 },
               });
             }}
-            className={cn(
-              "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+            className={`chip chip--action${
               (contact as any).cv_email && ((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned")
-                ? "bg-red-50 text-red-700 border-red-200"
+                ? " is-muted"
                 : (contact as any).cv_email
-                  ? "bg-green-100 text-green-800 border-green-200"
-                  : "bg-background text-muted-foreground border-border hover:bg-secondary",
-            )}
+                  ? " is-active"
+                  : ""
+            }`}
           >
             {(contact as any).cv_email && ((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned")
               ? "CV-Epost ✗"
@@ -1020,24 +1007,14 @@ export function ContactCardContent({
           {/* Innkjøper */}
           <button
             onClick={() => updateMutation.mutate({ call_list: !(contact as any).call_list })}
-            className={cn(
-              "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
-              (contact as any).call_list
-                ? "bg-amber-100 text-amber-800 border-amber-200"
-                : "bg-background text-muted-foreground border-border hover:bg-secondary",
-            )}
+            className={`chip chip--action${(contact as any).call_list ? " is-active" : ""}`}
           >
             {(contact as any).call_list ? "✓ Innkjøper" : "Innkjøper"}
           </button>
           {/* Ikke aktuell å kontakte */}
           <button
             onClick={() => updateMutation.mutate({ ikke_aktuell_kontakt: !(contact as any).ikke_aktuell_kontakt })}
-            className={cn(
-              "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
-              (contact as any).ikke_aktuell_kontakt
-                ? "bg-destructive/10 text-destructive border-destructive/30"
-                : "bg-background text-muted-foreground border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30",
-            )}
+            className={`chip chip--action is-muted`}
           >
             {(contact as any).ikke_aktuell_kontakt
               ? "✕ Ikke relevant person å kontakte igjen"
@@ -1126,7 +1103,7 @@ export function ContactCardContent({
                 {((contact as any).teknologier as string[]).map((tag: string) => (
                   <span
                     key={tag}
-                    className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.75rem] font-medium text-foreground"
+                    className="chip chip--tech"
                   >
                     {tag}
                   </span>
@@ -1518,7 +1495,7 @@ export function ContactCardContent({
                       {(m.match_tags || []).map((t: string) => (
                         <span
                           key={t}
-                          className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium"
+                          className="chip chip--tech"
                         >
                           {t}
                         </span>
@@ -1820,7 +1797,7 @@ function TaskRow({
         {displayDesc && <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{displayDesc}</p>}
         {task.assigned_to && profileMap[task.assigned_to] && (
           <div className="mt-1">
-            <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+            <span className="chip chip--action is-signal">
               {profileMap[task.assigned_to]}
             </span>
           </div>
@@ -2102,7 +2079,7 @@ function EmailRow({ email }: { email: any }) {
             <span className="text-[0.8125rem] text-muted-foreground">
               {format(d, "d. MMM yyyy", { locale: nb })}
             </span>
-            <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+            <span className="chip chip--action is-signal">
               E-post
             </span>
           </div>
@@ -2321,7 +2298,7 @@ function ActivityRow({
               {/* Owner badge */}
               {ownerName && (
                 <div className="mt-1">
-                  <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+                  <span className="chip chip--action is-signal">
                     {ownerName}
                   </span>
                 </div>
