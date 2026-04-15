@@ -13,7 +13,7 @@ import { differenceInDays } from "date-fns";
 import { getEffectiveSignal, normalizeCategoryLabel } from "@/lib/categoryUtils";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { C, SIGNAL_COLORS } from "@/theme";
+import { C, SIGNAL_COLORS } from "@/components/designlab/theme";
 import { crmQueryKeys } from "@/lib/queryKeys";
 
 /* ═══════════════════════════════════════════════════════════

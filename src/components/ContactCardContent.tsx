@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { SIGNAL_COLORS } from "@/theme";
+import { SIGNAL_COLORS } from "@/components/designlab/theme";
 import { AiSignalBanner } from "@/components/AiSignalBanner";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";

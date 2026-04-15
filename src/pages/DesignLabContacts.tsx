@@ -19,7 +19,7 @@ import { getConsultantAvailabilityMeta, sortHuntConsultants } from "@/lib/contac
 import { useAuth } from "@/hooks/useAuth";
 import { ContactCardContent } from "@/components/ContactCardContent";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
-import { C, SIGNAL_COLORS, HEAT_COLORS } from "@/theme";
+import { C, SIGNAL_COLORS, HEAT_COLORS } from "@/components/designlab/theme";
 import { CommandPalette } from "@/components/designlab/CommandPalette";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { getHeatResult, getTaskStatus, getActivityStatus, type HeatResult } from "@/lib/heatScore";
@@ -42,7 +42,7 @@ type TypeFilter = typeof TYPES[number];
 type SortField = "name" | "signal" | "company" | "title" | "owner" | "last_activity" | "heat";
 type SortDir = "asc" | "desc";
 
-/* Colors, signal colors, and heat colors imported from @/theme */
+/* Colors, signal colors, and heat colors imported from @/components/designlab/theme */
 
 function relTime(days: number): string {
   if (days === 0) return "I dag";

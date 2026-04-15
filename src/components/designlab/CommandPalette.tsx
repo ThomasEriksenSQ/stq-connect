@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Search, Users, Building2 } from "lucide-react";
 
-import { C } from "@/theme";
+import { C } from "@/components/designlab/theme";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES
