@@ -255,7 +255,8 @@ export default function DesignLabContacts() {
       const hasOverdue = tasks.some((t: any) => t.status !== "done" && t.status !== "completed" && t.due_date && new Date(t.due_date) < now);
       const hasAktivForespørsel = foresps.some((f: any) => f.status === "Aktiv" || f.status === "Ny");
       const hasTidligereForespørsel = foresps.length > 0;
-      const hasMarkedsradar = false; // would need finn_annonser query
+      const sistFraFinn = (techProfileMap as any)[(c as any).company_id || ""] || null;
+      const hasMarkedsradar = !!(sistFraFinn && differenceInDays(now, new Date(sistFraFinn)) <= 90);
       const taskStatus = getTaskStatus(tasks.map((t: any) => ({ due_date: t.due_date, status: t.status })));
       const activityStatus = getActivityStatus(daysSince);
 
