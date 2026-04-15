@@ -306,7 +306,7 @@ export default function DesignLabStacqPrisen() {
                 className="grid items-center"
                 style={{
                   gridTemplateColumns: "minmax(0,2fr) minmax(0,1.5fr) 80px 80px 80px 100px 56px 80px",
-                  height: 34, paddingInline: 16, borderBottom: `1px solid ${C.border}`, background: C.bg,
+                  height: 34, paddingInline: 16, borderBottom: `1px solid ${C.border}`, background: C.surfaceAlt,
                 }}
               >
                 <ColHeader label="Konsulent" field="kandidat" sort={sort} onSort={toggleSort} />
@@ -362,7 +362,7 @@ export default function DesignLabStacqPrisen() {
                 style={{
                   gridTemplateColumns: "minmax(0,2fr) minmax(0,1.5fr) 80px 80px 80px 100px 56px 80px",
                   minHeight: 40, paddingInline: 16,
-                  background: C.bg, fontWeight: 600,
+                  background: C.surfaceAlt, fontWeight: 600,
                 }}
               >
                 <span style={{ fontSize: 13, color: C.text }}>TOTAL</span>
