@@ -5,11 +5,11 @@ import type { HeatResult } from "@/lib/heatScore";
    ═══════════════════════════════════════════════════════════ */
 
 export const C = {
-  /* Backgrounds */
-  bg: "#F7F8FA",           // --bg-base (shell)
-  sidebarBg: "#F7F8FA",    // --bg-sidebar (identical to shell — disappears)
-  surface: "#FFFFFF",      // --bg-surface (white working surface — creates lift)
-  surfaceAlt: "#F4F5F8",   // --bg-elevated
+  /* Backgrounds — 3-layer: shell → main → panels */
+  bg: "#F5F6F8",           // app shell (outermost)
+  sidebarBg: "#FFFFFF",    // sidebar — white panel
+  surface: "#FAFBFC",      // main content canvas (slightly gray)
+  surfaceAlt: "#F4F5F8",   // elevated controls, table headers
   overlay: "#EDEEF2",      // --bg-overlay
   hoverBg: "#F0F2F6",      // --bg-hover
   activeBg: "#E8ECF5",     // --bg-active
