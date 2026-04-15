@@ -888,7 +888,6 @@ export function ContactCardContent({
             if (visibleLocations.length === 0) return null;
             return (
               <>
-                <span className="text-muted-foreground/40">·</span>
                 <div className="inline-flex items-center gap-1 flex-wrap">
                   <MapPin className="h-3 w-3 text-muted-foreground/50 shrink-0" />
                   {visibleLocations.map((loc) => {
