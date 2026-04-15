@@ -25,19 +25,20 @@ import { usePersistentState } from "@/hooks/usePersistentState";
 
 /* ═══ V8 COLOR CONSTANTS ═══ */
 const C = {
-  bg: "#F7F6F2",
-  surface: "#FFFFFF",
-  text: "#28251D",
-  textMuted: "#6B6B66",
-  textFaint: "#9C9C97",
-  textGhost: "#BAB9B4",
+  bg: "#f7f8f8",
+  surface: "#ffffff",
+  surfaceAlt: "#f3f4f5",
+  text: "#1d2028",
+  textMuted: "#6b6f76",
+  textFaint: "#8a8f98",
+  textGhost: "#a2a5ab",
   accent: "#01696F",
   accentBg: "rgba(1,105,111,0.06)",
-  border: "rgba(40,37,29,0.08)",
-  borderLight: "rgba(40,37,29,0.05)",
-  hoverBg: "rgba(40,37,29,0.035)",
-  activeBg: "rgba(1,105,111,0.04)",
-  shadow: "0 1px 3px rgba(40,37,29,0.06)",
+  border: "#e6e6e6",
+  borderLight: "#eff0f1",
+  hoverBg: "rgba(0,0,0,0.03)",
+  activeBg: "rgba(1,105,111,0.05)",
+  shadow: "0 1px 2px rgba(0,0,0,0.04)",
   danger: "#9a4a4a",
   dangerBg: "rgba(154,74,74,0.06)",
   success: "#4a9a6a",
@@ -221,21 +222,21 @@ export default function DesignLabStacqPrisen() {
 
       {/* ═══ SIDEBAR ═══ */}
       <aside className="flex flex-col shrink-0" style={{ width: 216, borderRight: `1px solid ${C.border}`, background: C.bg }}>
-        <div className="flex items-center gap-2 px-4 h-12">
+        <div className="flex items-center gap-2 px-4" style={{ height: 44 }}>
           <div className="flex items-center justify-center rounded" style={{ width: 22, height: 22, background: C.accent, color: "#fff", fontSize: 11, fontWeight: 700 }}>S</div>
           <span style={{ fontSize: 14, fontWeight: 600, color: C.text, letterSpacing: "-0.01em" }}>STACQ</span>
         </div>
         <div className="px-3 mb-1">
-          <button className="flex items-center gap-2 w-full rounded-md px-2 py-1.5" style={{ fontSize: 13, color: C.textFaint, background: "transparent" }}>
+          <button className="flex items-center gap-2 w-full px-2 py-1.5" style={{ fontSize: 13, color: C.textFaint, background: "transparent", borderRadius: 6 }}>
             <Search style={{ width: 14, height: 14 }} />
             <span className="flex-1 text-left">Søk</span>
-            <kbd className="rounded px-1" style={{ fontSize: 10, color: C.textGhost, background: "rgba(40,37,29,0.06)" }}>⌘K</kbd>
+            <kbd className="rounded px-1" style={{ fontSize: 10, color: C.textGhost, background: "rgba(0,0,0,0.06)" }}>⌘K</kbd>
           </button>
         </div>
         <nav className="flex-1 overflow-y-auto px-3 space-y-4 pb-3">
           <NavGroup items={NAV_MAIN} navigate={navigate} />
           <div>
-            <p className="px-2 pb-1.5 pt-1" style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: C.textGhost }}>STACQ</p>
+            <p className="px-2 pb-1.5 pt-1" style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: C.textGhost }}>STACQ</p>
             <NavGroup items={NAV_STACQ} navigate={navigate} />
           </div>
         </nav>
@@ -254,7 +255,7 @@ export default function DesignLabStacqPrisen() {
       {/* ═══ MAIN ═══ */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ zoom: SCALE_MAP[textSize] }}>
         {/* Header */}
-        <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 48, borderBottom: `1px solid ${C.border}` }}>
+        <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 44, borderBottom: `1px solid ${C.border}` }}>
           <div className="flex items-baseline gap-2.5">
             <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>STACQ Prisen</h1>
           </div>
@@ -280,7 +281,7 @@ export default function DesignLabStacqPrisen() {
 
           {/* Chart */}
           <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, background: C.surface, padding: 20, marginBottom: 24 }}>
-            <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: C.textMuted, marginBottom: 16 }}>
+            <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: C.textMuted, marginBottom: 16 }}>
               STACQ Prisen — ukentlig utvikling
             </p>
             <div style={{ height: 240 }}>
@@ -313,7 +314,7 @@ export default function DesignLabStacqPrisen() {
           </div>
 
           {/* Table */}
-          <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: C.textMuted, marginBottom: 10 }}>
+          <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: C.textMuted, marginBottom: 10 }}>
             Bidrag per konsulent
           </p>
 
@@ -412,12 +413,12 @@ export default function DesignLabStacqPrisen() {
    ═══════════════════════════════════════════════════════════ */
 
 const thStyle: React.CSSProperties = {
-  fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: C.textMuted,
+  fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: C.textMuted,
 };
 
 function TypeBadge({ status }: { status: string | null }) {
   let label = "—";
-  let bg: string = "rgba(40,37,29,0.05)";
+  let bg: string = "rgba(0,0,0,0.04)";
   let color: string = C.textFaint;
   let borderColor: string = C.border;
   if (status === "partner") { label = "Partner"; bg = C.warningBg; color = C.warning; borderColor = "rgba(154,122,42,0.15)"; }
@@ -453,7 +454,7 @@ function ColHeader({ label, field, sort, onSort, className }: {
     <button
       onClick={() => onSort(field)}
       className={`flex items-center gap-0.5 transition-colors ${className || ""}`}
-      style={{ fontSize: 11, fontWeight: active ? 700 : 600, textTransform: "uppercase", letterSpacing: "0.06em", color: active ? C.text : C.textMuted }}
+      style={{ fontSize: 11, fontWeight: active ? 700 : 600, textTransform: "uppercase", letterSpacing: "0.04em", color: active ? C.text : C.textMuted }}
     >
       {label}
       {active && (sort.dir === "asc" ? <ChevronUp style={{ width: 12, height: 12 }} /> : <ChevronDown style={{ width: 12, height: 12 }} />)}
@@ -468,14 +469,15 @@ function NavGroup({ items, navigate }: { items: { label: string; icon: any; href
         <button
           key={item.label}
           onClick={() => navigate(item.href)}
-          className="flex items-center gap-2 w-full rounded-md px-2 py-[6px] transition-colors"
+          className="flex items-center gap-2 w-full px-2 py-[5px] transition-colors"
           style={{
             fontSize: 13, fontWeight: item.active ? 600 : 500,
             color: item.active ? C.text : C.textMuted,
-            background: item.active ? "rgba(40,37,29,0.06)" : "transparent",
+            background: item.active ? "rgba(0,0,0,0.05)" : "transparent",
+            borderRadius: 6,
           }}
           onMouseEnter={(e) => { if (!item.active) e.currentTarget.style.background = C.hoverBg; }}
-          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? "rgba(40,37,29,0.06)" : "transparent"; }}
+          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? "rgba(0,0,0,0.05)" : "transparent"; }}
         >
           <item.icon style={{ width: 15, height: 15, strokeWidth: 1.6 }} />
           {item.label}
@@ -489,8 +491,8 @@ function SidebarBtn({ icon: Icon, label, onClick, muted }: { icon: any; label: s
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-2 w-full rounded-md px-2 py-[6px] transition-colors"
-      style={{ fontSize: 13, fontWeight: 500, color: muted ? C.textGhost : C.textMuted }}
+      className="flex items-center gap-2 w-full px-2 py-[5px] transition-colors"
+      style={{ fontSize: 13, fontWeight: 500, color: muted ? C.textGhost : C.textMuted, borderRadius: 6 }}
       onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
     >

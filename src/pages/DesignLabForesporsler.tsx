@@ -39,19 +39,20 @@ const TYPE_CHIPS: { value: TypeFilter; label: string }[] = [
 
 /* ── V8 Colors ── */
 const C = {
-  bg: "#F7F6F2",
-  surface: "#FFFFFF",
-  text: "#28251D",
-  textMuted: "#6B6B66",
-  textFaint: "#9C9C97",
-  textGhost: "#BAB9B4",
+  bg: "#f7f8f8",
+  surface: "#ffffff",
+  surfaceAlt: "#f3f4f5",
+  text: "#1d2028",
+  textMuted: "#6b6f76",
+  textFaint: "#8a8f98",
+  textGhost: "#a2a5ab",
   accent: "#01696F",
   accentBg: "rgba(1,105,111,0.06)",
-  border: "rgba(40,37,29,0.08)",
-  borderLight: "rgba(40,37,29,0.05)",
-  hoverBg: "rgba(40,37,29,0.035)",
-  activeBg: "rgba(1,105,111,0.04)",
-  shadow: "0 1px 3px rgba(40,37,29,0.06)",
+  border: "#e6e6e6",
+  borderLight: "#eff0f1",
+  hoverBg: "rgba(0,0,0,0.03)",
+  activeBg: "rgba(1,105,111,0.05)",
+  shadow: "0 1px 2px rgba(0,0,0,0.04)",
   danger: "#9a4a4a",
   success: "#4a9a6a",
   warning: "#9a7a2a",
@@ -106,7 +107,7 @@ function PipelineTrack({ status }: { status: string }) {
   const steps = [1, 2, 3];
   const cfg = PIPELINE[status] || PIPELINE.sendt_cv;
   const currentStep = cfg.step;
-  const off = "rgba(40,37,29,0.15)";
+  const off = "rgba(0,0,0,0.12)";
 
   return (
     <div className="flex items-center gap-0">
@@ -250,7 +251,7 @@ export default function DesignLabForesporsler() {
 
       {/* ═══ SIDEBAR ═══ */}
       <aside className="flex flex-col shrink-0" style={{ width: 216, borderRight: `1px solid ${C.border}`, background: C.bg }}>
-        <div className="flex items-center gap-2 px-4 h-12">
+        <div className="flex items-center gap-2 px-4" style={{ height: 44 }}>
           <div className="flex items-center justify-center rounded" style={{ width: 22, height: 22, background: C.accent, color: "#fff", fontSize: 11, fontWeight: 700 }}>S</div>
           <span style={{ fontSize: 14, fontWeight: 600, color: C.text, letterSpacing: "-0.01em" }}>STACQ</span>
         </div>
@@ -265,14 +266,14 @@ export default function DesignLabForesporsler() {
           >
             <Search style={{ width: 14, height: 14 }} />
             <span className="flex-1 text-left">Søk</span>
-            <kbd className="rounded px-1" style={{ fontSize: 10, color: C.textGhost, background: "rgba(40,37,29,0.06)" }}>⌘K</kbd>
+            <kbd className="rounded px-1" style={{ fontSize: 10, color: C.textGhost, background: "rgba(0,0,0,0.06)" }}>⌘K</kbd>
           </button>
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 space-y-4 pb-3">
           <NavGroup items={NAV_MAIN} navigate={navigate} />
           <div>
-            <p className="px-2 pb-1.5 pt-1" style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: C.textGhost }}>STACQ</p>
+            <p className="px-2 pb-1.5 pt-1" style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: C.textGhost }}>STACQ</p>
             <NavGroup items={NAV_STACQ} navigate={navigate} />
           </div>
         </nav>
@@ -292,7 +293,7 @@ export default function DesignLabForesporsler() {
       {/* ═══ MAIN ═══ */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ zoom: SCALE_MAP[textSize] }}>
         {/* Header */}
-        <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 48, borderBottom: `1px solid ${C.border}` }}>
+        <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 44, borderBottom: `1px solid ${C.border}` }}>
           <div className="flex items-baseline gap-2.5">
             <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Forespørsler</h1>
             <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>{filtered.length}</span>
@@ -306,7 +307,7 @@ export default function DesignLabForesporsler() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Søk forespørsler…"
-                className="w-full outline-none placeholder:text-[#BAB9B4]"
+                className="w-full outline-none placeholder:text-[#a2a5ab]"
                 style={{ height: 30, paddingLeft: 30, paddingRight: 10, borderRadius: 6, border: `1px solid ${C.border}`, background: C.surface, color: C.text, fontSize: 13 }}
               />
             </div>
@@ -359,11 +360,11 @@ export default function DesignLabForesporsler() {
               </ResizablePanel>
               <ResizableHandle
                 withHandle
-                className="bg-transparent hover:bg-[rgba(40,37,29,0.06)] transition-colors data-[resize-handle-active]:bg-[rgba(1,105,111,0.12)]"
+                className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(1,105,111,0.12)]"
               />
               <ResizablePanel defaultSize={60} minSize={40}>
                 <div className="h-full flex flex-col" style={{ background: C.surface }}>
-                  <div className="shrink-0 flex items-center justify-between px-6" style={{ height: 48, borderBottom: `1px solid ${C.border}` }}>
+                  <div className="shrink-0 flex items-center justify-between px-6" style={{ height: 44, borderBottom: `1px solid ${C.border}` }}>
                     <div className="flex items-center gap-2">
                       <h2 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{(selectedRow as any).selskap_navn}</h2>
                       <TypeChip type={(selectedRow as any).type} />
@@ -420,8 +421,8 @@ function TableHeader({ sort, onSort, compact }: { sort: { field: SortField; dir:
         <ColHeader label="Type" field="sendt_count" sort={sort} onSort={onSort} />
       ) : (
         <>
-          <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: C.textMuted }}>Type</span>
-          <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: C.textMuted }}>Teknologier</span>
+          <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: C.textMuted }}>Type</span>
+          <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: C.textMuted }}>Teknologier</span>
           <ColHeader label="Pipeline" field="sendt_count" sort={sort} onSort={onSort} className="justify-end" />
         </>
       )}
@@ -537,14 +538,15 @@ function NavGroup({ items, navigate }: { items: readonly { label: string; icon: 
         <button
           key={item.label}
           onClick={() => navigate(item.href)}
-          className="flex items-center gap-2 w-full rounded-md px-2 py-[6px] transition-colors"
+          className="flex items-center gap-2 w-full px-2 py-[5px] transition-colors"
           style={{
             fontSize: 13, fontWeight: item.active ? 600 : 500,
             color: item.active ? C.text : C.textMuted,
-            background: item.active ? "rgba(40,37,29,0.06)" : "transparent",
+            background: item.active ? "rgba(0,0,0,0.05)" : "transparent",
+            borderRadius: 6,
           }}
           onMouseEnter={(e) => { if (!item.active) e.currentTarget.style.background = C.hoverBg; }}
-          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? "rgba(40,37,29,0.06)" : "transparent"; }}
+          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? "rgba(0,0,0,0.05)" : "transparent"; }}
         >
           <item.icon style={{ width: 15, height: 15, strokeWidth: 1.6 }} />
           {item.label}
@@ -558,8 +560,8 @@ function SidebarBtn({ icon: Icon, label, onClick, muted }: { icon: any; label: s
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-2 w-full rounded-md px-2 py-[6px] transition-colors"
-      style={{ fontSize: 13, fontWeight: 500, color: muted ? C.textGhost : C.textMuted }}
+      className="flex items-center gap-2 w-full px-2 py-[5px] transition-colors"
+      style={{ fontSize: 13, fontWeight: 500, color: muted ? C.textGhost : C.textMuted, borderRadius: 6 }}
       onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
     >
@@ -589,7 +591,7 @@ function FilterRow({ label, options, value, onChange }: {
 }) {
   return (
     <div className="flex items-center gap-2 py-[3px]">
-      <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: C.textMuted, width: 56, flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: C.textMuted, width: 56, flexShrink: 0 }}>{label}</span>
       <div className="flex items-center gap-1 flex-wrap">
         {options.map((opt) => {
           const active = value === opt.value;
@@ -597,9 +599,10 @@ function FilterRow({ label, options, value, onChange }: {
             <button
               key={opt.value}
               onClick={() => onChange(opt.value)}
-              className="inline-flex items-center rounded-full transition-colors"
+              className="inline-flex items-center transition-colors"
               style={{
                 height: 24, paddingInline: 10, fontSize: 12, fontWeight: 500,
+                borderRadius: 6,
                 border: active ? "none" : `1px solid ${C.border}`,
                 background: active ? C.accent : "transparent",
                 color: active ? "#fff" : C.textMuted,
@@ -626,7 +629,7 @@ function ColHeader({ label, field, sort, onSort, className }: {
       onClick={() => onSort(field)}
       className={`flex items-center gap-0.5 transition-colors ${className || ""}`}
       style={{
-        fontSize: 11, fontWeight: active ? 700 : 600, textTransform: "uppercase", letterSpacing: "0.06em",
+        fontSize: 11, fontWeight: active ? 700 : 600, textTransform: "uppercase", letterSpacing: "0.04em",
         color: active ? C.text : C.textMuted,
       }}
     >

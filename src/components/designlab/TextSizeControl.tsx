@@ -13,9 +13,9 @@ export const SCALE_MAP: Record<TextSize, number> = {
 
 const C = {
   accent: "#01696F",
-  border: "rgba(40,37,29,0.08)",
-  text: "#28251D",
-  textMuted: "#6B6B66",
+  border: "#e6e6e6",
+  text: "#1d2028",
+  textMuted: "#6b6f76",
 };
 
 interface Props {
