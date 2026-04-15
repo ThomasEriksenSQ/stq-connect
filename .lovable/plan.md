@@ -1,39 +1,31 @@
 
 
-# Plan: Subtil heat-indikator i Design Lab kontaktlisten
+# Plan: Gjør heat-indikatorer mer fargerike i Design Lab
 
-## Tilnærming
+## Problem
+Nåværende heat-farger for "mulig" og "sovende" er nesten grå og uten fargenyanse — dette gjør heat-kolonnen lite verdifull visuelt. Kun "hett" (rød) og "lovende" (amber) har tydelig farge.
 
-Legge til en tynn farget venstrekant (3px `border-left`) på hver kontaktrad i listen, basert på `heatResult.temperature`. Dette matcher det eksisterende mønsteret fra standard Contacts-siden, men tilpasset Design Lab-paletten via `HEAT_COLORS` fra theme.ts.
+## Løsning
+Oppdater `HEAT_COLORS` i theme.ts med desaturerte men distinkte fargenyanser som følger Linear-paletten:
 
-I tillegg vises den eksisterende `HeatBadge`-komponenten som allerede finnes i filen (linje 625) som en kolonne i tabellen — erstatning av den nåværende "Siste akt."-kolonnen med en kombinert kolonne som viser både heat-badge og relativ tid.
+| Temperatur | Nå | Ny |
+|---|---|---|
+| **hett** | Rød 8% bg + #8B1D20 | Beholder — fungerer |
+| **lovende** | Amber 8% bg + #7D4E00 | Beholder — fungerer |
+| **mulig** | Grå 4% + textMuted | Blå 8% bg (`rgba(26,79,160,0.08)`) + info-farge (`#1A4FA0`) |
+| **sovende** | Grå 3% + textGhost | Nøytral 5% bg (`rgba(0,0,0,0.05)`) + `#8C929C` (textFaint) |
 
-## Design
+Dette bruker allerede definerte farger fra `C`-objektet (`infoBg`, `info`, `textFaint`) — konsistent med designsystemet. Nå har alle fire nivåer distinkte fargenyanser: rød → amber → blå → grå.
 
-- **Venstrekant på rad**: 3px `borderLeft` med farge fra `HEAT_COLORS[temperature].color`. `sovende` får transparent kant for å unngå støy.
-- **Heat-kolonne i header**: Bytt "Siste akt." til "Varme" — viser `HeatBadge` (som allerede er definert) med relativ tid som sekundær tekst.
-- Subtilt og konsistent med Linear-estetikken — ingen ekstra badges, bare en stille fargekant + kompakt badge.
+Venstrekanten på rader oppdateres tilsvarende — "sovende" forblir transparent, resten får tydelige farger.
 
-## Endringer i `src/pages/DesignLabContacts.tsx`
+## Endringer
 
-### 1. Rad: legg til farget venstrekant
-Linje ~531-536: Legg til `borderLeft` basert på temperature:
-```tsx
-borderLeft: `3px solid ${c.heatResult.temperature === "sovende" ? "transparent" : HEAT_COLORS[c.heatResult.temperature].color}`,
-```
-
-### 2. Siste kolonne: vis HeatBadge + relativ tid
-Linje ~561-563: Erstatt ren relativ tid med HeatBadge + tid:
-```tsx
-<div className="flex items-center justify-end gap-2">
-  <HeatBadge heat={c.heatResult} daysSince={c.daysSince} />
-  <span style={{ fontSize: 11, color: C.textFaint }}>{c.daysSince < 999 ? relTime(c.daysSince) : ""}</span>
-</div>
-```
-
-### 3. Header: oppdater siste kolonne-label
-Linje ~517: Endre "Siste akt." til "Varme" og juster bredde fra `80px` til `140px` i gridTemplateColumns (linje 506 og 532).
+### `src/components/designlab/theme.ts`
+Oppdater `HEAT_COLORS`:
+- `mulig`: bg → `C.infoBg`, color → `C.info`
+- `sovende`: bg → `"rgba(0,0,0,0.05)"`, color → `C.textFaint` (allerede #8C929C — en tick mørkere enn nåværende textGhost)
 
 ### Filer som endres
-- `src/pages/DesignLabContacts.tsx` — 3 småjusteringer i listevisningen
+- `src/components/designlab/theme.ts` — 2 linjer i HEAT_COLORS
 
