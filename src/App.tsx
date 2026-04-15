@@ -232,6 +232,14 @@ const App = () => (
                   }
                 />
               </Route>
+                <Route
+                  path="selskaper"
+                  element={
+                    <Suspense fallback={<LazyFallback />}>
+                      <DesignLabCompanies />
+                    </Suspense>
+                  }
+                />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
