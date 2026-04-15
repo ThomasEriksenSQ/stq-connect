@@ -571,7 +571,8 @@ export default function DesignLabContacts() {
             </ResizablePanel>
             <ResizableHandle
               withHandle
-              className="-mx-px bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
+              className="-mx-px hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
+              style={{ background: `linear-gradient(to bottom, ${C.surfaceAlt} 0px, ${C.surfaceAlt} 32px, transparent 32px, transparent 100%)` }}
             />
             <ResizablePanel defaultSize={65} minSize={40}>
               {sel ? (
