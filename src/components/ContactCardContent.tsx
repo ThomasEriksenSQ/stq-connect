@@ -799,6 +799,44 @@ export function ContactCardContent({
                 <ExternalLink className="h-3.5 w-3.5" />
               </Button>
             )}
+            {/* 3-dot menu for Design Lab */}
+            {defaultHidden && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-secondary transition-colors text-muted-foreground">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => {
+                    const nameEl = document.querySelector('[data-contact-name-field]') as HTMLElement;
+                    nameEl?.click();
+                  }}>
+                    <Pencil className="h-3.5 w-3.5 mr-2" /> Rediger profil
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    setShowConsultantMatch(true);
+                    handleFinnKonsulent();
+                  }}>
+                    <UserSearch className="h-3.5 w-3.5 mr-2" /> Finn konsulent
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    setShowNotes((prev) => !prev);
+                    if (!showNotes && !contact.notes) {
+                      setNotesDraft("");
+                      setTimeout(() => setEditingNotes(true), 50);
+                    }
+                  }}>
+                    <StickyNote className="h-3.5 w-3.5 mr-2" />
+                    {showNotes ? "Skjul notat" : contact.notes ? "Vis notat" : "Legg til notat"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowTechDna((prev) => !prev)}>
+                    {showTechDna ? <EyeOff className="h-3.5 w-3.5 mr-2" /> : <Eye className="h-3.5 w-3.5 mr-2" />}
+                    {showTechDna ? "Skjul teknisk DNA" : "Vis teknisk DNA"}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
 
