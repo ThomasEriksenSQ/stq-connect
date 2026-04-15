@@ -1004,14 +1004,13 @@ export function ContactCardContent({
                 },
               });
             }}
-            className={cn(
-              "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+            className={`chip chip--action${
               (contact as any).cv_email && ((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned")
-                ? "bg-red-50 text-red-700 border-red-200"
+                ? " is-muted"
                 : (contact as any).cv_email
-                  ? "bg-green-100 text-green-800 border-green-200"
-                  : "bg-background text-muted-foreground border-border hover:bg-secondary",
-            )}
+                  ? " is-active"
+                  : ""
+            }`}
           >
             {(contact as any).cv_email && ((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned")
               ? "CV-Epost ✗"
