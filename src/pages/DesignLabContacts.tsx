@@ -596,12 +596,6 @@ export default function DesignLabContacts() {
                           )}
                           <HeatBadge heat={sel.heatResult} daysSince={sel.daysSince} showScore />
                         </div>
-                        {/* Heat breakdown */}
-                        {sel.heatResult.reasons.length > 0 && (
-                          <p style={{ fontSize: 11, color: C.textFaint, marginTop: 4 }}>
-                            {sel.heatResult.reasons.join(" · ")} — poeng: {sel.heatResult.score}
-                          </p>
-                        )}
                       </div>
                       <div className="flex items-center gap-0.5 shrink-0 ml-4">
                         <IconBtn icon={<ArrowUpRight style={{ width: 15, height: 15 }} />} title="Åpne i CRM" onClick={() => navigate(`/kontakter/${sel.id}`)} />
