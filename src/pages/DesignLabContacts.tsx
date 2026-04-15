@@ -41,7 +41,7 @@ type SortDir = "asc" | "desc";
 
 /* ── Colors ── */
 const C = {
-  bg: "#D4D4D6",
+  bg: "#FCFCFD",
   sidebarBg: "#F3F3F4",
   surface: "#ffffff",
   surfaceAlt: "#f3f4f5",
