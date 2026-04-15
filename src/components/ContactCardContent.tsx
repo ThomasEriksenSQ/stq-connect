@@ -881,6 +881,7 @@ export function ContactCardContent({
           {(() => {
             const contactLocations: string[] = (contact as any).locations || [];
             if (companyLocations.length === 0) return null;
+            if (defaultHidden?.locationsIfEmpty && contactLocations.length === 0) return null;
             return (
               <>
                 <span className="text-muted-foreground/40">·</span>
@@ -1006,7 +1007,7 @@ export function ContactCardContent({
               <Linkedin className="h-3.5 w-3.5" />
               LinkedIn
             </a>
-          ) : editable ? (
+          ) : editable && !(defaultHidden?.linkedinIfEmpty) ? (
             <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground/40 hover:text-muted-foreground transition-colors">
               <Linkedin className="h-3.5 w-3.5" />
               <InlineField
