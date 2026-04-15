@@ -275,6 +275,58 @@ html {
   margin-right: auto;
 }
 
+/* ── Master-Detail Layout ── */
+.contacts-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+.contacts-toolbar {
+  flex-shrink: 0;
+}
+.master-detail-layout {
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+.master-pane {
+  width: 680px;
+  min-width: 560px;
+  max-width: 780px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-right: 1px solid #E8EAEE;
+}
+.detail-pane {
+  flex: 1 1 auto;
+  min-width: 420px;
+  overflow: auto;
+  background: #FFFFFF;
+}
+
+@media (max-width: 1600px) {
+  .master-pane { width: 620px; }
+}
+@media (max-width: 1280px) {
+  .master-pane { width: 56%; min-width: auto; max-width: none; }
+}
+@media (max-width: 1024px) {
+  .detail-pane {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    min-width: 0;
+    background: #FFFFFF;
+    box-shadow: -2px 0 10px rgba(0,0,0,0.06);
+  }
+  .detail-pane[data-empty="true"] {
+    display: none;
+  }
+}
+
 /* V8 scrollbar */
 .dl-v8-theme::-webkit-scrollbar-thumb {
   background: #C8CDD6;
