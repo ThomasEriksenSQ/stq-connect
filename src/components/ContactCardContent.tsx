@@ -907,7 +907,7 @@ export function ContactCardContent({
         </div>
 
         {/* Line 3: Telefon · E-post · LinkedIn */}
-        <div className="flex items-center gap-1.5 flex-wrap mt-2">
+        <div className="flex items-center gap-4 flex-wrap mt-2">
           {contact.phone ? (
             <a
               href={`tel:${contact.phone}`}
@@ -915,9 +915,9 @@ export function ContactCardContent({
                 e.preventDefault();
                 copyToClipboard(contact.phone!);
               }}
-              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-border bg-secondary text-[0.8125rem] text-foreground hover:bg-secondary/80 transition-colors"
+              className="inline-flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             >
-              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+              <Phone className="h-3.5 w-3.5" />
               {editable ? (
                 <InlineField value={contact.phone} onSave={updateField("phone")} className="text-[0.8125rem]" />
               ) : (
@@ -925,7 +925,7 @@ export function ContactCardContent({
               )}
             </a>
           ) : editable ? (
-            <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-dashed border-border text-[0.8125rem] text-muted-foreground/50 hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors">
+            <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground/40 hover:text-muted-foreground transition-colors">
               <Phone className="h-3.5 w-3.5" />
               <InlineField value="" onSave={updateField("phone")} placeholder="Telefon" className="text-[0.8125rem]" />
             </span>
@@ -937,9 +937,9 @@ export function ContactCardContent({
                 e.preventDefault();
                 copyToClipboard(contact.email!);
               }}
-              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-border bg-secondary text-[0.8125rem] text-foreground hover:bg-secondary/80 transition-colors"
+              className="inline-flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             >
-              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+              <Mail className="h-3.5 w-3.5" />
               {editable ? (
                 <InlineField value={contact.email} onSave={updateField("email")} className="text-[0.8125rem]" />
               ) : (
@@ -947,7 +947,7 @@ export function ContactCardContent({
               )}
             </a>
           ) : editable ? (
-            <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-dashed border-border text-[0.8125rem] text-muted-foreground/50 hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors">
+            <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground/40 hover:text-muted-foreground transition-colors">
               <Mail className="h-3.5 w-3.5" />
               <InlineField value="" onSave={updateField("email")} placeholder="E-post" className="text-[0.8125rem]" />
             </span>
@@ -957,13 +957,13 @@ export function ContactCardContent({
               href={contact.linkedin}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-border bg-secondary text-[0.8125rem] text-foreground hover:bg-secondary/80 transition-colors"
+              className="inline-flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors"
             >
-              <Linkedin className="h-3.5 w-3.5 text-muted-foreground" />
+              <Linkedin className="h-3.5 w-3.5" />
               LinkedIn
             </a>
           ) : editable ? (
-            <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-dashed border-border text-[0.8125rem] text-muted-foreground/50 hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors">
+            <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground/40 hover:text-muted-foreground transition-colors">
               <Linkedin className="h-3.5 w-3.5" />
               <InlineField
                 value=""
