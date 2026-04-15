@@ -1,53 +1,38 @@
 
 
-# Plan: Design Lab Selskaper-side
+# Plan: Detaljpanel for selskaper i Design Lab
 
 ## Sammendrag
-Opprett en ny `/design-lab/selskaper`-side som gjenspeiler funksjonaliteten fra `/selskaper`, men reskinnet i Design Lab V8 Linear-stilen. Ingen endringer på eksisterende `/selskaper`.
+Legg til et inline detaljpanel på `/design-lab/selskaper` som åpnes ved klikk på en rad — identisk arkitektur som kontaktsiden med `ResizablePanelGroup`, tre paneler, og mulighet til å justere bredde fra begge sider.
 
-## Ny fil: `src/pages/DesignLabCompanies.tsx`
+## Endring: `src/pages/DesignLabCompanies.tsx`
 
-En frittstående side (~500 linjer) som følger samme arkitektur som `DesignLabContacts.tsx`:
-- Sidebar (220px) med navigasjon — gjenbruker samme `NAV_MAIN`/`NAV_STACQ`-mønster, med "Selskaper" markert som aktiv
-- Header bar (40px) med tittel, antall, søkefelt og "+ Nytt selskap"-knapp
-- Filter bar med EIER og TYPE pill-filtre (samme chip-mønster som kontakter)
-- Tabell med sorterbare kolonner: Selskap, Type, Signal, Sted, Siste akt., Oppfølginger
-- All styling via inline styles med `C`-tokens fra `theme.ts`
+**Ny state:**
+- `selectedId: string | null` — valgt selskap
 
-**Data:** Henter selskaper med kontakter, aktiviteter og oppgaver — samme query-mønster som `Companies.tsx` men med `crmQueryKeys`. Beregner `getEffectiveSignal` per selskap og viser signal som en prikk + tekst.
+**Layout-endring:**
+Erstatt den nåværende `<div className="flex-1 min-h-0 overflow-y-auto">` tabellen med en `ResizablePanelGroup` (importert fra `@/components/ui/resizable`) med tre paneler:
 
-**Interaksjon:**
-- Klikk på rad → `navigate("/selskaper/{id}")` (bruker eksisterende detaljside)
-- Type-dropdown inline i tabellen med optimistisk oppdatering
-- Sortering: klikk kolonneheader (navn, type, sted, siste aktivitet)
-- Søk filtrerer på navn, org.nr, by
-
-**Visuell stil (V8):**
-- 34px radhøyde, 13px tekst, `C.hoverBg` hover
-- Signal-prikk (7px) + 12px tekst med `SIGNAL_COLORS` fra theme
-- Type som plain tekst med chevron-dropdown (ikke badge)
-- Seksjonstitler 11px/500/`C.textFaint`
-
-## Endring: `src/App.tsx`
-
-Legg til lazy import og route:
-```ts
-const DesignLabCompanies = lazy(() => import("./pages/DesignLabCompanies"));
 ```
-Route under `/design-lab`:
-```tsx
-<Route path="selskaper" element={<Suspense fallback={<LazyFallback />}><DesignLabCompanies /></Suspense>} />
+ResizablePanelGroup (horizontal)
+├─ Panel 1: Tabellen (defaultSize=35, minSize=20, maxSize=60)
+├─ ResizableHandle (withHandle)
+├─ Panel 2: CompanyCardContent (defaultSize=65, minSize=30)
+├─ ResizableHandle (withHandle)
+└─ Panel 3: Tomt spacer-panel (defaultSize=0, minSize=0, maxSize=40)
 ```
 
-## Endring: `src/pages/DesignLabContacts.tsx`
+**Rad-klikk:** Endres fra `navigate("/selskaper/{id}")` til `setSelectedId(id)` (toggle ved nytt klikk).
 
-Oppdater `NAV_MAIN` for å peke "Selskaper" til `/design-lab/selskaper` i stedet for `/selskaper`:
-```ts
-{ label: "Selskaper", icon: Building2, href: "/design-lab/selskaper" },
-```
+**Panel 2 innhold:**
+- Når `selectedId` er satt: Topplinje med X-lukkeknapp (32px), deretter `<CompanyCardContent companyId={selectedId} editable />` i scrollbar-div med `dl-v8-theme`-klasse.
+- Når ingen er valgt: Tom bakgrunn med `C.appBg`.
 
-## Filer som endres
-- **Ny:** `src/pages/DesignLabCompanies.tsx`
-- **Endret:** `src/App.tsx` (import + route)
-- **Endret:** `src/pages/DesignLabContacts.tsx` (sidebar link)
+**Aktiv rad-markering:** Samme mønster som kontakter — `background: C.activeBg` når valgt.
+
+**Importer:**
+- `ResizablePanelGroup, ResizablePanel, ResizableHandle` fra `@/components/ui/resizable`
+- `CompanyCardContent` fra `@/components/CompanyCardContent`
+
+Ingen andre filer endres.
 
