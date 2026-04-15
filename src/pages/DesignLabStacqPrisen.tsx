@@ -22,31 +22,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
+import { C } from "@/components/designlab/theme";
 
-/* ═══ V8 COLOR CONSTANTS ═══ */
-const C = {
-  bg: "#FCFCFD",
-  sidebarBg: "#F3F3F4",
-  surface: "#ffffff",
-  surfaceAlt: "#f3f4f5",
-  text: "#1d2028",
-  textMuted: "#6b6f76",
-  textFaint: "#8a8f98",
-  textGhost: "#a2a5ab",
-  accent: "#01696F",
-  accentBg: "rgba(1,105,111,0.06)",
-  border: "#e6e6e6",
-  borderLight: "#eff0f1",
-  hoverBg: "rgba(0,0,0,0.03)",
-  activeBg: "rgba(1,105,111,0.05)",
-  shadow: "0 1px 2px rgba(0,0,0,0.04)",
-  danger: "#9a4a4a",
-  dangerBg: "rgba(154,74,74,0.06)",
-  success: "#4a9a6a",
-  successBg: "rgba(74,154,106,0.06)",
-  warning: "#9a7a2a",
-  warningBg: "rgba(154,122,42,0.06)",
-} as const;
+/* Colors imported from @/components/designlab/theme */
 
 type SortField = "kandidat" | "kunde" | "stacq" | "utpris";
 type SortDir = "asc" | "desc";

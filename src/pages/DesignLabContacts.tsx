@@ -18,6 +18,7 @@ import { getConsultantAvailabilityMeta, sortHuntConsultants } from "@/lib/contac
 import { useAuth } from "@/hooks/useAuth";
 import { ContactCardContent } from "@/components/ContactCardContent";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
+import { C, SIGNAL_COLORS, HEAT_COLORS } from "@/components/designlab/theme";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { getHeatResult, getTaskStatus, getActivityStatus, type HeatResult } from "@/lib/heatScore";
 
@@ -39,47 +40,7 @@ type TypeFilter = typeof TYPES[number];
 type SortField = "name" | "signal" | "company" | "title" | "owner" | "last_activity" | "heat";
 type SortDir = "asc" | "desc";
 
-/* ── Colors ── */
-const C = {
-  bg: "#FCFCFD",
-  sidebarBg: "#F3F3F4",
-  surface: "#ffffff",
-  surfaceAlt: "#f3f4f5",
-  text: "#1d2028",
-  textMuted: "#6b6f76",
-  textFaint: "#8a8f98",
-  textGhost: "#a2a5ab",
-  accent: "#01696F",
-  accentBg: "rgba(1,105,111,0.06)",
-  border: "#e6e6e6",
-  borderLight: "#eff0f1",
-  hoverBg: "rgba(0,0,0,0.03)",
-  activeBg: "rgba(1,105,111,0.05)",
-  shadow: "0 1px 2px rgba(0,0,0,0.04)",
-  danger: "#9a4a4a",
-  dangerBg: "rgba(154,74,74,0.06)",
-  success: "#4a9a6a",
-  successBg: "rgba(74,154,106,0.06)",
-  warning: "#9a7a2a",
-  warningBg: "rgba(154,122,42,0.06)",
-} as const;
-
-/* ── Signal color map (Linear-neutral) ── */
-const SIGNAL_COLORS: Record<Signal, { bg: string; color: string }> = {
-  "Behov nå": { bg: "rgba(1,105,111,0.08)", color: C.accent },
-  "Får fremtidig behov": { bg: "rgba(59,111,160,0.08)", color: "#3B6FA0" },
-  "Får kanskje behov": { bg: "rgba(154,122,42,0.08)", color: "#8A7A3A" },
-  "Ukjent om behov": { bg: "rgba(0,0,0,0.04)", color: C.textFaint },
-  "Ikke aktuelt": { bg: "rgba(154,74,74,0.06)", color: "#8a5a5a" },
-};
-
-/* ── Heat badge colors (Linear-neutral) ── */
-const HEAT_COLORS: Record<HeatResult["temperature"], { bg: string; color: string; label: string }> = {
-  hett: { bg: "rgba(180,60,60,0.10)", color: "#A04040", label: "Hett" },
-  lovende: { bg: "rgba(180,120,40,0.10)", color: "#9A7A2A", label: "Lovende" },
-  mulig: { bg: "rgba(0,0,0,0.05)", color: C.textMuted, label: "Mulig" },
-  sovende: { bg: "rgba(0,0,0,0.03)", color: C.textGhost, label: "Sovende" },
-};
+/* Colors, signal colors, and heat colors imported from @/components/designlab/theme */
 
 function relTime(days: number): string {
   if (days === 0) return "I dag";
