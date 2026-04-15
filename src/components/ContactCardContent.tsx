@@ -1109,7 +1109,7 @@ export function ContactCardContent({
                 {((contact as any).teknologier as string[]).map((tag: string) => (
                   <span
                     key={tag}
-                    className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.75rem] font-medium text-foreground"
+                    className="chip chip--tech"
                   >
                     {tag}
                   </span>
@@ -1501,7 +1501,7 @@ export function ContactCardContent({
                       {(m.match_tags || []).map((t: string) => (
                         <span
                           key={t}
-                          className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium"
+                          className="chip chip--tech"
                         >
                           {t}
                         </span>
@@ -1803,7 +1803,7 @@ function TaskRow({
         {displayDesc && <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{displayDesc}</p>}
         {task.assigned_to && profileMap[task.assigned_to] && (
           <div className="mt-1">
-            <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+            <span className="chip chip--action is-signal">
               {profileMap[task.assigned_to]}
             </span>
           </div>
@@ -2085,7 +2085,7 @@ function EmailRow({ email }: { email: any }) {
             <span className="text-[0.8125rem] text-muted-foreground">
               {format(d, "d. MMM yyyy", { locale: nb })}
             </span>
-            <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+            <span className="chip chip--action is-signal">
               E-post
             </span>
           </div>
@@ -2304,7 +2304,7 @@ function ActivityRow({
               {/* Owner badge */}
               {ownerName && (
                 <div className="mt-1">
-                  <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+                  <span className="chip chip--action is-signal">
                     {ownerName}
                   </span>
                 </div>
