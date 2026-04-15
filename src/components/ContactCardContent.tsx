@@ -37,7 +37,7 @@ import {
   Target,
   Loader2,
   MapPin,
-  MoreHorizontal,
+  MoreVertical,
   Eye,
   EyeOff,
   StickyNote,
@@ -804,7 +804,7 @@ export function ContactCardContent({
               <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <button className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-secondary transition-colors text-muted-foreground">
-                    <MoreHorizontal className="h-4 w-4" />
+                    <MoreVertical className="h-4 w-4" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" sideOffset={4}>
