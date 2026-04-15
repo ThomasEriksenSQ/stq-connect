@@ -345,7 +345,7 @@ export default function DesignLabForesporsler() {
                 className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
               />
               <ResizablePanel defaultSize={60} minSize={40}>
-                <div className="h-full flex flex-col" style={{ background: C.surface }}>
+                <div className="h-full flex flex-col" style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}` }}>
                   <div className="shrink-0 flex items-center justify-between px-6" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
                     <div className="flex items-center gap-2">
                       <h2 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{(selectedRow as any).selskap_navn}</h2>

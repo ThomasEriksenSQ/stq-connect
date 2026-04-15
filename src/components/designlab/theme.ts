@@ -2,35 +2,37 @@ import type { HeatResult } from "@/lib/heatScore";
 
 /* ═══════════════════════════════════════════════════════════
    LINEAR-INSPIRED DESIGN SYSTEM v8 — LIGHT MODE
+   3-layer hierarchy: shell (#F5F6F8) → main (#FAFBFC) → panels (#FFFFFF)
    ═══════════════════════════════════════════════════════════ */
 
 export const C = {
   /* Backgrounds — 3-layer: shell → main → panels */
-  bg: "#F5F6F8",           // app shell (outermost)
+  bg: "#F5F6F8",           // app shell (outermost viewport)
   sidebarBg: "#FFFFFF",    // sidebar — white panel
+  panel: "#FFFFFF",        // detail/right panel — white
   surface: "#FAFBFC",      // main content canvas (slightly gray)
   surfaceAlt: "#F4F5F8",   // elevated controls, table headers
-  overlay: "#EDEEF2",      // --bg-overlay
-  hoverBg: "#F0F2F6",      // --bg-hover
-  activeBg: "#E8ECF5",     // --bg-active
-  selected: "#E2E7F5",     // --bg-selected
+  overlay: "#EDEEF2",      // overlay backgrounds
+  hoverBg: "#F0F2F6",      // hover state
+  activeBg: "#E8ECF5",     // active/pressed
+  selected: "#E2E7F5",     // selected row
 
   /* Text */
-  text: "#1A1C1F",          // --text-primary
-  textMuted: "#5C636E",    // --text-secondary
-  textFaint: "#8C929C",    // --text-tertiary
-  textGhost: "#BEC4CC",    // --text-disabled
+  text: "#1A1C1F",
+  textMuted: "#5C636E",
+  textFaint: "#8C929C",
+  textGhost: "#BEC4CC",
 
   /* Accent */
   accent: "#5E6AD2",
   accentHover: "#4F5AB8",
-  accentBg: "rgba(94,106,210,0.10)",   // --accent-subtle
-  accentMuted: "rgba(94,106,210,0.05)", // --accent-muted
+  accentBg: "rgba(94,106,210,0.10)",
+  accentMuted: "rgba(94,106,210,0.05)",
 
   /* Borders */
-  border: "#DDE0E7",        // --border-default
-  borderLight: "#E8EAEE",   // --border-subtle
-  borderStrong: "#C8CDD6",  // --border-strong
+  border: "#DDE0E7",
+  borderLight: "#EAECEF",   // sidebar/panel dividers
+  borderStrong: "#C8CDD6",
   borderFocus: "#5E6AD2",
 
   /* Status — desaturated */
