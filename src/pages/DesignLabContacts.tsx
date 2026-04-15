@@ -41,19 +41,20 @@ type SortDir = "asc" | "desc";
 
 /* ── Colors ── */
 const C = {
-  bg: "#F7F6F2",
-  surface: "#FFFFFF",
-  text: "#28251D",
-  textMuted: "#6B6B66",
-  textFaint: "#9C9C97",
-  textGhost: "#BAB9B4",
+  bg: "#f7f8f8",
+  surface: "#ffffff",
+  surfaceAlt: "#f3f4f5",
+  text: "#1d2028",
+  textMuted: "#6b6f76",
+  textFaint: "#8a8f98",
+  textGhost: "#a2a5ab",
   accent: "#01696F",
   accentBg: "rgba(1,105,111,0.06)",
-  border: "rgba(40,37,29,0.08)",
-  borderLight: "rgba(40,37,29,0.05)",
-  hoverBg: "rgba(40,37,29,0.035)",
-  activeBg: "rgba(1,105,111,0.04)",
-  shadow: "0 1px 3px rgba(40,37,29,0.06)",
+  border: "#e6e6e6",
+  borderLight: "#eff0f1",
+  hoverBg: "rgba(0,0,0,0.03)",
+  activeBg: "rgba(1,105,111,0.05)",
+  shadow: "0 1px 2px rgba(0,0,0,0.04)",
   danger: "#9a4a4a",
   dangerBg: "rgba(154,74,74,0.06)",
   success: "#4a9a6a",
@@ -62,21 +63,21 @@ const C = {
   warningBg: "rgba(154,122,42,0.06)",
 } as const;
 
-/* ── Signal color map (V8 desaturated) ── */
+/* ── Signal color map (Linear-neutral) ── */
 const SIGNAL_COLORS: Record<Signal, { bg: string; color: string }> = {
   "Behov nå": { bg: "rgba(1,105,111,0.08)", color: C.accent },
   "Får fremtidig behov": { bg: "rgba(59,111,160,0.08)", color: "#3B6FA0" },
   "Får kanskje behov": { bg: "rgba(154,122,42,0.08)", color: "#8A7A3A" },
-  "Ukjent om behov": { bg: "rgba(40,37,29,0.05)", color: C.textFaint },
+  "Ukjent om behov": { bg: "rgba(0,0,0,0.04)", color: C.textFaint },
   "Ikke aktuelt": { bg: "rgba(154,74,74,0.06)", color: "#8a5a5a" },
 };
 
-/* ── Heat badge colors (V8 desaturated) ── */
+/* ── Heat badge colors (Linear-neutral) ── */
 const HEAT_COLORS: Record<HeatResult["temperature"], { bg: string; color: string; label: string }> = {
   hett: { bg: "rgba(180,60,60,0.10)", color: "#A04040", label: "Hett" },
   lovende: { bg: "rgba(180,120,40,0.10)", color: "#9A7A2A", label: "Lovende" },
-  mulig: { bg: "rgba(40,37,29,0.06)", color: C.textMuted, label: "Mulig" },
-  sovende: { bg: "rgba(40,37,29,0.04)", color: C.textGhost, label: "Sovende" },
+  mulig: { bg: "rgba(0,0,0,0.05)", color: C.textMuted, label: "Mulig" },
+  sovende: { bg: "rgba(0,0,0,0.03)", color: C.textGhost, label: "Sovende" },
 };
 
 function relTime(days: number): string {
