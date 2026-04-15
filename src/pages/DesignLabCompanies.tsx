@@ -354,12 +354,7 @@ export default function DesignLabCompanies() {
 
         {/* Signal */}
         <div className="flex items-center gap-1.5">
-          {signal && signalColors && (
-            <>
-              <span className="rounded-full inline-block shrink-0" style={{ width: 7, height: 7, background: signalColors.color }} />
-              <span className="truncate" style={{ fontSize: 12, color: signalColors.color }}>{signal}</span>
-            </>
-          )}
+          {signal && <SignalChip signal={signal} />}
         </div>
 
         {/* City */}
