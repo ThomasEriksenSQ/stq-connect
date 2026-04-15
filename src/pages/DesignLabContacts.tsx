@@ -611,6 +611,20 @@ export default function DesignLabContacts() {
           </ResizablePanelGroup>
         </div>
       </main>
+
+      <CommandPalette
+        open={cmdOpen}
+        onClose={() => setCmdOpen(false)}
+        contacts={contacts.map((c) => ({
+          id: c.id, firstName: c.firstName, lastName: c.lastName,
+          company: c.company, companyId: c.companyId,
+          email: c.email, phone: c.phone, signal: c.signal, daysSince: c.daysSince,
+        }))}
+        companies={companiesList}
+        selectedContact={sel ? { id: sel.id, firstName: sel.firstName, lastName: sel.lastName, email: sel.email, signal: sel.signal } : null}
+        onSelectContact={(id) => setSelectedId(id)}
+        onFilterByCompany={(name) => setSearch(name)}
+      />
     </div>
   );
 }
