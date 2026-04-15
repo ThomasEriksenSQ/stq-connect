@@ -368,7 +368,7 @@ export default function DesignLabContacts() {
         <nav className="flex-1 overflow-y-auto px-3 space-y-4 pb-3">
           <NavGroup items={NAV_MAIN} navigate={navigate} />
           <div>
-            <p className="px-2 pb-1.5 pt-1" style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: C.textGhost }}>STACQ</p>
+            <p className="px-2 pb-1.5 pt-1" style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textGhost }}>STACQ</p>
             <NavGroup items={NAV_STACQ} navigate={navigate} />
           </div>
         </nav>
@@ -404,12 +404,12 @@ export default function DesignLabContacts() {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Søk kontakter…"
                 className="w-full outline-none placeholder:text-[#a2a5ab]"
-                style={{ height: 34, paddingLeft: 30, paddingRight: 10, borderRadius: 6, border: `1px solid ${C.border}`, background: C.surfaceAlt, color: C.text, fontSize: 13 }}
+                style={{ height: 32, paddingLeft: 30, paddingRight: 9, borderRadius: 5, border: `1px solid ${C.border}`, background: C.surfaceAlt, color: C.text, fontSize: 13 }}
               />
             </div>
             <button
               className="inline-flex items-center gap-1.5 rounded-md transition-opacity hover:opacity-90"
-              style={{ height: 32, paddingInline: 12, fontSize: 13, fontWeight: 500, background: C.accent, color: "#fff", borderRadius: 6 }}
+              style={{ height: 30, paddingInline: 11, fontSize: 13, fontWeight: 500, background: C.accent, color: "#fff", borderRadius: 5 }}
             >
               + Ny kontakt
             </button>
@@ -442,7 +442,7 @@ export default function DesignLabContacts() {
         {/* Available consultants bar */}
         {sortedConsultants.length > 0 && (
           <div className="shrink-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
-            <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: C.textGhost, marginBottom: 6 }}>Tilgjengelig for oppdrag</p>
+            <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textGhost, marginBottom: 6 }}>Tilgjengelig for oppdrag</p>
             <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
               {sortedConsultants.map((con) => {
                 const meta = getConsultantAvailabilityMeta(con.tilgjengelig_fra);
@@ -546,12 +546,12 @@ export default function DesignLabContacts() {
                         <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
                           <SignalChip signal={sel.signal} size="md" />
                           {sel.callList && (
-                            <span className="inline-flex items-center rounded-full" style={{ fontSize: 11, fontWeight: 500, padding: "2px 8px", background: C.accentBg, color: C.accent }}>
+                            <span className="inline-flex items-center rounded" style={{ fontSize: 11, fontWeight: 500, padding: "2px 6px", background: C.accentBg, color: C.accent }}>
                               Innkjøper
                             </span>
                           )}
                           {sel.cvEmail && (
-                            <span className="inline-flex items-center rounded-full" style={{ fontSize: 11, fontWeight: 500, padding: "2px 8px", background: C.infoBg, color: C.info }}>
+                            <span className="inline-flex items-center rounded" style={{ fontSize: 11, fontWeight: 500, padding: "2px 6px", background: C.infoBg, color: C.info }}>
                               CV
                             </span>
                           )}
@@ -655,7 +655,7 @@ function SignalChip({ signal, size = "sm" }: { signal: Signal; size?: "sm" | "md
       style={{
         fontSize: size === "sm" ? 11 : 12,
         fontWeight: 500,
-        padding: size === "sm" ? "1px 7px" : "2px 10px",
+        padding: size === "sm" ? "2px 6px" : "2px 8px",
         whiteSpace: "nowrap",
         background: colors.bg,
         color: colors.color,
@@ -680,7 +680,7 @@ function HeatBadge({ heat, daysSince, showScore }: { heat: HeatResult; daysSince
       style={{
         fontSize: 11,
         fontWeight: 500,
-        padding: "1px 7px",
+        padding: "2px 6px",
         whiteSpace: "nowrap",
         background: config.bg,
         color: config.color,
@@ -729,12 +729,12 @@ function NavGroup({ items, navigate }: { items: typeof NAV_MAIN; navigate: (p: s
         <button
           key={item.label}
           onClick={() => navigate(item.href)}
-          className="flex items-center gap-2 w-full px-2 py-[5px] transition-colors"
+          className="flex items-center gap-2 w-full px-2 transition-colors"
           style={{
-            fontSize: 13, fontWeight: item.active ? 600 : 500,
+            fontSize: 13, fontWeight: item.active ? 600 : 400,
             color: item.active ? C.text : C.textMuted,
             background: item.active ? C.activeBg : "transparent",
-            borderRadius: 4,
+            borderRadius: 3, height: 28,
           }}
           onMouseEnter={(e) => { if (!item.active) e.currentTarget.style.background = C.hoverBg; }}
           onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? C.activeBg : "transparent"; }}
@@ -751,8 +751,8 @@ function SidebarBtn({ icon: Icon, label, onClick, muted }: { icon: any; label: s
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-2 w-full px-2 py-[5px] transition-colors"
-      style={{ fontSize: 13, fontWeight: 500, color: muted ? C.textGhost : C.textMuted, borderRadius: 6 }}
+      className="flex items-center gap-2 w-full px-2 transition-colors"
+      style={{ fontSize: 13, fontWeight: 500, color: muted ? C.textGhost : C.textMuted, borderRadius: 3, height: 28 }}
       onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
     >
@@ -783,7 +783,7 @@ function FilterRow({ label, options, value, onChange }: {
 }) {
   return (
     <div className="flex items-center gap-2 py-[3px]">
-      <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: C.textMuted, width: 56, flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted, width: 56, flexShrink: 0 }}>{label}</span>
       <div className="flex items-center gap-1 flex-wrap">
         {options.map((opt) => {
           const active = value === opt;
@@ -794,7 +794,7 @@ function FilterRow({ label, options, value, onChange }: {
               className="inline-flex items-center transition-colors"
               style={{
                 height: 24, paddingInline: 10, fontSize: 12, fontWeight: 500,
-                borderRadius: 4,
+                borderRadius: 3,
                 border: active ? "none" : `1px solid ${C.border}`,
                 background: active ? C.accent : "transparent",
                 color: active ? "#fff" : C.textMuted,
@@ -821,7 +821,7 @@ function ColHeader({ label, field, sort, onSort, className }: {
       onClick={() => onSort(field)}
       className={`flex items-center gap-0.5 transition-colors ${className || ""}`}
       style={{
-        fontSize: 11, fontWeight: active ? 700 : 600, textTransform: "uppercase", letterSpacing: "0.04em",
+        fontSize: 11, fontWeight: active ? 600 : 500, textTransform: "uppercase", letterSpacing: "0.04em",
         color: active ? C.text : C.textMuted,
       }}
     >
