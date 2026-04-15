@@ -20,6 +20,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ContactCardContent } from "@/components/ContactCardContent";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
 import { C, SIGNAL_COLORS, HEAT_COLORS } from "@/components/designlab/theme";
+import { CommandPalette } from "@/components/designlab/CommandPalette";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { getHeatResult, getTaskStatus, getActivityStatus, type HeatResult } from "@/lib/heatScore";
 
@@ -94,24 +95,25 @@ export default function DesignLabContacts() {
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "heat", dir: "asc" });
   const [selectedId, setSelectedId] = useState<string | null>(searchParams.get("contact"));
   const searchRef = useRef<HTMLInputElement>(null);
+  const [cmdOpen, setCmdOpen] = useState(false);
 
   const initials = user?.email ? user.email.split("@")[0].slice(0, 2).toUpperCase() : "??";
 
-  // ⌘K shortcut
+  // ⌘K shortcut → open command palette
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        searchRef.current?.focus();
+        setCmdOpen(true);
       }
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !cmdOpen) {
         setSelectedId(null);
         searchRef.current?.blur();
       }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, []);
+  }, [cmdOpen]);
 
   // sync selectedId to URL
   useEffect(() => {
@@ -346,6 +348,19 @@ export default function DesignLabContacts() {
 
   const sel = selectedId ? contacts.find((c) => c.id === selectedId) ?? null : null;
 
+  // Derived companies for command palette
+  const companiesList = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; count: number }>();
+    contacts.forEach((c) => {
+      if (c.companyId && c.company) {
+        const existing = map.get(c.companyId);
+        if (existing) existing.count++;
+        else map.set(c.companyId, { id: c.companyId, name: c.company, count: 1 });
+      }
+    });
+    return Array.from(map.values()).map((c) => ({ id: c.id, name: c.name, contactCount: c.count }));
+  }, [contacts]);
+
   // Keyboard nav
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -378,7 +393,7 @@ export default function DesignLabContacts() {
         {/* Search trigger */}
         <div className="px-3 mb-1">
           <button
-            onClick={() => searchRef.current?.focus()}
+            onClick={() => setCmdOpen(true)}
             className="flex items-center gap-2 w-full rounded-md px-2 py-1.5 transition-colors"
             style={{ fontSize: 13, color: C.textFaint, background: "transparent" }}
             onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
@@ -596,6 +611,20 @@ export default function DesignLabContacts() {
           </ResizablePanelGroup>
         </div>
       </main>
+
+      <CommandPalette
+        open={cmdOpen}
+        onClose={() => setCmdOpen(false)}
+        contacts={contacts.map((c) => ({
+          id: c.id, firstName: c.firstName, lastName: c.lastName,
+          company: c.company, companyId: c.companyId,
+          email: c.email, phone: c.phone, signal: c.signal, daysSince: c.daysSince,
+        }))}
+        companies={companiesList}
+        selectedContact={sel ? { id: sel.id, firstName: sel.firstName, lastName: sel.lastName, email: sel.email, signal: sel.signal } : null}
+        onSelectContact={(id) => setSelectedId(id)}
+        onFilterByCompany={(name) => setSearch(name)}
+      />
     </div>
   );
 }
