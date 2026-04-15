@@ -1,38 +1,30 @@
 
 
-# Plan: Detaljpanel for selskaper i Design Lab
+# Plan: Visuell paritet mellom Design Lab Selskaper og Kontakter
 
-## Sammendrag
-Legg til et inline detaljpanel på `/design-lab/selskaper` som åpnes ved klikk på en rad — identisk arkitektur som kontaktsiden med `ResizablePanelGroup`, tre paneler, og mulighet til å justere bredde fra begge sider.
+## Problemet
+Selskapssiden har annen bakgrunn, spacing og struktur på detaljpanelet enn kontaktsiden. Tabellen bruker betinget rendering av `ResizablePanelGroup` i stedet for å alltid ha den montert.
 
-## Endring: `src/pages/DesignLabCompanies.tsx`
+## Endringer i `src/pages/DesignLabCompanies.tsx`
 
-**Ny state:**
-- `selectedId: string | null` — valgt selskap
+### 1. Alltid monter ResizablePanelGroup (som kontaktsiden)
+Fjern den betingede `selectedId ? <ResizablePanelGroup> : <div>` strukturen. Erstatt med en alltid-montert `ResizablePanelGroup` — identisk til kontaktsiden (linje 515-666). Tabellen er alltid i Panel 1, detaljpanel i Panel 2, spacer i Panel 3.
 
-**Layout-endring:**
-Erstatt den nåværende `<div className="flex-1 min-h-0 overflow-y-auto">` tabellen med en `ResizablePanelGroup` (importert fra `@/components/ui/resizable`) med tre paneler:
+### 2. Detaljpanel-styling lik kontaktkortet
+Endre Panel 2 innholdet til å matche kontaktsiden:
+- `background: C.panel` (hvit) i stedet for `C.bg`
+- `borderLeft: 1px solid ${C.borderLight}` (ikke `C.border`)
+- Innhold wrappet i `<div className="flex-1 overflow-y-auto px-6 py-5 dl-v8-theme">`
+- Lukkeknapp: `className="rounded p-1 hover:bg-black/5 transition-colors"` (som kontakter)
 
+### 3. ResizableHandle-styling
+Legg til samme klasser som kontaktsiden:
 ```
-ResizablePanelGroup (horizontal)
-├─ Panel 1: Tabellen (defaultSize=35, minSize=20, maxSize=60)
-├─ ResizableHandle (withHandle)
-├─ Panel 2: CompanyCardContent (defaultSize=65, minSize=30)
-├─ ResizableHandle (withHandle)
-└─ Panel 3: Tomt spacer-panel (defaultSize=0, minSize=0, maxSize=40)
+className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
 ```
 
-**Rad-klikk:** Endres fra `navigate("/selskaper/{id}")` til `setSelectedId(id)` (toggle ved nytt klikk).
+### 4. Panel-størrelser
+Beholdes som nå: defaultSize={35/65/0}, minSize={20/30/0}, maxSize={60/–/40}.
 
-**Panel 2 innhold:**
-- Når `selectedId` er satt: Topplinje med X-lukkeknapp (32px), deretter `<CompanyCardContent companyId={selectedId} editable />` i scrollbar-div med `dl-v8-theme`-klasse.
-- Når ingen er valgt: Tom bakgrunn med `C.appBg`.
-
-**Aktiv rad-markering:** Samme mønster som kontakter — `background: C.activeBg` når valgt.
-
-**Importer:**
-- `ResizablePanelGroup, ResizablePanel, ResizableHandle` fra `@/components/ui/resizable`
-- `CompanyCardContent` fra `@/components/CompanyCardContent`
-
-Ingen andre filer endres.
+Kun `src/pages/DesignLabCompanies.tsx` endres.
 
