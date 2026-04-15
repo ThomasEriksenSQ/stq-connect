@@ -556,10 +556,10 @@ export default function DesignLabContacts() {
                         </div>
                         <div className="flex items-center gap-1">
                           {c.cvEmail && (
-                            <span style={{ fontSize: 11, fontWeight: 500, color: "#2D6A4F", background: "rgba(45,106,79,0.08)", borderRadius: 3, padding: "1px 5px" }}>CV</span>
+                            <span className={`chip chip--action${c.cvEmail ? " is-active" : ""}`}>CV</span>
                           )}
                           {c.callList && (
-                            <span style={{ fontSize: 11, fontWeight: 500, color: "#5E6AD2", background: "rgba(94,106,210,0.08)", borderRadius: 3, padding: "1px 5px" }}>Innkjøper</span>
+                            <span className={`chip chip--action${c.callList ? " is-active" : ""}`}>Innkjøper</span>
                           )}
                         </div>
                         <div className="flex justify-end">
