@@ -33,7 +33,7 @@ export function TextSizeControl({ value, onChange }: Props) {
               padding: "0 6px",
               fontSize: 11,
               fontWeight: active ? 600 : 500,
-              borderRadius: 4,
+              borderRadius: 3,
               border: `1px solid ${active ? C.accent : C.border}`,
               background: active ? C.accent : "transparent",
               color: active ? "#fff" : C.textFaint,

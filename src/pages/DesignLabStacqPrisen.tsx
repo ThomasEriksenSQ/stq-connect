@@ -206,7 +206,7 @@ export default function DesignLabStacqPrisen() {
           <span style={{ fontSize: 14, fontWeight: 600, color: C.text, letterSpacing: "-0.01em" }}>STACQ</span>
         </div>
         <div className="px-3 mb-1">
-          <button className="flex items-center gap-2 w-full px-2 py-1.5" style={{ fontSize: 13, color: C.textFaint, background: "transparent", borderRadius: 6 }}>
+          <button className="flex items-center gap-2 w-full px-2 py-1.5" style={{ fontSize: 13, color: C.textFaint, background: "transparent", borderRadius: 3 }}>
             <Search style={{ width: 14, height: 14 }} />
             <span className="flex-1 text-left">Søk</span>
             <kbd className="rounded px-1" style={{ fontSize: 10, color: C.textGhost, background: "rgba(0,0,0,0.06)" }}>⌘K</kbd>
@@ -215,7 +215,7 @@ export default function DesignLabStacqPrisen() {
         <nav className="flex-1 overflow-y-auto px-3 space-y-4 pb-3">
           <NavGroup items={NAV_MAIN} navigate={navigate} />
           <div>
-            <p className="px-2 pb-1.5 pt-1" style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: C.textGhost }}>STACQ</p>
+            <p className="px-2 pb-1.5 pt-1" style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textGhost }}>STACQ</p>
             <NavGroup items={NAV_STACQ} navigate={navigate} />
           </div>
         </nav>
@@ -260,7 +260,7 @@ export default function DesignLabStacqPrisen() {
 
           {/* Chart */}
           <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, background: C.surface, padding: 20, marginBottom: 24 }}>
-            <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: C.textMuted, marginBottom: 16 }}>
+            <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted, marginBottom: 16 }}>
               STACQ Prisen — ukentlig utvikling
             </p>
             <div style={{ height: 240 }}>
@@ -293,7 +293,7 @@ export default function DesignLabStacqPrisen() {
           </div>
 
           {/* Table */}
-          <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: C.textMuted, marginBottom: 10 }}>
+          <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted, marginBottom: 10 }}>
             Bidrag per konsulent
           </p>
 
@@ -392,7 +392,7 @@ export default function DesignLabStacqPrisen() {
    ═══════════════════════════════════════════════════════════ */
 
 const thStyle: React.CSSProperties = {
-  fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: C.textMuted,
+  fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted,
 };
 
 function TypeBadge({ status }: { status: string | null }) {
@@ -433,7 +433,7 @@ function ColHeader({ label, field, sort, onSort, className }: {
     <button
       onClick={() => onSort(field)}
       className={`flex items-center gap-0.5 transition-colors ${className || ""}`}
-      style={{ fontSize: 11, fontWeight: active ? 700 : 600, textTransform: "uppercase", letterSpacing: "0.04em", color: active ? C.text : C.textMuted }}
+      style={{ fontSize: 11, fontWeight: active ? 600 : 500, letterSpacing: "0.04em", color: active ? C.text : C.textMuted }}
     >
       {label}
       {active && (sort.dir === "asc" ? <ChevronUp style={{ width: 12, height: 12 }} /> : <ChevronDown style={{ width: 12, height: 12 }} />)}
@@ -448,12 +448,12 @@ function NavGroup({ items, navigate }: { items: { label: string; icon: any; href
         <button
           key={item.label}
           onClick={() => navigate(item.href)}
-          className="flex items-center gap-2 w-full px-2 py-[5px] transition-colors"
+          className="flex items-center gap-2 w-full px-2 transition-colors"
           style={{
-            fontSize: 13, fontWeight: item.active ? 600 : 500,
+            fontSize: 13, fontWeight: item.active ? 600 : 400,
             color: item.active ? C.text : C.textMuted,
             background: item.active ? C.activeBg : "transparent",
-            borderRadius: 4,
+            borderRadius: 3, height: 28,
           }}
           onMouseEnter={(e) => { if (!item.active) e.currentTarget.style.background = C.hoverBg; }}
           onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? C.activeBg : "transparent"; }}
@@ -470,8 +470,8 @@ function SidebarBtn({ icon: Icon, label, onClick, muted }: { icon: any; label: s
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-2 w-full px-2 py-[5px] transition-colors"
-      style={{ fontSize: 13, fontWeight: 500, color: muted ? C.textGhost : C.textMuted, borderRadius: 6 }}
+      className="flex items-center gap-2 w-full px-2 transition-colors"
+      style={{ fontSize: 13, fontWeight: 500, color: muted ? C.textGhost : C.textMuted, borderRadius: 3, height: 28 }}
       onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
     >
@@ -535,7 +535,7 @@ function EditModal({ row, onClose, queryClient }: { row: any; onClose: () => voi
             disabled={saving}
             onClick={() => { setSaving(true); saveMut.mutate(); }}
             className="inline-flex items-center gap-1.5 rounded-md transition-opacity hover:opacity-90"
-            style={{ height: 32, paddingInline: 14, fontSize: 13, fontWeight: 500, background: C.accent, color: "#fff", borderRadius: 6 }}
+            style={{ height: 30, paddingInline: 11, fontSize: 13, fontWeight: 500, background: C.accent, color: "#fff", borderRadius: 5 }}
           >
             {saving ? "Lagrer…" : "Lagre"}
           </button>

@@ -255,7 +255,7 @@ export default function DesignLabForesporsler() {
         <nav className="flex-1 overflow-y-auto px-3 space-y-4 pb-3">
           <NavGroup items={NAV_MAIN} navigate={navigate} />
           <div>
-            <p className="px-2 pb-1.5 pt-1" style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: C.textGhost }}>STACQ</p>
+            <p className="px-2 pb-1.5 pt-1" style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textGhost }}>STACQ</p>
             <NavGroup items={NAV_STACQ} navigate={navigate} />
           </div>
         </nav>
@@ -290,12 +290,12 @@ export default function DesignLabForesporsler() {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Søk forespørsler…"
                 className="w-full outline-none placeholder:text-[#a2a5ab]"
-                style={{ height: 34, paddingLeft: 30, paddingRight: 10, borderRadius: 6, border: `1px solid ${C.border}`, background: C.surfaceAlt, color: C.text, fontSize: 13 }}
+                style={{ height: 32, paddingLeft: 30, paddingRight: 9, borderRadius: 5, border: `1px solid ${C.border}`, background: C.surfaceAlt, color: C.text, fontSize: 13 }}
               />
             </div>
             <button
               className="inline-flex items-center gap-1.5 rounded-md transition-opacity hover:opacity-90"
-              style={{ height: 32, paddingInline: 12, fontSize: 13, fontWeight: 500, background: C.accent, color: "#fff", borderRadius: 6 }}
+              style={{ height: 30, paddingInline: 11, fontSize: 13, fontWeight: 500, background: C.accent, color: "#fff", borderRadius: 5 }}
             >
               + Ny forespørsel
             </button>
@@ -403,8 +403,8 @@ function TableHeader({ sort, onSort, compact }: { sort: { field: SortField; dir:
         <ColHeader label="Type" field="sendt_count" sort={sort} onSort={onSort} />
       ) : (
         <>
-          <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: C.textMuted }}>Type</span>
-          <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: C.textMuted }}>Teknologier</span>
+          <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted }}>Type</span>
+          <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted }}>Teknologier</span>
           <ColHeader label="Pipeline" field="sendt_count" sort={sort} onSort={onSort} className="justify-end" />
         </>
       )}
@@ -453,7 +453,7 @@ function ForespRow({ row, isActive, onClick, compact }: { row: any; isActive: bo
           {/* Teknologier */}
           <div className="flex items-center gap-1 flex-wrap pr-2">
             {(row.teknologier || []).slice(0, 3).map((t: string) => (
-              <span key={t} className="inline-flex items-center rounded" style={{ border: `1px solid ${C.border}`, padding: "1px 7px", fontSize: 11, color: C.textMuted }}>{t}</span>
+              <span key={t} className="inline-flex items-center rounded" style={{ border: `1px solid ${C.border}`, padding: "2px 6px", fontSize: 11, color: C.textMuted }}>{t}</span>
             ))}
             {(row.teknologier || []).length > 3 && (
               <span style={{ fontSize: 11, color: C.textGhost }}>+{row.teknologier.length - 3}</span>
@@ -471,7 +471,7 @@ function ForespRow({ row, isActive, onClick, compact }: { row: any; isActive: bo
                   <div key={k.id} className="flex items-center gap-1.5">
                     <span style={{ fontSize: 12, color: C.textMuted }}>{navn}</span>
                     <span className="inline-flex items-center rounded-full" style={{
-                      fontSize: 10, fontWeight: 600, padding: "1px 7px",
+                      fontSize: 10, fontWeight: 600, padding: "2px 6px",
                       background: `${cfg.color}10`, color: cfg.color, border: `1px solid ${cfg.color}25`,
                     }}>
                       {cfg.label}
@@ -498,7 +498,7 @@ function TypeChip({ type }: { type: string | null }) {
   const color = isDir ? C.accent : isVia ? C.warning : C.textGhost;
   return (
     <span className="inline-flex items-center rounded" style={{
-      fontSize: 10, fontWeight: 600, padding: "1px 7px",
+      fontSize: 10, fontWeight: 600, padding: "2px 6px",
       background: `${color}10`, color, border: `1px solid ${color}20`,
     }}>
       {label}
@@ -520,12 +520,12 @@ function NavGroup({ items, navigate }: { items: readonly { label: string; icon: 
         <button
           key={item.label}
           onClick={() => navigate(item.href)}
-          className="flex items-center gap-2 w-full px-2 py-[5px] transition-colors"
+          className="flex items-center gap-2 w-full px-2 transition-colors"
           style={{
-            fontSize: 13, fontWeight: item.active ? 600 : 500,
+            fontSize: 13, fontWeight: item.active ? 600 : 400,
             color: item.active ? C.text : C.textMuted,
             background: item.active ? C.activeBg : "transparent",
-            borderRadius: 4,
+            borderRadius: 3, height: 28,
           }}
           onMouseEnter={(e) => { if (!item.active) e.currentTarget.style.background = C.hoverBg; }}
           onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? C.activeBg : "transparent"; }}
@@ -542,8 +542,8 @@ function SidebarBtn({ icon: Icon, label, onClick, muted }: { icon: any; label: s
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-2 w-full px-2 py-[5px] transition-colors"
-      style={{ fontSize: 13, fontWeight: 500, color: muted ? C.textGhost : C.textMuted, borderRadius: 6 }}
+      className="flex items-center gap-2 w-full px-2 transition-colors"
+      style={{ fontSize: 13, fontWeight: 500, color: muted ? C.textGhost : C.textMuted, borderRadius: 3, height: 28 }}
       onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
     >
@@ -573,7 +573,7 @@ function FilterRow({ label, options, value, onChange }: {
 }) {
   return (
     <div className="flex items-center gap-2 py-[3px]">
-      <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: C.textMuted, width: 56, flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted, width: 56, flexShrink: 0 }}>{label}</span>
       <div className="flex items-center gap-1 flex-wrap">
         {options.map((opt) => {
           const active = value === opt.value;
@@ -584,7 +584,7 @@ function FilterRow({ label, options, value, onChange }: {
               className="inline-flex items-center transition-colors"
               style={{
                 height: 24, paddingInline: 10, fontSize: 12, fontWeight: 500,
-                borderRadius: 4,
+                borderRadius: 3,
                 border: active ? "none" : `1px solid ${C.border}`,
                 background: active ? C.accent : "transparent",
                 color: active ? "#fff" : C.textMuted,
@@ -611,7 +611,7 @@ function ColHeader({ label, field, sort, onSort, className }: {
       onClick={() => onSort(field)}
       className={`flex items-center gap-0.5 transition-colors ${className || ""}`}
       style={{
-        fontSize: 11, fontWeight: active ? 700 : 600, textTransform: "uppercase", letterSpacing: "0.04em",
+        fontSize: 11, fontWeight: active ? 600 : 500, textTransform: "uppercase", letterSpacing: "0.04em",
         color: active ? C.text : C.textMuted,
       }}
     >
