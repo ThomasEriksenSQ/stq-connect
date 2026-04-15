@@ -781,14 +781,14 @@ function ContactIndicators({ callList, cvEmail }: { callList: boolean; cvEmail: 
         <span
           title="Innkjøper"
           className="rounded-full inline-block"
-          style={{ width: 6, height: 6, background: C.accent }}
+          style={{ width: 6, height: 6, background: C.toggleBuyer.activeText }}
         />
       )}
       {cvEmail && (
         <span
           title="CV-epost"
           className="rounded-full inline-block"
-          style={{ width: 6, height: 6, background: C.info }}
+          style={{ width: 6, height: 6, background: C.toggleCv.activeText }}
         />
       )}
     </span>
@@ -816,6 +816,12 @@ function IconBtn({ icon, title, onClick }: { icon: React.ReactNode; title: strin
   );
 }
 
+const TYPE_TOGGLE_MAP: Record<string, { activeBg: string; activeText: string }> = {
+  "CV-Epost":              C.toggleCv,
+  "Innkjøper":             C.toggleBuyer,
+  "Ikke relevant kontakt": C.toggleIrrelevant,
+};
+
 function FilterRow({
   label,
   options,
@@ -837,6 +843,13 @@ function FilterRow({
       <div className="flex items-center gap-1 flex-wrap">
         {options.map((opt) => {
           const active = value === opt;
+          const toggle = label === "TYPE" ? TYPE_TOGGLE_MAP[opt] : undefined;
+
+          // Active style: use toggle color if available, otherwise default accent
+          const activeBg = toggle ? toggle.activeBg : C.accent;
+          const activeColor = toggle ? toggle.activeText : "#fff";
+          const inactiveBorder = `1px solid ${C.toggleInactive.border}`;
+
           return (
             <button
               key={opt}
@@ -848,15 +861,15 @@ function FilterRow({
                 fontSize: 12,
                 fontWeight: 500,
                 borderRadius: 3,
-                border: active ? "none" : `1px solid ${C.border}`,
-                background: active ? C.accent : "transparent",
-                color: active ? "#fff" : C.textMuted,
+                border: active ? (toggle ? `1px solid transparent` : "none") : inactiveBorder,
+                background: active ? activeBg : C.toggleInactive.bg,
+                color: active ? activeColor : C.toggleInactive.text,
               }}
               onMouseEnter={(e) => {
                 if (!active) e.currentTarget.style.background = C.hoverBg;
               }}
               onMouseLeave={(e) => {
-                if (!active) e.currentTarget.style.background = active ? C.accent : "transparent";
+                if (!active) e.currentTarget.style.background = active ? activeBg : C.toggleInactive.bg;
               }}
             >
               {opt}
