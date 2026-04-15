@@ -6,8 +6,6 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/componen
 import { CompanyCardContent } from "@/components/CompanyCardContent";
 import {
   Search, ChevronDown, ChevronUp, X,
-  Users, Building2, LayoutDashboard, Briefcase, Settings, LogOut,
-  UserPlus, Radar, TrendingUp, Globe, Clock,
 } from "lucide-react";
 import { differenceInDays } from "date-fns";
 import { getEffectiveSignal, normalizeCategoryLabel } from "@/lib/categoryUtils";
@@ -15,6 +13,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { C, SIGNAL_COLORS } from "@/components/designlab/theme";
 import { crmQueryKeys } from "@/lib/queryKeys";
+import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
@@ -72,25 +71,8 @@ function mapToSignal(raw: string): Signal {
   return "Ukjent om behov";
 }
 
-/* ═══════════════════════════════════════════════════════════
-   SIDEBAR NAV
-   ═══════════════════════════════════════════════════════════ */
 
-const NAV_MAIN = [
-  { label: "Salgsagent", icon: LayoutDashboard, href: "/" },
-  { label: "Selskaper", icon: Building2, href: "/design-lab/selskaper", active: true },
-  { label: "Kontakter", icon: Users, href: "/design-lab/kontakter" },
-  { label: "Forespørsler", icon: Briefcase, href: "/design-lab/foresporsler" },
-  { label: "Oppfølginger", icon: Clock, href: "/oppfolginger" },
-];
 
-const NAV_STACQ = [
-  { label: "STACQ Prisen", icon: TrendingUp, href: "/design-lab/stacq-prisen" },
-  { label: "Markedsradar", icon: Radar, href: "/markedsradar" },
-  { label: "Ansatte", icon: Users, href: "/konsulenter/ansatte" },
-  { label: "Eksterne", icon: UserPlus, href: "/konsulenter/eksterne" },
-  { label: "stacq.no", icon: Globe, href: "/nettside-ai" },
-];
 
 /* ═══════════════════════════════════════════════════════════
    MAIN COMPONENT
@@ -108,7 +90,6 @@ export default function DesignLabCompanies() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const initials = user?.email ? user.email.split("@")[0].slice(0, 2).toUpperCase() : "??";
 
   // Close type dropdown on outside click
   useEffect(() => {
@@ -377,32 +358,7 @@ export default function DesignLabCompanies() {
   return (
     <div className="flex h-screen overflow-hidden select-none" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}>
 
-      {/* ═══ SIDEBAR ═══ */}
-      <aside className="flex flex-col shrink-0" style={{ width: 220, borderRight: `1px solid ${C.borderLight}`, background: C.sidebarBg }}>
-        <div className="flex items-center gap-2 px-4" style={{ height: 40 }}>
-          <div className="flex items-center justify-center rounded" style={{ width: 22, height: 22, background: C.accent, color: "#fff", fontSize: 11, fontWeight: 600 }}>S</div>
-          <span style={{ fontSize: 14, fontWeight: 600, color: C.text, letterSpacing: "-0.01em" }}>STACQ</span>
-        </div>
-
-        <nav className="flex-1 overflow-y-auto px-3 space-y-4 pb-3 pt-1">
-          <NavGroup items={NAV_MAIN} navigate={navigate} />
-          <div>
-            <p className="px-2 pb-1.5 pt-1" style={{ fontSize: 11, fontWeight: 500, color: C.textFaint, textTransform: "none" }}>Stacq</p>
-            <NavGroup items={NAV_STACQ} navigate={navigate} />
-          </div>
-        </nav>
-
-        <div className="px-3 py-2 space-y-0.5" style={{ borderTop: `1px solid ${C.border}` }}>
-          <SidebarBtn icon={Settings} label="Innstillinger" onClick={() => navigate("/innstillinger")} />
-          <SidebarBtn icon={LogOut} label="Logg ut" onClick={signOut} muted />
-          {user && (
-            <div className="flex items-center gap-2 px-2 pt-2 pb-1">
-              <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 24, height: 24, background: C.accentBg, color: C.accent, fontSize: 10, fontWeight: 600 }}>{initials}</div>
-              <span className="truncate" style={{ fontSize: 12, color: C.textGhost }}>{user.email}</span>
-            </div>
-          )}
-        </div>
-      </aside>
+      <DesignLabSidebar navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/selskaper" />
 
       {/* ═══ MAIN ═══ */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ background: C.appBg }}>
@@ -540,49 +496,7 @@ function SignalChip({ signal }: { signal: Signal }) {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════
-   SUB-COMPONENTS
-   ═══════════════════════════════════════════════════════════ */
 
-function NavGroup({ items, navigate }: { items: typeof NAV_MAIN; navigate: (p: string) => void }) {
-  return (
-    <div className="space-y-px">
-      {items.map((item) => (
-        <button
-          key={item.label}
-          onClick={() => navigate(item.href)}
-          className="flex items-center gap-2 w-full px-2 transition-colors"
-          style={{
-            fontSize: 13, fontWeight: item.active ? 500 : 400,
-            color: item.active ? "#1A1C1F" : "#5C636E",
-            background: item.active ? "#EAECF0" : "transparent",
-            borderRadius: 4, height: 28,
-          }}
-          onMouseEnter={(e) => { if (!item.active) { e.currentTarget.style.background = "#F0F2F4"; e.currentTarget.style.color = "#1A1C1F"; } }}
-          onMouseLeave={(e) => { if (!item.active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#5C636E"; } }}
-        >
-          <item.icon style={{ width: 14, height: 14, strokeWidth: 1.5, color: item.active ? "#1A1C1F" : "#8C929C" }} />
-          {item.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function SidebarBtn({ icon: Icon, label, onClick, muted }: { icon: any; label: string; onClick: () => void; muted?: boolean }) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex items-center gap-2 w-full px-2 transition-colors"
-      style={{ fontSize: 13, fontWeight: 400, color: muted ? C.textGhost : "#5C636E", borderRadius: 4, height: 28 }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = "#F0F2F4"; e.currentTarget.style.color = "#1A1C1F"; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = muted ? C.textGhost : "#5C636E"; }}
-    >
-      <Icon style={{ width: 14, height: 14, strokeWidth: 1.5, color: "#8C929C" }} />
-      {label}
-    </button>
-  );
-}
 
 function FilterRow({ label, options, value, onChange }: {
   label: string; options: readonly string[] | string[]; value: string; onChange: (v: string) => void;

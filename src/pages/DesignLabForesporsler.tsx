@@ -5,8 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import {
   Search, ChevronDown, ChevronUp, X,
-  Users, Building2, LayoutDashboard, Briefcase, Settings, LogOut,
-  UserPlus, Radar, TrendingUp, Globe, Clock, ArrowUpRight,
+  ArrowUpRight,
 } from "lucide-react";
 import { differenceInDays, format } from "date-fns";
 import { nb } from "date-fns/locale";
@@ -16,6 +15,7 @@ import { crmQueryKeys } from "@/lib/queryKeys";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { C } from "@/components/designlab/theme";
+import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
@@ -53,25 +53,8 @@ function relTime(days: number): string {
   return `${Math.floor(days / 365)}å`;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   SIDEBAR NAV
-   ═══════════════════════════════════════════════════════════ */
 
-const NAV_MAIN = [
-  { label: "Salgsagent", icon: LayoutDashboard, href: "/", active: false },
-  { label: "Selskaper", icon: Building2, href: "/selskaper", active: false },
-  { label: "Kontakter", icon: Users, href: "/design-lab/kontakter", active: false },
-  { label: "Forespørsler", icon: Briefcase, href: "/design-lab/foresporsler", active: true },
-  { label: "Oppfølginger", icon: Clock, href: "/oppfolginger", active: false },
-];
 
-const NAV_STACQ = [
-  { label: "STACQ Prisen", icon: TrendingUp, href: "/design-lab/stacq-prisen" },
-  { label: "Markedsradar", icon: Radar, href: "/markedsradar" },
-  { label: "Ansatte", icon: Users, href: "/konsulenter/ansatte" },
-  { label: "Eksterne", icon: UserPlus, href: "/konsulenter/eksterne" },
-  { label: "stacq.no", icon: Globe, href: "/nettside-ai" },
-];
 
 /* ═══════════════════════════════════════════════════════════
    PIPELINE
@@ -123,7 +106,6 @@ export default function DesignLabForesporsler() {
   const searchRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
 
-  const initials = user?.email ? user.email.split("@")[0].slice(0, 2).toUpperCase() : "??";
 
   // ⌘K shortcut
   useEffect(() => {
@@ -231,46 +213,7 @@ export default function DesignLabForesporsler() {
   return (
     <div className="flex h-screen overflow-hidden select-none" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}>
 
-      {/* ═══ SIDEBAR ═══ */}
-      <aside className="flex flex-col shrink-0" style={{ width: 220, borderRight: `1px solid ${C.borderLight}`, background: C.sidebarBg }}>
-        <div className="flex items-center gap-2 px-4" style={{ height: 40 }}>
-          <div className="flex items-center justify-center rounded" style={{ width: 22, height: 22, background: C.accent, color: "#fff", fontSize: 11, fontWeight: 600 }}>S</div>
-          <span style={{ fontSize: 14, fontWeight: 600, color: C.text, letterSpacing: "-0.01em" }}>STACQ</span>
-        </div>
-
-        <div className="px-3 mb-1">
-          <button
-            onClick={() => searchRef.current?.focus()}
-            className="flex items-center gap-2 w-full rounded-md px-2 py-1.5 transition-colors"
-            style={{ fontSize: 13, color: C.textFaint, background: "transparent" }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-          >
-            <Search style={{ width: 14, height: 14 }} />
-            <span className="flex-1 text-left">Søk</span>
-            <kbd className="rounded px-1" style={{ fontSize: 10, color: C.textGhost, background: "rgba(0,0,0,0.06)" }}>⌘K</kbd>
-          </button>
-        </div>
-
-        <nav className="flex-1 overflow-y-auto px-3 space-y-4 pb-3">
-          <NavGroup items={NAV_MAIN} navigate={navigate} />
-          <div>
-            <p className="px-2 pb-1.5 pt-1" style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textGhost }}>STACQ</p>
-            <NavGroup items={NAV_STACQ} navigate={navigate} />
-          </div>
-        </nav>
-
-        <div className="px-3 py-2 space-y-0.5" style={{ borderTop: `1px solid ${C.border}` }}>
-          <SidebarBtn icon={Settings} label="Innstillinger" onClick={() => navigate("/innstillinger")} />
-          <SidebarBtn icon={LogOut} label="Logg ut" onClick={signOut} muted />
-          {user && (
-            <div className="flex items-center gap-2 px-2 pt-2 pb-1">
-              <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 24, height: 24, background: C.accentBg, color: C.accent, fontSize: 10, fontWeight: 600 }}>{initials}</div>
-              <span className="truncate" style={{ fontSize: 12, color: C.textGhost }}>{user.email}</span>
-            </div>
-          )}
-        </div>
-      </aside>
+      <DesignLabSidebar navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/foresporsler" />
 
       {/* ═══ MAIN ═══ */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ zoom: SCALE_MAP[textSize], background: C.appBg }}>
@@ -513,45 +456,7 @@ function EmptyMsg() {
   return <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen forespørsler å vise</div>;
 }
 
-function NavGroup({ items, navigate }: { items: readonly { label: string; icon: any; href: string; active?: boolean }[]; navigate: (p: string) => void }) {
-  return (
-    <div className="space-y-px">
-      {items.map((item) => (
-        <button
-          key={item.label}
-          onClick={() => navigate(item.href)}
-          className="flex items-center gap-2 w-full px-2 transition-colors"
-          style={{
-            fontSize: 13, fontWeight: item.active ? 600 : 400,
-            color: item.active ? C.text : C.textMuted,
-            background: item.active ? C.activeBg : "transparent",
-            borderRadius: 3, height: 28,
-          }}
-          onMouseEnter={(e) => { if (!item.active) e.currentTarget.style.background = C.hoverBg; }}
-          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? C.activeBg : "transparent"; }}
-        >
-          <item.icon style={{ width: 15, height: 15, strokeWidth: 1.6, color: item.active ? C.text : C.iconDefault }} />
-          {item.label}
-        </button>
-      ))}
-    </div>
-  );
-}
 
-function SidebarBtn({ icon: Icon, label, onClick, muted }: { icon: any; label: string; onClick: () => void; muted?: boolean }) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex items-center gap-2 w-full px-2 transition-colors"
-      style={{ fontSize: 13, fontWeight: 500, color: muted ? C.textGhost : C.textMuted, borderRadius: 3, height: 28 }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-    >
-      <Icon style={{ width: 15, height: 15, strokeWidth: 1.6, color: C.iconDefault }} />
-      {label}
-    </button>
-  );
-}
 
 function IconBtn({ icon, title, onClick }: { icon: React.ReactNode; title: string; onClick: () => void }) {
   return (
