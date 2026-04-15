@@ -111,13 +111,7 @@ function CategoryBadge({ label, className }: { label: string; className?: string
   const isKnown = CATEGORIES.some((c) => c.label === normalized);
   if (!isKnown) return null;
   return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
-        color,
-        className,
-      )}
-    >
+    <span className={cn("chip chip--action is-signal", className)}>
       {normalized}
     </span>
   );
