@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import { SIGNAL_COLORS } from "@/components/designlab/theme";
 import { AiSignalBanner } from "@/components/AiSignalBanner";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -744,7 +745,12 @@ export function ContactCardContent({
                     <DropdownMenuTrigger asChild>
                       {signalCat ? (
                         <button
-                          className="chip chip--action is-signal cursor-pointer"
+                          className="chip chip--action cursor-pointer"
+                          style={{
+                            background: SIGNAL_COLORS[signalCat.label as keyof typeof SIGNAL_COLORS]?.bg,
+                            color: SIGNAL_COLORS[signalCat.label as keyof typeof SIGNAL_COLORS]?.color,
+                            border: "none",
+                          }}
                         >
                           {signalCat.label}
                           <ChevronDown className="h-3 w-3 ml-1" />
@@ -765,7 +771,12 @@ export function ContactCardContent({
                           }}
                         >
                           <span
-                            className="chip chip--action is-signal"
+                            className="chip chip--action"
+                            style={{
+                              background: SIGNAL_COLORS[cat.label as keyof typeof SIGNAL_COLORS]?.bg,
+                              color: SIGNAL_COLORS[cat.label as keyof typeof SIGNAL_COLORS]?.color,
+                              border: "none",
+                            }}
                           >
                             {cat.label}
                           </span>
