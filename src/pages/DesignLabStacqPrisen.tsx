@@ -22,31 +22,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
+import { C } from "@/components/designlab/theme";
 
-/* ═══ V8 COLOR CONSTANTS ═══ */
-const C = {
-  bg: "#FCFCFD",
-  sidebarBg: "#F3F3F4",
-  surface: "#ffffff",
-  surfaceAlt: "#f3f4f5",
-  text: "#1d2028",
-  textMuted: "#6b6f76",
-  textFaint: "#8a8f98",
-  textGhost: "#a2a5ab",
-  accent: "#01696F",
-  accentBg: "rgba(1,105,111,0.06)",
-  border: "#e6e6e6",
-  borderLight: "#eff0f1",
-  hoverBg: "rgba(0,0,0,0.03)",
-  activeBg: "rgba(1,105,111,0.05)",
-  shadow: "0 1px 2px rgba(0,0,0,0.04)",
-  danger: "#9a4a4a",
-  dangerBg: "rgba(154,74,74,0.06)",
-  success: "#4a9a6a",
-  successBg: "rgba(74,154,106,0.06)",
-  warning: "#9a7a2a",
-  warningBg: "rgba(154,122,42,0.06)",
-} as const;
+/* Colors imported from @/components/designlab/theme */
 
 type SortField = "kandidat" | "kunde" | "stacq" | "utpris";
 type SortDir = "asc" | "desc";
@@ -222,9 +200,9 @@ export default function DesignLabStacqPrisen() {
     <div className="flex h-screen overflow-hidden select-none" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}>
 
       {/* ═══ SIDEBAR ═══ */}
-      <aside className="flex flex-col shrink-0" style={{ width: 216, borderRight: `1px solid ${C.border}`, background: C.sidebarBg }}>
+      <aside className="flex flex-col shrink-0" style={{ width: 220, borderRight: `1px solid ${C.border}`, background: C.sidebarBg }}>
         <div className="flex items-center gap-2 px-4" style={{ height: 44 }}>
-          <div className="flex items-center justify-center rounded" style={{ width: 22, height: 22, background: C.accent, color: "#fff", fontSize: 11, fontWeight: 700 }}>S</div>
+          <div className="flex items-center justify-center rounded" style={{ width: 22, height: 22, background: C.accent, color: "#fff", fontSize: 11, fontWeight: 600 }}>S</div>
           <span style={{ fontSize: 14, fontWeight: 600, color: C.text, letterSpacing: "-0.01em" }}>STACQ</span>
         </div>
         <div className="px-3 mb-1">
@@ -426,7 +404,7 @@ function TypeBadge({ status }: { status: string | null }) {
   else if (status === "customer" || status === "kunde") { label = "Kunde"; bg = C.successBg; color = C.success; borderColor = "rgba(74,154,106,0.15)"; }
   else if (status === "prospect") { label = "Potensiell"; bg = C.accentBg; color = C.accent; borderColor = "rgba(1,105,111,0.15)"; }
   return (
-    <span className="inline-flex items-center rounded-full" style={{ fontSize: 11, fontWeight: 500, paddingInline: 8, paddingBlock: 2, background: bg, color, border: `1px solid ${borderColor}` }}>
+    <span className="inline-flex items-center rounded" style={{ fontSize: 11, fontWeight: 500, paddingInline: 8, paddingBlock: 2, background: bg, color, border: `1px solid ${borderColor}` }}>
       {label}
     </span>
   );
@@ -435,7 +413,7 @@ function TypeBadge({ status }: { status: string | null }) {
 function StatusBadge({ status }: { status: string }) {
   const isActive = status === "Aktiv";
   return (
-    <span className="inline-flex items-center rounded-full" style={{
+    <span className="inline-flex items-center rounded" style={{
       fontSize: 11, fontWeight: 500, paddingInline: 8, paddingBlock: 2,
       background: isActive ? C.successBg : C.warningBg,
       color: isActive ? C.success : C.warning,
@@ -474,11 +452,11 @@ function NavGroup({ items, navigate }: { items: { label: string; icon: any; href
           style={{
             fontSize: 13, fontWeight: item.active ? 600 : 500,
             color: item.active ? C.text : C.textMuted,
-            background: item.active ? "rgba(0,0,0,0.05)" : "transparent",
-            borderRadius: 6,
+            background: item.active ? C.activeBg : "transparent",
+            borderRadius: 4,
           }}
           onMouseEnter={(e) => { if (!item.active) e.currentTarget.style.background = C.hoverBg; }}
-          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? "rgba(0,0,0,0.05)" : "transparent"; }}
+          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? C.activeBg : "transparent"; }}
         >
           <item.icon style={{ width: 15, height: 15, strokeWidth: 1.6 }} />
           {item.label}

@@ -18,6 +18,7 @@ import { getConsultantAvailabilityMeta, sortHuntConsultants } from "@/lib/contac
 import { useAuth } from "@/hooks/useAuth";
 import { ContactCardContent } from "@/components/ContactCardContent";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
+import { C, SIGNAL_COLORS, HEAT_COLORS } from "@/components/designlab/theme";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { getHeatResult, getTaskStatus, getActivityStatus, type HeatResult } from "@/lib/heatScore";
 
@@ -39,47 +40,7 @@ type TypeFilter = typeof TYPES[number];
 type SortField = "name" | "signal" | "company" | "title" | "owner" | "last_activity" | "heat";
 type SortDir = "asc" | "desc";
 
-/* ── Colors ── */
-const C = {
-  bg: "#FCFCFD",
-  sidebarBg: "#F3F3F4",
-  surface: "#ffffff",
-  surfaceAlt: "#f3f4f5",
-  text: "#1d2028",
-  textMuted: "#6b6f76",
-  textFaint: "#8a8f98",
-  textGhost: "#a2a5ab",
-  accent: "#01696F",
-  accentBg: "rgba(1,105,111,0.06)",
-  border: "#e6e6e6",
-  borderLight: "#eff0f1",
-  hoverBg: "rgba(0,0,0,0.03)",
-  activeBg: "rgba(1,105,111,0.05)",
-  shadow: "0 1px 2px rgba(0,0,0,0.04)",
-  danger: "#9a4a4a",
-  dangerBg: "rgba(154,74,74,0.06)",
-  success: "#4a9a6a",
-  successBg: "rgba(74,154,106,0.06)",
-  warning: "#9a7a2a",
-  warningBg: "rgba(154,122,42,0.06)",
-} as const;
-
-/* ── Signal color map (Linear-neutral) ── */
-const SIGNAL_COLORS: Record<Signal, { bg: string; color: string }> = {
-  "Behov nå": { bg: "rgba(1,105,111,0.08)", color: C.accent },
-  "Får fremtidig behov": { bg: "rgba(59,111,160,0.08)", color: "#3B6FA0" },
-  "Får kanskje behov": { bg: "rgba(154,122,42,0.08)", color: "#8A7A3A" },
-  "Ukjent om behov": { bg: "rgba(0,0,0,0.04)", color: C.textFaint },
-  "Ikke aktuelt": { bg: "rgba(154,74,74,0.06)", color: "#8a5a5a" },
-};
-
-/* ── Heat badge colors (Linear-neutral) ── */
-const HEAT_COLORS: Record<HeatResult["temperature"], { bg: string; color: string; label: string }> = {
-  hett: { bg: "rgba(180,60,60,0.10)", color: "#A04040", label: "Hett" },
-  lovende: { bg: "rgba(180,120,40,0.10)", color: "#9A7A2A", label: "Lovende" },
-  mulig: { bg: "rgba(0,0,0,0.05)", color: C.textMuted, label: "Mulig" },
-  sovende: { bg: "rgba(0,0,0,0.03)", color: C.textGhost, label: "Sovende" },
-};
+/* Colors, signal colors, and heat colors imported from @/components/designlab/theme */
 
 function relTime(days: number): string {
   if (days === 0) return "I dag";
@@ -381,10 +342,10 @@ export default function DesignLabContacts() {
     <div className="flex h-screen overflow-hidden select-none" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}>
 
       {/* ═══ SIDEBAR ═══ */}
-      <aside className="flex flex-col shrink-0" style={{ width: 216, borderRight: `1px solid ${C.border}`, background: C.sidebarBg }}>
+      <aside className="flex flex-col shrink-0" style={{ width: 220, borderRight: `1px solid ${C.border}`, background: C.sidebarBg }}>
         {/* Workspace */}
         <div className="flex items-center gap-2 px-4" style={{ height: 44 }}>
-          <div className="flex items-center justify-center rounded" style={{ width: 22, height: 22, background: C.accent, color: "#fff", fontSize: 11, fontWeight: 700 }}>S</div>
+          <div className="flex items-center justify-center rounded" style={{ width: 22, height: 22, background: C.accent, color: "#fff", fontSize: 11, fontWeight: 600 }}>S</div>
           <span style={{ fontSize: 14, fontWeight: 600, color: C.text, letterSpacing: "-0.01em" }}>STACQ</span>
         </div>
 
@@ -443,12 +404,12 @@ export default function DesignLabContacts() {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Søk kontakter…"
                 className="w-full outline-none placeholder:text-[#a2a5ab]"
-                style={{ height: 30, paddingLeft: 30, paddingRight: 10, borderRadius: 6, border: `1px solid ${C.border}`, background: C.surface, color: C.text, fontSize: 13 }}
+                style={{ height: 34, paddingLeft: 30, paddingRight: 10, borderRadius: 6, border: `1px solid ${C.border}`, background: C.surfaceAlt, color: C.text, fontSize: 13 }}
               />
             </div>
             <button
               className="inline-flex items-center gap-1.5 rounded-md transition-opacity hover:opacity-90"
-              style={{ height: 30, paddingInline: 12, fontSize: 13, fontWeight: 500, background: C.accent, color: "#fff", borderRadius: 6 }}
+              style={{ height: 32, paddingInline: 12, fontSize: 13, fontWeight: 500, background: C.accent, color: "#fff", borderRadius: 6 }}
             >
               + Ny kontakt
             </button>
@@ -541,7 +502,7 @@ export default function DesignLabContacts() {
                           className="grid items-center cursor-pointer group"
                           style={{
                             gridTemplateColumns: "minmax(0,1fr) 100px 72px",
-                            minHeight: 42, paddingLeft: 16, paddingRight: 16,
+                            minHeight: 38, paddingLeft: 16, paddingRight: 16,
                             paddingTop: 4, paddingBottom: 4,
                             borderBottom: `1px solid ${C.borderLight}`,
                             background: isActive ? C.activeBg : undefined,
@@ -569,7 +530,7 @@ export default function DesignLabContacts() {
               </ResizablePanel>
               <ResizableHandle
                 withHandle
-                className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(1,105,111,0.12)]"
+                className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
               />
               <ResizablePanel defaultSize={65} minSize={40}>
                 <div className="h-full flex flex-col" style={{ background: C.surface }}>
@@ -577,7 +538,7 @@ export default function DesignLabContacts() {
                   <div className="shrink-0 px-6 py-4" style={{ borderBottom: `1px solid ${C.border}` }}>
                     <div className="flex items-start justify-between">
                       <div className="min-w-0 flex-1">
-                        <h2 style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 2 }}>{sel.firstName} {sel.lastName}</h2>
+                        <h2 style={{ fontSize: 16, fontWeight: 600, color: C.text, marginBottom: 2 }}>{sel.firstName} {sel.lastName}</h2>
                         <p style={{ fontSize: 13, color: C.textMuted }}>
                           {[sel.company, sel.title, sel.location].filter(Boolean).join(" · ")}
                         </p>
@@ -585,12 +546,12 @@ export default function DesignLabContacts() {
                         <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
                           <SignalChip signal={sel.signal} size="md" />
                           {sel.callList && (
-                            <span className="inline-flex items-center rounded-full" style={{ fontSize: 11, fontWeight: 500, padding: "2px 8px", background: "rgba(1,105,111,0.06)", color: C.accent }}>
+                            <span className="inline-flex items-center rounded-full" style={{ fontSize: 11, fontWeight: 500, padding: "2px 8px", background: C.accentBg, color: C.accent }}>
                               Innkjøper
                             </span>
                           )}
                           {sel.cvEmail && (
-                            <span className="inline-flex items-center rounded-full" style={{ fontSize: 11, fontWeight: 500, padding: "2px 8px", background: "rgba(59,111,160,0.06)", color: "#3B6FA0" }}>
+                            <span className="inline-flex items-center rounded-full" style={{ fontSize: 11, fontWeight: 500, padding: "2px 8px", background: C.infoBg, color: C.info }}>
                               CV
                             </span>
                           )}
@@ -690,7 +651,7 @@ function SignalChip({ signal, size = "sm" }: { signal: Signal; size?: "sm" | "md
   };
   return (
     <span
-      className="inline-flex items-center rounded-full"
+      className="inline-flex items-center rounded"
       style={{
         fontSize: size === "sm" ? 11 : 12,
         fontWeight: 500,
@@ -714,7 +675,7 @@ function HeatBadge({ heat, daysSince, showScore }: { heat: HeatResult; daysSince
   const tooltip = `${config.label} (${heat.score}p) · Siste: ${daysSince < 999 ? relTime(daysSince) : "aldri"}`;
   return (
     <span
-      className="inline-flex items-center rounded-full"
+      className="inline-flex items-center rounded"
       title={tooltip}
       style={{
         fontSize: 11,
@@ -750,7 +711,7 @@ function ContactIndicators({ callList, cvEmail }: { callList: boolean; cvEmail: 
         <span
           title="CV-epost"
           className="rounded-full inline-block"
-          style={{ width: 6, height: 6, background: "#3B6FA0" }}
+          style={{ width: 6, height: 6, background: C.info }}
         />
       )}
     </span>
@@ -772,11 +733,11 @@ function NavGroup({ items, navigate }: { items: typeof NAV_MAIN; navigate: (p: s
           style={{
             fontSize: 13, fontWeight: item.active ? 600 : 500,
             color: item.active ? C.text : C.textMuted,
-            background: item.active ? "rgba(0,0,0,0.05)" : "transparent",
-            borderRadius: 6,
+            background: item.active ? C.activeBg : "transparent",
+            borderRadius: 4,
           }}
           onMouseEnter={(e) => { if (!item.active) e.currentTarget.style.background = C.hoverBg; }}
-          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? "rgba(0,0,0,0.05)" : "transparent"; }}
+          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? C.activeBg : "transparent"; }}
         >
           <item.icon style={{ width: 15, height: 15, strokeWidth: 1.6 }} />
           {item.label}
@@ -833,7 +794,7 @@ function FilterRow({ label, options, value, onChange }: {
               className="inline-flex items-center transition-colors"
               style={{
                 height: 24, paddingInline: 10, fontSize: 12, fontWeight: 500,
-                borderRadius: 6,
+                borderRadius: 4,
                 border: active ? "none" : `1px solid ${C.border}`,
                 background: active ? C.accent : "transparent",
                 color: active ? "#fff" : C.textMuted,

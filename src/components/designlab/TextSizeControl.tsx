@@ -1,4 +1,5 @@
 import { Type } from "lucide-react";
+import { C } from "./theme";
 
 const SIZES = ["S", "M", "L", "XL", "XXL"] as const;
 export type TextSize = typeof SIZES[number];
@@ -11,13 +12,6 @@ export const SCALE_MAP: Record<TextSize, number> = {
   XXL: 1.4,
 };
 
-const C = {
-  accent: "#01696F",
-  border: "#e6e6e6",
-  text: "#1d2028",
-  textMuted: "#6b6f76",
-};
-
 interface Props {
   value: TextSize;
   onChange: (v: TextSize) => void;
@@ -26,7 +20,7 @@ interface Props {
 export function TextSizeControl({ value, onChange }: Props) {
   return (
     <div className="flex items-center gap-1.5">
-      <Type size={13} color={C.textMuted} />
+      <Type size={13} color={C.textFaint} />
       {SIZES.map((s) => {
         const active = s === value;
         return (
@@ -39,10 +33,10 @@ export function TextSizeControl({ value, onChange }: Props) {
               padding: "0 6px",
               fontSize: 11,
               fontWeight: active ? 600 : 500,
-              borderRadius: 9999,
+              borderRadius: 4,
               border: `1px solid ${active ? C.accent : C.border}`,
               background: active ? C.accent : "transparent",
-              color: active ? "#fff" : C.textMuted,
+              color: active ? "#fff" : C.textFaint,
               cursor: "pointer",
               transition: "all 120ms ease",
             }}

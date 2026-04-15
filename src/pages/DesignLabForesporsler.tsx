@@ -15,6 +15,7 @@ import { ForespørselSheet } from "@/components/ForespørselSheet";
 import { crmQueryKeys } from "@/lib/queryKeys";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
+import { C } from "@/components/designlab/theme";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
@@ -37,27 +38,7 @@ const TYPE_CHIPS: { value: TypeFilter; label: string }[] = [
   { value: "VIA", label: "Partner" },
 ];
 
-/* ── V8 Colors ── */
-const C = {
-  bg: "#FCFCFD",
-  sidebarBg: "#F3F3F4",
-  surface: "#ffffff",
-  surfaceAlt: "#f3f4f5",
-  text: "#1d2028",
-  textMuted: "#6b6f76",
-  textFaint: "#8a8f98",
-  textGhost: "#a2a5ab",
-  accent: "#01696F",
-  accentBg: "rgba(1,105,111,0.06)",
-  border: "#e6e6e6",
-  borderLight: "#eff0f1",
-  hoverBg: "rgba(0,0,0,0.03)",
-  activeBg: "rgba(1,105,111,0.05)",
-  shadow: "0 1px 2px rgba(0,0,0,0.04)",
-  danger: "#9a4a4a",
-  success: "#4a9a6a",
-  warning: "#9a7a2a",
-} as const;
+/* Colors imported from @/components/designlab/theme */
 
 function getDaysAgo(d: string): number {
   return differenceInDays(new Date(), new Date(d));
@@ -251,9 +232,9 @@ export default function DesignLabForesporsler() {
     <div className="flex h-screen overflow-hidden select-none" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}>
 
       {/* ═══ SIDEBAR ═══ */}
-      <aside className="flex flex-col shrink-0" style={{ width: 216, borderRight: `1px solid ${C.border}`, background: C.sidebarBg }}>
+      <aside className="flex flex-col shrink-0" style={{ width: 220, borderRight: `1px solid ${C.border}`, background: C.sidebarBg }}>
         <div className="flex items-center gap-2 px-4" style={{ height: 44 }}>
-          <div className="flex items-center justify-center rounded" style={{ width: 22, height: 22, background: C.accent, color: "#fff", fontSize: 11, fontWeight: 700 }}>S</div>
+          <div className="flex items-center justify-center rounded" style={{ width: 22, height: 22, background: C.accent, color: "#fff", fontSize: 11, fontWeight: 600 }}>S</div>
           <span style={{ fontSize: 14, fontWeight: 600, color: C.text, letterSpacing: "-0.01em" }}>STACQ</span>
         </div>
 
@@ -309,12 +290,12 @@ export default function DesignLabForesporsler() {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Søk forespørsler…"
                 className="w-full outline-none placeholder:text-[#a2a5ab]"
-                style={{ height: 30, paddingLeft: 30, paddingRight: 10, borderRadius: 6, border: `1px solid ${C.border}`, background: C.surface, color: C.text, fontSize: 13 }}
+                style={{ height: 34, paddingLeft: 30, paddingRight: 10, borderRadius: 6, border: `1px solid ${C.border}`, background: C.surfaceAlt, color: C.text, fontSize: 13 }}
               />
             </div>
             <button
               className="inline-flex items-center gap-1.5 rounded-md transition-opacity hover:opacity-90"
-              style={{ height: 30, paddingInline: 12, fontSize: 13, fontWeight: 500, background: C.accent, color: "#fff", borderRadius: 6 }}
+              style={{ height: 32, paddingInline: 12, fontSize: 13, fontWeight: 500, background: C.accent, color: "#fff", borderRadius: 6 }}
             >
               + Ny forespørsel
             </button>
@@ -361,7 +342,7 @@ export default function DesignLabForesporsler() {
               </ResizablePanel>
               <ResizableHandle
                 withHandle
-                className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(1,105,111,0.12)]"
+                className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
               />
               <ResizablePanel defaultSize={60} minSize={40}>
                 <div className="h-full flex flex-col" style={{ background: C.surface }}>
@@ -472,7 +453,7 @@ function ForespRow({ row, isActive, onClick, compact }: { row: any; isActive: bo
           {/* Teknologier */}
           <div className="flex items-center gap-1 flex-wrap pr-2">
             {(row.teknologier || []).slice(0, 3).map((t: string) => (
-              <span key={t} className="inline-flex items-center rounded-full" style={{ border: `1px solid ${C.border}`, padding: "1px 7px", fontSize: 11, color: C.textMuted }}>{t}</span>
+              <span key={t} className="inline-flex items-center rounded" style={{ border: `1px solid ${C.border}`, padding: "1px 7px", fontSize: 11, color: C.textMuted }}>{t}</span>
             ))}
             {(row.teknologier || []).length > 3 && (
               <span style={{ fontSize: 11, color: C.textGhost }}>+{row.teknologier.length - 3}</span>
@@ -516,7 +497,7 @@ function TypeChip({ type }: { type: string | null }) {
   const label = isDir ? "DIR" : isVia ? "VIA" : "—";
   const color = isDir ? C.accent : isVia ? C.warning : C.textGhost;
   return (
-    <span className="inline-flex items-center rounded-full" style={{
+    <span className="inline-flex items-center rounded" style={{
       fontSize: 10, fontWeight: 600, padding: "1px 7px",
       background: `${color}10`, color, border: `1px solid ${color}20`,
     }}>
@@ -543,11 +524,11 @@ function NavGroup({ items, navigate }: { items: readonly { label: string; icon: 
           style={{
             fontSize: 13, fontWeight: item.active ? 600 : 500,
             color: item.active ? C.text : C.textMuted,
-            background: item.active ? "rgba(0,0,0,0.05)" : "transparent",
-            borderRadius: 6,
+            background: item.active ? C.activeBg : "transparent",
+            borderRadius: 4,
           }}
           onMouseEnter={(e) => { if (!item.active) e.currentTarget.style.background = C.hoverBg; }}
-          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? "rgba(0,0,0,0.05)" : "transparent"; }}
+          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? C.activeBg : "transparent"; }}
         >
           <item.icon style={{ width: 15, height: 15, strokeWidth: 1.6 }} />
           {item.label}
@@ -603,7 +584,7 @@ function FilterRow({ label, options, value, onChange }: {
               className="inline-flex items-center transition-colors"
               style={{
                 height: 24, paddingInline: 10, fontSize: 12, fontWeight: 500,
-                borderRadius: 6,
+                borderRadius: 4,
                 border: active ? "none" : `1px solid ${C.border}`,
                 background: active ? C.accent : "transparent",
                 color: active ? "#fff" : C.textMuted,
