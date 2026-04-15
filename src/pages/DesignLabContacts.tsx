@@ -518,7 +518,7 @@ export default function DesignLabContacts() {
                 <div
                   className="grid items-center sticky top-0 z-10"
                   style={{
-                    gridTemplateColumns: "minmax(140px,1fr) 120px 36px minmax(120px,1fr) minmax(100px,1fr) minmax(0,1.2fr) 100px 140px",
+                    gridTemplateColumns: "minmax(140px,1fr) 120px 36px minmax(120px,1fr) minmax(100px,1fr) 100px 140px",
                     height: 32, borderBottom: `1px solid ${C.border}`,
                     background: C.surfaceAlt, paddingLeft: 16, paddingRight: 16,
                   }}
@@ -528,7 +528,7 @@ export default function DesignLabContacts() {
                   <span className="flex items-center" style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.01em", color: C.textMuted }}>Finn</span>
                   <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
                   <ColHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />
-                  <span className="flex items-center" style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.01em", color: C.textMuted }}>Kontaktinfo</span>
+                  
                   <span className="flex items-center" style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.01em", color: C.textMuted }}>Tags</span>
                   <ColHeader label="Varme" field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
                 </div>
@@ -545,7 +545,7 @@ export default function DesignLabContacts() {
                         onClick={() => setSelectedId(isActive ? null : c.id)}
                         className="grid items-center cursor-pointer group"
                         style={{
-                          gridTemplateColumns: "minmax(140px,1fr) 120px 36px minmax(120px,1fr) minmax(100px,1fr) minmax(0,1.2fr) 100px 140px",
+                          gridTemplateColumns: "minmax(140px,1fr) 120px 36px minmax(120px,1fr) minmax(100px,1fr) 100px 140px",
                           minHeight: 38, paddingLeft: 16, paddingRight: 16,
                           paddingTop: 4, paddingBottom: 4,
                           borderLeft: `3px solid ${c.heatResult.temperature === "sovende" ? "transparent" : HEAT_COLORS[c.heatResult.temperature].color}`,
@@ -570,53 +570,6 @@ export default function DesignLabContacts() {
                         </div>
                         <div className="truncate pr-3">
                           <span style={{ fontSize: 13, color: C.textMuted }}>{c.title}</span>
-                        </div>
-                        {/* Contact info: phone, email, linkedin */}
-                        <div className="flex items-center gap-3 overflow-hidden pr-2">
-                          {c.phone && (
-                            <a
-                              href={`tel:${c.phone}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="inline-flex items-center gap-1 shrink-0 transition-colors"
-                              style={{ fontSize: 12, color: C.textFaint }}
-                              onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.color = C.textFaint; }}
-                              title={c.phone}
-                            >
-                              <Phone style={{ width: 12, height: 12, flexShrink: 0 }} />
-                              <span className="truncate" style={{ maxWidth: 90 }}>{c.phone}</span>
-                            </a>
-                          )}
-                          {c.email && (
-                            <a
-                              href={`mailto:${c.email}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="inline-flex items-center gap-1 shrink-0 transition-colors"
-                              style={{ fontSize: 12, color: C.textFaint }}
-                              onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.color = C.textFaint; }}
-                              title={c.email}
-                            >
-                              <Mail style={{ width: 12, height: 12, flexShrink: 0 }} />
-                              <span className="truncate" style={{ maxWidth: 130 }}>{c.email}</span>
-                            </a>
-                          )}
-                          {c.linkedin && (
-                            <a
-                              href={c.linkedin.startsWith("http") ? c.linkedin : `https://${c.linkedin}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="inline-flex items-center gap-1 shrink-0 transition-colors"
-                              style={{ fontSize: 12, color: C.textFaint }}
-                              onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.color = C.textFaint; }}
-                              title="LinkedIn"
-                            >
-                              <Linkedin style={{ width: 12, height: 12 }} />
-                              <span>LinkedIn</span>
-                            </a>
-                          )}
                         </div>
                         <div className="flex items-center gap-1">
                           <span className={`chip chip--action${c.cvEmail ? " is-active" : ""}`}>CV</span>
