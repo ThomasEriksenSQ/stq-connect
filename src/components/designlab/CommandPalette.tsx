@@ -74,7 +74,7 @@ export function CommandPalette({
   const [activeIdx, setActiveIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
+  
 
   // Reset on open
   useEffect(() => {
