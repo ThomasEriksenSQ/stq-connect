@@ -242,8 +242,8 @@ export default function DesignLabStacqPrisen() {
         </header>
 
         {/* Content */}
-        <div className="content-wrapper flex-1 overflow-y-auto" style={{ padding: "24px 24px 48px" }}>
-          <div>
+        <div className="flex-1 overflow-y-auto" style={{ padding: "24px 24px 48px" }}>
+          <div style={{ maxWidth: 1100, margin: "0 auto" }}>
 
           {/* Stat line */}
           <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 20 }}>

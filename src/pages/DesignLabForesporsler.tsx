@@ -302,7 +302,6 @@ export default function DesignLabForesporsler() {
           </div>
         </header>
 
-        <div className="content-wrapper flex-1 flex flex-col min-h-0">
         {/* Filters + stat line */}
         <div className="shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
           <FilterRow label="TID" options={STATUS_CHIPS} value={statusFilter} onChange={(v) => setStatusFilter(v as StatusFilter)} />
@@ -377,7 +376,6 @@ export default function DesignLabForesporsler() {
               )}
             </div>
           )}
-        </div>
         </div>
       </main>
     </div>
