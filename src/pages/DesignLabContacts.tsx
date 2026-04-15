@@ -453,7 +453,7 @@ export default function DesignLabContacts() {
                   <div
                     key={con.id ?? con.navn}
                     className="flex items-center gap-2.5 shrink-0 rounded-lg"
-                    style={{ border: `1px solid ${C.border}`, padding: "8px 14px", background: C.surface }}
+                    style={{ border: `1px solid ${C.border}`, padding: "8px 14px", background: C.panel }}
                   >
                     <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 36, height: 36, background: "rgba(0,0,0,0.06)", fontSize: 12, fontWeight: 600, color: C.text }}>
                       {initials.toUpperCase()}
