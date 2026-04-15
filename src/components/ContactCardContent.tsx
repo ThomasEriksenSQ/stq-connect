@@ -1864,7 +1864,7 @@ function TaskRow({
         <Checkbox
           checked={completing}
           onCheckedChange={() => handleCheck({ stopPropagation: () => {} } as any)}
-          className="h-4 w-4 rounded-[4px] border-2 border-muted-foreground/40 flex-shrink-0 mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+          className="h-[18px] w-[18px] rounded border-[1.5px] border-muted-foreground/30 flex-shrink-0 mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
         />
       </div>
       <div className="flex-1 min-w-0">
