@@ -39,8 +39,8 @@ const TYPE_CHIPS: { value: TypeFilter; label: string }[] = [
 
 /* ── V8 Colors ── */
 const C = {
-  bg: "#ffffff",
-  sidebarBg: "#f4f5f6",
+  bg: "#D4D4D6",
+  sidebarBg: "#F3F3F4",
   surface: "#ffffff",
   surfaceAlt: "#f3f4f5",
   text: "#1d2028",
