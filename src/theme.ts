@@ -65,7 +65,7 @@ export const C = {
   /* Toggle states */
   toggleCv:         { activeBg: "rgba(26,79,160,0.08)",  activeText: "#1A4FA0" },
   toggleBuyer:      { activeBg: "rgba(94,106,210,0.08)", activeText: "#5E6AD2" },
-  toggleIrrelevant: { activeBg: "rgba(139,29,32,0.08)",  activeText: "#8B1D20" },
+  toggleIrrelevant: { activeBg: "rgba(193,53,56,0.08)",  activeText: "#C13538" },
   toggleInactive:   { bg: "transparent", text: "#8C929C", border: "#DDE0E7" },
 
   /* Shadows */
