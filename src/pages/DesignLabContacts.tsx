@@ -451,7 +451,7 @@ export default function DesignLabContacts() {
                 placeholder="Søk kontakter…"
                 className="w-full outline-none placeholder:text-[#a2a5ab]"
                 style={{
-                  height: 32,
+                  height: 30,
                   paddingLeft: 30,
                   paddingRight: 9,
                   borderRadius: 5,
