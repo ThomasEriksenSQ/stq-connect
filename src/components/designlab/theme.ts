@@ -8,9 +8,10 @@ import type { HeatResult } from "@/lib/heatScore";
 export const C = {
   /* Backgrounds — 3-layer: shell → main → panels */
   bg: "#F5F6F8",           // app shell (outermost viewport)
-  sidebarBg: "#FFFFFF",    // sidebar — white panel
+  sidebarBg: "#F7F8FA",    // sidebar — own subtle layer
   panel: "#FFFFFF",        // detail/right panel — white
-  surface: "#FAFBFC",      // main content canvas (slightly gray)
+  surface: "#FFFFFF",      // panels, detail views — white
+  appBg: "#FAFBFC",        // main canvas background
   surfaceAlt: "#F4F5F8",   // elevated controls, table headers
   overlay: "#EDEEF2",      // overlay backgrounds
   hoverBg: "#F0F2F6",      // hover state
