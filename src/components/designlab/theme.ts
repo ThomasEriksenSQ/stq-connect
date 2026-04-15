@@ -83,6 +83,6 @@ export const SIGNAL_COLORS: Record<Signal, { bg: string; color: string }> = {
 export const HEAT_COLORS: Record<HeatResult["temperature"], { bg: string; color: string; label: string }> = {
   hett:     { bg: C.dangerBg,            color: C.danger,    label: "Hett" },
   lovende:  { bg: C.warningBg,           color: C.warning,   label: "Lovende" },
-  mulig:    { bg: "rgba(0,0,0,0.04)",    color: C.textMuted, label: "Mulig" },
-  sovende:  { bg: "rgba(0,0,0,0.03)",    color: C.textGhost, label: "Sovende" },
+  mulig:    { bg: C.infoBg,              color: C.info,      label: "Mulig" },
+  sovende:  { bg: "rgba(0,0,0,0.05)",    color: C.textFaint, label: "Sovende" },
 };
