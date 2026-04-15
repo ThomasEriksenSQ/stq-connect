@@ -590,7 +590,7 @@ export default function DesignLabContacts() {
             />
             <ResizablePanel defaultSize={65} minSize={30}>
               {sel ? (
-                <div className="h-full flex flex-col" style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}` }}>
+                <div className="h-full flex flex-col" <div className="h-full flex flex-col" style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}`, borderTop: `2px solid ${SIGNAL_COLORS[sel.signal as keyof typeof SIGNAL_COLORS]?.color ?? C.borderLight}` }}>>
                   <div className="shrink-0 flex items-center justify-end px-4" style={{ height: 32, borderBottom: `1px solid ${C.border}` }}>
                     <button
                       onClick={() => setSelectedId(null)}
