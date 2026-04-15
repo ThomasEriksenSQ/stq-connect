@@ -766,7 +766,7 @@ export function ContactCardContent({
             {editable && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium whitespace-nowrap cursor-pointer">
+                  <button className="chip chip--action is-signal cursor-pointer whitespace-nowrap">
                     {contact.owner_id && profileMapFull[contact.owner_id] ? profileMapFull[contact.owner_id] : "Eier"}
                     <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
                   </button>
@@ -774,7 +774,7 @@ export function ContactCardContent({
                 <DropdownMenuContent align="end">
                   {allProfiles.map((p) => (
                     <DropdownMenuItem key={p.id} onClick={() => updateMutation.mutate({ owner_id: p.id })}>
-                      <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+                      <span className="chip chip--action is-signal">
                         {p.full_name}
                       </span>
                     </DropdownMenuItem>
