@@ -1,34 +1,35 @@
 
 
-# Plan: Tre distinkte bakgrunnsnivåer som Linear
+# Plan: Korriger bakgrunnsfarger til Linears faktiske verdier
 
 ## Problemet
 
-Sidebaren og hovedflaten bruker begge `C.bg` (`#f7f8f8`), så de ser like ut. Linear har tre tydelige bakgrunnslag:
+Vår sidebar (`#ecedf0`) er for mørk — den stikker seg ut som en tung grå flate. Linear bruker en mye mer subtil off-white på sidebaren. Hovedflaten (`#f7f8f8`) er også for grå — Linears innholdsområde er tilnærmet hvit.
+
+## Linears faktiske lag (fra skjermbildene)
 
 ```text
-Sidebar:       #ededef  (mørkest — tydelig "panel"-følelse)
-Hovedflate:    #f7f8f8  (mellomtone — lister/tabeller)
-Detaljpanel:   #ffffff  (hvit — fokusvindu)
+Sidebar:        #f4f5f6  (knapt merkbar off-white, IKKE tydelig grå)
+Hovedinnhold:   #ffffff  (hvit)
+Detaljpanel:    #ffffff  (hvit)
 ```
 
-## Endringer
+Skillet mellom sidebar og innhold skapes primært av **border**, ikke bakgrunnsfarge-kontrast. Sidebaren er bare *litt* mørkere enn hvit.
 
-### Alle tre Design Lab-sider
+## Endringer i alle tre filer
 
-1. **Legg til ny farge i `C`-objektet**: `sidebarBg: "#ededef"` (eller `#ecedf0` — Linears faktiske sidebar-farge i light mode)
+### Oppdater `C`-objektet
 
-2. **Sidebar `<aside>`**: Endre `background: C.bg` → `background: C.sidebarBg`
+```text
+sidebarBg:  #ecedf0 → #f4f5f6  (subtil off-white, som Linear)
+bg:         #f7f8f8 → #ffffff  (hvit hovedflate, som Linear)
+```
 
-3. **Hovedflate** (tabell-området): Beholder `C.bg` (`#f7f8f8`) — dette er allerede riktig
+### Filer
 
-4. **Detaljpanel**: Beholder `C.surface` (`#ffffff`) — dette er allerede riktig
+1. `src/pages/DesignLabContacts.tsx` — C.sidebarBg og C.bg
+2. `src/pages/DesignLabForesporsler.tsx` — C.sidebarBg og C.bg
+3. `src/pages/DesignLabStacqPrisen.tsx` — C.sidebarBg og C.bg
 
-### Filer som endres
-
-- `src/pages/DesignLabContacts.tsx` — sidebar background
-- `src/pages/DesignLabForesporsler.tsx` — sidebar background  
-- `src/pages/DesignLabStacqPrisen.tsx` — sidebar background
-
-Resultatet gir tre tydelig adskilte soner: mørk sidebar → mellomtone liste → hvit fokusfelt, akkurat som Linear.
+Ingen andre endringer. Resultatet: sidebar som knapt skiller seg fra hvit (som Linear), med border som primær separator.
 
