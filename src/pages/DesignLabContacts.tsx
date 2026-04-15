@@ -518,7 +518,7 @@ export default function DesignLabContacts() {
                 <div
                   className="grid items-center sticky top-0 z-10"
                   style={{
-                    gridTemplateColumns: "minmax(140px,1fr) 120px 36px minmax(120px,1fr) minmax(100px,1fr) 100px 140px",
+                    gridTemplateColumns: "minmax(140px,1fr) 120px 36px minmax(120px,1fr) minmax(100px,1fr) minmax(0,1.2fr) 100px 140px",
                     height: 32, borderBottom: `1px solid ${C.border}`,
                     background: C.surfaceAlt, paddingLeft: 16, paddingRight: 16,
                   }}
@@ -528,6 +528,7 @@ export default function DesignLabContacts() {
                   <span className="flex items-center" style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.01em", color: C.textMuted }}>Finn</span>
                   <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
                   <ColHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />
+                  <span className="flex items-center" style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.01em", color: C.textMuted }}>Kontaktinfo</span>
                   <span className="flex items-center" style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.01em", color: C.textMuted }}>Tags</span>
                   <ColHeader label="Varme" field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
                 </div>
