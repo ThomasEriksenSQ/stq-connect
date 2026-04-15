@@ -7,7 +7,7 @@ import type { HeatResult } from "@/lib/heatScore";
 export const C = {
   /* Backgrounds */
   bg: "#F5F6F8",           // --bg-base
-  sidebarBg: "#FFFFFF",    // --bg-surface
+  sidebarBg: "#F7F8FA",    // --bg-sidebar (near-identical to canvas)
   surface: "#FAFBFC",      // --bg-app
   surfaceAlt: "#F4F5F8",   // --bg-elevated
   overlay: "#EDEEF2",      // --bg-overlay
