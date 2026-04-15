@@ -231,7 +231,6 @@ const App = () => (
                     </Suspense>
                   }
                 />
-              </Route>
                 <Route
                   path="selskaper"
                   element={
@@ -240,6 +239,7 @@ const App = () => (
                     </Suspense>
                   }
                 />
+              </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
