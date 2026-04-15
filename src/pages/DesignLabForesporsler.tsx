@@ -106,7 +106,6 @@ export default function DesignLabForesporsler() {
   const searchRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
 
-  const initials = user?.email ? user.email.split("@")[0].slice(0, 2).toUpperCase() : "??";
 
   // ⌘K shortcut
   useEffect(() => {
