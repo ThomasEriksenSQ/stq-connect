@@ -717,7 +717,7 @@ export function ContactCardContent({
                   const last = parts.slice(1).join(" ") || "";
                   updateMutation.mutate({ first_name: first, last_name: last });
                 }}
-                className="text-[1.5rem] font-bold"
+                className="text-[1.5rem] font-bold text-foreground"
               />
             </h2>
           ) : (
