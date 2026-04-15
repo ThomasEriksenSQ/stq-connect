@@ -11,17 +11,7 @@ import {
   Users,
   X,
   Wifi,
-  Building2,
-  LayoutDashboard,
-  Briefcase,
-  Settings,
-  LogOut,
-  UserPlus,
-  Radar,
-  TrendingUp,
-  Globe,
   ArrowUpRight,
-  Clock,
 } from "lucide-react";
 import { differenceInDays, format } from "date-fns";
 import { nb } from "date-fns/locale";
@@ -35,6 +25,7 @@ import { C, SIGNAL_COLORS, HEAT_COLORS } from "@/components/designlab/theme";
 import { CommandPalette } from "@/components/designlab/CommandPalette";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { getHeatResult, getTaskStatus, getActivityStatus, type HeatResult } from "@/lib/heatScore";
+import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
