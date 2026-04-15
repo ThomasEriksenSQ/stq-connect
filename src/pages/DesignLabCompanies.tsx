@@ -2,6 +2,8 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { CompanyCardContent } from "@/components/CompanyCardContent";
 import {
   Search, ChevronDown, ChevronUp, X,
   Users, Building2, LayoutDashboard, Briefcase, Settings, LogOut,
