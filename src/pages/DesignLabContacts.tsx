@@ -496,9 +496,7 @@ export default function DesignLabContacts() {
         )}
 
         {/* Content: list + detail */}
-        <div className="flex-1 min-h-0 flex relative" style={{ borderBottom: "none" }}>
-          {/* Continuous header divider line */}
-          <div className="absolute top-[32px] left-0 right-0 h-px z-20 pointer-events-none" style={{ background: C.border }} />
+        <div className="flex-1 min-h-0 flex">
           <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel defaultSize={35} minSize={20} maxSize={60}>
               <div className="h-full overflow-y-auto">
@@ -571,12 +569,11 @@ export default function DesignLabContacts() {
             </ResizablePanel>
             <ResizableHandle
               withHandle
-              className="-mx-px hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
-              style={{ background: `linear-gradient(to bottom, ${C.surfaceAlt} 0px, ${C.surfaceAlt} 32px, transparent 32px, transparent 100%)` }}
+              className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
             />
             <ResizablePanel defaultSize={65} minSize={40}>
               {sel ? (
-                <div className="h-full flex flex-col" style={{ background: C.panel }}>
+                <div className="h-full flex flex-col" style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}` }}>
                   <div className="shrink-0 flex items-center justify-end px-4" style={{ height: 32, borderBottom: `1px solid ${C.border}` }}>
                     <button
                       onClick={() => setSelectedId(null)}
