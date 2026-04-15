@@ -530,7 +530,7 @@ function NavGroup({ items, navigate }: { items: readonly { label: string; icon: 
           onMouseEnter={(e) => { if (!item.active) e.currentTarget.style.background = C.hoverBg; }}
           onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? C.activeBg : "transparent"; }}
         >
-          <item.icon style={{ width: 15, height: 15, strokeWidth: 1.6 }} />
+          <item.icon style={{ width: 15, height: 15, strokeWidth: 1.6, color: item.active ? C.text : C.iconDefault }} />
           {item.label}
         </button>
       ))}
@@ -547,7 +547,7 @@ function SidebarBtn({ icon: Icon, label, onClick, muted }: { icon: any; label: s
       onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
     >
-      <Icon style={{ width: 15, height: 15, strokeWidth: 1.6 }} />
+      <Icon style={{ width: 15, height: 15, strokeWidth: 1.6, color: C.iconDefault }} />
       {label}
     </button>
   );
