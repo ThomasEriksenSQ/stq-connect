@@ -503,14 +503,18 @@ export default function DesignLabContacts() {
                 <div
                   className="grid items-center sticky top-0 z-10"
                   style={{
-                    gridTemplateColumns: "minmax(0,1fr) 100px 72px",
+                    gridTemplateColumns: "minmax(140px,1fr) 120px 36px minmax(120px,1fr) minmax(100px,1fr) 100px 80px",
                     height: 32, borderBottom: `1px solid ${C.border}`,
                     background: C.surfaceAlt, paddingLeft: 16, paddingRight: 16,
                   }}
                 >
                   <ColHeader label="Navn" field="name" sort={sort} onSort={toggleSort} />
                   <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Varme" field="heat" sort={sort} onSort={toggleSort} className="justify-end" />
+                  <span style={{ fontSize: 11, fontWeight: 500, color: C.textFaint, textTransform: "uppercase", letterSpacing: "0.04em" }}>Finn</span>
+                  <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
+                  <ColHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />
+                  <span style={{ fontSize: 11, fontWeight: 500, color: C.textFaint, textTransform: "uppercase", letterSpacing: "0.04em" }}>Tags</span>
+                  <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
                 </div>
                 {isLoading ? (
                   <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster kontakter…</div>
@@ -525,7 +529,7 @@ export default function DesignLabContacts() {
                         onClick={() => setSelectedId(isActive ? null : c.id)}
                         className="grid items-center cursor-pointer group"
                         style={{
-                          gridTemplateColumns: "minmax(0,1fr) 100px 72px",
+                          gridTemplateColumns: "minmax(140px,1fr) 120px 36px minmax(120px,1fr) minmax(100px,1fr) 100px 80px",
                           minHeight: 38, paddingLeft: 16, paddingRight: 16,
                           paddingTop: 4, paddingBottom: 4,
                           borderBottom: `1px solid ${C.borderLight}`,
@@ -536,15 +540,30 @@ export default function DesignLabContacts() {
                         onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = isActive ? C.activeBg : ""; }}
                       >
                         <div className="truncate pr-3">
-                          <div className="flex items-center gap-1.5">
-                            <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{c.firstName} {c.lastName}</span>
-                            <ContactIndicators callList={c.callList} cvEmail={c.cvEmail} />
-                          </div>
-                          <span style={{ fontSize: 12, color: C.textFaint, lineHeight: 1.2 }} className="truncate block">{c.company}</span>
+                          <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{c.firstName} {c.lastName}</span>
                         </div>
                         <div className="pr-3"><SignalChip signal={c.signal} /></div>
+                        <div className="flex items-center justify-center">
+                          {c.hasMarkedsradar && (
+                            <Wifi style={{ width: 14, height: 14, color: C.textFaint }} />
+                          )}
+                        </div>
+                        <div className="truncate pr-3">
+                          <span style={{ fontSize: 13, color: C.textMuted }}>{c.company}</span>
+                        </div>
+                        <div className="truncate pr-3">
+                          <span style={{ fontSize: 13, color: C.textMuted }}>{c.title}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {c.cvEmail && (
+                            <span style={{ fontSize: 11, fontWeight: 500, color: "#2D6A4F", background: "rgba(45,106,79,0.08)", borderRadius: 3, padding: "1px 5px" }}>CV</span>
+                          )}
+                          {c.callList && (
+                            <span style={{ fontSize: 11, fontWeight: 500, color: "#5E6AD2", background: "rgba(94,106,210,0.08)", borderRadius: 3, padding: "1px 5px" }}>Innkjøper</span>
+                          )}
+                        </div>
                         <div className="flex justify-end">
-                          <HeatBadge heat={c.heatResult} daysSince={c.daysSince} />
+                          <span style={{ fontSize: 12, color: C.textFaint }}>{c.daysSince < 999 ? relTime(c.daysSince) : ""}</span>
                         </div>
                       </div>
                     );
