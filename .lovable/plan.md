@@ -1,49 +1,49 @@
 
 
-# Plan: Collapsible sidebar for Design Lab
+# Fargeforslag for toggle-tilstander i V8
 
-## Summary
-Extract the duplicated sidebar into a shared component with a collapse/expand toggle. When collapsed, the sidebar shrinks to ~48px showing only icons. A small toggle button (chevron) at the bottom triggers the transition. State persists via `usePersistentState`.
+Alle farger følger V8-paletten med desaturerte 8%-bakgrunner og dempede tekstfarger.
 
-## New file: `src/components/designlab/DesignLabSidebar.tsx`
+## 1. CV-epost / CV
 
-A shared sidebar component used by all 4 Design Lab pages. Props: `navigate`, `signOut`, `user`, `activePath`.
+| Tilstand | Bakgrunn | Tekst | Border |
+|----------|----------|-------|--------|
+| **Aktiv** | `rgba(26,79,160,0.08)` | `#1A4FA0` | ingen |
+| **Inaktiv** | `transparent` | `#8C929C` | `#DDE0E7` |
 
-**Collapsed state:**
-- Width animates from 220px to 48px via CSS transition (`transition: width 200ms ease`)
-- Only icons visible (no labels, no group headers, no email)
-- STACQ logo shows just the "S" square
-- Nav items show only icons, centered
-- Footer: only Settings and LogOut icons
-- A small `ChevronsLeft`/`ChevronsRight` toggle button at the bottom of the sidebar
+Blå tone — matcher eksisterende `C.info`-prikken som allerede brukes for CV-epost-indikatoren.
 
-**Expanded state:**
-- Current 220px layout, identical to what exists now
-- Toggle button shows `ChevronsLeft`
+## 2. Innkjøper
 
-**Persistence:** `usePersistentState('dl-sidebar-collapsed', false)`
+| Tilstand | Bakgrunn | Tekst | Border |
+|----------|----------|-------|--------|
+| **Aktiv** | `rgba(94,106,210,0.08)` | `#5E6AD2` | ingen |
+| **Inaktiv** | `transparent` | `#8C929C` | `#DDE0E7` |
 
-**Active item detection:** Derived from `activePath` prop instead of hardcoded `active: true` on nav items. Compare `item.href` with the current path.
+Accent/lilla tone — matcher eksisterende `C.accent`-prikken som brukes for innkjøper-indikatoren.
 
-## Changes to each Design Lab page
+## 3. Ikke relevant person å kontakte igjen
 
-Replace the inline `<aside>...</aside>` block with:
-```tsx
-<DesignLabSidebar navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/kontakter" />
+| Tilstand | Bakgrunn | Tekst | Border |
+|----------|----------|-------|--------|
+| **Aktiv** | `rgba(139,29,32,0.08)` | `#8B1D20` | ingen |
+| **Inaktiv** | `transparent` | `#8C929C` | `#DDE0E7` |
+
+Rød/danger tone — signaliserer tydelig negativ status uten å skrike.
+
+## Implementering
+
+Legg til tokens i `src/theme.ts`:
+
+```ts
+/* Toggle states */
+toggleCv:        { activeBg: "rgba(26,79,160,0.08)",  activeText: "#1A4FA0" },
+toggleBuyer:     { activeBg: "rgba(94,106,210,0.08)",  activeText: "#5E6AD2" },
+toggleIrrelevant:{ activeBg: "rgba(139,29,32,0.08)",   activeText: "#8B1D20" },
+toggleInactive:  { bg: "transparent", text: "#8C929C", border: "#DDE0E7" },
 ```
 
-Files affected:
-- `src/pages/DesignLabContacts.tsx`
-- `src/pages/DesignLabCompanies.tsx`
-- `src/pages/DesignLabForesporsler.tsx`
-- `src/pages/DesignLabStacqPrisen.tsx`
+Alle inaktive tilstander bruker samme nøytrale stil (grå tekst + subtil border), mens aktive tilstander differensieres med farge.
 
-Also remove the duplicated `NavGroup`, `SidebarBtn` helper functions from each page (they move into the shared component), and remove the `NAV_MAIN`/`NAV_STACQ` constants (also moved).
-
-## Design details
-
-- Toggle button: 28px height, positioned at sidebar footer area, subtle `C.textFaint` color, `hover:bg C.hoverBg`
-- Transition: `width` property with `200ms ease`, `overflow: hidden` to clip labels during animation
-- Collapsed nav items: `justify-center`, tooltip on hover showing the label (using `title` attribute for simplicity)
-- No layout shift in main content — main area uses `flex-1 min-w-0` which naturally fills remaining space
+Oppdater filter-pills i `DesignLabContacts.tsx` FilterRow for TYPE-raden, og `ContactIndicators` for rad-indikatorer.
 
