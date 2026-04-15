@@ -571,11 +571,11 @@ export default function DesignLabContacts() {
             </ResizablePanel>
             <ResizableHandle
               withHandle
-              className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
+              className="-mx-px bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
             />
             <ResizablePanel defaultSize={65} minSize={40}>
               {sel ? (
-                <div className="h-full flex flex-col" style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}` }}>
+                <div className="h-full flex flex-col" style={{ background: C.panel }}>
                   <div className="shrink-0 flex items-center justify-end px-4" style={{ height: 32, borderBottom: `1px solid ${C.border}` }}>
                     <button
                       onClick={() => setSelectedId(null)}
