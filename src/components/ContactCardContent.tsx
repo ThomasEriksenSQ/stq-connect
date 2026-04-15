@@ -1275,6 +1275,7 @@ export function ContactCardContent({
             </button>
           ) : null}
         </div>
+        )}
 
         {/* ── Separator + Action Bar ── */}
         {editable && (
