@@ -62,6 +62,7 @@ type SortDir = "asc" | "desc";
 
 const DL_QUERY_KEYS = {
   contacts: ["dl-contacts-v9"] as const,
+  contactsParity: ["dl-contacts-parity-v10"] as const,
   activities: ["dl-activities-v9"] as const,
   tasks: ["dl-tasks-v9"] as const,
   foresporsler: ["dl-foresporsler-v9"] as const,
@@ -130,6 +131,7 @@ export default function DesignLabContacts() {
   const invalidateDesignLabQueries = useCallback(async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: DL_QUERY_KEYS.contacts }),
+      queryClient.invalidateQueries({ queryKey: DL_QUERY_KEYS.contactsParity }),
       queryClient.invalidateQueries({ queryKey: DL_QUERY_KEYS.activities }),
       queryClient.invalidateQueries({ queryKey: DL_QUERY_KEYS.tasks }),
       queryClient.invalidateQueries({ queryKey: DL_QUERY_KEYS.foresporsler }),
@@ -141,6 +143,9 @@ export default function DesignLabContacts() {
   const updateCachedContactFields = useCallback(
     (contactId: string, updates: Record<string, any>) => {
       queryClient.setQueryData(DL_QUERY_KEYS.contacts, (old: any) =>
+        Array.isArray(old) ? old.map((contact) => (contact.id === contactId ? { ...contact, ...updates } : contact)) : old,
+      );
+      queryClient.setQueryData(DL_QUERY_KEYS.contactsParity, (old: any) =>
         Array.isArray(old) ? old.map((contact) => (contact.id === contactId ? { ...contact, ...updates } : contact)) : old,
       );
       queryClient.setQueryData(crmQueryKeys.contacts.detail(contactId), (old: any) =>
@@ -340,8 +345,182 @@ export default function DesignLabContacts() {
     );
   }, [availableConsultants]);
 
+  const { data: parityContacts = [], isLoading: isLoadingParity } = useQuery({
+    queryKey: DL_QUERY_KEYS.contactsParity,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contacts")
+        .select(
+          "*, companies(id, name, ikke_relevant), profiles!contacts_owner_id_fkey(id, full_name)",
+        )
+        .order("updated_at", { ascending: false })
+        .limit(500);
+      if (error) throw error;
+
+      const contactIdSet = new Set(data.map((contact) => contact.id));
+
+      const [{ data: acts }, { data: tasks }, { data: companyTechProfiles }, { data: requestRows }] = await Promise.all([
+        supabase
+          .from("activities")
+          .select("contact_id, created_at, description, subject")
+          .not("contact_id", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(5000),
+        supabase
+          .from("tasks")
+          .select("contact_id, created_at, updated_at, due_date, status, description, title")
+          .not("contact_id", "is", null)
+          .limit(5000),
+        supabase
+          .from("company_tech_profile")
+          .select("company_id, sist_fra_finn")
+          .not("company_id", "is", null)
+          .limit(5000),
+        supabase
+          .from("foresporsler")
+          .select("selskap_id, mottatt_dato, status")
+          .order("mottatt_dato", { ascending: false })
+          .limit(5000),
+      ]);
+
+      const now = new Date();
+      const nowIso = now.toISOString();
+      const lastActMap: Record<string, string> = {};
+      const contactActsMap: Record<string, NonNullable<typeof acts>> = {};
+      const contactTasksMap: Record<string, NonNullable<typeof tasks>> = {};
+
+      (acts || []).forEach((activity) => {
+        if (!activity.contact_id || !contactIdSet.has(activity.contact_id)) return;
+        if (activity.created_at <= nowIso && !lastActMap[activity.contact_id]) {
+          lastActMap[activity.contact_id] = activity.created_at;
+        }
+        (contactActsMap[activity.contact_id] ??= []).push(activity);
+      });
+
+      (tasks || []).forEach((task) => {
+        if (!task.contact_id || !contactIdSet.has(task.contact_id) || task.status === "done") return;
+        (contactTasksMap[task.contact_id] ??= []).push(task);
+      });
+
+      const signalMap: Record<string, string> = {};
+      for (const contactId of contactIdSet) {
+        const effectiveSignal = getEffectiveSignal(
+          (contactActsMap[contactId] || []).map((activity) => ({
+            created_at: activity.created_at,
+            subject: activity.subject || "",
+            description: activity.description,
+          })),
+          (contactTasksMap[contactId] || []).map((task) => ({
+            created_at: task.created_at,
+            updated_at: task.updated_at,
+            title: task.title || "",
+            description: task.description,
+            due_date: task.due_date,
+            status: task.status,
+          })),
+        );
+        if (effectiveSignal) signalMap[contactId] = effectiveSignal;
+      }
+
+      const techProfileMap: Record<string, string | null> = {};
+      (companyTechProfiles || []).forEach((profile) => {
+        if (profile.company_id) techProfileMap[profile.company_id] = profile.sist_fra_finn || null;
+      });
+
+      const requestMap: Record<string, NonNullable<typeof requestRows>> = {};
+      (requestRows || []).forEach((request) => {
+        if (!request.selskap_id) return;
+        (requestMap[request.selskap_id] ??= []).push(request);
+      });
+
+      return data.map((contact) => {
+        const company = (contact as any).companies;
+        const owner = (contact as any).profiles;
+        const companyId = contact.company_id || "";
+        const actsForContact = contactActsMap[contact.id] || [];
+        const tasksForContact = contactTasksMap[contact.id] || [];
+        const foresporslerForCompany = requestMap[companyId] || [];
+        const signal = signalMap[contact.id] ? mapToSignal(signalMap[contact.id]) : "";
+        const lastActivityAt = lastActMap[contact.id] || null;
+        const daysSince = lastActivityAt ? differenceInDays(now, new Date(lastActivityAt)) : 999;
+        const hasOverdue = tasksForContact.some(
+          (task) =>
+            task.status !== "done" &&
+            task.status !== "completed" &&
+            task.due_date &&
+            new Date(task.due_date) < now,
+        );
+        const hasAktivForespørsel = foresporslerForCompany.some((request) =>
+          isActiveRequest(request.mottatt_dato, request.status),
+        );
+        const hasTidligereForespørsel =
+          foresporslerForCompany.length > 0 &&
+          foresporslerForCompany.some((request) => !isActiveRequest(request.mottatt_dato, request.status));
+        const sistFraFinn = techProfileMap[companyId] || null;
+        const hasMarkedsradar = Boolean(sistFraFinn && differenceInDays(now, new Date(sistFraFinn)) <= 90);
+        const taskStatus = getTaskStatus(
+          tasksForContact.map((task) => ({ due_date: task.due_date, status: task.status })),
+        );
+        const activityStatus = getActivityStatus(daysSince);
+        const signalAct = actsForContact.find((activity) => {
+          const normalizedSubject = normalizeCategoryLabel(activity.subject || "");
+          return SIGNALS.includes(normalizedSubject as Signal);
+        });
+        const signalSetAt = signalAct ? new Date(signalAct.created_at) : null;
+        const lastActDate = lastActivityAt ? new Date(lastActivityAt) : null;
+        const kes = Boolean(signalSetAt && lastActDate && lastActDate > signalSetAt);
+
+        const heatResult = getHeatResult({
+          signal,
+          isInnkjoper: contact.call_list === true,
+          hasMarkedsradar,
+          hasAktivForespørsel,
+          hasOverdue,
+          daysSinceLastContact: daysSince,
+          hasTidligereForespørsel,
+          ikkeAktuellKontakt: contact.ikke_aktuell_kontakt ?? false,
+          ikkeRelevantSelskap: company?.ikke_relevant ?? false,
+          taskStatus,
+          activityStatus,
+          kes,
+        });
+
+        return {
+          id: contact.id,
+          firstName: contact.first_name,
+          lastName: contact.last_name,
+          title: contact.title || "",
+          email: contact.email || "",
+          phone: contact.phone || "",
+          linkedin: contact.linkedin || "",
+          location: contact.location || "",
+          locations: contact.locations || [],
+          department: contact.department || "",
+          notes: contact.notes || "",
+          company: company?.name || "",
+          companyId: company?.id || null,
+          signal,
+          eier: owner?.full_name || "",
+          eierId: owner?.id || null,
+          cvEmail: contact.cv_email,
+          callList: contact.call_list,
+          mailchimpStatus: contact.mailchimp_status || null,
+          ikkeAktuell: contact.ikke_aktuell_kontakt ?? false,
+          teknologier: contact.teknologier || [],
+          daysSince,
+          lastActivityAt,
+          lastActivitySubject: actsForContact[0]?.subject || "",
+          activities: actsForContact,
+          tasks: tasksForContact,
+          heatResult,
+          hasMarkedsradar,
+        };
+      });
+    },
+  });
+
   // ── Computed with heat score ──
-  const contacts = useMemo(() => {
+  const fallbackContacts = useMemo(() => {
     const now = new Date();
     const nowIso = now.toISOString();
     return rawContacts.map((c) => {
@@ -436,6 +615,11 @@ export default function DesignLabContacts() {
       };
     });
   }, [rawContacts, activitiesMap, tasksMap, foresporslerMap, techProfileMap]);
+
+  const contacts = useMemo(
+    () => (parityContacts.length > 0 || (rawContacts.length === 0 && !isLoadingParity) ? parityContacts : fallbackContacts),
+    [fallbackContacts, isLoadingParity, parityContacts, rawContacts.length],
+  );
 
   const toggleSort = useCallback((field: SortField) => {
     setSort((current) =>
@@ -838,7 +1022,7 @@ export default function DesignLabContacts() {
                   <ColHeader label="Heat / tags" field="priority" sort={sort} onSort={toggleSort} />
                   <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
                 </div>
-                {isLoading ? (
+                {isLoading || isLoadingParity ? (
                   <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>
                     Laster kontakter…
                   </div>
