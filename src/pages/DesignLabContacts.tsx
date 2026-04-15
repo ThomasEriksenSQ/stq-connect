@@ -339,7 +339,7 @@ export default function DesignLabContacts() {
 
   /* ═══ RENDER ═══ */
   return (
-    <div className="flex h-screen overflow-hidden select-none" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}>
+    <div className="flex h-screen overflow-hidden select-none" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg, zoom: SCALE_MAP[textSize] }}>
 
       {/* ═══ SIDEBAR ═══ */}
       <aside className="flex flex-col shrink-0" style={{ width: 220, borderRight: `1px solid ${C.borderLight}`, background: C.sidebarBg }}>
@@ -387,7 +387,7 @@ export default function DesignLabContacts() {
       </aside>
 
       {/* ═══ MAIN ═══ */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ zoom: SCALE_MAP[textSize], background: C.appBg }}>
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ background: C.appBg }}>
         {/* Header bar */}
         <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
           <div className="flex items-baseline gap-2.5">
