@@ -70,25 +70,8 @@ function mapToSignal(raw: string): Signal {
   return "Ukjent om behov";
 }
 
-/* ═══════════════════════════════════════════════════════════
-   SIDEBAR NAV
-   ═══════════════════════════════════════════════════════════ */
 
-const NAV_MAIN = [
-  { label: "Salgsagent", icon: LayoutDashboard, href: "/" },
-  { label: "Selskaper", icon: Building2, href: "/design-lab/selskaper", active: true },
-  { label: "Kontakter", icon: Users, href: "/design-lab/kontakter" },
-  { label: "Forespørsler", icon: Briefcase, href: "/design-lab/foresporsler" },
-  { label: "Oppfølginger", icon: Clock, href: "/oppfolginger" },
-];
 
-const NAV_STACQ = [
-  { label: "STACQ Prisen", icon: TrendingUp, href: "/design-lab/stacq-prisen" },
-  { label: "Markedsradar", icon: Radar, href: "/markedsradar" },
-  { label: "Ansatte", icon: Users, href: "/konsulenter/ansatte" },
-  { label: "Eksterne", icon: UserPlus, href: "/konsulenter/eksterne" },
-  { label: "stacq.no", icon: Globe, href: "/nettside-ai" },
-];
 
 /* ═══════════════════════════════════════════════════════════
    MAIN COMPONENT
