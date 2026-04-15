@@ -90,7 +90,6 @@ export default function DesignLabCompanies() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const initials = user?.email ? user.email.split("@")[0].slice(0, 2).toUpperCase() : "??";
 
   // Close type dropdown on outside click
   useEffect(() => {
