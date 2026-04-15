@@ -368,7 +368,7 @@ export default function DesignLabContacts() {
         <nav className="flex-1 overflow-y-auto px-3 space-y-4 pb-3">
           <NavGroup items={NAV_MAIN} navigate={navigate} />
           <div>
-            <p className="px-2 pb-1.5 pt-1" style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textGhost }}>STACQ</p>
+            <p className="px-2 pb-1.5 pt-1" style={{ fontSize: 11, fontWeight: 500, letterSpacing: 0, color: C.textFaint, textTransform: "none" }}>Stacq</p>
             <NavGroup items={NAV_STACQ} navigate={navigate} />
           </div>
         </nav>
@@ -731,15 +731,15 @@ function NavGroup({ items, navigate }: { items: typeof NAV_MAIN; navigate: (p: s
           onClick={() => navigate(item.href)}
           className="flex items-center gap-2 w-full px-2 transition-colors"
           style={{
-            fontSize: 13, fontWeight: item.active ? 600 : 400,
-            color: item.active ? C.text : C.textMuted,
-            background: item.active ? C.activeBg : "transparent",
-            borderRadius: 3, height: 28,
+            fontSize: 13, fontWeight: item.active ? 500 : 400,
+            color: item.active ? "#1A1C1F" : "#5C636E",
+            background: item.active ? "#EAECF0" : "transparent",
+            borderRadius: 4, height: 28,
           }}
-          onMouseEnter={(e) => { if (!item.active) e.currentTarget.style.background = C.hoverBg; }}
-          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? C.activeBg : "transparent"; }}
+          onMouseEnter={(e) => { if (!item.active) { e.currentTarget.style.background = "#F0F2F4"; e.currentTarget.style.color = "#1A1C1F"; } }}
+          onMouseLeave={(e) => { if (!item.active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#5C636E"; } }}
         >
-          <item.icon style={{ width: 15, height: 15, strokeWidth: 1.6, color: item.active ? C.text : C.iconDefault }} />
+          <item.icon style={{ width: 14, height: 14, strokeWidth: 1.5, color: item.active ? "#1A1C1F" : "#8C929C" }} />
           {item.label}
         </button>
       ))}
@@ -752,11 +752,11 @@ function SidebarBtn({ icon: Icon, label, onClick, muted }: { icon: any; label: s
     <button
       onClick={onClick}
       className="flex items-center gap-2 w-full px-2 transition-colors"
-      style={{ fontSize: 13, fontWeight: 500, color: muted ? C.textGhost : C.textMuted, borderRadius: 3, height: 28 }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+      style={{ fontSize: 13, fontWeight: 400, color: muted ? C.textGhost : "#5C636E", borderRadius: 4, height: 28 }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = "#F0F2F4"; e.currentTarget.style.color = "#1A1C1F"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = muted ? C.textGhost : "#5C636E"; }}
     >
-      <Icon style={{ width: 15, height: 15, strokeWidth: 1.6, color: C.iconDefault }} />
+      <Icon style={{ width: 14, height: 14, strokeWidth: 1.5, color: "#8C929C" }} />
       {label}
     </button>
   );
