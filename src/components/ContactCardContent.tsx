@@ -37,6 +37,11 @@ import {
   Target,
   Loader2,
   MapPin,
+  MoreHorizontal,
+  Eye,
+  EyeOff,
+  StickyNote,
+  UserSearch,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday, getYear, addDays, addWeeks, addMonths, addYears } from "date-fns";
@@ -180,11 +185,20 @@ function extractTitleAndCategory(subject: string, description: string | null) {
   };
 }
 
+interface DefaultHiddenConfig {
+  techDna?: boolean;
+  notes?: boolean;
+  consultantMatch?: boolean;
+  linkedinIfEmpty?: boolean;
+  locationsIfEmpty?: boolean;
+}
+
 interface ContactCardContentProps {
   contactId: string;
   editable?: boolean;
   onOpenCompany?: (companyId: string) => void;
   onNavigateToFullPage?: () => void;
+  defaultHidden?: DefaultHiddenConfig;
 }
 
 interface ConsultantMatchResult {
@@ -273,6 +287,7 @@ export function ContactCardContent({
   editable = false,
   onOpenCompany,
   onNavigateToFullPage,
+  defaultHidden,
 }: ContactCardContentProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -299,6 +314,9 @@ export function ContactCardContent({
   const [consultantResults, setConsultantResults] = useState<ConsultantMatchResult[] | null>(null);
   const [matchSourceFilter, setMatchSourceFilter] = useState<"Alle" | "Ansatte" | "Eksterne">("Alle");
   const [matchUpdatedAt, setMatchUpdatedAt] = useState<string | null>(null);
+  const [showTechDna, setShowTechDna] = useState(!defaultHidden?.techDna);
+  const [showNotes, setShowNotes] = useState(!defaultHidden?.notes);
+  const [showConsultantMatch, setShowConsultantMatch] = useState(!defaultHidden?.consultantMatch);
 
   const { data: contact, isLoading } = useQuery({
     queryKey: crmQueryKeys.contacts.detail(contactId),
@@ -781,6 +799,44 @@ export function ContactCardContent({
                 <ExternalLink className="h-3.5 w-3.5" />
               </Button>
             )}
+            {/* 3-dot menu for Design Lab */}
+            {defaultHidden && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-secondary transition-colors text-muted-foreground">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => {
+                    const nameEl = document.querySelector('[data-contact-name-field]') as HTMLElement;
+                    nameEl?.click();
+                  }}>
+                    <Pencil className="h-3.5 w-3.5 mr-2" /> Rediger profil
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    setShowConsultantMatch(true);
+                    handleFinnKonsulent();
+                  }}>
+                    <UserSearch className="h-3.5 w-3.5 mr-2" /> Finn konsulent
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    setShowNotes((prev) => !prev);
+                    if (!showNotes && !contact.notes) {
+                      setNotesDraft("");
+                      setTimeout(() => setEditingNotes(true), 50);
+                    }
+                  }}>
+                    <StickyNote className="h-3.5 w-3.5 mr-2" />
+                    {showNotes ? "Skjul notat" : contact.notes ? "Vis notat" : "Legg til notat"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowTechDna((prev) => !prev)}>
+                    {showTechDna ? <EyeOff className="h-3.5 w-3.5 mr-2" /> : <Eye className="h-3.5 w-3.5 mr-2" />}
+                    {showTechDna ? "Skjul teknisk DNA" : "Vis teknisk DNA"}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
 
@@ -825,6 +881,7 @@ export function ContactCardContent({
           {(() => {
             const contactLocations: string[] = (contact as any).locations || [];
             if (companyLocations.length === 0) return null;
+            if (defaultHidden?.locationsIfEmpty && contactLocations.length === 0) return null;
             return (
               <>
                 <span className="text-muted-foreground/40">·</span>
@@ -950,7 +1007,7 @@ export function ContactCardContent({
               <Linkedin className="h-3.5 w-3.5" />
               LinkedIn
             </a>
-          ) : editable ? (
+          ) : editable && !(defaultHidden?.linkedinIfEmpty) ? (
             <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground/40 hover:text-muted-foreground transition-colors">
               <Linkedin className="h-3.5 w-3.5" />
               <InlineField
@@ -1069,6 +1126,7 @@ export function ContactCardContent({
 
       <div className="space-y-0">
         {/* ── Tekniske behov ── */}
+        {(!defaultHidden?.techDna || showTechDna) && (
         <div className="mb-5">
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -1155,8 +1213,10 @@ export function ContactCardContent({
               );
             })()}
         </div>
+        )}
 
         {/* ── Notat ── */}
+        {(!defaultHidden?.notes || showNotes) && (
         <div className="mb-5">
           {editingNotes ? (
             <div>
@@ -1215,6 +1275,7 @@ export function ContactCardContent({
             </button>
           ) : null}
         </div>
+        )}
 
         {/* ── Separator + Action Bar ── */}
         {editable && (
@@ -1411,7 +1472,7 @@ export function ContactCardContent({
         )}
 
         {/* ── Konsulent match-resultater ── */}
-        {consultantResults !== null && (
+        {(!defaultHidden?.consultantMatch || showConsultantMatch) && consultantResults !== null && (
           <div className="space-y-3 mb-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

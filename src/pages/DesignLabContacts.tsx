@@ -584,7 +584,7 @@ export default function DesignLabContacts() {
                     </button>
                   </div>
                   <div className="flex-1 overflow-y-auto px-6 py-5 dl-v8-theme">
-                    <ContactCardContent contactId={sel.id} editable />
+                    <ContactCardContent contactId={sel.id} editable defaultHidden={{ techDna: true, notes: true, consultantMatch: true, linkedinIfEmpty: true, locationsIfEmpty: true }} />
                   </div>
                 </div>
               ) : (
