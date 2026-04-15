@@ -397,45 +397,7 @@ function ColHeader({ label, field, sort, onSort, className }: {
   );
 }
 
-function NavGroup({ items, navigate }: { items: { label: string; icon: any; href: string; active?: boolean }[]; navigate: (p: string) => void }) {
-  return (
-    <div className="space-y-px">
-      {items.map((item) => (
-        <button
-          key={item.label}
-          onClick={() => navigate(item.href)}
-          className="flex items-center gap-2 w-full px-2 transition-colors"
-          style={{
-            fontSize: 13, fontWeight: item.active ? 600 : 400,
-            color: item.active ? C.text : C.textMuted,
-            background: item.active ? C.activeBg : "transparent",
-            borderRadius: 3, height: 28,
-          }}
-          onMouseEnter={(e) => { if (!item.active) e.currentTarget.style.background = C.hoverBg; }}
-          onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = item.active ? C.activeBg : "transparent"; }}
-        >
-          <item.icon style={{ width: 15, height: 15, strokeWidth: 1.6, color: item.active ? C.text : C.iconDefault }} />
-          {item.label}
-        </button>
-      ))}
-    </div>
-  );
-}
 
-function SidebarBtn({ icon: Icon, label, onClick, muted }: { icon: any; label: string; onClick: () => void; muted?: boolean }) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex items-center gap-2 w-full px-2 transition-colors"
-      style={{ fontSize: 13, fontWeight: 500, color: muted ? C.textGhost : C.textMuted, borderRadius: 3, height: 28 }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-    >
-      <Icon style={{ width: 15, height: 15, strokeWidth: 1.6, color: C.iconDefault }} />
-      {label}
-    </button>
-  );
-}
 
 function EditModal({ row, onClose, queryClient }: { row: any; onClose: () => void; queryClient: any }) {
   const [utpris, setUtpris] = useState(row.utpris?.toString() || "");
