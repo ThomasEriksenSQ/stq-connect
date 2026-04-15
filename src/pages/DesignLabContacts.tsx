@@ -6,7 +6,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/componen
 
 import {
   Search, ChevronDown, ChevronUp,
-  Users, X,
+  Users, X, Wifi,
   Building2, LayoutDashboard, Briefcase, Settings, LogOut,
   UserPlus, Radar, TrendingUp, Globe,
   ArrowUpRight, Clock,
