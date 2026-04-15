@@ -31,7 +31,7 @@ export const C = {
 
   /* Borders */
   border: "#DDE0E7",
-  borderLight: "#EAECEF",   // sidebar/panel dividers
+  borderLight: "#E8EAEE",   // sidebar/panel dividers
   borderStrong: "#C8CDD6",
   borderFocus: "#5E6AD2",
 
