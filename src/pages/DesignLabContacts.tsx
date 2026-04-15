@@ -554,7 +554,7 @@ export default function DesignLabContacts() {
                         <div className="truncate pr-3">
                           <span style={{ fontSize: 13, color: C.textMuted }}>{c.title}</span>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center">
                           <span className={`chip chip--action${c.cvEmail ? " is-active" : ""}`}>CV</span>
                           <span className={`chip chip--action${c.callList ? " is-active" : ""}`}>Innkjøper</span>
                         </div>
