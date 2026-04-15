@@ -219,7 +219,7 @@ export function CommandPalette({
             ref={inputRef}
             value={query}
             onChange={(e) => { setQuery(e.target.value); setActiveIdx(0); }}
-            placeholder="Søk kontakt, selskap, handling..."
+            placeholder="Søk kontakt eller selskap..."
             style={{
               width: "100%",
               height: "100%",
@@ -284,29 +284,6 @@ export function CommandPalette({
           )}
         </div>
 
-        {/* Bottom hint bar */}
-        <div style={{
-          height: 30,
-          borderTop: "1px solid #EAECEF",
-          padding: "0 12px",
-          display: "flex",
-          alignItems: "center",
-          gap: 14,
-          background: "#FAFBFC",
-          borderRadius: "0 0 10px 10px",
-          flexShrink: 0,
-        }}>
-          {[
-            { kbd: "↑↓", label: "naviger" },
-            { kbd: "↵", label: "velg" },
-            { kbd: "esc", label: "lukk" },
-          ].map((h) => (
-            <span key={h.kbd} style={{ fontSize: 11, color: "#C1C7D0", display: "flex", alignItems: "center" }}>
-              <span style={{ fontSize: 10, background: "#EAECEF", borderRadius: 3, padding: "1px 4px", color: "#8C929C", marginRight: 3 }}>{h.kbd}</span>
-              {h.label}
-            </span>
-          ))}
-        </div>
       </div>
     </div>,
     document.body
