@@ -274,3 +274,50 @@ html {
 .dl-v8-theme::-webkit-scrollbar-thumb:hover {
   background: #9BA3AE;
 }
+
+/* ═══ CHIP SYSTEM ═══ */
+.chip {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.chip--tech {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #F0F2F6;
+  color: #5C636E;
+  border: none;
+}
+
+.chip--action {
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #DDE0E7;
+  background: transparent;
+  color: #5C636E;
+  cursor: pointer;
+}
+.chip--action:hover {
+  background: #F6F7FA;
+}
+.chip--action.is-active {
+  background: #F0F2F6;
+  border: 1px solid #DDE0E7;
+  color: #1A1C1F;
+  font-weight: 600;
+}
+.chip--action.is-signal {
+  background: rgba(94,106,210,0.08);
+  border: none;
+  color: #5E6AD2;
+}
+.chip--action.is-muted {
+  background: transparent;
+  border: 1px solid #DDE0E7;
+  color: #8C929C;
+}
