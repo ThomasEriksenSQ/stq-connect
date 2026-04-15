@@ -404,7 +404,7 @@ export default function DesignLabContacts() {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Søk kontakter…"
                 className="w-full outline-none placeholder:text-[#a2a5ab]"
-                style={{ height: 34, paddingLeft: 30, paddingRight: 10, borderRadius: 6, border: `1px solid ${C.border}`, background: C.surface, color: C.text, fontSize: 13 }}
+                style={{ height: 34, paddingLeft: 30, paddingRight: 10, borderRadius: 6, border: `1px solid ${C.border}`, background: C.surfaceAlt, color: C.text, fontSize: 13 }}
               />
             </div>
             <button
@@ -546,12 +546,12 @@ export default function DesignLabContacts() {
                         <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
                           <SignalChip signal={sel.signal} size="md" />
                           {sel.callList && (
-                            <span className="inline-flex items-center rounded-full" style={{ fontSize: 11, fontWeight: 500, padding: "2px 8px", background: "rgba(1,105,111,0.06)", color: C.accent }}>
+                            <span className="inline-flex items-center rounded-full" style={{ fontSize: 11, fontWeight: 500, padding: "2px 8px", background: C.accentBg, color: C.accent }}>
                               Innkjøper
                             </span>
                           )}
                           {sel.cvEmail && (
-                            <span className="inline-flex items-center rounded-full" style={{ fontSize: 11, fontWeight: 500, padding: "2px 8px", background: "rgba(59,111,160,0.06)", color: "#3B6FA0" }}>
+                            <span className="inline-flex items-center rounded-full" style={{ fontSize: 11, fontWeight: 500, padding: "2px 8px", background: C.infoBg, color: C.info }}>
                               CV
                             </span>
                           )}
@@ -651,7 +651,7 @@ function SignalChip({ signal, size = "sm" }: { signal: Signal; size?: "sm" | "md
   };
   return (
     <span
-      className="inline-flex items-center rounded-full"
+      className="inline-flex items-center rounded"
       style={{
         fontSize: size === "sm" ? 11 : 12,
         fontWeight: 500,
@@ -675,7 +675,7 @@ function HeatBadge({ heat, daysSince, showScore }: { heat: HeatResult; daysSince
   const tooltip = `${config.label} (${heat.score}p) · Siste: ${daysSince < 999 ? relTime(daysSince) : "aldri"}`;
   return (
     <span
-      className="inline-flex items-center rounded-full"
+      className="inline-flex items-center rounded"
       title={tooltip}
       style={{
         fontSize: 11,
@@ -711,7 +711,7 @@ function ContactIndicators({ callList, cvEmail }: { callList: boolean; cvEmail: 
         <span
           title="CV-epost"
           className="rounded-full inline-block"
-          style={{ width: 6, height: 6, background: "#3B6FA0" }}
+          style={{ width: 6, height: 6, background: C.info }}
         />
       )}
     </span>

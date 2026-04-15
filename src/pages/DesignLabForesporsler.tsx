@@ -290,7 +290,7 @@ export default function DesignLabForesporsler() {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Søk forespørsler…"
                 className="w-full outline-none placeholder:text-[#a2a5ab]"
-                style={{ height: 34, paddingLeft: 30, paddingRight: 10, borderRadius: 6, border: `1px solid ${C.border}`, background: C.surface, color: C.text, fontSize: 13 }}
+                style={{ height: 34, paddingLeft: 30, paddingRight: 10, borderRadius: 6, border: `1px solid ${C.border}`, background: C.surfaceAlt, color: C.text, fontSize: 13 }}
               />
             </div>
             <button
@@ -453,7 +453,7 @@ function ForespRow({ row, isActive, onClick, compact }: { row: any; isActive: bo
           {/* Teknologier */}
           <div className="flex items-center gap-1 flex-wrap pr-2">
             {(row.teknologier || []).slice(0, 3).map((t: string) => (
-              <span key={t} className="inline-flex items-center rounded-full" style={{ border: `1px solid ${C.border}`, padding: "1px 7px", fontSize: 11, color: C.textMuted }}>{t}</span>
+              <span key={t} className="inline-flex items-center rounded" style={{ border: `1px solid ${C.border}`, padding: "1px 7px", fontSize: 11, color: C.textMuted }}>{t}</span>
             ))}
             {(row.teknologier || []).length > 3 && (
               <span style={{ fontSize: 11, color: C.textGhost }}>+{row.teknologier.length - 3}</span>
@@ -497,7 +497,7 @@ function TypeChip({ type }: { type: string | null }) {
   const label = isDir ? "DIR" : isVia ? "VIA" : "—";
   const color = isDir ? C.accent : isVia ? C.warning : C.textGhost;
   return (
-    <span className="inline-flex items-center rounded-full" style={{
+    <span className="inline-flex items-center rounded" style={{
       fontSize: 10, fontWeight: 600, padding: "1px 7px",
       background: `${color}10`, color, border: `1px solid ${color}20`,
     }}>

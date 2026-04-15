@@ -404,7 +404,7 @@ function TypeBadge({ status }: { status: string | null }) {
   else if (status === "customer" || status === "kunde") { label = "Kunde"; bg = C.successBg; color = C.success; borderColor = "rgba(74,154,106,0.15)"; }
   else if (status === "prospect") { label = "Potensiell"; bg = C.accentBg; color = C.accent; borderColor = "rgba(1,105,111,0.15)"; }
   return (
-    <span className="inline-flex items-center rounded-full" style={{ fontSize: 11, fontWeight: 500, paddingInline: 8, paddingBlock: 2, background: bg, color, border: `1px solid ${borderColor}` }}>
+    <span className="inline-flex items-center rounded" style={{ fontSize: 11, fontWeight: 500, paddingInline: 8, paddingBlock: 2, background: bg, color, border: `1px solid ${borderColor}` }}>
       {label}
     </span>
   );
@@ -413,7 +413,7 @@ function TypeBadge({ status }: { status: string | null }) {
 function StatusBadge({ status }: { status: string }) {
   const isActive = status === "Aktiv";
   return (
-    <span className="inline-flex items-center rounded-full" style={{
+    <span className="inline-flex items-center rounded" style={{
       fontSize: 11, fontWeight: 500, paddingInline: 8, paddingBlock: 2,
       background: isActive ? C.successBg : C.warningBg,
       color: isActive ? C.success : C.warning,
