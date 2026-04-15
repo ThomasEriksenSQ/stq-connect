@@ -1126,6 +1126,7 @@ export function ContactCardContent({
 
       <div className="space-y-0">
         {/* ── Tekniske behov ── */}
+        {(!defaultHidden?.techDna || showTechDna) && (
         <div className="mb-5">
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -1212,8 +1213,10 @@ export function ContactCardContent({
               );
             })()}
         </div>
+        )}
 
         {/* ── Notat ── */}
+        {(!defaultHidden?.notes || showNotes) && (
         <div className="mb-5">
           {editingNotes ? (
             <div>
