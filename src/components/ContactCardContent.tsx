@@ -287,6 +287,7 @@ export function ContactCardContent({
   editable = false,
   onOpenCompany,
   onNavigateToFullPage,
+  defaultHidden,
 }: ContactCardContentProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
