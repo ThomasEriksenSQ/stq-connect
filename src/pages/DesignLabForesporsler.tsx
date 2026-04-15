@@ -394,7 +394,7 @@ function TableHeader({ sort, onSort, compact }: { sort: { field: SortField; dir:
   return (
     <div
       className="grid items-center sticky top-0 z-10"
-      style={{ gridTemplateColumns: cols, height: 32, borderBottom: `1px solid ${C.border}`, background: C.bg, paddingLeft: 16, paddingRight: 16 }}
+      style={{ gridTemplateColumns: cols, height: 32, borderBottom: `1px solid ${C.border}`, background: C.surfaceAlt, paddingLeft: 16, paddingRight: 16 }}
     >
       <ColHeader label="Mottatt" field="mottatt_dato" sort={sort} onSort={onSort} />
       <ColHeader label="Selskap" field="selskap_navn" sort={sort} onSort={onSort} />

@@ -6,9 +6,9 @@ import type { HeatResult } from "@/lib/heatScore";
 
 export const C = {
   /* Backgrounds */
-  bg: "#F5F6F8",           // --bg-base
-  sidebarBg: "#F7F8FA",    // --bg-sidebar (near-identical to canvas)
-  surface: "#FAFBFC",      // --bg-app
+  bg: "#F7F8FA",           // --bg-base (shell)
+  sidebarBg: "#F7F8FA",    // --bg-sidebar (identical to shell — disappears)
+  surface: "#FFFFFF",      // --bg-surface (white working surface — creates lift)
   surfaceAlt: "#F4F5F8",   // --bg-elevated
   overlay: "#EDEEF2",      // --bg-overlay
   hoverBg: "#F0F2F6",      // --bg-hover

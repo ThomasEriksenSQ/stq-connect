@@ -579,7 +579,7 @@ export default function DesignLabContacts() {
                 style={{
                   gridTemplateColumns: "minmax(0,1fr) 120px 200px 180px 160px 72px",
                   height: 32, borderBottom: `1px solid ${C.border}`,
-                  background: C.bg, paddingLeft: 16, paddingRight: 16,
+                  background: C.surfaceAlt, paddingLeft: 16, paddingRight: 16,
                 }}
               >
                 <ColHeader label="Navn" field="name" sort={sort} onSort={toggleSort} />
