@@ -377,7 +377,7 @@ export default function DesignLabCompanies() {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Søk selskaper…"
                 className="w-full outline-none placeholder:text-[#a2a5ab]"
-                style={{ height: 32, paddingLeft: 30, paddingRight: 9, borderRadius: 5, border: `1px solid ${C.border}`, background: C.surfaceAlt, color: C.text, fontSize: 13 }}
+                style={{ height: 30, paddingLeft: 30, paddingRight: 9, borderRadius: 5, border: `1px solid ${C.border}`, background: C.surfaceAlt, color: C.text, fontSize: 13 }}
               />
             </div>
             <button
