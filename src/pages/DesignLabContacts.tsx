@@ -578,22 +578,14 @@ export default function DesignLabContacts() {
             <ResizablePanel defaultSize={65} minSize={40}>
               {sel ? (
                 <div className="h-full flex flex-col" style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}` }}>
-                  <div className="shrink-0 px-6 py-4" style={{ borderBottom: `1px solid ${C.border}` }}>
-                    <div className="flex items-start justify-between">
-                      <div className="min-w-0 flex-1">
-                        <h2 style={{ fontSize: 16, fontWeight: 600, color: C.text, marginBottom: 2 }}>{sel.firstName} {sel.lastName}</h2>
-                        <p style={{ fontSize: 13, color: C.textMuted }}>
-                          {[sel.title, sel.company].filter(Boolean).join(" · ")}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => setSelectedId(null)}
-                        className="rounded p-1 hover:bg-black/5 transition-colors"
-                        style={{ color: C.textFaint }}
-                      >
-                        <X style={{ width: 16, height: 16 }} />
-                      </button>
-                    </div>
+                  <div className="shrink-0 flex items-center justify-end px-4 py-2" style={{ borderBottom: `1px solid ${C.border}` }}>
+                    <button
+                      onClick={() => setSelectedId(null)}
+                      className="rounded p-1 hover:bg-black/5 transition-colors"
+                      style={{ color: C.textFaint }}
+                    >
+                      <X style={{ width: 16, height: 16 }} />
+                    </button>
                   </div>
                   <div className="flex-1 overflow-y-auto px-6 py-5 dl-v8-theme">
                     <ContactCardContent contactId={sel.id} editable />
