@@ -172,99 +172,105 @@ html {
 
 /* ── Design Lab V8 Theme Override ── */
 .dl-v8-theme {
-  --background: 45 18% 96%;
-  --foreground: 43 18% 14%;
-  --card: 45 18% 96%;
-  --card-foreground: 43 18% 14%;
-  --popover: 45 20% 98%;
-  --popover-foreground: 43 18% 14%;
-  --primary: 183 98% 22%;
+  --background: 228 14% 97%;
+  --foreground: 220 8% 11%;
+  --card: 228 14% 97%;
+  --card-foreground: 220 8% 11%;
+  --popover: 220 20% 99%;
+  --popover-foreground: 220 8% 11%;
+  --primary: 234 52% 59%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 43 10% 95%;
-  --secondary-foreground: 43 18% 14%;
-  --muted: 43 10% 93%;
-  --muted-foreground: 50 2% 41%;
-  --accent: 43 10% 93%;
-  --accent-foreground: 43 18% 14%;
-  --destructive: 0 30% 45%;
+  --secondary: 228 10% 95%;
+  --secondary-foreground: 220 8% 11%;
+  --muted: 228 10% 93%;
+  --muted-foreground: 220 5% 55%;
+  --accent: 228 10% 93%;
+  --accent-foreground: 220 8% 11%;
+  --destructive: 0 30% 33%;
   --destructive-foreground: 0 0% 100%;
-  --success: 150 35% 45%;
+  --success: 153 40% 30%;
   --success-foreground: 0 0% 100%;
-  --warning: 42 58% 38%;
+  --warning: 37 100% 25%;
   --warning-foreground: 0 0% 100%;
-  --border: 43 10% 88%;
-  --input: 43 10% 88%;
-  --ring: 183 98% 22%;
+  --border: 225 10% 88%;
+  --input: 225 10% 88%;
+  --ring: 234 52% 59%;
 }
 
-/* V8 button overrides */
+/* V8 button overrides — compact radius, accent color */
 .dl-v8-theme button {
-  border-radius: 9999px;
+  border-radius: 5px;
 }
 .dl-v8-theme button[class*="rounded-lg"] {
-  border-radius: 9999px;
+  border-radius: 5px;
 }
 
-/* V8 section headers */
+/* V8: Override green "Logg samtale" button to accent */
+.dl-v8-theme .bg-\[hsl\(var\(--success\)\)\] {
+  background-color: hsl(var(--primary)) !important;
+}
+
+/* V8 section headers — remove uppercase, use normal case */
 .dl-v8-theme .text-label,
 .dl-v8-theme [class*="uppercase"][class*="tracking"] {
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  color: hsl(var(--muted-foreground));
+  letter-spacing: 0;
+  text-transform: none;
+  color: #8C929C;
 }
 
 /* V8 badge overrides — desaturated */
 .dl-v8-theme .bg-emerald-100 {
-  background-color: hsl(150 20% 92%);
-  color: hsl(150 25% 35%);
-  border-color: hsl(150 15% 85%);
+  background-color: rgba(45,106,79,0.08);
+  color: #2D6A4F;
+  border-color: rgba(45,106,79,0.15);
 }
 .dl-v8-theme .bg-blue-100 {
-  background-color: hsl(210 20% 92%);
-  color: hsl(210 25% 40%);
-  border-color: hsl(210 15% 85%);
+  background-color: rgba(26,79,160,0.08);
+  color: #1A4FA0;
+  border-color: rgba(26,79,160,0.15);
 }
 .dl-v8-theme .bg-amber-100 {
-  background-color: hsl(42 25% 92%);
-  color: hsl(42 30% 35%);
-  border-color: hsl(42 20% 85%);
+  background-color: rgba(125,78,0,0.08);
+  color: #7D4E00;
+  border-color: rgba(125,78,0,0.15);
 }
 .dl-v8-theme .bg-gray-100 {
-  background-color: hsl(40 8% 92%);
-  color: hsl(40 5% 45%);
-  border-color: hsl(40 5% 87%);
+  background-color: rgba(0,0,0,0.04);
+  color: #8C929C;
+  border-color: rgba(0,0,0,0.06);
 }
 .dl-v8-theme .bg-red-50 {
-  background-color: hsl(0 15% 93%);
-  color: hsl(0 20% 45%);
-  border-color: hsl(0 12% 87%);
+  background-color: rgba(139,29,32,0.08);
+  color: #8B1D20;
+  border-color: rgba(139,29,32,0.15);
 }
 
 /* V8 input/textarea */
 .dl-v8-theme input,
 .dl-v8-theme textarea,
 .dl-v8-theme select {
-  border-color: hsl(var(--border));
-  background: hsl(var(--popover));
+  border-color: #DDE0E7;
+  background: #F4F5F8;
 }
 
 /* V8 tag styling */
 .dl-v8-theme [class*="tag-bg"] {
-  --tag-bg: 43 15% 93%;
-  --tag-text: 43 18% 30%;
+  --tag-bg: 228 10% 93%;
+  --tag-text: 234 20% 35%;
 }
 
 /* V8 card surfaces */
 .dl-v8-theme .bg-card,
 .dl-v8-theme [class*="bg-card"] {
-  background-color: hsl(var(--card));
+  background-color: #FAFBFC;
 }
 
 /* V8 scrollbar */
 .dl-v8-theme::-webkit-scrollbar-thumb {
-  background: hsl(43 10% 82%);
+  background: #C8CDD6;
 }
 .dl-v8-theme::-webkit-scrollbar-thumb:hover {
-  background: hsl(43 10% 70%);
+  background: #9BA3AE;
 }
