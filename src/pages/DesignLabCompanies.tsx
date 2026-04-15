@@ -497,49 +497,7 @@ function SignalChip({ signal }: { signal: Signal }) {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════
-   SUB-COMPONENTS
-   ═══════════════════════════════════════════════════════════ */
 
-function NavGroup({ items, navigate }: { items: typeof NAV_MAIN; navigate: (p: string) => void }) {
-  return (
-    <div className="space-y-px">
-      {items.map((item) => (
-        <button
-          key={item.label}
-          onClick={() => navigate(item.href)}
-          className="flex items-center gap-2 w-full px-2 transition-colors"
-          style={{
-            fontSize: 13, fontWeight: item.active ? 500 : 400,
-            color: item.active ? "#1A1C1F" : "#5C636E",
-            background: item.active ? "#EAECF0" : "transparent",
-            borderRadius: 4, height: 28,
-          }}
-          onMouseEnter={(e) => { if (!item.active) { e.currentTarget.style.background = "#F0F2F4"; e.currentTarget.style.color = "#1A1C1F"; } }}
-          onMouseLeave={(e) => { if (!item.active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#5C636E"; } }}
-        >
-          <item.icon style={{ width: 14, height: 14, strokeWidth: 1.5, color: item.active ? "#1A1C1F" : "#8C929C" }} />
-          {item.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function SidebarBtn({ icon: Icon, label, onClick, muted }: { icon: any; label: string; onClick: () => void; muted?: boolean }) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex items-center gap-2 w-full px-2 transition-colors"
-      style={{ fontSize: 13, fontWeight: 400, color: muted ? C.textGhost : "#5C636E", borderRadius: 4, height: 28 }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = "#F0F2F4"; e.currentTarget.style.color = "#1A1C1F"; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = muted ? C.textGhost : "#5C636E"; }}
-    >
-      <Icon style={{ width: 14, height: 14, strokeWidth: 1.5, color: "#8C929C" }} />
-      {label}
-    </button>
-  );
-}
 
 function FilterRow({ label, options, value, onChange }: {
   label: string; options: readonly string[] | string[]; value: string; onChange: (v: string) => void;
