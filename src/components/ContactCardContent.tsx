@@ -37,6 +37,11 @@ import {
   Target,
   Loader2,
   MapPin,
+  MoreHorizontal,
+  Eye,
+  EyeOff,
+  StickyNote,
+  UserSearch,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday, getYear, addDays, addWeeks, addMonths, addYears } from "date-fns";
@@ -180,11 +185,20 @@ function extractTitleAndCategory(subject: string, description: string | null) {
   };
 }
 
+interface DefaultHiddenConfig {
+  techDna?: boolean;
+  notes?: boolean;
+  consultantMatch?: boolean;
+  linkedinIfEmpty?: boolean;
+  locationsIfEmpty?: boolean;
+}
+
 interface ContactCardContentProps {
   contactId: string;
   editable?: boolean;
   onOpenCompany?: (companyId: string) => void;
   onNavigateToFullPage?: () => void;
+  defaultHidden?: DefaultHiddenConfig;
 }
 
 interface ConsultantMatchResult {
