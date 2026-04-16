@@ -30,7 +30,25 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { DesignLabActionButton, DesignLabFilterButton, DesignLabIconButton, DesignLabStaticTag } from "@/components/designlab/controls";
+import {
+  DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS,
+  DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS,
+  DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS,
+  DesignLabActionButton,
+  DesignLabFilterButton,
+  DesignLabIconButton,
+  DesignLabStaticTag,
+} from "@/components/designlab/controls";
+import {
+  DesignLabModalContent,
+  DesignLabModalField,
+  DesignLabModalForm,
+  DesignLabModalInput,
+  DesignLabModalLabel,
+  getDesignLabModalActionStyle,
+  getDesignLabModalChipStyle,
+  useDesignLabModalScale,
+} from "@/components/designlab/modal-system";
 import {
   Phone,
   Mail,
@@ -261,6 +279,7 @@ export function CompanyCardContent({
   const [mergeCompanyDialogOpen, setMergeCompanyDialogOpen] = useState(false);
   const [showTechDna, setShowTechDna] = useState(!defaultHidden?.techDna);
   const [showNotes, setShowNotes] = useState(false);
+  const modalScale = useDesignLabModalScale();
 
   const { data: company, isLoading } = useQuery({
     queryKey: crmQueryKeys.companies.detail(companyId),
@@ -1002,24 +1021,8 @@ export function CompanyCardContent({
                 Ny kontakt
               </DesignLabActionButton>
             </DialogTrigger>
-            <DialogContent
-              hideCloseButton
-              overlayClassName="bg-[rgba(0,0,0,0.35)]"
-              className="w-[calc(100vw-2rem)] max-w-[440px] gap-0 rounded-[10px] border-[#E8EAEE] bg-white p-0 shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
-            >
-              <div className="flex items-center justify-between px-4 pb-3 pt-4">
-                <DialogTitle className="text-[14px] font-semibold text-[#1A1C1F]">Ny kontakt</DialogTitle>
-                <DialogClose asChild>
-                  <button
-                    type="button"
-                    className="inline-flex h-7 w-7 items-center justify-center rounded-[6px] text-[#5C636E] transition-colors hover:bg-[#F0F2F6] hover:text-[#1A1C1F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5E6AD2] focus-visible:ring-offset-2"
-                  >
-                    <X className="h-4 w-4" />
-                    <span className="sr-only">Lukk</span>
-                  </button>
-                </DialogClose>
-              </div>
-              <form
+            <DesignLabModalContent title="Ny kontakt">
+              <DesignLabModalForm
                 onSubmit={async (e) => {
                   e.preventDefault();
                   const { error } = await supabase.from("contacts").insert({
@@ -1056,40 +1059,36 @@ export function CompanyCardContent({
                   });
                   toast.success("Kontakt opprettet");
                 }}
-                className="space-y-3 px-4 pb-4"
               >
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <div>
-                    <Label className="mb-1 block text-[11px] font-medium text-[#8C929C]">Fornavn</Label>
-                    <Input
+                <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: modalScale.rowGap }}>
+                  <DesignLabModalField>
+                    <DesignLabModalLabel>Fornavn</DesignLabModalLabel>
+                    <DesignLabModalInput
                       value={contactForm.first_name}
                       onChange={(e) => setContactForm({ ...contactForm, first_name: e.target.value })}
                       required
-                      className="h-8 rounded-[6px] border-[#DDE0E7] bg-white px-2.5 py-0 text-[13px] placeholder:text-[#8C929C] focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] md:text-[13px]"
                     />
-                  </div>
-                  <div>
-                    <Label className="mb-1 block text-[11px] font-medium text-[#8C929C]">Etternavn</Label>
-                    <Input
+                  </DesignLabModalField>
+                  <DesignLabModalField>
+                    <DesignLabModalLabel>Etternavn</DesignLabModalLabel>
+                    <DesignLabModalInput
                       value={contactForm.last_name}
                       onChange={(e) => setContactForm({ ...contactForm, last_name: e.target.value })}
                       required
-                      className="h-8 rounded-[6px] border-[#DDE0E7] bg-white px-2.5 py-0 text-[13px] placeholder:text-[#8C929C] focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] md:text-[13px]"
                     />
-                  </div>
+                  </DesignLabModalField>
                 </div>
-                <div>
-                  <Label className="mb-1 block text-[11px] font-medium text-[#8C929C]">Stilling</Label>
-                  <Input
+                <DesignLabModalField>
+                  <DesignLabModalLabel>Stilling</DesignLabModalLabel>
+                  <DesignLabModalInput
                     value={contactForm.title}
                     onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })}
-                    className="h-8 rounded-[6px] border-[#DDE0E7] bg-white px-2.5 py-0 text-[13px] placeholder:text-[#8C929C] focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] md:text-[13px]"
                   />
-                </div>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <div>
-                    <Label className="mb-1 block text-[11px] font-medium text-[#8C929C]">E-post</Label>
-                    <Input
+                </DesignLabModalField>
+                <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: modalScale.rowGap }}>
+                  <DesignLabModalField>
+                    <DesignLabModalLabel>E-post</DesignLabModalLabel>
+                    <DesignLabModalInput
                       value={contactForm.email}
                       onChange={(e) =>
                         setContactForm({
@@ -1099,27 +1098,24 @@ export function CompanyCardContent({
                         })
                       }
                       type="email"
-                      className="h-8 rounded-[6px] border-[#DDE0E7] bg-white px-2.5 py-0 text-[13px] placeholder:text-[#8C929C] focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] md:text-[13px]"
                     />
-                  </div>
-                  <div>
-                    <Label className="mb-1 block text-[11px] font-medium text-[#8C929C]">Telefon</Label>
-                    <Input
+                  </DesignLabModalField>
+                  <DesignLabModalField>
+                    <DesignLabModalLabel>Telefon</DesignLabModalLabel>
+                    <DesignLabModalInput
                       value={contactForm.phone}
                       onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-                      className="h-8 rounded-[6px] border-[#DDE0E7] bg-white px-2.5 py-0 text-[13px] placeholder:text-[#8C929C] focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] md:text-[13px]"
                     />
-                  </div>
+                  </DesignLabModalField>
                 </div>
-                <div>
-                  <Label className="mb-1 block text-[11px] font-medium text-[#8C929C]">LinkedIn</Label>
-                  <Input
+                <DesignLabModalField>
+                  <DesignLabModalLabel>LinkedIn</DesignLabModalLabel>
+                  <DesignLabModalInput
                     value={contactForm.linkedin}
                     onChange={(e) => setContactForm({ ...contactForm, linkedin: e.target.value })}
                     placeholder="https://linkedin.com/in/..."
-                    className="h-8 rounded-[6px] border-[#DDE0E7] bg-white px-2.5 py-0 text-[13px] placeholder:text-[#8C929C] focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] md:text-[13px]"
                   />
-                </div>
+                </DesignLabModalField>
                 {(() => {
                   const locs: string[] = company.city
                     ? company.city
@@ -1129,9 +1125,9 @@ export function CompanyCardContent({
                     : [];
                   if (locs.length === 0) return null;
                   return (
-                    <div>
-                      <Label className="mb-1 block text-[11px] font-medium text-[#8C929C]">Geografisk sted</Label>
-                      <div className="flex flex-wrap gap-1.5">
+                    <DesignLabModalField>
+                      <DesignLabModalLabel>Geografisk sted</DesignLabModalLabel>
+                      <div className="flex flex-wrap" style={{ gap: Math.max(4, modalScale.labelGap + 1) }}>
                         {locs.map((loc) => (
                           <DesignLabFilterButton
                             key={loc}
@@ -1140,34 +1136,21 @@ export function CompanyCardContent({
                               setContactForm({ ...contactForm, location: loc === contactForm.location ? "" : loc })
                             }
                             active={contactForm.location === loc}
-                            activeColors={{
-                              background: "#F0F2F6",
-                              color: "#1A1C1F",
-                              border: "1px solid transparent",
-                              fontWeight: 500,
-                            }}
-                            inactiveColors={{
-                              background: "transparent",
-                              color: "#5C636E",
-                              border: "1px solid #DDE0E7",
-                              fontWeight: 500,
-                            }}
-                            inactiveHoverColors={{
-                              background: "#F8F9FB",
-                              color: "#1A1C1F",
-                              border: "1px solid #DDE0E7",
-                            }}
+                            activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                            inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                            inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+                            style={getDesignLabModalChipStyle(modalScale)}
                           >
                             {loc}
                           </DesignLabFilterButton>
                         ))}
                       </div>
-                    </div>
+                    </DesignLabModalField>
                   );
                 })()}
-                <div>
-                  <Label className="mb-1 block text-[11px] font-medium text-[#8C929C]">Egenskaper</Label>
-                  <div className="flex items-center gap-2">
+                <DesignLabModalField>
+                  <DesignLabModalLabel>Egenskaper</DesignLabModalLabel>
+                  <div className="flex items-center" style={{ gap: Math.max(4, modalScale.labelGap + 1) }}>
                     <DesignLabFilterButton
                       type="button"
                       onClick={() => {
@@ -1178,23 +1161,10 @@ export function CompanyCardContent({
                         setContactForm({ ...contactForm, cv_email: !contactForm.cv_email });
                       }}
                       active={contactForm.cv_email}
-                      activeColors={{
-                        background: "#E8ECF5",
-                        color: "#1A1C1F",
-                        border: "1px solid #C5CBE8",
-                        fontWeight: 500,
-                      }}
-                      inactiveColors={{
-                        background: "transparent",
-                        color: "#5C636E",
-                        border: "1px solid #DDE0E7",
-                        fontWeight: 500,
-                      }}
-                      inactiveHoverColors={{
-                        background: "#F8F9FB",
-                        color: "#1A1C1F",
-                        border: "1px solid #DDE0E7",
-                      }}
+                      activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                      inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                      inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+                      style={getDesignLabModalChipStyle(modalScale)}
                     >
                       CV-Epost
                     </DesignLabFilterButton>
@@ -1202,33 +1172,20 @@ export function CompanyCardContent({
                       type="button"
                       onClick={() => setContactForm({ ...contactForm, call_list: !contactForm.call_list })}
                       active={contactForm.call_list}
-                      activeColors={{
-                        background: "#E8ECF5",
-                        color: "#1A1C1F",
-                        border: "1px solid #C5CBE8",
-                        fontWeight: 500,
-                      }}
-                      inactiveColors={{
-                        background: "transparent",
-                        color: "#5C636E",
-                        border: "1px solid #DDE0E7",
-                        fontWeight: 500,
-                      }}
-                      inactiveHoverColors={{
-                        background: "#F8F9FB",
-                        color: "#1A1C1F",
-                        border: "1px solid #DDE0E7",
-                      }}
+                      activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                      inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                      inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+                      style={getDesignLabModalChipStyle(modalScale)}
                     >
                       Innkjøper
                     </DesignLabFilterButton>
                   </div>
-                </div>
-                <DesignLabActionButton type="submit" variant="primary" style={{ width: "100%", height: 32, marginTop: 12, fontSize: 13 }}>
+                </DesignLabModalField>
+                <DesignLabActionButton type="submit" variant="primary" style={getDesignLabModalActionStyle(modalScale)}>
                   Opprett
                 </DesignLabActionButton>
-              </form>
-            </DialogContent>
+              </DesignLabModalForm>
+            </DesignLabModalContent>
           </Dialog>
         )}
       </div>
