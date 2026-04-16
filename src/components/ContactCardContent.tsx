@@ -1,17 +1,20 @@
-import { useState, useMemo, useRef, useEffect } from "react";
-import { SIGNAL_COLORS } from "@/components/designlab/theme";
+import { useState, useMemo, useRef, useEffect, type ReactNode } from "react";
+import { C, SIGNAL_COLORS } from "@/components/designlab/theme";
+import {
+  DesignLabActionButton,
+  DesignLabFilterButton,
+  DesignLabIconButton,
+} from "@/components/designlab/controls";
 import { AiSignalBanner } from "@/components/AiSignalBanner";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useConsultantCache } from "@/hooks/useConsultantCache";
 import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -105,21 +108,14 @@ function normalizeCategoryLabel(label: string): string {
   return LEGACY_CATEGORY_MAP[label] || label;
 }
 
-function getCategoryBadgeColor(label: string) {
-  const normalized = normalizeCategoryLabel(label);
-  const cat = CATEGORIES.find((c) => c.label === normalized);
-  return cat?.badgeColor || "bg-secondary text-foreground border-border";
-}
-
 function CategoryBadge({ label, className }: { label: string; className?: string }) {
   const normalized = normalizeCategoryLabel(label);
-  const color = getCategoryBadgeColor(normalized);
   const isKnown = CATEGORIES.some((c) => c.label === normalized);
   if (!isKnown) return null;
   return (
-    <span className={cn("chip chip--action is-signal", className)}>
+    <StatusChip category={normalized} className={className}>
       {normalized}
-    </span>
+    </StatusChip>
   );
 }
 
@@ -127,21 +123,73 @@ function CategoryPicker({ selected, onSelect }: { selected: string; onSelect: (v
   return (
     <div className="flex flex-wrap gap-1.5">
       {CATEGORIES.map((cat) => (
-        <button
+        <DesignLabFilterButton
           key={cat.label}
           type="button"
           onClick={() => onSelect(cat.label)}
-          className={cn(
-            "h-8 px-3 text-[0.8125rem] rounded-full border transition-all font-medium",
-            selected === cat.label
-              ? cat.selectedColor
-              : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground",
-          )}
+          active={selected === cat.label}
         >
           {cat.label}
-        </button>
+        </DesignLabFilterButton>
       ))}
     </div>
+  );
+}
+
+function StatusChip({
+  children,
+  className,
+  category,
+  tone = "default",
+}: {
+  children: ReactNode;
+  className?: string;
+  category?: string;
+  tone?: "default" | "signal" | "muted";
+}) {
+  const normalizedCategory = category ? normalizeCategoryLabel(category) : null;
+  const categoryColors = normalizedCategory
+    ? SIGNAL_COLORS[normalizedCategory as keyof typeof SIGNAL_COLORS]
+    : null;
+
+  const styles = categoryColors
+    ? {
+        background: categoryColors.bg,
+        color: categoryColors.color,
+        border: "1px solid transparent",
+      }
+    : tone === "signal"
+      ? {
+          background: C.accentBg,
+          color: C.accent,
+          border: "1px solid transparent",
+        }
+      : tone === "muted"
+        ? {
+            background: "transparent",
+            color: C.textFaint,
+            border: `1px solid ${C.borderDefault}`,
+          }
+        : {
+            background: C.hoverSubtle,
+            color: C.textSecondary,
+            border: `1px solid ${C.borderDefault}`,
+          };
+
+  return (
+    <span
+      className={cn("inline-flex items-center whitespace-nowrap", className)}
+      style={{
+        height: 20,
+        padding: "2px 6px",
+        borderRadius: 4,
+        fontSize: 11,
+        fontWeight: 500,
+        ...styles,
+      }}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -757,24 +805,10 @@ export function ContactCardContent({
                 return (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      {signalCat ? (
-                        <button
-                          className="chip chip--action cursor-pointer"
-                          style={{
-                            background: SIGNAL_COLORS[signalCat.label as keyof typeof SIGNAL_COLORS]?.bg,
-                            color: SIGNAL_COLORS[signalCat.label as keyof typeof SIGNAL_COLORS]?.color,
-                            border: "none",
-                          }}
-                        >
-                          {signalCat.label}
-                          <ChevronDown className="h-3 w-3 ml-1" />
-                        </button>
-                      ) : (
-                        <button className="inline-flex items-center rounded-full border border-dashed border-border px-2.5 py-0.5 text-[0.6875rem] text-muted-foreground/50 cursor-pointer hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors">
-                          Legg til signal
-                          <ChevronDown className="h-3 w-3 ml-1" />
-                        </button>
-                      )}
+                      <DesignLabFilterButton active={Boolean(signalCat)} className="whitespace-nowrap">
+                        <span>{signalCat ? signalCat.label : "Legg til signal"}</span>
+                        <ChevronDown className="h-3 w-3" />
+                      </DesignLabFilterButton>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       {CATEGORIES.map((cat) => (
@@ -784,16 +818,9 @@ export function ContactCardContent({
                             updateSignalMutation.mutate(cat.label);
                           }}
                         >
-                          <span
-                            className="chip chip--action"
-                            style={{
-                              background: SIGNAL_COLORS[cat.label as keyof typeof SIGNAL_COLORS]?.bg,
-                              color: SIGNAL_COLORS[cat.label as keyof typeof SIGNAL_COLORS]?.color,
-                              border: "none",
-                            }}
-                          >
+                          <StatusChip category={cat.label}>
                             {cat.label}
-                          </span>
+                          </StatusChip>
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuContent>
@@ -803,34 +830,34 @@ export function ContactCardContent({
             {editable && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="chip chip--action is-signal cursor-pointer whitespace-nowrap">
-                    {contact.owner_id && profileMapFull[contact.owner_id] ? profileMapFull[contact.owner_id] : "Eier"}
-                    <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
-                  </button>
+                  <DesignLabFilterButton active={Boolean(contact.owner_id)} className="whitespace-nowrap">
+                    <span>{contact.owner_id && profileMapFull[contact.owner_id] ? profileMapFull[contact.owner_id] : "Eier"}</span>
+                    <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                  </DesignLabFilterButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {allProfiles.map((p) => (
                     <DropdownMenuItem key={p.id} onClick={() => updateMutation.mutate({ owner_id: p.id })}>
-                      <span className="chip chip--action is-signal">
+                      <StatusChip tone={p.id === contact.owner_id ? "signal" : "default"}>
                         {p.full_name}
-                      </span>
+                      </StatusChip>
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
             {!editable && onNavigateToFullPage && (
-              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={onNavigateToFullPage}>
+              <DesignLabIconButton size={32} onClick={onNavigateToFullPage}>
                 <ExternalLink className="h-3.5 w-3.5" />
-              </Button>
+              </DesignLabIconButton>
             )}
             {/* 3-dot menu for Design Lab */}
             {defaultHidden && (
               <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
-                  <button className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-secondary transition-colors text-muted-foreground">
+                  <DesignLabIconButton size={32}>
                     <MoreVertical className="h-4 w-4" />
-                  </button>
+                  </DesignLabIconButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" sideOffset={4}>
                   <DropdownMenuItem onClick={() => {
@@ -1050,7 +1077,7 @@ export function ContactCardContent({
         {/* Status-piller */}
         <div className="flex items-center gap-2 flex-wrap mt-2 pt-2 border-t border-border/40">
           {/* CV-Epost */}
-          <button
+          <DesignLabFilterButton
             onClick={() => {
               const isUnsubscribed = (contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned";
               if ((contact as any).cv_email && isUnsubscribed) {
@@ -1077,34 +1104,31 @@ export function ContactCardContent({
                 },
               });
             }}
-            className={`chip chip--action${
-              (contact as any).cv_email && ((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned")
-                ? " is-muted"
-                : (contact as any).cv_email
-                  ? " is-cv-active"
-                  : ""
-            }`}
+            active={(contact as any).cv_email && !((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned")}
+            style={((contact as any).cv_email && ((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned"))
+              ? { color: C.textFaint }
+              : undefined}
           >
             {(contact as any).cv_email && ((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned")
               ? "CV-Epost ✗"
               : (contact as any).cv_email ? "✓ CV-Epost" : "CV-Epost"}
-          </button>
+          </DesignLabFilterButton>
           {/* Innkjøper */}
-          <button
+          <DesignLabFilterButton
             onClick={() => updateMutation.mutate({ call_list: !(contact as any).call_list })}
-            className={`chip chip--action${(contact as any).call_list ? " is-buyer-active" : ""}`}
+            active={Boolean((contact as any).call_list)}
           >
             {(contact as any).call_list ? "✓ Innkjøper" : "Innkjøper"}
-          </button>
+          </DesignLabFilterButton>
           {/* Ikke aktuell å kontakte */}
-          <button
+          <DesignLabFilterButton
             onClick={() => updateMutation.mutate({ ikke_aktuell_kontakt: !(contact as any).ikke_aktuell_kontakt })}
-            className={`chip chip--action${(contact as any).ikke_aktuell_kontakt ? " is-irrelevant-active" : ""}`}
+            active={Boolean((contact as any).ikke_aktuell_kontakt)}
           >
             {(contact as any).ikke_aktuell_kontakt
               ? "✕ Ikke relevant person å kontakte igjen"
               : "Ikke relevant person å kontakte igjen"}
-          </button>
+          </DesignLabFilterButton>
         </div>
         {changingCompany && (
           <div className="relative mt-1.5">
@@ -1162,10 +1186,11 @@ export function ContactCardContent({
                 Teknisk DNA for {contact.first_name} {contact.last_name}
               </span>
               {contact.teknologier && (contact.teknologier as string[]).length > 0 && (
-                <button
+                <DesignLabActionButton
                   onClick={handleFinnKonsulent}
                   disabled={matchingConsultants}
-                  className="inline-flex items-center gap-1.5 h-7 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+                  variant="secondary"
+                  style={{ height: 32, fontSize: 12 }}
                 >
                   {matchingConsultants ? (
                     <>
@@ -1176,7 +1201,7 @@ export function ContactCardContent({
                       <Target className="h-3.5 w-3.5 text-primary" /> Finn konsulent
                     </>
                   )}
-                </button>
+                </DesignLabActionButton>
               )}
             </div>
 
@@ -1264,24 +1289,19 @@ export function ContactCardContent({
               />
 
               <div className="flex gap-2 mt-1.5">
-                <Button
-                  size="sm"
-                  className="h-7 text-[0.75rem] px-3 rounded-md"
+                <DesignLabActionButton
+                  variant="primary"
+                  style={{ height: 32, fontSize: 12 }}
                   onClick={() => {
                     updateField("notes")(notesDraft);
                     setEditingNotes(false);
                   }}
                 >
                   Lagre
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-[0.75rem] px-3 rounded-md"
-                  onClick={() => setEditingNotes(false)}
-                >
+                </DesignLabActionButton>
+                <DesignLabActionButton variant="ghost" style={{ height: 32, fontSize: 12 }} onClick={() => setEditingNotes(false)}>
                   Avbryt
-                </Button>
+                </DesignLabActionButton>
               </div>
             </div>
           ) : contact.notes ? (
@@ -1309,32 +1329,32 @@ export function ContactCardContent({
         {editable && (
           <div className="border-t border-border pt-4 pb-6">
             <div className="flex items-center gap-2 flex-wrap">
-              <button
+              <DesignLabActionButton
                 onClick={() => openForm("call")}
-                className="inline-flex items-center gap-1.5 h-[34px] px-4 text-[0.8125rem] font-medium rounded-lg transition-colors bg-[hsl(var(--success))] text-white hover:opacity-90"
+                variant="secondary"
               >
                 <MessageCircle className="h-[15px] w-[15px]" /> Logg samtale
-              </button>
-              <button
+              </DesignLabActionButton>
+              <DesignLabActionButton
                 onClick={() => openForm("meeting")}
-                style={{ height: 34 }}
-                className="inline-flex items-center gap-1.5 h-[34px] px-4 text-[0.8125rem] font-medium rounded-lg transition-colors bg-primary text-primary-foreground hover:opacity-90"
+                variant="secondary"
               >
                 <FileText className="h-[15px] w-[15px]" /> Logg møtereferat
-              </button>
-              <button
+              </DesignLabActionButton>
+              <DesignLabActionButton
                 onClick={() => openForm("task")}
-                className="inline-flex items-center gap-1.5 h-[34px] px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
+                variant="ghost"
               >
                 <Clock className="h-[15px] w-[15px] text-[hsl(var(--warning))]" /> Ny oppfølging
-              </button>
+              </DesignLabActionButton>
               {!outlookStatus?.connected && (
-                <button
+                <DesignLabActionButton
                   onClick={handleConnectOutlook}
-                  className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-dashed border-border bg-background text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors ml-auto"
+                  variant="secondary"
+                  className="ml-auto"
                 >
                   <Mail className="h-[15px] w-[15px]" /> Koble til Outlook
-                </button>
+                </DesignLabActionButton>
               )}
             </div>
 
@@ -1355,20 +1375,18 @@ export function ContactCardContent({
 
                   {activeForm === "call" && (
                     <div className="flex items-center gap-1.5 mt-2">
-                      <button
+                      <DesignLabFilterButton
                         type="button"
                         onClick={() => setFormTitle("Ringte, ikke svar")}
-                        className="inline-flex items-center gap-1 h-6 px-2.5 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
                       >
                         <PhoneOff className="h-3 w-3" /> Ringte, ikke svar
-                      </button>
-                      <button
+                      </DesignLabFilterButton>
+                      <DesignLabFilterButton
                         type="button"
                         onClick={() => setFormTitle("Sendt LinkedIn melding")}
-                        className="inline-flex items-center gap-1 h-6 px-2.5 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
                       >
                         <Send className="h-3 w-3" /> Sendt LinkedIn melding
-                      </button>
+                      </DesignLabFilterButton>
                     </div>
                   )}
                 </div>
@@ -1396,9 +1414,10 @@ export function ContactCardContent({
                     </span>
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
                       {DATE_CHIPS.map((chip, i) => (
-                        <button
+                        <DesignLabFilterButton
                           key={chip.label}
                           type="button"
+                          active={selectedChipIdx === i}
                           onClick={() => {
                             const d = chip.fn();
                             if (d === null) {
@@ -1409,15 +1428,9 @@ export function ContactCardContent({
                               setSelectedChipIdx(i);
                             }
                           }}
-                          className={cn(
-                            "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors",
-                            selectedChipIdx === i
-                              ? "bg-primary/10 border-primary/30 text-primary font-medium"
-                              : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground",
-                          )}
                         >
                           {chip.label}
-                        </button>
+                        </DesignLabFilterButton>
                       ))}
                       <input
                         type="date"
@@ -1426,7 +1439,16 @@ export function ContactCardContent({
                           setFormDate(e.target.value);
                           setSelectedChipIdx(null);
                         }}
-                        className="h-7 px-2 text-[0.75rem] rounded-full border border-border text-muted-foreground bg-background"
+                        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                        style={{
+                          height: 28,
+                          paddingInline: 8,
+                          fontSize: 12,
+                          borderRadius: 6,
+                          border: `1px solid ${C.borderDefault}`,
+                          color: C.textSecondary,
+                          background: C.surface,
+                        }}
                       />
                     </div>
                     {formDate === "someday" ? (
@@ -1469,9 +1491,8 @@ export function ContactCardContent({
                 )}
 
                 <div className="flex items-center gap-2 mt-3">
-                  <Button
-                    size="sm"
-                    className="h-[34px] px-4 text-[0.8125rem] rounded-md"
+                  <DesignLabActionButton
+                    variant="primary"
                     disabled={
                       !formTitle.trim() ||
                       !formCategory ||
@@ -1485,15 +1506,10 @@ export function ContactCardContent({
                       : activeForm === "meeting"
                         ? "Lagre referat"
                         : "Lagre samtale"}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-[34px] px-3 text-[0.8125rem] text-muted-foreground rounded-md"
-                    onClick={closeForm}
-                  >
+                  </DesignLabActionButton>
+                  <DesignLabActionButton variant="ghost" onClick={closeForm}>
                     Avbryt
-                  </Button>
+                  </DesignLabActionButton>
                 </div>
               </div>
             )}
@@ -1537,16 +1553,13 @@ export function ContactCardContent({
                     {(["Alle", "Ansatte", "Eksterne"] as const).map((chip) => {
                       const selected = matchSourceFilter === chip;
                       return (
-                        <button
+                        <DesignLabFilterButton
                           key={chip}
                           onClick={() => setMatchSourceFilter(chip)}
-                          className={selected
-                            ? "h-7 px-2.5 text-[0.75rem] rounded-full border bg-foreground border-foreground text-background font-medium transition-colors"
-                            : "h-7 px-2.5 text-[0.75rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors"
-                          }
+                          active={selected}
                         >
                           {chip}
-                        </button>
+                        </DesignLabFilterButton>
                       );
                     })}
                   </div>
@@ -1762,9 +1775,10 @@ function TaskRow({
           <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Når?</span>
           <div className="flex flex-wrap gap-1.5 mt-1.5">
             {DATE_CHIPS.map((chip, i) => (
-              <button
+              <DesignLabFilterButton
                 key={chip.label}
                 type="button"
+                active={editChipIdx === i}
                 onClick={() => {
                   const d = chip.fn();
                   if (d === null) {
@@ -1775,15 +1789,9 @@ function TaskRow({
                     setEditChipIdx(i);
                   }
                 }}
-                className={cn(
-                  "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors",
-                  editChipIdx === i
-                    ? "bg-primary/10 border-primary/30 text-primary font-medium"
-                    : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground",
-                )}
               >
                 {chip.label}
-              </button>
+              </DesignLabFilterButton>
             ))}
             <input
               type="date"
@@ -1792,7 +1800,16 @@ function TaskRow({
                 setEditDate(e.target.value);
                 setEditChipIdx(null);
               }}
-              className="h-7 px-2 text-[0.75rem] rounded-full border border-border text-muted-foreground bg-background"
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+              style={{
+                height: 28,
+                paddingInline: 8,
+                fontSize: 12,
+                borderRadius: 6,
+                border: `1px solid ${C.borderDefault}`,
+                color: C.textSecondary,
+                background: C.surface,
+              }}
             />
             {editDate === "someday" && (
               <p className="text-[0.75rem] text-muted-foreground mt-2">
@@ -1819,22 +1836,17 @@ function TaskRow({
           </div>
         )}
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            className="h-6 text-[0.6875rem] px-2 rounded"
+          <DesignLabActionButton
+            variant="primary"
+            style={{ height: 32, fontSize: 12 }}
             disabled={!editTitle.trim() || !editCategory}
             onClick={handleSave}
           >
             Lagre
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 text-[0.6875rem] px-2 rounded"
-            onClick={() => setEditing(false)}
-          >
+          </DesignLabActionButton>
+          <DesignLabActionButton variant="ghost" style={{ height: 32, fontSize: 12 }} onClick={() => setEditing(false)}>
             Avbryt
-          </Button>
+          </DesignLabActionButton>
           <div className="ml-auto">
             {confirmDelete ? (
               <span className="text-[0.75rem] animate-in fade-in duration-150">
@@ -1887,9 +1899,9 @@ function TaskRow({
         {displayDesc && <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{displayDesc}</p>}
         {task.assigned_to && profileMap[task.assigned_to] && (
           <div className="mt-1">
-            <span className="chip chip--action is-signal">
+            <StatusChip tone="signal">
               {profileMap[task.assigned_to]}
-            </span>
+            </StatusChip>
           </div>
         )}
       </div>
@@ -2008,13 +2020,13 @@ function ActivityTimeline({
             Aktiviteter · 0
           </h3>
           {hasEmails && (
-            <button
+            <DesignLabFilterButton
               onClick={() => setShowEmails((v) => !v)}
-              className={`inline-flex items-center gap-1.5 h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors ${showEmails ? "bg-primary/10 border-primary/30 text-primary font-medium" : "bg-background border-border text-muted-foreground hover:bg-secondary"}`}
+              active={showEmails}
             >
               <Mail className="w-3.5 h-3.5" />
               {showEmails ? "Skjul e-post" : "Vis e-post"}
-            </button>
+            </DesignLabFilterButton>
           )}
         </div>
         <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen aktiviteter ennå</p>
@@ -2029,13 +2041,13 @@ function ActivityTimeline({
           Aktiviteter · {totalCount}
         </h3>
         {hasEmails && (
-          <button
+          <DesignLabFilterButton
             onClick={() => setShowEmails((v) => !v)}
-            className={`inline-flex items-center gap-1.5 h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors ${showEmails ? "bg-primary/10 border-primary/30 text-primary font-medium" : "bg-background border-border text-muted-foreground hover:bg-secondary"}`}
+            active={showEmails}
           >
             <Mail className="w-3.5 h-3.5" />
             {showEmails ? "Skjul e-post" : "Vis e-post"}
-          </button>
+          </DesignLabFilterButton>
         )}
       </div>
 
@@ -2169,9 +2181,9 @@ function EmailRow({ email }: { email: any }) {
             <span className="text-[0.8125rem] text-muted-foreground">
               {format(d, "d. MMM yyyy", { locale: nb })}
             </span>
-            <span className="chip chip--action is-signal">
+            <StatusChip tone="signal">
               E-post
-            </span>
+            </StatusChip>
           </div>
         </div>
       </div>
@@ -2295,26 +2307,29 @@ function ActivityRow({
                 type="date"
                 value={editDate}
                 onChange={(e) => setEditDate(e.target.value)}
-                className="h-7 px-2 text-[0.75rem] rounded-full border border-border text-muted-foreground bg-background"
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                style={{
+                  height: 28,
+                  paddingInline: 8,
+                  fontSize: 12,
+                  borderRadius: 6,
+                  border: `1px solid ${C.borderDefault}`,
+                  color: C.textSecondary,
+                  background: C.surface,
+                }}
               />
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                className="h-[34px] px-4 text-[0.8125rem] font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
+              <DesignLabActionButton
+                variant="primary"
                 disabled={!editTitle.trim() || !editCategory}
                 onClick={handleSaveEdit}
               >
                 Lagre
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-[34px] px-3 text-[0.8125rem] text-muted-foreground rounded-md hover:bg-secondary transition-colors"
-                onClick={() => setEditing(false)}
-              >
+              </DesignLabActionButton>
+              <DesignLabActionButton variant="ghost" onClick={() => setEditing(false)}>
                 Avbryt
-              </Button>
+              </DesignLabActionButton>
               <div className="ml-auto">
                 {confirmDelete ? (
                   <span className="text-[0.75rem] animate-in fade-in duration-150">
@@ -2388,9 +2403,9 @@ function ActivityRow({
               {/* Owner badge */}
               {ownerName && (
                 <div className="mt-1">
-                  <span className="chip chip--action is-signal">
+                  <StatusChip tone="signal">
                     {ownerName}
-                  </span>
+                  </StatusChip>
                 </div>
               )}
             </div>

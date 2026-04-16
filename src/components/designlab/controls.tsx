@@ -29,7 +29,9 @@ function handleInteractiveHover(
   if (typeof values.border === "string") element.style.border = values.border;
 }
 
-export function DesignLabFilterButton({
+export const DesignLabFilterButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & {
+  active?: boolean;
+}>(function DesignLabFilterButton({
   active = false,
   className,
   disabled,
@@ -38,9 +40,7 @@ export function DesignLabFilterButton({
   style,
   children,
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & {
-  active?: boolean;
-}) {
+}, ref) {
   const baseBorder = active ? `1px solid ${C.filterActiveBorder}` : `1px solid ${C.borderDefault}`;
   const baseBackground = active ? C.filterActiveBg : "transparent";
   const baseColor = active ? C.textPrimary : C.textSecondary;
@@ -49,6 +49,7 @@ export function DesignLabFilterButton({
   return (
     <button
       {...props}
+      ref={ref}
       disabled={disabled}
       className={cn(
         "inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition-colors",
@@ -91,9 +92,11 @@ export function DesignLabFilterButton({
       {children}
     </button>
   );
-}
+});
 
-export function DesignLabActionButton({
+export const DesignLabActionButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: ActionVariant;
+}>(function DesignLabActionButton({
   variant = "secondary",
   className,
   disabled,
@@ -102,9 +105,7 @@ export function DesignLabActionButton({
   style,
   children,
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: ActionVariant;
-}) {
+}, ref) {
   const variantMap: Record<ActionVariant, { background: string; border: string; color: string; hoverBackground: string }> = {
     primary: {
       background: C.accent,
@@ -134,6 +135,7 @@ export function DesignLabActionButton({
   return (
     <button
       {...props}
+      ref={ref}
       disabled={disabled}
       className={cn(
         "inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition-colors",
@@ -176,18 +178,19 @@ export function DesignLabActionButton({
       {children}
     </button>
   );
-}
+});
 
-export function DesignLabIconButton({
+export const DesignLabIconButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & {
+  size?: 28 | 32;
+}>(function DesignLabIconButton({
   size = 32,
   style,
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & {
-  size?: 28 | 32;
-}) {
+}, ref) {
   return (
     <DesignLabActionButton
       {...props}
+      ref={ref}
       variant="ghost"
       style={{
         width: size,
@@ -197,7 +200,7 @@ export function DesignLabIconButton({
       }}
     />
   );
-}
+});
 
 export const DesignLabSearchInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   ({ className, onFocus, onBlur, style, ...props }, ref) => {
