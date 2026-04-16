@@ -53,6 +53,9 @@ import {
   type MatchLeadOwnerSource,
 } from "@/lib/matchLeadOwners";
 import {
+  DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS,
+  DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS,
+  DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS,
   DesignLabActionButton,
   DesignLabControlLabel,
   DesignLabFilterButton,
@@ -457,7 +460,7 @@ export default function DesignLabContacts() {
           "id, first_name, last_name, title, email, phone, cv_email, call_list, ikke_aktuell_kontakt, teknologier, company_id, location, linkedin, department, notes, locations, mailchimp_status, owner_id, companies(id, name, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), profiles!contacts_owner_id_fkey(id, full_name)",
         )
         .order("updated_at", { ascending: false })
-        .limit(500);
+        .limit(2000);
       if (error) throw error;
       return data;
     },
@@ -656,7 +659,7 @@ export default function DesignLabContacts() {
           "*, companies(id, name, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), profiles!contacts_owner_id_fkey(id, full_name)",
         )
         .order("updated_at", { ascending: false })
-        .limit(500);
+        .limit(2000);
       if (error) throw error;
 
       const contactIdSet = new Set(data.map((contact) => contact.id));
@@ -2306,6 +2309,9 @@ export default function DesignLabContacts() {
                               <DesignLabFilterButton
                                 type="button"
                                 active={Boolean(c.cvEmail)}
+                                activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                                inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                                inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
                                 disabled={c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")}
                                 title={
                                   c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")
@@ -2341,6 +2347,9 @@ export default function DesignLabContacts() {
                               <DesignLabFilterButton
                                 type="button"
                                 active={Boolean(c.callList)}
+                                activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                                inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                                inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
                                 title={c.callList ? "Innkjøper aktiv" : "Aktiver innkjøper"}
                                 onClick={() =>
                                   handleToggle(
@@ -2396,6 +2405,7 @@ export default function DesignLabContacts() {
                     <ContactCardContent
                       contactId={sel.id}
                       editable
+                      headerPaddingTop={12}
                       onDataChanged={() => {
                         void invalidateDesignLabQueries();
                       }}

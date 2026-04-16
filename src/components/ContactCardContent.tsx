@@ -1,6 +1,9 @@
 import { useState, useMemo, useRef, useEffect, type ReactNode } from "react";
 import { C, SIGNAL_COLORS } from "@/components/designlab/theme";
 import {
+  DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS,
+  DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS,
+  DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS,
   DesignLabActionButton,
   DesignLabFilterButton,
   DesignLabIconButton,
@@ -100,6 +103,13 @@ function getCategoryPickerActiveColors(label: string) {
     fontWeight: 600,
   };
 }
+
+const NEUTRAL_ACTIVE_COLORS = {
+  background: C.statusNeutralBg,
+  color: C.statusNeutral,
+  border: `1px solid ${C.statusNeutralBorder}`,
+  fontWeight: 500 as const,
+};
 
 function CategoryBadge({ label, className }: { label: string; className?: string }) {
   const normalized = normalizeCategoryLabel(label);
@@ -243,6 +253,7 @@ interface ContactCardContentProps {
   onNavigateToFullPage?: () => void;
   defaultHidden?: DefaultHiddenConfig;
   onDataChanged?: () => void;
+  headerPaddingTop?: number;
 }
 
 interface ConsultantMatchResult {
@@ -333,6 +344,7 @@ export function ContactCardContent({
   onNavigateToFullPage,
   defaultHidden,
   onDataChanged,
+  headerPaddingTop = 0,
 }: ContactCardContentProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -761,7 +773,7 @@ export function ContactCardContent({
   return (
     <div>
       {/* ── ZONE A: Contact Header ── */}
-      <div className="mb-5">
+      <div className="mb-5" style={headerPaddingTop ? { paddingTop: headerPaddingTop } : undefined}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           {editable ? (
             <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">
@@ -802,6 +814,7 @@ export function ContactCardContent({
                       <DesignLabFilterButton
                         active={Boolean(signalCat)}
                         className="whitespace-nowrap"
+                        activeColors={signalCat ? getCategoryPickerActiveColors(signalCat.label) : undefined}
                       >
                         <span>{signalCat ? signalCat.label : "Legg til signal"}</span>
                         <ChevronDown className="h-3 w-3" />
@@ -827,7 +840,11 @@ export function ContactCardContent({
             {editable && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <DesignLabFilterButton active={Boolean(contact.owner_id)} className="whitespace-nowrap">
+                  <DesignLabFilterButton
+                    active={Boolean(contact.owner_id)}
+                    activeColors={NEUTRAL_ACTIVE_COLORS}
+                    className="whitespace-nowrap"
+                  >
                     <span>{contact.owner_id && profileMapFull[contact.owner_id] ? profileMapFull[contact.owner_id] : "Eier"}</span>
                     <ChevronDown className="h-3 w-3 flex-shrink-0" />
                   </DesignLabFilterButton>
@@ -1102,6 +1119,9 @@ export function ContactCardContent({
               });
             }}
             active={(contact as any).cv_email && !((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned")}
+            activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+            inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+            inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
             style={((contact as any).cv_email && ((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned"))
               ? { color: C.textFaint }
               : undefined}
@@ -1114,6 +1134,9 @@ export function ContactCardContent({
           <DesignLabFilterButton
             onClick={() => updateMutation.mutate({ call_list: !(contact as any).call_list })}
             active={Boolean((contact as any).call_list)}
+            activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+            inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+            inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
           >
             {(contact as any).call_list ? "✓ Innkjøper" : "Innkjøper"}
           </DesignLabFilterButton>
@@ -1121,6 +1144,7 @@ export function ContactCardContent({
           <DesignLabFilterButton
             onClick={() => updateMutation.mutate({ ikke_aktuell_kontakt: !(contact as any).ikke_aktuell_kontakt })}
             active={Boolean((contact as any).ikke_aktuell_kontakt)}
+            activeColors={getCategoryPickerActiveColors("Ikke aktuelt")}
           >
             {(contact as any).ikke_aktuell_kontakt
               ? "✕ Ikke relevant person å kontakte igjen"
@@ -2022,6 +2046,7 @@ function ActivityTimeline({
             <DesignLabFilterButton
               onClick={() => setShowEmails((v) => !v)}
               active={showEmails}
+              activeColors={NEUTRAL_ACTIVE_COLORS}
             >
               <Mail className="w-3.5 h-3.5" />
               {showEmails ? "Skjul e-post" : "Vis e-post"}
@@ -2043,6 +2068,7 @@ function ActivityTimeline({
           <DesignLabFilterButton
             onClick={() => setShowEmails((v) => !v)}
             active={showEmails}
+            activeColors={NEUTRAL_ACTIVE_COLORS}
           >
             <Mail className="w-3.5 h-3.5" />
             {showEmails ? "Skjul e-post" : "Vis e-post"}

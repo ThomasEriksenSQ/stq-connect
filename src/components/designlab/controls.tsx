@@ -20,6 +20,24 @@ type FilterHoverColors = {
   border?: string;
 };
 
+export const DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS = {
+  background: "transparent",
+  color: "#5C636E",
+  border: "1px solid #DDE0E7",
+  fontWeight: 500,
+} satisfies FilterActiveColors;
+
+export const DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS = {
+  background: "#E8ECF5",
+  color: "#1A1C1F",
+  border: "1px solid #C5CBE8",
+  fontWeight: 600,
+} satisfies FilterActiveColors;
+
+export const DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS = {
+  background: "#F0F2F6",
+} satisfies FilterHoverColors;
+
 const FOCUS_VARS: CSSProperties = {
   ["--dl-focus-ring" as string]: C.borderFocus,
   ["--dl-focus-offset" as string]: C.surface,
@@ -44,10 +62,12 @@ function handleInteractiveHover(
 export const DesignLabFilterButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & {
   active?: boolean;
   activeColors?: FilterActiveColors;
+  inactiveColors?: FilterActiveColors;
   inactiveHoverColors?: FilterHoverColors;
 }>(function DesignLabFilterButton({
   active = false,
   activeColors,
+  inactiveColors,
   inactiveHoverColors,
   className,
   disabled,
@@ -57,19 +77,27 @@ export const DesignLabFilterButton = forwardRef<HTMLButtonElement, ButtonHTMLAtt
   children,
   ...props
 }, ref) {
-  const baseBorder = active ? activeColors?.border ?? `1px solid ${C.filterActiveBorder}` : `1px solid ${C.borderDefault}`;
-  const baseBackground = active ? activeColors?.background ?? C.filterActiveBg : "transparent";
-  const baseColor = active ? activeColors?.color ?? C.textPrimary : C.textSecondary;
-  const baseFontWeight = active ? activeColors?.fontWeight ?? 600 : 500;
+  const baseBorder = active
+    ? activeColors?.border ?? `1px solid ${C.filterActiveBorder}`
+    : inactiveColors?.border ?? `1px solid ${C.borderDefault}`;
+  const baseBackground = active
+    ? activeColors?.background ?? C.filterActiveBg
+    : inactiveColors?.background ?? "transparent";
+  const baseColor = active
+    ? activeColors?.color ?? C.textPrimary
+    : inactiveColors?.color ?? C.textSecondary;
+  const baseFontWeight = active
+    ? activeColors?.fontWeight ?? 600
+    : inactiveColors?.fontWeight ?? 500;
   const hoverBackground = active
     ? activeColors?.background ?? C.filterActiveBg
-    : inactiveHoverColors?.background ?? C.hoverSubtle;
+    : inactiveHoverColors?.background ?? inactiveColors?.background ?? C.hoverSubtle;
   const hoverColor = active
     ? activeColors?.color ?? C.textPrimary
-    : inactiveHoverColors?.color ?? baseColor;
+    : inactiveHoverColors?.color ?? inactiveColors?.color ?? baseColor;
   const hoverBorder = active
     ? activeColors?.border ?? baseBorder
-    : inactiveHoverColors?.border ?? baseBorder;
+    : inactiveHoverColors?.border ?? inactiveColors?.border ?? baseBorder;
 
   return (
     <button
