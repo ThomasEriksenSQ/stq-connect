@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
@@ -12,12 +12,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Search, ArrowUpDown, Loader2, X, MapPin, ChevronDown, Map as MapIcon } from "lucide-react";
+import { Plus, Search, ArrowUpDown, Loader2, X, ChevronDown, Map as MapIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersistentState } from "@/hooks/usePersistentState";
 
 import { BrregSearch, lookupByOrgNr } from "@/components/BrregSearch";
+import { DesignLabActionButton, DesignLabFilterButton } from "@/components/designlab/controls";
 import { relativeDate } from "@/lib/relativeDate";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { format } from "date-fns";
@@ -77,15 +78,20 @@ const TYPE_ORDER = ["prospect", "customer", "churned", "partner", "lead"];
 const CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-[6px] border transition-colors cursor-pointer font-medium";
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
 const CHIP_ON = `${CHIP_BASE} bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8] font-semibold`;
+const MODAL_LABEL_CLASS = "mb-1 block text-[11px] font-medium text-[#8C929C]";
+const MODAL_INPUT_CLASS =
+  "h-8 rounded-[6px] border-[#DDE0E7] bg-white px-2.5 py-0 text-[13px] placeholder:text-[#8C929C] focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] md:text-[13px]";
 
 const OrgNrInput = ({
   value,
   onChange,
   onLookup,
+  className,
 }: {
   value: string;
   onChange: (v: string) => void;
   onLookup: (name: string | null, city: string | null) => void;
+  className?: string;
 }) => {
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
   const [loading, setLoading] = useState(false);
@@ -109,7 +115,7 @@ const OrgNrInput = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="923 456 789"
-        className="h-10 rounded-lg"
+        className={className ?? "h-10 rounded-lg"}
       />
       {loading && (
         <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
@@ -130,6 +136,7 @@ const Companies = () => {
     website: "",
     linkedin: "",
     status: "prospect",
+    owner_id: "",
   });
   const [locations, setLocations] = useState<string[]>([""]);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -154,7 +161,15 @@ const Companies = () => {
     setForm((prev) =>
       prev.name === prefillCompanyName
         ? prev
-        : { name: prefillCompanyName, org_number: "", city: "", website: "", linkedin: "", status: "prospect" },
+        : {
+            name: prefillCompanyName,
+            org_number: "",
+            city: "",
+            website: "",
+            linkedin: "",
+            status: "prospect",
+            owner_id: "",
+          },
     );
     setLocations([""]);
   }, [prefillCompanyName]);
@@ -283,21 +298,24 @@ const Companies = () => {
 
   const createMutation = useMutation({
     mutationFn: async () => {
+      const finalLocations = locations.map((location) => location.trim()).filter(Boolean);
+      const cityValue = finalLocations.length > 0 ? finalLocations.join(", ") : form.city || null;
       const { error } = await supabase.from("companies").insert({
         name: form.name,
         org_number: form.org_number || null,
-        city: form.city || null,
+        city: cityValue,
         website: form.website || null,
         linkedin: form.linkedin || null,
         created_by: user?.id,
         status: form.status,
+        owner_id: form.owner_id || null,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
       setOpen(false);
-      setForm({ name: "", org_number: "", city: "", website: "", linkedin: "", status: "prospect" });
+      setForm({ name: "", org_number: "", city: "", website: "", linkedin: "", status: "prospect", owner_id: "" });
       setLocations([""]);
       if (prefillCompanyName) {
         const nextParams = new URLSearchParams(searchParams);
@@ -318,6 +336,13 @@ const Companies = () => {
     if (id && fullName) ownerMap.set(id, fullName);
   });
   const ownerList = Array.from(ownerMap.entries());
+
+  useEffect(() => {
+    if (!open || form.owner_id || !user?.id) return;
+    if (ownerList.some(([id]) => id === user.id)) {
+      setForm((prev) => ({ ...prev, owner_id: user.id }));
+    }
+  }, [open, form.owner_id, ownerList, user?.id]);
 
   // Signal is read-only in company list — users set signals from the company detail page
 
@@ -465,42 +490,55 @@ const Companies = () => {
               Nytt selskap
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[440px] rounded-xl">
-            <DialogHeader>
-              <DialogTitle>Nytt selskap</DialogTitle>
-            </DialogHeader>
+          <DialogContent
+            hideCloseButton
+            overlayClassName="bg-[rgba(0,0,0,0.35)]"
+            className="w-[calc(100vw-2rem)] max-w-[440px] gap-0 rounded-[10px] border-[#E8EAEE] bg-white p-0 shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
+          >
+            <div className="flex items-center justify-between px-4 pb-3 pt-4">
+              <DialogTitle className="text-[14px] font-semibold text-[#1A1C1F]">Nytt selskap</DialogTitle>
+              <DialogClose asChild>
+                <button
+                  type="button"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-[6px] text-[#5C636E] transition-colors hover:bg-[#F0F2F6] hover:text-[#1A1C1F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5E6AD2] focus-visible:ring-offset-2"
+                >
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Lukk</span>
+                </button>
+              </DialogClose>
+            </div>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 createMutation.mutate();
               }}
-              className="space-y-4 mt-3"
+              className="space-y-3 px-4 pb-4"
             >
-              <div className="space-y-1.5">
-                <Label className="text-label">Selskapsnavn</Label>
+              <div>
+                <Label className={MODAL_LABEL_CLASS}>Selskapsnavn</Label>
                 <BrregSearch
                   value={form.name}
                   onChange={(name) => setForm((f) => ({ ...f, name }))}
                   onSelect={(r) => setForm((f) => ({ ...f, name: r.name, org_number: r.org_number, city: r.city }))}
+                  inputClassName={MODAL_INPUT_CLASS}
+                  dropdownClassName="rounded-[8px] border-[#E8EAEE] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
+                  resultClassName="px-3 py-2 text-[13px] hover:bg-[#F8F9FB]"
+                  resultTitleClassName="text-[13px] font-medium text-[#1A1C1F]"
+                  resultMetaClassName="mt-0.5 text-[11px] text-[#8C929C]"
+                  emptyStateClassName="px-3 py-3 text-[12px] text-[#8C929C]"
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-label">Org.nr</Label>
+              <div>
+                <Label className={MODAL_LABEL_CLASS}>Org.nr</Label>
                 <OrgNrInput
                   value={form.org_number}
                   onChange={(org_number) => setForm((f) => ({ ...f, org_number }))}
                   onLookup={(name, city) => setForm((f) => ({ ...f, name: name || f.name, city: city || f.city }))}
+                  className={MODAL_INPUT_CLASS}
                 />
               </div>
-              {form.city && (
-                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <MapPin className="h-3.5 w-3.5" />
-                  {form.city}
-                </div>
-              )}
-              {/* AVDELINGER */}
-              <div className="space-y-1.5">
-                <Label className="text-label">Geografiske steder</Label>
+              <div>
+                <Label className={MODAL_LABEL_CLASS}>Geografisk sted</Label>
                 <div className="space-y-2">
                   {locations.map((loc, i) => (
                     <div key={i} className="flex items-center gap-2">
@@ -512,80 +550,121 @@ const Companies = () => {
                           setLocations(next);
                         }}
                         placeholder="By eller sted"
-                        className="h-10 rounded-lg flex-1"
+                        className={`flex-1 ${MODAL_INPUT_CLASS}`}
                       />
                       {locations.length > 1 && (
                         <button
                           type="button"
                           onClick={() => setLocations(locations.filter((_, j) => j !== i))}
-                          className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-[6px] text-[#8C929C] transition-colors hover:bg-[#F0F2F6] hover:text-[#1A1C1F]"
                         >
                           <X className="h-4 w-4" />
                         </button>
                       )}
                     </div>
                   ))}
-                  <button
+                  <DesignLabActionButton
                     type="button"
                     onClick={() => setLocations([...locations, ""])}
-                    className="w-full h-9 text-[0.8125rem] text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg border border-dashed border-border transition-colors"
+                    variant="secondary"
+                    style={{ width: "100%" }}
                   >
-                    + Legg til sted
-                  </button>
+                    <Plus className="h-3.5 w-3.5" />
+                    Legg til sted
+                  </DesignLabActionButton>
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-label">Nettside</Label>
+              <div>
+                <Label className={MODAL_LABEL_CLASS}>Nettside</Label>
                 <Input
                   value={form.website}
-                  onChange={(e) => setForm({ ...form, website: e.target.value })}
+                  onChange={(e) => setForm((prev) => ({ ...prev, website: e.target.value }))}
                   placeholder="https://"
-                  className="h-10 rounded-lg"
+                  className={MODAL_INPUT_CLASS}
                   type="url"
                 />
               </div>
-              {/* STATUS */}
-              <div className="space-y-1.5">
-                <Label className="text-label">Status</Label>
-                <div className="flex gap-1.5">
-                  {(
-                    [
-                      {
-                        value: "prospect",
-                        label: "Potensiell kunde",
-                        activeClass: "bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8]",
-                      },
-                      {
-                        value: "customer",
-                        label: "Kunde",
-                        activeClass: "bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8]",
-                      },
-                      { value: "partner", label: "Partner", activeClass: "bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8]" },
-                      {
-                        value: "churned",
-                        label: "Ikke relevant selskap",
-                        activeClass: "bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8]",
-                      },
-                    ] as const
-                  ).map((opt) => (
-                    <button
-                      key={opt.value}
+              <div>
+                <Label className={MODAL_LABEL_CLASS}>LinkedIn</Label>
+                <Input
+                  value={form.linkedin}
+                  onChange={(e) => setForm((prev) => ({ ...prev, linkedin: e.target.value }))}
+                  placeholder="https://linkedin.com/company/..."
+                  className={MODAL_INPUT_CLASS}
+                  type="url"
+                />
+              </div>
+              <div>
+                <Label className={MODAL_LABEL_CLASS}>Type</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {TYPE_OPTIONS.map((option) => (
+                    <DesignLabFilterButton
+                      key={option.value}
                       type="button"
-                      onClick={() => setForm((f) => ({ ...f, status: opt.value }))}
-                      className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                        form.status === opt.value
-                          ? opt.activeClass
-                          : "bg-secondary text-muted-foreground hover:bg-secondary/80"
-                      }`}
+                      onClick={() => setForm((prev) => ({ ...prev, status: option.value }))}
+                      active={form.status === option.value}
+                      activeColors={{
+                        background: "#E8ECF5",
+                        color: "#1A1C1F",
+                        border: "1px solid #C5CBE8",
+                        fontWeight: 600,
+                      }}
+                      inactiveColors={{
+                        background: "transparent",
+                        color: "#5C636E",
+                        border: "1px solid #DDE0E7",
+                        fontWeight: 500,
+                      }}
+                      inactiveHoverColors={{
+                        background: "#F8F9FB",
+                        color: "#1A1C1F",
+                        border: "1px solid #DDE0E7",
+                      }}
                     >
-                      {opt.label}
-                    </button>
+                      {option.label}
+                    </DesignLabFilterButton>
                   ))}
                 </div>
               </div>
-              <Button type="submit" className="w-full h-10 rounded-lg" disabled={createMutation.isPending}>
+              {ownerList.length > 0 && (
+                <div>
+                  <Label className={MODAL_LABEL_CLASS}>Eier</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ownerList.map(([id, name]) => (
+                      <DesignLabFilterButton
+                        key={id}
+                        type="button"
+                        onClick={() =>
+                          setForm((prev) => ({ ...prev, owner_id: prev.owner_id === id ? "" : id }))
+                        }
+                        active={form.owner_id === id}
+                        activeColors={{
+                          background: "#E8ECF5",
+                          color: "#1A1C1F",
+                          border: "1px solid #C5CBE8",
+                          fontWeight: 600,
+                        }}
+                        inactiveColors={{
+                          background: "transparent",
+                          color: "#5C636E",
+                          border: "1px solid #DDE0E7",
+                          fontWeight: 500,
+                        }}
+                        inactiveHoverColors={{
+                          background: "#F8F9FB",
+                          color: "#1A1C1F",
+                          border: "1px solid #DDE0E7",
+                        }}
+                      >
+                        {name}
+                      </DesignLabFilterButton>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <DesignLabActionButton type="submit" variant="primary" style={{ width: "100%", marginTop: 12 }} disabled={createMutation.isPending}>
                 {createMutation.isPending ? "Oppretter..." : "Opprett"}
-              </Button>
+              </DesignLabActionButton>
             </form>
           </DialogContent>
         </Dialog>

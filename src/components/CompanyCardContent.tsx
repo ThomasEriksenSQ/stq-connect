@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -55,6 +55,7 @@ import {
   StickyNote,
   Eye,
   EyeOff,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday, getYear } from "date-fns";

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface BrregResult {
   navn: string;
@@ -18,6 +19,13 @@ interface BrregSearchProps {
   value: string;
   onChange: (name: string) => void;
   onSelect: (result: { name: string; org_number: string; city: string }) => void;
+  placeholder?: string;
+  inputClassName?: string;
+  dropdownClassName?: string;
+  resultClassName?: string;
+  resultTitleClassName?: string;
+  resultMetaClassName?: string;
+  emptyStateClassName?: string;
 }
 
 const searchBRREG = async (query: string): Promise<BrregResult[]> => {
@@ -44,7 +52,18 @@ export const lookupByOrgNr = async (orgNr: string): Promise<BrregResult | null> 
   }
 };
 
-export const BrregSearch = ({ value, onChange, onSelect }: BrregSearchProps) => {
+export const BrregSearch = ({
+  value,
+  onChange,
+  onSelect,
+  placeholder = "Søk etter selskap...",
+  inputClassName,
+  dropdownClassName,
+  resultClassName,
+  resultTitleClassName,
+  resultMetaClassName,
+  emptyStateClassName,
+}: BrregSearchProps) => {
   const [results, setResults] = useState<BrregResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -115,17 +134,22 @@ export const BrregSearch = ({ value, onChange, onSelect }: BrregSearchProps) => 
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => { if (results.length > 0 || noResults) setShowDropdown(true); }}
           required
-          placeholder="Søk etter selskap..."
-          className="h-10 rounded-lg pl-9 pr-9"
+          placeholder={placeholder}
+          className={cn("h-10 rounded-lg pl-9 pr-9", inputClassName)}
         />
         {loading && (
           <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
         )}
       </div>
       {showDropdown && (
-        <div className="absolute z-50 mt-1 w-full rounded-lg border border-border bg-popover shadow-md overflow-hidden">
+        <div
+          className={cn(
+            "absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md",
+            dropdownClassName,
+          )}
+        >
           {noResults ? (
-            <div className="px-3 py-3 text-[0.8125rem] text-muted-foreground">
+            <div className={cn("px-3 py-3 text-[0.8125rem] text-muted-foreground", emptyStateClassName)}>
               Ingen treff i Brønnøysundregisteret
             </div>
           ) : (
@@ -134,10 +158,13 @@ export const BrregSearch = ({ value, onChange, onSelect }: BrregSearchProps) => 
                 key={r.organisasjonsnummer}
                 type="button"
                 onClick={() => handleSelect(r)}
-                className="w-full px-3 py-2.5 text-left hover:bg-accent transition-colors cursor-pointer"
+                className={cn(
+                  "w-full cursor-pointer px-3 py-2.5 text-left transition-colors hover:bg-accent",
+                  resultClassName,
+                )}
               >
-                <div className="text-[0.875rem] font-semibold text-foreground">{r.navn}</div>
-                <div className="text-[0.75rem] text-muted-foreground mt-0.5">
+                <div className={cn("text-[0.875rem] font-semibold text-foreground", resultTitleClassName)}>{r.navn}</div>
+                <div className={cn("mt-0.5 text-[0.75rem] text-muted-foreground", resultMetaClassName)}>
                   {r.organisasjonsnummer}
                   {r.forretningsadresse?.kommune && ` · ${r.forretningsadresse.kommune}`}
                 </div>
