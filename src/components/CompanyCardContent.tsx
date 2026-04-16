@@ -80,7 +80,7 @@ import {
   getSignalBadgeStyle,
   upsertTaskSignalDescription,
 } from "@/lib/categoryUtils";
-import { C } from "@/theme";
+import { C, SIGNAL_COLORS } from "@/theme";
 
 /* ── Category system (shared with ContactCardContent) ── */
 const CATEGORIES = [
@@ -104,26 +104,15 @@ function normalizeCategoryLabel(label: string): string {
 
 function getCategoryPickerActiveColors(label: string) {
   const normalized = normalizeCategoryLabel(label);
+  const colors = SIGNAL_COLORS[normalized as keyof typeof SIGNAL_COLORS];
+  if (!colors) return undefined;
 
-  if (normalized === "Behov nå") {
-    return {
-      background: C.successBg,
-      color: C.success,
-      border: "1px solid #C0DEC8",
-      fontWeight: 600,
-    };
-  }
-
-  if (normalized === "Får fremtidig behov") {
-    return {
-      background: C.infoBg,
-      color: C.info,
-      border: "1px solid #B3C8E8",
-      fontWeight: 600,
-    };
-  }
-
-  return undefined;
+  return {
+    background: colors.bg,
+    color: colors.color,
+    border: `1px solid ${colors.border}`,
+    fontWeight: 600,
+  };
 }
 
 function CategoryBadge({ label, className }: { label: string; className?: string }) {

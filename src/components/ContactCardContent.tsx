@@ -90,26 +90,15 @@ function normalizeCategoryLabel(label: string): string {
 
 function getCategoryPickerActiveColors(label: string) {
   const normalized = normalizeCategoryLabel(label);
+  const colors = SIGNAL_COLORS[normalized as keyof typeof SIGNAL_COLORS];
+  if (!colors) return undefined;
 
-  if (normalized === "Behov nå") {
-    return {
-      background: SIGNAL_COLORS["Behov nå"].bg,
-      color: SIGNAL_COLORS["Behov nå"].color,
-      border: `1px solid ${SIGNAL_COLORS["Behov nå"].border}`,
-      fontWeight: 600,
-    };
-  }
-
-  if (normalized === "Får fremtidig behov") {
-    return {
-      background: SIGNAL_COLORS["Får fremtidig behov"].bg,
-      color: SIGNAL_COLORS["Får fremtidig behov"].color,
-      border: `1px solid ${SIGNAL_COLORS["Får fremtidig behov"].border}`,
-      fontWeight: 600,
-    };
-  }
-
-  return undefined;
+  return {
+    background: colors.bg,
+    color: colors.color,
+    border: `1px solid ${colors.border}`,
+    fontWeight: 600,
+  };
 }
 
 function CategoryBadge({ label, className }: { label: string; className?: string }) {
@@ -1339,13 +1328,13 @@ export function ContactCardContent({
             <div className="flex items-center gap-2 flex-wrap">
               <DesignLabActionButton
                 onClick={() => openForm("call")}
-                variant="secondary"
+                variant="primary"
               >
                 <MessageCircle className="h-[15px] w-[15px]" /> Logg samtale
               </DesignLabActionButton>
               <DesignLabActionButton
                 onClick={() => openForm("meeting")}
-                variant="secondary"
+                variant="primary"
               >
                 <FileText className="h-[15px] w-[15px]" /> Logg møtereferat
               </DesignLabActionButton>
