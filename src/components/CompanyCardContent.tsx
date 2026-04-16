@@ -1004,7 +1004,7 @@ export function CompanyCardContent({
         {editable && (
           <Dialog open={newContactOpen} onOpenChange={setNewContactOpen}>
             <DialogTrigger asChild>
-              <DesignLabActionButton variant="secondary" style={{ height: 28, fontSize: 12 }}>
+              <DesignLabActionButton variant="primary" style={{ height: 32, fontSize: 12 }}>
                 <Plus className="h-3.5 w-3.5" />
                 Ny kontakt
               </DesignLabActionButton>

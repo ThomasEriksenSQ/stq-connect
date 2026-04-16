@@ -1,16 +1,14 @@
 import { useState, useMemo, useCallback, useRef } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { CompanyCardContent } from "@/components/CompanyCardContent";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   ChevronDown, ChevronUp, X,
 } from "lucide-react";
 import { differenceInDays } from "date-fns";
 import { getEffectiveSignal, normalizeCategoryLabel } from "@/lib/categoryUtils";
-import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { C } from "@/components/designlab/theme";
 import { crmQueryKeys } from "@/lib/queryKeys";
@@ -90,7 +88,6 @@ function mapToSignal(raw: string): Signal {
 
 export default function DesignLabCompanies() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { signOut, user } = useAuth();
   const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [search, setSearch] = useState("");
@@ -187,27 +184,6 @@ export default function DesignLabCompanies() {
     },
   });
 
-  // ── Type mutation ──
-  const setTypeMutation = useMutation({
-    mutationFn: async ({ companyId, status }: { companyId: string; status: string }) => {
-      const { error } = await supabase.from("companies").update({ status }).eq("id", companyId);
-      if (error) throw error;
-    },
-    onMutate: async ({ companyId, status }) => {
-      queryClient.setQueryData(crmQueryKeys.companies.all(), (old: any[]) =>
-        old?.map((c) => (c.id === companyId ? { ...c, status } : c)),
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
-      toast.success("Type oppdatert");
-    },
-    onError: () => {
-      queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
-      toast.error("Kunne ikke oppdatere type");
-    },
-  });
-
   const toggleSort = useCallback((field: SortField) => {
     setSort((p) => p.field === field ? { field, dir: p.dir === "asc" ? "desc" : "asc" } : { field, dir: field === "last_activity" ? "desc" : "asc" });
   }, []);
@@ -287,34 +263,11 @@ export default function DesignLabCompanies() {
           <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{company.name}</span>
         </div>
 
-        {/* Type — inline dropdown */}
-        <div className="min-w-0 relative" onClick={(e) => e.stopPropagation()}>
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-              <DesignLabFilterButton
-                onClick={(e) => e.stopPropagation()}
-                active={false}
-                className="justify-start max-w-full"
-                style={{ paddingInline: 8 }}
-                aria-haspopup="menu"
-              >
-                <span className="truncate">{typeLabel}</span>
-                <ChevronDown style={{ width: 12, height: 12, flexShrink: 0 }} />
-              </DesignLabFilterButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" sideOffset={4} onClick={(e) => e.stopPropagation()}>
-              {TYPE_OPTIONS.map((opt) => (
-                <DropdownMenuItem
-                  key={opt.value}
-                  onClick={() => {
-                    setTypeMutation.mutate({ companyId: company.id, status: opt.value });
-                  }}
-                >
-                  {opt.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+        {/* Type */}
+        <div className="min-w-0">
+          <span className="inline-flex h-5 max-w-full items-center rounded-[4px] bg-[#F0F2F6] px-1.5 text-[11px] font-medium text-[#5C636E]">
+            <span className="truncate">{typeLabel}</span>
+          </span>
         </div>
 
         {/* City */}
@@ -326,7 +279,7 @@ export default function DesignLabCompanies() {
         </span>
       </div>
     );
-  }, [selectedId, setTypeMutation]);
+  }, [selectedId]);
 
   /* ═══ RENDER ═══ */
   return (
