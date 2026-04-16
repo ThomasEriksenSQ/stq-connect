@@ -86,12 +86,22 @@ export const C = {
 /* ── Signal color map ── */
 type Signal = "Behov nå" | "Får fremtidig behov" | "Får kanskje behov" | "Ukjent om behov" | "Ikke aktuelt";
 
-export const SIGNAL_COLORS: Record<Signal, { bg: string; color: string }> = {
-  "Behov nå":             { bg: C.successBg,               color: C.success },
-  "Får fremtidig behov":  { bg: C.infoBg,                  color: C.info },
-  "Får kanskje behov":    { bg: C.warningBg,               color: C.warning },
-  "Ukjent om behov":      { bg: "rgba(0,0,0,0.04)",        color: C.textFaint },
-  "Ikke aktuelt":         { bg: C.dangerBg,                color: C.danger },
+export const SIGNAL_COLORS: Record<
+  Signal,
+  {
+    bg: string;
+    color: string;
+    border: string;
+    activeBg: string;
+    activeColor: string;
+    activeBorder: string;
+  }
+> = {
+  "Behov nå":             { bg: "#D1FAE5", color: "#065F46", border: "#A7F3D0", activeBg: "#10B981", activeColor: "#FFFFFF", activeBorder: "#10B981" },
+  "Får fremtidig behov":  { bg: "#DBEAFE", color: "#1E40AF", border: "#BFDBFE", activeBg: "#3B82F6", activeColor: "#FFFFFF", activeBorder: "#3B82F6" },
+  "Får kanskje behov":    { bg: "#FEF3C7", color: "#92400E", border: "#FDE68A", activeBg: "#F59E0B", activeColor: "#FFFFFF", activeBorder: "#F59E0B" },
+  "Ukjent om behov":      { bg: "#F3F4F6", color: "#4B5563", border: "#E5E7EB", activeBg: "#9CA3AF", activeColor: "#FFFFFF", activeBorder: "#9CA3AF" },
+  "Ikke aktuelt":         { bg: "#FEF2F2", color: "#B91C1C", border: "#FECACA", activeBg: "#F87171", activeColor: "#FFFFFF", activeBorder: "#F87171" },
 };
 
 /* ── Heat badge colors ── */

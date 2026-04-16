@@ -115,9 +115,9 @@ function getSignalActiveColors(label?: string) {
   if (!colors) return undefined;
 
   return {
-    background: colors.bg,
-    color: colors.color,
-    border: "1px solid transparent",
+    background: colors.activeBg,
+    color: colors.activeColor,
+    border: `1px solid ${colors.activeBorder}`,
     fontWeight: 600,
   };
 }
@@ -171,13 +171,13 @@ function StatusChip({
     ? {
         background: categoryColors.bg,
         color: categoryColors.color,
-        border: "1px solid transparent",
+        border: `1px solid ${categoryColors.border}`,
       }
     : tone === "signal"
       ? {
           background: C.accentBg,
           color: C.accent,
-          border: "1px solid transparent",
+          border: `1px solid ${C.filterActiveBorder}`,
         }
       : tone === "muted"
         ? {
@@ -1868,28 +1868,30 @@ function TaskRow({
           </DesignLabActionButton>
           <div className="ml-auto">
             {confirmDelete ? (
-              <span className="text-[0.75rem] animate-in fade-in duration-150">
-                <span className="text-destructive mr-1">Er du sikker?</span>
-                <button
+              <div className="flex items-center gap-2 text-[0.75rem] animate-in fade-in duration-150">
+                <span className="text-destructive">Er du sikker?</span>
+                <DesignLabActionButton
+                  variant="secondary"
                   onClick={() => {
                     onDelete(task.id);
                     setConfirmDelete(false);
                   }}
-                  className="text-destructive font-medium hover:underline mr-1"
+                  style={{ height: 32, fontSize: 12, color: C.danger }}
                 >
                   Ja, slett
-                </button>
-                <button onClick={() => setConfirmDelete(false)} className="text-muted-foreground hover:text-foreground">
+                </DesignLabActionButton>
+                <DesignLabActionButton variant="ghost" style={{ height: 32, fontSize: 12 }} onClick={() => setConfirmDelete(false)}>
                   Avbryt
-                </button>
-              </span>
+                </DesignLabActionButton>
+              </div>
             ) : (
-              <button
+              <DesignLabIconButton
+                size={32}
                 onClick={() => setConfirmDelete(true)}
-                className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                style={{ color: C.textSecondary }}
               >
                 <Trash2 className="h-3.5 w-3.5" />
-              </button>
+              </DesignLabIconButton>
             )}
           </div>
         </div>
@@ -2175,12 +2177,13 @@ function EmailRow({ email }: { email: any }) {
                 </p>
                 {rest && (
                   <>
-                    <button
-                      className="mt-2 text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors"
+                    <DesignLabActionButton
+                      variant="ghost"
+                      style={{ marginTop: 8, height: 32, fontSize: 12 }}
                       onClick={(e) => { e.stopPropagation(); setShowThread(!showThread); }}
                     >
                       {showThread ? "Skjul tråd ▴" : "Vis hele tråden ▾"}
-                    </button>
+                    </DesignLabActionButton>
                     {showThread && (
                       <div className="mt-2 bg-muted/30 rounded-lg p-3">
                         <p className="text-[0.8125rem] leading-relaxed whitespace-pre-wrap text-muted-foreground">
@@ -2351,31 +2354,30 @@ function ActivityRow({
               </DesignLabActionButton>
               <div className="ml-auto">
                 {confirmDelete ? (
-                  <span className="text-[0.75rem] animate-in fade-in duration-150">
-                    <span className="text-destructive mr-1">Er du sikker?</span>
-                    <button
+                  <div className="flex items-center gap-2 text-[0.75rem] animate-in fade-in duration-150">
+                    <span className="text-destructive">Er du sikker?</span>
+                    <DesignLabActionButton
+                      variant="secondary"
                       onClick={() => {
                         onDelete(activity.id);
                         setConfirmDelete(false);
                       }}
-                      className="text-destructive font-medium hover:underline mr-1"
+                      style={{ height: 32, fontSize: 12, color: C.danger }}
                     >
                       Ja, slett
-                    </button>
-                    <button
-                      onClick={() => setConfirmDelete(false)}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
+                    </DesignLabActionButton>
+                    <DesignLabActionButton variant="ghost" style={{ height: 32, fontSize: 12 }} onClick={() => setConfirmDelete(false)}>
                       Avbryt
-                    </button>
-                  </span>
+                    </DesignLabActionButton>
+                  </div>
                 ) : (
-                  <button
+                  <DesignLabIconButton
+                    size={32}
                     onClick={() => setConfirmDelete(true)}
-                    className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                    style={{ color: C.textSecondary }}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  </DesignLabIconButton>
                 )}
               </div>
             </div>
@@ -2390,25 +2392,27 @@ function ActivityRow({
               {confirmDelete && (
                 <div className="flex items-center gap-2 mt-1 text-[0.75rem] animate-in fade-in duration-150">
                   <span className="text-destructive">Slett denne aktiviteten?</span>
-                  <button
+                  <DesignLabActionButton
+                    variant="secondary"
                     onClick={(e) => {
                       e.stopPropagation();
                       onDelete(activity.id);
                       setConfirmDelete(false);
                     }}
-                    className="text-destructive font-medium hover:underline"
+                    style={{ height: 32, fontSize: 12, color: C.danger }}
                   >
                     Ja, slett
-                  </button>
-                  <button
+                  </DesignLabActionButton>
+                  <DesignLabActionButton
+                    variant="ghost"
+                    style={{ height: 32, fontSize: 12 }}
                     onClick={(e) => {
                       e.stopPropagation();
                       setConfirmDelete(false);
                     }}
-                    className="text-muted-foreground hover:text-foreground"
                   >
                     Avbryt
-                  </button>
+                  </DesignLabActionButton>
                 </div>
               )}
 

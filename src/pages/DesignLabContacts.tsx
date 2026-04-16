@@ -2561,7 +2561,7 @@ function SignalChip({ signal, size = "sm" }: { signal: Signal; size?: "sm" | "md
         fontWeight: 500,
         background: colors.bg,
         color: colors.color,
-        border: "1px solid transparent",
+        border: `1px solid ${colors.border}`,
       }}
     >
       {size === "sm" ? signalShortLabel(signal) : signal}
@@ -2585,9 +2585,9 @@ function getSignalActiveColors(signal?: Signal | null) {
   if (!signal) return undefined;
   const colors = SIGNAL_COLORS[signal];
   return {
-    background: colors.bg,
-    color: colors.color,
-    border: "1px solid transparent",
+    background: colors.activeBg,
+    color: colors.activeColor,
+    border: `1px solid ${colors.activeBorder}`,
     fontWeight: 600,
   };
 }

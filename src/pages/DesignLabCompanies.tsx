@@ -497,7 +497,7 @@ function SignalChip({ signal }: { signal: Signal }) {
         fontWeight: 500,
         background: colors.bg,
         color: colors.color,
-        border: "1px solid transparent",
+        border: `1px solid ${colors.border}`,
       }}
     >
       {shortLabels[signal]}
