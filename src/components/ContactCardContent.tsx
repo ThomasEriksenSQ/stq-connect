@@ -197,6 +197,50 @@ function StatusChip({
   );
 }
 
+function ReadonlySelectableTag({
+  active,
+  children,
+  activeColors,
+}: {
+  active: boolean;
+  children: ReactNode;
+  activeColors?: {
+    background?: string;
+    color?: string;
+    border?: string;
+    fontWeight?: number;
+  };
+}) {
+  const inactiveStyles = {
+    background: "transparent",
+    color: "#5C636E",
+    border: "1px solid #DDE0E7",
+    fontWeight: 500,
+  };
+  const activeStyles = {
+    background: activeColors?.background ?? "#E8ECF5",
+    color: activeColors?.color ?? "#1A1C1F",
+    border: activeColors?.border ?? "1px solid #C5CBE8",
+    fontWeight: activeColors?.fontWeight ?? 600,
+  };
+  const styles = active ? activeStyles : inactiveStyles;
+
+  return (
+    <span
+      className="inline-flex items-center whitespace-nowrap"
+      style={{
+        height: 28,
+        padding: "0 10px",
+        borderRadius: 6,
+        fontSize: 12,
+        ...styles,
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
 /* ── Helpers for storing/retrieving category in description ── */
 function buildDescriptionWithCategory(category: string, description: string): string {
   if (!category) return description;
@@ -249,6 +293,7 @@ interface DefaultHiddenConfig {
 interface ContactCardContentProps {
   contactId: string;
   editable?: boolean;
+  enableProfileEditMode?: boolean;
   onOpenCompany?: (companyId: string) => void;
   onNavigateToFullPage?: () => void;
   defaultHidden?: DefaultHiddenConfig;
@@ -337,9 +382,21 @@ const DATE_CHIPS = [
   { label: "1 år", fn: () => addYears(new Date(), 1) },
 ];
 
+const MODERN_CHECKBOX_CLASS =
+  "h-4 w-4 rounded-[4px] border-[#DDE0E7] bg-white text-white " +
+  "hover:border-[#C5CBE8] hover:bg-[#F8F9FB] " +
+  "focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#E8ECF5] focus-visible:outline-offset-2 " +
+  "data-[state=checked]:border-transparent data-[state=checked]:bg-[#5E6AD2] data-[state=checked]:text-white";
+
+const MODERN_CHECKBOX_LABEL_CLASS = "text-[12px] text-[#5C636E]";
+
+const MODERN_CHECKBOX_ROW_CLASS =
+  "flex w-fit items-center gap-1.5 cursor-pointer select-none rounded-[6px] px-2 py-1 transition-colors hover:bg-[#F8F9FB]";
+
 export function ContactCardContent({
   contactId,
   editable = false,
+  enableProfileEditMode = false,
   onOpenCompany,
   onNavigateToFullPage,
   defaultHidden,
@@ -372,8 +429,9 @@ export function ContactCardContent({
   const [matchSourceFilter, setMatchSourceFilter] = useState<"Alle" | "Ansatte" | "Eksterne">("Alle");
   const [matchUpdatedAt, setMatchUpdatedAt] = useState<string | null>(null);
   const [showTechDna, setShowTechDna] = useState(!defaultHidden?.techDna);
-  const [showNotes, setShowNotes] = useState(!defaultHidden?.notes);
+  const [showNotes, setShowNotes] = useState(false);
   const [showConsultantMatch, setShowConsultantMatch] = useState(!defaultHidden?.consultantMatch);
+  const [profileEditMode, setProfileEditMode] = useState(false);
   const notifyDataChanged = () => {
     onDataChanged?.();
   };
@@ -465,6 +523,11 @@ export function ContactCardContent({
     },
     enabled: !!contactId,
   });
+
+  useEffect(() => {
+    if (!contact) return;
+    setShowNotes(Boolean(contact.notes?.trim()));
+  }, [contactId, contact?.notes]);
 
   const updateMutation = useMutation({
     mutationFn: async (updates: Record<string, any>) => {
@@ -744,6 +807,14 @@ export function ContactCardContent({
     updateMutation.mutate({ [field]: value || null });
   };
 
+  const exitProfileEditMode = () => {
+    setProfileEditMode(false);
+    setChangingCompany(false);
+    setCompanySearch("");
+    setCompanyResults([]);
+    setEditingNotes(false);
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast("Kopiert!", { duration: 1500 });
@@ -769,13 +840,25 @@ export function ContactCardContent({
         .filter(Boolean)
     : [];
   const showAvdeling = companyLocations.length > 1;
+  const canEditProfile = editable && (!enableProfileEditMode || profileEditMode);
+  const showProfileEditMenu = editable && enableProfileEditMode;
+  const effectiveSignal = getEffectiveSignal(
+    activities.map((a) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+    tasks.map((t) => ({
+      created_at: t.created_at,
+      title: t.title,
+      description: t.description,
+      due_date: t.due_date,
+    })),
+  );
+  const signalCat = effectiveSignal ? CATEGORIES.find((c) => c.label === effectiveSignal) : null;
 
   return (
     <div>
       {/* ── ZONE A: Contact Header ── */}
       <div className="mb-5" style={headerPaddingTop ? { paddingTop: headerPaddingTop } : undefined}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          {editable ? (
+          {canEditProfile ? (
             <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">
               <InlineField
                 value={`${contact.first_name} ${contact.last_name}`}
@@ -795,49 +878,43 @@ export function ContactCardContent({
           )}
           {/* Owner badge */}
           <div className="flex items-center gap-2 flex-shrink-0 sm:ml-auto">
+            {showProfileEditMenu && profileEditMode && (
+              <DesignLabActionButton variant="ghost" onClick={exitProfileEditMode}>
+                Avslutt redigering
+              </DesignLabActionButton>
+            )}
             {/* Signal badge */}
-            {editable &&
-              (() => {
-                const effectiveSignal = getEffectiveSignal(
-                  activities.map((a) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
-                  tasks.map((t) => ({
-                    created_at: t.created_at,
-                    title: t.title,
-                    description: t.description,
-                    due_date: t.due_date,
-                  })),
-                );
-                const signalCat = effectiveSignal ? CATEGORIES.find((c) => c.label === effectiveSignal) : null;
-                return (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <DesignLabFilterButton
-                        active={Boolean(signalCat)}
-                        className="whitespace-nowrap"
-                        activeColors={signalCat ? getCategoryPickerActiveColors(signalCat.label) : undefined}
-                      >
-                        <span>{signalCat ? signalCat.label : "Legg til signal"}</span>
-                        <ChevronDown className="h-3 w-3" />
-                      </DesignLabFilterButton>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {CATEGORIES.map((cat) => (
-                        <DropdownMenuItem
-                          key={cat.label}
-                          onClick={() => {
-                            updateSignalMutation.mutate(cat.label);
-                          }}
-                        >
-                          <StatusChip category={cat.label}>
-                            {cat.label}
-                          </StatusChip>
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                );
-              })()}
-            {editable && (
+            {canEditProfile ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <DesignLabFilterButton
+                    active={Boolean(signalCat)}
+                    className="whitespace-nowrap"
+                    activeColors={signalCat ? getCategoryPickerActiveColors(signalCat.label) : undefined}
+                  >
+                    <span>{signalCat ? signalCat.label : "Legg til signal"}</span>
+                    <ChevronDown className="h-3 w-3" />
+                  </DesignLabFilterButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {CATEGORIES.map((cat) => (
+                    <DropdownMenuItem
+                      key={cat.label}
+                      onClick={() => {
+                        updateSignalMutation.mutate(cat.label);
+                      }}
+                    >
+                      <StatusChip category={cat.label}>
+                        {cat.label}
+                      </StatusChip>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : signalCat ? (
+              <StatusChip category={signalCat.label}>{signalCat.label}</StatusChip>
+            ) : null}
+            {canEditProfile ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <DesignLabFilterButton
@@ -859,14 +936,16 @@ export function ContactCardContent({
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-            )}
+            ) : contact.owner_id && profileMapFull[contact.owner_id] ? (
+              <StatusChip tone="signal">{profileMapFull[contact.owner_id]}</StatusChip>
+            ) : null}
             {!editable && onNavigateToFullPage && (
               <DesignLabIconButton size={32} onClick={onNavigateToFullPage}>
                 <ExternalLink className="h-3.5 w-3.5" />
               </DesignLabIconButton>
             )}
             {/* 3-dot menu for Design Lab */}
-            {defaultHidden && (
+            {showProfileEditMenu && (
               <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <DesignLabIconButton size={32}>
@@ -875,31 +954,36 @@ export function ContactCardContent({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" sideOffset={4}>
                   <DropdownMenuItem onClick={() => {
-                    const nameEl = document.querySelector('[data-contact-name-field]') as HTMLElement;
-                    nameEl?.click();
+                    if (profileEditMode) exitProfileEditMode();
+                    else setProfileEditMode(true);
                   }}>
-                    <Pencil className="h-3.5 w-3.5 mr-2" /> Rediger profil
+                    <Pencil className="h-3.5 w-3.5 mr-2" /> {profileEditMode ? "Avslutt redigering" : "Rediger profil"}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => {
-                    setShowConsultantMatch(true);
-                    handleFinnKonsulent();
-                  }}>
-                    <UserSearch className="h-3.5 w-3.5 mr-2" /> Finn konsulent
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => {
-                    setShowNotes((prev) => !prev);
-                    if (!showNotes && !contact.notes) {
-                      setNotesDraft("");
-                      setTimeout(() => setEditingNotes(true), 50);
-                    }
-                  }}>
-                    <StickyNote className="h-3.5 w-3.5 mr-2" />
-                    {showNotes ? "Skjul notat" : contact.notes ? "Vis notat" : "Legg til notat"}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowTechDna((prev) => !prev)}>
-                    {showTechDna ? <EyeOff className="h-3.5 w-3.5 mr-2" /> : <Eye className="h-3.5 w-3.5 mr-2" />}
-                    {showTechDna ? "Skjul teknisk DNA" : "Vis teknisk DNA"}
-                  </DropdownMenuItem>
+                  {defaultHidden && (
+                    <>
+                      <DropdownMenuItem onClick={() => {
+                        setShowConsultantMatch(true);
+                        handleFinnKonsulent();
+                      }}>
+                        <UserSearch className="h-3.5 w-3.5 mr-2" /> Finn konsulent
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => {
+                        setShowNotes((prev) => !prev);
+                        if (!showNotes && !contact.notes) {
+                          setProfileEditMode(true);
+                          setNotesDraft("");
+                          setTimeout(() => setEditingNotes(true), 50);
+                        }
+                      }}>
+                        <StickyNote className="h-3.5 w-3.5 mr-2" />
+                        {showNotes ? "Skjul notat" : contact.notes ? "Vis notat" : "Legg til notat"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setShowTechDna((prev) => !prev)}>
+                        {showTechDna ? <EyeOff className="h-3.5 w-3.5 mr-2" /> : <Eye className="h-3.5 w-3.5 mr-2" />}
+                        {showTechDna ? "Skjul teknisk DNA" : "Vis teknisk DNA"}
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
@@ -916,7 +1000,7 @@ export function ContactCardContent({
               >
                 {companyName}
               </button>
-              {editable && (
+              {canEditProfile && (
                 <button
                   onClick={() => {
                     setChangingCompany(true);
@@ -931,7 +1015,7 @@ export function ContactCardContent({
               )}
             </span>
           )}
-          {!companyName && editable && (
+          {!companyName && canEditProfile && (
             <button
               onClick={() => {
                 setChangingCompany(true);
@@ -947,8 +1031,10 @@ export function ContactCardContent({
           {(() => {
             const contactLocations: string[] = (contact as any).locations || [];
             if (companyLocations.length === 0) return null;
-            if (defaultHidden?.locationsIfEmpty && contactLocations.length === 0) return null;
-            const visibleLocations = defaultHidden
+            if (!canEditProfile && defaultHidden?.locationsIfEmpty && contactLocations.length === 0) return null;
+            const visibleLocations = canEditProfile
+              ? companyLocations
+              : defaultHidden
               ? companyLocations.filter((loc) => contactLocations.includes(loc))
               : companyLocations;
             if (visibleLocations.length === 0) return null;
@@ -958,7 +1044,7 @@ export function ContactCardContent({
                   <MapPin className="h-3 w-3 text-muted-foreground/50 shrink-0" />
                   {visibleLocations.map((loc) => {
                     const isSelected = contactLocations.includes(loc);
-                    return (
+                    return canEditProfile ? (
                       <button
                         key={loc}
                         onClick={() => {
@@ -976,6 +1062,16 @@ export function ContactCardContent({
                       >
                         {loc}
                       </button>
+                    ) : (
+                      <span
+                        key={loc}
+                        className={cn(
+                          "text-[0.8125rem] px-1.5 py-0 rounded",
+                          isSelected ? "text-foreground font-medium" : "text-muted-foreground/60",
+                        )}
+                      >
+                        {loc}
+                      </span>
                     );
                   })}
                 </div>
@@ -988,10 +1084,10 @@ export function ContactCardContent({
             </>
           )}
           {/* Avdeling · Stilling — same line */}
-          {showAvdeling && !(defaultHidden && !(contact as any).department) && (
+          {(showAvdeling || canEditProfile) && !(defaultHidden && !(contact as any).department && !canEditProfile) && (
             <>
               <span className="text-muted-foreground/40">·</span>
-              {editable ? (
+              {canEditProfile ? (
                 <InlineField
                   value={(contact as any).department || ""}
                   onSave={updateField("department")}
@@ -1003,10 +1099,10 @@ export function ContactCardContent({
               )}
             </>
           )}
-          {(contact.title || editable) && (
+          {(contact.title || canEditProfile) && (
             <>
               <span className="text-muted-foreground/40">·</span>
-              {editable ? (
+              {canEditProfile ? (
                 <InlineField
                   value={contact.title || ""}
                   onSave={updateField("title")}
@@ -1032,13 +1128,13 @@ export function ContactCardContent({
               className="inline-flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             >
               <Phone className="h-3.5 w-3.5" />
-              {editable ? (
+              {canEditProfile ? (
                 <InlineField value={contact.phone} onSave={updateField("phone")} className="text-[0.8125rem]" />
               ) : (
                 contact.phone
               )}
             </a>
-          ) : editable ? (
+          ) : canEditProfile ? (
             <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground/40 hover:text-muted-foreground transition-colors">
               <Phone className="h-3.5 w-3.5" />
               <InlineField value="" onSave={updateField("phone")} placeholder="Telefon" className="text-[0.8125rem]" />
@@ -1054,19 +1150,19 @@ export function ContactCardContent({
               className="inline-flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             >
               <Mail className="h-3.5 w-3.5" />
-              {editable ? (
+              {canEditProfile ? (
                 <InlineField value={contact.email} onSave={updateField("email")} className="text-[0.8125rem]" />
               ) : (
                 contact.email
               )}
             </a>
-          ) : editable ? (
+          ) : canEditProfile ? (
             <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground/40 hover:text-muted-foreground transition-colors">
               <Mail className="h-3.5 w-3.5" />
               <InlineField value="" onSave={updateField("email")} placeholder="E-post" className="text-[0.8125rem]" />
             </span>
           ) : null}
-          {contact.linkedin ? (
+          {contact.linkedin && !canEditProfile ? (
             <a
               href={contact.linkedin}
               target="_blank"
@@ -1076,80 +1172,111 @@ export function ContactCardContent({
               <Linkedin className="h-3.5 w-3.5" />
               LinkedIn
             </a>
-          ) : editable && !(defaultHidden?.linkedinIfEmpty) ? (
+          ) : canEditProfile ? (
             <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground/40 hover:text-muted-foreground transition-colors">
               <Linkedin className="h-3.5 w-3.5" />
               <InlineField
-                value=""
+                value={contact.linkedin || ""}
                 onSave={updateField("linkedin")}
                 placeholder="LinkedIn"
                 className="text-[0.8125rem]"
               />
             </span>
-          ) : null}
+          ) : editable && !(defaultHidden?.linkedinIfEmpty) ? null : null}
         </div>
         {/* Status-piller */}
         <div className="flex items-center gap-2 flex-wrap mt-2 pt-2 border-t border-border/40">
           {/* CV-Epost */}
-          <DesignLabFilterButton
-            onClick={() => {
-              const isUnsubscribed = (contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned";
-              if ((contact as any).cv_email && isUnsubscribed) {
-                toast.info("Kontakten har avmeldt seg via Mailchimp og kan ikke re-abonneres.");
-                return;
-              }
-              if (!contact.cv_email && !contactHasEmail(contact as any)) {
-                toast.error(CONTACT_CV_EMAIL_REQUIRED_MESSAGE);
-                return;
-              }
-              const newVal = !(contact as any).cv_email;
-              updateMutation.mutate({ cv_email: newVal }, {
-                onSuccess: () => {
-                  supabase.functions.invoke("mailchimp-sync", {
-                    body: { action: "sync-contact", contactId },
-                  }).then(({ data, error: mcErr }) => {
-                    if (mcErr) {
-                      console.error("Mailchimp sync feilet:", mcErr);
-                      toast.error("Mailchimp-synk feilet");
-                    } else {
-                      toast.success(`Mailchimp: ${data?.status || "synkronisert"}`);
-                    }
-                  });
-                },
-              });
-            }}
-            active={(contact as any).cv_email && !((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned")}
-            activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
-            inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
-            inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
-            style={((contact as any).cv_email && ((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned"))
-              ? { color: C.textFaint }
-              : undefined}
-          >
-            {(contact as any).cv_email && ((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned")
-              ? "CV-Epost ✗"
-              : (contact as any).cv_email ? "✓ CV-Epost" : "CV-Epost"}
-          </DesignLabFilterButton>
+          {canEditProfile ? (
+            <DesignLabFilterButton
+              onClick={() => {
+                const isUnsubscribed = (contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned";
+                if ((contact as any).cv_email && isUnsubscribed) {
+                  toast.info("Kontakten har avmeldt seg via Mailchimp og kan ikke re-abonneres.");
+                  return;
+                }
+                if (!contact.cv_email && !contactHasEmail(contact as any)) {
+                  toast.error(CONTACT_CV_EMAIL_REQUIRED_MESSAGE);
+                  return;
+                }
+                const newVal = !(contact as any).cv_email;
+                updateMutation.mutate({ cv_email: newVal }, {
+                  onSuccess: () => {
+                    supabase.functions.invoke("mailchimp-sync", {
+                      body: { action: "sync-contact", contactId },
+                    }).then(({ data, error: mcErr }) => {
+                      if (mcErr) {
+                        console.error("Mailchimp sync feilet:", mcErr);
+                        toast.error("Mailchimp-synk feilet");
+                      } else {
+                        toast.success(`Mailchimp: ${data?.status || "synkronisert"}`);
+                      }
+                    });
+                  },
+                });
+              }}
+              active={(contact as any).cv_email && !((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned")}
+              activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+              inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+              inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+              style={((contact as any).cv_email && ((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned"))
+                ? { color: C.textFaint }
+                : undefined}
+            >
+              {(contact as any).cv_email && ((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned")
+                ? "CV-Epost ✗"
+                : (contact as any).cv_email ? "✓ CV-Epost" : "CV-Epost"}
+            </DesignLabFilterButton>
+          ) : (
+            <ReadonlySelectableTag
+              active={Boolean((contact as any).cv_email && !((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned"))}
+              activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+            >
+              {(contact as any).cv_email && ((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned")
+                ? "CV-Epost ✗"
+                : (contact as any).cv_email ? "✓ CV-Epost" : "CV-Epost"}
+            </ReadonlySelectableTag>
+          )}
           {/* Innkjøper */}
-          <DesignLabFilterButton
-            onClick={() => updateMutation.mutate({ call_list: !(contact as any).call_list })}
-            active={Boolean((contact as any).call_list)}
-            activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
-            inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
-            inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
-          >
-            {(contact as any).call_list ? "✓ Innkjøper" : "Innkjøper"}
-          </DesignLabFilterButton>
+          {canEditProfile ? (
+            <DesignLabFilterButton
+              onClick={() => updateMutation.mutate({ call_list: !(contact as any).call_list })}
+              active={Boolean((contact as any).call_list)}
+              activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+              inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+              inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+            >
+              {(contact as any).call_list ? "✓ Innkjøper" : "Innkjøper"}
+            </DesignLabFilterButton>
+          ) : (
+            <ReadonlySelectableTag
+              active={Boolean((contact as any).call_list)}
+              activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+            >
+              {(contact as any).call_list ? "✓ Innkjøper" : "Innkjøper"}
+            </ReadonlySelectableTag>
+          )}
           {/* Ikke aktuell å kontakte */}
-          <DesignLabFilterButton
-            onClick={() => updateMutation.mutate({ ikke_aktuell_kontakt: !(contact as any).ikke_aktuell_kontakt })}
-            active={Boolean((contact as any).ikke_aktuell_kontakt)}
-            activeColors={getCategoryPickerActiveColors("Ikke aktuelt")}
-          >
-            {(contact as any).ikke_aktuell_kontakt
-              ? "✕ Ikke relevant person å kontakte igjen"
-              : "Ikke relevant person å kontakte igjen"}
-          </DesignLabFilterButton>
+          {canEditProfile ? (
+            <DesignLabFilterButton
+              onClick={() => updateMutation.mutate({ ikke_aktuell_kontakt: !(contact as any).ikke_aktuell_kontakt })}
+              active={Boolean((contact as any).ikke_aktuell_kontakt)}
+              activeColors={getCategoryPickerActiveColors("Ikke aktuelt")}
+            >
+              {(contact as any).ikke_aktuell_kontakt
+                ? "✕ Ikke relevant person å kontakte igjen"
+                : "Ikke relevant person å kontakte igjen"}
+            </DesignLabFilterButton>
+          ) : (
+            <ReadonlySelectableTag
+              active={Boolean((contact as any).ikke_aktuell_kontakt)}
+              activeColors={getCategoryPickerActiveColors("Ikke aktuelt")}
+            >
+              {(contact as any).ikke_aktuell_kontakt
+                ? "✕ Ikke relevant person å kontakte igjen"
+                : "Ikke relevant person å kontakte igjen"}
+            </ReadonlySelectableTag>
+          )}
         </div>
         {changingCompany && (
           <div className="relative mt-1.5">
@@ -1290,7 +1417,7 @@ export function ContactCardContent({
         )}
 
         {/* ── Notat ── */}
-        {(!defaultHidden?.notes || showNotes) && (
+        {showNotes && (
         <div className="mb-5">
           {editingNotes ? (
             <div>
@@ -1315,6 +1442,7 @@ export function ContactCardContent({
                   style={{ height: 32, fontSize: 12 }}
                   onClick={() => {
                     updateField("notes")(notesDraft);
+                    setShowNotes(Boolean(notesDraft.trim()));
                     setEditingNotes(false);
                   }}
                 >
@@ -1326,13 +1454,27 @@ export function ContactCardContent({
               </div>
             </div>
           ) : contact.notes ? (
-            <div className="group relative">
-              <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                {contact.notes}
-              </p>
-              {editable}
-            </div>
-          ) : editable ? (
+            canEditProfile ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setNotesDraft(contact.notes || "");
+                  setEditingNotes(true);
+                }}
+                className="group relative block w-full text-left"
+              >
+                <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap transition-colors group-hover:text-foreground/80">
+                  {contact.notes}
+                </p>
+              </button>
+            ) : (
+              <div className="group relative">
+                <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                  {contact.notes}
+                </p>
+              </div>
+            )
+          ) : canEditProfile ? (
             <button
               onClick={() => {
                 setNotesDraft("");
@@ -1492,21 +1634,21 @@ export function ContactCardContent({
 
                 {activeForm === "task" && (
                   <>
-                    <label className="flex items-center gap-2 cursor-pointer select-none mt-2">
+                    <label className={`${MODERN_CHECKBOX_ROW_CLASS} mt-2`}>
                       <Checkbox
                         checked={formEmailNotify}
                         onCheckedChange={(v) => setFormEmailNotify(!!v)}
-                        className="h-4 w-4"
+                        className={MODERN_CHECKBOX_CLASS}
                       />
-                      <span className="text-[0.8125rem] text-foreground">Epostvarsling ved forfall</span>
+                      <span className={MODERN_CHECKBOX_LABEL_CLASS}>Epostvarsling ved forfall</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <label className={MODERN_CHECKBOX_ROW_CLASS}>
                       <Checkbox
                         checked={formCalendarSync}
                         onCheckedChange={(v) => setFormCalendarSync(!!v)}
-                        className="h-4 w-4"
+                        className={MODERN_CHECKBOX_CLASS}
                       />
-                      <span className="text-[0.8125rem] text-foreground">Legg til i Outlook-kalender</span>
+                      <span className={MODERN_CHECKBOX_LABEL_CLASS}>Legg til i Outlook-kalender</span>
                     </label>
                   </>
                 )}
@@ -1664,7 +1806,7 @@ export function ContactCardContent({
         )}
 
         {/* ── Aktiviteter ── */}
-        <div className="mt-8">
+        <div className="mt-5">
           <ActivityTimeline
             activities={activities}
             profileMap={profileMapFull}
@@ -1839,13 +1981,13 @@ function TaskRow({
             )}
           </div>
         </div>
-        <label className="flex items-center gap-2 cursor-pointer select-none">
+        <label className={MODERN_CHECKBOX_ROW_CLASS}>
           <Checkbox
             checked={editEmailNotify}
             onCheckedChange={(v) => setEditEmailNotify(!!v)}
-            className="h-4 w-4"
+            className={MODERN_CHECKBOX_CLASS}
           />
-          <span className="text-[0.8125rem] text-foreground">Epostvarsling ved forfall</span>
+          <span className={MODERN_CHECKBOX_LABEL_CLASS}>Epostvarsling ved forfall</span>
         </label>
         {task.calendar_synced ? (
           <div className="flex items-center gap-2">
@@ -2039,7 +2181,7 @@ function ActivityTimeline({
     return (
       <div>
         <div className="flex items-center justify-between">
-          <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+          <h3 className="text-[12px] font-medium text-[#5C636E]">
             Aktiviteter · 0
           </h3>
           {hasEmails && (
@@ -2060,8 +2202,8 @@ function ActivityTimeline({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4 mt-8">
-        <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+      <div className="flex items-center justify-between mb-3 mt-5">
+        <h3 className="text-[12px] font-medium text-[#5C636E]">
           Aktiviteter · {totalCount}
         </h3>
         {hasEmails && (

@@ -14,7 +14,7 @@ const ContactDetail = () => {
         <ArrowLeft className="h-3.5 w-3.5 stroke-[1.5]" />
         Tilbake
       </button>
-      <ContactCardContent contactId={id} editable />
+      <ContactCardContent contactId={id} editable enableProfileEditMode />
     </div>
   );
 };

@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { C } from "@/components/designlab/theme";
 import { usePersistentState } from "@/hooks/usePersistentState";
+import { SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
 
 /* ═══ NAV ITEMS ═══ */
 
@@ -35,13 +36,16 @@ interface DesignLabSidebarProps {
 
 export function DesignLabSidebar({ navigate, signOut, user, activePath }: DesignLabSidebarProps) {
   const [collapsed, setCollapsed] = usePersistentState("dl-sidebar-collapsed", false);
+  const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const initials = user?.email ? user.email.split("@")[0].slice(0, 2).toUpperCase() : "??";
+  const scale = SCALE_MAP[textSize];
+  const px = (value: number) => Math.round(value * scale * 100) / 100;
 
   const isActive = (href: string) => href === activePath;
 
   return (
     <aside
-      className="flex flex-col shrink-0 overflow-hidden"
+      className="flex h-screen min-h-0 flex-col shrink-0 overflow-hidden"
       style={{
         width: collapsed ? 48 : 220,
         transition: "width 200ms ease",
@@ -50,47 +54,53 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
       }}
     >
       {/* Logo */}
-      <div className="flex items-center gap-2 shrink-0" style={{ height: 40, paddingLeft: collapsed ? 13 : 16 }}>
+      <div className="flex items-center gap-2 shrink-0" style={{ height: px(40), paddingLeft: collapsed ? px(13) : px(16) }}>
         <div
           className="flex items-center justify-center rounded shrink-0"
-          style={{ width: 22, height: 22, background: C.accent, color: C.onAccent, fontSize: 11, fontWeight: 600 }}
+          style={{ width: px(22), height: px(22), background: C.accent, color: C.onAccent, fontSize: px(11), fontWeight: 600 }}
         >
           S
         </div>
         {!collapsed && (
-          <span style={{ fontSize: 14, fontWeight: 600, color: C.text, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>
+          <span style={{ fontSize: px(14), fontWeight: 600, color: C.text, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>
             STACQ
           </span>
         )}
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-1.5 space-y-4 pb-3 pt-1" style={{ paddingInline: collapsed ? 6 : 12 }}>
-        <NavGroup items={NAV_MAIN} navigate={navigate} isActive={isActive} collapsed={collapsed} />
+      <nav
+        className="flex-1 overflow-y-auto px-1.5 space-y-4 pb-3 pt-1"
+        style={{ minHeight: 0, paddingInline: collapsed ? px(6) : px(12), paddingTop: px(4), paddingBottom: px(12) }}
+      >
+        <NavGroup items={NAV_MAIN} navigate={navigate} isActive={isActive} collapsed={collapsed} scale={scale} />
         <div>
           {!collapsed && (
-            <p className="px-2 pb-1.5 pt-1" style={{ fontSize: 11, fontWeight: 500, color: C.textFaint, whiteSpace: "nowrap" }}>
+            <p className="px-2 pb-1.5 pt-1" style={{ fontSize: px(11), fontWeight: 500, color: C.textFaint, whiteSpace: "nowrap" }}>
               STACQ
             </p>
           )}
-          <NavGroup items={NAV_STACQ} navigate={navigate} isActive={isActive} collapsed={collapsed} />
+          <NavGroup items={NAV_STACQ} navigate={navigate} isActive={isActive} collapsed={collapsed} scale={scale} />
         </div>
       </nav>
 
       {/* Footer */}
-      <div className="shrink-0 space-y-0.5" style={{ borderTop: `1px solid ${C.border}`, padding: collapsed ? "8px 6px" : "8px 12px" }}>
-        <FooterBtn icon={Settings} label="Innstillinger" onClick={() => navigate("/innstillinger")} collapsed={collapsed} />
-        <FooterBtn icon={LogOut} label="Logg ut" onClick={signOut} muted collapsed={collapsed} />
+      <div
+        className="mt-auto shrink-0 space-y-0.5"
+        style={{ borderTop: `1px solid ${C.border}`, padding: `${px(8)}px ${collapsed ? px(6) : px(12)}px` }}
+      >
+        <FooterBtn icon={Settings} label="Innstillinger" onClick={() => navigate("/innstillinger")} collapsed={collapsed} scale={scale} />
+        <FooterBtn icon={LogOut} label="Logg ut" onClick={signOut} muted collapsed={collapsed} scale={scale} />
 
         {user && !collapsed && (
           <div className="flex items-center gap-2 px-2 pt-2 pb-1">
             <div
               className="flex items-center justify-center rounded-full shrink-0"
-              style={{ width: 24, height: 24, background: C.accentBg, color: C.accent, fontSize: 10, fontWeight: 600 }}
+              style={{ width: px(24), height: px(24), background: C.accentBg, color: C.accent, fontSize: px(10), fontWeight: 600 }}
             >
               {initials}
             </div>
-            <span className="truncate" style={{ fontSize: 12, color: C.textGhost }}>{user.email}</span>
+            <span className="truncate" style={{ fontSize: px(12), color: C.textGhost }}>{user.email}</span>
           </div>
         )}
 
@@ -102,21 +112,21 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
           style={{
             ["--dl-focus-ring" as string]: C.borderFocus,
             ["--dl-focus-offset" as string]: C.sidebarBg,
-            height: 28,
-            borderRadius: 6,
+            height: px(28),
+            borderRadius: px(6),
             justifyContent: collapsed ? "center" : "flex-start",
-            paddingLeft: collapsed ? 0 : 8,
-            gap: 8,
+            paddingLeft: collapsed ? 0 : px(8),
+            gap: px(8),
             color: C.textFaint,
           }}
           onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverSubtle; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
         >
           {collapsed
-            ? <ChevronsRight style={{ width: 14, height: 14, strokeWidth: 1.5 }} />
-            : <ChevronsLeft style={{ width: 14, height: 14, strokeWidth: 1.5 }} />
+            ? <ChevronsRight style={{ width: px(14), height: px(14), strokeWidth: 1.5 }} />
+            : <ChevronsLeft style={{ width: px(14), height: px(14), strokeWidth: 1.5 }} />
           }
-          {!collapsed && <span style={{ fontSize: 12, whiteSpace: "nowrap" }}>Skjul</span>}
+          {!collapsed && <span style={{ fontSize: px(12), whiteSpace: "nowrap" }}>Skjul</span>}
         </button>
       </div>
     </aside>
@@ -130,12 +140,15 @@ function NavGroup({
   navigate,
   isActive,
   collapsed,
+  scale,
 }: {
   items: typeof NAV_MAIN;
   navigate: (p: string) => void;
   isActive: (href: string) => boolean;
   collapsed: boolean;
+  scale: number;
 }) {
+  const px = (value: number) => Math.round(value * scale * 100) / 100;
   return (
     <div className="space-y-px">
       {items.map((item) => {
@@ -149,23 +162,23 @@ function NavGroup({
             style={{
               ["--dl-focus-ring" as string]: C.borderFocus,
               ["--dl-focus-offset" as string]: C.sidebarBg,
-              fontSize: 13,
+              fontSize: px(13),
               fontWeight: active ? 500 : 400,
               color: active ? C.text : C.textMuted,
               background: active ? C.filterActiveBg : "transparent",
-              borderRadius: 6,
-              height: 28,
-              gap: 8,
+              borderRadius: px(6),
+              height: px(28),
+              gap: px(8),
               justifyContent: collapsed ? "center" : "flex-start",
-              paddingLeft: collapsed ? 0 : 8,
-              paddingRight: collapsed ? 0 : 8,
+              paddingLeft: collapsed ? 0 : px(8),
+              paddingRight: collapsed ? 0 : px(8),
               whiteSpace: "nowrap",
               overflow: "hidden",
             }}
             onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = C.hoverSubtle; e.currentTarget.style.color = C.text; } }}
             onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = C.textMuted; } }}
           >
-            <item.icon style={{ width: 14, height: 14, strokeWidth: 1.5, color: active ? C.text : C.textFaint, flexShrink: 0 }} />
+            <item.icon style={{ width: px(14), height: px(14), strokeWidth: 1.5, color: active ? C.text : C.textFaint, flexShrink: 0 }} />
             {!collapsed && item.label}
           </button>
         );
@@ -180,13 +193,16 @@ function FooterBtn({
   onClick,
   muted,
   collapsed,
+  scale,
 }: {
   icon: any;
   label: string;
   onClick: () => void;
   muted?: boolean;
   collapsed: boolean;
+  scale: number;
 }) {
+  const px = (value: number) => Math.round(value * scale * 100) / 100;
   return (
     <button
       onClick={onClick}
@@ -195,22 +211,22 @@ function FooterBtn({
       style={{
         ["--dl-focus-ring" as string]: C.borderFocus,
         ["--dl-focus-offset" as string]: C.sidebarBg,
-        fontSize: 13,
+        fontSize: px(13),
         fontWeight: 400,
         color: muted ? C.textGhost : C.textMuted,
-        borderRadius: 6,
-        height: 28,
-        gap: 8,
+        borderRadius: px(6),
+        height: px(28),
+        gap: px(8),
         justifyContent: collapsed ? "center" : "flex-start",
-        paddingLeft: collapsed ? 0 : 8,
-        paddingRight: collapsed ? 0 : 8,
+        paddingLeft: collapsed ? 0 : px(8),
+        paddingRight: collapsed ? 0 : px(8),
         whiteSpace: "nowrap",
         overflow: "hidden",
       }}
       onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverSubtle; e.currentTarget.style.color = C.text; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = muted ? C.textGhost : C.textMuted; }}
     >
-      <Icon style={{ width: 14, height: 14, strokeWidth: 1.5, color: C.textFaint, flexShrink: 0 }} />
+      <Icon style={{ width: px(14), height: px(14), strokeWidth: 1.5, color: C.textFaint, flexShrink: 0 }} />
       {!collapsed && label}
     </button>
   );

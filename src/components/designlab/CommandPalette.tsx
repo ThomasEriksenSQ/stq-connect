@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Search, Users, Building2 } from "lucide-react";
 
 import { C } from "@/components/designlab/theme";
+import { SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES
@@ -37,6 +38,7 @@ interface SelectedContact {
 interface CommandPaletteProps {
   open: boolean;
   onClose: () => void;
+  textSize: TextSize;
   contacts: ContactItem[];
   companies: CompanyItem[];
   selectedContact: SelectedContact | null;
@@ -64,6 +66,7 @@ interface PaletteItem {
 export function CommandPalette({
   open,
   onClose,
+  textSize,
   contacts,
   companies,
   selectedContact,
@@ -209,6 +212,7 @@ export function CommandPalette({
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
+          zoom: SCALE_MAP[textSize],
         }}
         onKeyDown={handleKeyDown}
       >
@@ -238,13 +242,13 @@ export function CommandPalette({
         {/* Results */}
         <div ref={listRef} style={{ flex: 1, overflowY: "auto", padding: "4px 0 0" }}>
           {displaySections.length === 0 ? (
-            <div style={{ padding: "24px 16px", fontSize: 13, color: "#B0B7C3" }}>
+            <div style={{ padding: "24px 16px", fontSize: 13, color: "#8C929C" }}>
               Ingen resultater for «{query}»
             </div>
           ) : (
             displaySections.map((section) => (
               <div key={section.label}>
-                <div style={{ fontSize: 11, fontWeight: 500, color: "#B0B7C3", padding: "8px 12px 3px", letterSpacing: 0 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#8C929C", padding: "8px 12px 4px", letterSpacing: 0 }}>
                   {section.label}
                 </div>
                 {section.items.map((item) => {
@@ -257,7 +261,7 @@ export function CommandPalette({
                       onClick={item.action}
                       onMouseEnter={() => setActiveIdx(item.flatIdx)}
                       style={{
-                        height: 30,
+                        height: 28,
                         padding: "0 8px",
                         margin: "1px 6px",
                         borderRadius: 6,
@@ -268,13 +272,16 @@ export function CommandPalette({
                         fontWeight: 400,
                         color: "#1A1C1F",
                         cursor: "pointer",
-                        background: isActive ? "#ECEEF5" : "transparent",
+                        background: isActive ? "#F3F5F9" : "#FFFFFF",
+                        transition: "background 120ms ease, color 120ms ease",
                       }}
                     >
                       <Icon style={{ width: 14, height: 14, color: isActive ? "#8C929C" : "#C1C7D0", flexShrink: 0 }} />
                       <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
                       {item.meta && (
-                        <span style={{ fontSize: 12, color: isActive ? "#8C929C" : "#B0B7C3", marginLeft: "auto", flexShrink: 0 }}>{item.meta}</span>
+                        <span style={{ fontSize: 11, color: isActive ? "#6B7280" : "#8C929C", marginLeft: "auto", flexShrink: 0 }}>
+                          {item.meta}
+                        </span>
                       )}
                     </div>
                   );

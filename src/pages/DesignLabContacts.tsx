@@ -1866,13 +1866,12 @@ export default function DesignLabContacts() {
       style={{
         fontFamily: "'Inter', -apple-system, system-ui, sans-serif",
         background: C.bg,
-        zoom: SCALE_MAP[textSize],
       }}
     >
       <DesignLabSidebar navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/kontakter" />
 
       {/* ═══ MAIN ═══ */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ background: C.appBg }}>
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ zoom: SCALE_MAP[textSize], background: C.appBg }}>
         {/* Header bar */}
         <header
           className="flex items-center justify-between px-6 shrink-0"
@@ -2405,6 +2404,7 @@ export default function DesignLabContacts() {
                     <ContactCardContent
                       contactId={sel.id}
                       editable
+                      enableProfileEditMode
                       headerPaddingTop={12}
                       onDataChanged={() => {
                         void invalidateDesignLabQueries();
@@ -2437,6 +2437,7 @@ export default function DesignLabContacts() {
       <CommandPalette
         open={cmdOpen}
         onClose={() => setCmdOpen(false)}
+        textSize={textSize}
         contacts={contacts.map((c) => ({
           id: c.id,
           firstName: c.firstName,
