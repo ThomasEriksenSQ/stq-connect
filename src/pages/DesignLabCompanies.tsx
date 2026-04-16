@@ -1,11 +1,14 @@
-import { useState, useMemo, useCallback, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { CompanyCardContent } from "@/components/CompanyCardContent";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
-  ChevronDown, ChevronUp, X,
+  ChevronDown, ChevronUp, X, Plus, Loader2,
 } from "lucide-react";
 import { differenceInDays } from "date-fns";
 import { getEffectiveSignal, normalizeCategoryLabel } from "@/lib/categoryUtils";
@@ -15,6 +18,8 @@ import { crmQueryKeys } from "@/lib/queryKeys";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
+import { BrregSearch, lookupByOrgNr } from "@/components/BrregSearch";
+import { toast } from "sonner";
 import {
   DesignLabActionButton,
   DesignLabControlLabel,
@@ -62,6 +67,10 @@ const TYPE_LABEL_TO_VALUE: Record<string, string> = {
   "Ikke relevant selskap": "churned",
 };
 
+const MODAL_LABEL_CLASS = "mb-1 block text-[11px] font-medium text-[#8C929C]";
+const MODAL_INPUT_CLASS =
+  "h-8 rounded-[6px] border-[#DDE0E7] bg-white px-2.5 py-0 text-[13px] placeholder:text-[#8C929C] focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] md:text-[13px]";
+
 type SortField = "name" | "type" | "signal" | "city" | "last_activity" | "tasks";
 type SortDir = "asc" | "desc";
 
@@ -80,6 +89,48 @@ function mapToSignal(raw: string): Signal {
   return "Ukjent om behov";
 }
 
+function OrgNrInput({
+  value,
+  onChange,
+  onLookup,
+  className,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onLookup: (name: string | null, city: string | null) => void;
+  className?: string;
+}) {
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const cleaned = value.replace(/\s/g, "");
+    if (cleaned.length !== 9 || !/^\d{9}$/.test(cleaned)) return;
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(async () => {
+      setLoading(true);
+      const r = await lookupByOrgNr(cleaned);
+      if (r) onLookup(r.navn, r.forretningsadresse?.kommune || null);
+      setLoading(false);
+    }, 400);
+    return () => clearTimeout(timerRef.current);
+  }, [value, onLookup]);
+
+  return (
+    <div className="relative">
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="923 456 789"
+        className={className ?? MODAL_INPUT_CLASS}
+      />
+      {loading && (
+        <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+      )}
+    </div>
+  );
+}
+
 
 
 
@@ -90,12 +141,24 @@ function mapToSignal(raw: string): Signal {
 export default function DesignLabCompanies() {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
+  const queryClient = useQueryClient();
   const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [search, setSearch] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("Alle");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "name", dir: "asc" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    org_number: "",
+    city: "",
+    website: "",
+    linkedin: "",
+    status: "prospect",
+    owner_id: "",
+  });
+  const [createLocations, setCreateLocations] = useState<string[]>([""]);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // ── Data query (same pattern as Companies.tsx) ──
@@ -182,6 +245,68 @@ export default function DesignLabCompanies() {
         ownerName: (c.profiles as any)?.full_name || "",
         ownerId: (c.profiles as any)?.id || null,
       }));
+    },
+  });
+
+  const { data: allProfiles = [] } = useQuery({
+    queryKey: crmQueryKeys.profiles.all(),
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("id, full_name").order("full_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  useEffect(() => {
+    if (createForm.city && createLocations[0] === "") {
+      setCreateLocations((prev) => [createForm.city, ...prev.slice(1)]);
+    }
+  }, [createForm.city, createLocations]);
+
+  useEffect(() => {
+    if (!createOpen || createForm.owner_id || !user?.id) return;
+    if (allProfiles.some((profile) => profile.id === user.id)) {
+      setCreateForm((prev) => ({ ...prev, owner_id: user.id }));
+    }
+  }, [allProfiles, createForm.owner_id, createOpen, user?.id]);
+
+  const resetCreateForm = useCallback(() => {
+    setCreateForm({
+      name: "",
+      org_number: "",
+      city: "",
+      website: "",
+      linkedin: "",
+      status: "prospect",
+      owner_id: "",
+    });
+    setCreateLocations([""]);
+  }, []);
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      const finalLocations = createLocations.map((location) => location.trim()).filter(Boolean);
+      const cityValue = finalLocations.length > 0 ? finalLocations.join(", ") : createForm.city || null;
+      const { error } = await supabase.from("companies").insert({
+        name: createForm.name,
+        org_number: createForm.org_number || null,
+        city: cityValue,
+        website: createForm.website || null,
+        linkedin: createForm.linkedin || null,
+        created_by: user?.id,
+        status: createForm.status,
+        owner_id: createForm.owner_id || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
+      setCreateOpen(false);
+      resetCreateForm();
+      toast.success("Selskap opprettet");
+    },
+    onError: () => {
+      toast.error("Kunne ikke opprette selskap");
     },
   });
 
@@ -282,6 +407,14 @@ export default function DesignLabCompanies() {
     );
   }, [selectedId]);
 
+  const ownerOptions = useMemo(
+    () =>
+      allProfiles
+        .filter((profile) => Boolean(profile.full_name))
+        .map((profile) => ({ id: profile.id, name: profile.full_name })),
+    [allProfiles],
+  );
+
   /* ═══ RENDER ═══ */
   return (
     <div className="flex h-screen overflow-hidden select-none" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}>
@@ -307,7 +440,7 @@ export default function DesignLabCompanies() {
             />
             <DesignLabActionButton
               variant="primary"
-              onClick={() => navigate("/selskaper?ny=Nytt+selskap")}
+              onClick={() => setCreateOpen(true)}
             >
               + Nytt selskap
             </DesignLabActionButton>
@@ -403,6 +536,201 @@ export default function DesignLabCompanies() {
           </ResizablePanelGroup>
         </div>
       </main>
+      <Dialog
+        open={createOpen}
+        onOpenChange={(nextOpen) => {
+          setCreateOpen(nextOpen);
+          if (!nextOpen && !createMutation.isPending) resetCreateForm();
+        }}
+      >
+        <DialogContent
+          hideCloseButton
+          overlayClassName="bg-[rgba(0,0,0,0.35)]"
+          className="w-[calc(100vw-2rem)] max-w-[440px] gap-0 rounded-[10px] border-[#E8EAEE] bg-white p-0 shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
+        >
+          <div className="flex items-center justify-between px-4 pb-3 pt-4">
+            <DialogTitle className="text-[14px] font-semibold text-[#1A1C1F]">Nytt selskap</DialogTitle>
+            <DialogClose asChild>
+              <button
+                type="button"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-[6px] text-[#5C636E] transition-colors hover:bg-[#F0F2F6] hover:text-[#1A1C1F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5E6AD2] focus-visible:ring-offset-2"
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Lukk</span>
+              </button>
+            </DialogClose>
+          </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              createMutation.mutate();
+            }}
+            className="space-y-3 px-4 pb-4"
+          >
+            <div>
+              <Label className={MODAL_LABEL_CLASS}>Selskapsnavn</Label>
+              <BrregSearch
+                value={createForm.name}
+                onChange={(name) => setCreateForm((prev) => ({ ...prev, name }))}
+                onSelect={(result) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    name: result.name,
+                    org_number: result.org_number,
+                    city: result.city,
+                  }))
+                }
+                inputClassName={MODAL_INPUT_CLASS}
+                dropdownClassName="rounded-[8px] border-[#E8EAEE] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
+                resultClassName="px-3 py-2 text-[13px] hover:bg-[#F8F9FB]"
+                resultTitleClassName="text-[13px] font-medium text-[#1A1C1F]"
+                resultMetaClassName="mt-0.5 text-[11px] text-[#8C929C]"
+                emptyStateClassName="px-3 py-3 text-[12px] text-[#8C929C]"
+              />
+            </div>
+            <div>
+              <Label className={MODAL_LABEL_CLASS}>Org.nr</Label>
+              <OrgNrInput
+                value={createForm.org_number}
+                onChange={(org_number) => setCreateForm((prev) => ({ ...prev, org_number }))}
+                onLookup={(name, city) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    name: name || prev.name,
+                    city: city || prev.city,
+                  }))
+                }
+              />
+            </div>
+            <div>
+              <Label className={MODAL_LABEL_CLASS}>Geografisk sted</Label>
+              <div className="space-y-2">
+                {createLocations.map((location, index) => (
+                  <div key={`${index}-${location}`} className="flex items-center gap-2">
+                    <Input
+                      value={location}
+                      onChange={(e) => {
+                        const next = [...createLocations];
+                        next[index] = e.target.value;
+                        setCreateLocations(next);
+                      }}
+                      placeholder="By eller sted"
+                      className={`flex-1 ${MODAL_INPUT_CLASS}`}
+                    />
+                    {createLocations.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setCreateLocations(createLocations.filter((_, itemIndex) => itemIndex !== index))}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-[6px] text-[#8C929C] transition-colors hover:bg-[#F0F2F6] hover:text-[#1A1C1F]"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <DesignLabActionButton type="button" variant="secondary" style={{ width: "100%" }} onClick={() => setCreateLocations([...createLocations, ""])}>
+                  <Plus className="h-3.5 w-3.5" />
+                  Legg til sted
+                </DesignLabActionButton>
+              </div>
+            </div>
+            <div>
+              <Label className={MODAL_LABEL_CLASS}>Nettside</Label>
+              <Input
+                value={createForm.website}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, website: e.target.value }))}
+                placeholder="https://"
+                className={MODAL_INPUT_CLASS}
+                type="url"
+              />
+            </div>
+            <div>
+              <Label className={MODAL_LABEL_CLASS}>LinkedIn</Label>
+              <Input
+                value={createForm.linkedin}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, linkedin: e.target.value }))}
+                placeholder="https://linkedin.com/company/..."
+                className={MODAL_INPUT_CLASS}
+                type="url"
+              />
+            </div>
+            <div>
+              <Label className={MODAL_LABEL_CLASS}>Type</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {TYPE_OPTIONS.map((option) => (
+                  <DesignLabFilterButton
+                    key={option.value}
+                    type="button"
+                    onClick={() => setCreateForm((prev) => ({ ...prev, status: option.value }))}
+                    active={createForm.status === option.value}
+                    activeColors={{
+                      background: "#E8ECF5",
+                      color: "#1A1C1F",
+                      border: "1px solid #C5CBE8",
+                      fontWeight: 600,
+                    }}
+                    inactiveColors={{
+                      background: "transparent",
+                      color: "#5C636E",
+                      border: "1px solid #DDE0E7",
+                      fontWeight: 500,
+                    }}
+                    inactiveHoverColors={{
+                      background: "#F8F9FB",
+                      color: "#1A1C1F",
+                      border: "1px solid #DDE0E7",
+                    }}
+                  >
+                    {option.label}
+                  </DesignLabFilterButton>
+                ))}
+              </div>
+            </div>
+            {ownerOptions.length > 0 && (
+              <div>
+                <Label className={MODAL_LABEL_CLASS}>Eier</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {ownerOptions.map((owner) => (
+                    <DesignLabFilterButton
+                      key={owner.id}
+                      type="button"
+                      onClick={() =>
+                        setCreateForm((prev) => ({
+                          ...prev,
+                          owner_id: prev.owner_id === owner.id ? "" : owner.id,
+                        }))
+                      }
+                      active={createForm.owner_id === owner.id}
+                      activeColors={{
+                        background: "#E8ECF5",
+                        color: "#1A1C1F",
+                        border: "1px solid #C5CBE8",
+                        fontWeight: 600,
+                      }}
+                      inactiveColors={{
+                        background: "transparent",
+                        color: "#5C636E",
+                        border: "1px solid #DDE0E7",
+                        fontWeight: 500,
+                      }}
+                      inactiveHoverColors={{
+                        background: "#F8F9FB",
+                        color: "#1A1C1F",
+                        border: "1px solid #DDE0E7",
+                      }}
+                    >
+                      {owner.name}
+                    </DesignLabFilterButton>
+                  ))}
+                </div>
+              </div>
+            )}
+            <DesignLabActionButton type="submit" variant="primary" style={{ width: "100%", marginTop: 12 }} disabled={createMutation.isPending}>
+              {createMutation.isPending ? "Oppretter..." : "Opprett"}
+            </DesignLabActionButton>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
