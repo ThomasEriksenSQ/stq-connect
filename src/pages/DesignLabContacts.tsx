@@ -1707,7 +1707,6 @@ export default function DesignLabContacts() {
 
   const hasVisibleResults = selectedConsultant ? visibleMatchLeads.length > 0 : sorted.length > 0;
   const visibleResultCount = selectedConsultant ? visibleMatchLeads.length : filteredContacts.length;
-  const visibleResultLabel = selectedConsultant ? "treff" : "kontakter";
 
   const handleToggle = useCallback(
     (contact: {
@@ -1880,7 +1879,7 @@ export default function DesignLabContacts() {
           <div className="flex items-baseline gap-2.5">
             <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Kontakter</h1>
             <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>
-              {visibleResultCount} {visibleResultLabel}
+              · {visibleResultCount}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -1997,7 +1996,7 @@ export default function DesignLabContacts() {
         {/* Available consultants bar */}
         {sortedConsultants.length > 0 && (
           <div className="shrink-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
-            <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textGhost, marginBottom: 6 }}>
+            <p style={{ fontSize: 12, fontWeight: 500, color: "#5C636E", marginBottom: 6 }}>
               Tilgjengelig for oppdrag
             </p>
             <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>

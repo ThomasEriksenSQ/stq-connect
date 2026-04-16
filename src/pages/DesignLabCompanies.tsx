@@ -1,9 +1,10 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { CompanyCardContent } from "@/components/CompanyCardContent";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   ChevronDown, ChevronUp, X,
 } from "lucide-react";
@@ -11,9 +12,11 @@ import { differenceInDays } from "date-fns";
 import { getEffectiveSignal, normalizeCategoryLabel } from "@/lib/categoryUtils";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { C, SIGNAL_COLORS } from "@/components/designlab/theme";
+import { C } from "@/components/designlab/theme";
 import { crmQueryKeys } from "@/lib/queryKeys";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
+import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import {
   DesignLabActionButton,
   DesignLabControlLabel,
@@ -89,22 +92,13 @@ export default function DesignLabCompanies() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { signOut, user } = useAuth();
+  const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [search, setSearch] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("Alle");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "name", dir: "asc" });
-  const [typeDropdownOpen, setTypeDropdownOpen] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-
-
-  // Close type dropdown on outside click
-  useEffect(() => {
-    if (!typeDropdownOpen) return;
-    const handler = () => setTypeDropdownOpen(null);
-    document.addEventListener("click", handler);
-    return () => document.removeEventListener("click", handler);
-  }, [typeDropdownOpen]);
 
   // ── Data query (same pattern as Companies.tsx) ──
   const { data: companies = [], isLoading } = useQuery({
@@ -270,8 +264,6 @@ export default function DesignLabCompanies() {
   }, [filtered, sort]);
 
   const renderRow = useCallback((company: any) => {
-    const signal = company.signal ? mapToSignal(company.signal) : null;
-    const signalColors = signal ? SIGNAL_COLORS[signal] : null;
     const daysSince = company.lastActivity ? differenceInDays(new Date(), new Date(company.lastActivity)) : null;
     const typeLabel = TYPE_VALUE_TO_LABEL[company.status] || company.status;
     const isSelected = selectedId === company.id;
@@ -282,8 +274,8 @@ export default function DesignLabCompanies() {
         onClick={() => setSelectedId(isSelected ? null : company.id)}
         className="grid items-center cursor-pointer group"
         style={{
-          gridTemplateColumns: "minmax(180px,2fr) minmax(120px,1fr) 130px 120px 90px 80px",
-          minHeight: 34, paddingLeft: 16, paddingRight: 16,
+          gridTemplateColumns: "minmax(220px,2.2fr) minmax(140px,1.2fr) minmax(180px,1.4fr) 132px",
+          minHeight: 38, paddingLeft: 16, paddingRight: 16,
           borderBottom: `1px solid ${C.borderLight}`,
           background: isSelected ? C.activeBg : "transparent",
         }}
@@ -293,72 +285,48 @@ export default function DesignLabCompanies() {
         {/* Name */}
         <div className="min-w-0 flex items-center gap-2">
           <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{company.name}</span>
-          {company.contactCount > 0 && (
-            <span style={{ fontSize: 11, color: C.textGhost }}>{company.contactCount}</span>
-          )}
         </div>
 
         {/* Type — inline dropdown */}
         <div className="min-w-0 relative" onClick={(e) => e.stopPropagation()}>
-          <DesignLabFilterButton
-            onClick={(e) => {
-              e.stopPropagation();
-              setTypeDropdownOpen(typeDropdownOpen === company.id ? null : company.id);
-            }}
-            active={typeDropdownOpen === company.id}
-            className="justify-start max-w-full"
-            style={{ paddingInline: 8 }}
-            aria-haspopup="menu"
-            aria-expanded={typeDropdownOpen === company.id}
-          >
-            <span className="truncate">{typeLabel}</span>
-            <ChevronDown style={{ width: 12, height: 12, flexShrink: 0 }} />
-          </DesignLabFilterButton>
-          {typeDropdownOpen === company.id && (
-            <>
-              <div className="fixed inset-0 z-20" onClick={() => setTypeDropdownOpen(null)} />
-              <div
-                className="absolute left-0 top-full mt-1 z-30 rounded-md overflow-hidden"
-                style={{ background: C.panel, border: `1px solid ${C.border}`, boxShadow: C.shadowMd, minWidth: 160 }}
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <DesignLabFilterButton
+                onClick={(e) => e.stopPropagation()}
+                active={false}
+                className="justify-start max-w-full"
+                style={{ paddingInline: 8 }}
+                aria-haspopup="menu"
               >
-                {TYPE_OPTIONS.map((opt) => (
-                  <DesignLabActionButton
-                    key={opt.value}
-                    onClick={() => {
-                      setTypeMutation.mutate({ companyId: company.id, status: opt.value });
-                      setTypeDropdownOpen(null);
-                    }}
-                    variant="ghost"
-                    className="w-full justify-start"
-                  >
-                    {opt.label}
-                  </DesignLabActionButton>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Signal */}
-        <div className="flex items-center gap-1.5">
-          {signal && <SignalChip signal={signal} />}
+                <span className="truncate">{typeLabel}</span>
+                <ChevronDown style={{ width: 12, height: 12, flexShrink: 0 }} />
+              </DesignLabFilterButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" sideOffset={4} onClick={(e) => e.stopPropagation()}>
+              {TYPE_OPTIONS.map((opt) => (
+                <DropdownMenuItem
+                  key={opt.value}
+                  onClick={() => {
+                    setTypeMutation.mutate({ companyId: company.id, status: opt.value });
+                  }}
+                >
+                  {opt.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* City */}
         <span className="truncate" style={{ fontSize: 12, color: C.textMuted }}>{company.city || ""}</span>
 
         {/* Last activity */}
-        <span style={{ fontSize: 12, color: C.textFaint }}>
+        <span className="text-right" style={{ fontSize: 12, color: C.textFaint }}>
           {daysSince !== null ? relTime(daysSince) : ""}
-        </span>
-
-        {/* Tasks */}
-        <span className="text-right" style={{ fontSize: 12, color: company.hasOverdue ? C.danger : company.taskCount > 0 ? C.textMuted : C.textGhost }}>
-          {company.taskCount > 0 ? company.taskCount : ""}
         </span>
       </div>
     );
-  }, [selectedId, typeDropdownOpen, setTypeMutation]);
+  }, [selectedId, setTypeMutation]);
 
   /* ═══ RENDER ═══ */
   return (
@@ -367,14 +335,15 @@ export default function DesignLabCompanies() {
       <DesignLabSidebar navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/selskaper" />
 
       {/* ═══ MAIN ═══ */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ background: C.appBg }}>
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ zoom: SCALE_MAP[textSize], background: C.appBg }}>
         {/* Header bar */}
         <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
           <div className="flex items-baseline gap-2.5">
             <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Selskaper</h1>
-            <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>{filtered.length}</span>
+            <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {filtered.length}</span>
           </div>
           <div className="flex items-center gap-2">
+            <TextSizeControl value={textSize} onChange={setTextSize} />
             <DesignLabSearchInput
               ref={searchRef}
               value={search}
@@ -396,14 +365,19 @@ export default function DesignLabCompanies() {
           <FilterRow label="EIER" options={OWNERS} value={ownerFilter} onChange={setOwnerFilter} />
           <div className="flex items-center justify-between">
             <FilterRow label="TYPE" options={[...TYPE_FILTERS]} value={typeFilter} onChange={(v) => setTypeFilter(v as TypeFilter)} />
-            {(ownerFilter !== "Alle" || typeFilter !== "Alle") && (
-              <DesignLabActionButton
-                variant="ghost"
-                onClick={() => { setOwnerFilter("Alle"); setTypeFilter("Alle"); }}
-              >
-                <X style={{ width: 12, height: 12 }} /> Nullstill
-              </DesignLabActionButton>
-            )}
+            <div className="flex items-center gap-3">
+              <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500, whiteSpace: "nowrap", paddingLeft: 12 }}>
+                {filtered.length} selskaper
+              </span>
+              {(ownerFilter !== "Alle" || typeFilter !== "Alle") && (
+                <DesignLabActionButton
+                  variant="ghost"
+                  onClick={() => { setOwnerFilter("Alle"); setTypeFilter("Alle"); }}
+                >
+                  <X style={{ width: 12, height: 12 }} /> Nullstill
+                </DesignLabActionButton>
+              )}
+            </div>
           </div>
         </div>
 
@@ -415,17 +389,15 @@ export default function DesignLabCompanies() {
                 <div
                   className="grid items-center sticky top-0 z-10"
                   style={{
-                    gridTemplateColumns: "minmax(180px,2fr) minmax(120px,1fr) 130px 120px 90px 80px",
+                    gridTemplateColumns: "minmax(220px,2.2fr) minmax(140px,1.2fr) minmax(180px,1.4fr) 132px",
                     height: 32, borderBottom: `1px solid ${C.border}`,
                     background: C.surfaceAlt, paddingLeft: 16, paddingRight: 16,
                   }}
                 >
                   <ColHeader label="Selskap" field="name" sort={sort} onSort={toggleSort} />
                   <ColHeader label="Type" field="type" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
                   <ColHeader label="Sted" field="city" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Oppf." field="tasks" sort={sort} onSort={toggleSort} className="justify-end" />
+                  <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
                 </div>
                 {isLoading ? (
                   <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster selskaper…</div>
@@ -443,7 +415,7 @@ export default function DesignLabCompanies() {
             <ResizablePanel defaultSize={65} minSize={30}>
               {selectedId ? (
                 <div className="h-full flex flex-col" style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}` }}>
-                  <div className="shrink-0 flex items-center justify-end px-4" style={{ height: 32, borderBottom: `1px solid ${C.border}` }}>
+                  <div className="shrink-0 flex items-center justify-end px-4" style={{ height: 32 }}>
                     <DesignLabIconButton
                       onClick={() => setSelectedId(null)}
                     >
@@ -451,7 +423,16 @@ export default function DesignLabCompanies() {
                     </DesignLabIconButton>
                   </div>
                   <div className="flex-1 overflow-y-auto px-6 py-5 dl-v8-theme">
-                    <CompanyCardContent companyId={selectedId} editable onNavigateToFullPage={() => navigate(`/selskaper/${selectedId}`)} />
+                    <CompanyCardContent
+                      companyId={selectedId}
+                      editable
+                      headerPaddingTop={12}
+                      defaultHidden={{
+                        techDna: true,
+                        notes: true,
+                      }}
+                      onNavigateToFullPage={() => navigate(`/selskaper/${selectedId}`)}
+                    />
                   </div>
                 </div>
               ) : (
@@ -471,40 +452,6 @@ export default function DesignLabCompanies() {
     </div>
   );
 }
-
-/* ═══════════════════════════════════════════════════════════
-   SIGNAL CHIP (V8 color-coded — matches contacts page)
-   ═══════════════════════════════════════════════════════════ */
-
-function SignalChip({ signal }: { signal: Signal }) {
-  const shortLabels: Record<Signal, string> = {
-    "Behov nå": "Behov nå",
-    "Får fremtidig behov": "Fremtidig",
-    "Får kanskje behov": "Kanskje",
-    "Ukjent om behov": "Ukjent",
-    "Ikke aktuelt": "Ikke aktuelt",
-  };
-  const colors = SIGNAL_COLORS[signal];
-  return (
-    <span
-      className="inline-flex items-center whitespace-nowrap"
-      style={{
-        height: 28,
-        padding: "0 10px",
-        borderRadius: 6,
-        fontSize: 12,
-        fontWeight: 500,
-        background: colors.bg,
-        color: colors.color,
-        border: `1px solid ${colors.border}`,
-      }}
-    >
-      {shortLabels[signal]}
-    </span>
-  );
-}
-
-
 
 function FilterRow({ label, options, value, onChange }: {
   label: string; options: readonly string[] | string[]; value: string; onChange: (v: string) => void;

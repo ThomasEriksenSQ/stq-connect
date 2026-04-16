@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, type ReactNode } from "react";
 import { DescriptionText } from "@/components/DescriptionText";
 import { MergeCompanyDialog } from "@/components/company/MergeCompanyDialog";
 import { useNavigate } from "react-router-dom";
@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { DesignLabActionButton, DesignLabFilterButton, DesignLabIconButton } from "@/components/designlab/controls";
 import {
   Phone,
   Mail,
@@ -38,7 +40,6 @@ import {
   Calendar,
   CalendarDays,
   ExternalLink,
-  ChevronRight,
   ChevronDown,
   Pencil,
   User,
@@ -50,6 +51,10 @@ import {
   Loader2,
   Target,
   Sparkles,
+  MoreVertical,
+  StickyNote,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, isPast, isToday, getYear } from "date-fns";
@@ -155,6 +160,14 @@ function CategoryPicker({ selected, onSelect }: { selected: string; onSelect: (v
   );
 }
 
+function RelatedContactBadge({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-flex h-5 items-center rounded-[4px] bg-[#F0F2F6] px-1.5 text-[11px] font-medium text-[#5C636E]">
+      {children}
+    </span>
+  );
+}
+
 function buildDescriptionWithCategory(category: string, description: string): string {
   if (!category) return description;
   return description ? `[${category}]\n${description}` : `[${category}]`;
@@ -189,11 +202,18 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   active: { label: "Aktiv", className: "bg-success/10 text-success" },
 };
 
+interface DefaultHiddenConfig {
+  techDna?: boolean;
+  notes?: boolean;
+}
+
 interface CompanyCardContentProps {
   companyId: string;
   editable?: boolean;
   onOpenContact?: (contactId: string) => void;
   onNavigateToFullPage?: () => void;
+  headerPaddingTop?: number;
+  defaultHidden?: DefaultHiddenConfig;
 }
 
 export function CompanyCardContent({
@@ -201,6 +221,8 @@ export function CompanyCardContent({
   editable = false,
   onOpenContact,
   onNavigateToFullPage,
+  headerPaddingTop,
+  defaultHidden,
 }: CompanyCardContentProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -241,8 +263,11 @@ export function CompanyCardContent({
   const [analyzeText, setAnalyzeText] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [techTagInput, setTechTagInput] = useState("");
+  const [activeContactId, setActiveContactId] = useState<string | null>(null);
   const [deleteCompanyDialogOpen, setDeleteCompanyDialogOpen] = useState(false);
   const [mergeCompanyDialogOpen, setMergeCompanyDialogOpen] = useState(false);
+  const [showTechDna, setShowTechDna] = useState(!defaultHidden?.techDna);
+  const [showNotes, setShowNotes] = useState(false);
 
   const { data: company, isLoading } = useQuery({
     queryKey: crmQueryKeys.companies.detail(companyId),
@@ -293,6 +318,11 @@ export function CompanyCardContent({
       }
     }
   }, [newContactOpen, company]);
+
+  useEffect(() => {
+    if (!company) return;
+    setShowNotes(Boolean(company.notes?.trim()));
+  }, [companyId, company?.notes]);
 
   // BRREG lookup when org.nr is 9 digits
   useEffect(() => {
@@ -623,10 +653,598 @@ export function CompanyCardContent({
     }
   };
 
+  const openEditCompanyDialog = () => {
+    if (!company) return;
+    setEditForm({
+      name: company.name || "",
+      org_number: company.org_number || "",
+      city: company.city || "",
+      website: company.website || "",
+      linkedin: company.linkedin || "",
+      locations: company.city
+        ? company.city
+            .split(",")
+            .map((s: string) => s.trim())
+            .filter(Boolean)
+        : [],
+    });
+    setNewLocation("");
+    setEditCompanyOpen(true);
+  };
+
+  const companyDetailSections = (
+    <div className="space-y-5">
+      {/* ── Teknisk DNA ── */}
+      {showTechDna && (() => {
+        const techTags = getSortedTechnologyEntries(techProfile?.teknologier as any);
+        const contactTechTags = mergeTechnologyTags(
+          ...(contacts as any[]).map((contact) => (contact as any).teknologier || []),
+        );
+        const hasTech = techTags.length > 0 || contactTechTags.length > 0;
+
+        return (
+          <div className="mb-2">
+            <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                Teknisk DNA for {company.name}
+                {techProfile?.konsulent_hyppighet ? (
+                  <span className="ml-2 text-muted-foreground/50 font-normal normal-case tracking-normal">
+                    · {techProfile.konsulent_hyppighet} annonser
+                  </span>
+                ) : null}
+              </h3>
+              <div className="flex flex-wrap items-center gap-2">
+                {hasTech && (
+                  <DesignLabActionButton
+                    onClick={handleFinnKonsulenter}
+                    disabled={matchingKonsulenter}
+                    variant="secondary"
+                    style={{ height: 32, fontSize: 12 }}
+                  >
+                    {matchingKonsulenter ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Matcher...
+                      </>
+                    ) : (
+                      <>
+                        <Target className="h-3.5 w-3.5 text-primary" /> Finn konsulent
+                      </>
+                    )}
+                  </DesignLabActionButton>
+                )}
+              </div>
+            </div>
+
+            <p className="text-[0.75rem] text-muted-foreground mb-2">
+              Bygges automatisk fra forespørsler, aktivitet og selskapets eksisterende kontakt-DNA.
+            </p>
+
+            {showAnalyze && (
+              <div className="mb-3 p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-2">
+                <p className="text-[0.75rem] text-muted-foreground">
+                  Lim inn stillingsbeskrivelse, e-post eller kravspesifikasjon — AI finner relevante teknologier
+                  automatisk.
+                </p>
+                <textarea
+                  value={analyzeText}
+                  onChange={(e) => setAnalyzeText(e.target.value)}
+                  placeholder="Lim inn tekst her..."
+                  rows={4}
+                  className="w-full text-[0.875rem] rounded-md border border-border bg-background px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary/30"
+                />
+
+                <div className="flex items-center gap-2">
+                  <DesignLabActionButton
+                    onClick={handleAnalyzeText}
+                    disabled={!analyzeText.trim() || isAnalyzing}
+                    variant="primary"
+                    style={{ height: 32, fontSize: 12 }}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {isAnalyzing ? "Analyserer..." : "Finn teknologier"}
+                  </DesignLabActionButton>
+                  <DesignLabActionButton
+                    onClick={() => {
+                      setShowAnalyze(false);
+                      setAnalyzeText("");
+                    }}
+                    variant="ghost"
+                    style={{ height: 32, fontSize: 12 }}
+                  >
+                    Avbryt
+                  </DesignLabActionButton>
+                </div>
+              </div>
+            )}
+
+            {konsulentResults !== null && (
+              <div className="space-y-3 mb-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-4 w-4 text-primary" />
+                    <div>
+                      <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                        Konsulentmatch
+                      </span>
+                      {konsulentMatchFreshness && (
+                        <p className="text-[0.6875rem] text-muted-foreground normal-case tracking-normal">
+                          {konsulentMatchFreshness}
+                        </p>
+                      )}
+                    </div>
+                    <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-primary/10 text-primary text-[0.6875rem] font-semibold">
+                      {konsulentResults.length}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleFinnKonsulenter}
+                    className="text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Kjør på nytt
+                  </button>
+                </div>
+                {visibleKonsulentResults.length === 0 ? (
+                  <p className="text-[0.8125rem] text-muted-foreground">Ingen treff med score ≥ 4</p>
+                ) : (
+                  <div className="space-y-2">
+                    {konsulentResults.length > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        {(["Alle", "Ansatte", "Eksterne"] as const).map((f) => (
+                          <DesignLabFilterButton
+                            key={f}
+                            onClick={() => setKonsulentFilter(f)}
+                            active={konsulentFilter === f}
+                          >
+                            {f}
+                          </DesignLabFilterButton>
+                        ))}
+                      </div>
+                    )}
+                    {visibleKonsulentResults.map((m: any, i: number) => (
+                      <div key={`${m.type}-${m.id}`} className="rounded-lg border border-border bg-card p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
+                            <span className="text-[0.875rem] font-semibold text-foreground truncate">{m.navn}</span>
+                            <span
+                              className={cn(
+                                "inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold shrink-0",
+                                m.type === "intern" ? "bg-foreground text-background" : "bg-blue-100 text-blue-700",
+                              )}
+                            >
+                              {m.type === "intern" ? "Ansatt" : "Ekstern"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span
+                              className={cn(
+                                "inline-block h-2.5 w-2.5 rounded-full",
+                                getConsultantMatchScoreColor(m.score),
+                              )}
+                            />
+                            <span className="text-[0.8125rem] font-bold text-foreground">{m.score}/10</span>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {(m.match_tags || []).map((t: string) => (
+                            <span key={t} className="chip chip--tech">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                        <p className="text-[0.8125rem] text-muted-foreground mt-1.5 italic">{m.begrunnelse}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {techTags.length > 0 ? (
+              <div className="space-y-3">
+                <div>
+                  <p className="text-[0.6875rem] text-muted-foreground/60 mb-1.5">Fra Finn og forespørsler</p>
+                  <div className="flex flex-wrap gap-1">
+                    {techTags.slice(0, 20).map(({ name, count }) => (
+                      <span
+                        key={name}
+                        className="inline-flex items-center rounded-full bg-secondary text-foreground px-2.5 py-0.5 text-[0.75rem] font-mono border border-border"
+                      >
+                        {name}
+                        {count > 1 ? <span className="ml-1 text-muted-foreground/60">×{count}</span> : null}
+                      </span>
+                    ))}
+                  </div>
+                  {techProfile?.sist_fra_finn && (
+                    <p className="text-[0.6875rem] text-muted-foreground/40 mt-1.5">
+                      Oppdatert{" "}
+                      {new Date(techProfile.sist_fra_finn).toLocaleDateString("nb-NO", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </p>
+                  )}
+                </div>
+                {contactTechTags.length > 0 && (
+                  <>
+                    <div className="border-t border-border/50" />
+                    <div>
+                      <p className="text-[0.6875rem] text-muted-foreground/60 mb-1.5">Kontakt-DNA</p>
+                      <div className="flex flex-wrap gap-1">
+                        {contactTechTags.slice(0, 10).map((tech: string) => (
+                          <span
+                            key={tech}
+                            className="inline-flex items-center rounded-full bg-secondary text-foreground px-2.5 py-0.5 text-[0.75rem] font-mono border border-border"
+                          >
+                            {tech}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <p className="text-[0.8125rem] text-muted-foreground/50">Ingen teknisk data ennå</p>
+            )}
+          </div>
+        );
+      })()}
+
+      <div className="border-t border-border/50" />
+
+      {tasks.length > 0 && (
+        <div className="bg-card border border-border rounded-lg shadow-card p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+              Oppfølginger · {tasks.length}
+            </h3>
+          </div>
+          <div className="space-y-px">
+            {tasks.map((task) => {
+              const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
+              const today = task.due_date && isToday(new Date(task.due_date));
+              const contactName = (task.contacts as any)?.first_name
+                ? `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}`
+                : null;
+              const {
+                title: displayTitle,
+                category: displayCategory,
+                cleanDesc: displayDesc,
+              } = extractTitleAndCategory(task.title, task.description);
+              return (
+                <div
+                  key={task.id}
+                  className="flex items-start gap-2.5 py-2.5 px-1 rounded-md transition-all duration-200 group hover:bg-background/60 cursor-pointer"
+                  onClick={() => {
+                    if (task.contact_id) navigate(`/kontakter/${task.contact_id}`);
+                  }}
+                >
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={false}
+                      onCheckedChange={() => toggleTaskMutation.mutate(task.id)}
+                      className="h-4 w-4 rounded-[4px] border-2 border-muted-foreground/40 flex-shrink-0 mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</div>
+                    {contactName && (
+                      <a
+                        href={`/kontakter/${task.contact_id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-[0.8125rem] font-semibold text-blue-600 hover:underline block mt-0.5"
+                      >
+                        → {contactName}
+                      </a>
+                    )}
+                    {displayDesc && !/^\[.+\]$/.test(displayDesc.trim()) && (
+                      <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{displayDesc}</p>
+                    )}
+                    <div className="flex items-center gap-1.5 mt-1">
+                      {task.assigned_to && profileMapFull[task.assigned_to] && (
+                        <span
+                          className="inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium h-7"
+                          style={{
+                            background: C.statusNeutralBg,
+                            color: C.statusNeutral,
+                            border: `1px solid ${C.statusNeutralBorder}`,
+                          }}
+                        >
+                          {profileMapFull[task.assigned_to]}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
+                    {task.due_date && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span
+                            className={cn(
+                              "text-[0.8125rem] font-medium",
+                              overdue
+                                ? "text-destructive"
+                                : today
+                                  ? "text-[hsl(var(--warning))]"
+                                  : "text-muted-foreground",
+                            )}
+                          >
+                            {format(new Date(task.due_date), "d. MMM yyyy", { locale: nb })}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>{fullDate(task.due_date)}</TooltipContent>
+                      </Tooltip>
+                    )}
+                    {displayCategory && <CategoryBadge label={displayCategory} />}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-5">
+        <CompanyActivityTimeline
+          activities={activities}
+          profileMap={profileMapFull}
+          companyId={companyId}
+          editable={editable}
+        />
+      </div>
+    </div>
+  );
+
+  const relatedContactsContent = (
+    <div className="pt-4 md:pt-0">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <h3 className="text-[12px] font-medium text-[#5C636E]">Kontakter · {contacts.length}</h3>
+        {editable && (
+          <Dialog open={newContactOpen} onOpenChange={setNewContactOpen}>
+            <DialogTrigger asChild>
+              <DesignLabActionButton variant="secondary" style={{ height: 28, fontSize: 12 }}>
+                <Plus className="h-3.5 w-3.5" />
+                Ny kontakt
+              </DesignLabActionButton>
+            </DialogTrigger>
+            <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-[440px] rounded-xl">
+              <DialogHeader>
+                <DialogTitle>Ny kontakt</DialogTitle>
+              </DialogHeader>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const { error } = await supabase.from("contacts").insert({
+                    first_name: contactForm.first_name,
+                    last_name: contactForm.last_name,
+                    email: contactForm.email || null,
+                    phone: contactForm.phone || null,
+                    title: contactForm.title || null,
+                    linkedin: contactForm.linkedin || null,
+                    locations: contactForm.location ? [contactForm.location] : [],
+                    cv_email: sanitizeContactCvEmail(contactForm.email, contactForm.cv_email),
+                    call_list: contactForm.call_list,
+                    company_id: companyId,
+                    created_by: user?.id,
+                    owner_id: user?.id,
+                  });
+                  if (error) {
+                    toast.error("Kunne ikke opprette kontakt");
+                    return;
+                  }
+                  queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.contacts(companyId) });
+                  queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() });
+                  setNewContactOpen(false);
+                  setContactForm({
+                    first_name: "",
+                    last_name: "",
+                    email: "",
+                    phone: "",
+                    title: "",
+                    linkedin: "",
+                    location: "",
+                    cv_email: false,
+                    call_list: false,
+                  });
+                  toast.success("Kontakt opprettet");
+                }}
+                className="space-y-4 mt-3"
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-label">Fornavn</Label>
+                    <Input
+                      value={contactForm.first_name}
+                      onChange={(e) => setContactForm({ ...contactForm, first_name: e.target.value })}
+                      required
+                      className="h-10 rounded-lg"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-label">Etternavn</Label>
+                    <Input
+                      value={contactForm.last_name}
+                      onChange={(e) => setContactForm({ ...contactForm, last_name: e.target.value })}
+                      required
+                      className="h-10 rounded-lg"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-label">Stilling</Label>
+                  <Input
+                    value={contactForm.title}
+                    onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })}
+                    className="h-10 rounded-lg"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-label">E-post</Label>
+                    <Input
+                      value={contactForm.email}
+                      onChange={(e) =>
+                        setContactForm({
+                          ...contactForm,
+                          email: e.target.value,
+                          cv_email: sanitizeContactCvEmail(e.target.value, contactForm.cv_email),
+                        })
+                      }
+                      type="email"
+                      className="h-10 rounded-lg"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-label">Telefon</Label>
+                    <Input
+                      value={contactForm.phone}
+                      onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                      className="h-10 rounded-lg"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-label">LinkedIn</Label>
+                  <Input
+                    value={contactForm.linkedin}
+                    onChange={(e) => setContactForm({ ...contactForm, linkedin: e.target.value })}
+                    placeholder="https://linkedin.com/in/..."
+                    className="h-10 rounded-lg"
+                  />
+                </div>
+                {(() => {
+                  const locs: string[] = company.city
+                    ? company.city
+                        .split(",")
+                        .map((s: string) => s.trim())
+                        .filter(Boolean)
+                    : [];
+                  if (locs.length === 0) return null;
+                  return (
+                    <div className="space-y-1.5">
+                      <Label className="text-label">Geografisk sted</Label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {locs.map((loc) => (
+                          <button
+                            key={loc}
+                            type="button"
+                            onClick={() =>
+                              setContactForm({ ...contactForm, location: loc === contactForm.location ? "" : loc })
+                            }
+                            className={cn(
+                              "inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-[0.8125rem] font-medium transition-colors",
+                              contactForm.location === loc
+                                ? "bg-foreground text-background border-foreground"
+                                : "border-border text-muted-foreground hover:bg-secondary",
+                            )}
+                          >
+                            {loc}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+                <div className="space-y-1.5">
+                  <Label className="text-label">Egenskaper</Label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!contactForm.cv_email && !contactHasEmail(contactForm)) {
+                          toast.error(CONTACT_CV_EMAIL_REQUIRED_MESSAGE);
+                          return;
+                        }
+                        setContactForm({ ...contactForm, cv_email: !contactForm.cv_email });
+                      }}
+                      className={cn(
+                        "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+                        contactForm.cv_email
+                          ? "bg-green-100 text-green-800 border-green-200"
+                          : "bg-background text-muted-foreground border-border hover:bg-secondary",
+                      )}
+                    >
+                      {contactForm.cv_email ? "✓ CV-Epost" : "CV-Epost"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setContactForm({ ...contactForm, call_list: !contactForm.call_list })}
+                      className={cn(
+                        "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
+                        contactForm.call_list
+                          ? "bg-amber-100 text-amber-800 border-amber-200"
+                          : "bg-background text-muted-foreground border-border hover:bg-secondary",
+                      )}
+                    >
+                      {contactForm.call_list ? "✓ Innkjøper" : "Innkjøper"}
+                    </button>
+                  </div>
+                </div>
+                <Button type="submit" className="w-full h-10 rounded-lg">
+                  Opprett
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+
+      {contacts.length === 0 ? (
+        <p className="py-2 text-[11px] text-[#8C929C]">Ingen kontakter</p>
+      ) : (
+        <div className="space-y-0.5">
+          {contacts.map((c) => {
+            const isActive = activeContactId === c.id;
+            const contactOwner = (c as any).profiles?.full_name || null;
+            const secondaryText = [c.title, contactOwner].filter(Boolean).join(" · ");
+
+            return (
+              <button
+                key={c.id}
+                type="button"
+                className={cn(
+                  "w-full rounded-[6px] px-2 py-1.5 text-left transition-colors duration-100",
+                  isActive ? "bg-[#F0F2F6]" : "hover:bg-[#F8F9FB]",
+                )}
+                onClick={() => {
+                  setActiveContactId(c.id);
+                  if (onOpenContact) {
+                    onOpenContact(c.id);
+                    return;
+                  }
+                  navigate(`/kontakter/${c.id}`);
+                }}
+              >
+                <div className="flex items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="truncate text-[12px] font-medium text-[#1A1C1F]">
+                        {c.first_name} {c.last_name}
+                      </p>
+                      <div className="flex shrink-0 items-center gap-1">
+                        {c.cv_email && <RelatedContactBadge>CV</RelatedContactBadge>}
+                        {c.call_list && <RelatedContactBadge>Innkjøper</RelatedContactBadge>}
+                      </div>
+                    </div>
+                    {secondaryText ? (
+                      <p className="mt-[2px] truncate text-[11px] font-normal text-[#8C929C]">{secondaryText}</p>
+                    ) : null}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div>
       {/* ── ZONE A: Header ── */}
-      <div className="mb-5">
+      <div className="mb-5" style={headerPaddingTop ? { paddingTop: headerPaddingTop } : undefined}>
         <div className="flex items-center gap-3">
           {editable ? (
             <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">
@@ -987,33 +1605,52 @@ export function CompanyCardContent({
               }}
             />
             {editable && (
-              <button
-                onClick={() => {
-                  setEditForm({
-                    name: company.name || "",
-                    org_number: company.org_number || "",
-                    city: company.city || "",
-                    website: company.website || "",
-                    linkedin: company.linkedin || "",
-                    locations: company.city
-                      ? company.city
-                          .split(",")
-                          .map((s: string) => s.trim())
-                          .filter(Boolean)
-                      : [],
-                  });
-                  setNewLocation("");
-                  setEditCompanyOpen(true);
-                }}
-                className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-secondary text-muted-foreground"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <DesignLabIconButton>
+                    <MoreVertical className="h-4 w-4" />
+                  </DesignLabIconButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" sideOffset={4}>
+                  <DropdownMenuItem onClick={openEditCompanyDialog}>
+                    <Pencil className="h-3.5 w-3.5 mr-2" /> Rediger selskap
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setShowTechDna(true);
+                      void handleFinnKonsulenter();
+                    }}
+                  >
+                    <Target className="h-3.5 w-3.5 mr-2" /> Finn konsulent
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      if (showNotes) {
+                        setShowNotes(false);
+                        setEditingNotes(false);
+                        return;
+                      }
+                      setShowNotes(true);
+                      if (!company.notes) {
+                        setNotesDraft("");
+                        setTimeout(() => setEditingNotes(true), 50);
+                      }
+                    }}
+                  >
+                    <StickyNote className="h-3.5 w-3.5 mr-2" />
+                    {showNotes ? "Skjul notat" : company.notes ? "Vis notat" : "Legg til notat"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowTechDna((prev) => !prev)}>
+                    {showTechDna ? <EyeOff className="h-3.5 w-3.5 mr-2" /> : <Eye className="h-3.5 w-3.5 mr-2" />}
+                    {showTechDna ? "Skjul teknisk DNA" : "Vis teknisk DNA"}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             {!editable && onNavigateToFullPage && (
-              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={onNavigateToFullPage}>
+              <DesignLabIconButton onClick={onNavigateToFullPage}>
                 <ExternalLink className="h-3.5 w-3.5" />
-              </Button>
+              </DesignLabIconButton>
             )}
           </div>
         </div>
@@ -1081,61 +1718,80 @@ export function CompanyCardContent({
         </div>
       </div>
 
-      {/* Notat — kun når det finnes innhold eller redigeres */}
-      {editable && editingNotes ? (
+      {/* Notat */}
+      {showNotes && (
         <div className="mb-5">
-          <Textarea
-            value={notesDraft}
-            onChange={(e) => setNotesDraft(e.target.value)}
-            rows={3}
-            autoFocus
-            className="text-[0.875rem] rounded-md"
-            onKeyDown={(e) => {
-              if (e.key === "Escape") setEditingNotes(false);
-              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                updateField("notes")(notesDraft);
-                setEditingNotes(false);
-              }
-            }}
-          />
+          {editable && editingNotes ? (
+            <div>
+              <Textarea
+                value={notesDraft}
+                onChange={(e) => setNotesDraft(e.target.value)}
+                rows={3}
+                autoFocus
+                className="text-[0.875rem] rounded-md"
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setEditingNotes(false);
+                  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                    updateField("notes")(notesDraft);
+                    setShowNotes(Boolean(notesDraft.trim()));
+                    setEditingNotes(false);
+                  }
+                }}
+              />
 
-          <div className="flex gap-2 mt-1.5">
-            <Button
-              size="sm"
-              className="h-7 text-[0.75rem] px-3 rounded-md"
-              onClick={() => {
-                updateField("notes")(notesDraft);
-                setEditingNotes(false);
-              }}
-            >
-              Lagre
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-[0.75rem] px-3 rounded-md"
-              onClick={() => setEditingNotes(false)}
-            >
-              Avbryt
-            </Button>
-          </div>
-        </div>
-      ) : company.notes ? (
-        <div className="group relative mb-5">
-          <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{company.notes}</p>
-          {editable && (
+              <div className="flex gap-2 mt-1.5">
+                <DesignLabActionButton
+                  variant="primary"
+                  style={{ height: 32, fontSize: 12 }}
+                  onClick={() => {
+                    updateField("notes")(notesDraft);
+                    setShowNotes(Boolean(notesDraft.trim()));
+                    setEditingNotes(false);
+                  }}
+                >
+                  Lagre
+                </DesignLabActionButton>
+                <DesignLabActionButton
+                  variant="ghost"
+                  style={{ height: 32, fontSize: 12 }}
+                  onClick={() => setEditingNotes(false)}
+                >
+                  Avbryt
+                </DesignLabActionButton>
+              </div>
+            </div>
+          ) : company.notes ? (
+            editable ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setNotesDraft(company.notes || "");
+                  setEditingNotes(true);
+                }}
+                className="group relative block w-full text-left"
+              >
+                <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap transition-colors group-hover:text-foreground/80">
+                  {company.notes}
+                </p>
+              </button>
+            ) : (
+              <div className="group relative">
+                <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{company.notes}</p>
+              </div>
+            )
+          ) : editable ? (
             <button
               onClick={() => {
-                setNotesDraft(company.notes || "");
+                setNotesDraft("");
                 setEditingNotes(true);
               }}
-              className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-secondary"
+              className="text-[0.75rem] text-muted-foreground/50 hover:text-muted-foreground inline-flex items-center gap-1 transition-colors"
             >
-              <Pencil className="h-3 w-3 text-muted-foreground" />
+              <Pencil className="h-3 w-3" /> Legg til notat
             </button>
-          )}
+          ) : null}
         </div>
-      ) : null}
+      )}
 
       {/* ── Snapshot-rad ── */}
       {(() => {
@@ -1145,557 +1801,30 @@ export function CompanyCardContent({
         return;
       })()}
 
-      {/* ── To-kolonne layout ── */}
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_minmax(0,260px)] gap-6">
-        {/* Venstre: Teknisk DNA + Oppfølginger + Aktiviteter */}
-        <div className="space-y-5">
-          {/* ── Teknisk DNA ── */}
-          {(() => {
-            const techTags = getSortedTechnologyEntries(techProfile?.teknologier as any);
-            const contactTechTags = mergeTechnologyTags(
-              ...(contacts as any[]).map((contact) => (contact as any).teknologier || []),
-            );
-            const hasTech = techTags.length > 0 || contactTechTags.length > 0;
+      <div className="md:hidden">
+        <div className="space-y-5">{companyDetailSections}</div>
+        <div className="mt-4">{relatedContactsContent}</div>
+      </div>
 
-            return (
-              <div className="mb-2">
-                <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                    Teknisk DNA
-                    {techProfile?.konsulent_hyppighet ? (
-                      <span className="ml-2 text-muted-foreground/50 font-normal normal-case tracking-normal">
-                        · {techProfile.konsulent_hyppighet} annonser
-                      </span>
-                    ) : null}
-                  </h3>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {hasTech && (
-                      <button
-                        onClick={handleFinnKonsulenter}
-                        disabled={matchingKonsulenter}
-                        className="inline-flex items-center gap-1.5 h-7 px-2.5 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
-                      >
-                        {matchingKonsulenter ? (
-                          <>
-                            <Loader2 className="h-3 w-3 animate-spin" /> Matcher...
-                          </>
-                        ) : (
-                          <>
-                            <Target className="h-3.5 w-3.5 text-primary" /> Finn konsulenter som matcher teknisk behov
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {showAnalyze && (
-                  <div className="mb-3 p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-2">
-                    <p className="text-[0.75rem] text-muted-foreground">
-                      Lim inn stillingsbeskrivelse, e-post eller kravspesifikasjon — AI finner relevante teknologier
-                      automatisk.
-                    </p>
-                    <textarea
-                      value={analyzeText}
-                      onChange={(e) => setAnalyzeText(e.target.value)}
-                      placeholder="Lim inn tekst her..."
-                      rows={4}
-                      className="w-full text-[0.875rem] rounded-md border border-border bg-background px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary/30"
-                    />
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={handleAnalyzeText}
-                        disabled={!analyzeText.trim() || isAnalyzing}
-                        className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.75rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-colors"
-                      >
-                        <Sparkles className="h-3.5 w-3.5" />
-                        {isAnalyzing ? "Analyserer..." : "Finn teknologier"}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowAnalyze(false);
-                          setAnalyzeText("");
-                        }}
-                        className="text-[0.75rem] text-muted-foreground hover:text-foreground"
-                      >
-                        Avbryt
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Konsulentmatch-resultater */}
-                {konsulentResults !== null && (
-                  <div className="mb-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                          Konsulentmatch · {konsulentResults.length}
-                        </span>
-                        {konsulentMatchFreshness && (
-                          <p className="text-[0.6875rem] text-muted-foreground normal-case tracking-normal">
-                            {konsulentMatchFreshness}
-                          </p>
-                        )}
-                      </div>
-                      <button
-                        onClick={handleFinnKonsulenter}
-                        className="text-[0.6875rem] text-muted-foreground hover:text-foreground"
-                      >
-                        Kjør på nytt
-                      </button>
-                    </div>
-                    <div className="flex gap-1.5">
-                      {(["Alle", "Ansatte", "Eksterne"] as const).map((f) => (
-                        <button
-                          key={f}
-                          onClick={() => setKonsulentFilter(f)}
-                          className={cn(
-                            "h-6 px-2.5 text-[0.6875rem] rounded-full border transition-colors font-medium",
-                            konsulentFilter === f
-                              ? "bg-foreground text-background border-foreground"
-                              : "border-border text-muted-foreground hover:bg-secondary",
-                          )}
-                        >
-                          {f}
-                        </button>
-                      ))}
-                    </div>
-                    {visibleKonsulentResults.length === 0 ? (
-                      <p className="text-[0.8125rem] text-muted-foreground">Ingen treff</p>
-                    ) : (
-                      visibleKonsulentResults.map((m: any, i: number) => (
-                          <div key={`${m.type}-${m.id}`} className="rounded-lg border border-border bg-card p-2.5">
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
-                                <span className="text-[0.8125rem] font-semibold text-foreground truncate">
-                                  {m.navn}
-                                </span>
-                                <span
-                                  className={cn(
-                                    "inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold shrink-0",
-                                    m.type === "intern" ? "bg-foreground text-background" : "bg-blue-100 text-blue-700",
-                                  )}
-                                >
-                                  {m.type === "intern" ? "Ansatt" : "Ekstern"}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1 shrink-0">
-                                <span
-                                  className={cn(
-                                    "inline-block h-2 w-2 rounded-full",
-                                    getConsultantMatchScoreColor(m.score),
-                                  )}
-                                />
-
-                                <span className="text-[0.75rem] font-bold">{m.score}/10</span>
-                              </div>
-                            </div>
-                            <div className="flex flex-wrap gap-1 mt-1.5">
-                              {(m.match_tags || []).map((t: string) => (
-                                <span
-                                  key={t}
-                                  className="inline-flex items-center rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[0.625rem] font-medium"
-                                >
-                                  {t}
-                                </span>
-                              ))}
-                            </div>
-                            <p className="text-[0.75rem] text-muted-foreground mt-1 italic">{m.begrunnelse}</p>
-                          </div>
-                        ))
-                    )}
-                  </div>
-                )}
-
-                {techTags.length > 0 ? (
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-[0.6875rem] text-muted-foreground/60 mb-1.5">Fra Finn og forespørsler</p>
-                      <div className="flex flex-wrap gap-1">
-                        {techTags.slice(0, 20).map(({ name, count }) => (
-                          <span
-                            key={name}
-                            className="inline-flex items-center rounded-full bg-secondary text-foreground px-2.5 py-0.5 text-[0.75rem] font-mono border border-border"
-                          >
-                            {name}
-                            {count > 1 ? <span className="ml-1 text-muted-foreground/60">×{count}</span> : null}
-                          </span>
-                        ))}
-                      </div>
-                      {techProfile?.sist_fra_finn && (
-                        <p className="text-[0.6875rem] text-muted-foreground/40 mt-1.5">
-                          Oppdatert{" "}
-                          {new Date(techProfile.sist_fra_finn).toLocaleDateString("nb-NO", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </p>
-                      )}
-                    </div>
-                    {contactTechTags.length > 0 && (
-                      <>
-                        <div className="border-t border-border/50" />
-                        <div>
-                          <p className="text-[0.6875rem] text-muted-foreground/60 mb-1.5">Kontakt-DNA</p>
-                          <div className="flex flex-wrap gap-1">
-                            {contactTechTags.slice(0, 10).map((tech: string) => (
-                              <span
-                                key={tech}
-                                className="inline-flex items-center rounded-full bg-secondary text-foreground px-2.5 py-0.5 text-[0.75rem] font-mono border border-border"
-                              >
-                                {tech}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-[0.8125rem] text-muted-foreground/50">Ingen teknisk data ennå</p>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* Separator */}
-          <div className="border-t border-border/50" />
-
-          {/* ── Oppfølginger ── */}
-          {tasks.length > 0 && (
-            <div className="bg-card border border-border rounded-lg shadow-card p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                  Oppfølginger · {tasks.length}
-                </h3>
-              </div>
-              <div className="space-y-px">
-                {tasks.map((task) => {
-                  const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
-                  const today = task.due_date && isToday(new Date(task.due_date));
-                  const contactName = (task.contacts as any)?.first_name
-                    ? `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}`
-                    : null;
-                  const {
-                    title: displayTitle,
-                    category: displayCategory,
-                    cleanDesc: displayDesc,
-                  } = extractTitleAndCategory(task.title, task.description);
-                  return (
-                    <div
-                      key={task.id}
-                      className="flex items-start gap-2.5 py-2.5 px-1 rounded-md transition-all duration-200 group hover:bg-background/60 cursor-pointer"
-                      onClick={() => {
-                        if (task.contact_id) navigate(`/kontakter/${task.contact_id}`);
-                      }}
-                    >
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={false}
-                          onCheckedChange={() => toggleTaskMutation.mutate(task.id)}
-                          className="h-4 w-4 rounded-[4px] border-2 border-muted-foreground/40 flex-shrink-0 mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</div>
-                        {contactName && (
-                          <a
-                            href={`/kontakter/${task.contact_id}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-[0.8125rem] font-semibold text-blue-600 hover:underline block mt-0.5"
-                          >
-                            → {contactName}
-                          </a>
-                        )}
-                        {displayDesc && !/^\[.+\]$/.test(displayDesc.trim()) && (
-                          <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{displayDesc}</p>
-                        )}
-                        <div className="flex items-center gap-1.5 mt-1">
-                          {task.assigned_to && profileMapFull[task.assigned_to] && (
-                            <span
-                              className="inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium h-7"
-                              style={{
-                                background: C.statusNeutralBg,
-                                color: C.statusNeutral,
-                                border: `1px solid ${C.statusNeutralBorder}`,
-                              }}
-                            >
-                              {profileMapFull[task.assigned_to]}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
-                        {task.due_date && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span
-                                className={cn(
-                                  "text-[0.8125rem] font-medium",
-                                  overdue
-                                    ? "text-destructive"
-                                    : today
-                                      ? "text-[hsl(var(--warning))]"
-                                      : "text-muted-foreground",
-                                )}
-                              >
-                                {format(new Date(task.due_date), "d. MMM yyyy", { locale: nb })}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>{fullDate(task.due_date)}</TooltipContent>
-                          </Tooltip>
-                        )}
-                        {displayCategory && <CategoryBadge label={displayCategory} />}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+      <div className="hidden md:block">
+        <ResizablePanelGroup direction="horizontal" className="min-h-[520px] w-full">
+          <ResizablePanel defaultSize={76} minSize={52}>
+            <div className="pr-5">{companyDetailSections}</div>
+          </ResizablePanel>
+          <ResizableHandle className="group !w-1 !bg-transparent after:hidden hover:!bg-[#DDE0E7] data-[resize-handle-active]:!bg-[#5E6AD2] transition-colors focus-visible:!ring-0 focus-visible:!ring-offset-0">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute left-1/2 top-1/2 grid -translate-x-1/2 -translate-y-1/2 grid-cols-2 gap-[2px] opacity-0 transition-opacity group-hover:opacity-100"
+            >
+              {Array.from({ length: 6 }).map((_, index) => (
+                <span key={index} className="h-[2px] w-[2px] rounded-full bg-[#8C929C]" />
+              ))}
             </div>
-          )}
-
-          {/* ── Activities Timeline ── */}
-          <CompanyActivityTimeline activities={activities} profileMap={profileMapFull} companyId={companyId} />
-        </div>
-
-        {/* Høyre: Kun kontakter */}
-        <div className="space-y-2 border-t border-border pt-5 md:border-t-0 md:border-l md:pl-5 md:pt-0">
-          <div className="flex items-center justify-between">
-            <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-              Kontakter · {contacts.length}
-            </h3>
-            {editable && (
-              <Dialog open={newContactOpen} onOpenChange={setNewContactOpen}>
-                <DialogTrigger asChild>
-                  <Button className="rounded-lg h-7 px-2.5 text-[0.75rem] font-medium gap-1">
-                    <Plus className="h-3 w-3" />
-                    Ny kontakt
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-[440px] rounded-xl">
-                  <DialogHeader>
-                    <DialogTitle>Ny kontakt</DialogTitle>
-                  </DialogHeader>
-                  <form
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      const { error } = await supabase.from("contacts").insert({
-                        first_name: contactForm.first_name,
-                        last_name: contactForm.last_name,
-                        email: contactForm.email || null,
-                        phone: contactForm.phone || null,
-                        title: contactForm.title || null,
-                        linkedin: contactForm.linkedin || null,
-                        locations: contactForm.location ? [contactForm.location] : [],
-                        cv_email: sanitizeContactCvEmail(contactForm.email, contactForm.cv_email),
-                        call_list: contactForm.call_list,
-                        company_id: companyId,
-                        created_by: user?.id,
-                        owner_id: user?.id,
-                      });
-                      if (error) {
-                        toast.error("Kunne ikke opprette kontakt");
-                        return;
-                      }
-                      queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.contacts(companyId) });
-                      queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() });
-                      setNewContactOpen(false);
-                      setContactForm({
-                        first_name: "",
-                        last_name: "",
-                        email: "",
-                        phone: "",
-                        title: "",
-                        linkedin: "",
-                        location: "",
-                        cv_email: false,
-                        call_list: false,
-                      });
-                      toast.success("Kontakt opprettet");
-                    }}
-                    className="space-y-4 mt-3"
-                  >
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-label">Fornavn</Label>
-                        <Input
-                          value={contactForm.first_name}
-                          onChange={(e) => setContactForm({ ...contactForm, first_name: e.target.value })}
-                          required
-                          className="h-10 rounded-lg"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-label">Etternavn</Label>
-                        <Input
-                          value={contactForm.last_name}
-                          onChange={(e) => setContactForm({ ...contactForm, last_name: e.target.value })}
-                          required
-                          className="h-10 rounded-lg"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-label">Stilling</Label>
-                      <Input
-                        value={contactForm.title}
-                        onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })}
-                        className="h-10 rounded-lg"
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-label">E-post</Label>
-                        <Input
-                          value={contactForm.email}
-                          onChange={(e) =>
-                            setContactForm({
-                              ...contactForm,
-                              email: e.target.value,
-                              cv_email: sanitizeContactCvEmail(e.target.value, contactForm.cv_email),
-                            })
-                          }
-                          type="email"
-                          className="h-10 rounded-lg"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-label">Telefon</Label>
-                        <Input
-                          value={contactForm.phone}
-                          onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-                          className="h-10 rounded-lg"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-label">LinkedIn</Label>
-                      <Input
-                        value={contactForm.linkedin}
-                        onChange={(e) => setContactForm({ ...contactForm, linkedin: e.target.value })}
-                        placeholder="https://linkedin.com/in/..."
-                        className="h-10 rounded-lg"
-                      />
-                    </div>
-                    {(() => {
-                      const locs: string[] = company.city
-                        ? company.city
-                            .split(",")
-                            .map((s: string) => s.trim())
-                            .filter(Boolean)
-                        : [];
-                      if (locs.length === 0) return null;
-                      return (
-                        <div className="space-y-1.5">
-                          <Label className="text-label">Geografisk sted</Label>
-                          <div className="flex flex-wrap gap-1.5">
-                            {locs.map((loc) => (
-                              <button
-                                key={loc}
-                                type="button"
-                                onClick={() =>
-                                  setContactForm({ ...contactForm, location: loc === contactForm.location ? "" : loc })
-                                }
-                                className={cn(
-                                  "inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-[0.8125rem] font-medium transition-colors",
-                                  contactForm.location === loc
-                                    ? "bg-foreground text-background border-foreground"
-                                    : "border-border text-muted-foreground hover:bg-secondary",
-                                )}
-                              >
-                                {loc}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                    <div className="space-y-1.5">
-                      <Label className="text-label">Egenskaper</Label>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!contactForm.cv_email && !contactHasEmail(contactForm)) {
-                              toast.error(CONTACT_CV_EMAIL_REQUIRED_MESSAGE);
-                              return;
-                            }
-                            setContactForm({ ...contactForm, cv_email: !contactForm.cv_email });
-                          }}
-                          className={cn(
-                            "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
-                            contactForm.cv_email
-                              ? "bg-green-100 text-green-800 border-green-200"
-                              : "bg-background text-muted-foreground border-border hover:bg-secondary",
-                          )}
-                        >
-                          {contactForm.cv_email ? "✓ CV-Epost" : "CV-Epost"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setContactForm({ ...contactForm, call_list: !contactForm.call_list })}
-                          className={cn(
-                            "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
-                            contactForm.call_list
-                              ? "bg-amber-100 text-amber-800 border-amber-200"
-                              : "bg-background text-muted-foreground border-border hover:bg-secondary",
-                          )}
-                        >
-                          {contactForm.call_list ? "✓ Innkjøper" : "Innkjøper"}
-                        </button>
-                      </div>
-                    </div>
-                    <Button type="submit" className="w-full h-10 rounded-lg">
-                      Opprett
-                    </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
-          {contacts.length === 0 ? (
-            <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen kontakter</p>
-          ) : (
-            <div className="divide-y divide-border">
-              {contacts.map((c) => {
-                const contactOwner = (c as any).profiles?.full_name || null;
-                return (
-                  <button
-                    key={c.id}
-                    className="w-full flex items-center gap-2 py-3 hover:bg-secondary/50 transition-colors duration-75 text-left group rounded-md"
-                    onClick={() => (onOpenContact ? onOpenContact(c.id) : navigate(`/kontakter/${c.id}`))}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-[0.8125rem] font-medium truncate group-hover:text-primary transition-colors">
-                          {c.first_name} {c.last_name}
-                        </p>
-                        {c.cv_email && (
-                          <span className="rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">
-                            CV
-                          </span>
-                        )}
-                        {c.call_list && (
-                          <span className="rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-xs font-medium flex-shrink-0">
-                            Innkjøper
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[0.6875rem] text-muted-foreground truncate">
-                        {[c.title, contactOwner].filter(Boolean).join(" · ") || ""}
-                      </p>
-                    </div>
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/20 group-hover:text-muted-foreground/60 flex-shrink-0" />
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
+          </ResizableHandle>
+          <ResizablePanel defaultSize={24} minSize={18} maxSize={38}>
+            <div className="pl-4">{relatedContactsContent}</div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
     </div>
   );
@@ -1706,10 +1835,12 @@ function CompanyActivityTimeline({
   activities,
   profileMap,
   companyId,
+  editable,
 }: {
   activities: any[];
   profileMap: Record<string, string>;
   companyId: string;
+  editable: boolean;
 }) {
   const navigate = useNavigate();
   const currentYear = getYear(new Date());
@@ -1737,7 +1868,7 @@ function CompanyActivityTimeline({
   if (activities.length === 0) {
     return (
       <div>
-        <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+        <h3 className="text-[12px] font-medium text-[#5C636E]">
           Aktiviteter · 0
         </h3>
         <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen aktiviteter</p>
@@ -1747,7 +1878,7 @@ function CompanyActivityTimeline({
 
   return (
     <div>
-      <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4">
+      <h3 className="text-[12px] font-medium text-[#5C636E] mb-3">
         Aktiviteter · {activities.length}
       </h3>
 
@@ -1770,6 +1901,7 @@ function CompanyActivityTimeline({
                   activity={activity}
                   profileMap={profileMap}
                   companyId={companyId}
+                  editable={editable}
                   navigate={navigate}
                 />
               ))}
@@ -1786,11 +1918,13 @@ function CompanyActivityRow({
   activity,
   profileMap,
   companyId,
+  editable,
   navigate,
 }: {
   activity: any;
   profileMap: Record<string, string>;
   companyId: string;
+  editable: boolean;
   navigate: (path: string) => void;
 }) {
   const queryClient = useQueryClient();
@@ -1820,7 +1954,7 @@ function CompanyActivityRow({
     );
 
   const handleRowClick = () => {
-    if (editing) return;
+    if (!editable || editing) return;
     const parsed = extractTitleAndCategory(activity.subject, activity.description);
     let cat = parsed.category;
     if (!cat && CATEGORIES.some((c) => c.label === activity.subject)) {
@@ -1901,59 +2035,70 @@ function CompanyActivityRow({
                 type="date"
                 value={editDate}
                 onChange={(e) => setEditDate(e.target.value)}
-                className="h-7 px-2 text-[0.75rem] rounded-full border border-border text-muted-foreground bg-background"
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                style={{
+                  height: 28,
+                  paddingInline: 8,
+                  fontSize: 12,
+                  borderRadius: 6,
+                  border: `1px solid ${C.borderDefault}`,
+                  color: C.textSecondary,
+                  background: C.surface,
+                }}
               />
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                className="h-6 text-[0.6875rem] px-2 rounded"
+              <DesignLabActionButton
+                variant="primary"
+                style={{ height: 32, fontSize: 12 }}
                 disabled={!editTitle.trim() || !editCategory}
                 onClick={handleSave}
               >
                 Lagre
-              </Button>
-              <Button
+              </DesignLabActionButton>
+              <DesignLabActionButton
                 variant="ghost"
-                size="sm"
-                className="h-6 text-[0.6875rem] px-2 rounded"
+                style={{ height: 32, fontSize: 12 }}
                 onClick={() => setEditing(false)}
               >
                 Avbryt
-              </Button>
+              </DesignLabActionButton>
               <div className="ml-auto">
                 {confirmDelete ? (
-                  <span className="text-[0.75rem] animate-in fade-in duration-150">
-                    <span className="text-destructive mr-1">Er du sikker?</span>
-                    <button
+                  <div className="flex items-center gap-2 text-[0.75rem] animate-in fade-in duration-150">
+                    <span className="text-destructive">Er du sikker?</span>
+                    <DesignLabActionButton
+                      variant="secondary"
                       onClick={() => {
                         handleDelete();
                         setConfirmDelete(false);
                       }}
-                      className="text-destructive font-medium hover:underline mr-1"
+                      style={{ height: 32, fontSize: 12, color: C.danger }}
                     >
                       Ja, slett
-                    </button>
-                    <button
+                    </DesignLabActionButton>
+                    <DesignLabActionButton
+                      variant="ghost"
+                      style={{ height: 32, fontSize: 12 }}
                       onClick={() => setConfirmDelete(false)}
-                      className="text-muted-foreground hover:text-foreground"
                     >
                       Avbryt
-                    </button>
-                  </span>
+                    </DesignLabActionButton>
+                  </div>
                 ) : (
-                  <button
+                  <DesignLabIconButton
+                    size={32}
                     onClick={() => setConfirmDelete(true)}
-                    className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                    style={{ color: C.textSecondary }}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  </DesignLabIconButton>
                 )}
               </div>
             </div>
           </div>
         ) : (
-          <div onClick={handleRowClick} className="cursor-pointer flex items-start gap-3">
+          <div onClick={handleRowClick} className={cn("flex items-start gap-3", editable && "cursor-pointer")}>
             <div className="flex-1 min-w-0">
               <span className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</span>
 
