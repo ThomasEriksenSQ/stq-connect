@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { CompanyCardContent } from "@/components/CompanyCardContent";
 import {
-  Search, ChevronDown, ChevronUp, X,
+  ChevronDown, ChevronUp, X,
 } from "lucide-react";
 import { differenceInDays } from "date-fns";
 import { getEffectiveSignal, normalizeCategoryLabel } from "@/lib/categoryUtils";
@@ -14,6 +14,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { C, SIGNAL_COLORS } from "@/components/designlab/theme";
 import { crmQueryKeys } from "@/lib/queryKeys";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
+import {
+  DesignLabActionButton,
+  DesignLabControlLabel,
+  DesignLabFilterButton,
+  DesignLabIconButton,
+  DesignLabSearchInput,
+} from "@/components/designlab/controls";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
@@ -293,19 +300,20 @@ export default function DesignLabCompanies() {
 
         {/* Type — inline dropdown */}
         <div className="min-w-0 relative" onClick={(e) => e.stopPropagation()}>
-          <button
+          <DesignLabFilterButton
             onClick={(e) => {
               e.stopPropagation();
               setTypeDropdownOpen(typeDropdownOpen === company.id ? null : company.id);
             }}
-            className="inline-flex items-center gap-0.5 transition-colors"
-            style={{ fontSize: 12, color: C.textMuted, cursor: "pointer" }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = C.textMuted; }}
+            active={typeDropdownOpen === company.id}
+            className="justify-start max-w-full"
+            style={{ paddingInline: 8 }}
+            aria-haspopup="menu"
+            aria-expanded={typeDropdownOpen === company.id}
           >
             <span className="truncate">{typeLabel}</span>
             <ChevronDown style={{ width: 12, height: 12, flexShrink: 0 }} />
-          </button>
+          </DesignLabFilterButton>
           {typeDropdownOpen === company.id && (
             <>
               <div className="fixed inset-0 z-20" onClick={() => setTypeDropdownOpen(null)} />
@@ -314,19 +322,18 @@ export default function DesignLabCompanies() {
                 style={{ background: C.panel, border: `1px solid ${C.border}`, boxShadow: C.shadowMd, minWidth: 160 }}
               >
                 {TYPE_OPTIONS.map((opt) => (
-                  <button
+                  <DesignLabActionButton
                     key={opt.value}
                     onClick={() => {
                       setTypeMutation.mutate({ companyId: company.id, status: opt.value });
                       setTypeDropdownOpen(null);
                     }}
-                    className="block w-full text-left px-3 transition-colors"
-                    style={{ fontSize: 12, color: C.text, height: 30 }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                    variant="ghost"
+                    className="w-full justify-start"
+                    style={{ height: 28, paddingInline: 10, fontSize: 12 }}
                   >
                     {opt.label}
-                  </button>
+                  </DesignLabActionButton>
                 ))}
               </div>
             </>
@@ -369,24 +376,19 @@ export default function DesignLabCompanies() {
             <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>{filtered.length}</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="relative" style={{ width: 220 }}>
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ width: 14, height: 14, color: C.textGhost }} />
-              <input
-                ref={searchRef}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Søk selskaper…"
-                className="w-full outline-none placeholder:text-[#a2a5ab]"
-                style={{ height: 30, paddingLeft: 30, paddingRight: 9, borderRadius: 5, border: `1px solid ${C.border}`, background: C.surfaceAlt, color: C.text, fontSize: 13 }}
-              />
-            </div>
-            <button
-              className="inline-flex items-center gap-1.5 rounded-md transition-opacity hover:opacity-90"
-              style={{ height: 30, paddingInline: 11, fontSize: 13, fontWeight: 500, background: C.accent, color: "#fff", borderRadius: 5 }}
+            <DesignLabSearchInput
+              ref={searchRef}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Søk selskaper…"
+              style={{ width: 220 }}
+            />
+            <DesignLabActionButton
+              variant="primary"
               onClick={() => navigate("/selskaper?ny=Nytt+selskap")}
             >
               + Nytt selskap
-            </button>
+            </DesignLabActionButton>
           </div>
         </header>
 
@@ -396,15 +398,12 @@ export default function DesignLabCompanies() {
           <div className="flex items-center justify-between">
             <FilterRow label="TYPE" options={[...TYPE_FILTERS]} value={typeFilter} onChange={(v) => setTypeFilter(v as TypeFilter)} />
             {(ownerFilter !== "Alle" || typeFilter !== "Alle") && (
-              <button
+              <DesignLabActionButton
+                variant="ghost"
                 onClick={() => { setOwnerFilter("Alle"); setTypeFilter("Alle"); }}
-                className="inline-flex items-center gap-1 rounded transition-colors shrink-0"
-                style={{ fontSize: 12, color: C.textFaint, padding: "2px 6px" }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = C.textFaint; }}
               >
                 <X style={{ width: 12, height: 12 }} /> Nullstill
-              </button>
+              </DesignLabActionButton>
             )}
           </div>
         </div>
@@ -446,13 +445,11 @@ export default function DesignLabCompanies() {
               {selectedId ? (
                 <div className="h-full flex flex-col" style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}` }}>
                   <div className="shrink-0 flex items-center justify-end px-4" style={{ height: 32, borderBottom: `1px solid ${C.border}` }}>
-                    <button
+                    <DesignLabIconButton
                       onClick={() => setSelectedId(null)}
-                      className="rounded p-1 hover:bg-black/5 transition-colors"
-                      style={{ color: C.textFaint }}
                     >
                       <X style={{ width: 16, height: 16 }} />
-                    </button>
+                    </DesignLabIconButton>
                   </div>
                   <div className="flex-1 overflow-y-auto px-6 py-5 dl-v8-theme">
                     <CompanyCardContent companyId={selectedId} editable onNavigateToFullPage={() => navigate(`/selskaper/${selectedId}`)} />
@@ -503,27 +500,18 @@ function FilterRow({ label, options, value, onChange }: {
 }) {
   return (
     <div className="flex items-center gap-2 py-[3px]">
-      <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted, width: 56, flexShrink: 0 }}>{label}</span>
-      <div className="flex items-center gap-1 flex-wrap">
+      <DesignLabControlLabel>{label}</DesignLabControlLabel>
+      <div className="flex items-center gap-1.5 flex-wrap">
         {options.map((opt) => {
           const active = value === opt;
           return (
-            <button
+            <DesignLabFilterButton
               key={opt}
               onClick={() => onChange(opt)}
-              className="inline-flex items-center transition-colors"
-              style={{
-                height: 24, paddingInline: 10, fontSize: 12, fontWeight: 500,
-                borderRadius: 3,
-                border: active ? "none" : `1px solid ${C.border}`,
-                background: active ? C.accent : "transparent",
-                color: active ? "#fff" : C.textMuted,
-              }}
-              onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = C.hoverBg; }}
-              onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = active ? C.accent : "transparent"; }}
+              active={active}
             >
               {opt}
-            </button>
+            </DesignLabFilterButton>
           );
         })}
       </div>

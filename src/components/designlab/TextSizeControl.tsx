@@ -1,4 +1,7 @@
 import { Type } from "lucide-react";
+
+import { DesignLabFilterButton } from "@/components/designlab/controls";
+
 import { C } from "./theme";
 
 const SIZES = ["S", "M", "L", "XL", "XXL"] as const;
@@ -24,25 +27,19 @@ export function TextSizeControl({ value, onChange }: Props) {
       {SIZES.map((s) => {
         const active = s === value;
         return (
-          <button
+          <DesignLabFilterButton
             key={s}
             onClick={() => onChange(s)}
+            active={active}
             style={{
-              height: 28,
               minWidth: 28,
-              padding: "0 6px",
+              paddingInline: 6,
               fontSize: 11,
-              fontWeight: active ? 600 : 500,
-              borderRadius: 3,
-              border: `1px solid ${active ? C.accent : C.border}`,
-              background: active ? C.accent : "transparent",
-              color: active ? "#fff" : C.textFaint,
-              cursor: "pointer",
               transition: "all 120ms ease",
             }}
           >
             {s}
-          </button>
+          </DesignLabFilterButton>
         );
       })}
     </div>

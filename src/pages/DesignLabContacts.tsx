@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import {
-  Search,
   ArrowUpDown,
   ChevronDown,
   ChevronUp,
@@ -59,6 +58,13 @@ import {
   resolveMatchLeadOwner,
   type MatchLeadOwnerSource,
 } from "@/lib/matchLeadOwners";
+import {
+  DesignLabActionButton,
+  DesignLabControlLabel,
+  DesignLabFilterButton,
+  DesignLabIconButton,
+  DesignLabSearchInput,
+} from "@/components/designlab/controls";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
@@ -288,8 +294,8 @@ function compareByPriority(
 
 function getHeatBarColor(heat: HeatResult) {
   if (heat.temperature === "hett") return C.danger;
-  if (heat.temperature === "lovende") return "#FB923C";
-  if (heat.temperature === "mulig") return "#FBBF24";
+  if (heat.temperature === "lovende") return C.heatPromising;
+  if (heat.temperature === "mulig") return C.heatPossible;
   return "transparent";
 }
 
@@ -1945,43 +1951,16 @@ export default function DesignLabContacts() {
           </div>
           <div className="flex items-center gap-2">
             <TextSizeControl value={textSize} onChange={setTextSize} />
-            <div className="relative" style={{ width: 220 }}>
-              <Search
-                className="absolute left-2.5 top-1/2 -translate-y-1/2"
-                style={{ width: 14, height: 14, color: C.textGhost }}
-              />
-              <input
-                ref={searchRef}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Søk kontakter…"
-                className="w-full outline-none placeholder:text-[#a2a5ab]"
-                style={{
-                  height: 30,
-                  paddingLeft: 30,
-                  paddingRight: 9,
-                  borderRadius: 5,
-                  border: `1px solid ${C.border}`,
-                  background: C.surfaceAlt,
-                  color: C.text,
-                  fontSize: 13,
-                }}
-              />
-            </div>
-            <button
-              className="inline-flex items-center gap-1.5 rounded-md transition-opacity hover:opacity-90"
-              style={{
-                height: 30,
-                paddingInline: 11,
-                fontSize: 13,
-                fontWeight: 500,
-                background: C.accent,
-                color: "#fff",
-                borderRadius: 5,
-              }}
-            >
+            <DesignLabSearchInput
+              ref={searchRef}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Søk kontakter…"
+              style={{ width: 220 }}
+            />
+            <DesignLabActionButton variant="primary">
               + Ny kontakt
-            </button>
+            </DesignLabActionButton>
           </div>
         </header>
 
@@ -2004,23 +1983,16 @@ export default function DesignLabContacts() {
                   onChange={(v) => setTypeFilter(v as TypeFilter)}
                 />
                 {(ownerFilter !== "Alle" || signalFilter !== "Alle" || typeFilter !== "Alle") && (
-                  <button
+                  <DesignLabActionButton
+                    variant="ghost"
                     onClick={() => {
                       setOwnerFilter("Alle");
                       setSignalFilter("Alle");
                       setTypeFilter("Alle");
                     }}
-                    className="inline-flex items-center gap-1 rounded transition-colors shrink-0"
-                    style={{ fontSize: 12, color: C.textFaint, padding: "2px 6px" }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = C.text;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = C.textFaint;
-                    }}
                   >
                     <X style={{ width: 12, height: 12 }} /> Nullstill
-                  </button>
+                  </DesignLabActionButton>
                 )}
               </div>
             </>
@@ -2035,28 +2007,17 @@ export default function DesignLabContacts() {
                     {JAKT_CHIP_HELP_TEXT[jaktChip]}
                   </p>
                 </div>
-                <button
+                <DesignLabActionButton
+                  variant="ghost"
                   onClick={() => handleConsultantToggle(selectedConsultant.id)}
-                  className="inline-flex items-center gap-1 rounded transition-colors shrink-0"
-                  style={{ fontSize: 12, color: C.textFaint, padding: "2px 6px" }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = C.text;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = C.textFaint;
-                  }}
                 >
                   <X style={{ width: 12, height: 12 }} /> Vis alle kontakter
-                </button>
+                </DesignLabActionButton>
               </div>
               <div className="flex items-start justify-between gap-6">
                 <div className="min-w-0 flex-1 space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span
-                      style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted, width: 56, flexShrink: 0 }}
-                    >
-                      EIER
-                    </span>
+                    <DesignLabControlLabel>EIER</DesignLabControlLabel>
                     <MatchFilterChip active={matchOwnerFilter === "all"} onClick={() => setMatchOwnerFilter("all")}>
                       Alle
                     </MatchFilterChip>
@@ -2079,11 +2040,7 @@ export default function DesignLabContacts() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span
-                      style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted, width: 56, flexShrink: 0 }}
-                    >
-                      MATCH
-                    </span>
+                    <DesignLabControlLabel>MATCH</DesignLabControlLabel>
                     {JAKT_CHIPS.map((chip) => (
                       <MatchFilterChip
                         key={chip.value}
@@ -2116,7 +2073,7 @@ export default function DesignLabContacts() {
                 const nameParts = con.navn.split(" ");
                 const initials = (nameParts[0]?.[0] || "") + (nameParts[nameParts.length - 1]?.[0] || "");
                 const toneColor = isSelected
-                  ? "#fff"
+                  ? C.onAccent
                   : meta.tone === "ready"
                     ? C.dotSuccess
                     : meta.tone === "soon"
@@ -2142,7 +2099,7 @@ export default function DesignLabContacts() {
                         background: isSelected ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.06)",
                         fontSize: 12,
                         fontWeight: 600,
-                        color: isSelected ? "#fff" : C.text,
+                        color: isSelected ? C.onAccent : C.text,
                       }}
                     >
                       {initials.toUpperCase()}
@@ -2150,7 +2107,7 @@ export default function DesignLabContacts() {
                     <div className="min-w-0">
                       <p
                         className="truncate"
-                        style={{ fontSize: 13, fontWeight: 500, color: isSelected ? "#fff" : C.text, maxWidth: 140 }}
+                        style={{ fontSize: 13, fontWeight: 500, color: isSelected ? C.onAccent : C.text, maxWidth: 140 }}
                       >
                         {con.navn}
                       </p>
@@ -2184,20 +2141,20 @@ export default function DesignLabContacts() {
                       <span style={{ fontSize: 11, fontWeight: 500, color: C.textMuted }}>Lead</span>
                       <span style={{ fontSize: 11, fontWeight: 500, color: C.textMuted }}>Selskap</span>
                       <span style={{ fontSize: 11, fontWeight: 500, color: C.textMuted }}>Kilde</span>
-                      <button
+                      <DesignLabFilterButton
                         onClick={() => toggleHuntSort("match")}
-                        className="flex items-center gap-1 transition-colors"
-                        style={{ fontSize: 11, fontWeight: 500, color: huntSort.field === "match" ? C.text : C.textMuted }}
+                        active={huntSort.field === "match"}
+                        style={{ fontSize: 11 }}
                       >
                         Match <ArrowUpDown style={{ width: 12, height: 12 }} />
-                      </button>
-                      <button
+                      </DesignLabFilterButton>
+                      <DesignLabFilterButton
                         onClick={() => toggleHuntSort("varme")}
-                        className="flex items-center gap-1 transition-colors"
-                        style={{ fontSize: 11, fontWeight: 500, color: huntSort.field === "varme" ? C.text : C.textMuted }}
+                        active={huntSort.field === "varme"}
+                        style={{ fontSize: 11 }}
                       >
                         Varme <ArrowUpDown style={{ width: 12, height: 12 }} />
-                      </button>
+                      </DesignLabFilterButton>
                       <span className="text-right" style={{ fontSize: 11, fontWeight: 500, color: C.textMuted }}>
                         Sist
                       </span>
@@ -2220,9 +2177,9 @@ export default function DesignLabContacts() {
                           : lead.temperature === "hett"
                             ? C.danger
                             : lead.temperature === "lovende"
-                              ? "#FB923C"
+                              ? C.heatPromising
                               : lead.temperature === "mulig"
-                                ? "#FBBF24"
+                                ? C.heatPossible
                                 : "transparent";
                         const heatLabel = isContactMatchLead(lead)
                           ? lead.temperature
@@ -2393,27 +2350,15 @@ export default function DesignLabContacts() {
                             <div className="flex items-center gap-1.5">
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <button
+                                  <DesignLabFilterButton
                                     onClick={(event) => event.stopPropagation()}
-                                    className="inline-flex items-center"
+                                    active={Boolean(c.signal)}
+                                    className="justify-start"
+                                    aria-haspopup="menu"
                                   >
-                                    {c.signal ? (
-                                      <SignalChip signal={c.signal as Signal} />
-                                    ) : (
-                                      <span
-                                        style={{
-                                          fontSize: 11,
-                                          fontWeight: 500,
-                                          padding: "2px 8px",
-                                          borderRadius: 999,
-                                          border: `1px dashed ${C.borderStrong}`,
-                                          color: C.textFaint,
-                                        }}
-                                      >
-                                        + Signal
-                                      </span>
-                                    )}
-                                  </button>
+                                    <span>{c.signal ? signalShortLabel(c.signal as Signal) : "Velg signal"}</span>
+                                    <ChevronDown style={{ width: 12, height: 12, flexShrink: 0 }} />
+                                  </DesignLabFilterButton>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start">
                                   {SIGNALS.map((signalOption) => (
@@ -2450,8 +2395,10 @@ export default function DesignLabContacts() {
                             </div>
                             <span className="truncate" style={{ fontSize: 12, color: C.textMuted }}>{c.title}</span>
                             <div className="flex items-center gap-1.5 min-w-0" onClick={(event) => event.stopPropagation()}>
-                              <button
+                              <DesignLabFilterButton
                                 type="button"
+                                active={Boolean(c.cvEmail)}
+                                disabled={c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")}
                                 title={
                                   c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")
                                     ? "Kontakten har avmeldt seg via Mailchimp og kan ikke re-abonneres"
@@ -2478,37 +2425,14 @@ export default function DesignLabContacts() {
                                     !c.cvEmail,
                                   );
                                 }}
-                                style={{
-                                  fontSize: 11,
-                                  fontWeight: 500,
-                                  padding: "1px 6px",
-                                  borderRadius: 3,
-                                  background:
-                                    c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")
-                                      ? C.dangerBg
-                                      : c.cvEmail
-                                        ? C.toggleCv.activeBg
-                                        : C.toggleInactive.bg,
-                                  color:
-                                    c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")
-                                      ? C.danger
-                                      : c.cvEmail
-                                        ? C.toggleCv.activeText
-                                        : C.toggleInactive.text,
-                                  border:
-                                    c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")
-                                      ? `1px solid ${C.danger}`
-                                      : c.cvEmail
-                                        ? "none"
-                                        : `1px solid ${C.toggleInactive.border}`,
-                                }}
                               >
                                 {c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")
                                   ? "CV ✗"
                                   : "CV"}
-                              </button>
-                              <button
+                              </DesignLabFilterButton>
+                              <DesignLabFilterButton
                                 type="button"
+                                active={Boolean(c.callList)}
                                 title={c.callList ? "Innkjøper aktiv" : "Aktiver innkjøper"}
                                 onClick={() =>
                                   handleToggle(
@@ -2523,18 +2447,9 @@ export default function DesignLabContacts() {
                                     !c.callList,
                                   )
                                 }
-                                style={{
-                                  fontSize: 11,
-                                  fontWeight: 500,
-                                  padding: "1px 6px",
-                                  borderRadius: 3,
-                                  background: c.callList ? C.toggleBuyer.activeBg : C.toggleInactive.bg,
-                                  color: c.callList ? C.toggleBuyer.activeText : C.toggleInactive.text,
-                                  border: c.callList ? "none" : `1px solid ${C.toggleInactive.border}`,
-                                }}
                               >
                                 Innkjøper
-                              </button>
+                              </DesignLabFilterButton>
                             </div>
                             <span
                               className="text-right"
@@ -2565,13 +2480,9 @@ export default function DesignLabContacts() {
                     className="shrink-0 flex items-center justify-end px-4"
                     style={{ height: 32, borderBottom: `1px solid ${C.border}` }}
                   >
-                    <button
-                      onClick={() => setSelectedId(null)}
-                      className="rounded p-1 hover:bg-black/5 transition-colors"
-                      style={{ color: C.textFaint }}
-                    >
+                    <DesignLabIconButton onClick={() => setSelectedId(null)} title="Lukk kontaktpanel">
                       <X style={{ width: 16, height: 16 }} />
-                    </button>
+                    </DesignLabIconButton>
                   </div>
                   <div className="flex-1 overflow-y-auto px-6 py-5 dl-v8-theme">
                     <ContactCardContent
@@ -2637,6 +2548,11 @@ export default function DesignLabContacts() {
    ═══════════════════════════════════════════════════════════ */
 
 function SignalChip({ signal, size = "sm" }: { signal: Signal; size?: "sm" | "md" }) {
+  const modifier = signal === "Ikke aktuelt" ? " is-muted" : " is-signal";
+  return <span className={`chip chip--action${modifier}`}>{size === "sm" ? signalShortLabel(signal) : signal}</span>;
+}
+
+function signalShortLabel(signal: Signal): string {
   const shortLabels: Record<Signal, string> = {
     "Behov nå": "Behov nå",
     "Får fremtidig behov": "Fremtidig",
@@ -2644,8 +2560,8 @@ function SignalChip({ signal, size = "sm" }: { signal: Signal; size?: "sm" | "md
     "Ukjent om behov": "Ukjent",
     "Ikke aktuelt": "Ikke aktuelt",
   };
-  const modifier = signal === "Ikke aktuelt" ? " is-muted" : " is-signal";
-  return <span className={`chip chip--action${modifier}`}>{size === "sm" ? shortLabels[signal] : signal}</span>;
+
+  return shortLabels[signal];
 }
 
 function MatchFilterChip({
@@ -2658,30 +2574,11 @@ function MatchFilterChip({
   onClick: () => void;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className="inline-flex items-center transition-colors"
-      style={{
-        height: 24,
-        paddingInline: 10,
-        fontSize: 12,
-        fontWeight: 500,
-        borderRadius: 999,
-        border: active ? "1px solid transparent" : `1px solid ${C.toggleInactive.border}`,
-        background: active ? C.accent : C.toggleInactive.bg,
-        color: active ? "#fff" : C.toggleInactive.text,
-      }}
-    >
+    <DesignLabFilterButton onClick={onClick} active={active} style={{ borderRadius: 999 }}>
       {children}
-    </button>
+    </DesignLabFilterButton>
   );
 }
-
-const TYPE_TOGGLE_MAP: Record<string, { activeBg: string; activeText: string }> = {
-  "CV-Epost":              C.toggleCv,
-  "Innkjøper":             C.toggleBuyer,
-  "Ikke relevant kontakt": C.toggleIrrelevant,
-};
 
 function FilterRow({
   label,
@@ -2696,45 +2593,19 @@ function FilterRow({
 }) {
   return (
     <div className="flex items-center gap-2 py-[3px]">
-      <span
-        style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted, width: 56, flexShrink: 0 }}
-      >
-        {label}
-      </span>
-      <div className="flex items-center gap-1 flex-wrap">
+      <DesignLabControlLabel>{label}</DesignLabControlLabel>
+      <div className="flex items-center gap-1.5 flex-wrap">
         {options.map((opt) => {
           const active = value === opt;
-          const toggle = label === "TYPE" ? TYPE_TOGGLE_MAP[opt] : undefined;
-
-          // Active style: use toggle color if available, otherwise default accent
-          const activeBg = toggle ? toggle.activeBg : C.accent;
-          const activeColor = toggle ? toggle.activeText : "#fff";
-          const inactiveBorder = `1px solid ${C.toggleInactive.border}`;
 
           return (
-            <button
+            <DesignLabFilterButton
               key={opt}
               onClick={() => onChange(opt)}
-              className="inline-flex items-center transition-colors"
-              style={{
-                height: 24,
-                paddingInline: 10,
-                fontSize: 12,
-                fontWeight: 500,
-                borderRadius: 3,
-                border: active ? (toggle ? `1px solid transparent` : "none") : inactiveBorder,
-                background: active ? activeBg : C.toggleInactive.bg,
-                color: active ? activeColor : C.toggleInactive.text,
-              }}
-              onMouseEnter={(e) => {
-                if (!active) e.currentTarget.style.background = C.hoverBg;
-              }}
-              onMouseLeave={(e) => {
-                if (!active) e.currentTarget.style.background = active ? activeBg : C.toggleInactive.bg;
-              }}
+              active={active}
             >
               {opt}
-            </button>
+            </DesignLabFilterButton>
           );
         })}
       </div>

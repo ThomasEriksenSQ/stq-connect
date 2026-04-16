@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import {
-  Search, ChevronDown, ChevronUp, X,
+  ChevronDown, ChevronUp, X,
   ArrowUpRight,
 } from "lucide-react";
 import { differenceInDays, format } from "date-fns";
@@ -16,6 +16,13 @@ import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designla
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { C } from "@/components/designlab/theme";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
+import {
+  DesignLabActionButton,
+  DesignLabControlLabel,
+  DesignLabFilterButton,
+  DesignLabIconButton,
+  DesignLabSearchInput,
+} from "@/components/designlab/controls";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
@@ -225,23 +232,16 @@ export default function DesignLabForesporsler() {
           </div>
           <div className="flex items-center gap-2">
             <TextSizeControl value={textSize} onChange={setTextSize} />
-            <div className="relative" style={{ width: 220 }}>
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ width: 14, height: 14, color: C.textGhost }} />
-              <input
-                ref={searchRef}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Søk forespørsler…"
-                className="w-full outline-none placeholder:text-[#a2a5ab]"
-                style={{ height: 30, paddingLeft: 30, paddingRight: 9, borderRadius: 5, border: `1px solid ${C.border}`, background: C.surfaceAlt, color: C.text, fontSize: 13 }}
-              />
-            </div>
-            <button
-              className="inline-flex items-center gap-1.5 rounded-md transition-opacity hover:opacity-90"
-              style={{ height: 30, paddingInline: 11, fontSize: 13, fontWeight: 500, background: C.accent, color: "#fff", borderRadius: 5 }}
-            >
+            <DesignLabSearchInput
+              ref={searchRef}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Søk forespørsler…"
+              style={{ width: 220 }}
+            />
+            <DesignLabActionButton variant="primary">
               + Ny forespørsel
-            </button>
+            </DesignLabActionButton>
           </div>
         </header>
 
@@ -256,15 +256,12 @@ export default function DesignLabForesporsler() {
           </div>
           {(statusFilter !== "aktive" || typeFilter !== "Alle") && (
             <div className="flex justify-end">
-              <button
+              <DesignLabActionButton
+                variant="ghost"
                 onClick={() => { setStatusFilter("aktive"); setTypeFilter("Alle"); }}
-                className="inline-flex items-center gap-1 rounded transition-colors"
-                style={{ fontSize: 12, color: C.textFaint, padding: "2px 6px" }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = C.text; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = C.textFaint; }}
               >
                 <X style={{ width: 12, height: 12 }} /> Nullstill
-              </button>
+              </DesignLabActionButton>
             </div>
           )}
         </div>
@@ -294,9 +291,13 @@ export default function DesignLabForesporsler() {
                       <h2 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{(selectedRow as any).selskap_navn}</h2>
                       <TypeChip type={(selectedRow as any).type} />
                     </div>
-                    <div className="flex items-center gap-0.5">
-                      <IconBtn icon={<ArrowUpRight style={{ width: 15, height: 15 }} />} title="Åpne i CRM" onClick={() => navigate(`/foresporsler?id=${selectedRowId}`)} />
-                      <IconBtn icon={<X style={{ width: 15, height: 15 }} />} title="Lukk" onClick={() => setSelectedRowId(null)} />
+                    <div className="flex items-center gap-1.5">
+                      <DesignLabIconButton title="Åpne i CRM" onClick={() => navigate(`/foresporsler?id=${selectedRowId}`)}>
+                        <ArrowUpRight style={{ width: 15, height: 15 }} />
+                      </DesignLabIconButton>
+                      <DesignLabIconButton title="Lukk" onClick={() => setSelectedRowId(null)}>
+                        <X style={{ width: 15, height: 15 }} />
+                      </DesignLabIconButton>
                     </div>
                   </div>
                   <div className="flex-1 overflow-y-auto dl-v8-theme">
@@ -455,50 +456,23 @@ function LoadingMsg() {
 function EmptyMsg() {
   return <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen forespørsler å vise</div>;
 }
-
-
-
-function IconBtn({ icon, title, onClick }: { icon: React.ReactNode; title: string; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      title={title}
-      className="flex items-center justify-center rounded transition-colors"
-      style={{ width: 28, height: 28, color: C.textFaint }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-    >
-      {icon}
-    </button>
-  );
-}
-
 function FilterRow({ label, options, value, onChange }: {
   label: string; options: readonly { value: string; label: string }[]; value: string; onChange: (v: string) => void;
 }) {
   return (
     <div className="flex items-center gap-2 py-[3px]">
-      <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted, width: 56, flexShrink: 0 }}>{label}</span>
-      <div className="flex items-center gap-1 flex-wrap">
+      <DesignLabControlLabel>{label}</DesignLabControlLabel>
+      <div className="flex items-center gap-1.5 flex-wrap">
         {options.map((opt) => {
           const active = value === opt.value;
           return (
-            <button
+            <DesignLabFilterButton
               key={opt.value}
               onClick={() => onChange(opt.value)}
-              className="inline-flex items-center transition-colors"
-              style={{
-                height: 24, paddingInline: 10, fontSize: 12, fontWeight: 500,
-                borderRadius: 3,
-                border: active ? "none" : `1px solid ${C.border}`,
-                background: active ? C.accent : "transparent",
-                color: active ? "#fff" : C.textMuted,
-              }}
-              onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = C.hoverBg; }}
-              onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = active ? C.accent : "transparent"; }}
+              active={active}
             >
               {opt.label}
-            </button>
+            </DesignLabFilterButton>
           );
         })}
       </div>

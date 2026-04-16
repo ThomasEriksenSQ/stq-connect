@@ -17,16 +17,22 @@ export const C = {
   hoverBg: "#F0F2F6",      // hover state
   activeBg: "#E8ECF5",     // active/pressed
   selected: "#E2E7F5",     // selected row
+  hoverSubtle: "#F0F2F6",
+  filterActiveBg: "#E8ECF5",
+  filterActiveBorder: "#C5CBE8",
 
   /* Text */
   text: "#1A1C1F",
   textMuted: "#5C636E",
   textFaint: "#8C929C",
   textGhost: "#BEC4CC",
+  textPrimary: "#1A1C1F",
+  textSecondary: "#5C636E",
 
   /* Accent */
   accent: "#5E6AD2",
   accentHover: "#4F5AB8",
+  onAccent: "#FFFFFF",
   accentBg: "rgba(94,106,210,0.10)",
   accentMuted: "rgba(94,106,210,0.05)",
 
@@ -35,12 +41,15 @@ export const C = {
   borderLight: "#E8EAEE",   // sidebar/panel dividers
   borderStrong: "#C8CDD6",
   borderFocus: "#5E6AD2",
+  borderDefault: "#DDE0E7",
 
   /* Status — desaturated */
   success: "#2D6A4F",
   warning: "#7D4E00",
   danger: "#8B1D20",
   info: "#1A4FA0",
+  heatPromising: "#FB923C",
+  heatPossible: "#FBBF24",
 
   /* Status backgrounds (8% opacity) */
   successBg: "rgba(45,106,79,0.08)",

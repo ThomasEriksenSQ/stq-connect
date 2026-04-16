@@ -53,7 +53,7 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
       <div className="flex items-center gap-2 shrink-0" style={{ height: 40, paddingLeft: collapsed ? 13 : 16 }}>
         <div
           className="flex items-center justify-center rounded shrink-0"
-          style={{ width: 22, height: 22, background: C.accent, color: "#fff", fontSize: 11, fontWeight: 600 }}
+          style={{ width: 22, height: 22, background: C.accent, color: C.onAccent, fontSize: 11, fontWeight: 600 }}
         >
           S
         </div>
@@ -98,16 +98,18 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
         <button
           onClick={() => setCollapsed((p) => !p)}
           title={collapsed ? "Utvid sidebar" : "Skjul sidebar"}
-          className="flex items-center w-full transition-colors"
+          className="flex items-center w-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dl-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--dl-focus-offset)]"
           style={{
+            ["--dl-focus-ring" as string]: C.borderFocus,
+            ["--dl-focus-offset" as string]: C.sidebarBg,
             height: 28,
-            borderRadius: 4,
+            borderRadius: 6,
             justifyContent: collapsed ? "center" : "flex-start",
             paddingLeft: collapsed ? 0 : 8,
             gap: 8,
             color: C.textFaint,
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverSubtle; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
         >
           {collapsed
@@ -143,13 +145,15 @@ function NavGroup({
             key={item.label}
             onClick={() => navigate(item.href)}
             title={collapsed ? item.label : undefined}
-            className="flex items-center w-full transition-colors"
+            className="flex items-center w-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dl-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--dl-focus-offset)]"
             style={{
+              ["--dl-focus-ring" as string]: C.borderFocus,
+              ["--dl-focus-offset" as string]: C.sidebarBg,
               fontSize: 13,
               fontWeight: active ? 500 : 400,
               color: active ? C.text : C.textMuted,
-              background: active ? "#EAECF0" : "transparent",
-              borderRadius: 4,
+              background: active ? C.filterActiveBg : "transparent",
+              borderRadius: 6,
               height: 28,
               gap: 8,
               justifyContent: collapsed ? "center" : "flex-start",
@@ -158,10 +162,10 @@ function NavGroup({
               whiteSpace: "nowrap",
               overflow: "hidden",
             }}
-            onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = "#F0F2F4"; e.currentTarget.style.color = C.text; } }}
+            onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = C.hoverSubtle; e.currentTarget.style.color = C.text; } }}
             onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = C.textMuted; } }}
           >
-            <item.icon style={{ width: 14, height: 14, strokeWidth: 1.5, color: active ? C.text : "#8C929C", flexShrink: 0 }} />
+            <item.icon style={{ width: 14, height: 14, strokeWidth: 1.5, color: active ? C.text : C.textFaint, flexShrink: 0 }} />
             {!collapsed && item.label}
           </button>
         );
@@ -187,12 +191,14 @@ function FooterBtn({
     <button
       onClick={onClick}
       title={collapsed ? label : undefined}
-      className="flex items-center w-full transition-colors"
+      className="flex items-center w-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dl-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--dl-focus-offset)]"
       style={{
+        ["--dl-focus-ring" as string]: C.borderFocus,
+        ["--dl-focus-offset" as string]: C.sidebarBg,
         fontSize: 13,
         fontWeight: 400,
         color: muted ? C.textGhost : C.textMuted,
-        borderRadius: 4,
+        borderRadius: 6,
         height: 28,
         gap: 8,
         justifyContent: collapsed ? "center" : "flex-start",
@@ -201,10 +207,10 @@ function FooterBtn({
         whiteSpace: "nowrap",
         overflow: "hidden",
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = "#F0F2F4"; e.currentTarget.style.color = C.text; }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverSubtle; e.currentTarget.style.color = C.text; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = muted ? C.textGhost : C.textMuted; }}
     >
-      <Icon style={{ width: 14, height: 14, strokeWidth: 1.5, color: "#8C929C", flexShrink: 0 }} />
+      <Icon style={{ width: 14, height: 14, strokeWidth: 1.5, color: C.textFaint, flexShrink: 0 }} />
       {!collapsed && label}
     </button>
   );
