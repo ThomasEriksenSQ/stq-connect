@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, type ReactNode } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { DescriptionText } from "@/components/DescriptionText";
 import { MergeCompanyDialog } from "@/components/company/MergeCompanyDialog";
 import { useNavigate } from "react-router-dom";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,7 +30,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { DesignLabActionButton, DesignLabFilterButton, DesignLabIconButton } from "@/components/designlab/controls";
+import { DesignLabActionButton, DesignLabFilterButton, DesignLabIconButton, DesignLabStaticTag } from "@/components/designlab/controls";
 import {
   Phone,
   Mail,
@@ -157,14 +157,6 @@ function CategoryPicker({ selected, onSelect }: { selected: string; onSelect: (v
         </button>
       ))}
     </div>
-  );
-}
-
-function RelatedContactBadge({ children }: { children: ReactNode }) {
-  return (
-    <span className="inline-flex h-5 items-center rounded-[4px] bg-[#F0F2F6] px-1.5 text-[11px] font-medium text-[#5C636E]">
-      {children}
-    </span>
   );
 }
 
@@ -1009,10 +1001,23 @@ export function CompanyCardContent({
                 Ny kontakt
               </DesignLabActionButton>
             </DialogTrigger>
-            <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-[440px] rounded-xl">
-              <DialogHeader>
-                <DialogTitle>Ny kontakt</DialogTitle>
-              </DialogHeader>
+            <DialogContent
+              hideCloseButton
+              overlayClassName="bg-[rgba(0,0,0,0.35)]"
+              className="w-[calc(100vw-2rem)] max-w-[440px] gap-0 rounded-[10px] border-[#E8EAEE] bg-white p-0 shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
+            >
+              <div className="flex items-center justify-between px-4 pb-3 pt-4">
+                <DialogTitle className="text-[14px] font-semibold text-[#1A1C1F]">Ny kontakt</DialogTitle>
+                <DialogClose asChild>
+                  <button
+                    type="button"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-[6px] text-[#5C636E] transition-colors hover:bg-[#F0F2F6] hover:text-[#1A1C1F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5E6AD2] focus-visible:ring-offset-2"
+                  >
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Lukk</span>
+                  </button>
+                </DialogClose>
+              </div>
               <form
                 onSubmit={async (e) => {
                   e.preventDefault();
@@ -1050,39 +1055,39 @@ export function CompanyCardContent({
                   });
                   toast.success("Kontakt opprettet");
                 }}
-                className="space-y-4 mt-3"
+                className="space-y-3 px-4 pb-4"
               >
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-label">Fornavn</Label>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div>
+                    <Label className="mb-1 block text-[11px] font-medium text-[#8C929C]">Fornavn</Label>
                     <Input
                       value={contactForm.first_name}
                       onChange={(e) => setContactForm({ ...contactForm, first_name: e.target.value })}
                       required
-                      className="h-10 rounded-lg"
+                      className="h-8 rounded-[6px] border-[#DDE0E7] bg-white px-2.5 py-0 text-[13px] placeholder:text-[#8C929C] focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] md:text-[13px]"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-label">Etternavn</Label>
+                  <div>
+                    <Label className="mb-1 block text-[11px] font-medium text-[#8C929C]">Etternavn</Label>
                     <Input
                       value={contactForm.last_name}
                       onChange={(e) => setContactForm({ ...contactForm, last_name: e.target.value })}
                       required
-                      className="h-10 rounded-lg"
+                      className="h-8 rounded-[6px] border-[#DDE0E7] bg-white px-2.5 py-0 text-[13px] placeholder:text-[#8C929C] focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] md:text-[13px]"
                     />
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-label">Stilling</Label>
+                <div>
+                  <Label className="mb-1 block text-[11px] font-medium text-[#8C929C]">Stilling</Label>
                   <Input
                     value={contactForm.title}
                     onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })}
-                    className="h-10 rounded-lg"
+                    className="h-8 rounded-[6px] border-[#DDE0E7] bg-white px-2.5 py-0 text-[13px] placeholder:text-[#8C929C] focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] md:text-[13px]"
                   />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-label">E-post</Label>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div>
+                    <Label className="mb-1 block text-[11px] font-medium text-[#8C929C]">E-post</Label>
                     <Input
                       value={contactForm.email}
                       onChange={(e) =>
@@ -1093,25 +1098,25 @@ export function CompanyCardContent({
                         })
                       }
                       type="email"
-                      className="h-10 rounded-lg"
+                      className="h-8 rounded-[6px] border-[#DDE0E7] bg-white px-2.5 py-0 text-[13px] placeholder:text-[#8C929C] focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] md:text-[13px]"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-label">Telefon</Label>
+                  <div>
+                    <Label className="mb-1 block text-[11px] font-medium text-[#8C929C]">Telefon</Label>
                     <Input
                       value={contactForm.phone}
                       onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-                      className="h-10 rounded-lg"
+                      className="h-8 rounded-[6px] border-[#DDE0E7] bg-white px-2.5 py-0 text-[13px] placeholder:text-[#8C929C] focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] md:text-[13px]"
                     />
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-label">LinkedIn</Label>
+                <div>
+                  <Label className="mb-1 block text-[11px] font-medium text-[#8C929C]">LinkedIn</Label>
                   <Input
                     value={contactForm.linkedin}
                     onChange={(e) => setContactForm({ ...contactForm, linkedin: e.target.value })}
                     placeholder="https://linkedin.com/in/..."
-                    className="h-10 rounded-lg"
+                    className="h-8 rounded-[6px] border-[#DDE0E7] bg-white px-2.5 py-0 text-[13px] placeholder:text-[#8C929C] focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] md:text-[13px]"
                   />
                 </div>
                 {(() => {
@@ -1123,34 +1128,46 @@ export function CompanyCardContent({
                     : [];
                   if (locs.length === 0) return null;
                   return (
-                    <div className="space-y-1.5">
-                      <Label className="text-label">Geografisk sted</Label>
+                    <div>
+                      <Label className="mb-1 block text-[11px] font-medium text-[#8C929C]">Geografisk sted</Label>
                       <div className="flex flex-wrap gap-1.5">
                         {locs.map((loc) => (
-                          <button
+                          <DesignLabFilterButton
                             key={loc}
                             type="button"
                             onClick={() =>
                               setContactForm({ ...contactForm, location: loc === contactForm.location ? "" : loc })
                             }
-                            className={cn(
-                              "inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-[0.8125rem] font-medium transition-colors",
-                              contactForm.location === loc
-                                ? "bg-foreground text-background border-foreground"
-                                : "border-border text-muted-foreground hover:bg-secondary",
-                            )}
+                            active={contactForm.location === loc}
+                            activeColors={{
+                              background: "#F0F2F6",
+                              color: "#1A1C1F",
+                              border: "1px solid transparent",
+                              fontWeight: 500,
+                            }}
+                            inactiveColors={{
+                              background: "transparent",
+                              color: "#5C636E",
+                              border: "1px solid #DDE0E7",
+                              fontWeight: 500,
+                            }}
+                            inactiveHoverColors={{
+                              background: "#F8F9FB",
+                              color: "#1A1C1F",
+                              border: "1px solid #DDE0E7",
+                            }}
                           >
                             {loc}
-                          </button>
+                          </DesignLabFilterButton>
                         ))}
                       </div>
                     </div>
                   );
                 })()}
-                <div className="space-y-1.5">
-                  <Label className="text-label">Egenskaper</Label>
+                <div>
+                  <Label className="mb-1 block text-[11px] font-medium text-[#8C929C]">Egenskaper</Label>
                   <div className="flex items-center gap-2">
-                    <button
+                    <DesignLabFilterButton
                       type="button"
                       onClick={() => {
                         if (!contactForm.cv_email && !contactHasEmail(contactForm)) {
@@ -1159,32 +1176,56 @@ export function CompanyCardContent({
                         }
                         setContactForm({ ...contactForm, cv_email: !contactForm.cv_email });
                       }}
-                      className={cn(
-                        "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
-                        contactForm.cv_email
-                          ? "bg-green-100 text-green-800 border-green-200"
-                          : "bg-background text-muted-foreground border-border hover:bg-secondary",
-                      )}
+                      active={contactForm.cv_email}
+                      activeColors={{
+                        background: "#E8ECF5",
+                        color: "#1A1C1F",
+                        border: "1px solid #C5CBE8",
+                        fontWeight: 500,
+                      }}
+                      inactiveColors={{
+                        background: "transparent",
+                        color: "#5C636E",
+                        border: "1px solid #DDE0E7",
+                        fontWeight: 500,
+                      }}
+                      inactiveHoverColors={{
+                        background: "#F8F9FB",
+                        color: "#1A1C1F",
+                        border: "1px solid #DDE0E7",
+                      }}
                     >
-                      {contactForm.cv_email ? "✓ CV-Epost" : "CV-Epost"}
-                    </button>
-                    <button
+                      CV-Epost
+                    </DesignLabFilterButton>
+                    <DesignLabFilterButton
                       type="button"
                       onClick={() => setContactForm({ ...contactForm, call_list: !contactForm.call_list })}
-                      className={cn(
-                        "inline-flex items-center h-7 px-3 rounded-full border text-[0.75rem] font-medium transition-colors",
-                        contactForm.call_list
-                          ? "bg-amber-100 text-amber-800 border-amber-200"
-                          : "bg-background text-muted-foreground border-border hover:bg-secondary",
-                      )}
+                      active={contactForm.call_list}
+                      activeColors={{
+                        background: "#E8ECF5",
+                        color: "#1A1C1F",
+                        border: "1px solid #C5CBE8",
+                        fontWeight: 500,
+                      }}
+                      inactiveColors={{
+                        background: "transparent",
+                        color: "#5C636E",
+                        border: "1px solid #DDE0E7",
+                        fontWeight: 500,
+                      }}
+                      inactiveHoverColors={{
+                        background: "#F8F9FB",
+                        color: "#1A1C1F",
+                        border: "1px solid #DDE0E7",
+                      }}
                     >
-                      {contactForm.call_list ? "✓ Innkjøper" : "Innkjøper"}
-                    </button>
+                      Innkjøper
+                    </DesignLabFilterButton>
                   </div>
                 </div>
-                <Button type="submit" className="w-full h-10 rounded-lg">
+                <DesignLabActionButton type="submit" variant="primary" style={{ width: "100%", height: 32, marginTop: 12, fontSize: 13 }}>
                   Opprett
-                </Button>
+                </DesignLabActionButton>
               </form>
             </DialogContent>
           </Dialog>
@@ -1223,9 +1264,9 @@ export function CompanyCardContent({
                       <p className="truncate text-[12px] font-medium text-[#1A1C1F]">
                         {c.first_name} {c.last_name}
                       </p>
-                      <div className="flex shrink-0 items-center gap-1">
-                        {c.cv_email && <RelatedContactBadge>CV</RelatedContactBadge>}
-                        {c.call_list && <RelatedContactBadge>Innkjøper</RelatedContactBadge>}
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        {c.cv_email && <DesignLabStaticTag>CV</DesignLabStaticTag>}
+                        {c.call_list && <DesignLabStaticTag>Innkjøper</DesignLabStaticTag>}
                       </div>
                     </div>
                     {secondaryText ? (

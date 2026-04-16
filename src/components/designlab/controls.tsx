@@ -20,6 +20,13 @@ type FilterHoverColors = {
   border?: string;
 };
 
+type StaticTagColors = {
+  background?: string;
+  color?: string;
+  border?: string;
+  fontWeight?: number;
+};
+
 export const DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS = {
   background: "transparent",
   color: "#5C636E",
@@ -37,6 +44,38 @@ export const DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS = {
 export const DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS = {
   background: "#F0F2F6",
 } satisfies FilterHoverColors;
+
+export function DesignLabStaticTag({
+  className,
+  colors = DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS,
+  style,
+  children,
+}: {
+  className?: string;
+  colors?: StaticTagColors;
+  style?: CSSProperties;
+  children: ReactNode;
+}) {
+  return (
+    <span
+      className={cn("inline-flex items-center justify-center gap-1.5 whitespace-nowrap", className)}
+      style={{
+        height: 28,
+        minWidth: 28,
+        paddingInline: 10,
+        fontSize: 12,
+        fontWeight: colors.fontWeight ?? 600,
+        borderRadius: 6,
+        border: colors.border ?? `1px solid ${C.filterActiveBorder}`,
+        background: colors.background ?? C.filterActiveBg,
+        color: colors.color ?? C.textPrimary,
+        ...style,
+      }}
+    >
+      {children}
+    </span>
+  );
+}
 
 const FOCUS_VARS: CSSProperties = {
   ["--dl-focus-ring" as string]: C.borderFocus,

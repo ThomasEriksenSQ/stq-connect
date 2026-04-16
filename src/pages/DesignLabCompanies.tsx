@@ -21,6 +21,7 @@ import {
   DesignLabFilterButton,
   DesignLabIconButton,
   DesignLabSearchInput,
+  DesignLabStaticTag,
 } from "@/components/designlab/controls";
 
 /* ═══════════════════════════════════════════════════════════
@@ -265,9 +266,9 @@ export default function DesignLabCompanies() {
 
         {/* Type */}
         <div className="min-w-0">
-          <span className="inline-flex h-5 max-w-full items-center rounded-[4px] bg-[#F0F2F6] px-1.5 text-[11px] font-medium text-[#5C636E]">
+          <DesignLabStaticTag className="max-w-full">
             <span className="truncate">{typeLabel}</span>
-          </span>
+          </DesignLabStaticTag>
         </div>
 
         {/* City */}
