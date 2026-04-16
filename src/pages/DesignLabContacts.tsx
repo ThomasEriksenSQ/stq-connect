@@ -2464,10 +2464,10 @@ function SignalChip({ signal, size = "sm" }: { signal: Signal; size?: "sm" | "md
     <span
       className="inline-flex items-center whitespace-nowrap"
       style={{
-        height: 20,
-        padding: "2px 6px",
-        borderRadius: 4,
-        fontSize: 11,
+        height: 28,
+        padding: "0 10px",
+        borderRadius: 6,
+        fontSize: 12,
         fontWeight: 500,
         background: colors.bg,
         color: colors.color,
@@ -2491,17 +2491,6 @@ function signalShortLabel(signal: Signal): string {
   return shortLabels[signal];
 }
 
-function getSignalActiveColors(signal?: Signal | null) {
-  if (!signal) return undefined;
-  const colors = SIGNAL_COLORS[signal];
-  return {
-    background: colors.activeBg,
-    color: colors.activeColor,
-    border: `1px solid ${colors.activeBorder}`,
-    fontWeight: 600,
-  };
-}
-
 function MatchFilterChip({
   active,
   children,
@@ -2512,7 +2501,7 @@ function MatchFilterChip({
   onClick: () => void;
 }) {
   return (
-    <DesignLabFilterButton onClick={onClick} active={active} style={{ borderRadius: 999 }}>
+    <DesignLabFilterButton onClick={onClick} active={active}>
       {children}
     </DesignLabFilterButton>
   );

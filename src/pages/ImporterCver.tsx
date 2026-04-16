@@ -45,13 +45,13 @@ function fuzzyScore(a: string, b: string): number {
 }
 
 /* ─── Chip styles ─── */
-const CHIP_BASE = "h-8 px-4 text-[0.8125rem] rounded-full border transition-colors cursor-pointer select-none font-medium";
-const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground`;
+const CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-[6px] border transition-colors cursor-pointer select-none font-medium";
+const CHIP_ON = `${CHIP_BASE} bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8] font-semibold`;
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
 const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
 
-const TYPE_CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors cursor-pointer select-none font-medium";
-const TYPE_CHIP_ON = `${TYPE_CHIP_BASE} bg-foreground text-background border-foreground`;
+const TYPE_CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-[6px] border transition-colors cursor-pointer select-none font-medium";
+const TYPE_CHIP_ON = `${TYPE_CHIP_BASE} bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8] font-semibold`;
 const TYPE_CHIP_OFF = `${TYPE_CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
 
 export default function ImporterCver() {

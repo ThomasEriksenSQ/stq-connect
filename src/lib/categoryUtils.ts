@@ -1,14 +1,25 @@
+import { C, SIGNAL_COLORS } from "@/theme";
+
 export const CATEGORIES = [
-  { label: "Behov nå", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-  { label: "Får fremtidig behov", badgeColor: "bg-blue-100 text-blue-800 border-blue-200" },
-  { label: "Får kanskje behov", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
-  { label: "Ukjent om behov", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" },
-  { label: "Ikke aktuelt", badgeColor: "bg-red-50 text-red-700 border-red-200" },
+  { label: "Behov nå" },
+  { label: "Får fremtidig behov" },
+  { label: "Får kanskje behov" },
+  { label: "Ukjent om behov" },
+  { label: "Ikke aktuelt" },
 ] as const;
 
 export const SIGNAL_OPTIONS = CATEGORIES.map((category) => ({
   label: category.label,
-  badgeColor: category.badgeColor,
+  badgeColor:
+    category.label === "Behov nå"
+      ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+      : category.label === "Får fremtidig behov"
+        ? "bg-blue-100 text-blue-800 border-blue-200"
+        : category.label === "Får kanskje behov"
+          ? "bg-amber-100 text-amber-800 border-amber-200"
+          : category.label === "Ukjent om behov"
+            ? "bg-gray-100 text-gray-600 border-gray-200"
+            : "bg-red-50 text-red-700 border-red-200",
 }));
 
 export const LEGACY_CATEGORY_MAP: Record<string, string> = {
@@ -20,6 +31,30 @@ export const LEGACY_CATEGORY_MAP: Record<string, string> = {
 
 export function normalizeCategoryLabel(label: string): string {
   return LEGACY_CATEGORY_MAP[label] || label;
+}
+
+export function getSignalBadgeColors(category: string | null) {
+  if (!category) return null;
+
+  const normalized = normalizeCategoryLabel(category);
+  return SIGNAL_COLORS[normalized as keyof typeof SIGNAL_COLORS] || null;
+}
+
+export function getSignalBadgeStyle(category: string | null) {
+  const colors = getSignalBadgeColors(category);
+  if (!colors) {
+    return {
+      background: C.statusNeutralBg,
+      color: C.statusNeutral,
+      border: `1px solid ${C.statusNeutralBorder}`,
+    };
+  }
+
+  return {
+    background: colors.bg,
+    color: colors.color,
+    border: `1px solid ${colors.border}`,
+  };
 }
 
 export function buildDescriptionWithCategory(category: string, description: string): string {

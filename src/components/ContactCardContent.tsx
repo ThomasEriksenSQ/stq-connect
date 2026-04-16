@@ -70,31 +70,11 @@ import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/q
 
 /* ── Category system ── */
 const CATEGORIES = [
-  {
-    label: "Behov nå",
-    badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200",
-    selectedColor: "bg-emerald-500 text-white border-emerald-500",
-  },
-  {
-    label: "Får fremtidig behov",
-    badgeColor: "bg-blue-100 text-blue-800 border-blue-200",
-    selectedColor: "bg-blue-500 text-white border-blue-500",
-  },
-  {
-    label: "Får kanskje behov",
-    badgeColor: "bg-amber-100 text-amber-800 border-amber-200",
-    selectedColor: "bg-amber-500 text-white border-amber-500",
-  },
-  {
-    label: "Ukjent om behov",
-    badgeColor: "bg-gray-100 text-gray-600 border-gray-200",
-    selectedColor: "bg-gray-400 text-white border-gray-400",
-  },
-  {
-    label: "Ikke aktuelt",
-    badgeColor: "bg-red-50 text-red-700 border-red-200",
-    selectedColor: "bg-red-400 text-white border-red-400",
-  },
+  { label: "Behov nå" },
+  { label: "Får fremtidig behov" },
+  { label: "Får kanskje behov" },
+  { label: "Ukjent om behov" },
+  { label: "Ikke aktuelt" },
 ] as const;
 
 const LEGACY_CATEGORY_MAP: Record<string, string> = {
@@ -108,18 +88,28 @@ function normalizeCategoryLabel(label: string): string {
   return LEGACY_CATEGORY_MAP[label] || label;
 }
 
-function getSignalActiveColors(label?: string) {
-  if (!label) return undefined;
+function getCategoryPickerActiveColors(label: string) {
   const normalized = normalizeCategoryLabel(label);
-  const colors = SIGNAL_COLORS[normalized as keyof typeof SIGNAL_COLORS];
-  if (!colors) return undefined;
 
-  return {
-    background: colors.activeBg,
-    color: colors.activeColor,
-    border: `1px solid ${colors.activeBorder}`,
-    fontWeight: 600,
-  };
+  if (normalized === "Behov nå") {
+    return {
+      background: SIGNAL_COLORS["Behov nå"].bg,
+      color: SIGNAL_COLORS["Behov nå"].color,
+      border: `1px solid ${SIGNAL_COLORS["Behov nå"].border}`,
+      fontWeight: 600,
+    };
+  }
+
+  if (normalized === "Får fremtidig behov") {
+    return {
+      background: SIGNAL_COLORS["Får fremtidig behov"].bg,
+      color: SIGNAL_COLORS["Får fremtidig behov"].color,
+      border: `1px solid ${SIGNAL_COLORS["Får fremtidig behov"].border}`,
+      fontWeight: 600,
+    };
+  }
+
+  return undefined;
 }
 
 function CategoryBadge({ label, className }: { label: string; className?: string }) {
@@ -127,7 +117,7 @@ function CategoryBadge({ label, className }: { label: string; className?: string
   const isKnown = CATEGORIES.some((c) => c.label === normalized);
   if (!isKnown) return null;
   return (
-    <StatusChip category={normalized} className={className} pill>
+    <StatusChip category={normalized} className={className}>
       {normalized}
     </StatusChip>
   );
@@ -142,7 +132,7 @@ function CategoryPicker({ selected, onSelect }: { selected: string; onSelect: (v
           type="button"
           onClick={() => onSelect(cat.label)}
           active={selected === cat.label}
-          activeColors={getSignalActiveColors(cat.label)}
+          activeColors={getCategoryPickerActiveColors(cat.label)}
         >
           {cat.label}
         </DesignLabFilterButton>
@@ -156,13 +146,11 @@ function StatusChip({
   className,
   category,
   tone = "default",
-  pill = false,
 }: {
   children: ReactNode;
   className?: string;
   category?: string;
   tone?: "default" | "signal" | "muted";
-  pill?: boolean;
 }) {
   const normalizedCategory = category ? normalizeCategoryLabel(category) : null;
   const categoryColors = normalizedCategory
@@ -175,32 +163,32 @@ function StatusChip({
         color: categoryColors.color,
         border: `1px solid ${categoryColors.border}`,
       }
-    : tone === "signal"
+    : tone === "muted"
       ? {
-          background: C.accentBg,
-          color: C.accent,
-          border: `1px solid ${C.filterActiveBorder}`,
+          background: "transparent",
+          color: C.textFaint,
+          border: `1px solid ${C.borderDefault}`,
         }
-      : tone === "muted"
+      : tone === "signal"
         ? {
-            background: "transparent",
-            color: C.textFaint,
-            border: `1px solid ${C.borderDefault}`,
+            background: C.statusNeutralBg,
+            color: C.statusNeutral,
+            border: `1px solid ${C.statusNeutralBorder}`,
           }
         : {
-            background: C.hoverSubtle,
-            color: C.textSecondary,
-            border: `1px solid ${C.borderDefault}`,
+            background: C.statusNeutralBg,
+            color: C.statusNeutral,
+            border: `1px solid ${C.statusNeutralBorder}`,
           };
 
   return (
     <span
       className={cn("inline-flex items-center whitespace-nowrap", className)}
       style={{
-        height: 20,
-        padding: pill ? "2px 8px" : "2px 6px",
-        borderRadius: pill ? 999 : 4,
-        fontSize: 11,
+        height: 28,
+        padding: "0 10px",
+        borderRadius: 6,
+        fontSize: 12,
         fontWeight: 500,
         ...styles,
       }}
@@ -824,7 +812,6 @@ export function ContactCardContent({
                     <DropdownMenuTrigger asChild>
                       <DesignLabFilterButton
                         active={Boolean(signalCat)}
-                        activeColors={getSignalActiveColors(signalCat?.label)}
                         className="whitespace-nowrap"
                       >
                         <span>{signalCat ? signalCat.label : "Legg til signal"}</span>
@@ -1922,7 +1909,7 @@ function TaskRow({
         {displayDesc && <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{displayDesc}</p>}
         {task.assigned_to && profileMap[task.assigned_to] && (
           <div className="mt-1">
-            <StatusChip tone="signal" pill>
+            <StatusChip tone="signal">
               {profileMap[task.assigned_to]}
             </StatusChip>
           </div>
@@ -2205,7 +2192,7 @@ function EmailRow({ email }: { email: any }) {
             <span className="text-[0.8125rem] text-muted-foreground">
               {format(d, "d. MMM yyyy", { locale: nb })}
             </span>
-            <StatusChip tone="signal" pill>
+            <StatusChip tone="signal">
               E-post
             </StatusChip>
           </div>
@@ -2428,7 +2415,7 @@ function ActivityRow({
               {/* Owner badge */}
               {ownerName && (
                 <div className="mt-1">
-                  <StatusChip tone="signal" pill>
+                  <StatusChip tone="signal">
                     {ownerName}
                   </StatusChip>
                 </div>

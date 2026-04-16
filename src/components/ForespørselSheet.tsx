@@ -43,11 +43,11 @@ import { crmQueryKeys } from "@/lib/queryKeys";
 const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
 
 const PIPELINE_CONFIG: Record<string, { label: string; dot: string; badge: string; step: number | null }> = {
-  sendt_cv:  { label: "Sendt CV", dot: "bg-amber-400", badge: "bg-amber-50 text-amber-700 border-amber-200", step: 1 },
-  intervju:  { label: "Intervju", dot: "bg-blue-500", badge: "bg-blue-50 text-blue-700 border-blue-200", step: 2 },
-  vunnet:    { label: "Vunnet 🎉", dot: "bg-green-500", badge: "bg-green-50 text-green-700 border-green-200", step: 3 },
-  avslag:    { label: "Avslag", dot: "bg-red-400", badge: "bg-red-50 text-red-600 border-red-200", step: null },
-  bortfalt:  { label: "Bortfalt", dot: "bg-gray-400", badge: "bg-gray-50 text-gray-500 border-gray-200", step: null },
+  sendt_cv:  { label: "Sendt CV", dot: "bg-amber-400", badge: "bg-[#FBF3E6] text-[#7D4E00] border-[#E8D0A0]", step: 1 },
+  intervju:  { label: "Intervju", dot: "bg-blue-500", badge: "bg-[#EAF0F9] text-[#1A4FA0] border-[#B3C8E8]", step: 2 },
+  vunnet:    { label: "Vunnet 🎉", dot: "bg-green-500", badge: "bg-[#EBF3EE] text-[#2D6A4F] border-[#C0DEC8]", step: 3 },
+  avslag:    { label: "Avslag", dot: "bg-red-400", badge: "bg-[#FAEBEC] text-[#8B1D20] border-[#E8B8BA]", step: null },
+  bortfalt:  { label: "Bortfalt", dot: "bg-gray-400", badge: "bg-[#F0F2F6] text-[#3A3F4A] border-[#C8CDD6]", step: null },
 };
 
 const PIPELINE_BORDER_MAP: Record<string, string> = {
@@ -758,11 +758,11 @@ export function ForespørselSheet({
                       const navn = isIntern ? k.stacq_ansatte?.navn : k.external_consultants?.navn;
                       const status = k.status || "sendt_cv";
                       const PIPELINE = [
-                        { key: "sendt_cv", label: "Sendt CV", color: "bg-blue-50 text-blue-700 border-blue-200" },
-                        { key: "intervju", label: "Intervju", color: "bg-violet-50 text-violet-700 border-violet-200" },
-                        { key: "vunnet", label: "Vunnet", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-                        { key: "avslag", label: "Avslag", color: "bg-red-50 text-red-700 border-red-200" },
-                        { key: "bortfalt", label: "Bortfalt", color: "bg-gray-100 text-gray-500 border-gray-200" },
+                        { key: "sendt_cv", label: "Sendt CV", color: "bg-[#FBF3E6] text-[#7D4E00] border-[#E8D0A0]" },
+                        { key: "intervju", label: "Intervju", color: "bg-[#EAF0F9] text-[#1A4FA0] border-[#B3C8E8]" },
+                        { key: "vunnet", label: "Vunnet", color: "bg-[#EBF3EE] text-[#2D6A4F] border-[#C0DEC8]" },
+                        { key: "avslag", label: "Avslag", color: "bg-[#FAEBEC] text-[#8B1D20] border-[#E8B8BA]" },
+                        { key: "bortfalt", label: "Bortfalt", color: "bg-[#F0F2F6] text-[#3A3F4A] border-[#C8CDD6]" },
                       ];
                       return (
                         <div key={k.id} className="rounded-lg border border-border bg-muted/30 px-3 py-2.5 mb-2">
@@ -1370,7 +1370,7 @@ function EditMode(props: any) {
         </div>
         <div className="flex flex-wrap gap-1.5 mt-2">
           {SUGGESTED_TAGS.filter((s: string) => !teknologier.includes(s)).map((s: string) => (
-            <button key={s} onClick={() => addTag(s)} className="h-6 px-2 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors">
+            <button key={s} onClick={() => addTag(s)} className="h-7 px-2.5 text-[0.75rem] rounded-[6px] border border-border text-muted-foreground hover:bg-secondary transition-colors font-medium">
               {s}
             </button>
           ))}
@@ -1448,7 +1448,7 @@ function AddKonsulentCombobox({
     .filter((e: any) => !alreadyLinkedEkstern.includes(e.id))
     .filter((e: any) => !q || e.navn?.toLowerCase().includes(q));
 
-  const CHIP_BASE_SM = "h-6 px-2 text-[0.6875rem] rounded-full border transition-colors cursor-pointer select-none font-medium";
+  const CHIP_BASE_SM = "h-7 px-2.5 text-[0.75rem] rounded-[6px] border transition-colors cursor-pointer select-none font-medium";
 
   return (
     <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setSearch(""); } }}>

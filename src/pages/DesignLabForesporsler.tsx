@@ -397,7 +397,13 @@ function ForespRow({ row, isActive, onClick, compact }: { row: any; isActive: bo
           {/* Teknologier */}
           <div className="flex items-center gap-1 flex-wrap pr-2">
             {(row.teknologier || []).slice(0, 3).map((t: string) => (
-              <span key={t} className="inline-flex items-center rounded" style={{ border: `1px solid ${C.border}`, padding: "2px 6px", fontSize: 11, color: C.textMuted }}>{t}</span>
+              <span
+                key={t}
+                className="inline-flex items-center rounded-[6px]"
+                style={{ height: 28, border: `1px solid ${C.border}`, padding: "0 10px", fontSize: 12, fontWeight: 500, color: C.textMuted }}
+              >
+                {t}
+              </span>
             ))}
             {(row.teknologier || []).length > 3 && (
               <span style={{ fontSize: 11, color: C.textGhost }}>+{row.teknologier.length - 3}</span>
@@ -414,8 +420,8 @@ function ForespRow({ row, isActive, onClick, compact }: { row: any; isActive: bo
                 return (
                   <div key={k.id} className="flex items-center gap-1.5">
                     <span style={{ fontSize: 12, color: C.textMuted }}>{navn}</span>
-                    <span className="inline-flex items-center rounded-full" style={{
-                      fontSize: 10, fontWeight: 600, padding: "2px 6px",
+                    <span className="inline-flex items-center rounded-[6px]" style={{
+                      height: 28, fontSize: 12, fontWeight: 500, padding: "0 10px",
                       background: `${cfg.color}10`, color: cfg.color, border: `1px solid ${cfg.color}25`,
                     }}>
                       {cfg.label}
@@ -441,8 +447,8 @@ function TypeChip({ type }: { type: string | null }) {
   const label = isDir ? "DIR" : isVia ? "VIA" : "—";
   const color = isDir ? C.accent : isVia ? C.warning : C.textGhost;
   return (
-    <span className="inline-flex items-center rounded" style={{
-      fontSize: 10, fontWeight: 600, padding: "2px 6px",
+    <span className="inline-flex items-center rounded-[6px]" style={{
+      height: 28, fontSize: 12, fontWeight: 500, padding: "0 10px",
       background: `${color}10`, color, border: `1px solid ${color}20`,
     }}>
       {label}

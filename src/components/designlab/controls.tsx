@@ -14,6 +14,12 @@ type FilterActiveColors = {
   fontWeight?: number;
 };
 
+type FilterHoverColors = {
+  background?: string;
+  color?: string;
+  border?: string;
+};
+
 const FOCUS_VARS: CSSProperties = {
   ["--dl-focus-ring" as string]: C.borderFocus,
   ["--dl-focus-offset" as string]: C.surface,
@@ -38,9 +44,11 @@ function handleInteractiveHover(
 export const DesignLabFilterButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & {
   active?: boolean;
   activeColors?: FilterActiveColors;
+  inactiveHoverColors?: FilterHoverColors;
 }>(function DesignLabFilterButton({
   active = false,
   activeColors,
+  inactiveHoverColors,
   className,
   disabled,
   onMouseEnter,
@@ -53,7 +61,15 @@ export const DesignLabFilterButton = forwardRef<HTMLButtonElement, ButtonHTMLAtt
   const baseBackground = active ? activeColors?.background ?? C.filterActiveBg : "transparent";
   const baseColor = active ? activeColors?.color ?? C.textPrimary : C.textSecondary;
   const baseFontWeight = active ? activeColors?.fontWeight ?? 600 : 500;
-  const hoverBackground = active ? activeColors?.background ?? C.filterActiveBg : C.hoverSubtle;
+  const hoverBackground = active
+    ? activeColors?.background ?? C.filterActiveBg
+    : inactiveHoverColors?.background ?? C.hoverSubtle;
+  const hoverColor = active
+    ? activeColors?.color ?? C.textPrimary
+    : inactiveHoverColors?.color ?? baseColor;
+  const hoverBorder = active
+    ? activeColors?.border ?? baseBorder
+    : inactiveHoverColors?.border ?? baseBorder;
 
   return (
     <button
@@ -83,8 +99,8 @@ export const DesignLabFilterButton = forwardRef<HTMLButtonElement, ButtonHTMLAtt
         if (!disabled) {
           handleInteractiveHover(event.currentTarget, {
             background: hoverBackground,
-            color: active ? activeColors?.color ?? C.textPrimary : C.textSecondary,
-            border: baseBorder,
+            color: hoverColor,
+            border: hoverBorder,
           });
         }
         onMouseEnter?.(event);
@@ -125,7 +141,7 @@ export const DesignLabActionButton = forwardRef<HTMLButtonElement, ButtonHTMLAtt
     secondary: {
       background: "transparent",
       border: `1px solid ${C.borderDefault}`,
-      color: C.textPrimary,
+      color: C.textSecondary,
       hoverBackground: C.hoverSubtle,
     },
     ghost: {

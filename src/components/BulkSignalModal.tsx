@@ -3,23 +3,11 @@ import { Sparkles, Check, SkipForward, Loader2, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { analyzeSignal, type AiSignalResult } from "@/lib/aiSignal";
-import { getEffectiveSignal, upsertTaskSignalDescription } from "@/lib/categoryUtils";
+import { getEffectiveSignal, getSignalBadgeStyle, upsertTaskSignalDescription } from "@/lib/categoryUtils";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
-
-const CATEGORIES = [
-  { label: "Behov nå", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-  { label: "Får fremtidig behov", badgeColor: "bg-blue-100 text-blue-800 border-blue-200" },
-  { label: "Får kanskje behov", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
-  { label: "Ukjent om behov", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" },
-  { label: "Ikke aktuelt", badgeColor: "bg-red-50 text-red-700 border-red-200" },
-];
-
-function getBadgeColor(label: string) {
-  return CATEGORIES.find((c) => c.label === label)?.badgeColor || "bg-gray-100 text-gray-600 border-gray-200";
-}
 
 interface ResultRow {
   contactId: string;
@@ -310,19 +298,15 @@ export function BulkSignalModal({ open, onClose }: BulkSignalModalProps) {
                 {row.companyName && <p className="text-[0.75rem] text-muted-foreground">{row.companyName}</p>}
                 <div className="flex items-center gap-1.5 mt-1">
                   <span
-                    className={cn(
-                      "inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold",
-                      getBadgeColor(row.currentSignal || ""),
-                    )}
+                    className="inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium h-7"
+                    style={getSignalBadgeStyle(row.currentSignal || "")}
                   >
                     {row.currentSignal || "—"}
                   </span>
                   <span className="text-muted-foreground text-[0.75rem]">→</span>
                   <span
-                    className={cn(
-                      "inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold",
-                      getBadgeColor(row.result.anbefalt_signal),
-                    )}
+                    className="inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium h-7"
+                    style={getSignalBadgeStyle(row.result.anbefalt_signal)}
                   >
                     {row.result.anbefalt_signal}
                   </span>

@@ -22,9 +22,9 @@ import { useAuth } from "@/hooks/useAuth";
 type TypeFilter = "Alle" | "freelance" | "partner";
 type StatusFilter = "Alle" | "ledig" | "utilgjengelig";
 
-const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer";
+const CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-[6px] border transition-colors cursor-pointer font-medium";
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
-const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground font-medium`;
+const CHIP_ON = `${CHIP_BASE} bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8] font-semibold`;
 
 const TYPE_LABELS: Record<string, string> = {
   freelance: "Freelance",
@@ -696,7 +696,7 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
               </div>
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {SUGGESTED_TECH.filter(s => !form.teknologier.includes(s)).slice(0, 10).map(s => (
-                  <button key={s} onClick={() => addTag(s)} className="h-6 px-2 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors">
+                  <button key={s} onClick={() => addTag(s)} className="h-7 px-2.5 text-[0.75rem] rounded-[6px] border border-border text-muted-foreground hover:bg-secondary transition-colors font-medium">
                     {s}
                   </button>
                 ))}

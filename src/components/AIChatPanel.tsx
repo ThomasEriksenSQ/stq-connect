@@ -41,9 +41,9 @@ const QUICK_ACTIONS = [
   { icon: ArrowLeftRight, label: "Match til oppdrag", sub: "Finn beste forespørsel for en konsulent", action: "oppdragsmatch" as const },
 ];
 
-const CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-full border transition-colors cursor-pointer select-none";
+const CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-[6px] border transition-colors cursor-pointer select-none font-medium";
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
-const CHIP_ON = `${CHIP_BASE} bg-primary/10 border-primary/30 text-primary font-medium`;
+const CHIP_ON = `${CHIP_BASE} bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8] font-semibold`;
 
 /* ─── System prompt builder ─── */
 
@@ -760,7 +760,7 @@ Returner BARE JSON, ingen annen tekst.`,
               </div>
               <div className="flex flex-wrap gap-1 mt-1.5">
                 {SUGGESTED_TAGS.filter(s => !fTeknologier.includes(s)).slice(0, 8).map(s => (
-                  <button key={s} onClick={() => setFTeknologier([...fTeknologier, s])} className="h-6 px-2 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors">{s}</button>
+                  <button key={s} onClick={() => setFTeknologier([...fTeknologier, s])} className="h-7 px-2.5 text-[0.75rem] rounded-[6px] border border-border text-muted-foreground hover:bg-secondary transition-colors font-medium">{s}</button>
                 ))}
               </div>
             </div>

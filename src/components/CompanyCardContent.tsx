@@ -77,36 +77,18 @@ import {
   CATEGORIES as SIGNAL_CATEGORIES,
   getEffectiveSignal,
   extractCategory,
+  getSignalBadgeStyle,
   upsertTaskSignalDescription,
 } from "@/lib/categoryUtils";
+import { C } from "@/theme";
 
 /* ── Category system (shared with ContactCardContent) ── */
 const CATEGORIES = [
-  {
-    label: "Behov nå",
-    badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200",
-    selectedColor: "bg-emerald-500 text-white border-emerald-500",
-  },
-  {
-    label: "Får fremtidig behov",
-    badgeColor: "bg-blue-100 text-blue-800 border-blue-200",
-    selectedColor: "bg-blue-500 text-white border-blue-500",
-  },
-  {
-    label: "Får kanskje behov",
-    badgeColor: "bg-amber-100 text-amber-800 border-amber-200",
-    selectedColor: "bg-amber-500 text-white border-amber-500",
-  },
-  {
-    label: "Ukjent om behov",
-    badgeColor: "bg-gray-100 text-gray-600 border-gray-200",
-    selectedColor: "bg-gray-400 text-white border-gray-400",
-  },
-  {
-    label: "Ikke aktuelt",
-    badgeColor: "bg-red-50 text-red-700 border-red-200",
-    selectedColor: "bg-red-400 text-white border-red-400",
-  },
+  { label: "Behov nå" },
+  { label: "Får fremtidig behov" },
+  { label: "Får kanskje behov" },
+  { label: "Ukjent om behov" },
+  { label: "Ikke aktuelt" },
 ] as const;
 
 const LEGACY_CATEGORY_MAP: Record<string, string> = {
@@ -120,24 +102,41 @@ function normalizeCategoryLabel(label: string): string {
   return LEGACY_CATEGORY_MAP[label] || label;
 }
 
-function getCategoryBadgeColor(label: string) {
+function getCategoryPickerActiveColors(label: string) {
   const normalized = normalizeCategoryLabel(label);
-  const cat = CATEGORIES.find((c) => c.label === normalized);
-  return cat?.badgeColor || "bg-secondary text-foreground border-border";
+
+  if (normalized === "Behov nå") {
+    return {
+      background: C.successBg,
+      color: C.success,
+      border: "1px solid #C0DEC8",
+      fontWeight: 600,
+    };
+  }
+
+  if (normalized === "Får fremtidig behov") {
+    return {
+      background: C.infoBg,
+      color: C.info,
+      border: "1px solid #B3C8E8",
+      fontWeight: 600,
+    };
+  }
+
+  return undefined;
 }
 
 function CategoryBadge({ label, className }: { label: string; className?: string }) {
   const normalized = normalizeCategoryLabel(label);
-  const color = getCategoryBadgeColor(normalized);
   const isKnown = CATEGORIES.some((c) => c.label === normalized);
   if (!isKnown) return null;
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
-        color,
+        "inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium h-7",
         className,
       )}
+      style={getSignalBadgeStyle(normalized)}
     >
       {normalized}
     </span>
@@ -153,11 +152,12 @@ function CategoryPicker({ selected, onSelect }: { selected: string; onSelect: (v
           type="button"
           onClick={() => onSelect(cat.label)}
           className={cn(
-            "h-7 px-2.5 text-[0.75rem] rounded-full border transition-all font-medium",
+            "h-7 px-2.5 text-[0.75rem] rounded-[6px] border transition-colors font-medium",
             selected === cat.label
-              ? cat.selectedColor
-              : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground",
+              ? "bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8] font-semibold"
+              : "border-border text-muted-foreground hover:bg-secondary",
           )}
+          style={selected === cat.label ? getCategoryPickerActiveColors(cat.label) : undefined}
         >
           {cat.label}
         </button>
@@ -544,10 +544,10 @@ export function CompanyCardContent({
   if (!company) return <p className="text-sm text-muted-foreground">Selskap ikke funnet</p>;
 
   const STATUS_OPTIONS = [
-    { value: "prospect", label: "Potensiell kunde", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
-    { value: "customer", label: "Kunde", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-    { value: "partner", label: "Partner", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" },
-    { value: "churned", label: "Ikke relevant selskap", badgeColor: "bg-red-50 text-red-700 border-red-200" },
+    { value: "prospect", label: "Potensiell kunde" },
+    { value: "customer", label: "Kunde" },
+    { value: "partner", label: "Partner" },
+    { value: "churned", label: "Ikke relevant selskap" },
   ] as const;
   const currentStatus =
     STATUS_OPTIONS.find((s) => s.value === company.status || (s.value === "customer" && company.status === "kunde")) ||
@@ -558,10 +558,7 @@ export function CompanyCardContent({
     activities.map((a) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
     tasks.map((t) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date })),
   );
-  const signalBadgeColor = effectiveSignal
-    ? SIGNAL_CATEGORIES.find((c) => c.label === effectiveSignal)?.badgeColor ||
-      "bg-gray-100 text-gray-600 border-gray-200"
-    : "bg-gray-100 text-gray-600 border-gray-200";
+  const signalBadgeStyle = getSignalBadgeStyle(effectiveSignal);
 
   const handleFinnKonsulenter = async () => {
     setMatchingKonsulenter(true);
@@ -660,19 +657,17 @@ export function CompanyCardContent({
                 }}
                 className={cn(
                   effectiveSignal
-                    ? "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer"
-                    : "inline-flex items-center rounded-full border border-dashed border-border px-2.5 py-0.5 text-[0.6875rem] text-muted-foreground/50 cursor-pointer hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors",
-                  effectiveSignal ? signalBadgeColor : "",
+                    ? "inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium h-7 cursor-pointer"
+                    : "inline-flex items-center rounded-[6px] border border-dashed border-border px-2.5 py-0.5 text-[0.75rem] text-muted-foreground/50 h-7 cursor-pointer hover:text-muted-foreground hover:border-muted-foreground/40 transition-colors",
                 )}
+                style={effectiveSignal ? signalBadgeStyle : undefined}
               >
                 {effectiveSignal || "Sett signal"}
               </button>
             ) : effectiveSignal ? (
               <span
-                className={cn(
-                  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
-                  signalBadgeColor,
-                )}
+                className="inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium h-7"
+                style={signalBadgeStyle}
               >
                 {effectiveSignal}
               </span>
@@ -681,7 +676,14 @@ export function CompanyCardContent({
             {editable ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="inline-flex items-center rounded-full border bg-gray-100 text-gray-600 border-gray-200 px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap cursor-pointer">
+                  <button
+                    className="inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium whitespace-nowrap cursor-pointer h-7"
+                    style={{
+                      background: C.statusNeutralBg,
+                      color: C.statusNeutral,
+                      border: `1px solid ${C.statusNeutralBorder}`,
+                    }}
+                  >
                     {currentStatus.label}
                     <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
                   </button>
@@ -695,7 +697,14 @@ export function CompanyCardContent({
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <span className="inline-flex items-center rounded-full border bg-gray-100 text-gray-600 border-gray-200 px-2.5 py-0.5 text-xs font-semibold">
+              <span
+                className="inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium h-7"
+                style={{
+                  background: C.statusNeutralBg,
+                  color: C.statusNeutral,
+                  border: `1px solid ${C.statusNeutralBorder}`,
+                }}
+              >
                 {currentStatus.label}
               </span>
             )}
@@ -703,7 +712,14 @@ export function CompanyCardContent({
             {editable ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="inline-flex items-center rounded-full border bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap cursor-pointer">
+                  <button
+                    className="inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium whitespace-nowrap cursor-pointer h-7"
+                    style={{
+                      background: C.statusNeutralBg,
+                      color: C.statusNeutral,
+                      border: `1px solid ${C.statusNeutralBorder}`,
+                    }}
+                  >
                     {company.owner_id && profileMapFull[company.owner_id] ? profileMapFull[company.owner_id] : "Eier"}
                     <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
                   </button>
@@ -711,7 +727,14 @@ export function CompanyCardContent({
                 <DropdownMenuContent align="end">
                   {allProfiles.map((p) => (
                     <DropdownMenuItem key={p.id} onClick={() => updateMutation.mutate({ owner_id: p.id })}>
-                      <span className="inline-flex items-center rounded-full border bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold">
+                      <span
+                        className="inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium h-7"
+                        style={{
+                          background: C.statusNeutralBg,
+                          color: C.statusNeutral,
+                          border: `1px solid ${C.statusNeutralBorder}`,
+                        }}
+                      >
                         {p.full_name}
                       </span>
                     </DropdownMenuItem>
@@ -719,7 +742,14 @@ export function CompanyCardContent({
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : ownerFullName ? (
-              <span className="inline-flex items-center rounded-full border bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold">
+              <span
+                className="inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium h-7"
+                style={{
+                  background: C.statusNeutralBg,
+                  color: C.statusNeutral,
+                  border: `1px solid ${C.statusNeutralBorder}`,
+                }}
+              >
                 {ownerFullName}
               </span>
             ) : null}
@@ -739,10 +769,10 @@ export function CompanyCardContent({
                           type="button"
                           onClick={() => setPendingSignal(c.label)}
                           className={cn(
-                            "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer transition-all",
+                            "inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium cursor-pointer transition-colors h-7",
                             pendingSignal === c.label
-                              ? c.badgeColor + " ring-2 ring-offset-1 ring-primary"
-                              : c.badgeColor + " opacity-50",
+                              ? "bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8] font-semibold"
+                              : "border-border text-muted-foreground hover:bg-secondary",
                           )}
                         >
                           {c.label}
@@ -1397,7 +1427,14 @@ export function CompanyCardContent({
                         )}
                         <div className="flex items-center gap-1.5 mt-1">
                           {task.assigned_to && profileMapFull[task.assigned_to] && (
-                            <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+                            <span
+                              className="inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium h-7"
+                              style={{
+                                background: C.statusNeutralBg,
+                                color: C.statusNeutral,
+                                border: `1px solid ${C.statusNeutralBorder}`,
+                              }}
+                            >
                               {profileMapFull[task.assigned_to]}
                             </span>
                           )}
@@ -1949,7 +1986,14 @@ function CompanyActivityRow({
 
               <div className="flex items-center gap-2 mt-1">
                 {ownerName && (
-                  <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[0.6875rem] font-medium">
+                  <span
+                    className="inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium h-7"
+                    style={{
+                      background: C.statusNeutralBg,
+                      color: C.statusNeutral,
+                      border: `1px solid ${C.statusNeutralBorder}`,
+                    }}
+                  >
                     {ownerName}
                   </span>
                 )}

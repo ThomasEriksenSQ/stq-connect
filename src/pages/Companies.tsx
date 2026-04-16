@@ -74,9 +74,9 @@ const statusLabels: Record<string, { label: string; className: string; badgeColo
 
 const TYPE_ORDER = ["prospect", "customer", "churned", "partner", "lead"];
 
-const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer";
+const CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-[6px] border transition-colors cursor-pointer font-medium";
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
-const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground font-medium`;
+const CHIP_ON = `${CHIP_BASE} bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8] font-semibold`;
 
 const OrgNrInput = ({
   value,
@@ -553,18 +553,18 @@ const Companies = () => {
                       {
                         value: "prospect",
                         label: "Potensiell kunde",
-                        activeClass: "bg-blue-500 text-white border-blue-500",
+                        activeClass: "bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8]",
                       },
                       {
                         value: "customer",
                         label: "Kunde",
-                        activeClass: "bg-emerald-500 text-white border-emerald-500",
+                        activeClass: "bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8]",
                       },
-                      { value: "partner", label: "Partner", activeClass: "bg-gray-400 text-white border-gray-400" },
+                      { value: "partner", label: "Partner", activeClass: "bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8]" },
                       {
                         value: "churned",
                         label: "Ikke relevant selskap",
-                        activeClass: "bg-red-400 text-white border-red-400",
+                        activeClass: "bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8]",
                       },
                     ] as const
                   ).map((opt) => (

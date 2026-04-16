@@ -19,9 +19,9 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import FollowUpModal from "./FollowUpModal";
 
-const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer";
+const CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-[6px] border transition-colors cursor-pointer font-medium";
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
-const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground font-medium`;
+const CHIP_ON = `${CHIP_BASE} bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8] font-semibold`;
 
 type NaarFilter = "Forfalt + I dag" | "Forfalt" | "I dag" | "Denne uken" | "Alle";
 type SignalFilter = "Alle" | string;

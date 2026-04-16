@@ -6,7 +6,7 @@ import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/q
 import { differenceInDays, isPast, isToday, format, addWeeks, addMonths } from "date-fns";
 import { nb } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { getEffectiveSignal, upsertTaskSignalDescription } from "@/lib/categoryUtils";
+import { getEffectiveSignal, getSignalBadgeStyle, upsertTaskSignalDescription } from "@/lib/categoryUtils";
 import { CONTACT_CV_EMAIL_REQUIRED_MESSAGE, contactHasEmail } from "@/lib/contactCvEligibility";
 import { getHeatResult, TEMP_CONFIG } from "@/lib/heatScore";
 import { Flame, ChevronLeft, ChevronRight, Radio, Loader2, MapPin, ChevronDown, X, Bell } from "lucide-react";
@@ -14,6 +14,7 @@ import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ContactCardContent } from "@/components/ContactCardContent";
 import { toast } from "sonner";
+import { C } from "@/theme";
 
 const DATE_CHIPS = [
   { label: "1 uke", fn: () => addWeeks(new Date(), 1) },
@@ -23,11 +24,11 @@ const DATE_CHIPS = [
 ];
 
 const SIGNAL_CATEGORIES = [
-  { label: "Behov nå", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-  { label: "Får fremtidig behov", badgeColor: "bg-blue-100 text-blue-800 border-blue-200" },
-  { label: "Får kanskje behov", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
-  { label: "Ukjent om behov", badgeColor: "bg-gray-100 text-gray-600 border-gray-200" },
-  { label: "Ikke aktuelt", badgeColor: "bg-red-50 text-red-700 border-red-200" },
+  { label: "Behov nå" },
+  { label: "Får fremtidig behov" },
+  { label: "Får kanskje behov" },
+  { label: "Ukjent om behov" },
+  { label: "Ikke aktuelt" },
 ];
 
 interface ScoredLead {
@@ -1047,9 +1048,9 @@ const DailyBrief = () => {
                         <button
                           onClick={() => setActiveForm(activeForm === "signal" ? null : "signal")}
                           className={cn(
-                            "inline-flex items-center gap-1.5 h-9 px-4 rounded-full border text-[0.8125rem] font-medium transition-colors",
+                            "inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[6px] border text-[0.75rem] font-medium transition-colors",
                             currentSignal
-                              ? SIGNAL_CATEGORIES.find((c) => c.label === currentSignal)?.badgeColor
+                              ? "bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8] font-semibold"
                               : "bg-background text-muted-foreground border-border hover:bg-secondary",
                           )}
                         >
@@ -1089,10 +1090,8 @@ const DailyBrief = () => {
                                 className="w-full flex items-center gap-2 px-3 py-2.5 text-[0.8125rem] hover:bg-secondary transition-colors text-left"
                               >
                                 <span
-                                  className={cn(
-                                    "inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold",
-                                    cat.badgeColor,
-                                  )}
+                                  className="inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium h-7"
+                                  style={getSignalBadgeStyle(cat.label)}
                                 >
                                   {cat.label}
                                 </span>
@@ -1317,21 +1316,29 @@ const DailyBrief = () => {
                         </span>
                         {lead.signal && (
                           <span
-                            className={cn(
-                              "inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold flex-shrink-0",
-                              SIGNAL_CATEGORIES.find((c) => c.label === lead.signal)?.badgeColor,
-                            )}
+                            className="inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium flex-shrink-0 h-7"
+                            style={getSignalBadgeStyle(lead.signal)}
                           >
                             {lead.signal}
                           </span>
                         )}
                         {lead.hasMarkedsradar && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 text-[0.6875rem] font-semibold flex-shrink-0">
+                          <span
+                            className="inline-flex items-center gap-1 rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium flex-shrink-0 h-7"
+                            style={getSignalBadgeStyle("Får fremtidig behov")}
+                          >
                             <Radio className="h-3 w-3" /> Finn.no
                           </span>
                         )}
                         {lead.isInnkjoper && (
-                          <span className="inline-flex items-center rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 text-[0.6875rem] font-semibold flex-shrink-0">
+                          <span
+                            className="inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium flex-shrink-0 h-7"
+                            style={{
+                              background: C.statusNeutralBg,
+                              color: C.statusNeutral,
+                              border: `1px solid ${C.statusNeutralBorder}`,
+                            }}
+                          >
                             Innkjøper
                           </span>
                         )}
@@ -1459,37 +1466,23 @@ const DailyBrief = () => {
                   )}
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {[
-                      {
-                        label: "Behov nå",
-                        active: "bg-emerald-500 text-white border-emerald-500",
-                        inactive: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100",
-                      },
-                      {
-                        label: "Får fremtidig behov",
-                        active: "bg-blue-500 text-white border-blue-500",
-                        inactive: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
-                      },
-                      {
-                        label: "Får kanskje behov",
-                        active: "bg-amber-500 text-white border-amber-500",
-                        inactive: "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100",
-                      },
-                      {
-                        label: "Ukjent om behov",
-                        active: "bg-gray-400 text-white border-gray-400",
-                        inactive: "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100",
-                      },
-                    ].map((cat) => (
+                      "Behov nå",
+                      "Får fremtidig behov",
+                      "Får kanskje behov",
+                      "Ukjent om behov",
+                    ].map((label) => (
                       <button
-                        key={cat.label}
-                        onClick={() => setNudgeSignal(cat.label)}
+                        key={label}
+                        onClick={() => setNudgeSignal(label)}
                         className={cn(
-                          "h-10 px-3 rounded-xl border text-[0.8125rem] font-medium transition-all flex items-center justify-center gap-1.5",
-                          nudgeSignal === cat.label ? cat.active + " shadow-sm" : cat.inactive,
+                          "h-7 px-3 rounded-xl border text-[0.8125rem] font-medium transition-colors flex items-center justify-center gap-1.5",
+                          nudgeSignal === label
+                            ? "bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8] shadow-sm"
+                            : "bg-transparent text-muted-foreground border-border hover:bg-secondary",
                         )}
                       >
-                        {nudgeSignal === cat.label && <span className="text-sm">✓</span>}
-                        {cat.label}
+                        {nudgeSignal === label && <span className="text-sm">✓</span>}
+                        {label}
                       </button>
                     ))}
                   </div>

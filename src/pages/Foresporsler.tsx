@@ -48,9 +48,9 @@ const STATUS_CHIPS: { value: StatusFilter; label: string }[] = [
   { value: "alle", label: "Alle" },
 ];
 
-const CHIP_BASE = "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors cursor-pointer select-none";
+const CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-[6px] border transition-colors cursor-pointer select-none font-medium";
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
-const CHIP_ON = `${CHIP_BASE} bg-foreground text-background border-foreground font-medium`;
+const CHIP_ON = `${CHIP_BASE} bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8] font-semibold`;
 
 const SUGGESTED_TAGS = ["C++", "C", "Embedded", "Yocto", "Linux", "Qt", "FPGA", "Python", "SPI/I2C", "MCU", "Embedded Linux", "Sikkerhet"];
 
@@ -105,11 +105,11 @@ function TypeBadge({ type }: { type: string | null }) {
 /* ─── Pipeline config ─── */
 
 const PIPELINE: Record<string, { label: string; dot: string; badge: string; step: number | null }> = {
-  sendt_cv:  { label: "Sendt CV", dot: "bg-amber-400", badge: "bg-amber-50 text-amber-700 border-amber-200", step: 1 },
-  intervju:  { label: "Intervju", dot: "bg-blue-500", badge: "bg-blue-50 text-blue-700 border-blue-200", step: 2 },
-  vunnet:    { label: "Vunnet 🎉", dot: "bg-green-500", badge: "bg-green-50 text-green-700 border-green-200", step: 3 },
-  avslag:    { label: "Avslag", dot: "bg-red-400", badge: "bg-red-50 text-red-600 border-red-200", step: null },
-  bortfalt:  { label: "Bortfalt", dot: "bg-gray-400", badge: "bg-gray-50 text-gray-500 border-gray-200", step: null },
+  sendt_cv:  { label: "Sendt CV", dot: "bg-amber-400", badge: "bg-[#FBF3E6] text-[#7D4E00] border-[#E8D0A0]", step: 1 },
+  intervju:  { label: "Intervju", dot: "bg-blue-500", badge: "bg-[#EAF0F9] text-[#1A4FA0] border-[#B3C8E8]", step: 2 },
+  vunnet:    { label: "Vunnet 🎉", dot: "bg-green-500", badge: "bg-[#EBF3EE] text-[#2D6A4F] border-[#C0DEC8]", step: 3 },
+  avslag:    { label: "Avslag", dot: "bg-red-400", badge: "bg-[#FAEBEC] text-[#8B1D20] border-[#E8B8BA]", step: null },
+  bortfalt:  { label: "Bortfalt", dot: "bg-gray-400", badge: "bg-[#F0F2F6] text-[#3A3F4A] border-[#C8CDD6]", step: null },
 };
 
 const PIPELINE_BORDER: Record<string, string> = {
@@ -718,7 +718,7 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
                 <button
                   key={s}
                   onClick={() => addTag(s)}
-                  className="h-6 px-2 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors"
+                  className="h-7 px-2.5 text-[0.75rem] rounded-[6px] border border-border text-muted-foreground hover:bg-secondary transition-colors font-medium"
                 >
                   {s}
                 </button>

@@ -48,6 +48,7 @@ export const C = {
   warning: "#7D4E00",
   danger: "#8B1D20",
   info: "#1A4FA0",
+  statusNeutral: "#3A3F4A",
   heatPromising: "#FB923C",
   heatPossible: "#FBBF24",
 
@@ -56,6 +57,8 @@ export const C = {
   warningBg: "rgba(125,78,0,0.08)",
   dangerBg: "rgba(139,29,32,0.08)",
   infoBg: "rgba(26,79,160,0.08)",
+  statusNeutralBg: "#F0F2F6",
+  statusNeutralBorder: "#C8CDD6",
 
   /* Dot colors — for status indicators */
   dotSuccess: "#4CAF78",
@@ -97,11 +100,11 @@ export const SIGNAL_COLORS: Record<
     activeBorder: string;
   }
 > = {
-  "Behov nå":             { bg: "#D1FAE5", color: "#065F46", border: "#A7F3D0", activeBg: "#10B981", activeColor: "#FFFFFF", activeBorder: "#10B981" },
-  "Får fremtidig behov":  { bg: "#DBEAFE", color: "#1E40AF", border: "#BFDBFE", activeBg: "#3B82F6", activeColor: "#FFFFFF", activeBorder: "#3B82F6" },
-  "Får kanskje behov":    { bg: "#FEF3C7", color: "#92400E", border: "#FDE68A", activeBg: "#F59E0B", activeColor: "#FFFFFF", activeBorder: "#F59E0B" },
-  "Ukjent om behov":      { bg: "#F3F4F6", color: "#4B5563", border: "#E5E7EB", activeBg: "#9CA3AF", activeColor: "#FFFFFF", activeBorder: "#9CA3AF" },
-  "Ikke aktuelt":         { bg: "#FEF2F2", color: "#B91C1C", border: "#FECACA", activeBg: "#F87171", activeColor: "#FFFFFF", activeBorder: "#F87171" },
+  "Behov nå":             { bg: "#EBF3EE", color: "#2D6A4F", border: "#C0DEC8", activeBg: "#E8ECF5", activeColor: "#1A1C1F", activeBorder: "#C5CBE8" },
+  "Får fremtidig behov":  { bg: "#EAF0F9", color: "#1A4FA0", border: "#B3C8E8", activeBg: "#E8ECF5", activeColor: "#1A1C1F", activeBorder: "#C5CBE8" },
+  "Får kanskje behov":    { bg: "#FBF3E6", color: "#7D4E00", border: "#E8D0A0", activeBg: "#E8ECF5", activeColor: "#1A1C1F", activeBorder: "#C5CBE8" },
+  "Ukjent om behov":      { bg: "#F0F2F6", color: "#3A3F4A", border: "#C8CDD6", activeBg: "#E8ECF5", activeColor: "#1A1C1F", activeBorder: "#C5CBE8" },
+  "Ikke aktuelt":         { bg: "#FAEBEC", color: "#8B1D20", border: "#E8B8BA", activeBg: "#E8ECF5", activeColor: "#1A1C1F", activeBorder: "#C5CBE8" },
 };
 
 /* ── Heat badge colors ── */

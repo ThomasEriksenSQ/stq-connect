@@ -330,7 +330,6 @@ export default function DesignLabCompanies() {
                     }}
                     variant="ghost"
                     className="w-full justify-start"
-                    style={{ height: 28, paddingInline: 10, fontSize: 12 }}
                   >
                     {opt.label}
                   </DesignLabActionButton>
@@ -490,10 +489,10 @@ function SignalChip({ signal }: { signal: Signal }) {
     <span
       className="inline-flex items-center whitespace-nowrap"
       style={{
-        height: 20,
-        padding: "2px 6px",
-        borderRadius: 4,
-        fontSize: 11,
+        height: 28,
+        padding: "0 10px",
+        borderRadius: 6,
+        fontSize: 12,
         fontWeight: 500,
         background: colors.bg,
         color: colors.color,

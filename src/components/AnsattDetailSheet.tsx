@@ -547,7 +547,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                         <button
                           key={s}
                           onClick={() => addTag(s)}
-                          className="h-6 px-2 text-[0.6875rem] rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors"
+                          className="h-7 px-2.5 text-[0.75rem] rounded-[6px] border border-border text-muted-foreground hover:bg-secondary transition-colors font-medium"
                         >
                           {s}
                         </button>
