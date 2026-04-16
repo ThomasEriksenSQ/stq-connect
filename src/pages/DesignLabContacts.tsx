@@ -1047,9 +1047,6 @@ export default function DesignLabContacts() {
   const filteredContacts = useMemo(() => {
     let list = searchFilteredContacts;
 
-    if (typeFilter !== "Ikke relevant kontakt") {
-      list = list.filter((contact) => !contact.ikkeAktuell);
-    }
     if (ownerFilter === "Uten eier") list = list.filter((contact) => !contact.eier);
     else if (ownerFilter !== "Alle") list = list.filter((contact) => contact.eier === ownerFilter);
     if (signalFilter !== "Alle") list = list.filter((contact) => contact.signal === signalFilter);
@@ -2389,7 +2386,7 @@ export default function DesignLabContacts() {
                 >
                   <div
                     className="shrink-0 flex items-center justify-end px-4"
-                    style={{ height: 32, borderBottom: `1px solid ${C.border}` }}
+                    style={{ height: 32 }}
                   >
                     <DesignLabIconButton onClick={() => setSelectedId(null)} title="Lukk kontaktpanel">
                       <X style={{ width: 16, height: 16 }} />
