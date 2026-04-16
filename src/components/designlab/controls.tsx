@@ -7,6 +7,12 @@ import { cn } from "@/lib/utils";
 import { C } from "./theme";
 
 type ActionVariant = "primary" | "secondary" | "ghost";
+type FilterActiveColors = {
+  background?: string;
+  color?: string;
+  border?: string;
+  fontWeight?: number;
+};
 
 const FOCUS_VARS: CSSProperties = {
   ["--dl-focus-ring" as string]: C.borderFocus,
@@ -31,8 +37,10 @@ function handleInteractiveHover(
 
 export const DesignLabFilterButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & {
   active?: boolean;
+  activeColors?: FilterActiveColors;
 }>(function DesignLabFilterButton({
   active = false,
+  activeColors,
   className,
   disabled,
   onMouseEnter,
@@ -41,10 +49,11 @@ export const DesignLabFilterButton = forwardRef<HTMLButtonElement, ButtonHTMLAtt
   children,
   ...props
 }, ref) {
-  const baseBorder = active ? `1px solid ${C.filterActiveBorder}` : `1px solid ${C.borderDefault}`;
-  const baseBackground = active ? C.filterActiveBg : "transparent";
-  const baseColor = active ? C.textPrimary : C.textSecondary;
-  const hoverBackground = active ? C.filterActiveBg : C.hoverSubtle;
+  const baseBorder = active ? activeColors?.border ?? `1px solid ${C.filterActiveBorder}` : `1px solid ${C.borderDefault}`;
+  const baseBackground = active ? activeColors?.background ?? C.filterActiveBg : "transparent";
+  const baseColor = active ? activeColors?.color ?? C.textPrimary : C.textSecondary;
+  const baseFontWeight = active ? activeColors?.fontWeight ?? 600 : 500;
+  const hoverBackground = active ? activeColors?.background ?? C.filterActiveBg : C.hoverSubtle;
 
   return (
     <button
@@ -62,7 +71,7 @@ export const DesignLabFilterButton = forwardRef<HTMLButtonElement, ButtonHTMLAtt
         minWidth: 28,
         paddingInline: 10,
         fontSize: 12,
-        fontWeight: active ? 600 : 500,
+        fontWeight: baseFontWeight,
         borderRadius: 6,
         border: baseBorder,
         background: baseBackground,
@@ -74,7 +83,7 @@ export const DesignLabFilterButton = forwardRef<HTMLButtonElement, ButtonHTMLAtt
         if (!disabled) {
           handleInteractiveHover(event.currentTarget, {
             background: hoverBackground,
-            color: active ? C.textPrimary : C.textSecondary,
+            color: active ? activeColors?.color ?? C.textPrimary : C.textSecondary,
             border: baseBorder,
           });
         }

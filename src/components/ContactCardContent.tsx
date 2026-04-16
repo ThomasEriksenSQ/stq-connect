@@ -108,6 +108,20 @@ function normalizeCategoryLabel(label: string): string {
   return LEGACY_CATEGORY_MAP[label] || label;
 }
 
+function getSignalActiveColors(label?: string) {
+  if (!label) return undefined;
+  const normalized = normalizeCategoryLabel(label);
+  const colors = SIGNAL_COLORS[normalized as keyof typeof SIGNAL_COLORS];
+  if (!colors) return undefined;
+
+  return {
+    background: colors.bg,
+    color: colors.color,
+    border: "1px solid transparent",
+    fontWeight: 600,
+  };
+}
+
 function CategoryBadge({ label, className }: { label: string; className?: string }) {
   const normalized = normalizeCategoryLabel(label);
   const isKnown = CATEGORIES.some((c) => c.label === normalized);
@@ -128,6 +142,7 @@ function CategoryPicker({ selected, onSelect }: { selected: string; onSelect: (v
           type="button"
           onClick={() => onSelect(cat.label)}
           active={selected === cat.label}
+          activeColors={getSignalActiveColors(cat.label)}
         >
           {cat.label}
         </DesignLabFilterButton>
@@ -805,7 +820,11 @@ export function ContactCardContent({
                 return (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <DesignLabFilterButton active={Boolean(signalCat)} className="whitespace-nowrap">
+                      <DesignLabFilterButton
+                        active={Boolean(signalCat)}
+                        activeColors={getSignalActiveColors(signalCat?.label)}
+                        className="whitespace-nowrap"
+                      >
                         <span>{signalCat ? signalCat.label : "Legg til signal"}</span>
                         <ChevronDown className="h-3 w-3" />
                       </DesignLabFilterButton>

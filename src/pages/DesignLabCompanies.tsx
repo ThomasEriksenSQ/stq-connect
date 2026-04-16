@@ -485,9 +485,21 @@ function SignalChip({ signal }: { signal: Signal }) {
     "Ukjent om behov": "Ukjent",
     "Ikke aktuelt": "Ikke aktuelt",
   };
-  const modifier = signal === "Ikke aktuelt" ? " is-muted" : " is-signal";
+  const colors = SIGNAL_COLORS[signal];
   return (
-    <span className={`chip chip--action${modifier}`}>
+    <span
+      className="inline-flex items-center whitespace-nowrap"
+      style={{
+        height: 20,
+        padding: "2px 6px",
+        borderRadius: 4,
+        fontSize: 11,
+        fontWeight: 500,
+        background: colors.bg,
+        color: colors.color,
+        border: "1px solid transparent",
+      }}
+    >
       {shortLabels[signal]}
     </span>
   );

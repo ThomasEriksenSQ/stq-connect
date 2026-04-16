@@ -34,7 +34,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { ContactCardContent } from "@/components/ContactCardContent";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
-import { C } from "@/components/designlab/theme";
+import { C, SIGNAL_COLORS } from "@/components/designlab/theme";
 import { CommandPalette } from "@/components/designlab/CommandPalette";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { getHeatResult, getTaskStatus, getActivityStatus, type HeatResult } from "@/lib/heatScore";
@@ -2353,6 +2353,7 @@ export default function DesignLabContacts() {
                                   <DesignLabFilterButton
                                     onClick={(event) => event.stopPropagation()}
                                     active={Boolean(c.signal)}
+                                    activeColors={getSignalActiveColors((c.signal as Signal | null) ?? null)}
                                     className="justify-start"
                                     aria-haspopup="menu"
                                   >
@@ -2548,8 +2549,24 @@ export default function DesignLabContacts() {
    ═══════════════════════════════════════════════════════════ */
 
 function SignalChip({ signal, size = "sm" }: { signal: Signal; size?: "sm" | "md" }) {
-  const modifier = signal === "Ikke aktuelt" ? " is-muted" : " is-signal";
-  return <span className={`chip chip--action${modifier}`}>{size === "sm" ? signalShortLabel(signal) : signal}</span>;
+  const colors = SIGNAL_COLORS[signal];
+  return (
+    <span
+      className="inline-flex items-center whitespace-nowrap"
+      style={{
+        height: 20,
+        padding: "2px 6px",
+        borderRadius: 4,
+        fontSize: 11,
+        fontWeight: 500,
+        background: colors.bg,
+        color: colors.color,
+        border: "1px solid transparent",
+      }}
+    >
+      {size === "sm" ? signalShortLabel(signal) : signal}
+    </span>
+  );
 }
 
 function signalShortLabel(signal: Signal): string {
@@ -2562,6 +2579,17 @@ function signalShortLabel(signal: Signal): string {
   };
 
   return shortLabels[signal];
+}
+
+function getSignalActiveColors(signal?: Signal | null) {
+  if (!signal) return undefined;
+  const colors = SIGNAL_COLORS[signal];
+  return {
+    background: colors.bg,
+    color: colors.color,
+    border: "1px solid transparent",
+    fontWeight: 600,
+  };
 }
 
 function MatchFilterChip({
