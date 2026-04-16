@@ -127,7 +127,7 @@ function CategoryBadge({ label, className }: { label: string; className?: string
   const isKnown = CATEGORIES.some((c) => c.label === normalized);
   if (!isKnown) return null;
   return (
-    <StatusChip category={normalized} className={className}>
+    <StatusChip category={normalized} className={className} pill>
       {normalized}
     </StatusChip>
   );
@@ -156,11 +156,13 @@ function StatusChip({
   className,
   category,
   tone = "default",
+  pill = false,
 }: {
   children: ReactNode;
   className?: string;
   category?: string;
   tone?: "default" | "signal" | "muted";
+  pill?: boolean;
 }) {
   const normalizedCategory = category ? normalizeCategoryLabel(category) : null;
   const categoryColors = normalizedCategory
@@ -196,8 +198,8 @@ function StatusChip({
       className={cn("inline-flex items-center whitespace-nowrap", className)}
       style={{
         height: 20,
-        padding: "2px 6px",
-        borderRadius: 4,
+        padding: pill ? "2px 8px" : "2px 6px",
+        borderRadius: pill ? 999 : 4,
         fontSize: 11,
         fontWeight: 500,
         ...styles,
@@ -1920,7 +1922,7 @@ function TaskRow({
         {displayDesc && <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{displayDesc}</p>}
         {task.assigned_to && profileMap[task.assigned_to] && (
           <div className="mt-1">
-            <StatusChip tone="signal">
+            <StatusChip tone="signal" pill>
               {profileMap[task.assigned_to]}
             </StatusChip>
           </div>
@@ -2203,7 +2205,7 @@ function EmailRow({ email }: { email: any }) {
             <span className="text-[0.8125rem] text-muted-foreground">
               {format(d, "d. MMM yyyy", { locale: nb })}
             </span>
-            <StatusChip tone="signal">
+            <StatusChip tone="signal" pill>
               E-post
             </StatusChip>
           </div>
@@ -2426,7 +2428,7 @@ function ActivityRow({
               {/* Owner badge */}
               {ownerName && (
                 <div className="mt-1">
-                  <StatusChip tone="signal">
+                  <StatusChip tone="signal" pill>
                     {ownerName}
                   </StatusChip>
                 </div>

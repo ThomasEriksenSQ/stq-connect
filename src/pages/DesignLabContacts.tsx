@@ -3,12 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 import {
   ArrowUpDown,
@@ -19,7 +13,7 @@ import {
 } from "lucide-react";
 import { differenceInDays, format } from "date-fns";
 import { nb } from "date-fns/locale";
-import { getEffectiveSignal, normalizeCategoryLabel, upsertTaskSignalDescription } from "@/lib/categoryUtils";
+import { getEffectiveSignal, normalizeCategoryLabel } from "@/lib/categoryUtils";
 import { toast } from "sonner";
 import {
   getConsultantAvailabilityMeta,
@@ -1715,65 +1709,6 @@ export default function DesignLabContacts() {
   const visibleResultCount = selectedConsultant ? visibleMatchLeads.length : filteredContacts.length;
   const visibleResultLabel = selectedConsultant ? "treff" : "kontakter";
 
-  const setSignalMutation = useMutation({
-    mutationFn: async ({
-      contactId,
-      companyId,
-      label,
-    }: {
-      contactId: string;
-      companyId: string | null;
-      label: Signal;
-    }) => {
-      const { data: existingTasks, error: taskLookupError } = await supabase
-        .from("tasks")
-        .select("id, description, due_date")
-        .eq("contact_id", contactId)
-        .neq("status", "done")
-        .order("due_date", { ascending: true, nullsFirst: false })
-        .limit(1);
-      if (taskLookupError) throw taskLookupError;
-
-      const primaryTask = existingTasks?.[0];
-      if (primaryTask) {
-        const { error } = await supabase
-          .from("tasks")
-          .update({
-            description: upsertTaskSignalDescription(primaryTask.description, label, !primaryTask.due_date),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", primaryTask.id);
-        if (error) throw error;
-        return;
-      }
-
-      const { error } = await supabase.from("tasks").insert({
-        title: "Følg opp om behov",
-        description: upsertTaskSignalDescription(null, label, true),
-        priority: "medium",
-        due_date: null,
-        contact_id: contactId,
-        company_id: companyId,
-        assigned_to: user?.id,
-        created_by: user?.id,
-      });
-      if (error) throw error;
-    },
-    onSuccess: async (_, variables) => {
-      await Promise.all([
-        invalidateDesignLabQueries(),
-        queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.detail(variables.contactId) }),
-        queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.tasks(variables.contactId) }),
-        queryClient.invalidateQueries({ queryKey: crmQueryKeys.generic.tasks() }),
-        invalidateQueryGroup(queryClient, crmSummaryQueryKeys),
-      ]);
-      toast.success("Signal oppdatert");
-    },
-    onError: () => {
-      toast.error("Kunne ikke oppdatere signal");
-    },
-  });
-
   const handleToggle = useCallback(
     (contact: {
       id: string;
@@ -2348,36 +2283,11 @@ export default function DesignLabContacts() {
                               )}
                             </div>
                             <div className="flex items-center gap-1.5">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <DesignLabFilterButton
-                                    onClick={(event) => event.stopPropagation()}
-                                    active={Boolean(c.signal)}
-                                    activeColors={getSignalActiveColors((c.signal as Signal | null) ?? null)}
-                                    className="justify-start"
-                                    aria-haspopup="menu"
-                                  >
-                                    <span>{c.signal ? signalShortLabel(c.signal as Signal) : "Velg signal"}</span>
-                                    <ChevronDown style={{ width: 12, height: 12, flexShrink: 0 }} />
-                                  </DesignLabFilterButton>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start">
-                                  {SIGNALS.map((signalOption) => (
-                                    <DropdownMenuItem
-                                      key={signalOption}
-                                      onClick={() =>
-                                        setSignalMutation.mutate({
-                                          contactId: c.id,
-                                          companyId: c.companyId,
-                                          label: signalOption,
-                                        })
-                                      }
-                                    >
-                                      <SignalChip signal={signalOption} />
-                                    </DropdownMenuItem>
-                                  ))}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                              {c.signal ? (
+                                <SignalChip signal={c.signal as Signal} />
+                              ) : (
+                                <span style={{ fontSize: 11, color: C.textGhost }}>—</span>
+                              )}
                             </div>
                             <div
                               className="flex items-center justify-center"
