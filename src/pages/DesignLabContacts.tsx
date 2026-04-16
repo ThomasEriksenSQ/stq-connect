@@ -12,6 +12,7 @@ import {
 
 import {
   Search,
+  ArrowUpDown,
   ChevronDown,
   ChevronUp,
   X,
@@ -24,19 +25,40 @@ import { toast } from "sonner";
 import {
   getConsultantAvailabilityMeta,
   hasConsultantAvailability,
+  hasRecentActualActivity,
   isActiveRequest,
+  isColdCallCandidate,
+  isCustomerCompany,
   sortHuntConsultants,
+  type HuntChipValue,
 } from "@/lib/contactHunt";
 import { useAuth } from "@/hooks/useAuth";
 import { ContactCardContent } from "@/components/ContactCardContent";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
-import { C, SIGNAL_COLORS } from "@/components/designlab/theme";
+import { C } from "@/components/designlab/theme";
 import { CommandPalette } from "@/components/designlab/CommandPalette";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { getHeatResult, getTaskStatus, getActivityStatus, type HeatResult } from "@/lib/heatScore";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { CONTACT_CV_EMAIL_REQUIRED_MESSAGE, contactHasEmail } from "@/lib/contactCvEligibility";
 import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/queryKeys";
+import { relativeDate } from "@/lib/relativeDate";
+import { mergeTechnologyTags } from "@/lib/technologyTags";
+import {
+  getContactMatchScore,
+  getMatchBand,
+  type ConfidenceBand,
+  type MatchBand,
+} from "@/lib/contactMatchScore";
+import { getConsultantMatchScoreColor } from "@/lib/consultantMatches";
+import {
+  MATCH_OWNER_FILTER_NONE,
+  buildMatchLeadOwnerCandidate,
+  getMatchLeadOwnerLabel,
+  matchesMatchLeadOwnerFilter,
+  resolveMatchLeadOwner,
+  type MatchLeadOwnerSource,
+} from "@/lib/matchLeadOwners";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
@@ -53,12 +75,177 @@ const SIGNAL_ORDER: Record<Signal, number> = {
 };
 
 const SIGNALS: Signal[] = ["Behov nå", "Får fremtidig behov", "Får kanskje behov", "Ukjent om behov", "Ikke aktuelt"];
-const OWNERS = ["Alle", "Jon Richard Nygaard", "Thomas Eriksen", "Uten eier"];
 const TYPES = ["Alle", "Innkjøper", "CV-Epost", "Ikke relevant kontakt"] as const;
 type TypeFilter = (typeof TYPES)[number];
 
 type SortField = "name" | "signal" | "company" | "title" | "owner" | "last_activity" | "priority";
 type SortDir = "asc" | "desc";
+type HuntSortField = "default" | "match" | "varme";
+
+type OwnerPreview = { id: string; full_name: string } | null;
+
+type CompanyPreview = {
+  id: string;
+  name: string;
+  status: string | null;
+  ikke_relevant: boolean | null;
+  owner_id: string | null;
+  profiles: OwnerPreview;
+};
+
+type CompanyTechLeadRow = {
+  companyId: string;
+  company: CompanyPreview | null;
+  companyTechnologyTags: string[];
+  sistFraFinn: string | null;
+};
+
+type RequestLeadRow = {
+  id: number;
+  companyId: string | null;
+  contactId: string | null;
+  companyName: string;
+  company: CompanyPreview | null;
+  mottattDato: string;
+  fristDato: string | null;
+  sted: string | null;
+  status: string | null;
+  technologyTags: string[];
+  contactName: string | null;
+  contactTitle: string | null;
+};
+
+type NormalizedContact = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  title: string;
+  email: string;
+  phone: string;
+  linkedin: string;
+  location: string;
+  locations: string[];
+  department: string;
+  notes: string;
+  company: string;
+  companyId: string | null;
+  companyPreview: CompanyPreview | null;
+  signal: Signal | "";
+  eier: string;
+  eierId: string | null;
+  ownerProfile: OwnerPreview;
+  cvEmail: boolean | null;
+  callList: boolean | null;
+  mailchimpStatus: string | null;
+  ikkeAktuell: boolean;
+  teknologier: string[];
+  daysSince: number;
+  lastActivityAt: string | null;
+  lastActivitySubject: string;
+  activities: any[];
+  tasks: any[];
+  openTasks: { count: number; overdue: boolean };
+  heatResult: HeatResult;
+  heatScore: number;
+  temperature: "hett" | "lovende" | "mulig" | "sovende";
+  tier: 1 | 2 | 3 | 4;
+  needsReview: boolean;
+  hasMarkedsradar: boolean;
+  hasAktivForespørsel: boolean;
+  hasTidligereForespørsel: boolean;
+  companyStatus: string | null;
+  contactTechnologyTags: string[];
+  companyTechnologyTags: string[];
+  requestTechnologyTags: string[];
+};
+
+type HuntConsultant = {
+  id: number;
+  navn: string;
+  status: string | null;
+  tilgjengelig_fra: string | null;
+  kompetanse: string[] | null;
+};
+
+type MatchLeadBase = {
+  leadKey: string;
+  leadType: "contact" | "company" | "request";
+  companyId: string | null;
+  companyName: string;
+  matchScore10: number;
+  matchBand: MatchBand | null;
+  confidenceScore: number;
+  confidenceBand: ConfidenceBand;
+  matchSources: HuntChipValue[];
+  matchTags: string[];
+  sourceDates: string[];
+  chipUrgency: number;
+  summary: string;
+  ownerId: string | null;
+  ownerName: string | null;
+  ownerSource: MatchLeadOwnerSource;
+};
+
+type ContactMatchLead = NormalizedContact & MatchLeadBase & {
+  leadType: "contact";
+  name: string;
+};
+
+type CompanyMatchLead = MatchLeadBase & {
+  leadType: "company";
+  companyId: string;
+  name: string;
+  status: string | null;
+  companyTechnologyTags: string[];
+  preferredContactName?: string | null;
+  preferredContactTitle?: string | null;
+};
+
+type RequestMatchLead = MatchLeadBase & {
+  leadType: "request";
+  name: string;
+  requestId: number;
+  requestStatus: string | null;
+  requestTechnologyTags: string[];
+  fristDato: string | null;
+  sted: string | null;
+  contactId: string | null;
+  contactName: string | null;
+  contactTitle: string | null;
+  tier?: 1 | 2 | 3 | 4;
+  heatScore?: number;
+  temperature?: "hett" | "lovende" | "mulig" | "sovende";
+  needsReview?: boolean;
+  signal?: string | null;
+};
+
+type MatchLead = ContactMatchLead | CompanyMatchLead | RequestMatchLead;
+
+const JAKT_CHIPS: Array<{ value: HuntChipValue; label: string }> = [
+  { value: "alle", label: "Alle" },
+  { value: "foresporsler", label: "Forespørsler" },
+  { value: "finn", label: "Finn-match" },
+  { value: "siste_aktivitet", label: "Siste aktivitet" },
+  { value: "innkjoper", label: "Innkjøper" },
+  { value: "kunder", label: "Kunder" },
+  { value: "cold_call", label: "Cold call" },
+];
+
+const JAKT_CHIP_HELP_TEXT: Record<HuntChipValue, string> = {
+  alle: "Beste tekniske treff på tvers av kilder, sortert på match først.",
+  foresporsler: "Aktive forespørsler de siste 45 dagene med teknisk match.",
+  finn: "Tekniske treff fra Finn-annonser og selskapets tekniske DNA.",
+  siste_aktivitet: "Kontakter med aktivitet de siste 45 dagene og teknisk match.",
+  innkjoper: "Innkjøpere med teknisk match.",
+  kunder: "Eksisterende kunder med teknisk match.",
+  cold_call: "Kalde leads med teknisk match og lite nylig aktivitet.",
+};
+
+const CONFIDENCE_CONFIG: Record<ConfidenceBand, { label: string; tone: string }> = {
+  high: { label: "Høy evidens", tone: C.dotSuccess },
+  medium: { label: "Middels evidens", tone: C.warning },
+  low: { label: "Lav evidens", tone: C.textFaint },
+};
 
 const DL_QUERY_KEYS = {
   contacts: ["dl-contacts-v9"] as const,
@@ -106,6 +293,63 @@ function getHeatBarColor(heat: HeatResult) {
   return "transparent";
 }
 
+function getMatchSourceLabel(source: HuntChipValue): string {
+  switch (source) {
+    case "foresporsler":
+      return "Forespørsel";
+    case "finn":
+      return "Finn";
+    case "siste_aktivitet":
+      return "Siste aktivitet";
+    case "innkjoper":
+      return "Innkjøper";
+    case "kunder":
+      return "Kunde";
+    case "cold_call":
+      return "Cold call";
+    case "alle":
+    default:
+      return "Match";
+  }
+}
+
+function compareByHotList(
+  left: { tier?: number | null; heatScore?: number | null },
+  right: { tier?: number | null; heatScore?: number | null },
+) {
+  const leftTier = left.tier ?? 4;
+  const rightTier = right.tier ?? 4;
+  if (leftTier !== rightTier) return leftTier - rightTier;
+
+  const leftHeatScore = left.heatScore ?? -1000;
+  const rightHeatScore = right.heatScore ?? -1000;
+  if (rightHeatScore !== leftHeatScore) return rightHeatScore - leftHeatScore;
+
+  return 0;
+}
+
+function getConfidenceConfig(confidenceBand: ConfidenceBand) {
+  return CONFIDENCE_CONFIG[confidenceBand];
+}
+
+function isContactMatchLead(lead: MatchLead): lead is ContactMatchLead {
+  return lead.leadType === "contact";
+}
+
+function isCompanyMatchLead(lead: MatchLead): lead is CompanyMatchLead {
+  return lead.leadType === "company";
+}
+
+function isRequestMatchLead(lead: MatchLead): lead is RequestMatchLead {
+  return lead.leadType === "request";
+}
+
+function getMatchLeadDate(lead: MatchLead): string | null {
+  if (lead.sourceDates[0]) return lead.sourceDates[0];
+  if (isContactMatchLead(lead)) return lead.lastActivityAt;
+  return null;
+}
+
 
 
 /* ═══════════════════════════════════════════════════════════
@@ -123,6 +367,10 @@ export default function DesignLabContacts() {
   const [signalFilter, setSignalFilter] = useState("Alle");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "priority", dir: "desc" });
+  const [selectedConsultantId, setSelectedConsultantId] = useState<number | null>(null);
+  const [jaktChip, setJaktChip] = useState<HuntChipValue>("alle");
+  const [huntSort, setHuntSort] = useState<{ field: HuntSortField; dir: SortDir }>({ field: "default", dir: "desc" });
+  const [matchOwnerFilter, setMatchOwnerFilter] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(searchParams.get("contact"));
   const searchRef = useRef<HTMLInputElement>(null);
   const [cmdOpen, setCmdOpen] = useState(false);
@@ -142,11 +390,19 @@ export default function DesignLabContacts() {
 
   const updateCachedContactFields = useCallback(
     (contactId: string, updates: Record<string, any>) => {
+      const normalizedUpdates = {
+        ...updates,
+        ...(Object.prototype.hasOwnProperty.call(updates, "cv_email") ? { cvEmail: updates.cv_email } : {}),
+        ...(Object.prototype.hasOwnProperty.call(updates, "call_list") ? { callList: updates.call_list } : {}),
+      };
+
       queryClient.setQueryData(DL_QUERY_KEYS.contacts, (old: any) =>
         Array.isArray(old) ? old.map((contact) => (contact.id === contactId ? { ...contact, ...updates } : contact)) : old,
       );
       queryClient.setQueryData(DL_QUERY_KEYS.contactsParity, (old: any) =>
-        Array.isArray(old) ? old.map((contact) => (contact.id === contactId ? { ...contact, ...updates } : contact)) : old,
+        Array.isArray(old)
+          ? old.map((contact) => (contact.id === contactId ? { ...contact, ...normalizedUpdates } : contact))
+          : old,
       );
       queryClient.setQueryData(crmQueryKeys.contacts.detail(contactId), (old: any) =>
         old ? { ...old, ...updates } : old,
@@ -198,7 +454,7 @@ export default function DesignLabContacts() {
       const { data, error } = await supabase
         .from("contacts")
         .select(
-          "id, first_name, last_name, title, email, phone, cv_email, call_list, ikke_aktuell_kontakt, teknologier, company_id, location, linkedin, department, notes, locations, mailchimp_status, companies(id, name, ikke_relevant), profiles:owner_id(id, full_name)",
+          "id, first_name, last_name, title, email, phone, cv_email, call_list, ikke_aktuell_kontakt, teknologier, company_id, location, linkedin, department, notes, locations, mailchimp_status, owner_id, companies(id, name, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), profiles!contacts_owner_id_fkey(id, full_name)",
         )
         .order("updated_at", { ascending: false })
         .limit(500);
@@ -276,7 +532,9 @@ export default function DesignLabContacts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("foresporsler")
-        .select("id, selskap_id, mottatt_dato, status")
+        .select(
+          "id, selskap_id, kontakt_id, selskap_navn, sted, mottatt_dato, frist_dato, status, teknologier, companies!foresporsler_selskap_id_fkey(id, name, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title)",
+        )
         .not("selskap_id", "is", null)
         .order("mottatt_dato", { ascending: false })
         .limit(5000);
@@ -286,15 +544,38 @@ export default function DesignLabContacts() {
     enabled: companyIds.size > 0,
   });
 
+  const requests = useMemo<RequestLeadRow[]>(
+    () =>
+      (allForesporsler as any[]).map((request) => ({
+        id: request.id,
+        companyId: request.selskap_id || null,
+        contactId: request.kontakt_id || null,
+        companyName: request.companies?.name || request.selskap_navn || "Ukjent selskap",
+        company: (request.companies || null) as CompanyPreview | null,
+        mottattDato: request.mottatt_dato,
+        fristDato: request.frist_dato || null,
+        sted: request.sted || null,
+        status: request.status || null,
+        technologyTags: mergeTechnologyTags(request.teknologier || []),
+        contactName: request.contacts
+          ? `${request.contacts.first_name || ""} ${request.contacts.last_name || ""}`.trim() || null
+          : null,
+        contactTitle: request.contacts?.title || null,
+      })),
+    [allForesporsler],
+  );
+
   const foresporslerMap = useMemo(() => {
-    const map: Record<string, typeof allForesporsler> = {};
-    allForesporsler.forEach((foresporsel) => {
-      if (foresporsel.selskap_id && companyIds.has(foresporsel.selskap_id)) {
-        (map[foresporsel.selskap_id] ??= []).push(foresporsel);
+    const map = new Map<string, RequestLeadRow[]>();
+    requests.forEach((request) => {
+      if (request.companyId && companyIds.has(request.companyId)) {
+        const existing = map.get(request.companyId) || [];
+        existing.push(request);
+        map.set(request.companyId, existing);
       }
     });
     return map;
-  }, [allForesporsler, companyIds]);
+  }, [companyIds, requests]);
 
   // ── Company tech profiles for FINN column ──
 
@@ -303,7 +584,9 @@ export default function DesignLabContacts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("company_tech_profile")
-        .select("company_id, sist_fra_finn")
+        .select(
+          "company_id, sist_fra_finn, teknologier, companies!company_tech_profile_company_id_fkey(id, name, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name))",
+        )
         .not("company_id", "is", null)
         .limit(5000);
       if (error) throw error;
@@ -312,15 +595,34 @@ export default function DesignLabContacts() {
     enabled: companyIds.size > 0,
   });
 
+  const companyTechProfiles = useMemo<CompanyTechLeadRow[]>(
+    () =>
+      (allTechProfiles as any[])
+        .filter((profile) => Boolean(profile?.company_id))
+        .map((profile) => ({
+          companyId: profile.company_id,
+          company: (profile.companies || null) as CompanyPreview | null,
+          sistFraFinn: profile.sist_fra_finn || null,
+          companyTechnologyTags: mergeTechnologyTags(
+            Array.isArray(profile?.teknologier)
+              ? profile.teknologier
+              : profile?.teknologier && typeof profile.teknologier === "object"
+                ? Object.keys(profile.teknologier as Record<string, number>)
+                : [],
+          ),
+        })),
+    [allTechProfiles],
+  );
+
   const techProfileMap = useMemo(() => {
-    const map: Record<string, string | null> = {};
-    allTechProfiles.forEach((profile) => {
-      if (profile.company_id && companyIds.has(profile.company_id)) {
-        map[profile.company_id] = profile.sist_fra_finn;
+    const map = new Map<string, CompanyTechLeadRow>();
+    companyTechProfiles.forEach((profile) => {
+      if (companyIds.has(profile.companyId)) {
+        map.set(profile.companyId, profile);
       }
     });
     return map;
-  }, [allTechProfiles, companyIds]);
+  }, [companyIds, companyTechProfiles]);
 
   // ── Consultants available ──
   const { data: availableConsultants = [] } = useQuery({
@@ -328,7 +630,7 @@ export default function DesignLabContacts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stacq_ansatte")
-        .select("id, navn, status, tilgjengelig_fra")
+        .select("id, navn, status, tilgjengelig_fra, kompetanse")
         .in("status", ["AKTIV/SIGNERT", "Ledig"])
         .not("tilgjengelig_fra", "is", null);
       if (error) throw error;
@@ -339,7 +641,7 @@ export default function DesignLabContacts() {
 
   const sortedConsultants = useMemo(() => {
     return sortHuntConsultants(
-      (availableConsultants as Array<{ id: number; navn: string; tilgjengelig_fra: string | null }>).filter((consultant) =>
+      (availableConsultants as HuntConsultant[]).filter((consultant) =>
         hasConsultantAvailability(consultant.tilgjengelig_fra),
       ),
     );
@@ -351,7 +653,7 @@ export default function DesignLabContacts() {
       const { data, error } = await supabase
         .from("contacts")
         .select(
-          "*, companies(id, name, ikke_relevant), profiles!contacts_owner_id_fkey(id, full_name)",
+          "*, companies(id, name, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), profiles!contacts_owner_id_fkey(id, full_name)",
         )
         .order("updated_at", { ascending: false })
         .limit(500);
@@ -373,12 +675,16 @@ export default function DesignLabContacts() {
           .limit(5000),
         supabase
           .from("company_tech_profile")
-          .select("company_id, sist_fra_finn")
+          .select(
+            "company_id, sist_fra_finn, teknologier, companies!company_tech_profile_company_id_fkey(id, name, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name))",
+          )
           .not("company_id", "is", null)
           .limit(5000),
         supabase
           .from("foresporsler")
-          .select("selskap_id, mottatt_dato, status")
+          .select(
+            "id, selskap_id, kontakt_id, selskap_navn, sted, mottatt_dato, frist_dato, status, teknologier, companies!foresporsler_selskap_id_fkey(id, name, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title)",
+          )
           .order("mottatt_dato", { ascending: false })
           .limit(5000),
       ]);
@@ -388,6 +694,8 @@ export default function DesignLabContacts() {
       const lastActMap: Record<string, string> = {};
       const contactActsMap: Record<string, NonNullable<typeof acts>> = {};
       const contactTasksMap: Record<string, NonNullable<typeof tasks>> = {};
+      const openTasksMap: Record<string, { count: number; overdue: boolean }> = {};
+      const today = new Date().toISOString().slice(0, 10);
 
       (acts || []).forEach((activity) => {
         if (!activity.contact_id || !contactIdSet.has(activity.contact_id)) return;
@@ -400,6 +708,11 @@ export default function DesignLabContacts() {
       (tasks || []).forEach((task) => {
         if (!task.contact_id || !contactIdSet.has(task.contact_id) || task.status === "done") return;
         (contactTasksMap[task.contact_id] ??= []).push(task);
+        if (task.status === "open") {
+          if (!openTasksMap[task.contact_id]) openTasksMap[task.contact_id] = { count: 0, overdue: false };
+          openTasksMap[task.contact_id].count++;
+          if (task.due_date && task.due_date < today) openTasksMap[task.contact_id].overdue = true;
+        }
       });
 
       const signalMap: Record<string, string> = {};
@@ -422,42 +735,72 @@ export default function DesignLabContacts() {
         if (effectiveSignal) signalMap[contactId] = effectiveSignal;
       }
 
-      const techProfileMap: Record<string, string | null> = {};
-      (companyTechProfiles || []).forEach((profile) => {
-        if (profile.company_id) techProfileMap[profile.company_id] = profile.sist_fra_finn || null;
-      });
+      const techProfileByCompanyId = new Map<string, CompanyTechLeadRow>();
+      (companyTechProfiles || [])
+        .filter((profile: any) => Boolean(profile?.company_id))
+        .forEach((profile: any) => {
+          techProfileByCompanyId.set(profile.company_id, {
+            companyId: profile.company_id,
+            company: (profile.companies || null) as CompanyPreview | null,
+            sistFraFinn: profile.sist_fra_finn || null,
+            companyTechnologyTags: mergeTechnologyTags(
+              Array.isArray(profile?.teknologier)
+                ? profile.teknologier
+                : profile?.teknologier && typeof profile.teknologier === "object"
+                  ? Object.keys(profile.teknologier as Record<string, number>)
+                  : [],
+            ),
+          });
+        });
 
-      const requestMap: Record<string, NonNullable<typeof requestRows>> = {};
-      (requestRows || []).forEach((request) => {
+      const requestMap = new Map<string, RequestLeadRow[]>();
+      (requestRows || []).forEach((request: any) => {
         if (!request.selskap_id) return;
-        (requestMap[request.selskap_id] ??= []).push(request);
+        const row: RequestLeadRow = {
+          id: request.id,
+          companyId: request.selskap_id || null,
+          contactId: request.kontakt_id || null,
+          companyName: request.companies?.name || request.selskap_navn || "Ukjent selskap",
+          company: (request.companies || null) as CompanyPreview | null,
+          mottattDato: request.mottatt_dato,
+          fristDato: request.frist_dato || null,
+          sted: request.sted || null,
+          status: request.status || null,
+          technologyTags: mergeTechnologyTags(request.teknologier || []),
+          contactName: request.contacts
+            ? `${request.contacts.first_name || ""} ${request.contacts.last_name || ""}`.trim() || null
+            : null,
+          contactTitle: request.contacts?.title || null,
+        };
+        const existing = requestMap.get(request.selskap_id) || [];
+        existing.push(row);
+        requestMap.set(request.selskap_id, existing);
       });
 
-      return data.map((contact) => {
-        const company = (contact as any).companies;
-        const owner = (contact as any).profiles;
+      return data.map((contact): NormalizedContact => {
+        const company = (contact as any).companies as CompanyPreview | null;
+        const owner = ((contact as any).profiles || null) as OwnerPreview;
         const companyId = contact.company_id || "";
         const actsForContact = contactActsMap[contact.id] || [];
         const tasksForContact = contactTasksMap[contact.id] || [];
-        const foresporslerForCompany = requestMap[companyId] || [];
+        const foresporslerForCompany = requestMap.get(companyId) || [];
         const signal = signalMap[contact.id] ? mapToSignal(signalMap[contact.id]) : "";
         const lastActivityAt = lastActMap[contact.id] || null;
         const daysSince = lastActivityAt ? differenceInDays(now, new Date(lastActivityAt)) : 999;
-        const hasOverdue = tasksForContact.some(
-          (task) =>
-            task.status !== "done" &&
-            task.status !== "completed" &&
-            task.due_date &&
-            new Date(task.due_date) < now,
+        const openTasks = openTasksMap[contact.id] || { count: 0, overdue: false };
+        const techProfile = techProfileByCompanyId.get(companyId);
+        const companyTechnologyTags = techProfile?.companyTechnologyTags || [];
+        const activeRequests = foresporslerForCompany.filter((request) =>
+          isActiveRequest(request.mottattDato, request.status),
         );
-        const hasAktivForespørsel = foresporslerForCompany.some((request) =>
-          isActiveRequest(request.mottatt_dato, request.status),
-        );
+        const hasAktivForespørsel = activeRequests.length > 0;
         const hasTidligereForespørsel =
           foresporslerForCompany.length > 0 &&
-          foresporslerForCompany.some((request) => !isActiveRequest(request.mottatt_dato, request.status));
-        const sistFraFinn = techProfileMap[companyId] || null;
-        const hasMarkedsradar = Boolean(sistFraFinn && differenceInDays(now, new Date(sistFraFinn)) <= 90);
+          foresporslerForCompany.some((request) => !isActiveRequest(request.mottattDato, request.status));
+        const requestTechnologyTags = mergeTechnologyTags(...activeRequests.map((request) => request.technologyTags));
+        const hasMarkedsradar = Boolean(
+          techProfile?.sistFraFinn && differenceInDays(now, new Date(techProfile.sistFraFinn)) <= 90,
+        );
         const taskStatus = getTaskStatus(
           tasksForContact.map((task) => ({ due_date: task.due_date, status: task.status })),
         );
@@ -475,7 +818,7 @@ export default function DesignLabContacts() {
           isInnkjoper: contact.call_list === true,
           hasMarkedsradar,
           hasAktivForespørsel,
-          hasOverdue,
+          hasOverdue: openTasks.overdue,
           daysSinceLastContact: daysSince,
           hasTidligereForespørsel,
           ikkeAktuellKontakt: contact.ikke_aktuell_kontakt ?? false,
@@ -499,9 +842,11 @@ export default function DesignLabContacts() {
           notes: contact.notes || "",
           company: company?.name || "",
           companyId: company?.id || null,
+          companyPreview: company,
           signal,
           eier: owner?.full_name || "",
           eierId: owner?.id || null,
+          ownerProfile: owner,
           cvEmail: contact.cv_email,
           callList: contact.call_list,
           mailchimpStatus: contact.mailchimp_status || null,
@@ -512,8 +857,19 @@ export default function DesignLabContacts() {
           lastActivitySubject: actsForContact[0]?.subject || "",
           activities: actsForContact,
           tasks: tasksForContact,
+          openTasks,
           heatResult,
+          heatScore: heatResult.score,
+          temperature: heatResult.temperature,
+          tier: heatResult.tier,
+          needsReview: heatResult.needsReview,
           hasMarkedsradar,
+          hasAktivForespørsel,
+          hasTidligereForespørsel,
+          companyStatus: company?.status || null,
+          contactTechnologyTags: mergeTechnologyTags(contact.teknologier || []),
+          companyTechnologyTags,
+          requestTechnologyTags,
         };
       });
     },
@@ -523,11 +879,12 @@ export default function DesignLabContacts() {
   const fallbackContacts = useMemo(() => {
     const now = new Date();
     const nowIso = now.toISOString();
-    return rawContacts.map((c) => {
+    const today = new Date().toISOString().slice(0, 10);
+    return rawContacts.map((c): NormalizedContact => {
       const acts = (activitiesMap as any)[c.id] || [];
       const tasks = (tasksMap as any)[c.id] || [];
       const companyId = (c as any).company_id || "";
-      const foresps = (foresporslerMap as any)[companyId] || [];
+      const foresps = foresporslerMap.get(companyId) || [];
       const effectiveSignal = getEffectiveSignal(
         acts.map((activity: any) => ({
           created_at: activity.created_at,
@@ -547,17 +904,29 @@ export default function DesignLabContacts() {
       const pastActivities = acts.filter((activity: any) => activity.created_at <= nowIso);
       const lastAct = pastActivities[0] || null;
       const daysSince = lastAct ? differenceInDays(now, new Date(lastAct.created_at)) : 999;
-      const company = (c as any).companies;
-      const owner = (c as any).profiles;
-
-      const hasOverdue = tasks.some(
-        (t: any) => t.status !== "done" && t.status !== "completed" && t.due_date && new Date(t.due_date) < now,
+      const company = ((c as any).companies || null) as CompanyPreview | null;
+      const owner = (((c as any).profiles || null) as OwnerPreview);
+      const openTasks = tasks.reduce(
+        (acc: { count: number; overdue: boolean }, task: any) => {
+          if (task.status === "open") {
+            acc.count += 1;
+            if (task.due_date && task.due_date < today) acc.overdue = true;
+          }
+          return acc;
+        },
+        { count: 0, overdue: false },
       );
-      const hasAktivForespørsel = foresps.some((request: any) => isActiveRequest(request.mottatt_dato, request.status));
+
+      const activeRequests = foresps.filter((request) => isActiveRequest(request.mottattDato, request.status));
+      const hasAktivForespørsel = activeRequests.length > 0;
       const hasTidligereForespørsel =
-        foresps.length > 0 && foresps.some((request: any) => !isActiveRequest(request.mottatt_dato, request.status));
-      const sistFraFinn = (techProfileMap as any)[companyId] || null;
-      const hasMarkedsradar = !!(sistFraFinn && differenceInDays(now, new Date(sistFraFinn)) <= 90);
+        foresps.length > 0 && foresps.some((request) => !isActiveRequest(request.mottattDato, request.status));
+      const techProfile = techProfileMap.get(companyId) || null;
+      const companyTechnologyTags = techProfile?.companyTechnologyTags || [];
+      const requestTechnologyTags = mergeTechnologyTags(...activeRequests.map((request) => request.technologyTags));
+      const hasMarkedsradar = Boolean(
+        techProfile?.sistFraFinn && differenceInDays(now, new Date(techProfile.sistFraFinn)) <= 90,
+      );
       const taskStatus = getTaskStatus(tasks.map((t: any) => ({ due_date: t.due_date, status: t.status })));
       const activityStatus = getActivityStatus(daysSince);
       const signalAct = acts.find((activity: any) => {
@@ -573,7 +942,7 @@ export default function DesignLabContacts() {
         isInnkjoper: c.call_list === true,
         hasMarkedsradar,
         hasAktivForespørsel,
-        hasOverdue,
+        hasOverdue: openTasks.overdue,
         daysSinceLastContact: daysSince,
         hasTidligereForespørsel,
         ikkeAktuellKontakt: c.ikke_aktuell_kontakt ?? false,
@@ -597,9 +966,11 @@ export default function DesignLabContacts() {
         notes: c.notes || "",
         company: company?.name || "",
         companyId: company?.id || null,
+        companyPreview: company,
         signal,
         eier: owner?.full_name || "",
         eierId: owner?.id || null,
+        ownerProfile: owner,
         cvEmail: c.cv_email,
         callList: c.call_list,
         mailchimpStatus: c.mailchimp_status || null,
@@ -610,8 +981,19 @@ export default function DesignLabContacts() {
         lastActivitySubject: lastAct?.subject || "",
         activities: acts,
         tasks,
+        openTasks,
         heatResult,
+        heatScore: heatResult.score,
+        temperature: heatResult.temperature,
+        tier: heatResult.tier,
+        needsReview: heatResult.needsReview,
         hasMarkedsradar,
+        hasAktivForespørsel,
+        hasTidligereForespørsel,
+        companyStatus: company?.status || null,
+        contactTechnologyTags: mergeTechnologyTags(c.teknologier || []),
+        companyTechnologyTags,
+        requestTechnologyTags,
       };
     });
   }, [rawContacts, activitiesMap, tasksMap, foresporslerMap, techProfileMap]);
@@ -621,6 +1003,16 @@ export default function DesignLabContacts() {
     [fallbackContacts, isLoadingParity, parityContacts, rawContacts.length],
   );
 
+  const selectedConsultant = useMemo(
+    () => sortedConsultants.find((consultant) => consultant.id === selectedConsultantId) ?? null,
+    [selectedConsultantId, sortedConsultants],
+  );
+
+  const ownerOptions = useMemo(() => {
+    const names = Array.from(new Set(contacts.map((contact) => contact.eier).filter(Boolean)));
+    return ["Alle", ...names.sort((left, right) => left.localeCompare(right, "nb")), "Uten eier"];
+  }, [contacts]);
+
   const toggleSort = useCallback((field: SortField) => {
     setSort((current) =>
       current.field === field
@@ -629,41 +1021,644 @@ export default function DesignLabContacts() {
     );
   }, []);
 
-  const filtered = useMemo(() => {
-    let list = contacts;
-    // Default: hide ikke-relevante unless explicitly filtering for them
+  const searchTerm = search.trim().toLowerCase();
+
+  const searchFilteredContacts = useMemo(
+    () =>
+      contacts.filter((contact) => {
+        if (!searchTerm) return true;
+        const technologyTags = mergeTechnologyTags(
+          contact.contactTechnologyTags,
+          contact.companyTechnologyTags,
+          contact.requestTechnologyTags,
+        );
+
+        return (
+          `${contact.firstName} ${contact.lastName}`.toLowerCase().includes(searchTerm) ||
+          contact.company.toLowerCase().includes(searchTerm) ||
+          contact.title.toLowerCase().includes(searchTerm) ||
+          contact.email.toLowerCase().includes(searchTerm) ||
+          technologyTags.join(" ").toLowerCase().includes(searchTerm)
+        );
+      }),
+    [contacts, searchTerm],
+  );
+
+  const filteredContacts = useMemo(() => {
+    let list = searchFilteredContacts;
+
     if (typeFilter !== "Ikke relevant kontakt") {
-      list = list.filter((c) => !c.ikkeAktuell);
+      list = list.filter((contact) => !contact.ikkeAktuell);
     }
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (c) =>
-          `${c.firstName} ${c.lastName}`.toLowerCase().includes(q) ||
-          c.company.toLowerCase().includes(q) ||
-          c.title.toLowerCase().includes(q) ||
-          c.email.toLowerCase().includes(q),
-      );
-    }
-    if (ownerFilter === "Uten eier") list = list.filter((c) => !c.eier);
-    else if (ownerFilter !== "Alle") list = list.filter((c) => c.eier === ownerFilter);
-    if (signalFilter !== "Alle") list = list.filter((c) => c.signal === signalFilter);
-    if (typeFilter === "Innkjøper") list = list.filter((c) => c.callList === true);
-    else if (typeFilter === "CV-Epost") list = list.filter((c) => c.cvEmail === true);
-    else if (typeFilter === "Ikke relevant kontakt") list = list.filter((c) => c.ikkeAktuell);
+    if (ownerFilter === "Uten eier") list = list.filter((contact) => !contact.eier);
+    else if (ownerFilter !== "Alle") list = list.filter((contact) => contact.eier === ownerFilter);
+    if (signalFilter !== "Alle") list = list.filter((contact) => contact.signal === signalFilter);
+    if (typeFilter === "Innkjøper") list = list.filter((contact) => contact.callList === true);
+    else if (typeFilter === "CV-Epost") list = list.filter((contact) => contact.cvEmail === true);
+    else if (typeFilter === "Ikke relevant kontakt") list = list.filter((contact) => contact.ikkeAktuell);
+
     return list;
-  }, [contacts, search, ownerFilter, signalFilter, typeFilter]);
+  }, [ownerFilter, searchFilteredContacts, signalFilter, typeFilter]);
+
+  const matchBaseContacts = useMemo(
+    () =>
+      searchFilteredContacts.filter(
+        (contact) =>
+          !contact.ikkeAktuell &&
+          !contact.companyPreview?.ikke_relevant &&
+          contact.signal !== "Ikke aktuelt",
+      ),
+    [searchFilteredContacts],
+  );
+
+  const selectedConsultantFirstName = selectedConsultant?.navn.split(" ")[0] || "konsulenten";
+
+  const matchResults = useMemo(() => {
+    if (!selectedConsultant) {
+      return {
+        allLeads: [] as MatchLead[],
+        leads: [] as MatchLead[],
+        emptyState: null as string | null,
+      };
+    }
+
+    const consultantTags = mergeTechnologyTags(selectedConsultant.kompetanse || []);
+    if (consultantTags.length === 0) {
+      return {
+        allLeads: [] as MatchLead[],
+        leads: [] as MatchLead[],
+        emptyState: `${selectedConsultant.navn} mangler teknisk DNA i CRM. Legg inn kompetanse på konsulenten for å få match-treff her.`,
+      };
+    }
+
+    const chipPoolKeys: Array<Exclude<HuntChipValue, "alle">> = [
+      "foresporsler",
+      "finn",
+      "siste_aktivitet",
+      "innkjoper",
+      "kunder",
+      "cold_call",
+    ];
+    const contactPools = Object.fromEntries(
+      chipPoolKeys.map((chip) => [chip, new Map<string, ContactMatchLead>()]),
+    ) as Record<Exclude<HuntChipValue, "alle">, Map<string, ContactMatchLead>>;
+    const companyPools = Object.fromEntries(
+      chipPoolKeys.map((chip) => [chip, new Map<string, CompanyMatchLead>()]),
+    ) as Record<Exclude<HuntChipValue, "alle">, Map<string, CompanyMatchLead>>;
+    const requestPools = {
+      foresporsler: new Map<number, RequestMatchLead>(),
+    };
+
+    const allContactsById = new Map(contacts.map((contact) => [contact.id, contact]));
+    const searchableContactById = new Map(matchBaseContacts.map((contact) => [contact.id, contact]));
+    const searchableContactsByCompanyId = new Map<string, NormalizedContact[]>();
+    matchBaseContacts.forEach((contact) => {
+      if (!contact.companyId) return;
+      const existing = searchableContactsByCompanyId.get(contact.companyId) || [];
+      existing.push(contact);
+      searchableContactsByCompanyId.set(contact.companyId, existing);
+    });
+
+    const companyTechById = new Map(companyTechProfiles.map((profile) => [profile.companyId, profile]));
+    const companyNameMatchesSearch = (name: string, tags: string[]) =>
+      !searchTerm || name.toLowerCase().includes(searchTerm) || tags.join(" ").toLowerCase().includes(searchTerm);
+    const mergeTags = (...tagGroups: string[][]) => [...new Set(tagGroups.flat().filter(Boolean))];
+    const mergeSources = (...sourceGroups: HuntChipValue[][]) => [...new Set(sourceGroups.flat())];
+    const mergeDates = (...dateGroups: string[][]) =>
+      [...new Set(dateGroups.flat().filter(Boolean))].sort((left, right) => right.localeCompare(left));
+    const mergeUrgency = (...urgencies: number[]) => Math.max(0, ...urgencies);
+    const getSourceUrgency = (
+      chip: Exclude<HuntChipValue, "alle">,
+      sourceDate?: string | null,
+      contact?: NormalizedContact,
+    ) => {
+      if (chip === "cold_call") return contact?.daysSince ?? 0;
+      return sourceDate ? new Date(sourceDate).getTime() : 0;
+    };
+    const buildContactLeadTags = (contact: NormalizedContact) =>
+      mergeTechnologyTags(contact.contactTechnologyTags, contact.companyTechnologyTags);
+    const getLeadScore = (tags: string[]) => getContactMatchScore(consultantTags, tags);
+    const getContactOwnerCandidate = (
+      contact: Pick<NormalizedContact, "eierId" | "ownerProfile"> | null | undefined,
+      source: Exclude<MatchLeadOwnerSource, "company" | "none"> = "contact",
+    ) =>
+      buildMatchLeadOwnerCandidate(
+        contact
+          ? {
+              owner_id: contact.eierId,
+              profiles: contact.ownerProfile,
+            }
+          : null,
+        source,
+      );
+    const getCompanyOwnerCandidate = (company: CompanyPreview | null | undefined) =>
+      buildMatchLeadOwnerCandidate(
+        company
+          ? {
+              owner_id: company.owner_id,
+              profiles: company.profiles,
+            }
+          : null,
+        "company",
+      );
+    const resolveLeadOwner = ({
+      contact,
+      company,
+      fallbackContact,
+    }: {
+      contact?: Pick<NormalizedContact, "eierId" | "ownerProfile"> | null;
+      company?: CompanyPreview | null;
+      fallbackContact?: Pick<NormalizedContact, "eierId" | "ownerProfile"> | null;
+    }) =>
+      resolveMatchLeadOwner(
+        getContactOwnerCandidate(contact, "contact"),
+        getCompanyOwnerCandidate(company),
+        getContactOwnerCandidate(fallbackContact, "fallback_contact"),
+      );
+
+    const getBestCompanyContact = (companyId: string, sourceTags?: string[]) => {
+      const candidates = searchableContactsByCompanyId.get(companyId) || [];
+      if (candidates.length === 0) return null;
+
+      return [...candidates].sort((left, right) => {
+        const leftScore = getLeadScore(sourceTags || buildContactLeadTags(left));
+        const rightScore = getLeadScore(sourceTags || buildContactLeadTags(right));
+        if (rightScore.score10 !== leftScore.score10) return rightScore.score10 - leftScore.score10;
+        if (rightScore.confidenceScore !== leftScore.confidenceScore) {
+          return rightScore.confidenceScore - leftScore.confidenceScore;
+        }
+
+        const hotListCompare = compareByHotList(left, right);
+        if (hotListCompare !== 0) return hotListCompare;
+
+        return `${left.firstName} ${left.lastName}`.localeCompare(`${right.firstName} ${right.lastName}`, "nb");
+      })[0];
+    };
+
+    const addContactLead = (
+      chip: Exclude<HuntChipValue, "alle">,
+      contact: NormalizedContact,
+      leadTags: string[],
+      sourceDate?: string | null,
+      summary?: string,
+    ) => {
+      const scoreResult = getLeadScore(leadTags);
+      if (scoreResult.score10 < 4 || !scoreResult.matchBand) return;
+      const owner = resolveLeadOwner({ contact });
+
+      const nextLead: ContactMatchLead = {
+        ...contact,
+        leadKey: `contact:${contact.id}`,
+        leadType: "contact",
+        name: `${contact.firstName} ${contact.lastName}`.trim(),
+        companyId: contact.companyId,
+        companyName: contact.company,
+        matchScore10: scoreResult.score10,
+        matchBand: scoreResult.matchBand,
+        confidenceScore: scoreResult.confidenceScore,
+        confidenceBand: scoreResult.confidenceBand,
+        matchSources: [chip],
+        matchTags: scoreResult.matchTags,
+        sourceDates: sourceDate ? [sourceDate] : [],
+        chipUrgency: getSourceUrgency(chip, sourceDate, contact),
+        summary: summary || contact.title || "Kontaktlead",
+        ownerId: owner.ownerId,
+        ownerName: owner.ownerName,
+        ownerSource: owner.ownerSource,
+      };
+
+      const existing = contactPools[chip].get(contact.id);
+      if (!existing) {
+        contactPools[chip].set(contact.id, nextLead);
+        return;
+      }
+
+      const mergedScore = Math.max(existing.matchScore10, nextLead.matchScore10);
+      contactPools[chip].set(contact.id, {
+        ...existing,
+        matchScore10: mergedScore,
+        matchBand: getMatchBand(mergedScore) || existing.matchBand,
+        confidenceScore: Math.max(existing.confidenceScore, nextLead.confidenceScore),
+        confidenceBand:
+          existing.confidenceScore >= nextLead.confidenceScore ? existing.confidenceBand : nextLead.confidenceBand,
+        matchSources: mergeSources(existing.matchSources, nextLead.matchSources),
+        matchTags: mergeTags(existing.matchTags, nextLead.matchTags),
+        sourceDates: mergeDates(existing.sourceDates, nextLead.sourceDates),
+        chipUrgency: mergeUrgency(existing.chipUrgency, nextLead.chipUrgency),
+        summary: existing.summary || nextLead.summary,
+        ownerId: existing.ownerId || nextLead.ownerId,
+        ownerName: existing.ownerName || nextLead.ownerName,
+        ownerSource: existing.ownerId || existing.ownerName ? existing.ownerSource : nextLead.ownerSource,
+      });
+    };
+
+    const addCompanyLead = (
+      chip: Exclude<HuntChipValue, "alle">,
+      companyId: string | null,
+      company: CompanyPreview | null,
+      fallbackName: string,
+      leadTags: string[],
+      companyTechnologyTags: string[],
+      sourceDate?: string | null,
+      summary?: string,
+      preferredContact?: { name?: string | null; title?: string | null },
+      fallbackContact?: NormalizedContact | null,
+      minimumScore = 4,
+    ) => {
+      const companyName = company?.name || fallbackName || "Ukjent selskap";
+      if (!companyId || !companyNameMatchesSearch(companyName, leadTags) || company?.ikke_relevant) return;
+
+      const scoreResult = getLeadScore(leadTags);
+      if (scoreResult.score10 < minimumScore) return;
+      const owner = resolveLeadOwner({ company, fallbackContact });
+
+      const nextLead: CompanyMatchLead = {
+        leadKey: `company:${companyId}`,
+        leadType: "company",
+        companyId,
+        companyName,
+        name: companyName,
+        status: company?.status || null,
+        companyTechnologyTags,
+        matchScore10: scoreResult.score10,
+        matchBand: scoreResult.matchBand,
+        confidenceScore: scoreResult.confidenceScore,
+        confidenceBand: scoreResult.confidenceBand,
+        matchSources: [chip],
+        matchTags: scoreResult.matchTags,
+        sourceDates: sourceDate ? [sourceDate] : [],
+        chipUrgency: getSourceUrgency(chip, sourceDate),
+        summary: summary || "Selskapslead uten registrert kontakt",
+        preferredContactName: preferredContact?.name || null,
+        preferredContactTitle: preferredContact?.title || null,
+        ownerId: owner.ownerId,
+        ownerName: owner.ownerName,
+        ownerSource: owner.ownerSource,
+      };
+
+      const existing = companyPools[chip].get(companyId);
+      if (!existing) {
+        companyPools[chip].set(companyId, nextLead);
+        return;
+      }
+
+      const mergedScore = Math.max(existing.matchScore10, nextLead.matchScore10);
+      companyPools[chip].set(companyId, {
+        ...existing,
+        matchScore10: mergedScore,
+        matchBand: getMatchBand(mergedScore) || existing.matchBand,
+        confidenceScore: Math.max(existing.confidenceScore, nextLead.confidenceScore),
+        confidenceBand:
+          existing.confidenceScore >= nextLead.confidenceScore ? existing.confidenceBand : nextLead.confidenceBand,
+        matchTags: mergeTags(existing.matchTags, nextLead.matchTags),
+        matchSources: mergeSources(existing.matchSources, nextLead.matchSources),
+        sourceDates: mergeDates(existing.sourceDates, nextLead.sourceDates),
+        chipUrgency: mergeUrgency(existing.chipUrgency, nextLead.chipUrgency),
+        summary: existing.summary || nextLead.summary,
+        preferredContactName: existing.preferredContactName || nextLead.preferredContactName || null,
+        preferredContactTitle: existing.preferredContactTitle || nextLead.preferredContactTitle || null,
+        ownerId: existing.ownerId || nextLead.ownerId,
+        ownerName: existing.ownerName || nextLead.ownerName,
+        ownerSource: existing.ownerId || existing.ownerName ? existing.ownerSource : nextLead.ownerSource,
+      });
+    };
+
+    const addRequestLead = (request: RequestLeadRow) => {
+      const scoreResult = getLeadScore(request.technologyTags);
+      if (scoreResult.score10 === 0 && request.technologyTags.length === 0) return;
+
+      const ownerContact = request.contactId ? allContactsById.get(request.contactId) || null : null;
+      const linkedContact = request.contactId ? searchableContactById.get(request.contactId) || null : null;
+      const bestCompanyContact =
+        !linkedContact && request.companyId ? getBestCompanyContact(request.companyId, request.technologyTags) : null;
+      const heatContact = linkedContact || bestCompanyContact;
+      const owner = resolveLeadOwner({
+        contact: ownerContact,
+        company: request.company,
+        fallbackContact: bestCompanyContact,
+      });
+      const requestName = request.companyName || "Ukjent selskap";
+
+      if (
+        searchTerm &&
+        !requestName.toLowerCase().includes(searchTerm) &&
+        !request.contactName?.toLowerCase().includes(searchTerm) &&
+        !request.technologyTags.join(" ").toLowerCase().includes(searchTerm)
+      ) {
+        return;
+      }
+
+      requestPools.foresporsler.set(request.id, {
+        leadKey: `request:${request.id}`,
+        leadType: "request",
+        requestId: request.id,
+        companyId: request.companyId,
+        companyName: requestName,
+        name: requestName,
+        matchScore10: scoreResult.score10,
+        matchBand: scoreResult.matchBand,
+        confidenceScore: scoreResult.confidenceScore,
+        confidenceBand: scoreResult.confidenceBand,
+        matchSources: ["foresporsler"],
+        matchTags: scoreResult.matchTags,
+        requestTechnologyTags: request.technologyTags,
+        sourceDates: request.mottattDato ? [request.mottattDato] : [],
+        chipUrgency: getSourceUrgency("foresporsler", request.mottattDato),
+        summary: request.contactName ? "Aktiv forespørsel med kontakt" : "Aktiv forespørsel",
+        requestStatus: request.status,
+        fristDato: request.fristDato,
+        sted: request.sted,
+        contactId: request.contactId,
+        contactName: request.contactName || (heatContact ? `${heatContact.firstName} ${heatContact.lastName}`.trim() : null),
+        contactTitle: request.contactTitle || heatContact?.title || null,
+        tier: heatContact?.tier,
+        heatScore: heatContact?.heatScore,
+        temperature: heatContact?.temperature,
+        needsReview: heatContact?.needsReview,
+        signal: heatContact?.signal || null,
+        ownerId: owner.ownerId,
+        ownerName: owner.ownerName,
+        ownerSource: owner.ownerSource,
+      });
+    };
+
+    const activeRequests = requests.filter((request) => isActiveRequest(request.mottattDato, request.status));
+    activeRequests.forEach((request) => {
+      addRequestLead(request);
+    });
+
+    companyTechProfiles.forEach((profile) => {
+      const hasFreshFinn =
+        Boolean(profile.sistFraFinn) && differenceInDays(new Date(), new Date(profile.sistFraFinn!)) <= 90;
+      if (!hasFreshFinn) return;
+
+      const bestContact = getBestCompanyContact(profile.companyId, profile.companyTechnologyTags);
+      if (bestContact) {
+        addContactLead("finn", bestContact, profile.companyTechnologyTags, profile.sistFraFinn, "Finn-teknologimatch");
+        return;
+      }
+
+      addCompanyLead(
+        "finn",
+        profile.companyId,
+        profile.company,
+        profile.company?.name || "Ukjent selskap",
+        profile.companyTechnologyTags,
+        profile.companyTechnologyTags,
+        profile.sistFraFinn,
+        "Finn-teknologimatch uten registrert kontakt",
+      );
+    });
+
+    matchBaseContacts.forEach((contact) => {
+      const contactLeadTags = buildContactLeadTags(contact);
+
+      if (hasRecentActualActivity(contact.daysSince, 45)) {
+        addContactLead("siste_aktivitet", contact, contactLeadTags, contact.lastActivityAt, "Nylig aktivitet");
+      }
+      if (contact.callList) {
+        addContactLead("innkjoper", contact, contactLeadTags, contact.lastActivityAt, "Aktiv innkjøper");
+      }
+      if (
+        isColdCallCandidate({
+          daysSinceLastContact: contact.daysSince,
+          openTaskCount: contact.openTasks.count,
+          isIkkeAktuellKontakt: Boolean(contact.ikkeAktuell),
+        })
+      ) {
+        addContactLead("cold_call", contact, contactLeadTags, contact.lastActivityAt, "Cold call-kandidat");
+      }
+    });
+
+    const customerCompanyIds = new Set<string>();
+    matchBaseContacts.forEach((contact) => {
+      if (contact.companyId && isCustomerCompany(contact.companyStatus)) customerCompanyIds.add(contact.companyId);
+    });
+    companyTechProfiles.forEach((profile) => {
+      if (profile.companyId && isCustomerCompany(profile.company?.status)) customerCompanyIds.add(profile.companyId);
+    });
+
+    customerCompanyIds.forEach((companyId) => {
+      const companyContacts = searchableContactsByCompanyId.get(companyId) || [];
+      const companyProfile = companyTechById.get(companyId);
+      const company = companyContacts[0]?.companyPreview || companyProfile?.company || null;
+      if (!company || !isCustomerCompany(company.status) || company.ikke_relevant) return;
+
+      const customerLeadTags = mergeTechnologyTags(
+        companyProfile?.companyTechnologyTags || [],
+        ...companyContacts.map((contact) => contact.contactTechnologyTags),
+        ...companyContacts.map((contact) => contact.companyTechnologyTags),
+      );
+      const bestContact = getBestCompanyContact(companyId, customerLeadTags);
+      const customerSourceDate = bestContact?.lastActivityAt || companyProfile?.sistFraFinn || null;
+
+      addCompanyLead(
+        "kunder",
+        companyId,
+        company,
+        company.name,
+        customerLeadTags,
+        companyProfile?.companyTechnologyTags || [],
+        customerSourceDate,
+        "Kundeselskap",
+        {
+          name: bestContact ? `${bestContact.firstName} ${bestContact.lastName}`.trim() : null,
+          title: bestContact?.title || null,
+        },
+        bestContact,
+        1,
+      );
+    });
+
+    const mergeContactPools = (chips: Array<Exclude<HuntChipValue, "alle">>) => {
+      const merged = new Map<string, ContactMatchLead>();
+      chips.forEach((chip) => {
+        contactPools[chip].forEach((lead, contactId) => {
+          const existing = merged.get(contactId);
+          if (!existing) {
+            merged.set(contactId, { ...lead });
+            return;
+          }
+
+          const mergedScore = Math.max(existing.matchScore10, lead.matchScore10);
+          merged.set(contactId, {
+            ...existing,
+            matchScore10: mergedScore,
+            matchBand: getMatchBand(mergedScore) || existing.matchBand,
+            confidenceScore: Math.max(existing.confidenceScore, lead.confidenceScore),
+            confidenceBand:
+              existing.confidenceScore >= lead.confidenceScore ? existing.confidenceBand : lead.confidenceBand,
+            matchTags: mergeTags(existing.matchTags, lead.matchTags),
+            matchSources: mergeSources(existing.matchSources, lead.matchSources),
+            sourceDates: mergeDates(existing.sourceDates, lead.sourceDates),
+            chipUrgency: mergeUrgency(existing.chipUrgency, lead.chipUrgency),
+            summary: existing.summary || lead.summary,
+            ownerId: existing.ownerId || lead.ownerId,
+            ownerName: existing.ownerName || lead.ownerName,
+            ownerSource: existing.ownerId || existing.ownerName ? existing.ownerSource : lead.ownerSource,
+          });
+        });
+      });
+      return [...merged.values()];
+    };
+
+    const mergeCompanyPools = (chips: Array<Exclude<HuntChipValue, "alle">>) => {
+      const merged = new Map<string, CompanyMatchLead>();
+      chips.forEach((chip) => {
+        companyPools[chip].forEach((lead, companyId) => {
+          const existing = merged.get(companyId);
+          if (!existing) {
+            merged.set(companyId, { ...lead });
+            return;
+          }
+
+          const mergedScore = Math.max(existing.matchScore10, lead.matchScore10);
+          merged.set(companyId, {
+            ...existing,
+            matchScore10: mergedScore,
+            matchBand: getMatchBand(mergedScore) || existing.matchBand,
+            confidenceScore: Math.max(existing.confidenceScore, lead.confidenceScore),
+            confidenceBand:
+              existing.confidenceScore >= lead.confidenceScore ? existing.confidenceBand : lead.confidenceBand,
+            matchTags: mergeTags(existing.matchTags, lead.matchTags),
+            matchSources: mergeSources(existing.matchSources, lead.matchSources),
+            sourceDates: mergeDates(existing.sourceDates, lead.sourceDates),
+            chipUrgency: mergeUrgency(existing.chipUrgency, lead.chipUrgency),
+            summary: existing.summary || lead.summary,
+            ownerId: existing.ownerId || lead.ownerId,
+            ownerName: existing.ownerName || lead.ownerName,
+            ownerSource: existing.ownerId || existing.ownerName ? existing.ownerSource : lead.ownerSource,
+          });
+        });
+      });
+      return [...merged.values()];
+    };
+
+    const mergeRequestPools = () => [...requestPools.foresporsler.values()].filter((lead) => lead.matchScore10 >= 4);
+
+    const contactResults =
+      jaktChip === "alle" ? mergeContactPools(chipPoolKeys) : [...contactPools[jaktChip as Exclude<HuntChipValue, "alle">].values()];
+    const companyResults =
+      jaktChip === "alle" ? mergeCompanyPools(chipPoolKeys) : [...companyPools[jaktChip as Exclude<HuntChipValue, "alle">].values()];
+    const requestResults =
+      jaktChip === "alle"
+        ? mergeRequestPools()
+        : jaktChip === "foresporsler"
+          ? [...requestPools.foresporsler.values()]
+          : [];
+
+    const allLeads = [...contactResults, ...companyResults, ...requestResults];
+    const leads = allLeads
+      .filter((lead) => matchesMatchLeadOwnerFilter(lead.ownerId, matchOwnerFilter))
+      .sort((left, right) => {
+        if (right.matchScore10 !== left.matchScore10) return right.matchScore10 - left.matchScore10;
+        if (right.confidenceScore !== left.confidenceScore) return right.confidenceScore - left.confidenceScore;
+
+        const hotListCompare = compareByHotList(left as any, right as any);
+        if (hotListCompare !== 0) return hotListCompare;
+
+        if (right.chipUrgency !== left.chipUrgency) return right.chipUrgency - left.chipUrgency;
+
+        return left.name.localeCompare(right.name, "nb");
+      });
+
+    let emptyState: string | null = null;
+    if (leads.length === 0) {
+      if (allLeads.length > 0 && matchOwnerFilter !== "all") {
+        emptyState = "Ingen match-treff for valgt eier akkurat nå.";
+      } else {
+        switch (jaktChip) {
+          case "foresporsler":
+            emptyState = activeRequests.length === 0
+              ? "Ingen aktive forespørsler siste 45 dager akkurat nå."
+              : `Ingen aktive forespørsler er synlige for ${selectedConsultantFirstName} med dagens søk akkurat nå.`;
+            break;
+          case "finn":
+            emptyState = `Ingen Finn-annonser matcher ${selectedConsultantFirstName} sin tekniske profil akkurat nå.`;
+            break;
+          case "siste_aktivitet":
+            emptyState = `Ingen kontakter med nylig aktivitet matcher ${selectedConsultantFirstName} sin tekniske profil akkurat nå.`;
+            break;
+          case "innkjoper":
+            emptyState = `Ingen aktive innkjøpere matcher ${selectedConsultantFirstName} sin tekniske profil akkurat nå.`;
+            break;
+          case "kunder":
+            emptyState = `Ingen kundeselskaper med teknisk DNA matcher ${selectedConsultantFirstName} akkurat nå.`;
+            break;
+          case "cold_call":
+            emptyState = `Ingen cold call-treff matcher ${selectedConsultantFirstName} sin tekniske profil akkurat nå.`;
+            break;
+          case "alle":
+          default:
+            emptyState = `Ingen tekniske match-treff for ${selectedConsultantFirstName} akkurat nå.`;
+            break;
+        }
+      }
+    }
+
+    return {
+      allLeads,
+      leads,
+      emptyState,
+    };
+  }, [
+    companyTechProfiles,
+    contacts,
+    jaktChip,
+    matchBaseContacts,
+    matchOwnerFilter,
+    requests,
+    searchTerm,
+    selectedConsultant,
+    selectedConsultantFirstName,
+  ]);
+
+  const matchOwnerOptions = useMemo(() => {
+    if (!selectedConsultant) {
+      return {
+        owners: [] as Array<{ value: string; label: string }>,
+        hasUnassigned: false,
+      };
+    }
+
+    const owners = new Map<string, string>();
+    let hasUnassigned = false;
+
+    matchResults.allLeads.forEach((lead) => {
+      if (lead.ownerId) owners.set(lead.ownerId, getMatchLeadOwnerLabel(lead.ownerId, lead.ownerName));
+      else hasUnassigned = true;
+    });
+
+    return {
+      owners: Array.from(owners.entries())
+        .map(([value, label]) => ({ value, label }))
+        .sort((left, right) => left.label.localeCompare(right.label, "nb")),
+      hasUnassigned,
+    };
+  }, [matchResults.allLeads, selectedConsultant]);
+
+  useEffect(() => {
+    if (!selectedConsultant || matchOwnerFilter === "all") return;
+
+    const validFilters = new Set(matchOwnerOptions.owners.map((owner) => owner.value));
+    if (matchOwnerOptions.hasUnassigned) validFilters.add(MATCH_OWNER_FILTER_NONE);
+    if (!validFilters.has(matchOwnerFilter)) {
+      setMatchOwnerFilter("all");
+    }
+  }, [matchOwnerFilter, matchOwnerOptions, selectedConsultant]);
 
   const sorted = useMemo(() => {
-    const arr = [...filtered];
+    if (selectedConsultant) return [] as NormalizedContact[];
+
+    const arr = [...filteredContacts];
     const d = sort.dir === "asc" ? 1 : -1;
     arr.sort((a, b) => {
       switch (sort.field) {
         case "name":
           return d * `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, "nb");
         case "signal": {
-          const leftRank = a.signal ? SIGNAL_ORDER[a.signal as Signal] : SIGNALS.length + 1;
-          const rightRank = b.signal ? SIGNAL_ORDER[b.signal as Signal] : SIGNALS.length + 1;
+          const leftRank = a.signal ? SIGNAL_ORDER[a.signal] : SIGNALS.length + 1;
+          const rightRank = b.signal ? SIGNAL_ORDER[b.signal] : SIGNALS.length + 1;
           return d * (leftRank - rightRank);
         }
         case "company":
@@ -684,7 +1679,35 @@ export default function DesignLabContacts() {
       }
     });
     return arr;
-  }, [filtered, sort]);
+  }, [filteredContacts, selectedConsultant, sort]);
+
+  const visibleMatchLeads = useMemo(() => {
+    if (!selectedConsultant) return [] as MatchLead[];
+
+    const leads = [...matchResults.leads];
+    if (huntSort.field === "default") return leads;
+
+    const tempToNum = (temperature?: string) =>
+      temperature === "hett" ? 4 : temperature === "lovende" ? 3 : temperature === "mulig" ? 2 : temperature === "sovende" ? 1 : 0;
+
+    leads.sort((left, right) => {
+      let diff = 0;
+      if (huntSort.field === "match") {
+        diff = (left.matchScore10 ?? 0) - (right.matchScore10 ?? 0);
+      } else {
+        const leftTemp = isContactMatchLead(left) ? left.temperature : isRequestMatchLead(left) ? left.temperature : undefined;
+        const rightTemp = isContactMatchLead(right) ? right.temperature : isRequestMatchLead(right) ? right.temperature : undefined;
+        diff = tempToNum(leftTemp) - tempToNum(rightTemp);
+      }
+      return huntSort.dir === "desc" ? -diff : diff;
+    });
+
+    return leads;
+  }, [huntSort, matchResults.leads, selectedConsultant]);
+
+  const hasVisibleResults = selectedConsultant ? visibleMatchLeads.length > 0 : sorted.length > 0;
+  const visibleResultCount = selectedConsultant ? visibleMatchLeads.length : filteredContacts.length;
+  const visibleResultLabel = selectedConsultant ? "treff" : "kontakter";
 
   const setSignalMutation = useMutation({
     mutationFn: async ({
@@ -821,6 +1844,50 @@ export default function DesignLabContacts() {
     [invalidateDesignLabQueries, queryClient, updateCachedContactFields],
   );
 
+  const handleConsultantToggle = useCallback((consultantId: number) => {
+    setSelectedConsultantId((current) => {
+      const next = current === consultantId ? null : consultantId;
+      setHuntSort({ field: "default", dir: "desc" });
+      setJaktChip("alle");
+      setMatchOwnerFilter("all");
+      if (next !== current) {
+        setSelectedId(null);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleJaktChipSelect = useCallback((value: HuntChipValue) => {
+    setJaktChip(value);
+    setHuntSort({ field: "default", dir: "desc" });
+    setSelectedId(null);
+  }, []);
+
+  const toggleHuntSort = useCallback((field: "match" | "varme") => {
+    setHuntSort((current) =>
+      current.field === field
+        ? { field, dir: current.dir === "desc" ? "asc" : "desc" }
+        : { field, dir: "desc" },
+    );
+  }, []);
+
+  const getMatchLeadHref = useCallback((lead: MatchLead) => {
+    if (isContactMatchLead(lead)) return `/design-lab/kontakter?contact=${lead.id}`;
+    if (isRequestMatchLead(lead)) return `/foresporsler?id=${lead.requestId}`;
+    return `/selskaper/${lead.companyId}`;
+  }, []);
+
+  const handleMatchLeadSelect = useCallback(
+    (lead: MatchLead) => {
+      if (isContactMatchLead(lead)) {
+        setSelectedId((current) => (current === lead.id ? null : lead.id));
+        return;
+      }
+      navigate(getMatchLeadHref(lead));
+    },
+    [getMatchLeadHref, navigate],
+  );
+
   const sel = selectedId ? (contacts.find((c) => c.id === selectedId) ?? null) : null;
 
   // Derived companies for command palette
@@ -872,7 +1939,9 @@ export default function DesignLabContacts() {
         >
           <div className="flex items-baseline gap-2.5">
             <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Kontakter</h1>
-            <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>{filtered.length}</span>
+            <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>
+              {visibleResultCount} {visibleResultLabel}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <TextSizeControl value={textSize} onChange={setTextSize} />
@@ -918,40 +1987,120 @@ export default function DesignLabContacts() {
 
         {/* Filters bar */}
         <div className="shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
-          <FilterRow label="EIER" options={OWNERS} value={ownerFilter} onChange={setOwnerFilter} />
-          <div className="flex items-center justify-between">
-            <FilterRow label="SIGNAL" options={["Alle", ...SIGNALS]} value={signalFilter} onChange={setSignalFilter} />
-            <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500, whiteSpace: "nowrap", paddingLeft: 12 }}>
-              {filtered.length} kontakter
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <FilterRow
-              label="TYPE"
-              options={[...TYPES]}
-              value={typeFilter}
-              onChange={(v) => setTypeFilter(v as TypeFilter)}
-            />
-            {(ownerFilter !== "Alle" || signalFilter !== "Alle" || typeFilter !== "Alle") && (
-              <button
-                onClick={() => {
-                  setOwnerFilter("Alle");
-                  setSignalFilter("Alle");
-                  setTypeFilter("Alle");
-                }}
-                className="inline-flex items-center gap-1 rounded transition-colors shrink-0"
-                style={{ fontSize: 12, color: C.textFaint, padding: "2px 6px" }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = C.text;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = C.textFaint;
-                }}
-              >
-                <X style={{ width: 12, height: 12 }} /> Nullstill
-              </button>
-            )}
-          </div>
+          {!selectedConsultant ? (
+            <>
+              <FilterRow label="EIER" options={ownerOptions} value={ownerFilter} onChange={setOwnerFilter} />
+              <div className="flex items-center justify-between">
+                <FilterRow label="SIGNAL" options={["Alle", ...SIGNALS]} value={signalFilter} onChange={setSignalFilter} />
+                <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500, whiteSpace: "nowrap", paddingLeft: 12 }}>
+                  {visibleResultCount} kontakter
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <FilterRow
+                  label="TYPE"
+                  options={[...TYPES]}
+                  value={typeFilter}
+                  onChange={(v) => setTypeFilter(v as TypeFilter)}
+                />
+                {(ownerFilter !== "Alle" || signalFilter !== "Alle" || typeFilter !== "Alle") && (
+                  <button
+                    onClick={() => {
+                      setOwnerFilter("Alle");
+                      setSignalFilter("Alle");
+                      setTypeFilter("Alle");
+                    }}
+                    className="inline-flex items-center gap-1 rounded transition-colors shrink-0"
+                    style={{ fontSize: 12, color: C.textFaint, padding: "2px 6px" }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = C.text;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = C.textFaint;
+                    }}
+                  >
+                    <X style={{ width: 12, height: 12 }} /> Nullstill
+                  </button>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: C.text }}>
+                    Matcher for {selectedConsultant.navn}
+                  </p>
+                  <p style={{ fontSize: 12, color: C.textFaint }}>
+                    {JAKT_CHIP_HELP_TEXT[jaktChip]}
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleConsultantToggle(selectedConsultant.id)}
+                  className="inline-flex items-center gap-1 rounded transition-colors shrink-0"
+                  style={{ fontSize: 12, color: C.textFaint, padding: "2px 6px" }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = C.text;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = C.textFaint;
+                  }}
+                >
+                  <X style={{ width: 12, height: 12 }} /> Vis alle kontakter
+                </button>
+              </div>
+              <div className="flex items-start justify-between gap-6">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span
+                      style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted, width: 56, flexShrink: 0 }}
+                    >
+                      EIER
+                    </span>
+                    <MatchFilterChip active={matchOwnerFilter === "all"} onClick={() => setMatchOwnerFilter("all")}>
+                      Alle
+                    </MatchFilterChip>
+                    {matchOwnerOptions.owners.map((owner) => (
+                      <MatchFilterChip
+                        key={owner.value}
+                        active={matchOwnerFilter === owner.value}
+                        onClick={() => setMatchOwnerFilter(owner.value)}
+                      >
+                        {owner.label}
+                      </MatchFilterChip>
+                    ))}
+                    {matchOwnerOptions.hasUnassigned && (
+                      <MatchFilterChip
+                        active={matchOwnerFilter === MATCH_OWNER_FILTER_NONE}
+                        onClick={() => setMatchOwnerFilter(MATCH_OWNER_FILTER_NONE)}
+                      >
+                        Uten eier
+                      </MatchFilterChip>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span
+                      style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted, width: 56, flexShrink: 0 }}
+                    >
+                      MATCH
+                    </span>
+                    {JAKT_CHIPS.map((chip) => (
+                      <MatchFilterChip
+                        key={chip.value}
+                        active={jaktChip === chip.value}
+                        onClick={() => handleJaktChipSelect(chip.value)}
+                      >
+                        {chip.label}
+                      </MatchFilterChip>
+                    ))}
+                  </div>
+                </div>
+                <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500, whiteSpace: "nowrap" }}>
+                  {visibleResultCount} treff
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Available consultants bar */}
@@ -962,36 +2111,52 @@ export default function DesignLabContacts() {
             </p>
             <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
               {sortedConsultants.map((con) => {
+                const isSelected = selectedConsultantId === con.id;
                 const meta = getConsultantAvailabilityMeta(con.tilgjengelig_fra);
                 const nameParts = con.navn.split(" ");
                 const initials = (nameParts[0]?.[0] || "") + (nameParts[nameParts.length - 1]?.[0] || "");
-                const toneColor = meta.tone === "ready" ? C.dotSuccess : meta.tone === "soon" ? C.warning : C.textFaint;
+                const toneColor = isSelected
+                  ? "#fff"
+                  : meta.tone === "ready"
+                    ? C.dotSuccess
+                    : meta.tone === "soon"
+                      ? C.warning
+                      : C.textFaint;
                 return (
-                  <div
+                  <button
                     key={con.id ?? con.navn}
-                    className="flex items-center gap-2.5 shrink-0 rounded-lg"
-                    style={{ border: `1px solid ${C.border}`, padding: "8px 14px", background: C.panel }}
+                    type="button"
+                    onClick={() => handleConsultantToggle(con.id)}
+                    className="flex items-center gap-2.5 shrink-0 rounded-lg transition-colors"
+                    style={{
+                      border: `1px solid ${isSelected ? C.accent : C.border}`,
+                      padding: "8px 14px",
+                      background: isSelected ? C.accent : C.panel,
+                    }}
                   >
                     <div
                       className="flex items-center justify-center rounded-full shrink-0"
                       style={{
                         width: 36,
                         height: 36,
-                        background: "rgba(0,0,0,0.06)",
+                        background: isSelected ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.06)",
                         fontSize: 12,
                         fontWeight: 600,
-                        color: C.text,
+                        color: isSelected ? "#fff" : C.text,
                       }}
                     >
                       {initials.toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text, maxWidth: 140 }}>
+                      <p
+                        className="truncate"
+                        style={{ fontSize: 13, fontWeight: 500, color: isSelected ? "#fff" : C.text, maxWidth: 140 }}
+                      >
                         {con.navn}
                       </p>
                       <p style={{ fontSize: 12, color: toneColor, fontWeight: 500 }}>{meta.label}</p>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -1003,239 +2168,386 @@ export default function DesignLabContacts() {
           <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel defaultSize={35} minSize={20} maxSize={60}>
               <div className="h-full overflow-y-auto" style={{ scrollbarColor: `${C.borderStrong} ${C.surfaceAlt}` }}>
-                <div
-                  className="grid items-center sticky top-0 z-10"
-                  style={{
-                    gridTemplateColumns: "minmax(160px,2fr) 132px 52px minmax(120px,1.5fr) minmax(100px,1fr) 132px 80px",
-                    height: 32,
-                    borderBottom: `1px solid ${C.border}`,
-                    background: C.surfaceAlt,
-                    paddingLeft: 16,
-                    paddingRight: 16,
-                  }}
-                >
-                  <ColHeader label="Navn" field="name" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
-                  <span style={{ fontSize: 11, fontWeight: 500, color: C.textFaint }}>Finn</span>
-                  <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Tags" field="priority" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
-                </div>
-                {isLoading || isLoadingParity ? (
-                  <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>
-                    Laster kontakter…
-                  </div>
-                ) : sorted.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>
-                    Ingen kontakter funnet
-                  </div>
-                ) : (
-                  sorted.map((c) => {
-                    const isActive = selectedId === c.id;
-                    return (
-                      <div
-                        key={c.id}
-                        onClick={() => setSelectedId(isActive ? null : c.id)}
-                        className="grid items-center cursor-pointer group"
-                        style={{
-                          gridTemplateColumns: "minmax(160px,2fr) 132px 52px minmax(120px,1.5fr) minmax(100px,1fr) 132px 80px",
-                          minHeight: 38,
-                          paddingLeft: 16,
-                          paddingRight: 16,
-                          borderBottom: `1px solid ${C.borderLight}`,
-                          background: isActive ? C.activeBg : "transparent",
-                          boxShadow: `inset 3px 0 0 ${getHeatBarColor(c.heatResult)}`,
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isActive) e.currentTarget.style.background = C.hoverBg;
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isActive) e.currentTarget.style.background = isActive ? C.activeBg : "transparent";
-                        }}
+                {selectedConsultant ? (
+                  <>
+                    <div
+                      className="grid items-center sticky top-0 z-10"
+                      style={{
+                        gridTemplateColumns: "minmax(180px,1.8fr) minmax(140px,1.2fr) minmax(150px,1.3fr) 110px 108px 92px",
+                        height: 32,
+                        borderBottom: `1px solid ${C.border}`,
+                        background: C.surfaceAlt,
+                        paddingLeft: 16,
+                        paddingRight: 16,
+                      }}
+                    >
+                      <span style={{ fontSize: 11, fontWeight: 500, color: C.textMuted }}>Lead</span>
+                      <span style={{ fontSize: 11, fontWeight: 500, color: C.textMuted }}>Selskap</span>
+                      <span style={{ fontSize: 11, fontWeight: 500, color: C.textMuted }}>Kilde</span>
+                      <button
+                        onClick={() => toggleHuntSort("match")}
+                        className="flex items-center gap-1 transition-colors"
+                        style={{ fontSize: 11, fontWeight: 500, color: huntSort.field === "match" ? C.text : C.textMuted }}
                       >
-                        {/* Navn */}
-                        <div className="min-w-0 flex items-center gap-2">
-                          <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>
-                            {c.firstName} {c.lastName}
-                          </span>
-                          {c.heatResult.needsReview && (
-                            <span
-                              title="Trenger oppfølging"
-                              style={{ fontSize: 11, fontWeight: 700, color: C.warning, flexShrink: 0 }}
-                            >
-                              !
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Signal */}
-                        <div className="flex items-center gap-1.5">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button
-                                onClick={(event) => event.stopPropagation()}
-                                className="inline-flex items-center"
-                              >
-                                {c.signal ? (
-                                  <SignalChip signal={c.signal as Signal} />
-                                ) : (
-                                  <span
-                                    style={{
-                                      fontSize: 11,
-                                      fontWeight: 500,
-                                      padding: "2px 8px",
-                                      borderRadius: 999,
-                                      border: `1px dashed ${C.borderStrong}`,
-                                      color: C.textFaint,
-                                    }}
-                                  >
-                                    + Signal
-                                  </span>
-                                )}
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start">
-                              {SIGNALS.map((signalOption) => (
-                                <DropdownMenuItem
-                                  key={signalOption}
-                                  onClick={() =>
-                                    setSignalMutation.mutate({
-                                      contactId: c.id,
-                                      companyId: c.companyId,
-                                      label: signalOption,
-                                    })
-                                  }
-                                >
-                                  <SignalChip signal={signalOption} />
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-
-                        {/* Finn */}
-                        <div
-                          className="flex items-center justify-center"
-                          title={
-                            c.hasMarkedsradar
-                              ? "Selskapet har annonsert etter embedded på Finn.no siste 90 dager"
-                              : ""
-                          }
-                        >
-                          {c.hasMarkedsradar && (
-                            <Wifi style={{ width: 14, height: 14, color: C.info }} />
-                          )}
-                        </div>
-
-                        {/* Selskap */}
-                        <div className="min-w-0">
-                          <span className="truncate block" style={{ fontSize: 12, color: C.textMuted }}>{c.company}</span>
-                        </div>
-
-                        {/* Stilling */}
-                        <span className="truncate" style={{ fontSize: 12, color: C.textMuted }}>{c.title}</span>
-
-                        {/* Heat / Tags */}
-                        <div className="flex items-center gap-1.5 min-w-0" onClick={(event) => event.stopPropagation()}>
-                          <button
-                            type="button"
-                            title={
-                              c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")
-                                ? "Kontakten har avmeldt seg via Mailchimp og kan ikke re-abonneres"
-                                : c.cvEmail
-                                  ? "CV-Epost aktiv"
-                                  : contactHasEmail(c)
-                                    ? "Aktiver CV-Epost"
-                                    : CONTACT_CV_EMAIL_REQUIRED_MESSAGE
-                            }
-                            onClick={() => {
-                              if (c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")) {
-                                toast.info("Kontakten har avmeldt seg via Mailchimp og kan ikke re-abonneres.");
-                                return;
-                              }
-                              handleToggle(
-                                {
-                                  id: c.id,
-                                  email: c.email,
-                                  cvEmail: c.cvEmail,
-                                  callList: c.callList,
-                                  mailchimpStatus: c.mailchimpStatus,
-                                },
-                                "cv_email",
-                                !c.cvEmail,
-                              );
-                            }}
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 500,
-                              padding: "1px 6px",
-                              borderRadius: 3,
-                              background:
-                                c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")
-                                  ? C.dangerBg
-                                  : c.cvEmail
-                                    ? C.toggleCv.activeBg
-                                    : C.toggleInactive.bg,
-                              color:
-                                c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")
-                                  ? C.danger
-                                  : c.cvEmail
-                                    ? C.toggleCv.activeText
-                                    : C.toggleInactive.text,
-                              border:
-                                c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")
-                                  ? `1px solid ${C.danger}`
-                                  : c.cvEmail
-                                    ? "none"
-                                    : `1px solid ${C.toggleInactive.border}`,
-                            }}
-                          >
-                            {c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")
-                              ? "CV ✗"
-                              : "CV"}
-                          </button>
-                          <button
-                            type="button"
-                            title={c.callList ? "Innkjøper aktiv" : "Aktiver innkjøper"}
-                            onClick={() =>
-                              handleToggle(
-                                {
-                                  id: c.id,
-                                  email: c.email,
-                                  cvEmail: c.cvEmail,
-                                  callList: c.callList,
-                                  mailchimpStatus: c.mailchimpStatus,
-                                },
-                                "call_list",
-                                !c.callList,
-                              )
-                            }
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 500,
-                              padding: "1px 6px",
-                              borderRadius: 3,
-                              background: c.callList ? C.toggleBuyer.activeBg : C.toggleInactive.bg,
-                              color: c.callList ? C.toggleBuyer.activeText : C.toggleInactive.text,
-                              border: c.callList ? "none" : `1px solid ${C.toggleInactive.border}`,
-                            }}
-                          >
-                            Innkjøper
-                          </button>
-                        </div>
-
-                        {/* Siste akt. */}
-                        <span
-                          className="text-right"
-                          title={c.lastActivityAt ? format(new Date(c.lastActivityAt), "d. MMM yyyy", { locale: nb }) : ""}
-                          style={{ fontSize: 12, color: C.textFaint }}
-                        >
-                          {c.daysSince < 999 ? relTime(c.daysSince) : ""}
-                        </span>
+                        Match <ArrowUpDown style={{ width: 12, height: 12 }} />
+                      </button>
+                      <button
+                        onClick={() => toggleHuntSort("varme")}
+                        className="flex items-center gap-1 transition-colors"
+                        style={{ fontSize: 11, fontWeight: 500, color: huntSort.field === "varme" ? C.text : C.textMuted }}
+                      >
+                        Varme <ArrowUpDown style={{ width: 12, height: 12 }} />
+                      </button>
+                      <span className="text-right" style={{ fontSize: 11, fontWeight: 500, color: C.textMuted }}>
+                        Sist
+                      </span>
+                    </div>
+                    {isLoading || isLoadingParity ? (
+                      <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>
+                        Laster kontakter…
                       </div>
-                    );
-                  })
+                    ) : !hasVisibleResults ? (
+                      <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>
+                        {matchResults.emptyState}
+                      </div>
+                    ) : (
+                      visibleMatchLeads.map((lead) => {
+                        const isActive = isContactMatchLead(lead) && selectedId === lead.id;
+                        const leadDate = getMatchLeadDate(lead);
+                        const confidence = getConfidenceConfig(lead.confidenceBand);
+                        const heatColor = isContactMatchLead(lead)
+                          ? getHeatBarColor(lead.heatResult)
+                          : lead.temperature === "hett"
+                            ? C.danger
+                            : lead.temperature === "lovende"
+                              ? "#FB923C"
+                              : lead.temperature === "mulig"
+                                ? "#FBBF24"
+                                : "transparent";
+                        const heatLabel = isContactMatchLead(lead)
+                          ? lead.temperature
+                          : isRequestMatchLead(lead) && lead.temperature
+                            ? lead.temperature
+                            : null;
+
+                        return (
+                          <div
+                            key={lead.leadKey}
+                            onClick={() => handleMatchLeadSelect(lead)}
+                            className="grid items-center cursor-pointer"
+                            style={{
+                              gridTemplateColumns: "minmax(180px,1.8fr) minmax(140px,1.2fr) minmax(150px,1.3fr) 110px 108px 92px",
+                              minHeight: 48,
+                              paddingLeft: 16,
+                              paddingRight: 16,
+                              borderBottom: `1px solid ${C.borderLight}`,
+                              background: isActive ? C.activeBg : "transparent",
+                              boxShadow: `inset 3px 0 0 ${heatColor}`,
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isActive) e.currentTarget.style.background = C.hoverBg;
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isActive) e.currentTarget.style.background = "transparent";
+                            }}
+                          >
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>
+                                  {lead.name}
+                                </span>
+                                {isCompanyMatchLead(lead) && (
+                                  <span style={{ fontSize: 10, color: C.textFaint, flexShrink: 0 }}>Selskap</span>
+                                )}
+                                {isRequestMatchLead(lead) && (
+                                  <span style={{ fontSize: 10, color: C.textFaint, flexShrink: 0 }}>Forespørsel</span>
+                                )}
+                              </div>
+                              <p className="truncate" style={{ fontSize: 11, color: C.textMuted }}>
+                                {isContactMatchLead(lead)
+                                  ? lead.title || lead.summary
+                                  : isRequestMatchLead(lead)
+                                    ? lead.contactName || lead.summary
+                                    : lead.preferredContactName || lead.summary}
+                              </p>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate" style={{ fontSize: 12, color: C.textMuted }}>
+                                {isContactMatchLead(lead)
+                                  ? lead.companyName
+                                  : isRequestMatchLead(lead)
+                                    ? lead.contactTitle || lead.companyName
+                                    : lead.status || lead.companyName}
+                              </p>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate" style={{ fontSize: 11, color: C.textMuted }}>
+                                {lead.matchSources.map(getMatchSourceLabel).join(" · ")}
+                              </p>
+                              <p className="truncate" style={{ fontSize: 11, color: C.textFaint }}>
+                                {lead.matchTags.slice(0, 3).join(", ")}
+                              </p>
+                            </div>
+                            <div className="min-w-0">
+                              <p style={{ fontSize: 12, fontWeight: 600, color: C.text, display: "flex", alignItems: "center", gap: 6 }}>
+                                <span
+                                  className={getConsultantMatchScoreColor(lead.matchScore10)}
+                                  style={{ width: 8, height: 8, borderRadius: 999, display: "inline-block" }}
+                                />
+                                Match {lead.matchScore10}/10
+                              </p>
+                              <p className="truncate" style={{ fontSize: 10, color: confidence.tone }}>
+                                {confidence.label}
+                              </p>
+                            </div>
+                            <div className="min-w-0">
+                              {heatLabel ? (
+                                <span
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: 500,
+                                    color: heatColor,
+                                    textTransform: "capitalize",
+                                  }}
+                                >
+                                  {heatLabel}
+                                </span>
+                              ) : (
+                                <span style={{ fontSize: 11, color: C.textFaint }}>Ingen heat</span>
+                              )}
+                            </div>
+                            <div className="text-right" style={{ fontSize: 11, color: C.textFaint }}>
+                              {leadDate ? relativeDate(leadDate) : ""}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div
+                      className="grid items-center sticky top-0 z-10"
+                      style={{
+                        gridTemplateColumns: "minmax(160px,2fr) 132px 52px minmax(120px,1.5fr) minmax(100px,1fr) 132px 80px",
+                        height: 32,
+                        borderBottom: `1px solid ${C.border}`,
+                        background: C.surfaceAlt,
+                        paddingLeft: 16,
+                        paddingRight: 16,
+                      }}
+                    >
+                      <ColHeader label="Navn" field="name" sort={sort} onSort={toggleSort} />
+                      <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
+                      <span style={{ fontSize: 11, fontWeight: 500, color: C.textFaint }}>Finn</span>
+                      <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
+                      <ColHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />
+                      <ColHeader label="Tags" field="priority" sort={sort} onSort={toggleSort} />
+                      <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
+                    </div>
+                    {isLoading || isLoadingParity ? (
+                      <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>
+                        Laster kontakter…
+                      </div>
+                    ) : !hasVisibleResults ? (
+                      <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>
+                        Ingen kontakter funnet
+                      </div>
+                    ) : (
+                      sorted.map((c) => {
+                        const isActive = selectedId === c.id;
+                        return (
+                          <div
+                            key={c.id}
+                            onClick={() => setSelectedId(isActive ? null : c.id)}
+                            className="grid items-center cursor-pointer group"
+                            style={{
+                              gridTemplateColumns: "minmax(160px,2fr) 132px 52px minmax(120px,1.5fr) minmax(100px,1fr) 132px 80px",
+                              minHeight: 38,
+                              paddingLeft: 16,
+                              paddingRight: 16,
+                              borderBottom: `1px solid ${C.borderLight}`,
+                              background: isActive ? C.activeBg : "transparent",
+                              boxShadow: `inset 3px 0 0 ${getHeatBarColor(c.heatResult)}`,
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isActive) e.currentTarget.style.background = C.hoverBg;
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isActive) e.currentTarget.style.background = isActive ? C.activeBg : "transparent";
+                            }}
+                          >
+                            <div className="min-w-0 flex items-center gap-2">
+                              <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>
+                                {c.firstName} {c.lastName}
+                              </span>
+                              {c.heatResult.needsReview && (
+                                <span
+                                  title="Trenger oppfølging"
+                                  style={{ fontSize: 11, fontWeight: 700, color: C.warning, flexShrink: 0 }}
+                                >
+                                  !
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <button
+                                    onClick={(event) => event.stopPropagation()}
+                                    className="inline-flex items-center"
+                                  >
+                                    {c.signal ? (
+                                      <SignalChip signal={c.signal as Signal} />
+                                    ) : (
+                                      <span
+                                        style={{
+                                          fontSize: 11,
+                                          fontWeight: 500,
+                                          padding: "2px 8px",
+                                          borderRadius: 999,
+                                          border: `1px dashed ${C.borderStrong}`,
+                                          color: C.textFaint,
+                                        }}
+                                      >
+                                        + Signal
+                                      </span>
+                                    )}
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start">
+                                  {SIGNALS.map((signalOption) => (
+                                    <DropdownMenuItem
+                                      key={signalOption}
+                                      onClick={() =>
+                                        setSignalMutation.mutate({
+                                          contactId: c.id,
+                                          companyId: c.companyId,
+                                          label: signalOption,
+                                        })
+                                      }
+                                    >
+                                      <SignalChip signal={signalOption} />
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                            <div
+                              className="flex items-center justify-center"
+                              title={
+                                c.hasMarkedsradar
+                                  ? "Selskapet har annonsert etter embedded på Finn.no siste 90 dager"
+                                  : ""
+                              }
+                            >
+                              {c.hasMarkedsradar && (
+                                <Wifi style={{ width: 14, height: 14, color: C.info }} />
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <span className="truncate block" style={{ fontSize: 12, color: C.textMuted }}>{c.company}</span>
+                            </div>
+                            <span className="truncate" style={{ fontSize: 12, color: C.textMuted }}>{c.title}</span>
+                            <div className="flex items-center gap-1.5 min-w-0" onClick={(event) => event.stopPropagation()}>
+                              <button
+                                type="button"
+                                title={
+                                  c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")
+                                    ? "Kontakten har avmeldt seg via Mailchimp og kan ikke re-abonneres"
+                                    : c.cvEmail
+                                      ? "CV-Epost aktiv"
+                                      : contactHasEmail(c)
+                                        ? "Aktiver CV-Epost"
+                                        : CONTACT_CV_EMAIL_REQUIRED_MESSAGE
+                                }
+                                onClick={() => {
+                                  if (c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")) {
+                                    toast.info("Kontakten har avmeldt seg via Mailchimp og kan ikke re-abonneres.");
+                                    return;
+                                  }
+                                  handleToggle(
+                                    {
+                                      id: c.id,
+                                      email: c.email,
+                                      cvEmail: c.cvEmail,
+                                      callList: c.callList,
+                                      mailchimpStatus: c.mailchimpStatus,
+                                    },
+                                    "cv_email",
+                                    !c.cvEmail,
+                                  );
+                                }}
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 500,
+                                  padding: "1px 6px",
+                                  borderRadius: 3,
+                                  background:
+                                    c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")
+                                      ? C.dangerBg
+                                      : c.cvEmail
+                                        ? C.toggleCv.activeBg
+                                        : C.toggleInactive.bg,
+                                  color:
+                                    c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")
+                                      ? C.danger
+                                      : c.cvEmail
+                                        ? C.toggleCv.activeText
+                                        : C.toggleInactive.text,
+                                  border:
+                                    c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")
+                                      ? `1px solid ${C.danger}`
+                                      : c.cvEmail
+                                        ? "none"
+                                        : `1px solid ${C.toggleInactive.border}`,
+                                }}
+                              >
+                                {c.cvEmail && (c.mailchimpStatus === "unsubscribed" || c.mailchimpStatus === "cleaned")
+                                  ? "CV ✗"
+                                  : "CV"}
+                              </button>
+                              <button
+                                type="button"
+                                title={c.callList ? "Innkjøper aktiv" : "Aktiver innkjøper"}
+                                onClick={() =>
+                                  handleToggle(
+                                    {
+                                      id: c.id,
+                                      email: c.email,
+                                      cvEmail: c.cvEmail,
+                                      callList: c.callList,
+                                      mailchimpStatus: c.mailchimpStatus,
+                                    },
+                                    "call_list",
+                                    !c.callList,
+                                  )
+                                }
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 500,
+                                  padding: "1px 6px",
+                                  borderRadius: 3,
+                                  background: c.callList ? C.toggleBuyer.activeBg : C.toggleInactive.bg,
+                                  color: c.callList ? C.toggleBuyer.activeText : C.toggleInactive.text,
+                                  border: c.callList ? "none" : `1px solid ${C.toggleInactive.border}`,
+                                }}
+                              >
+                                Innkjøper
+                              </button>
+                            </div>
+                            <span
+                              className="text-right"
+                              title={c.lastActivityAt ? format(new Date(c.lastActivityAt), "d. MMM yyyy", { locale: nb }) : ""}
+                              style={{ fontSize: 12, color: C.textFaint }}
+                            >
+                              {c.daysSince < 999 ? relTime(c.daysSince) : ""}
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </>
                 )}
               </div>
             </ResizablePanel>
@@ -1336,49 +2648,31 @@ function SignalChip({ signal, size = "sm" }: { signal: Signal; size?: "sm" | "md
   return <span className={`chip chip--action${modifier}`}>{size === "sm" ? shortLabels[signal] : signal}</span>;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   CONTACT INDICATORS (Innkjøper / CV dots)
-   ═══════════════════════════════════════════════════════════ */
-
-function ContactIndicators({ callList, cvEmail }: { callList: boolean; cvEmail: boolean }) {
-  if (!callList && !cvEmail) return null;
-  return (
-    <span className="inline-flex items-center gap-1 shrink-0">
-      {callList && (
-        <span
-          title="Innkjøper"
-          className="rounded-full inline-block"
-          style={{ width: 6, height: 6, background: C.toggleBuyer.activeText }}
-        />
-      )}
-      {cvEmail && (
-        <span
-          title="CV-epost"
-          className="rounded-full inline-block"
-          style={{ width: 6, height: 6, background: C.toggleCv.activeText }}
-        />
-      )}
-    </span>
-  );
-}
-
-
-
-function IconBtn({ icon, title, onClick }: { icon: React.ReactNode; title: string; onClick: () => void }) {
+function MatchFilterChip({
+  active,
+  children,
+  onClick,
+}: {
+  active: boolean;
+  children: React.ReactNode;
+  onClick: () => void;
+}) {
   return (
     <button
       onClick={onClick}
-      title={title}
-      className="flex items-center justify-center rounded transition-colors"
-      style={{ width: 28, height: 28, color: C.textFaint }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = C.hoverBg;
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = "transparent";
+      className="inline-flex items-center transition-colors"
+      style={{
+        height: 24,
+        paddingInline: 10,
+        fontSize: 12,
+        fontWeight: 500,
+        borderRadius: 999,
+        border: active ? "1px solid transparent" : `1px solid ${C.toggleInactive.border}`,
+        background: active ? C.accent : C.toggleInactive.bg,
+        color: active ? "#fff" : C.toggleInactive.text,
       }}
     >
-      {icon}
+      {children}
     </button>
   );
 }
