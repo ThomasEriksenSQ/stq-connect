@@ -8,7 +8,6 @@ import { nb } from "date-fns/locale";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
 import { relativeDate } from "@/lib/relativeDate";
 import { calcStacqPris } from "@/lib/stacqPris";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +20,12 @@ import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
+import {
+  DesignLabPrimaryAction,
+  DesignLabReadonlyChip,
+  DESIGN_LAB_STATUS_NEUTRAL_CHIP_ACTIVE_COLORS,
+} from "@/components/designlab/system";
+import { C } from "@/components/designlab/theme";
 
 const fmt = (d: string | null) => d ? format(new Date(d), "d. MMM yyyy", { locale: nb }) : "–";
 
@@ -258,12 +263,6 @@ const AnsattDetail = ({
   const activeOppdrag = oppdrag.filter((o: any) => o.status === "Aktiv" || o.status === "Oppstart");
   const previousOppdrag = oppdrag.filter((o: any) => o.status !== "Aktiv" && o.status !== "Oppstart");
 
-  const statusColor = status === "Aktiv"
-    ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-    : status === "Kommende"
-      ? "bg-amber-100 text-amber-700 border-amber-200"
-      : "bg-gray-100 text-gray-600 border-gray-200";
-
   const selskapIdToKontakt: Record<string, string> = {};
   for (const vk of vunnetKontakter) {
     const f = vk.foresporsler;
@@ -297,9 +296,9 @@ const AnsattDetail = ({
         )}
         <div>
           <h1 className="text-[1.5rem] font-bold">{ansatt.navn}</h1>
-          <Badge className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold mt-1", statusColor)}>
-            {status}
-          </Badge>
+          <div className="mt-1">
+            <StatusChip status={status} />
+          </div>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <button
@@ -412,9 +411,6 @@ const AnsattDetail = ({
                     const f = ap.foresporsler;
                     const kontaktNavn = getContactName(f);
                     const statusLabel = ap.status === "intervju" ? "Intervju" : "Sendt CV";
-                    const statusColor = ap.status === "intervju"
-                      ? "bg-amber-100 text-amber-800 border-amber-200"
-                      : "bg-blue-100 text-blue-800 border-blue-200";
                     return (
                       <Link
                         key={ap.id}
@@ -426,9 +422,7 @@ const AnsattDetail = ({
                             <p className="text-[0.9375rem] font-medium text-foreground">{f?.selskap_navn || "Ukjent"}</p>
                             {kontaktNavn && <p className="text-[0.75rem] text-muted-foreground">{kontaktNavn}</p>}
                           </div>
-                          <Badge className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", statusColor)}>
-                            {statusLabel}
-                          </Badge>
+                          <ProcessStatusChip status={ap.status} label={statusLabel} />
                         </div>
                       </Link>
                     );
@@ -445,11 +439,6 @@ const AnsattDetail = ({
                     const f = ap.foresporsler;
                     const kontaktNavn = getContactName(f);
                     const statusLabel = ap.status === "vunnet" ? "Vunnet" : ap.status === "avslag" ? "Avslag" : "Bortfalt";
-                    const statusColor = ap.status === "vunnet"
-                      ? "bg-emerald-100 text-emerald-800 border-emerald-200"
-                      : ap.status === "avslag"
-                        ? "bg-red-100 text-red-800 border-red-200"
-                        : "bg-gray-100 text-gray-600 border-gray-200";
                     return (
                       <Link
                         key={ap.id}
@@ -461,9 +450,7 @@ const AnsattDetail = ({
                             <p className={cn("text-[0.9375rem] font-medium text-foreground", ap.status === "bortfalt" && "text-muted-foreground")}>{f?.selskap_navn || "Ukjent"}</p>
                             {kontaktNavn && <p className="text-[0.75rem] text-muted-foreground">{kontaktNavn}</p>}
                           </div>
-                          <Badge className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", statusColor)}>
-                            {statusLabel}
-                          </Badge>
+                          <ProcessStatusChip status={ap.status} label={statusLabel} />
                         </div>
                       </Link>
                     );
@@ -512,10 +499,10 @@ const AnsattDetail = ({
             <h2 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">Aktiviteter</h2>
             <Dialog open={actOpen} onOpenChange={setActOpen}>
               <DialogTrigger asChild>
-                <button className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-[hsl(var(--success))] text-white hover:opacity-90">
+                <DesignLabPrimaryAction>
                   <MessageCircle className="h-3.5 w-3.5" />
                   Logg aktivitet
-                </button>
+                </DesignLabPrimaryAction>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -716,13 +703,9 @@ function OppdragRow({ o, isActive = false, kontaktNavn }: { o: any; isActive?: b
           {o.til_konsulent != null && <span className="text-muted-foreground">Til kons: <span className="font-medium text-foreground">{o.til_konsulent_override ?? o.til_konsulent} kr</span></span>}
           {margin != null && <span className="text-muted-foreground">Margin: <span className="font-medium text-emerald-600">{margin != null && <span className="text-muted-foreground">Margin: <span className="font-medium text-emerald-600">{margin.toFixed(2)} kr</span></span>}</span></span>}
         </div>
-        <Badge variant="secondary" className={cn("text-xs self-start sm:self-auto",
-          o.status === "Aktiv" ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
-          o.status === "Oppstart" ? "bg-amber-100 text-amber-700 border-amber-200" :
-          "bg-gray-100 text-gray-600 border-gray-200"
-        )}>
-          {o.status || "–"}
-        </Badge>
+        <div className="self-start sm:self-auto">
+          <OppdragStatusChip status={o.status || "–"} />
+        </div>
       </div>
       {isActive && renewalDate && daysToRenewal != null && (
         <div className="text-[0.8125rem]">
@@ -762,9 +745,9 @@ function KompetanseCollapsible({ kompetanse }: { kompetanse: string[] }) {
         className={cn("flex flex-wrap gap-1.5 mt-1.5 overflow-hidden transition-all", !expanded && "max-h-[26px]")}
       >
         {kompetanse.map((k: string) => (
-          <Badge key={k} variant="secondary" className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold">
+          <DesignLabReadonlyChip key={k} active={false}>
             {k}
-          </Badge>
+          </DesignLabReadonlyChip>
         ))}
       </div>
       {needsTruncation && (
@@ -776,6 +759,80 @@ function KompetanseCollapsible({ kompetanse }: { kompetanse: string[] }) {
         </button>
       )}
     </div>
+  );
+}
+
+const ACTIVE_CHIP_COLORS = {
+  background: C.successBg,
+  color: C.success,
+  border: `1px solid rgba(74,154,106,0.18)`,
+  fontWeight: 600,
+};
+
+const UPCOMING_CHIP_COLORS = {
+  background: C.warningBg,
+  color: C.warning,
+  border: `1px solid rgba(154,122,42,0.18)`,
+  fontWeight: 600,
+};
+
+const INFO_CHIP_COLORS = {
+  background: C.infoBg,
+  color: C.info,
+  border: `1px solid rgba(26,79,160,0.18)`,
+  fontWeight: 600,
+};
+
+const DANGER_CHIP_COLORS = {
+  background: C.dangerBg,
+  color: C.danger,
+  border: `1px solid rgba(139,29,32,0.18)`,
+  fontWeight: 600,
+};
+
+function StatusChip({ status }: { status: string }) {
+  const colors = status === "Aktiv"
+    ? ACTIVE_CHIP_COLORS
+    : status === "Kommende"
+      ? UPCOMING_CHIP_COLORS
+      : DESIGN_LAB_STATUS_NEUTRAL_CHIP_ACTIVE_COLORS;
+
+  return (
+    <DesignLabReadonlyChip active={true} activeColors={colors}>
+      {status}
+    </DesignLabReadonlyChip>
+  );
+}
+
+function ProcessStatusChip({ status, label }: { status: string; label: string }) {
+  const colors = status === "intervju"
+    ? UPCOMING_CHIP_COLORS
+    : status === "sendt_cv"
+      ? INFO_CHIP_COLORS
+      : status === "vunnet"
+        ? ACTIVE_CHIP_COLORS
+        : status === "avslag"
+          ? DANGER_CHIP_COLORS
+          : DESIGN_LAB_STATUS_NEUTRAL_CHIP_ACTIVE_COLORS;
+
+  return (
+    <DesignLabReadonlyChip active={true} activeColors={colors}>
+      {label}
+    </DesignLabReadonlyChip>
+  );
+}
+
+function OppdragStatusChip({ status }: { status: string }) {
+  const colors = status === "Aktiv"
+    ? ACTIVE_CHIP_COLORS
+    : status === "Oppstart"
+      ? UPCOMING_CHIP_COLORS
+      : DESIGN_LAB_STATUS_NEUTRAL_CHIP_ACTIVE_COLORS;
+
+  return (
+    <DesignLabReadonlyChip active={true} activeColors={colors}>
+      {status}
+    </DesignLabReadonlyChip>
   );
 }
 

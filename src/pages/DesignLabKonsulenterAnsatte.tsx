@@ -13,7 +13,11 @@ import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
 import { C } from "@/components/designlab/theme";
 import { DesignLabSearchInput, DesignLabIconButton } from "@/components/designlab/controls";
-import { DesignLabPrimaryAction, DesignLabFilterRow } from "@/components/designlab/system";
+import {
+  DesignLabPrimaryAction,
+  DesignLabFilterRow,
+  DesignLabReadonlyChip,
+} from "@/components/designlab/system";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -29,6 +33,19 @@ import AnsattDetail from "./AnsattDetail";
 type Filter = "Alle" | "Aktiv" | "Kommende" | "Sluttet";
 
 const GRID_TEMPLATE = "minmax(220px,2.2fr) 120px 120px 110px 110px";
+const ACTIVE_CHIP_COLORS = {
+  background: C.successBg,
+  color: C.success,
+  border: `1px solid rgba(74,154,106,0.18)`,
+  fontWeight: 600,
+};
+
+const UPCOMING_CHIP_COLORS = {
+  background: C.warningBg,
+  color: C.warning,
+  border: `1px solid rgba(154,122,42,0.18)`,
+  fontWeight: 600,
+};
 
 export default function DesignLabKonsulenterAnsatte() {
   const navigate = useNavigate();
@@ -216,17 +233,17 @@ export default function DesignLabKonsulenterAnsatte() {
 
     if (oppdragStatus === "Aktiv") {
       return (
-        <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold" style={{ background: C.successBg, color: C.success, borderColor: "rgba(74,154,106,0.18)" }}>
+        <DesignLabReadonlyChip active={true} activeColors={ACTIVE_CHIP_COLORS}>
           I oppdrag
-        </span>
+        </DesignLabReadonlyChip>
       );
     }
 
     if (oppdragStatus === "Oppstart") {
       return (
-        <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold" style={{ background: C.warningBg, color: C.warning, borderColor: "rgba(154,122,42,0.18)" }}>
+        <DesignLabReadonlyChip active={true} activeColors={UPCOMING_CHIP_COLORS}>
           Oppstart
-        </span>
+        </DesignLabReadonlyChip>
       );
     }
 
@@ -275,9 +292,9 @@ export default function DesignLabKonsulenterAnsatte() {
 
         <div style={{ fontSize: 13, color: C.textMuted }}>
           {status === "Kommende" && row.start_dato ? (
-            <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold" style={{ background: C.warningBg, color: C.warning, borderColor: "rgba(154,122,42,0.18)" }}>
+            <DesignLabReadonlyChip active={true} activeColors={UPCOMING_CHIP_COLORS}>
               Starter {format(new Date(row.start_dato), "dd.MM")}
-            </span>
+            </DesignLabReadonlyChip>
           ) : row.start_dato ? (
             format(new Date(row.start_dato), "dd.MM.yyyy")
           ) : "–"}

@@ -189,7 +189,7 @@ export default function DesignLabStacqPrisen() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto" style={{ padding: "24px 24px 48px" }}>
-          <div className="flex flex-col gap-6 2xl:grid 2xl:grid-cols-[minmax(0,1fr)_420px] 2xl:items-start" style={{ maxWidth: 1680, margin: "0 auto" }}>
+          <div className="flex flex-col gap-6 2xl:grid 2xl:grid-cols-[minmax(0,1.05fr)_minmax(620px,0.95fr)] 2xl:items-start" style={{ maxWidth: 1900, margin: "0 auto" }}>
             <div className="order-2 min-w-0 w-full 2xl:order-1">
               <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted, marginBottom: 10 }}>
                 Bidrag per konsulent
@@ -304,7 +304,7 @@ export default function DesignLabStacqPrisen() {
                 <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted, marginBottom: 16 }}>
                   STACQ Prisen — ukentlig utvikling
                 </p>
-                <div style={{ height: 240 }}>
+                <div style={{ height: 320 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
                       <defs>
