@@ -215,7 +215,7 @@ export const DesignLabActionButton = forwardRef<HTMLButtonElement, ButtonHTMLAtt
       background: "transparent",
       border: "1px solid transparent",
       color: C.textSecondary,
-      hoverBackground: C.hoverSubtle,
+      hoverBackground: "#F0F2F6",
     },
   };
 

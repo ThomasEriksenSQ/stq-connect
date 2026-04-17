@@ -40,15 +40,17 @@ import {
   DesignLabStaticTag,
 } from "@/components/designlab/controls";
 import {
+  DesignLabGhostAction,
+  DesignLabModalActions,
+  DesignLabModalChipGroup,
   DesignLabModalContent,
   DesignLabModalField,
+  DesignLabModalFieldGrid,
   DesignLabModalForm,
   DesignLabModalInput,
   DesignLabModalLabel,
-  getDesignLabModalActionStyle,
-  getDesignLabModalChipStyle,
-  useDesignLabModalScale,
-} from "@/components/designlab/modal-system";
+  DesignLabPrimaryAction,
+} from "@/components/designlab/system";
 import {
   Phone,
   Mail,
@@ -279,7 +281,19 @@ export function CompanyCardContent({
   const [mergeCompanyDialogOpen, setMergeCompanyDialogOpen] = useState(false);
   const [showTechDna, setShowTechDna] = useState(!defaultHidden?.techDna);
   const [showNotes, setShowNotes] = useState(false);
-  const modalScale = useDesignLabModalScale();
+  const resetNewContactForm = () => {
+    setContactForm({
+      first_name: "",
+      last_name: "",
+      email: "",
+      phone: "",
+      title: "",
+      linkedin: "",
+      location: "",
+      cv_email: false,
+      call_list: false,
+    });
+  };
 
   const { data: company, isLoading } = useQuery({
     queryKey: crmQueryKeys.companies.detail(companyId),
@@ -1014,12 +1028,18 @@ export function CompanyCardContent({
       <div className="mb-2 flex items-center justify-between gap-3">
         <h3 className="text-[12px] font-medium text-[#5C636E]">Kontakter · {contacts.length}</h3>
         {editable && (
-          <Dialog open={newContactOpen} onOpenChange={setNewContactOpen}>
+          <Dialog
+            open={newContactOpen}
+            onOpenChange={(nextOpen) => {
+              setNewContactOpen(nextOpen);
+              if (!nextOpen) resetNewContactForm();
+            }}
+          >
             <DialogTrigger asChild>
-              <DesignLabActionButton variant="primary" style={{ height: 32, fontSize: 12 }}>
+              <DesignLabPrimaryAction>
                 <Plus className="h-3.5 w-3.5" />
                 Ny kontakt
-              </DesignLabActionButton>
+              </DesignLabPrimaryAction>
             </DialogTrigger>
             <DesignLabModalContent title="Ny kontakt">
               <DesignLabModalForm
@@ -1046,21 +1066,11 @@ export function CompanyCardContent({
                   queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.contacts(companyId) });
                   queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() });
                   setNewContactOpen(false);
-                  setContactForm({
-                    first_name: "",
-                    last_name: "",
-                    email: "",
-                    phone: "",
-                    title: "",
-                    linkedin: "",
-                    location: "",
-                    cv_email: false,
-                    call_list: false,
-                  });
+                  resetNewContactForm();
                   toast.success("Kontakt opprettet");
                 }}
               >
-                <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: modalScale.rowGap }}>
+                <DesignLabModalFieldGrid>
                   <DesignLabModalField>
                     <DesignLabModalLabel>Fornavn</DesignLabModalLabel>
                     <DesignLabModalInput
@@ -1077,7 +1087,7 @@ export function CompanyCardContent({
                       required
                     />
                   </DesignLabModalField>
-                </div>
+                </DesignLabModalFieldGrid>
                 <DesignLabModalField>
                   <DesignLabModalLabel>Stilling</DesignLabModalLabel>
                   <DesignLabModalInput
@@ -1085,7 +1095,7 @@ export function CompanyCardContent({
                     onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })}
                   />
                 </DesignLabModalField>
-                <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: modalScale.rowGap }}>
+                <DesignLabModalFieldGrid>
                   <DesignLabModalField>
                     <DesignLabModalLabel>E-post</DesignLabModalLabel>
                     <DesignLabModalInput
@@ -1107,7 +1117,7 @@ export function CompanyCardContent({
                       onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
                     />
                   </DesignLabModalField>
-                </div>
+                </DesignLabModalFieldGrid>
                 <DesignLabModalField>
                   <DesignLabModalLabel>LinkedIn</DesignLabModalLabel>
                   <DesignLabModalInput
@@ -1127,7 +1137,7 @@ export function CompanyCardContent({
                   return (
                     <DesignLabModalField>
                       <DesignLabModalLabel>Geografisk sted</DesignLabModalLabel>
-                      <div className="flex flex-wrap" style={{ gap: Math.max(4, modalScale.labelGap + 1) }}>
+                      <DesignLabModalChipGroup>
                         {locs.map((loc) => (
                           <DesignLabFilterButton
                             key={loc}
@@ -1135,22 +1145,21 @@ export function CompanyCardContent({
                             onClick={() =>
                               setContactForm({ ...contactForm, location: loc === contactForm.location ? "" : loc })
                             }
-                            active={contactForm.location === loc}
-                            activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
-                            inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
-                            inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
-                            style={getDesignLabModalChipStyle(modalScale)}
-                          >
-                            {loc}
-                          </DesignLabFilterButton>
+                      active={contactForm.location === loc}
+                      activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                      inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                      inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+                    >
+                      {loc}
+                    </DesignLabFilterButton>
                         ))}
-                      </div>
+                      </DesignLabModalChipGroup>
                     </DesignLabModalField>
                   );
                 })()}
                 <DesignLabModalField>
                   <DesignLabModalLabel>Egenskaper</DesignLabModalLabel>
-                  <div className="flex items-center" style={{ gap: Math.max(4, modalScale.labelGap + 1) }}>
+                  <DesignLabModalChipGroup>
                     <DesignLabFilterButton
                       type="button"
                       onClick={() => {
@@ -1164,7 +1173,6 @@ export function CompanyCardContent({
                       activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
                       inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
                       inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
-                      style={getDesignLabModalChipStyle(modalScale)}
                     >
                       CV-Epost
                     </DesignLabFilterButton>
@@ -1175,15 +1183,25 @@ export function CompanyCardContent({
                       activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
                       inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
                       inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
-                      style={getDesignLabModalChipStyle(modalScale)}
                     >
                       Innkjøper
                     </DesignLabFilterButton>
-                  </div>
+                  </DesignLabModalChipGroup>
                 </DesignLabModalField>
-                <DesignLabActionButton type="submit" variant="primary" style={getDesignLabModalActionStyle(modalScale)}>
-                  Opprett
-                </DesignLabActionButton>
+                <DesignLabModalActions>
+                  <DesignLabPrimaryAction type="submit">
+                    Opprett
+                  </DesignLabPrimaryAction>
+                  <DesignLabGhostAction
+                    type="button"
+                    onClick={() => {
+                      setNewContactOpen(false);
+                      resetNewContactForm();
+                    }}
+                  >
+                    Avbryt
+                  </DesignLabGhostAction>
+                </DesignLabModalActions>
               </DesignLabModalForm>
             </DesignLabModalContent>
           </Dialog>

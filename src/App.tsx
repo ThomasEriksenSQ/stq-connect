@@ -42,6 +42,7 @@ const DesignLabContacts = lazy(() => import("./pages/DesignLabContacts"));
 const DesignLabContactDetail = lazy(() => import("./pages/DesignLabContactDetail"));
 const DesignLabForesporsler = lazy(() => import("./pages/DesignLabForesporsler"));
 const DesignLabCompanies = lazy(() => import("./pages/DesignLabCompanies"));
+const DesignLabStyleguide = lazy(() => import("./pages/DesignLabStyleguide"));
 
 const queryClient = new QueryClient();
 
@@ -233,6 +234,14 @@ function AppRouter() {
             element={
               <Suspense fallback={<LazyFallback />}>
                 <DesignLabCompanies />
+              </Suspense>
+            }
+          />
+          <Route
+            path="stilark"
+            element={
+              <Suspense fallback={<LazyFallback />}>
+                <DesignLabStyleguide />
               </Suspense>
             }
           />

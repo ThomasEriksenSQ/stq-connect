@@ -8,7 +8,7 @@ import { CompanyCardContent } from "@/components/CompanyCardContent";
 import { Input } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
 import {
-  ChevronDown, ChevronUp, X, Plus, Loader2,
+  X, Plus, Loader2,
 } from "lucide-react";
 import { differenceInDays } from "date-fns";
 import { getEffectiveSignal, normalizeCategoryLabel } from "@/lib/categoryUtils";
@@ -21,27 +21,27 @@ import { usePersistentState } from "@/hooks/usePersistentState";
 import { BrregSearch, lookupByOrgNr } from "@/components/BrregSearch";
 import { toast } from "sonner";
 import {
-  DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS,
-  DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS,
-  DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS,
-  DesignLabActionButton,
-  DesignLabControlLabel,
   DesignLabFilterButton,
   DesignLabIconButton,
   DesignLabSearchInput,
   DesignLabStaticTag,
 } from "@/components/designlab/controls";
 import {
+  DesignLabColumnHeader,
+  DesignLabFilterRow,
+  DesignLabGhostAction,
+  DesignLabModalActions,
+  DesignLabModalChipGroup,
   DesignLabModalContent,
   DesignLabModalField,
+  DesignLabModalInlineAction,
   DesignLabModalForm,
   DesignLabModalInput,
   DesignLabModalLabel,
-  getDesignLabModalActionStyle,
-  getDesignLabModalChipStyle,
-  getDesignLabModalInputStyle,
+  DesignLabPrimaryAction,
   useDesignLabModalScale,
-} from "@/components/designlab/modal-system";
+  getDesignLabModalInputStyle,
+} from "@/components/designlab/system";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
@@ -113,20 +113,25 @@ function OrgNrInput({
   style?: CSSProperties;
 }) {
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const onLookupRef = useRef(onLookup);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    onLookupRef.current = onLookup;
+  }, [onLookup]);
+
+  useEffect(() => {
     const cleaned = value.replace(/\s/g, "");
-    if (cleaned.length !== 9 || !/^\d{9}$/.test(cleaned)) return;
     clearTimeout(timerRef.current);
+    if (cleaned.length !== 9 || !/^\d{9}$/.test(cleaned)) return;
     timerRef.current = setTimeout(async () => {
       setLoading(true);
       const r = await lookupByOrgNr(cleaned);
-      if (r) onLookup(r.navn, r.forretningsadresse?.kommune || null);
+      if (r) onLookupRef.current(r.navn, r.forretningsadresse?.kommune || null);
       setLoading(false);
     }, 400);
     return () => clearTimeout(timerRef.current);
-  }, [value, onLookup]);
+  }, [value]);
 
   return (
     <div className="relative">
@@ -452,31 +457,25 @@ export default function DesignLabCompanies() {
               placeholder="Søk selskaper…"
               style={{ width: 220 }}
             />
-            <DesignLabActionButton
-              variant="primary"
-              onClick={() => setCreateOpen(true)}
-            >
+            <DesignLabPrimaryAction onClick={() => setCreateOpen(true)}>
               + Nytt selskap
-            </DesignLabActionButton>
+            </DesignLabPrimaryAction>
           </div>
         </header>
 
         {/* Filters bar */}
         <div className="shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
-          <FilterRow label="EIER" options={OWNERS} value={ownerFilter} onChange={setOwnerFilter} />
+          <DesignLabFilterRow label="EIER" options={OWNERS} value={ownerFilter} onChange={setOwnerFilter} />
           <div className="flex items-center justify-between">
-            <FilterRow label="TYPE" options={[...TYPE_FILTERS]} value={typeFilter} onChange={(v) => setTypeFilter(v as TypeFilter)} />
+            <DesignLabFilterRow label="TYPE" options={[...TYPE_FILTERS]} value={typeFilter} onChange={(v) => setTypeFilter(v as TypeFilter)} />
             <div className="flex items-center gap-3">
               <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500, whiteSpace: "nowrap", paddingLeft: 12 }}>
                 {filtered.length} selskaper
               </span>
               {(ownerFilter !== "Alle" || typeFilter !== "Alle") && (
-                <DesignLabActionButton
-                  variant="ghost"
-                  onClick={() => { setOwnerFilter("Alle"); setTypeFilter("Alle"); }}
-                >
+                <DesignLabGhostAction onClick={() => { setOwnerFilter("Alle"); setTypeFilter("Alle"); }}>
                   <X style={{ width: 12, height: 12 }} /> Nullstill
-                </DesignLabActionButton>
+                </DesignLabGhostAction>
               )}
             </div>
           </div>
@@ -495,10 +494,10 @@ export default function DesignLabCompanies() {
                     background: C.surfaceAlt, paddingLeft: 16, paddingRight: 16,
                   }}
                 >
-                  <ColHeader label="Selskap" field="name" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Type" field="type" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Sted" field="city" sort={sort} onSort={toggleSort} />
-                  <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
+                  <DesignLabColumnHeader label="Selskap" field="name" sort={sort} onSort={toggleSort} />
+                  <DesignLabColumnHeader label="Type" field="type" sort={sort} onSort={toggleSort} />
+                  <DesignLabColumnHeader label="Sted" field="city" sort={sort} onSort={toggleSort} />
+                  <DesignLabColumnHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
                 </div>
                 {isLoading ? (
                   <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster selskaper…</div>
@@ -577,17 +576,17 @@ export default function DesignLabCompanies() {
                     city: result.city,
                   }))
                 }
-                inputClassName="focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2]"
+                inputClassName="focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#5E6AD2] focus-visible:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]"
                 inputStyle={getDesignLabModalInputStyle(modalScale)}
                 dropdownClassName="rounded-[8px] border-[#E8EAEE] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
                 resultClassName="px-3 py-2 hover:bg-[#F8F9FB]"
-                resultStyle={{ fontSize: modalScale.controlSize }}
+                resultStyle={{ font: "inherit" }}
                 resultTitleClassName="font-medium text-[#1A1C1F]"
-                resultTitleStyle={{ fontSize: modalScale.controlSize, lineHeight: 1.25 }}
+                resultTitleStyle={{ fontSize: "inherit", lineHeight: 1.25 }}
                 resultMetaClassName="mt-0.5 text-[#8C929C]"
-                resultMetaStyle={{ fontSize: modalScale.labelSize, lineHeight: 1.2 }}
+                resultMetaStyle={{ fontSize: "inherit", lineHeight: 1.2 }}
                 emptyStateClassName="px-3 py-3 text-[#8C929C]"
-                emptyStateStyle={{ fontSize: modalScale.labelSize, lineHeight: 1.2 }}
+                emptyStateStyle={{ fontSize: "inherit", lineHeight: 1.2 }}
               />
             </DesignLabModalField>
             <DesignLabModalField>
@@ -602,15 +601,15 @@ export default function DesignLabCompanies() {
                     city: city || prev.city,
                   }))
                 }
-                className="focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2]"
+                className="focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] focus-visible:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]"
                 style={getDesignLabModalInputStyle(modalScale)}
               />
             </DesignLabModalField>
             <DesignLabModalField>
               <DesignLabModalLabel>Geografisk sted</DesignLabModalLabel>
-              <div style={{ display: "grid", rowGap: modalScale.labelGap + 4 }}>
+              <div style={{ display: "grid", rowGap: "var(--dl-modal-chip-gap)" }}>
                 {createLocations.map((location, index) => (
-                  <div key={`${index}-${location}`} className="flex items-center gap-2">
+                  <div key={index} className="flex items-center gap-2">
                     <DesignLabModalInput
                       value={location}
                       onChange={(e) => {
@@ -633,15 +632,13 @@ export default function DesignLabCompanies() {
                     )}
                   </div>
                 ))}
-                <DesignLabActionButton
+                <DesignLabModalInlineAction
                   type="button"
-                  variant="secondary"
-                  style={{ width: "100%", height: modalScale.controlHeight, fontSize: modalScale.controlSize }}
                   onClick={() => setCreateLocations([...createLocations, ""])}
                 >
                   <Plus className="h-3.5 w-3.5" />
                   Legg til sted
-                </DesignLabActionButton>
+                </DesignLabModalInlineAction>
               </div>
             </DesignLabModalField>
             <DesignLabModalField>
@@ -664,27 +661,23 @@ export default function DesignLabCompanies() {
             </DesignLabModalField>
             <DesignLabModalField>
               <DesignLabModalLabel>Type</DesignLabModalLabel>
-              <div className="flex flex-wrap" style={{ gap: Math.max(4, modalScale.labelGap + 1) }}>
+              <DesignLabModalChipGroup>
                 {TYPE_OPTIONS.map((option) => (
                   <DesignLabFilterButton
                     key={option.value}
                     type="button"
                     onClick={() => setCreateForm((prev) => ({ ...prev, status: option.value }))}
                     active={createForm.status === option.value}
-                    activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
-                    inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
-                    inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
-                    style={getDesignLabModalChipStyle(modalScale)}
                   >
                     {option.label}
                   </DesignLabFilterButton>
                 ))}
-              </div>
+              </DesignLabModalChipGroup>
             </DesignLabModalField>
             {ownerOptions.length > 0 && (
               <DesignLabModalField>
                 <DesignLabModalLabel>Eier</DesignLabModalLabel>
-                <div className="flex flex-wrap" style={{ gap: Math.max(4, modalScale.labelGap + 1) }}>
+                <DesignLabModalChipGroup>
                   {ownerOptions.map((owner) => (
                     <DesignLabFilterButton
                       key={owner.id}
@@ -696,72 +689,30 @@ export default function DesignLabCompanies() {
                         }))
                       }
                       active={createForm.owner_id === owner.id}
-                      activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
-                      inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
-                      inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
-                      style={getDesignLabModalChipStyle(modalScale)}
                     >
                       {owner.name}
                     </DesignLabFilterButton>
                   ))}
-                </div>
+                </DesignLabModalChipGroup>
               </DesignLabModalField>
             )}
-            <DesignLabActionButton
-              type="submit"
-              variant="primary"
-              style={getDesignLabModalActionStyle(modalScale)}
-              disabled={createMutation.isPending}
-            >
-              {createMutation.isPending ? "Oppretter..." : "Opprett"}
-            </DesignLabActionButton>
+            <DesignLabModalActions>
+              <DesignLabPrimaryAction type="submit" disabled={createMutation.isPending}>
+                {createMutation.isPending ? "Oppretter..." : "Opprett"}
+              </DesignLabPrimaryAction>
+              <DesignLabGhostAction
+                type="button"
+                onClick={() => {
+                  setCreateOpen(false);
+                  if (!createMutation.isPending) resetCreateForm();
+                }}
+              >
+                Avbryt
+              </DesignLabGhostAction>
+            </DesignLabModalActions>
           </DesignLabModalForm>
         </DesignLabModalContent>
       </Dialog>
     </div>
-  );
-}
-
-function FilterRow({ label, options, value, onChange }: {
-  label: string; options: readonly string[] | string[]; value: string; onChange: (v: string) => void;
-}) {
-  return (
-    <div className="flex items-center gap-2 py-[3px]">
-      <DesignLabControlLabel>{label}</DesignLabControlLabel>
-      <div className="flex items-center gap-1.5 flex-wrap">
-        {options.map((opt) => {
-          const active = value === opt;
-          return (
-            <DesignLabFilterButton
-              key={opt}
-              onClick={() => onChange(opt)}
-              active={active}
-            >
-              {opt}
-            </DesignLabFilterButton>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function ColHeader({ label, field, sort, onSort, className }: {
-  label: string; field: SortField; sort: { field: SortField; dir: SortDir };
-  onSort: (f: SortField) => void; className?: string;
-}) {
-  const active = sort.field === field;
-  return (
-    <button
-      onClick={() => onSort(field)}
-      className={`flex items-center gap-0.5 transition-colors ${className || ""}`}
-      style={{
-        fontSize: 11, fontWeight: active ? 600 : 500, letterSpacing: "0.01em",
-        color: active ? C.text : C.textMuted,
-      }}
-    >
-      {label}
-      {active && (sort.dir === "asc" ? <ChevronUp style={{ width: 12, height: 12 }} /> : <ChevronDown style={{ width: 12, height: 12 }} />)}
-    </button>
   );
 }

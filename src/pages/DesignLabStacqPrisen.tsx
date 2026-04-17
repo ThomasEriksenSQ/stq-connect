@@ -8,7 +8,7 @@ import { calcStacqPris } from "@/lib/stacqPris";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  ArrowUpDown, TrendingUp, ChevronUp, ChevronDown,
+  ArrowUpDown, TrendingUp,
   Search,
 } from "lucide-react";
 import {
@@ -23,6 +23,7 @@ import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designla
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { C } from "@/components/designlab/theme";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
+import { DesignLabColumnHeader } from "@/components/designlab/system";
 
 /* Colors imported from @/components/designlab/theme */
 
@@ -265,12 +266,12 @@ export default function DesignLabStacqPrisen() {
                   height: 34, paddingInline: 16, borderBottom: `1px solid ${C.border}`, background: C.surfaceAlt,
                 }}
               >
-                <ColHeader label="Konsulent" field="kandidat" sort={sort} onSort={toggleSort} />
-                <ColHeader label="Kunde" field="kunde" sort={sort} onSort={toggleSort} />
+                <DesignLabColumnHeader label="Konsulent" field="kandidat" sort={sort} onSort={toggleSort} />
+                <DesignLabColumnHeader label="Kunde" field="kunde" sort={sort} onSort={toggleSort} />
                 <span style={thStyle}>Type</span>
-                <ColHeader label="Utpris" field="utpris" sort={sort} onSort={toggleSort} />
+                <DesignLabColumnHeader label="Utpris" field="utpris" sort={sort} onSort={toggleSort} />
                 <span style={thStyle}>Ekstra</span>
-                <ColHeader label="STACQ Pris" field="stacq" sort={sort} onSort={toggleSort} />
+                <DesignLabColumnHeader label="STACQ Pris" field="stacq" sort={sort} onSort={toggleSort} />
                 <span style={{ ...thStyle, textAlign: "right" }}>%</span>
                 <span style={{ ...thStyle, textAlign: "right" }}>Status</span>
               </div>
@@ -380,25 +381,6 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function ColHeader({ label, field, sort, onSort, className }: {
-  label: string; field: SortField; sort: { field: SortField; dir: SortDir };
-  onSort: (f: SortField) => void; className?: string;
-}) {
-  const active = sort.field === field;
-  return (
-    <button
-      onClick={() => onSort(field)}
-      className={`flex items-center gap-0.5 transition-colors ${className || ""}`}
-      style={{ fontSize: 11, fontWeight: active ? 600 : 500, letterSpacing: "0.04em", color: active ? C.text : C.textMuted }}
-    >
-      {label}
-      {active && (sort.dir === "asc" ? <ChevronUp style={{ width: 12, height: 12 }} /> : <ChevronDown style={{ width: 12, height: 12 }} />)}
-    </button>
-  );
-}
-
-
-
 function EditModal({ row, onClose, queryClient }: { row: any; onClose: () => void; queryClient: any }) {
   const [utpris, setUtpris] = useState(row.utpris?.toString() || "");
   const [override, setOverride] = useState(row.til_konsulent_override?.toString() || "");
@@ -435,15 +417,15 @@ function EditModal({ row, onClose, queryClient }: { row: any; onClose: () => voi
         <div className="space-y-3">
           <div>
             <label style={{ ...thStyle, display: "block", marginBottom: 4 }}>Utpris</label>
-            <Input type="number" value={utpris} onChange={(e) => setUtpris(e.target.value)} style={{ fontSize: 14, border: `1px solid ${C.border}` }} />
+            <Input type="number" value={utpris} onChange={(e) => setUtpris(e.target.value)} style={{ height: 32, fontSize: 13, border: `1px solid ${C.border}` }} />
           </div>
           <div>
             <label style={{ ...thStyle, display: "block", marginBottom: 4 }}>Til konsulent override</label>
-            <Input type="number" value={override} onChange={(e) => setOverride(e.target.value)} placeholder="Tom = standard 70%" style={{ fontSize: 14, border: `1px solid ${C.border}` }} />
+            <Input type="number" value={override} onChange={(e) => setOverride(e.target.value)} placeholder="Tom = standard 70%" style={{ height: 32, fontSize: 13, border: `1px solid ${C.border}` }} />
           </div>
           <div>
             <label style={{ ...thStyle, display: "block", marginBottom: 4 }}>Ekstra kostnad / dag</label>
-            <Input type="number" value={ekstra} onChange={(e) => setEkstra(e.target.value)} placeholder="f.eks. 80 for deal-bonus" style={{ fontSize: 14, border: `1px solid ${C.border}` }} />
+            <Input type="number" value={ekstra} onChange={(e) => setEkstra(e.target.value)} placeholder="f.eks. 80 for deal-bonus" style={{ height: 32, fontSize: 13, border: `1px solid ${C.border}` }} />
             <p style={{ fontSize: 12, color: C.textFaint, marginTop: 4 }}>Ekstra kostnad trekkes fra STACQ Prisen. Brukes for deal-avtaler, bonus-forpliktelser e.l.</p>
           </div>
         </div>

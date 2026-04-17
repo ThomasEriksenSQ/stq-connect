@@ -28,7 +28,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { ContactCardContent } from "@/components/ContactCardContent";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
-import { C, SIGNAL_COLORS } from "@/components/designlab/theme";
+import { C } from "@/components/designlab/theme";
 import { CommandPalette } from "@/components/designlab/CommandPalette";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { getHeatResult, getTaskStatus, getActivityStatus, type HeatResult } from "@/lib/heatScore";
@@ -62,6 +62,13 @@ import {
   DesignLabIconButton,
   DesignLabSearchInput,
 } from "@/components/designlab/controls";
+import {
+  DesignLabColumnHeader,
+  DesignLabFilterRow,
+  DesignLabMatchFilterChip,
+  DesignLabPrimaryAction,
+  DesignLabSignalBadge,
+} from "@/components/designlab/system";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
@@ -1891,9 +1898,9 @@ export default function DesignLabContacts() {
               placeholder="Søk kontakter…"
               style={{ width: 220 }}
             />
-            <DesignLabActionButton variant="primary">
+            <DesignLabPrimaryAction>
               + Ny kontakt
-            </DesignLabActionButton>
+            </DesignLabPrimaryAction>
           </div>
         </header>
 
@@ -1901,15 +1908,15 @@ export default function DesignLabContacts() {
         <div className="shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
           {!selectedConsultant ? (
             <>
-              <FilterRow label="EIER" options={ownerOptions} value={ownerFilter} onChange={setOwnerFilter} />
+              <DesignLabFilterRow label="EIER" options={ownerOptions} value={ownerFilter} onChange={setOwnerFilter} />
               <div className="flex items-center justify-between">
-                <FilterRow label="SIGNAL" options={["Alle", ...SIGNALS]} value={signalFilter} onChange={setSignalFilter} />
+                <DesignLabFilterRow label="SIGNAL" options={["Alle", ...SIGNALS]} value={signalFilter} onChange={setSignalFilter} />
                 <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500, whiteSpace: "nowrap", paddingLeft: 12 }}>
                   {visibleResultCount} kontakter
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <FilterRow
+                <DesignLabFilterRow
                   label="TYPE"
                   options={[...TYPES]}
                   value={typeFilter}
@@ -1951,37 +1958,37 @@ export default function DesignLabContacts() {
                 <div className="min-w-0 flex-1 space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <DesignLabControlLabel>EIER</DesignLabControlLabel>
-                    <MatchFilterChip active={matchOwnerFilter === "all"} onClick={() => setMatchOwnerFilter("all")}>
+                    <DesignLabMatchFilterChip active={matchOwnerFilter === "all"} onClick={() => setMatchOwnerFilter("all")}>
                       Alle
-                    </MatchFilterChip>
+                    </DesignLabMatchFilterChip>
                     {matchOwnerOptions.owners.map((owner) => (
-                      <MatchFilterChip
+                      <DesignLabMatchFilterChip
                         key={owner.value}
                         active={matchOwnerFilter === owner.value}
                         onClick={() => setMatchOwnerFilter(owner.value)}
                       >
                         {owner.label}
-                      </MatchFilterChip>
+                      </DesignLabMatchFilterChip>
                     ))}
                     {matchOwnerOptions.hasUnassigned && (
-                      <MatchFilterChip
+                      <DesignLabMatchFilterChip
                         active={matchOwnerFilter === MATCH_OWNER_FILTER_NONE}
                         onClick={() => setMatchOwnerFilter(MATCH_OWNER_FILTER_NONE)}
                       >
                         Uten eier
-                      </MatchFilterChip>
+                      </DesignLabMatchFilterChip>
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <DesignLabControlLabel>MATCH</DesignLabControlLabel>
                     {JAKT_CHIPS.map((chip) => (
-                      <MatchFilterChip
+                      <DesignLabMatchFilterChip
                         key={chip.value}
                         active={jaktChip === chip.value}
                         onClick={() => handleJaktChipSelect(chip.value)}
                       >
                         {chip.label}
-                      </MatchFilterChip>
+                      </DesignLabMatchFilterChip>
                     ))}
                   </div>
                 </div>
@@ -2227,13 +2234,13 @@ export default function DesignLabContacts() {
                         paddingRight: 16,
                       }}
                     >
-                      <ColHeader label="Navn" field="name" sort={sort} onSort={toggleSort} />
-                      <ColHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
+                      <DesignLabColumnHeader label="Navn" field="name" sort={sort} onSort={toggleSort} />
+                      <DesignLabColumnHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
                       <span style={{ fontSize: 11, fontWeight: 500, color: C.textFaint }}>Finn</span>
-                      <ColHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
-                      <ColHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />
-                      <ColHeader label="Tags" field="priority" sort={sort} onSort={toggleSort} />
-                      <ColHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
+                      <DesignLabColumnHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
+                      <DesignLabColumnHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />
+                      <DesignLabColumnHeader label="Tags" field="priority" sort={sort} onSort={toggleSort} />
+                      <DesignLabColumnHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
                     </div>
                     {isLoading || isLoadingParity ? (
                       <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>
@@ -2282,7 +2289,7 @@ export default function DesignLabContacts() {
                             </div>
                             <div className="flex items-center gap-1.5">
                               {c.signal ? (
-                                <SignalChip signal={c.signal as Signal} />
+                                <DesignLabSignalBadge signal={c.signal as Signal} />
                               ) : (
                                 <span style={{ fontSize: 11, color: C.textGhost }}>—</span>
                               )}
@@ -2458,127 +2465,5 @@ export default function DesignLabContacts() {
         onFilterByCompany={(name) => setSearch(name)}
       />
     </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════
-   SIGNAL CHIP (V8 color-coded)
-   ═══════════════════════════════════════════════════════════ */
-
-function SignalChip({ signal, size = "sm" }: { signal: Signal; size?: "sm" | "md" }) {
-  const colors = SIGNAL_COLORS[signal];
-  return (
-    <span
-      className="inline-flex items-center whitespace-nowrap"
-      style={{
-        height: 28,
-        padding: "0 10px",
-        borderRadius: 6,
-        fontSize: 12,
-        fontWeight: 500,
-        background: colors.bg,
-        color: colors.color,
-        border: `1px solid ${colors.border}`,
-      }}
-    >
-      {size === "sm" ? signalShortLabel(signal) : signal}
-    </span>
-  );
-}
-
-function signalShortLabel(signal: Signal): string {
-  const shortLabels: Record<Signal, string> = {
-    "Behov nå": "Behov nå",
-    "Får fremtidig behov": "Fremtidig",
-    "Får kanskje behov": "Kanskje",
-    "Ukjent om behov": "Ukjent",
-    "Ikke aktuelt": "Ikke aktuelt",
-  };
-
-  return shortLabels[signal];
-}
-
-function MatchFilterChip({
-  active,
-  children,
-  onClick,
-}: {
-  active: boolean;
-  children: React.ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <DesignLabFilterButton onClick={onClick} active={active}>
-      {children}
-    </DesignLabFilterButton>
-  );
-}
-
-function FilterRow({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string;
-  options: string[];
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div className="flex items-center gap-2 py-[3px]">
-      <DesignLabControlLabel>{label}</DesignLabControlLabel>
-      <div className="flex items-center gap-1.5 flex-wrap">
-        {options.map((opt) => {
-          const active = value === opt;
-
-          return (
-            <DesignLabFilterButton
-              key={opt}
-              onClick={() => onChange(opt)}
-              active={active}
-            >
-              {opt}
-            </DesignLabFilterButton>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function ColHeader({
-  label,
-  field,
-  sort,
-  onSort,
-  className,
-}: {
-  label: string;
-  field: SortField;
-  sort: { field: SortField; dir: SortDir };
-  onSort: (f: SortField) => void;
-  className?: string;
-}) {
-  const active = sort.field === field;
-  return (
-    <button
-      onClick={() => onSort(field)}
-      className={`flex items-center gap-0.5 transition-colors ${className || ""}`}
-      style={{
-        fontSize: 11,
-        fontWeight: active ? 600 : 500,
-        letterSpacing: "0.01em",
-        color: active ? C.text : C.textMuted,
-      }}
-    >
-      {label}
-      {active &&
-        (sort.dir === "asc" ? (
-          <ChevronUp style={{ width: 12, height: 12 }} />
-        ) : (
-          <ChevronDown style={{ width: 12, height: 12 }} />
-        ))}
-    </button>
   );
 }

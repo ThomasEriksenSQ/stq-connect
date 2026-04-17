@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef, useEffect, type ReactNode } from "react";
-import { C, SIGNAL_COLORS } from "@/components/designlab/theme";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { C } from "@/components/designlab/theme";
 import {
   DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS,
   DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS,
@@ -56,7 +56,14 @@ import { nb } from "date-fns/locale";
 import { fullDate } from "@/lib/relativeDate";
 import { cleanDescription } from "@/lib/cleanDescription";
 import { cn } from "@/lib/utils";
-import { getEffectiveSignal, upsertTaskSignalDescription } from "@/lib/categoryUtils";
+import {
+  buildDescriptionWithCategory,
+  CATEGORIES,
+  getEffectiveSignal,
+  normalizeCategoryLabel,
+  parseDescriptionCategory,
+  upsertTaskSignalDescription,
+} from "@/lib/categoryUtils";
 import {
   filterConsultantMatches,
   formatConsultantMatchFreshness,
@@ -68,196 +75,17 @@ import {
   CONTACT_CV_EMAIL_REQUIRED_MESSAGE,
   contactHasEmail,
 } from "@/lib/contactCvEligibility";
+import {
+  DesignLabCategoryBadge,
+  DesignLabCategoryPicker,
+  DesignLabReadonlyChip,
+  DesignLabStatusBadge,
+  DESIGN_LAB_STATUS_NEUTRAL_CHIP_ACTIVE_COLORS,
+  getDesignLabCategoryChipActiveColors,
+} from "@/components/designlab/system";
 import { mergeTechnologyTags } from "@/lib/technologyTags";
 import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/queryKeys";
-
-/* ── Category system ── */
-const CATEGORIES = [
-  { label: "Behov nå" },
-  { label: "Får fremtidig behov" },
-  { label: "Får kanskje behov" },
-  { label: "Ukjent om behov" },
-  { label: "Ikke aktuelt" },
-] as const;
-
-const LEGACY_CATEGORY_MAP: Record<string, string> = {
-  "Fremtidig behov": "Får fremtidig behov",
-  "Har kanskje behov": "Får kanskje behov",
-  "Vil kanskje få behov": "Får kanskje behov",
-  "Aldri aktuelt": "Ikke aktuelt",
-};
-
-function normalizeCategoryLabel(label: string): string {
-  return LEGACY_CATEGORY_MAP[label] || label;
-}
-
-function getCategoryPickerActiveColors(label: string) {
-  const normalized = normalizeCategoryLabel(label);
-  const colors = SIGNAL_COLORS[normalized as keyof typeof SIGNAL_COLORS];
-  if (!colors) return undefined;
-
-  return {
-    background: colors.bg,
-    color: colors.color,
-    border: `1px solid ${colors.border}`,
-    fontWeight: 600,
-  };
-}
-
-const NEUTRAL_ACTIVE_COLORS = {
-  background: C.statusNeutralBg,
-  color: C.statusNeutral,
-  border: `1px solid ${C.statusNeutralBorder}`,
-  fontWeight: 500 as const,
-};
-
-function CategoryBadge({ label, className }: { label: string; className?: string }) {
-  const normalized = normalizeCategoryLabel(label);
-  const isKnown = CATEGORIES.some((c) => c.label === normalized);
-  if (!isKnown) return null;
-  return (
-    <StatusChip category={normalized} className={className}>
-      {normalized}
-    </StatusChip>
-  );
-}
-
-function CategoryPicker({ selected, onSelect }: { selected: string; onSelect: (v: string) => void }) {
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {CATEGORIES.map((cat) => (
-        <DesignLabFilterButton
-          key={cat.label}
-          type="button"
-          onClick={() => onSelect(cat.label)}
-          active={selected === cat.label}
-          activeColors={getCategoryPickerActiveColors(cat.label)}
-        >
-          {cat.label}
-        </DesignLabFilterButton>
-      ))}
-    </div>
-  );
-}
-
-function StatusChip({
-  children,
-  className,
-  category,
-  tone = "default",
-}: {
-  children: ReactNode;
-  className?: string;
-  category?: string;
-  tone?: "default" | "signal" | "muted";
-}) {
-  const normalizedCategory = category ? normalizeCategoryLabel(category) : null;
-  const categoryColors = normalizedCategory
-    ? SIGNAL_COLORS[normalizedCategory as keyof typeof SIGNAL_COLORS]
-    : null;
-
-  const styles = categoryColors
-    ? {
-        background: categoryColors.bg,
-        color: categoryColors.color,
-        border: `1px solid ${categoryColors.border}`,
-      }
-    : tone === "muted"
-      ? {
-          background: "transparent",
-          color: C.textFaint,
-          border: `1px solid ${C.borderDefault}`,
-        }
-      : tone === "signal"
-        ? {
-            background: C.statusNeutralBg,
-            color: C.statusNeutral,
-            border: `1px solid ${C.statusNeutralBorder}`,
-          }
-        : {
-            background: C.statusNeutralBg,
-            color: C.statusNeutral,
-            border: `1px solid ${C.statusNeutralBorder}`,
-          };
-
-  return (
-    <span
-      className={cn("inline-flex items-center whitespace-nowrap", className)}
-      style={{
-        height: 28,
-        padding: "0 10px",
-        borderRadius: 6,
-        fontSize: 12,
-        fontWeight: 500,
-        ...styles,
-      }}
-    >
-      {children}
-    </span>
-  );
-}
-
-function ReadonlySelectableTag({
-  active,
-  children,
-  activeColors,
-}: {
-  active: boolean;
-  children: ReactNode;
-  activeColors?: {
-    background?: string;
-    color?: string;
-    border?: string;
-    fontWeight?: number;
-  };
-}) {
-  const inactiveStyles = {
-    background: "transparent",
-    color: "#5C636E",
-    border: "1px solid #DDE0E7",
-    fontWeight: 500,
-  };
-  const activeStyles = {
-    background: activeColors?.background ?? "#E8ECF5",
-    color: activeColors?.color ?? "#1A1C1F",
-    border: activeColors?.border ?? "1px solid #C5CBE8",
-    fontWeight: activeColors?.fontWeight ?? 600,
-  };
-  const styles = active ? activeStyles : inactiveStyles;
-
-  return (
-    <span
-      className="inline-flex items-center whitespace-nowrap"
-      style={{
-        height: 28,
-        padding: "0 10px",
-        borderRadius: 6,
-        fontSize: 12,
-        ...styles,
-      }}
-    >
-      {children}
-    </span>
-  );
-}
-
 /* ── Helpers for storing/retrieving category in description ── */
-function buildDescriptionWithCategory(category: string, description: string): string {
-  if (!category) return description;
-  return description ? `[${category}]\n${description}` : `[${category}]`;
-}
-
-function parseDescriptionCategory(description: string | null): { category: string; text: string } {
-  if (!description) return { category: "", text: "" };
-  const match = description.match(/^\[([^\]]+)\]\n?([\s\S]*)$/);
-  if (match) {
-    const cat = match[1];
-    if (CATEGORIES.some((c) => c.label === cat) || Object.keys(LEGACY_CATEGORY_MAP).includes(cat)) {
-      return { category: normalizeCategoryLabel(cat), text: match[2].trim() };
-    }
-  }
-  return { category: "", text: description };
-}
 
 /**
  * For legacy data: subject IS the category. For new data: subject is free-text title, category in description.
@@ -890,7 +718,7 @@ export function ContactCardContent({
                   <DesignLabFilterButton
                     active={Boolean(signalCat)}
                     className="whitespace-nowrap"
-                    activeColors={signalCat ? getCategoryPickerActiveColors(signalCat.label) : undefined}
+                    activeColors={signalCat ? getDesignLabCategoryChipActiveColors(signalCat.label) : undefined}
                   >
                     <span>{signalCat ? signalCat.label : "Legg til signal"}</span>
                     <ChevronDown className="h-3 w-3" />
@@ -904,22 +732,22 @@ export function ContactCardContent({
                         updateSignalMutation.mutate(cat.label);
                       }}
                     >
-                      <StatusChip category={cat.label}>
+                      <DesignLabStatusBadge category={cat.label}>
                         {cat.label}
-                      </StatusChip>
+                      </DesignLabStatusBadge>
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : signalCat ? (
-              <StatusChip category={signalCat.label}>{signalCat.label}</StatusChip>
+              <DesignLabStatusBadge category={signalCat.label}>{signalCat.label}</DesignLabStatusBadge>
             ) : null}
             {canEditProfile ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <DesignLabFilterButton
                     active={Boolean(contact.owner_id)}
-                    activeColors={NEUTRAL_ACTIVE_COLORS}
+                    activeColors={DESIGN_LAB_STATUS_NEUTRAL_CHIP_ACTIVE_COLORS}
                     className="whitespace-nowrap"
                   >
                     <span>{contact.owner_id && profileMapFull[contact.owner_id] ? profileMapFull[contact.owner_id] : "Eier"}</span>
@@ -929,15 +757,15 @@ export function ContactCardContent({
                 <DropdownMenuContent align="end">
                   {allProfiles.map((p) => (
                     <DropdownMenuItem key={p.id} onClick={() => updateMutation.mutate({ owner_id: p.id })}>
-                      <StatusChip tone={p.id === contact.owner_id ? "signal" : "default"}>
+                      <DesignLabStatusBadge tone={p.id === contact.owner_id ? "signal" : "default"}>
                         {p.full_name}
-                      </StatusChip>
+                      </DesignLabStatusBadge>
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : contact.owner_id && profileMapFull[contact.owner_id] ? (
-              <StatusChip tone="signal">{profileMapFull[contact.owner_id]}</StatusChip>
+              <DesignLabStatusBadge tone="signal">{profileMapFull[contact.owner_id]}</DesignLabStatusBadge>
             ) : null}
             {!editable && onNavigateToFullPage && (
               <DesignLabIconButton size={32} onClick={onNavigateToFullPage}>
@@ -1228,14 +1056,14 @@ export function ContactCardContent({
                 : (contact as any).cv_email ? "✓ CV-Epost" : "CV-Epost"}
             </DesignLabFilterButton>
           ) : (
-            <ReadonlySelectableTag
+            <DesignLabReadonlyChip
               active={Boolean((contact as any).cv_email && !((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned"))}
               activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
             >
               {(contact as any).cv_email && ((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned")
                 ? "CV-Epost ✗"
                 : (contact as any).cv_email ? "✓ CV-Epost" : "CV-Epost"}
-            </ReadonlySelectableTag>
+            </DesignLabReadonlyChip>
           )}
           {/* Innkjøper */}
           {canEditProfile ? (
@@ -1249,33 +1077,33 @@ export function ContactCardContent({
               {(contact as any).call_list ? "✓ Innkjøper" : "Innkjøper"}
             </DesignLabFilterButton>
           ) : (
-            <ReadonlySelectableTag
+            <DesignLabReadonlyChip
               active={Boolean((contact as any).call_list)}
               activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
             >
               {(contact as any).call_list ? "✓ Innkjøper" : "Innkjøper"}
-            </ReadonlySelectableTag>
+            </DesignLabReadonlyChip>
           )}
           {/* Ikke aktuell å kontakte */}
           {canEditProfile ? (
             <DesignLabFilterButton
               onClick={() => updateMutation.mutate({ ikke_aktuell_kontakt: !(contact as any).ikke_aktuell_kontakt })}
               active={Boolean((contact as any).ikke_aktuell_kontakt)}
-              activeColors={getCategoryPickerActiveColors("Ikke aktuelt")}
+              activeColors={getDesignLabCategoryChipActiveColors("Ikke aktuelt")}
             >
               {(contact as any).ikke_aktuell_kontakt
                 ? "✕ Ikke relevant person å kontakte igjen"
                 : "Ikke relevant person å kontakte igjen"}
             </DesignLabFilterButton>
           ) : (
-            <ReadonlySelectableTag
+            <DesignLabReadonlyChip
               active={Boolean((contact as any).ikke_aktuell_kontakt)}
-              activeColors={getCategoryPickerActiveColors("Ikke aktuelt")}
+              activeColors={getDesignLabCategoryChipActiveColors("Ikke aktuelt")}
             >
               {(contact as any).ikke_aktuell_kontakt
                 ? "✕ Ikke relevant person å kontakte igjen"
                 : "Ikke relevant person å kontakte igjen"}
-            </ReadonlySelectableTag>
+            </DesignLabReadonlyChip>
           )}
         </div>
         {changingCompany && (
@@ -1558,7 +1386,7 @@ export function ContactCardContent({
                   <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">
                     Kategori
                   </span>
-                  <CategoryPicker selected={formCategory} onSelect={setFormCategory} />
+                  <DesignLabCategoryPicker selected={formCategory} onSelect={setFormCategory} />
                 </div>
 
                 <Textarea
@@ -1920,7 +1748,7 @@ function TaskRow({
           <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">
             Kategori
           </span>
-          <CategoryPicker selected={editCategory} onSelect={setEditCategory} />
+          <DesignLabCategoryPicker selected={editCategory} onSelect={setEditCategory} />
         </div>
         <Textarea
           value={editDesc}
@@ -2064,9 +1892,9 @@ function TaskRow({
         {displayDesc && <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{displayDesc}</p>}
         {task.assigned_to && profileMap[task.assigned_to] && (
           <div className="mt-1">
-            <StatusChip tone="signal">
+            <DesignLabStatusBadge tone="signal">
               {profileMap[task.assigned_to]}
-            </StatusChip>
+            </DesignLabStatusBadge>
           </div>
         )}
       </div>
@@ -2088,7 +1916,7 @@ function TaskRow({
         ) : task.description?.includes("[someday]") || !task.due_date ? (
           <span className="text-[0.8125rem] font-medium text-muted-foreground italic">Følg opp på sikt</span>
         ) : null}
-        {displayCategory && <CategoryBadge label={displayCategory} />}
+        {displayCategory && <DesignLabCategoryBadge label={displayCategory} />}
       </div>
     </div>
   );
@@ -2188,7 +2016,7 @@ function ActivityTimeline({
             <DesignLabFilterButton
               onClick={() => setShowEmails((v) => !v)}
               active={showEmails}
-              activeColors={NEUTRAL_ACTIVE_COLORS}
+              activeColors={DESIGN_LAB_STATUS_NEUTRAL_CHIP_ACTIVE_COLORS}
             >
               <Mail className="w-3.5 h-3.5" />
               {showEmails ? "Skjul e-post" : "Vis e-post"}
@@ -2210,7 +2038,7 @@ function ActivityTimeline({
           <DesignLabFilterButton
             onClick={() => setShowEmails((v) => !v)}
             active={showEmails}
-            activeColors={NEUTRAL_ACTIVE_COLORS}
+            activeColors={DESIGN_LAB_STATUS_NEUTRAL_CHIP_ACTIVE_COLORS}
           >
             <Mail className="w-3.5 h-3.5" />
             {showEmails ? "Skjul e-post" : "Vis e-post"}
@@ -2349,9 +2177,9 @@ function EmailRow({ email }: { email: any }) {
             <span className="text-[0.8125rem] text-muted-foreground">
               {format(d, "d. MMM yyyy", { locale: nb })}
             </span>
-            <StatusChip tone="signal">
+            <DesignLabStatusBadge tone="signal">
               E-post
-            </StatusChip>
+            </DesignLabStatusBadge>
           </div>
         </div>
       </div>
@@ -2453,7 +2281,7 @@ function ActivityRow({
               <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 block">
                 Kategori
               </span>
-              <CategoryPicker selected={editCategory} onSelect={setEditCategory} />
+              <DesignLabCategoryPicker selected={editCategory} onSelect={setEditCategory} />
             </div>
             <Textarea
               value={editDesc}
@@ -2572,9 +2400,9 @@ function ActivityRow({
               {/* Owner badge */}
               {ownerName && (
                 <div className="mt-1">
-                  <StatusChip tone="signal">
+                  <DesignLabStatusBadge tone="signal">
                     {ownerName}
-                  </StatusChip>
+                  </DesignLabStatusBadge>
                 </div>
               )}
             </div>
@@ -2589,7 +2417,7 @@ function ActivityRow({
                 </TooltipTrigger>
                 <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
               </Tooltip>
-              {displayCategory && <CategoryBadge label={displayCategory} />}
+              {displayCategory && <DesignLabCategoryBadge label={displayCategory} />}
             </div>
           </div>
         )}

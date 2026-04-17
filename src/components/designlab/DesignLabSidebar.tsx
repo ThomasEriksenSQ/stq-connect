@@ -2,6 +2,7 @@ import { User } from "@supabase/supabase-js";
 import {
   Users, Building2, LayoutDashboard, Briefcase, Settings, LogOut,
   UserPlus, Radar, TrendingUp, Globe, Clock, ChevronsLeft, ChevronsRight,
+  SwatchBook,
 } from "lucide-react";
 import { C } from "@/components/designlab/theme";
 import { usePersistentState } from "@/hooks/usePersistentState";
@@ -14,6 +15,7 @@ const NAV_MAIN = [
   { label: "Selskaper", icon: Building2, href: "/design-lab/selskaper" },
   { label: "Kontakter", icon: Users, href: "/design-lab/kontakter" },
   { label: "Forespørsler", icon: Briefcase, href: "/design-lab/foresporsler" },
+  { label: "Stilark", icon: SwatchBook, href: "/design-lab/stilark" },
   { label: "Oppfølginger", icon: Clock, href: "/oppfolginger" },
 ];
 
@@ -158,7 +160,7 @@ function NavGroup({
             key={item.label}
             onClick={() => navigate(item.href)}
             title={collapsed ? item.label : undefined}
-            className="flex items-center w-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dl-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--dl-focus-offset)]"
+            className="flex items-center w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dl-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--dl-focus-offset)]"
             style={{
               ["--dl-focus-ring" as string]: C.borderFocus,
               ["--dl-focus-offset" as string]: C.sidebarBg,
@@ -170,10 +172,11 @@ function NavGroup({
               height: px(28),
               gap: px(8),
               justifyContent: collapsed ? "center" : "flex-start",
-              paddingLeft: collapsed ? 0 : px(8),
-              paddingRight: collapsed ? 0 : px(8),
+              paddingLeft: collapsed ? 0 : px(10),
+              paddingRight: collapsed ? 0 : px(10),
               whiteSpace: "nowrap",
               overflow: "hidden",
+              transition: "background-color 120ms cubic-bezier(0.16, 1, 0.3, 1)",
             }}
             onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = C.hoverSubtle; e.currentTarget.style.color = C.text; } }}
             onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = C.textMuted; } }}

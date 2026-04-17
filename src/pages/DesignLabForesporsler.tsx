@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import {
-  ChevronDown, ChevronUp, X,
+  X,
   ArrowUpRight,
 } from "lucide-react";
 import { differenceInDays, format } from "date-fns";
@@ -17,12 +17,15 @@ import { usePersistentState } from "@/hooks/usePersistentState";
 import { C } from "@/components/designlab/theme";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import {
-  DesignLabActionButton,
-  DesignLabControlLabel,
-  DesignLabFilterButton,
   DesignLabIconButton,
   DesignLabSearchInput,
 } from "@/components/designlab/controls";
+import {
+  DesignLabColumnHeader,
+  DesignLabFilterRow,
+  DesignLabGhostAction,
+  DesignLabPrimaryAction,
+} from "@/components/designlab/system";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
@@ -239,29 +242,42 @@ export default function DesignLabForesporsler() {
               placeholder="Søk forespørsler…"
               style={{ width: 220 }}
             />
-            <DesignLabActionButton variant="primary">
+            <DesignLabPrimaryAction>
               + Ny forespørsel
-            </DesignLabActionButton>
+            </DesignLabPrimaryAction>
           </div>
         </header>
 
         {/* Filters + stat line */}
         <div className="shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
-          <FilterRow label="TID" options={STATUS_CHIPS} value={statusFilter} onChange={(v) => setStatusFilter(v as StatusFilter)} />
+          <DesignLabFilterRow
+            label="TID"
+            options={STATUS_CHIPS.map((option) => option.label)}
+            value={STATUS_CHIPS.find((option) => option.value === statusFilter)?.label ?? "Aktive"}
+            onChange={(value) => {
+              const next = STATUS_CHIPS.find((option) => option.label === value);
+              if (next) setStatusFilter(next.value);
+            }}
+          />
           <div className="flex items-center justify-between">
-            <FilterRow label="TYPE" options={TYPE_CHIPS} value={typeFilter} onChange={(v) => setTypeFilter(v as TypeFilter)} />
+            <DesignLabFilterRow
+              label="TYPE"
+              options={TYPE_CHIPS.map((option) => option.label)}
+              value={TYPE_CHIPS.find((option) => option.value === typeFilter)?.label ?? "Alle"}
+              onChange={(value) => {
+                const next = TYPE_CHIPS.find((option) => option.label === value);
+                if (next) setTypeFilter(next.value);
+              }}
+            />
             <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500, whiteSpace: "nowrap", paddingLeft: 12 }}>
               {stats.aktive} aktive · {stats.utenKonsulent} uten konsulent · {stats.iProsess} i prosess · {stats.vunnet} vunnet
             </span>
           </div>
           {(statusFilter !== "aktive" || typeFilter !== "Alle") && (
             <div className="flex justify-end">
-              <DesignLabActionButton
-                variant="ghost"
-                onClick={() => { setStatusFilter("aktive"); setTypeFilter("Alle"); }}
-              >
+              <DesignLabGhostAction onClick={() => { setStatusFilter("aktive"); setTypeFilter("Alle"); }}>
                 <X style={{ width: 12, height: 12 }} /> Nullstill
-              </DesignLabActionButton>
+              </DesignLabGhostAction>
             </div>
           )}
         </div>
@@ -340,16 +356,16 @@ function TableHeader({ sort, onSort, compact }: { sort: { field: SortField; dir:
       className="grid items-center sticky top-0 z-10"
       style={{ gridTemplateColumns: cols, height: 32, borderBottom: `1px solid ${C.border}`, background: C.surfaceAlt, paddingLeft: 16, paddingRight: 16 }}
     >
-      <ColHeader label="Mottatt" field="mottatt_dato" sort={sort} onSort={onSort} />
-      <ColHeader label="Selskap" field="selskap_navn" sort={sort} onSort={onSort} />
-      <ColHeader label="Kontakt" field="kontakt" sort={sort} onSort={onSort} />
+      <DesignLabColumnHeader label="Mottatt" field="mottatt_dato" sort={sort} onSort={onSort} />
+      <DesignLabColumnHeader label="Selskap" field="selskap_navn" sort={sort} onSort={onSort} />
+      <DesignLabColumnHeader label="Kontakt" field="kontakt" sort={sort} onSort={onSort} />
       {compact ? (
-        <ColHeader label="Type" field="sendt_count" sort={sort} onSort={onSort} />
+        <DesignLabColumnHeader label="Type" field="sendt_count" sort={sort} onSort={onSort} />
       ) : (
         <>
           <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted }}>Type</span>
           <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted }}>Teknologier</span>
-          <ColHeader label="Pipeline" field="sendt_count" sort={sort} onSort={onSort} className="justify-end" />
+          <DesignLabColumnHeader label="Pipeline" field="sendt_count" sort={sort} onSort={onSort} className="justify-end" />
         </>
       )}
     </div>
@@ -461,47 +477,4 @@ function LoadingMsg() {
 }
 function EmptyMsg() {
   return <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen forespørsler å vise</div>;
-}
-function FilterRow({ label, options, value, onChange }: {
-  label: string; options: readonly { value: string; label: string }[]; value: string; onChange: (v: string) => void;
-}) {
-  return (
-    <div className="flex items-center gap-2 py-[3px]">
-      <DesignLabControlLabel>{label}</DesignLabControlLabel>
-      <div className="flex items-center gap-1.5 flex-wrap">
-        {options.map((opt) => {
-          const active = value === opt.value;
-          return (
-            <DesignLabFilterButton
-              key={opt.value}
-              onClick={() => onChange(opt.value)}
-              active={active}
-            >
-              {opt.label}
-            </DesignLabFilterButton>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function ColHeader({ label, field, sort, onSort, className }: {
-  label: string; field: SortField; sort: { field: SortField; dir: SortDir };
-  onSort: (f: SortField) => void; className?: string;
-}) {
-  const active = sort.field === field;
-  return (
-    <button
-      onClick={() => onSort(field)}
-      className={`flex items-center gap-0.5 transition-colors ${className || ""}`}
-      style={{
-        fontSize: 11, fontWeight: active ? 600 : 500, letterSpacing: "0.01em",
-        color: active ? C.text : C.textMuted,
-      }}
-    >
-      {label}
-      {active && (sort.dir === "asc" ? <ChevronUp style={{ width: 12, height: 12 }} /> : <ChevronDown style={{ width: 12, height: 12 }} />)}
-    </button>
-  );
 }
