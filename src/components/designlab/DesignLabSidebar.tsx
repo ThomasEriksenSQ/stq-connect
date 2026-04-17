@@ -11,17 +11,18 @@ import { SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl
 /* ═══ NAV ITEMS ═══ */
 
 const NAV_MAIN = [
-  { label: "Salgsagent", icon: LayoutDashboard, href: "/" },
+  { label: "Salgsagent", icon: LayoutDashboard, href: "/design-lab/salgsagent" },
   { label: "Selskaper", icon: Building2, href: "/design-lab/selskaper" },
   { label: "Kontakter", icon: Users, href: "/design-lab/kontakter" },
   { label: "Forespørsler", icon: Briefcase, href: "/design-lab/foresporsler" },
   { label: "Stilark", icon: SwatchBook, href: "/design-lab/stilark" },
-  { label: "Oppfølginger", icon: Clock, href: "/oppfolginger" },
+  { label: "Oppfølginger", icon: Clock, href: "/design-lab/oppfolginger" },
 ];
 
 const NAV_STACQ = [
   { label: "STACQ Prisen", icon: TrendingUp, href: "/design-lab/stacq-prisen" },
   { label: "Markedsradar", icon: Radar, href: "/design-lab/markedsradar" },
+  { label: "Aktive oppdrag", icon: Briefcase, href: "/design-lab/aktive-oppdrag" },
   { label: "Ansatte", icon: Users, href: "/design-lab/ansatte" },
   { label: "Eksterne", icon: UserPlus, href: "/design-lab/eksterne" },
   { label: "stacq.no", icon: Globe, href: "/design-lab/nettside-ai" },

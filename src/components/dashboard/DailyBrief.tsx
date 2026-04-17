@@ -10,8 +10,9 @@ import { getEffectiveSignal, getSignalBadgeStyle, upsertTaskSignalDescription } 
 import { CONTACT_CV_EMAIL_REQUIRED_MESSAGE, contactHasEmail } from "@/lib/contactCvEligibility";
 import { getHeatResult, TEMP_CONFIG } from "@/lib/heatScore";
 import { Flame, ChevronLeft, ChevronRight, Radio, Loader2, MapPin, ChevronDown, X, Bell } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { ContactCardContent } from "@/components/ContactCardContent";
 import { toast } from "sonner";
 import { C } from "@/theme";
@@ -118,10 +119,15 @@ function buildSignalSnapshot(lead: ScoredLead, signalOverride?: string) {
   };
 }
 
+interface DailyBriefProps {
+  designLabMode?: boolean;
+}
+
 /* ── Main Component ── */
-const DailyBrief = () => {
+const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<"kort" | "liste">("kort");
   const [ownerFilter, setOwnerFilter] = useState(user?.id || "alle");
@@ -160,6 +166,15 @@ const DailyBrief = () => {
   const treatedStorageKey = useMemo(
     () => `daily-brief-treated:${user?.id || "anonymous"}:${ownerFilter}:${todayKey}`,
     [ownerFilter, todayKey, user?.id],
+  );
+  const inDesignLab = location.pathname.startsWith("/design-lab");
+  const getContactHref = useCallback(
+    (contactId: string) => (inDesignLab ? `/design-lab/kontakter?contact=${contactId}` : `/kontakter/${contactId}`),
+    [inDesignLab],
+  );
+  const getCompanyHref = useCallback(
+    (companyId: string) => (inDesignLab ? `/design-lab/selskaper?company=${companyId}` : `/selskaper/${companyId}`),
+    [inDesignLab],
   );
 
   const { data: allProfiles = [] } = useQuery({
@@ -670,7 +685,7 @@ const DailyBrief = () => {
   }, [isAnimating, goNext]);
 
 
-  return (
+  const leadPane = (
     <div className="space-y-4">
 
       {/* ── Filter + visningsvalg ── */}
@@ -774,13 +789,15 @@ const DailyBrief = () => {
                       </span>
                     );
                   })()}
-                  <button
-                    onClick={() => setPanelOpen(true)}
-                    className="ml-auto inline-flex items-center gap-1.5 h-7 px-3 rounded-lg bg-secondary border border-border text-[0.75rem] text-muted-foreground hover:text-foreground transition-all"
-                  >
-                    <span>↗</span>
-                    <span>Åpne kontakt</span>
-                  </button>
+                  {!designLabMode && (
+                    <button
+                      onClick={() => setPanelOpen(true)}
+                      className="ml-auto inline-flex items-center gap-1.5 h-7 px-3 rounded-lg bg-secondary border border-border text-[0.75rem] text-muted-foreground hover:text-foreground transition-all"
+                    >
+                      <span>↗</span>
+                      <span>Åpne kontakt</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="p-4 pt-3 sm:p-7 sm:pt-3">
@@ -788,7 +805,7 @@ const DailyBrief = () => {
                   <div className="pb-5">
                     <div className="space-y-1">
                       <button
-                        onClick={() => navigate(`/kontakter/${current.contact.id}`)}
+                        onClick={() => navigate(getContactHref(current.contact.id))}
                         className="text-[1.5rem] font-bold text-foreground hover:text-primary transition-colors text-left leading-tight"
                       >
                         {current.contact.first_name} {current.contact.last_name}
@@ -799,7 +816,7 @@ const DailyBrief = () => {
                           <>
                             {current.contact.title && <span>·</span>}
                             <button
-                              onClick={() => navigate(`/selskaper/${current.contact.company_id}`)}
+                              onClick={() => navigate(getCompanyHref(current.contact.company_id))}
                               className="text-primary hover:underline font-medium"
                             >
                               {current.contact.companies.name}
@@ -1305,7 +1322,7 @@ const DailyBrief = () => {
                 return (
                   <button
                     key={lead.contact.id}
-                    onClick={() => navigate(`/kontakter/${lead.contact.id}`)}
+                    onClick={() => navigate(getContactHref(lead.contact.id))}
                     className="w-full flex flex-col items-start gap-3 px-4 py-3 hover:bg-secondary/50 transition-colors text-left sm:flex-row sm:items-center"
                   >
                     <div className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", temp.dot)} />
@@ -1516,8 +1533,48 @@ const DailyBrief = () => {
           );
         })()}
 
-      {/* ── Side panel ── */}
-      {current && (
+    </div>
+  );
+
+  return (
+    <>
+      {designLabMode ? (
+        <ResizablePanelGroup direction="horizontal" className="h-full">
+          <ResizablePanel defaultSize={40} minSize={28} maxSize={58}>
+            <div className="h-full overflow-y-auto px-6 py-6" style={{ scrollbarColor: `${C.borderStrong} ${C.surfaceAlt}` }}>
+              {leadPane}
+            </div>
+          </ResizablePanel>
+
+          <ResizableHandle
+            withHandle
+            className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
+          />
+
+          <ResizablePanel defaultSize={60} minSize={32}>
+            <div className="flex h-full flex-col" style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}` }}>
+              <div className="flex-1 overflow-y-auto px-6 py-5">
+                {current ? (
+                  <ContactCardContent contactId={current.contact.id} editable={true} />
+                ) : (
+                  <div className="flex h-full items-center justify-center px-6 text-center">
+                    <div>
+                      <p className="text-[0.9375rem] font-medium text-foreground">Ingen kontakt valgt</p>
+                      <p className="mt-1 text-[0.8125rem] text-muted-foreground">
+                        Velg et lead til venstre for å åpne kontaktkortet her.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      ) : (
+        leadPane
+      )}
+
+      {current && !designLabMode && (
         <Sheet open={panelOpen} onOpenChange={setPanelOpen}>
           <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
             <div className="p-4 sm:p-6 max-w-2xl">
@@ -1526,7 +1583,7 @@ const DailyBrief = () => {
           </SheetContent>
         </Sheet>
       )}
-    </div>
+    </>
   );
 };
 

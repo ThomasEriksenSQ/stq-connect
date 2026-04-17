@@ -11,6 +11,10 @@ import { FornyelsesTimeline } from "@/components/FornyelsesTimeline";
 type Filter = "Alle" | "Aktiv" | "Oppstart" | "Inaktiv";
 const TIMER_PER_DAG = 7.5;
 
+interface KonsulenterOppdragProps {
+  hidePageIntro?: boolean;
+}
+
 function computeOppdragStatus(oppdrag: any): string {
   if (oppdrag.status === "Inaktiv") return "Inaktiv";
   const today = startOfDay(new Date());
@@ -33,7 +37,7 @@ function parseOppdragDate(value?: string | null): Date | null {
   return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
 }
 
-export default function KonsulenterOppdrag() {
+export default function KonsulenterOppdrag({ hidePageIntro = false }: KonsulenterOppdragProps = {}) {
   const [filter, setFilter] = useState<Filter>("Aktiv");
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -191,21 +195,33 @@ export default function KonsulenterOppdrag() {
   return (
     <div>
       {/* Header */}
-      <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3 min-w-0">
-          <h1 className="text-[1.375rem] font-bold">Aktive oppdrag</h1>
-          <span className="bg-secondary text-muted-foreground rounded-full px-2.5 py-0.5 text-xs font-medium">
-            {stats.aktive + stats.oppstart}
-          </span>
+      {hidePageIntro ? (
+        <div className="flex justify-end mb-6">
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity shrink-0"
+          >
+            <Plus className="h-4 w-4" />
+            Nytt oppdrag
+          </button>
         </div>
-        <button
-          onClick={() => setCreateOpen(true)}
-          className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity shrink-0"
-        >
-          <Plus className="h-4 w-4" />
-          Nytt oppdrag
-        </button>
-      </div>
+      ) : (
+        <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <h1 className="text-[1.375rem] font-bold">Aktive oppdrag</h1>
+            <span className="bg-secondary text-muted-foreground rounded-full px-2.5 py-0.5 text-xs font-medium">
+              {stats.aktive + stats.oppstart}
+            </span>
+          </div>
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity shrink-0"
+          >
+            <Plus className="h-4 w-4" />
+            Nytt oppdrag
+          </button>
+        </div>
+      )}
 
 
       {/* Stat cards */}

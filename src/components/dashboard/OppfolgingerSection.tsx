@@ -7,6 +7,7 @@ import { CATEGORIES, getEffectiveSignal, upsertTaskSignalDescription } from "@/l
 import { Check, Calendar as CalendarIcon, ChevronDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -532,9 +533,16 @@ function TaskRow({
   onChangeSignal,
   onPostpone,
 }: TaskRowProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const contact = task.contacts as any;
   const contactName = contact?.first_name ? `${contact.first_name} ${contact.last_name}` : null;
   const contactId = contact?.id || null;
+  const contactHref = contactId
+    ? location.pathname.startsWith("/design-lab")
+      ? `/design-lab/kontakter?contact=${contactId}`
+      : `/kontakter/${contactId}`
+    : null;
   const companyName = contact?.companies?.name || null;
   const ownerProfile = profiles.find((p) => p.id === task.assigned_to);
   const ownerName = ownerProfile?.full_name || "";
@@ -576,7 +584,7 @@ function TaskRow({
         !isOverdue && "border-l-[3px] border-l-transparent",
         isFading && "opacity-0 scale-95",
       )}
-      onClick={() => contactId && (window.location.href = `/kontakter/${contactId}`)}
+      onClick={() => contactHref && navigate(contactHref)}
     >
       {/* Checkbox */}
       <button
@@ -595,7 +603,7 @@ function TaskRow({
               className="text-[0.9375rem] font-semibold text-foreground hover:text-primary hover:underline"
               onClick={(e) => {
                 e.stopPropagation();
-                window.location.href = `/kontakter/${contactId}`;
+                if (contactHref) navigate(contactHref);
               }}
             >
               {contactName}

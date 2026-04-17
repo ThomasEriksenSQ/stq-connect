@@ -30,7 +30,9 @@ const KonsulenterOppdrag = lazy(() => import("./pages/KonsulenterOppdrag"));
 const EksterneKonsulenter = lazy(() => import("./pages/EksterneKonsulenter"));
 const StacqPrisen = lazy(() => import("./pages/StacqPrisen"));
 const DesignLabStacqPrisen = lazy(() => import("./pages/DesignLabStacqPrisen"));
+const DesignLabDashboard = lazy(() => import("./pages/DesignLabDashboard"));
 const DesignLabMarkedsradar = lazy(() => import("./pages/DesignLabMarkedsradar"));
+const DesignLabKonsulenterOppdrag = lazy(() => import("./pages/DesignLabKonsulenterOppdrag"));
 const DesignLabKonsulenterAnsatte = lazy(() => import("./pages/DesignLabKonsulenterAnsatte"));
 const DesignLabEksterneKonsulenter = lazy(() => import("./pages/DesignLabEksterneKonsulenter"));
 const DesignLabNettsideAI = lazy(() => import("./pages/DesignLabNettsideAI"));
@@ -45,6 +47,7 @@ const Innstillinger = lazy(() => import("./pages/Innstillinger"));
 const DesignLabContacts = lazy(() => import("./pages/DesignLabContacts"));
 const DesignLabContactDetail = lazy(() => import("./pages/DesignLabContactDetail"));
 const DesignLabForesporsler = lazy(() => import("./pages/DesignLabForesporsler"));
+const DesignLabOppfolginger = lazy(() => import("./pages/DesignLabOppfolginger"));
 const DesignLabCompanies = lazy(() => import("./pages/DesignLabCompanies"));
 const DesignLabStyleguide = lazy(() => import("./pages/DesignLabStyleguide"));
 
@@ -201,6 +204,15 @@ function AppRouter() {
           />
         </Route>
         <Route path="/design-lab" element={<ProtectedMinimal />}>
+          <Route index element={<Navigate to="salgsagent" replace />} />
+          <Route
+            path="salgsagent"
+            element={
+              <Suspense fallback={<LazyFallback />}>
+                <DesignLabDashboard />
+              </Suspense>
+            }
+          />
           <Route
             path="kontakter"
             element={
@@ -226,6 +238,14 @@ function AppRouter() {
             }
           />
           <Route
+            path="oppfolginger"
+            element={
+              <Suspense fallback={<LazyFallback />}>
+                <DesignLabOppfolginger />
+              </Suspense>
+            }
+          />
+          <Route
             path="stacq-prisen"
             element={
               <Suspense fallback={<LazyFallback />}>
@@ -238,6 +258,14 @@ function AppRouter() {
             element={
               <Suspense fallback={<LazyFallback />}>
                 <DesignLabMarkedsradar />
+              </Suspense>
+            }
+          />
+          <Route
+            path="aktive-oppdrag"
+            element={
+              <Suspense fallback={<LazyFallback />}>
+                <DesignLabKonsulenterOppdrag />
               </Suspense>
             }
           />

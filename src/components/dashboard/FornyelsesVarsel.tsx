@@ -4,10 +4,14 @@ import { differenceInDays, format } from "date-fns";
 import { nb } from "date-fns/locale";
 import { cn, formatNOK } from "@/lib/utils";
 import { CalendarClock, AlertTriangle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export default function FornyelsesVarsel() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const oppdragHref = location.pathname.startsWith("/design-lab")
+    ? "/design-lab/aktive-oppdrag"
+    : "/konsulenter/i-oppdrag";
 
   const { data: oppdrag = [] } = useQuery({
     queryKey: ["stacq-oppdrag-fornyelser"],
@@ -49,7 +53,7 @@ export default function FornyelsesVarsel() {
           return (
             <button
               key={o.id}
-              onClick={() => navigate("/konsulenter/i-oppdrag")}
+              onClick={() => navigate(oppdragHref)}
               className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
             >
               {/* Status indicator */}
