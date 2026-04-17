@@ -24,7 +24,19 @@ import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
 
 const fmt = (d: string | null) => d ? format(new Date(d), "d. MMM yyyy", { locale: nb }) : "–";
 
-const AnsattDetail = () => {
+interface AnsattDetailProps {
+  ansattIdOverride?: number;
+  hideBackButton?: boolean;
+  embedded?: boolean;
+  designLabMode?: boolean;
+}
+
+const AnsattDetail = ({
+  ansattIdOverride,
+  hideBackButton = false,
+  embedded = false,
+  designLabMode = false,
+}: AnsattDetailProps = {}) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -38,7 +50,8 @@ const AnsattDetail = () => {
   const [matchSheetOpen, setMatchSheetOpen] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
 
-  const ansattId = Number(id);
+  const ansattId = ansattIdOverride ?? Number(id);
+  const foresporslerPath = designLabMode ? "/design-lab/foresporsler" : "/foresporsler";
 
   const { data: ansatt, isLoading } = useQuery({
     queryKey: ["ansatt-detail", ansattId],
@@ -265,11 +278,13 @@ const AnsattDetail = () => {
   };
 
   return (
-    <div className="max-w-5xl space-y-6">
-      <button onClick={() => navigate(-1)} className="inline-flex items-center gap-2 text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">
-        <ArrowLeft className="h-3.5 w-3.5 stroke-[1.5]" />
-        Tilbake
-      </button>
+    <div className={cn("space-y-6", embedded ? "max-w-none" : "max-w-5xl")}>
+      {!hideBackButton && (
+        <button onClick={() => navigate(-1)} className="inline-flex items-center gap-2 text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">
+          <ArrowLeft className="h-3.5 w-3.5 stroke-[1.5]" />
+          Tilbake
+        </button>
+      )}
 
       {/* HEADER */}
       <div className="flex items-center gap-5">
@@ -403,7 +418,7 @@ const AnsattDetail = () => {
                     return (
                       <Link
                         key={ap.id}
-                        to="/foresporsler"
+                        to={foresporslerPath}
                         className="flex flex-col gap-1 py-2 px-3 rounded-lg bg-background border border-border transition-colors hover:bg-secondary/40"
                       >
                         <div className="flex items-center justify-between">
@@ -438,7 +453,7 @@ const AnsattDetail = () => {
                     return (
                       <Link
                         key={ap.id}
-                        to="/foresporsler"
+                        to={foresporslerPath}
                         className="flex flex-col gap-1 py-2 px-3 rounded-lg bg-background border border-border transition-colors hover:bg-secondary/40"
                       >
                         <div className="flex items-center justify-between">

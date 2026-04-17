@@ -1015,15 +1015,21 @@ function InnstillingerTab() {
 
 /* ─── Main Page ─── */
 
-const NettsideAI = () => {
+interface NettsideAIProps {
+  hidePageIntro?: boolean;
+}
+
+const NettsideAI = ({ hidePageIntro = false }: NettsideAIProps = {}) => {
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-[1.375rem] font-bold text-foreground">Nettside</h1>
-        <p className="text-[0.8125rem] text-muted-foreground mt-1">
-          Administrer stacq.no.
-        </p>
-      </div>
+      {!hidePageIntro && (
+        <div>
+          <h1 className="text-[1.375rem] font-bold text-foreground">Nettside</h1>
+          <p className="text-[0.8125rem] text-muted-foreground mt-1">
+            Administrer stacq.no.
+          </p>
+        </div>
+      )}
 
       <Tabs defaultValue="besok">
         <TabsList>

@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type CSSProperties } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +17,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePersistentState } from "@/hooks/usePersistentState";
 
 import { BrregSearch, lookupByOrgNr } from "@/components/BrregSearch";
-import { DesignLabActionButton, DesignLabFilterButton } from "@/components/designlab/controls";
+import {
+  DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS,
+  DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS,
+  DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS,
+  DesignLabFilterButton,
+} from "@/components/designlab/controls";
 import { relativeDate } from "@/lib/relativeDate";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { format } from "date-fns";
@@ -29,6 +33,20 @@ type SortField = "name" | "type" | "city" | "last_activity" | "tasks";
 type SortDir = "asc" | "desc";
 
 import { getEffectiveSignal } from "@/lib/categoryUtils";
+import {
+  DesignLabGhostAction,
+  DesignLabModalActions,
+  DesignLabModalChipGroup,
+  DesignLabModalContent,
+  DesignLabModalField,
+  DesignLabModalForm,
+  DesignLabModalInlineAction,
+  DesignLabModalInput,
+  DesignLabModalLabel,
+  DesignLabPrimaryAction,
+  getDesignLabModalInputStyle,
+  useDesignLabModalScale,
+} from "@/components/designlab/system";
 
 const TYPE_BADGE_COLORS: Record<string, { label: string; badgeColor: string }> = {
   prospect: { label: "Potensiell kunde", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
@@ -78,20 +96,19 @@ const TYPE_ORDER = ["prospect", "customer", "churned", "partner", "lead"];
 const CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-[6px] border transition-colors cursor-pointer font-medium";
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
 const CHIP_ON = `${CHIP_BASE} bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8] font-semibold`;
-const MODAL_LABEL_CLASS = "mb-1 block text-[11px] font-medium text-[#8C929C]";
-const MODAL_INPUT_CLASS =
-  "h-8 rounded-[6px] border-[#DDE0E7] bg-white px-2.5 py-0 text-[13px] placeholder:text-[#8C929C] focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] md:text-[13px]";
 
 const OrgNrInput = ({
   value,
   onChange,
   onLookup,
   className,
+  style,
 }: {
   value: string;
   onChange: (v: string) => void;
   onLookup: (name: string | null, city: string | null) => void;
   className?: string;
+  style?: CSSProperties;
 }) => {
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
   const [loading, setLoading] = useState(false);
@@ -116,6 +133,7 @@ const OrgNrInput = ({
         onChange={(e) => onChange(e.target.value)}
         placeholder="923 456 789"
         className={className ?? "h-10 rounded-lg"}
+        style={style}
       />
       {loading && (
         <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
@@ -150,6 +168,7 @@ const Companies = () => {
     dir: "asc",
   });
   const [userHasSorted, setUserHasSorted] = usePersistentState("stacq:companies:userHasSorted", false);
+  const modalScale = useDesignLabModalScale();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -490,59 +509,49 @@ const Companies = () => {
               Nytt selskap
             </Button>
           </DialogTrigger>
-          <DialogContent
-            hideCloseButton
-            overlayClassName="bg-[rgba(0,0,0,0.35)]"
-            className="w-[calc(100vw-2rem)] max-w-[440px] gap-0 rounded-[10px] border-[#E8EAEE] bg-white p-0 shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
-          >
-            <div className="flex items-center justify-between px-4 pb-3 pt-4">
-              <DialogTitle className="text-[14px] font-semibold text-[#1A1C1F]">Nytt selskap</DialogTitle>
-              <DialogClose asChild>
-                <button
-                  type="button"
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-[6px] text-[#5C636E] transition-colors hover:bg-[#F0F2F6] hover:text-[#1A1C1F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5E6AD2] focus-visible:ring-offset-2"
-                >
-                  <X className="h-4 w-4" />
-                  <span className="sr-only">Lukk</span>
-                </button>
-              </DialogClose>
-            </div>
-            <form
+          <DesignLabModalContent title="Nytt selskap">
+            <DesignLabModalForm
               onSubmit={(e) => {
                 e.preventDefault();
                 createMutation.mutate();
               }}
-              className="space-y-3 px-4 pb-4"
             >
-              <div>
-                <Label className={MODAL_LABEL_CLASS}>Selskapsnavn</Label>
+              <DesignLabModalField>
+                <DesignLabModalLabel>Selskapsnavn</DesignLabModalLabel>
                 <BrregSearch
                   value={form.name}
                   onChange={(name) => setForm((f) => ({ ...f, name }))}
                   onSelect={(r) => setForm((f) => ({ ...f, name: r.name, org_number: r.org_number, city: r.city }))}
-                  inputClassName={MODAL_INPUT_CLASS}
+                  showSearchIcon={false}
+                  inputClassName="focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#5E6AD2] focus-visible:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]"
+                  inputStyle={getDesignLabModalInputStyle(modalScale)}
                   dropdownClassName="rounded-[8px] border-[#E8EAEE] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
-                  resultClassName="px-3 py-2 text-[13px] hover:bg-[#F8F9FB]"
-                  resultTitleClassName="text-[13px] font-medium text-[#1A1C1F]"
-                  resultMetaClassName="mt-0.5 text-[11px] text-[#8C929C]"
-                  emptyStateClassName="px-3 py-3 text-[12px] text-[#8C929C]"
+                  resultClassName="px-3 py-2 hover:bg-[#F8F9FB]"
+                  resultStyle={{ font: "inherit" }}
+                  resultTitleClassName="font-medium text-[#1A1C1F]"
+                  resultTitleStyle={{ fontSize: "inherit", lineHeight: 1.25 }}
+                  resultMetaClassName="mt-0.5 text-[#8C929C]"
+                  resultMetaStyle={{ fontSize: "inherit", lineHeight: 1.2 }}
+                  emptyStateClassName="px-3 py-3 text-[#8C929C]"
+                  emptyStateStyle={{ fontSize: "inherit", lineHeight: 1.2 }}
                 />
-              </div>
-              <div>
-                <Label className={MODAL_LABEL_CLASS}>Org.nr</Label>
+              </DesignLabModalField>
+              <DesignLabModalField>
+                <DesignLabModalLabel>Org.nr</DesignLabModalLabel>
                 <OrgNrInput
                   value={form.org_number}
                   onChange={(org_number) => setForm((f) => ({ ...f, org_number }))}
                   onLookup={(name, city) => setForm((f) => ({ ...f, name: name || f.name, city: city || f.city }))}
-                  className={MODAL_INPUT_CLASS}
+                  className="focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] focus-visible:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]"
+                  style={getDesignLabModalInputStyle(modalScale)}
                 />
-              </div>
-              <div>
-                <Label className={MODAL_LABEL_CLASS}>Geografisk sted</Label>
-                <div className="space-y-2">
+              </DesignLabModalField>
+              <DesignLabModalField>
+                <DesignLabModalLabel>Geografisk sted</DesignLabModalLabel>
+                <div style={{ display: "grid", rowGap: "var(--dl-modal-chip-gap)" }}>
                   {locations.map((loc, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <Input
+                      <DesignLabModalInput
                         value={loc}
                         onChange={(e) => {
                           const next = [...locations];
@@ -550,123 +559,92 @@ const Companies = () => {
                           setLocations(next);
                         }}
                         placeholder="By eller sted"
-                        className={`flex-1 ${MODAL_INPUT_CLASS}`}
+                        style={{ flex: 1 }}
                       />
                       {locations.length > 1 && (
                         <button
                           type="button"
                           onClick={() => setLocations(locations.filter((_, j) => j !== i))}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-[6px] text-[#8C929C] transition-colors hover:bg-[#F0F2F6] hover:text-[#1A1C1F]"
+                          className="inline-flex items-center justify-center rounded-[6px] text-[#8C929C] transition-colors hover:bg-[#F0F2F6] hover:text-[#1A1C1F]"
+                          style={{ width: modalScale.controlHeight, height: modalScale.controlHeight }}
                         >
                           <X className="h-4 w-4" />
                         </button>
                       )}
                     </div>
                   ))}
-                  <DesignLabActionButton
-                    type="button"
-                    onClick={() => setLocations([...locations, ""])}
-                    variant="secondary"
-                    style={{ width: "100%" }}
-                  >
+                  <DesignLabModalInlineAction type="button" onClick={() => setLocations([...locations, ""])}>
                     <Plus className="h-3.5 w-3.5" />
                     Legg til sted
-                  </DesignLabActionButton>
+                  </DesignLabModalInlineAction>
                 </div>
-              </div>
-              <div>
-                <Label className={MODAL_LABEL_CLASS}>Nettside</Label>
-                <Input
+              </DesignLabModalField>
+              <DesignLabModalField>
+                <DesignLabModalLabel>Nettside</DesignLabModalLabel>
+                <DesignLabModalInput
                   value={form.website}
                   onChange={(e) => setForm((prev) => ({ ...prev, website: e.target.value }))}
                   placeholder="https://"
-                  className={MODAL_INPUT_CLASS}
                   type="url"
                 />
-              </div>
-              <div>
-                <Label className={MODAL_LABEL_CLASS}>LinkedIn</Label>
-                <Input
+              </DesignLabModalField>
+              <DesignLabModalField>
+                <DesignLabModalLabel>LinkedIn</DesignLabModalLabel>
+                <DesignLabModalInput
                   value={form.linkedin}
                   onChange={(e) => setForm((prev) => ({ ...prev, linkedin: e.target.value }))}
                   placeholder="https://linkedin.com/company/..."
-                  className={MODAL_INPUT_CLASS}
                   type="url"
                 />
-              </div>
-              <div>
-                <Label className={MODAL_LABEL_CLASS}>Type</Label>
-                <div className="flex flex-wrap gap-1.5">
+              </DesignLabModalField>
+              <DesignLabModalField>
+                <DesignLabModalLabel>Type</DesignLabModalLabel>
+                <DesignLabModalChipGroup>
                   {TYPE_OPTIONS.map((option) => (
                     <DesignLabFilterButton
                       key={option.value}
                       type="button"
                       onClick={() => setForm((prev) => ({ ...prev, status: option.value }))}
                       active={form.status === option.value}
-                      activeColors={{
-                        background: "#E8ECF5",
-                        color: "#1A1C1F",
-                        border: "1px solid #C5CBE8",
-                        fontWeight: 600,
-                      }}
-                      inactiveColors={{
-                        background: "transparent",
-                        color: "#5C636E",
-                        border: "1px solid #DDE0E7",
-                        fontWeight: 500,
-                      }}
-                      inactiveHoverColors={{
-                        background: "#F8F9FB",
-                        color: "#1A1C1F",
-                        border: "1px solid #DDE0E7",
-                      }}
+                      activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                      inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                      inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
                     >
                       {option.label}
                     </DesignLabFilterButton>
                   ))}
-                </div>
-              </div>
+                </DesignLabModalChipGroup>
+              </DesignLabModalField>
               {ownerList.length > 0 && (
-                <div>
-                  <Label className={MODAL_LABEL_CLASS}>Eier</Label>
-                  <div className="flex flex-wrap gap-1.5">
+                <DesignLabModalField>
+                  <DesignLabModalLabel>Eier</DesignLabModalLabel>
+                  <DesignLabModalChipGroup>
                     {ownerList.map(([id, name]) => (
                       <DesignLabFilterButton
                         key={id}
                         type="button"
-                        onClick={() =>
-                          setForm((prev) => ({ ...prev, owner_id: prev.owner_id === id ? "" : id }))
-                        }
+                        onClick={() => setForm((prev) => ({ ...prev, owner_id: prev.owner_id === id ? "" : id }))}
                         active={form.owner_id === id}
-                        activeColors={{
-                          background: "#E8ECF5",
-                          color: "#1A1C1F",
-                          border: "1px solid #C5CBE8",
-                          fontWeight: 600,
-                        }}
-                        inactiveColors={{
-                          background: "transparent",
-                          color: "#5C636E",
-                          border: "1px solid #DDE0E7",
-                          fontWeight: 500,
-                        }}
-                        inactiveHoverColors={{
-                          background: "#F8F9FB",
-                          color: "#1A1C1F",
-                          border: "1px solid #DDE0E7",
-                        }}
+                        activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                        inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                        inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
                       >
                         {name}
                       </DesignLabFilterButton>
                     ))}
-                  </div>
-                </div>
+                  </DesignLabModalChipGroup>
+                </DesignLabModalField>
               )}
-              <DesignLabActionButton type="submit" variant="primary" style={{ width: "100%", marginTop: 12 }} disabled={createMutation.isPending}>
-                {createMutation.isPending ? "Oppretter..." : "Opprett"}
-              </DesignLabActionButton>
-            </form>
-          </DialogContent>
+              <DesignLabModalActions>
+                <DesignLabPrimaryAction type="submit" disabled={createMutation.isPending}>
+                  {createMutation.isPending ? "Oppretter..." : "Opprett"}
+                </DesignLabPrimaryAction>
+                <DesignLabGhostAction type="button" onClick={() => handleDialogOpenChange(false)}>
+                  Avbryt
+                </DesignLabGhostAction>
+              </DesignLabModalActions>
+            </DesignLabModalForm>
+          </DesignLabModalContent>
         </Dialog>
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

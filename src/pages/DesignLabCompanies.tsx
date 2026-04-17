@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import type { CSSProperties } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { CompanyCardContent } from "@/components/CompanyCardContent";
@@ -158,6 +158,7 @@ function OrgNrInput({
 
 export default function DesignLabCompanies() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { signOut, user } = useAuth();
   const queryClient = useQueryClient();
   const modalScale = useDesignLabModalScale();
@@ -166,7 +167,8 @@ export default function DesignLabCompanies() {
   const [ownerFilter, setOwnerFilter] = useState("Alle");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "name", dir: "asc" });
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(searchParams.get("company"));
+  const prefillCompanyName = searchParams.get("ny")?.trim() || "";
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState({
     name: "",
@@ -179,6 +181,43 @@ export default function DesignLabCompanies() {
   });
   const [createLocations, setCreateLocations] = useState<string[]>([""]);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const companyFromUrl = searchParams.get("company");
+    if (companyFromUrl !== selectedId) {
+      setSelectedId(companyFromUrl);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const currentCompany = searchParams.get("company");
+    if (selectedId) {
+      if (currentCompany !== selectedId) {
+        setSearchParams({ company: selectedId }, { replace: true });
+      }
+    } else if (currentCompany !== null) {
+      setSearchParams({}, { replace: true });
+    }
+  }, [selectedId, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (!prefillCompanyName) return;
+    setCreateOpen(true);
+    setCreateForm((prev) =>
+      prev.name === prefillCompanyName
+        ? prev
+        : {
+            name: prefillCompanyName,
+            org_number: "",
+            city: "",
+            website: "",
+            linkedin: "",
+            status: "prospect",
+            owner_id: "",
+          },
+    );
+    setCreateLocations([""]);
+  }, [prefillCompanyName]);
 
   // ── Data query (same pattern as Companies.tsx) ──
   const { data: companies = [], isLoading } = useQuery({
@@ -322,6 +361,11 @@ export default function DesignLabCompanies() {
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
       setCreateOpen(false);
       resetCreateForm();
+      if (prefillCompanyName) {
+        const nextParams = new URLSearchParams(searchParams);
+        nextParams.delete("ny");
+        setSearchParams(nextParams, { replace: true });
+      }
       toast.success("Selskap opprettet");
     },
     onError: () => {
@@ -531,7 +575,7 @@ export default function DesignLabCompanies() {
                         techDna: true,
                         notes: true,
                       }}
-                      onNavigateToFullPage={() => navigate(`/selskaper/${selectedId}`)}
+                      onNavigateToFullPage={() => navigate(`/design-lab/selskaper?company=${selectedId}`)}
                     />
                   </div>
                 </div>
@@ -553,7 +597,14 @@ export default function DesignLabCompanies() {
         open={createOpen}
         onOpenChange={(nextOpen) => {
           setCreateOpen(nextOpen);
-          if (!nextOpen && !createMutation.isPending) resetCreateForm();
+          if (!nextOpen) {
+            if (!createMutation.isPending) resetCreateForm();
+            if (prefillCompanyName) {
+              const nextParams = new URLSearchParams(searchParams);
+              nextParams.delete("ny");
+              setSearchParams(nextParams, { replace: true });
+            }
+          }
         }}
       >
         <DesignLabModalContent title="Nytt selskap">
@@ -576,6 +627,7 @@ export default function DesignLabCompanies() {
                     city: result.city,
                   }))
                 }
+                showSearchIcon={false}
                 inputClassName="focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#5E6AD2] focus-visible:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]"
                 inputStyle={getDesignLabModalInputStyle(modalScale)}
                 dropdownClassName="rounded-[8px] border-[#E8EAEE] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
@@ -705,6 +757,11 @@ export default function DesignLabCompanies() {
                 onClick={() => {
                   setCreateOpen(false);
                   if (!createMutation.isPending) resetCreateForm();
+                  if (prefillCompanyName) {
+                    const nextParams = new URLSearchParams(searchParams);
+                    nextParams.delete("ny");
+                    setSearchParams(nextParams, { replace: true });
+                  }
                 }}
               >
                 Avbryt

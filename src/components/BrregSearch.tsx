@@ -21,6 +21,7 @@ interface BrregSearchProps {
   onChange: (name: string) => void;
   onSelect: (result: { name: string; org_number: string; city: string }) => void;
   placeholder?: string;
+  showSearchIcon?: boolean;
   inputClassName?: string;
   inputStyle?: CSSProperties;
   dropdownClassName?: string;
@@ -64,6 +65,7 @@ export const BrregSearch = ({
   onChange,
   onSelect,
   placeholder = "Søk etter selskap...",
+  showSearchIcon = true,
   inputClassName,
   inputStyle,
   dropdownClassName,
@@ -141,14 +143,16 @@ export const BrregSearch = ({
   return (
     <div ref={containerRef} className="relative">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+        {showSearchIcon && (
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+        )}
         <Input
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => { if (results.length > 0 || noResults) setShowDropdown(true); }}
           required
           placeholder={placeholder}
-          className={cn("h-10 rounded-lg pl-9 pr-9", inputClassName)}
+          className={cn("h-10 rounded-lg pr-9", showSearchIcon ? "pl-9" : undefined, inputClassName)}
           style={inputStyle}
         />
         {loading && (

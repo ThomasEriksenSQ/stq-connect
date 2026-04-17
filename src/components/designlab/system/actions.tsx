@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
 type ActionProps = ComponentPropsWithoutRef<typeof DesignLabActionButton>;
 
 const DESIGN_LAB_V2_ACTION_STYLE: CSSProperties = {
-  height: 32,
-  fontSize: 12,
+  height: "var(--dl-action-height, 32px)",
+  fontSize: "var(--dl-action-font-size, 12px)",
   fontWeight: 500,
 };
 
@@ -66,7 +66,7 @@ export function DesignLabInlineTextAction({
         padding: "4px 6px",
         borderRadius: 4,
         border: "none",
-        fontSize: 12,
+        fontSize: "var(--dl-modal-inline-action-font-size, 12px)",
         fontFamily: "inherit",
         fontWeight: 500,
         background: "transparent",

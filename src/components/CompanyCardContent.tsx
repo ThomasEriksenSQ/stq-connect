@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { DescriptionText } from "@/components/DescriptionText";
 import { MergeCompanyDialog } from "@/components/company/MergeCompanyDialog";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useConsultantCache } from "@/hooks/useConsultantCache";
@@ -238,6 +238,12 @@ export function CompanyCardContent({
   defaultHidden,
 }: CompanyCardContentProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const inDesignLab = location.pathname.startsWith("/design-lab");
+  const getContactHref = (contactId: string) =>
+    inDesignLab ? `/design-lab/kontakter?contact=${contactId}` : `/kontakter/${contactId}`;
+  const getCompanyHref = (targetCompanyId: string) =>
+    inDesignLab ? `/design-lab/selskaper?company=${targetCompanyId}` : `/selskaper/${targetCompanyId}`;
   const queryClient = useQueryClient();
   const { interne: cachedInterne, eksterne: cachedEksterne } = useConsultantCache();
   const [editingNotes, setEditingNotes] = useState(false);
@@ -944,7 +950,7 @@ export function CompanyCardContent({
                   key={task.id}
                   className="flex items-start gap-2.5 py-2.5 px-1 rounded-md transition-all duration-200 group hover:bg-background/60 cursor-pointer"
                   onClick={() => {
-                    if (task.contact_id) navigate(`/kontakter/${task.contact_id}`);
+                    if (task.contact_id) navigate(getContactHref(task.contact_id));
                   }}
                 >
                   <div onClick={(e) => e.stopPropagation()}>
@@ -958,7 +964,7 @@ export function CompanyCardContent({
                     <div className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</div>
                     {contactName && (
                       <a
-                        href={`/kontakter/${task.contact_id}`}
+                        href={task.contact_id ? getContactHref(task.contact_id) : undefined}
                         onClick={(e) => e.stopPropagation()}
                         className="text-[0.8125rem] font-semibold text-blue-600 hover:underline block mt-0.5"
                       >
@@ -1231,7 +1237,7 @@ export function CompanyCardContent({
                     onOpenContact(c.id);
                     return;
                   }
-                  navigate(`/kontakter/${c.id}`);
+                  navigate(getContactHref(c.id));
                 }}
               >
                 <div className="flex items-start gap-2">
@@ -1618,7 +1624,7 @@ export function CompanyCardContent({
                 setEditCompanyOpen(false);
                 setMergeCompanyDialogOpen(false);
                 queryClient.invalidateQueries();
-                navigate(`/selskaper/${targetCompanyId}`);
+                navigate(getCompanyHref(targetCompanyId));
               }}
             />
             {editable && (
@@ -2121,7 +2127,7 @@ function CompanyActivityRow({
 
               {contactName && (
                 <a
-                  href={`/kontakter/${activity.contact_id}`}
+                  href={activity.contact_id ? getContactHref(activity.contact_id) : undefined}
                   onClick={(e) => e.stopPropagation()}
                   className="text-[0.8125rem] font-semibold text-blue-600 hover:underline block mt-0.5"
                 >

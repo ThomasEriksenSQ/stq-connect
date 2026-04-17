@@ -97,15 +97,20 @@ function techColor(index: number) {
   return CHART_COLORS[index % CHART_COLORS.length];
 }
 
-function companyRoute(company: CompanyRef | null) {
-  return company ? `/selskaper/${company.id}` : null;
+function companyRoute(company: CompanyRef | null, designLabMode = false) {
+  return company ? (designLabMode ? `/design-lab/selskaper?company=${company.id}` : `/selskaper/${company.id}`) : null;
 }
 
-function createCompanyRoute(name: string) {
-  return `/selskaper?ny=${encodeURIComponent(name)}`;
+function createCompanyRoute(name: string, designLabMode = false) {
+  return `${designLabMode ? "/design-lab/selskaper" : "/selskaper"}?ny=${encodeURIComponent(name)}`;
 }
 
-export default function Markedsradar() {
+interface MarkedsradarProps {
+  hidePageIntro?: boolean;
+  designLabMode?: boolean;
+}
+
+export default function Markedsradar({ hidePageIntro = false, designLabMode = false }: MarkedsradarProps = {}) {
   const navigate = useNavigate();
   const [importOpen, setImportOpen] = useState(false);
 
@@ -161,7 +166,7 @@ export default function Markedsradar() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-[1.5rem] font-bold text-foreground">Markedsradar</h1>
+          {!hidePageIntro && <h1 className="text-[1.5rem] font-bold text-foreground">Markedsradar</h1>}
           <p className="text-[0.8125rem] text-muted-foreground">
             Handlingsrettet oversikt over Finn-importerte selskaper, teknologier og kontaktpunkter.
           </p>
@@ -180,15 +185,15 @@ export default function Markedsradar() {
         </TabsList>
 
         <TabsContent value="radar">
-          <RadarTab market={market} navigate={navigate} />
+          <RadarTab market={market} navigate={navigate} designLabMode={designLabMode} />
         </TabsContent>
 
         <TabsContent value="annonser">
-          <AnnonserTab annonser={annonser} market={market} findCompany={findCompany} navigate={navigate} />
+          <AnnonserTab annonser={annonser} market={market} findCompany={findCompany} navigate={navigate} designLabMode={designLabMode} />
         </TabsContent>
 
         <TabsContent value="ai">
-          <AIAnalyseTab annonser={annonser} market={market} currentWeek={currentWeek} findCompany={findCompany} />
+          <AIAnalyseTab annonser={annonser} market={market} currentWeek={currentWeek} findCompany={findCompany} designLabMode={designLabMode} />
         </TabsContent>
       </Tabs>
 
@@ -200,12 +205,20 @@ export default function Markedsradar() {
 function RadarTab({
   market,
   navigate,
+  designLabMode,
 }: {
   market: ReturnType<typeof buildMarketRadar>;
   navigate: ReturnType<typeof useNavigate>;
+  designLabMode?: boolean;
 }) {
   const [crmFilter, setCrmFilter] = useState<"alle" | "crm" | "ikke_crm">("alle");
   const [techFilter, setTechFilter] = useState<string>("alle");
+  const openCompany = useCallback(
+    (company: CompanyRef | null, fallbackName: string) => {
+      navigate(company ? companyRoute(company, designLabMode)! : createCompanyRoute(fallbackName, designLabMode));
+    },
+    [designLabMode, navigate],
+  );
 
   const filteredCompanies = useMemo(() => {
     let rows = market.companies;
@@ -322,9 +335,7 @@ function RadarTab({
                 {selectedTechCompanies.slice(0, 5).map((company) => (
                   <button
                     key={company.key}
-                    onClick={() =>
-                      navigate(company.company ? companyRoute(company.company)! : createCompanyRoute(company.name))
-                    }
+                    onClick={() => openCompany(company.company, company.name)}
                     className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-background px-3 py-1.5 text-[0.75rem] text-foreground hover:bg-secondary"
                   >
                     {!company.inCrm && <Plus className="h-3 w-3" />}
@@ -337,7 +348,7 @@ function RadarTab({
         </Card>
       )}
 
-      <div className="space-y-6">
+      <div className={cn("space-y-6", designLabMode && "xl:grid xl:grid-cols-3 xl:gap-6 xl:space-y-0 xl:items-start")}>
         {/* 1. Selskaper med sterkest signal */}
         <Card>
           <CardContent className="pt-5 pb-4">
@@ -367,11 +378,7 @@ function RadarTab({
                           </span>
                           <div className="min-w-0 flex-1">
                             <button
-                              onClick={() => {
-                                if (company.company) {
-                                  navigate(`/companies/${company.company.id}`);
-                                }
-                              }}
+                              onClick={() => openCompany(company.company, company.name)}
                               className="text-[0.9375rem] font-bold text-foreground hover:text-primary transition-colors text-left truncate max-w-full block"
                             >
                               {company.name}
@@ -440,11 +447,7 @@ function RadarTab({
                         {contact.role && <span className="text-[0.75rem] text-muted-foreground">· {contact.role}</span>}
                       </div>
                       <button
-                        onClick={() =>
-                          navigate(
-                            contact.company ? companyRoute(contact.company)! : createCompanyRoute(contact.companyName),
-                          )
-                        }
+                        onClick={() => openCompany(contact.company, contact.companyName)}
                         className="text-[0.75rem] text-primary hover:underline"
                       >
                         {contact.companyName}
@@ -564,7 +567,7 @@ function RadarTab({
 
             <div className="space-y-3">
               {filteredCompanies.slice(0, 14).map((company) => (
-                <PriorityCompanyCard key={company.key} company={company} navigate={navigate} />
+                <PriorityCompanyCard key={company.key} company={company} navigate={navigate} designLabMode={designLabMode} />
               ))}
               {filteredCompanies.length === 0 && (
                 <p className="text-[0.8125rem] text-muted-foreground py-8 text-center">
@@ -601,7 +604,7 @@ function RadarTab({
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => navigate(createCompanyRoute(company.name))}
+                    onClick={() => navigate(createCompanyRoute(company.name, designLabMode))}
                     className="gap-1.5 shrink-0"
                   >
                     <Plus className="h-3.5 w-3.5" />
@@ -623,9 +626,11 @@ function RadarTab({
 function PriorityCompanyCard({
   company,
   navigate,
+  designLabMode,
 }: {
   company: RadarCompany;
   navigate: ReturnType<typeof useNavigate>;
+  designLabMode?: boolean;
 }) {
   const bestContact = company.contacts[0];
   const actionText =
@@ -641,9 +646,7 @@ function PriorityCompanyCard({
         <div className="space-y-3 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() =>
-                navigate(company.company ? companyRoute(company.company)! : createCompanyRoute(company.name))
-              }
+              onClick={() => navigate(company.company ? companyRoute(company.company, designLabMode)! : createCompanyRoute(company.name, designLabMode))}
               className="text-[1rem] font-semibold text-foreground hover:text-primary text-left"
             >
               {company.name}
@@ -697,9 +700,7 @@ function PriorityCompanyCard({
         <div className="flex flex-wrap gap-2 shrink-0">
           <Button
             variant={company.primaryAction === "create_company" ? "default" : "outline"}
-            onClick={() =>
-              navigate(company.company ? companyRoute(company.company)! : createCompanyRoute(company.name))
-            }
+            onClick={() => navigate(company.company ? companyRoute(company.company, designLabMode)! : createCompanyRoute(company.name, designLabMode))}
           >
             {actionText}
           </Button>
@@ -744,11 +745,13 @@ function AnnonserTab({
   market,
   findCompany,
   navigate,
+  designLabMode,
 }: {
   annonser: FinnAnnonse[];
   market: ReturnType<typeof buildMarketRadar>;
   findCompany: (name: string | null) => CompanyRef | null;
   navigate: ReturnType<typeof useNavigate>;
+  designLabMode?: boolean;
 }) {
   const [search, setSearch] = useState("");
   const [weekFilter, setWeekFilter] = useState<string>("alle");
@@ -756,6 +759,12 @@ function AnnonserTab({
   const [crmFilter, setCrmFilter] = useState<"alle" | "crm" | "ikke_crm">("alle");
   const [page, setPage] = useState(0);
   const PER_PAGE = 25;
+  const openCompany = useCallback(
+    (company: CompanyRef | null, fallbackName: string) => {
+      navigate(company ? companyRoute(company, designLabMode)! : createCompanyRoute(fallbackName, designLabMode));
+    },
+    [designLabMode, navigate],
+  );
 
   const allWeeks = useMemo(() => {
     const weeks = [...new Set(annonser.map((ad) => ad.uke).filter(Boolean))] as string[];
@@ -887,9 +896,7 @@ function AnnonserTab({
                           "text-[0.9375rem] font-semibold text-left",
                           company ? "text-primary hover:underline" : "text-foreground",
                         )}
-                        onClick={() =>
-                          navigate(company ? companyRoute(company)! : createCompanyRoute(annonse.selskap || ""))
-                        }
+                        onClick={() => openCompany(company, annonse.selskap || "")}
                       >
                         {annonse.selskap}
                       </button>
@@ -903,9 +910,7 @@ function AnnonserTab({
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() =>
-                        navigate(company ? companyRoute(company)! : createCompanyRoute(annonse.selskap || ""))
-                      }
+                      onClick={() => openCompany(company, annonse.selskap || "")}
                     >
                       {company ? <Building2 className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                     </Button>
@@ -997,9 +1002,7 @@ function AnnonserTab({
                           "text-[0.8125rem] font-medium text-left",
                           company ? "text-primary hover:underline" : "text-foreground",
                         )}
-                        onClick={() =>
-                          navigate(company ? companyRoute(company)! : createCompanyRoute(annonse.selskap || ""))
-                        }
+                        onClick={() => openCompany(company, annonse.selskap || "")}
                       >
                         {annonse.selskap}
                       </button>
@@ -1048,9 +1051,7 @@ function AnnonserTab({
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7"
-                        onClick={() =>
-                          navigate(company ? companyRoute(company)! : createCompanyRoute(annonse.selskap || ""))
-                        }
+                        onClick={() => openCompany(company, annonse.selskap || "")}
                       >
                         {company ? <Building2 className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
                       </Button>
@@ -1092,17 +1093,25 @@ function AIAnalyseTab({
   market,
   currentWeek,
   findCompany,
+  designLabMode,
 }: {
   annonser: FinnAnnonse[];
   market: ReturnType<typeof buildMarketRadar>;
   currentWeek: string;
   findCompany: (name: string | null) => CompanyRef | null;
+  designLabMode?: boolean;
 }) {
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const openCompany = useCallback(
+    (company: CompanyRef | null, fallbackName: string) => {
+      navigate(company ? companyRoute(company, designLabMode)! : createCompanyRoute(fallbackName, designLabMode));
+    },
+    [designLabMode, navigate],
+  );
 
   const generateAnalysis = async () => {
     setLoading(true);
@@ -1248,7 +1257,7 @@ function AIAnalyseTab({
                 <Button
                   variant="ghost"
                   className="px-0 h-auto text-[0.8125rem] text-primary hover:text-primary"
-                  onClick={() => navigate(company ? companyRoute(company)! : createCompanyRoute(block.title))}
+                  onClick={() => openCompany(company, block.title)}
                 >
                   {company ? "Åpne i CRM" : "Opprett i CRM"}
                 </Button>
@@ -1278,7 +1287,7 @@ function AIAnalyseTab({
           return (
             <button
               key={name}
-              onClick={() => navigate(company ? companyRoute(company)! : createCompanyRoute(name))}
+              onClick={() => openCompany(company, name)}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[0.8125rem] font-medium transition-colors",
                 company

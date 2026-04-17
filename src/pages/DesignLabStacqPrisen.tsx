@@ -8,10 +8,6 @@ import { calcStacqPris } from "@/lib/stacqPris";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  ArrowUpDown, TrendingUp,
-  Search,
-} from "lucide-react";
-import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip as ReTooltip, ResponsiveContainer, ReferenceLine,
 } from "recharts";
@@ -59,13 +55,6 @@ function stacqColorV8(timePris: number): string {
   if (timePris >= 350) return C.success;
   if (timePris >= 250) return C.warning;
   return C.textFaint;
-}
-
-function getKundeTypeLabel(companyStatus: string | null): string {
-  if (companyStatus === "partner") return "Partner";
-  if (companyStatus === "customer" || companyStatus === "kunde") return "Kunde";
-  if (companyStatus === "prospect") return "Potensiell";
-  return "Direkte";
 }
 
 function computeOppdragStatus(r: any): string {
@@ -200,136 +189,150 @@ export default function DesignLabStacqPrisen() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto" style={{ padding: "24px 24px 48px" }}>
-          <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-
-          {/* Stat line */}
-          <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 20 }}>
-            <span style={{ fontWeight: 600, color: C.text }}>kr {formatKr(Math.round(stacqTotalPerTime))}/t</span>
-            {" · "}
-            {aktive.length} konsulenter
-            {" · "}
-            snitt {formatKr(Math.round(avgPrisPerTime))}/t
-            {" · "}
-            <span style={{ color: C.warning }}>+{formatKr(Math.round(oppstartTotalPerTime))} oppstart</span>
-            {" · "}
-            {formatKr(Math.round(monthlyTotal))}/mnd ({format(now, "MMMM", { locale: nb })})
-          </p>
-
-          {/* Chart */}
-          <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, background: C.surface, padding: 20, marginBottom: 24 }}>
-            <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted, marginBottom: 16 }}>
-              STACQ Prisen — ukentlig utvikling
-            </p>
-            <div style={{ height: 240 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="stacqGradV8" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={C.accent} stopOpacity={0.2} />
-                      <stop offset="95%" stopColor={C.accent} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={C.borderLight} />
-                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: C.textFaint }} stroke={C.border} />
-                  <YAxis tick={{ fontSize: 11, fill: C.textFaint }} stroke={C.border} tickFormatter={(v) => `${v}`} />
-                  <ReTooltip
-                    contentStyle={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, color: C.text }}
-                    formatter={(value: number) => [`kr ${formatKr(value)} / time`, "STACQ Pris"]}
-                  />
-                  <ReferenceLine y={5000} stroke={C.warning} strokeDasharray="6 4" label={{ value: "Mål: 5 000", position: "right", fontSize: 11, fill: C.warning }} />
-                  <Area type="monotone" dataKey="value" stroke={C.accent} strokeWidth={2} fill="url(#stacqGradV8)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-            {mangler5000 > 0 && (
-              <p style={{ fontSize: 13, color: C.textMuted, marginTop: 12 }}>
-                Neste milepæl: <span style={{ fontWeight: 500, color: C.text }}>kr 5 000/time</span> — mangler{" "}
-                <span style={{ fontWeight: 500, color: C.warning }}>kr {formatKr(Math.round(mangler5000))}/time</span>
+          <div className="flex flex-col gap-6 2xl:grid 2xl:grid-cols-[minmax(0,1fr)_420px] 2xl:items-start" style={{ maxWidth: 1680, margin: "0 auto" }}>
+            <div className="order-2 min-w-0 w-full 2xl:order-1">
+              <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted, marginBottom: 10 }}>
+                Bidrag per konsulent
               </p>
-            )}
-          </div>
 
-          {/* Table */}
-          <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted, marginBottom: 10 }}>
-            Bidrag per konsulent
-          </p>
-
-          {isLoading ? (
-            <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster…</div>
-          ) : (
-            <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden", background: C.surface }}>
-              {/* Table header */}
-              <div
-                className="grid items-center"
-                style={{
-                  gridTemplateColumns: "minmax(0,2fr) minmax(0,1.5fr) 80px 80px 80px 100px 56px 80px",
-                  height: 34, paddingInline: 16, borderBottom: `1px solid ${C.border}`, background: C.surfaceAlt,
-                }}
-              >
-                <DesignLabColumnHeader label="Konsulent" field="kandidat" sort={sort} onSort={toggleSort} />
-                <DesignLabColumnHeader label="Kunde" field="kunde" sort={sort} onSort={toggleSort} />
-                <span style={thStyle}>Type</span>
-                <DesignLabColumnHeader label="Utpris" field="utpris" sort={sort} onSort={toggleSort} />
-                <span style={thStyle}>Ekstra</span>
-                <DesignLabColumnHeader label="STACQ Pris" field="stacq" sort={sort} onSort={toggleSort} />
-                <span style={{ ...thStyle, textAlign: "right" }}>%</span>
-                <span style={{ ...thStyle, textAlign: "right" }}>Status</span>
-              </div>
-
-              {/* Rows */}
-              {sorted.map((row) => {
-                const pct = row.utpris ? (row.stacqPris / row.utpris) * 100 : 0;
-                const cs = row.selskap_id ? companyStatusMap[row.selskap_id] : null;
-                const priceColor = stacqColorV8(row.stacqPris);
-                return (
+              {isLoading ? (
+                <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster…</div>
+              ) : (
+                <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden", background: C.surface }}>
                   <div
-                    key={row.id}
-                    onClick={() => setEditRow(row)}
-                    className="grid items-center cursor-pointer"
+                    className="grid items-center"
+                    style={{
+                      gridTemplateColumns: "minmax(0,2fr) minmax(0,1.5fr) 80px 80px 80px 100px 56px 80px",
+                      height: 34, paddingInline: 16, borderBottom: `1px solid ${C.border}`, background: C.surfaceAlt,
+                    }}
+                  >
+                    <DesignLabColumnHeader label="Konsulent" field="kandidat" sort={sort} onSort={toggleSort} />
+                    <DesignLabColumnHeader label="Kunde" field="kunde" sort={sort} onSort={toggleSort} />
+                    <span style={thStyle}>Type</span>
+                    <DesignLabColumnHeader label="Utpris" field="utpris" sort={sort} onSort={toggleSort} />
+                    <span style={thStyle}>Ekstra</span>
+                    <DesignLabColumnHeader label="STACQ Pris" field="stacq" sort={sort} onSort={toggleSort} />
+                    <span style={{ ...thStyle, textAlign: "right" }}>%</span>
+                    <span style={{ ...thStyle, textAlign: "right" }}>Status</span>
+                  </div>
+
+                  {sorted.map((row) => {
+                    const pct = row.utpris ? (row.stacqPris / row.utpris) * 100 : 0;
+                    const cs = row.selskap_id ? companyStatusMap[row.selskap_id] : null;
+                    const priceColor = stacqColorV8(row.stacqPris);
+                    return (
+                      <div
+                        key={row.id}
+                        onClick={() => setEditRow(row)}
+                        className="grid items-center cursor-pointer"
+                        style={{
+                          gridTemplateColumns: "minmax(0,2fr) minmax(0,1.5fr) 80px 80px 80px 100px 56px 80px",
+                          minHeight: 40, paddingInline: 16,
+                          borderBottom: `1px solid ${C.borderLight}`,
+                          transition: "background 50ms",
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}
+                      >
+                        <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{row.kandidat}</span>
+                        <span className="truncate" style={{ fontSize: 13, color: C.textMuted }}>{row.kunde || "–"}</span>
+                        <span><TypeBadge status={cs} /></span>
+                        <span style={{ fontSize: 13, color: C.textMuted }}>{row.utpris ?? "–"}</span>
+                        <span style={{ fontSize: 13 }}>
+                          {(row.ekstra_kostnad ?? 0) > 0
+                            ? <span style={{ color: C.danger }}>−{row.ekstra_kostnad}</span>
+                            : <span style={{ color: C.textFaint }}>–</span>}
+                        </span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: priceColor }}>kr {formatKr(Math.round(row.stacqPris))}</span>
+                        <span style={{ fontSize: 13, textAlign: "right", color: priceColor }}>{Math.round(pct)}%</span>
+                        <div className="flex justify-end">
+                          <StatusBadge status={row.status} />
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  <div
+                    className="grid items-center"
                     style={{
                       gridTemplateColumns: "minmax(0,2fr) minmax(0,1.5fr) 80px 80px 80px 100px 56px 80px",
                       minHeight: 40, paddingInline: 16,
-                      borderBottom: `1px solid ${C.borderLight}`,
-                      transition: "background 50ms",
+                      background: C.surfaceAlt, fontWeight: 600,
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}
                   >
-                    <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{row.kandidat}</span>
-                    <span className="truncate" style={{ fontSize: 13, color: C.textMuted }}>{row.kunde || "–"}</span>
-                    <span><TypeBadge status={cs} /></span>
-                    <span style={{ fontSize: 13, color: C.textMuted }}>{row.utpris ?? "–"}</span>
-                    <span style={{ fontSize: 13 }}>
-                      {(row.ekstra_kostnad ?? 0) > 0
-                        ? <span style={{ color: C.danger }}>−{row.ekstra_kostnad}</span>
-                        : <span style={{ color: C.textFaint }}>–</span>}
-                    </span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: priceColor }}>kr {formatKr(Math.round(row.stacqPris))}</span>
-                    <span style={{ fontSize: 13, textAlign: "right", color: priceColor }}>{Math.round(pct)}%</span>
-                    <div className="flex justify-end">
-                      <StatusBadge status={row.status} />
-                    </div>
+                    <span style={{ fontSize: 13, color: C.text }}>TOTAL</span>
+                    <span /><span /><span /><span />
+                    <span style={{ fontSize: 13, color: C.accent }}>kr {formatKr(Math.round(stacqTotalPerTime + oppstartTotalPerTime))}/t</span>
+                    <span style={{ fontSize: 13, textAlign: "right", color: C.textMuted }}>{Math.round(totalPct)}%</span>
+                    <span />
                   </div>
-                );
-              })}
-
-              {/* Total row */}
-              <div
-                className="grid items-center"
-                style={{
-                  gridTemplateColumns: "minmax(0,2fr) minmax(0,1.5fr) 80px 80px 80px 100px 56px 80px",
-                  minHeight: 40, paddingInline: 16,
-                  background: C.surfaceAlt, fontWeight: 600,
-                }}
-              >
-                <span style={{ fontSize: 13, color: C.text }}>TOTAL</span>
-                <span /><span /><span /><span />
-                <span style={{ fontSize: 13, color: C.accent }}>kr {formatKr(Math.round(stacqTotalPerTime + oppstartTotalPerTime))}/t</span>
-                <span style={{ fontSize: 13, textAlign: "right", color: C.textMuted }}>{Math.round(totalPct)}%</span>
-                <span />
-              </div>
+                </div>
+              )}
             </div>
-          )}
+
+            <aside className="order-1 w-full space-y-6 2xl:sticky 2xl:top-6 2xl:order-2">
+              <div className="grid grid-cols-2 gap-3">
+                <TopStatCard
+                  label="STACQ Prisen / time"
+                  value={`kr ${formatKr(Math.round(stacqTotalPerTime))}`}
+                  sub={`${aktive.length} konsulenter i oppdrag`}
+                  accent="emerald"
+                  suffix="/ time"
+                />
+                <TopStatCard
+                  label="STACQ Prisen / mnd"
+                  value={`kr ${formatKr(Math.round(monthlyTotal))}`}
+                  sub={`${workdayCount} arbeidsdager · ${format(now, "MMMM yyyy", { locale: nb })}`}
+                  suffix="/ mnd"
+                />
+                <TopStatCard
+                  label="Snitt per konsulent"
+                  value={`kr ${formatKr(Math.round(avgPrisPerTime))}`}
+                  sub="gjennomsnitt"
+                  suffix="/ time"
+                />
+                <TopStatCard
+                  label="Oppstart"
+                  value={`+ kr ${formatKr(Math.round(oppstartTotalPerTime))}`}
+                  sub={`${oppstart.length} konsulenter kommer snart`}
+                  accent="amber"
+                  suffix="/ time"
+                />
+              </div>
+
+              <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, background: C.surface, padding: 20 }}>
+                <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted, marginBottom: 16 }}>
+                  STACQ Prisen — ukentlig utvikling
+                </p>
+                <div style={{ height: 240 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="stacqGradV8" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={C.accent} stopOpacity={0.2} />
+                          <stop offset="95%" stopColor={C.accent} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke={C.borderLight} />
+                      <XAxis dataKey="label" tick={{ fontSize: 11, fill: C.textFaint }} stroke={C.border} />
+                      <YAxis tick={{ fontSize: 11, fill: C.textFaint }} stroke={C.border} tickFormatter={(v) => `${v}`} />
+                      <ReTooltip
+                        contentStyle={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, color: C.text }}
+                        formatter={(value: number) => [`kr ${formatKr(value)} / time`, "STACQ Pris"]}
+                      />
+                      <ReferenceLine y={5000} stroke={C.warning} strokeDasharray="6 4" label={{ value: "Mål: 5 000", position: "right", fontSize: 11, fill: C.warning }} />
+                      <Area type="monotone" dataKey="value" stroke={C.accent} strokeWidth={2} fill="url(#stacqGradV8)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                {mangler5000 > 0 && (
+                  <p style={{ fontSize: 13, color: C.textMuted, marginTop: 12 }}>
+                    Neste milepæl: <span style={{ fontWeight: 500, color: C.text }}>kr 5 000/time</span> — mangler{" "}
+                    <span style={{ fontWeight: 500, color: C.warning }}>kr {formatKr(Math.round(mangler5000))}/time</span>
+                  </p>
+                )}
+              </div>
+            </aside>
           </div>
         </div>
       </main>
@@ -351,6 +354,47 @@ export default function DesignLabStacqPrisen() {
 const thStyle: React.CSSProperties = {
   fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted,
 };
+
+function TopStatCard({
+  label,
+  value,
+  sub,
+  accent,
+  suffix,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  accent?: "emerald" | "amber";
+  suffix?: string;
+}) {
+  const borderColor = accent === "emerald"
+    ? "rgba(74,154,106,0.24)"
+    : accent === "amber"
+      ? "rgba(154,122,42,0.24)"
+      : C.border;
+
+  return (
+    <div
+      style={{
+        border: `1px solid ${borderColor}`,
+        borderRadius: 8,
+        background: C.surface,
+        padding: 16,
+        boxShadow: "0 8px 24px rgba(0,0,0,0.04)",
+      }}
+    >
+      <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>
+        {label}
+      </p>
+      <p style={{ marginTop: 6, fontSize: 22, fontWeight: 700, color: C.text }}>
+        {value}
+        {suffix && <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 400, color: C.textFaint }}>{suffix}</span>}
+      </p>
+      <p style={{ marginTop: 4, fontSize: 12, color: C.textMuted }}>{sub}</p>
+    </div>
+  );
+}
 
 function TypeBadge({ status }: { status: string | null }) {
   let label = "—";

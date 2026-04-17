@@ -24,7 +24,11 @@ type Filter = "Alle" | "Aktiv" | "Kommende" | "Sluttet";
 
 const GRID_COLS = "grid grid-cols-[minmax(0,2.5fr)_minmax(90px,1fr)_minmax(90px,1fr)_minmax(80px,1fr)_minmax(80px,1fr)_minmax(80px,auto)]";
 
-export default function KonsulenterAnsatte() {
+interface KonsulenterAnsatteProps {
+  hidePageTitle?: boolean;
+}
+
+export default function KonsulenterAnsatte({ hidePageTitle = false }: KonsulenterAnsatteProps) {
   const [filter, setFilter] = useState<Filter>("Aktiv");
   const [detailAnsatt, setDetailAnsatt] = useState<any | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -176,7 +180,7 @@ export default function KonsulenterAnsatte() {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-[1.375rem] font-bold">Ansatte</h1>
+        {hidePageTitle ? <div /> : <h1 className="text-[1.375rem] font-bold">Ansatte</h1>}
         <button
           onClick={() => { setDetailAnsatt(null); setDetailOpen(true); }}
           className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"

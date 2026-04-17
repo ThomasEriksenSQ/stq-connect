@@ -450,12 +450,22 @@ export default function DesignLabContacts() {
 
   // sync selectedId to URL
   useEffect(() => {
+    const currentContact = searchParams.get("contact");
     if (selectedId) {
-      setSearchParams({ contact: selectedId }, { replace: true });
-    } else {
+      if (currentContact !== selectedId) {
+        setSearchParams({ contact: selectedId }, { replace: true });
+      }
+    } else if (currentContact !== null) {
       setSearchParams({}, { replace: true });
     }
-  }, [selectedId, setSearchParams]);
+  }, [selectedId, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    const contactFromUrl = searchParams.get("contact");
+    if (contactFromUrl !== selectedId) {
+      setSelectedId(contactFromUrl);
+    }
+  }, [searchParams]);
 
   // ── Queries ──
   const { data: rawContacts = [], isLoading } = useQuery({
@@ -1821,7 +1831,7 @@ export default function DesignLabContacts() {
   const getMatchLeadHref = useCallback((lead: MatchLead) => {
     if (isContactMatchLead(lead)) return `/design-lab/kontakter?contact=${lead.id}`;
     if (isRequestMatchLead(lead)) return `/foresporsler?id=${lead.requestId}`;
-    return `/selskaper/${lead.companyId}`;
+    return `/design-lab/selskaper?company=${lead.companyId}`;
   }, []);
 
   const handleMatchLeadSelect = useCallback(

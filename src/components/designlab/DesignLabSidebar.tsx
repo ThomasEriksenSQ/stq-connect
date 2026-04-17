@@ -21,10 +21,10 @@ const NAV_MAIN = [
 
 const NAV_STACQ = [
   { label: "STACQ Prisen", icon: TrendingUp, href: "/design-lab/stacq-prisen" },
-  { label: "Markedsradar", icon: Radar, href: "/markedsradar" },
-  { label: "Ansatte", icon: Users, href: "/konsulenter/ansatte" },
-  { label: "Eksterne", icon: UserPlus, href: "/konsulenter/eksterne" },
-  { label: "stacq.no", icon: Globe, href: "/nettside-ai" },
+  { label: "Markedsradar", icon: Radar, href: "/design-lab/markedsradar" },
+  { label: "Ansatte", icon: Users, href: "/design-lab/ansatte" },
+  { label: "Eksterne", icon: UserPlus, href: "/design-lab/eksterne" },
+  { label: "stacq.no", icon: Globe, href: "/design-lab/nettside-ai" },
 ];
 
 /* ═══ PROPS ═══ */

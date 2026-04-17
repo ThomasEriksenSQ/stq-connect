@@ -9,7 +9,7 @@ import {
   DesignLabIconButton,
 } from "@/components/designlab/controls";
 import { AiSignalBanner } from "@/components/AiSignalBanner";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useConsultantCache } from "@/hooks/useConsultantCache";
@@ -234,6 +234,10 @@ export function ContactCardContent({
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
+  const inDesignLab = location.pathname.startsWith("/design-lab");
+  const getCompanyHref = (companyId: string) =>
+    inDesignLab ? `/design-lab/selskaper?company=${companyId}` : `/selskaper/${companyId}`;
   const { interne: cachedInterne, eksterne: cachedEksterne } = useConsultantCache();
 
   // Form states
@@ -824,7 +828,7 @@ export function ContactCardContent({
             <span className="group/co inline-flex items-center gap-1">
               <button
                 className="text-primary font-medium hover:underline"
-                onClick={() => (onOpenCompany ? onOpenCompany(companyId) : navigate(`/selskaper/${companyId}`))}
+                onClick={() => (onOpenCompany ? onOpenCompany(companyId) : navigate(getCompanyHref(companyId)))}
               >
                 {companyName}
               </button>

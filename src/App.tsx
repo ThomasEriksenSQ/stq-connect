@@ -30,6 +30,10 @@ const KonsulenterOppdrag = lazy(() => import("./pages/KonsulenterOppdrag"));
 const EksterneKonsulenter = lazy(() => import("./pages/EksterneKonsulenter"));
 const StacqPrisen = lazy(() => import("./pages/StacqPrisen"));
 const DesignLabStacqPrisen = lazy(() => import("./pages/DesignLabStacqPrisen"));
+const DesignLabMarkedsradar = lazy(() => import("./pages/DesignLabMarkedsradar"));
+const DesignLabKonsulenterAnsatte = lazy(() => import("./pages/DesignLabKonsulenterAnsatte"));
+const DesignLabEksterneKonsulenter = lazy(() => import("./pages/DesignLabEksterneKonsulenter"));
+const DesignLabNettsideAI = lazy(() => import("./pages/DesignLabNettsideAI"));
 const ImporterCver = lazy(() => import("./pages/ImporterCver"));
 const ImporterSelskaper = lazy(() => import("./pages/ImporterSelskaper"));
 const Markedsradar = lazy(() => import("./pages/Markedsradar"));
@@ -226,6 +230,46 @@ function AppRouter() {
             element={
               <Suspense fallback={<LazyFallback />}>
                 <DesignLabStacqPrisen />
+              </Suspense>
+            }
+          />
+          <Route
+            path="markedsradar"
+            element={
+              <Suspense fallback={<LazyFallback />}>
+                <DesignLabMarkedsradar />
+              </Suspense>
+            }
+          />
+          <Route
+            path="ansatte"
+            element={
+              <Suspense fallback={<LazyFallback />}>
+                <DesignLabKonsulenterAnsatte />
+              </Suspense>
+            }
+          />
+          <Route
+            path="ansatte/:id"
+            element={
+              <Suspense fallback={<LazyFallback />}>
+                <DesignLabKonsulenterAnsatte />
+              </Suspense>
+            }
+          />
+          <Route
+            path="eksterne"
+            element={
+              <Suspense fallback={<LazyFallback />}>
+                <DesignLabEksterneKonsulenter />
+              </Suspense>
+            }
+          />
+          <Route
+            path="nettside-ai"
+            element={
+              <Suspense fallback={<LazyFallback />}>
+                <DesignLabNettsideAI />
               </Suspense>
             }
           />

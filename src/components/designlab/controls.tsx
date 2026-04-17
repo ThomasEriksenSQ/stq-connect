@@ -60,10 +60,10 @@ export function DesignLabStaticTag({
     <span
       className={cn("inline-flex items-center justify-center gap-1.5 whitespace-nowrap", className)}
       style={{
-        height: 28,
-        minWidth: 28,
-        paddingInline: 10,
-        fontSize: 12,
+        height: "var(--dl-filter-height, 28px)",
+        minWidth: "var(--dl-filter-min-width, 28px)",
+        paddingInline: "var(--dl-filter-padding-x, 10px)",
+        fontSize: "var(--dl-filter-font-size, 12px)",
         fontWeight: colors.fontWeight ?? 600,
         borderRadius: 6,
         border: colors.border ?? `1px solid ${C.filterActiveBorder}`,
@@ -150,10 +150,10 @@ export const DesignLabFilterButton = forwardRef<HTMLButtonElement, ButtonHTMLAtt
         className,
       )}
       style={withFocusVars({
-        height: 28,
-        minWidth: 28,
-        paddingInline: 10,
-        fontSize: 12,
+        height: "var(--dl-filter-height, 28px)",
+        minWidth: "var(--dl-filter-min-width, 28px)",
+        paddingInline: "var(--dl-filter-padding-x, 10px)",
+        fontSize: "var(--dl-filter-font-size, 12px)",
         fontWeight: baseFontWeight,
         borderRadius: 6,
         border: baseBorder,
@@ -236,10 +236,10 @@ export const DesignLabActionButton = forwardRef<HTMLButtonElement, ButtonHTMLAtt
         className,
       )}
       style={withFocusVars({
-        height: 32,
-        minWidth: 32,
-        paddingInline: 12,
-        fontSize: 13,
+        height: "var(--dl-action-height, 32px)",
+        minWidth: "var(--dl-action-min-width, 32px)",
+        paddingInline: "var(--dl-action-padding-x, 12px)",
+        fontSize: "var(--dl-action-font-size, 13px)",
         fontWeight: 500,
         borderRadius: 6,
         border: disabled ? disabledBorder : config.border,

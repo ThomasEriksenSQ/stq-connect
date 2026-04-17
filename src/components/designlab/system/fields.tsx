@@ -23,7 +23,7 @@ export function getDesignLabTextFieldStyle(): CSSProperties {
     boxShadow: "inset 0 1px 0 rgba(0,0,0,0.02)",
     paddingInline: 10,
     paddingBlock: 0,
-    fontSize: 13,
+    fontSize: "var(--dl-modal-font-size, 13px)",
     fontFamily: "inherit",
     lineHeight: 1.2,
     color: "#1A1C1F",

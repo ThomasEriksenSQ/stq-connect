@@ -25,6 +25,7 @@ import {
   DesignLabFilterRow,
   DesignLabGhostAction,
   DesignLabPrimaryAction,
+  DesignLabReadonlyChip,
 } from "@/components/designlab/system";
 
 /* ═══════════════════════════════════════════════════════════
@@ -129,9 +130,19 @@ export default function DesignLabForesporsler() {
 
   // sync URL
   useEffect(() => {
-    if (selectedRowId) setSearchParams({ id: String(selectedRowId) }, { replace: true });
-    else setSearchParams({}, { replace: true });
-  }, [selectedRowId]);
+    const currentId = searchParams.get("id");
+    if (selectedRowId) {
+      const nextId = String(selectedRowId);
+      if (currentId !== nextId) setSearchParams({ id: nextId }, { replace: true });
+    } else if (currentId !== null) {
+      setSearchParams({}, { replace: true });
+    }
+  }, [selectedRowId, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    const nextId = Number(searchParams.get("id") || "") || null;
+    if (nextId !== selectedRowId) setSelectedRowId(nextId);
+  }, [searchParams]);
 
   // ── Query ──
   const { data: rows = [], isLoading } = useQuery({
@@ -283,24 +294,33 @@ export default function DesignLabForesporsler() {
         </div>
 
         {/* Content: list + detail */}
-        <div className="flex-1 min-h-0">
-          {selectedRow ? (
-            <ResizablePanelGroup direction="horizontal" className="h-full">
-              <ResizablePanel defaultSize={40} minSize={25} maxSize={60}>
-                <div className="h-full overflow-y-auto">
-                  <TableHeader sort={sort} onSort={toggleSort} compact />
-                  {isLoading ? <LoadingMsg /> : sorted.length === 0 ? <EmptyMsg /> : (
-                    sorted.map((row: any) => (
-                      <ForespRow key={row.id} row={row} isActive={selectedRowId === row.id} onClick={() => setSelectedRowId(row.id)} compact />
-                    ))
-                  )}
-                </div>
-              </ResizablePanel>
-              <ResizableHandle
-                withHandle
-                className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
-              />
-              <ResizablePanel defaultSize={60} minSize={40}>
+        <div className="flex-1 min-h-0 flex">
+          <ResizablePanelGroup direction="horizontal" className="h-full">
+            <ResizablePanel defaultSize={38} minSize={24} maxSize={60}>
+              <div className="h-full overflow-y-auto" style={{ scrollbarColor: `${C.borderStrong} ${C.surfaceAlt}` }}>
+                <TableHeader sort={sort} onSort={toggleSort} />
+                {isLoading ? (
+                  <LoadingMsg />
+                ) : sorted.length === 0 ? (
+                  <EmptyMsg />
+                ) : (
+                  sorted.map((row: any) => (
+                    <ForespRow
+                      key={row.id}
+                      row={row}
+                      isActive={selectedRowId === row.id}
+                      onClick={() => setSelectedRowId(row.id)}
+                    />
+                  ))
+                )}
+              </div>
+            </ResizablePanel>
+            <ResizableHandle
+              withHandle
+              className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
+            />
+            <ResizablePanel defaultSize={62} minSize={34}>
+              {selectedRow ? (
                 <div className="h-full flex flex-col" style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}` }}>
                   <div className="shrink-0 flex items-center justify-between px-6" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
                     <div className="flex items-center gap-2">
@@ -324,18 +344,18 @@ export default function DesignLabForesporsler() {
                     />
                   </div>
                 </div>
-              </ResizablePanel>
-            </ResizablePanelGroup>
-          ) : (
-            <div className="h-full overflow-y-auto" style={{ maxWidth: 1100, margin: "0 auto", width: "100%" }}>
-              <TableHeader sort={sort} onSort={toggleSort} compact={false} />
-              {isLoading ? <LoadingMsg /> : sorted.length === 0 ? <EmptyMsg /> : (
-                sorted.map((row: any) => (
-                  <ForespRow key={row.id} row={row} isActive={false} onClick={() => setSelectedRowId(row.id)} compact={false} />
-                ))
+              ) : (
+                <div className="h-full" style={{ borderLeft: `1px solid ${C.borderLight}`, background: C.appBg }} />
               )}
-            </div>
-          )}
+            </ResizablePanel>
+            <ResizableHandle
+              withHandle
+              className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
+            />
+            <ResizablePanel defaultSize={0} minSize={0} maxSize={30}>
+              <div className="h-full" style={{ background: C.appBg }} />
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </div>
       </main>
     </div>
@@ -346,109 +366,130 @@ export default function DesignLabForesporsler() {
    TABLE COMPONENTS
    ═══════════════════════════════════════════════════════════ */
 
-function TableHeader({ sort, onSort, compact }: { sort: { field: SortField; dir: SortDir }; onSort: (f: SortField) => void; compact: boolean }) {
-  const cols = compact
-    ? "90px minmax(0,1.5fr) minmax(0,1fr) 60px"
-    : "90px minmax(0,1.5fr) minmax(0,1fr) 70px minmax(0,1.2fr) minmax(0,1fr)";
+function TableHeader({ sort, onSort }: { sort: { field: SortField; dir: SortDir }; onSort: (f: SortField) => void }) {
+  const cols = "92px minmax(220px,1.5fr) minmax(170px,0.95fr) 88px minmax(180px,1.05fr) minmax(190px,1.15fr) minmax(138px,0.85fr)";
 
   return (
     <div
       className="grid items-center sticky top-0 z-10"
-      style={{ gridTemplateColumns: cols, height: 32, borderBottom: `1px solid ${C.border}`, background: C.surfaceAlt, paddingLeft: 16, paddingRight: 16 }}
+      style={{
+        gridTemplateColumns: cols,
+        height: 36,
+        borderBottom: `1px solid ${C.border}`,
+        background: C.surfaceAlt,
+        paddingLeft: 16,
+        paddingRight: 16,
+      }}
     >
       <DesignLabColumnHeader label="Mottatt" field="mottatt_dato" sort={sort} onSort={onSort} />
       <DesignLabColumnHeader label="Selskap" field="selskap_navn" sort={sort} onSort={onSort} />
       <DesignLabColumnHeader label="Kontakt" field="kontakt" sort={sort} onSort={onSort} />
-      {compact ? (
-        <DesignLabColumnHeader label="Type" field="sendt_count" sort={sort} onSort={onSort} />
-      ) : (
-        <>
-          <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted }}>Type</span>
-          <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted }}>Teknologier</span>
-          <DesignLabColumnHeader label="Pipeline" field="sendt_count" sort={sort} onSort={onSort} className="justify-end" />
-        </>
-      )}
+      <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted }}>Type</span>
+      <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted }}>Teknologier</span>
+      <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted }}>Konsulent</span>
+      <DesignLabColumnHeader label="Status" field="sendt_count" sort={sort} onSort={onSort} />
     </div>
   );
 }
 
-function ForespRow({ row, isActive, onClick, compact }: { row: any; isActive: boolean; onClick: () => void; compact: boolean }) {
+function ForespRow({ row, isActive, onClick }: { row: any; isActive: boolean; onClick: () => void }) {
   const days = getDaysAgo(row.mottatt_dato);
   const kontaktNavn = row.contacts ? `${row.contacts.first_name} ${row.contacts.last_name}`.trim() : "—";
   const sendt = row.foresporsler_konsulenter || [];
-
-  const cols = compact
-    ? "90px minmax(0,1.5fr) minmax(0,1fr) 60px"
-    : "90px minmax(0,1.5fr) minmax(0,1fr) 70px minmax(0,1.2fr) minmax(0,1fr)";
+  const cols = "92px minmax(220px,1.5fr) minmax(170px,0.95fr) 88px minmax(180px,1.05fr) minmax(190px,1.15fr) minmax(138px,0.85fr)";
 
   return (
     <div
       onClick={onClick}
-      className="grid items-center cursor-pointer group"
+      className="grid items-start cursor-pointer group"
       style={{
         gridTemplateColumns: cols,
-        minHeight: 40, paddingLeft: 16, paddingRight: 16, paddingTop: 4, paddingBottom: 4,
+        minHeight: 52,
+        paddingLeft: 16,
+        paddingRight: 16,
+        paddingTop: 8,
+        paddingBottom: 8,
         borderBottom: `1px solid ${C.borderLight}`,
         background: isActive ? C.activeBg : undefined,
-        transition: "background 50ms",
+        transition: "background 80ms ease",
       }}
       onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = C.hoverBg; }}
       onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = isActive ? C.activeBg : ""; }}
     >
-      {/* Mottatt */}
-      <span style={{ fontSize: 13, fontWeight: 500, color: days <= 7 ? C.text : days <= 21 ? C.warning : C.danger }}>
+      <span style={{ fontSize: 13, fontWeight: 500, color: days <= 7 ? C.text : days <= 21 ? C.warning : C.danger, paddingTop: 2 }}>
         {relTime(days)}
       </span>
-      {/* Selskap */}
-      <span className="truncate pr-3" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{row.selskap_navn}</span>
-      {/* Kontakt */}
-      <span className="truncate pr-3" style={{ fontSize: 13, color: C.textMuted }}>{kontaktNavn}</span>
-
-      {compact ? (
+      <div className="min-w-0 pr-4" style={{ paddingTop: 2 }}>
+        <span className="block truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>
+          {row.selskap_navn}
+        </span>
+      </div>
+      <div className="min-w-0 pr-4" style={{ paddingTop: 2 }}>
+        <span className="block truncate" style={{ fontSize: 13, color: C.textMuted }}>
+          {kontaktNavn}
+        </span>
+      </div>
+      <div style={{ paddingTop: 1 }}>
         <TypeChip type={row.type} />
-      ) : (
-        <>
-          {/* Type */}
-          <TypeChip type={row.type} />
-          {/* Teknologier */}
-          <div className="flex items-center gap-1 flex-wrap pr-2">
-            {(row.teknologier || []).slice(0, 3).map((t: string) => (
-              <span
-                key={t}
-                className="inline-flex items-center rounded-[6px]"
-                style={{ height: 28, border: `1px solid ${C.border}`, padding: "0 10px", fontSize: 12, fontWeight: 500, color: C.textMuted }}
-              >
-                {t}
-              </span>
-            ))}
-            {(row.teknologier || []).length > 3 && (
-              <span style={{ fontSize: 11, color: C.textGhost }}>+{row.teknologier.length - 3}</span>
-            )}
+      </div>
+      <div className="flex items-center gap-1.5 flex-wrap pr-4">
+        {(row.teknologier || []).slice(0, 3).map((t: string) => (
+          <DesignLabReadonlyChip key={t} active={false}>
+            {t}
+          </DesignLabReadonlyChip>
+        ))}
+        {(row.teknologier || []).length > 3 && (
+          <span style={{ fontSize: 11, color: C.textGhost }}>+{row.teknologier.length - 3}</span>
+        )}
+      </div>
+      <div className="flex flex-col items-start gap-2 pr-3" style={{ paddingTop: 2 }}>
+        {sendt.length === 0 ? (
+          <div style={{ minHeight: 28, display: "flex", alignItems: "center" }}>
+            <span style={{ fontSize: 12, color: C.textGhost }}>—</span>
           </div>
-          {/* Pipeline */}
-          <div className="flex flex-col items-end gap-1">
-            {sendt.length === 0 ? (
-              <span style={{ fontSize: 12, color: C.textGhost }}>—</span>
-            ) : (
-              sendt.map((k: any) => {
-                const navn = ((k.konsulent_type === "intern" ? k.stacq_ansatte?.navn : k.external_consultants?.navn) || "Ukjent").split(" ")[0];
-                const cfg = PIPELINE[k.status] || { label: "Ny", color: C.textFaint };
-                return (
-                  <div key={k.id} className="flex items-center gap-1.5">
-                    <span style={{ fontSize: 12, color: C.textMuted }}>{navn}</span>
-                    <span className="inline-flex items-center rounded-[6px]" style={{
-                      height: 28, fontSize: 12, fontWeight: 500, padding: "0 10px",
-                      background: `${cfg.color}10`, color: cfg.color, border: `1px solid ${cfg.color}25`,
-                    }}>
-                      {cfg.label}
-                    </span>
-                  </div>
-                );
-              })
-            )}
+        ) : (
+          sendt.map((k: any) => {
+            const navn = (k.konsulent_type === "intern" ? k.stacq_ansatte?.navn : k.external_consultants?.navn) || "Ukjent";
+            return (
+              <div key={k.id} style={{ minHeight: 28, display: "flex", alignItems: "center" }}>
+                <span style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.2, whiteSpace: "normal" }}>
+                  {navn}
+                </span>
+              </div>
+            );
+          })
+        )}
+      </div>
+      <div className="flex flex-col items-start gap-2" style={{ paddingTop: 1 }}>
+        {sendt.length === 0 ? (
+          <div style={{ minHeight: 28, display: "flex", alignItems: "center" }}>
+            <span style={{ fontSize: 12, color: C.textGhost }}>—</span>
           </div>
-        </>
-      )}
+        ) : (
+          sendt.map((k: any) => {
+            const cfg = PIPELINE[k.status] || { label: "Ny", color: C.textFaint };
+            return (
+              <div key={k.id} style={{ minHeight: 28, display: "flex", alignItems: "center" }}>
+                <span
+                  className="inline-flex items-center rounded-[6px]"
+                  style={{
+                    height: 28,
+                    width: "fit-content",
+                    fontSize: 12,
+                    fontWeight: 500,
+                    padding: "0 10px",
+                    background: `${cfg.color}10`,
+                    color: cfg.color,
+                    border: `1px solid ${cfg.color}25`,
+                  }}
+                >
+                  {cfg.label}
+                </span>
+              </div>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }

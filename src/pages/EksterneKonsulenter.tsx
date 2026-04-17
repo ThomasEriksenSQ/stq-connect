@@ -48,7 +48,11 @@ const SUGGESTED_TECH = [
   "Python", "SPI/I2C", "MCU", "Embedded Linux", "Sikkerhet",
 ];
 
-export default function EksterneKonsulenter() {
+interface EksterneKonsulenterProps {
+  hidePageTitle?: boolean;
+}
+
+export default function EksterneKonsulenter({ hidePageTitle = false }: EksterneKonsulenterProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -134,9 +138,11 @@ export default function EksterneKonsulenter() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-[1.375rem] font-bold">Eksterne konsulenter</h1>
-      </div>
+      {!hidePageTitle && (
+        <div className="flex items-center justify-between">
+          <h1 className="text-[1.375rem] font-bold">Eksterne konsulenter</h1>
+        </div>
+      )}
 
       {/* Search + count + Add */}
       <div className="flex items-center gap-3">

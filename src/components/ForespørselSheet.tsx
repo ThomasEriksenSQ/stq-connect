@@ -39,6 +39,7 @@ import { mergeTechnologyTags } from "@/lib/technologyTags";
 import { createOppdragFormState } from "@/lib/oppdragForm";
 import { createOppdrag, invalidateOppdragQueries } from "@/lib/oppdragPersistence";
 import { crmQueryKeys } from "@/lib/queryKeys";
+import { DesignLabReadonlyChip } from "@/components/designlab/system";
 
 const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
 
@@ -678,7 +679,7 @@ export function ForespørselSheet({
                 )}
 
                 {/* Info row */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-start">
                   <div>
                     <p className={LABEL}>Mottatt</p>
                     <Tooltip>
@@ -696,6 +697,18 @@ export function ForespørselSheet({
                       {contactName || "—"}
                     </p>
                   </div>
+                  {!matchResults && !matching && (
+                    <div className="sm:justify-self-end">
+                      <button
+                        onClick={runMatch}
+                        disabled={!(row.teknologier?.length)}
+                        className="inline-flex items-center gap-2 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        Finn match
+                      </button>
+                    </div>
+                  )}
                 </div>
 
 
@@ -705,9 +718,9 @@ export function ForespørselSheet({
                   <div className="flex flex-wrap gap-1.5 mt-1.5">
                     {(row.teknologier || []).length > 0 ? (
                       row.teknologier.map((t: string) => (
-                        <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[0.75rem] font-medium text-foreground">
+                        <DesignLabReadonlyChip key={t} active={false}>
                           {t}
-                        </span>
+                        </DesignLabReadonlyChip>
                       ))
                     ) : (
                       <span className="text-[0.8125rem] text-muted-foreground">—</span>
@@ -716,23 +729,6 @@ export function ForespørselSheet({
                 </div>
 
                 {/* Finn match button (only when no results yet) */}
-                {!matchResults && !matching && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Target className="h-4 w-4 text-primary" />
-                      <p className={`${LABEL} mb-0`}>Konsulentmatch</p>
-                    </div>
-                    <button
-                      onClick={runMatch}
-                      disabled={!(row.teknologier?.length)}
-                      className="inline-flex items-center gap-2 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
-                    >
-                      <Sparkles className="h-4 w-4" />
-                      Finn match
-                    </button>
-                  </div>
-                )}
-
                 {/* No results message */}
                 {matchResults && matchResults.length === 0 && !matching && (
                   <div>

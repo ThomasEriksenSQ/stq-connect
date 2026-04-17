@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { usePersistentState } from "@/hooks/usePersistentState";
 
-import type { TextSize } from "@/components/designlab/TextSizeControl";
+import { SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
 import {
   DesignLabFieldGrid,
   DesignLabFieldLabel,
@@ -20,6 +20,7 @@ import {
 
 export type ModalScale = {
   textSize: TextSize;
+  scaleFactor: number;
   width: number;
   fontSize: string;
   rowGap: number;
@@ -30,74 +31,70 @@ export type ModalScale = {
   controlHeight: number;
   actionHeight: number;
   chipHeight: number;
+  actionFontSize: number;
+  chipFontSize: number;
+  inlineActionFontSize: number;
+  headerPaddingX: number;
+  headerPaddingTop: number;
+  headerPaddingBottom: number;
+  bodyPaddingX: number;
+  bodyPaddingBottom: number;
+  closeButtonSize: number;
 };
 
-const MODAL_LAYOUT_MAP: Record<TextSize, Omit<ModalScale, "textSize">> = {
-  S: {
-    width: 460,
-    fontSize: "0.75rem",
-    rowGap: 16,
-    sectionGap: 20,
-    labelGap: 4,
-    gridGap: 12,
-    chipGap: 6,
-    controlHeight: 32,
-    actionHeight: 32,
-    chipHeight: 28,
-  },
-  M: {
-    width: 460,
-    fontSize: "0.8125rem",
-    rowGap: 18,
-    sectionGap: 22,
-    labelGap: 4,
-    gridGap: 12,
-    chipGap: 6,
-    controlHeight: 32,
-    actionHeight: 32,
-    chipHeight: 28,
-  },
-  L: {
-    width: 460,
-    fontSize: "0.875rem",
-    rowGap: 18,
-    sectionGap: 22,
-    labelGap: 4,
-    gridGap: 12,
-    chipGap: 6,
-    controlHeight: 32,
-    actionHeight: 32,
-    chipHeight: 28,
-  },
-  XL: {
-    width: 460,
-    fontSize: "0.9375rem",
-    rowGap: 18,
-    sectionGap: 22,
-    labelGap: 4,
-    gridGap: 12,
-    chipGap: 6,
-    controlHeight: 32,
-    actionHeight: 32,
-    chipHeight: 28,
-  },
-  XXL: {
-    width: 480,
-    fontSize: "1rem",
-    rowGap: 18,
-    sectionGap: 22,
-    labelGap: 4,
-    gridGap: 12,
-    chipGap: 6,
-    controlHeight: 32,
-    actionHeight: 32,
-    chipHeight: 28,
-  },
-};
+const MODAL_BASE_LAYOUT = {
+  width: 460,
+  fontSize: 13,
+  rowGap: 18,
+  sectionGap: 22,
+  labelGap: 4,
+  gridGap: 12,
+  chipGap: 6,
+  controlHeight: 32,
+  actionHeight: 32,
+  chipHeight: 28,
+  actionFontSize: 12,
+  chipFontSize: 12,
+  inlineActionFontSize: 12,
+  headerPaddingX: 24,
+  headerPaddingTop: 24,
+  headerPaddingBottom: 16,
+  bodyPaddingX: 24,
+  bodyPaddingBottom: 24,
+  closeButtonSize: 32,
+} as const;
+
+function scaleMetric(value: number, scaleFactor: number): number {
+  return Math.round(value * scaleFactor * 10) / 10;
+}
 
 export function useDesignLabModalScale(): ModalScale {
   const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
-  return { textSize, ...MODAL_LAYOUT_MAP[textSize] };
+  const scaleFactor = SCALE_MAP[textSize];
+
+  return {
+    textSize,
+    scaleFactor,
+    width: scaleMetric(MODAL_BASE_LAYOUT.width, scaleFactor),
+    fontSize: `${scaleMetric(MODAL_BASE_LAYOUT.fontSize, scaleFactor)}px`,
+    rowGap: scaleMetric(MODAL_BASE_LAYOUT.rowGap, scaleFactor),
+    sectionGap: scaleMetric(MODAL_BASE_LAYOUT.sectionGap, scaleFactor),
+    labelGap: scaleMetric(MODAL_BASE_LAYOUT.labelGap, scaleFactor),
+    gridGap: scaleMetric(MODAL_BASE_LAYOUT.gridGap, scaleFactor),
+    chipGap: scaleMetric(MODAL_BASE_LAYOUT.chipGap, scaleFactor),
+    controlHeight: scaleMetric(MODAL_BASE_LAYOUT.controlHeight, scaleFactor),
+    actionHeight: scaleMetric(MODAL_BASE_LAYOUT.actionHeight, scaleFactor),
+    chipHeight: scaleMetric(MODAL_BASE_LAYOUT.chipHeight, scaleFactor),
+    actionFontSize: scaleMetric(MODAL_BASE_LAYOUT.actionFontSize, scaleFactor),
+    chipFontSize: scaleMetric(MODAL_BASE_LAYOUT.chipFontSize, scaleFactor),
+    inlineActionFontSize: scaleMetric(MODAL_BASE_LAYOUT.inlineActionFontSize, scaleFactor),
+    headerPaddingX: scaleMetric(MODAL_BASE_LAYOUT.headerPaddingX, scaleFactor),
+    headerPaddingTop: scaleMetric(MODAL_BASE_LAYOUT.headerPaddingTop, scaleFactor),
+    headerPaddingBottom: scaleMetric(MODAL_BASE_LAYOUT.headerPaddingBottom, scaleFactor),
+    bodyPaddingX: scaleMetric(MODAL_BASE_LAYOUT.bodyPaddingX, scaleFactor),
+    bodyPaddingBottom: scaleMetric(MODAL_BASE_LAYOUT.bodyPaddingBottom, scaleFactor),
+    closeButtonSize: scaleMetric(MODAL_BASE_LAYOUT.closeButtonSize, scaleFactor),
+  };
 }
 
 function getDesignLabModalScaleVars(scale: ModalScale): CSSProperties {
@@ -111,6 +108,23 @@ function getDesignLabModalScaleVars(scale: ModalScale): CSSProperties {
     ["--dl-modal-action-height" as string]: `${scale.actionHeight}px`,
     ["--dl-modal-chip-height" as string]: `${scale.chipHeight}px`,
     ["--dl-modal-font-size" as string]: scale.fontSize,
+    ["--dl-modal-action-font-size" as string]: `${scale.actionFontSize}px`,
+    ["--dl-modal-chip-font-size" as string]: `${scale.chipFontSize}px`,
+    ["--dl-modal-inline-action-font-size" as string]: `${scale.inlineActionFontSize}px`,
+    ["--dl-modal-header-padding-x" as string]: `${scale.headerPaddingX}px`,
+    ["--dl-modal-header-padding-top" as string]: `${scale.headerPaddingTop}px`,
+    ["--dl-modal-header-padding-bottom" as string]: `${scale.headerPaddingBottom}px`,
+    ["--dl-modal-body-padding-x" as string]: `${scale.bodyPaddingX}px`,
+    ["--dl-modal-body-padding-bottom" as string]: `${scale.bodyPaddingBottom}px`,
+    ["--dl-modal-close-size" as string]: `${scale.closeButtonSize}px`,
+    ["--dl-filter-height" as string]: `${scale.chipHeight}px`,
+    ["--dl-filter-min-width" as string]: `${scale.chipHeight}px`,
+    ["--dl-filter-padding-x" as string]: `${scaleMetric(10, scale.scaleFactor)}px`,
+    ["--dl-filter-font-size" as string]: `${scale.chipFontSize}px`,
+    ["--dl-action-height" as string]: `${scale.actionHeight}px`,
+    ["--dl-action-min-width" as string]: `${scale.actionHeight}px`,
+    ["--dl-action-padding-x" as string]: `${scaleMetric(12, scale.scaleFactor)}px`,
+    ["--dl-action-font-size" as string]: `${scale.actionFontSize}px`,
   };
 }
 
@@ -151,7 +165,7 @@ export function getDesignLabModalInlineActionStyle(scale: ModalScale): CSSProper
     padding: "4px 6px",
     borderRadius: 4,
     border: "none",
-    fontSize: 12,
+    fontSize: `${scale.inlineActionFontSize}px`,
     fontFamily: "inherit",
     fontWeight: 500,
     background: "transparent",
@@ -188,7 +202,14 @@ function DesignLabModalSurface({
         ...getDesignLabModalScaleVars(scale),
       }}
     >
-      <div className="flex items-center justify-between px-6 pb-4 pt-6">
+      <div
+        className="flex items-center justify-between"
+        style={{
+          paddingInline: "var(--dl-modal-header-padding-x)",
+          paddingTop: "var(--dl-modal-header-padding-top)",
+          paddingBottom: "var(--dl-modal-header-padding-bottom)",
+        }}
+      >
         {useDialogTitle ? (
           <DialogTitle className="font-semibold text-[#1A1C1F]" style={titleStyle}>
             {title}
@@ -225,7 +246,7 @@ export function DesignLabModalContent({
           <DialogClose asChild>
             <DesignLabGhostAction
               type="button"
-              style={{ width: 32, minWidth: 32, paddingInline: 0 }}
+              style={{ width: "var(--dl-modal-close-size)", minWidth: "var(--dl-modal-close-size)", paddingInline: 0 }}
               className="text-[#5C636E] hover:bg-[#F0F2F6] hover:text-[#1A1C1F] focus-visible:ring-0 focus-visible:ring-offset-0"
             >
               <X className="h-4 w-4" />
@@ -253,7 +274,7 @@ export function DesignLabModalPreviewSurface({
       closeSlot={
         <DesignLabGhostAction
           type="button"
-          style={{ width: 32, minWidth: 32, paddingInline: 0 }}
+          style={{ width: "var(--dl-modal-close-size)", minWidth: "var(--dl-modal-close-size)", paddingInline: 0 }}
           className="pointer-events-none text-[#5C636E]"
         >
           <X className="h-4 w-4" />
@@ -274,7 +295,15 @@ export function DesignLabModalForm({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
-    <form onSubmit={onSubmit} className="px-6 pb-6" style={{ display: "grid", rowGap: "var(--dl-modal-row-gap)" }}>
+    <form
+      onSubmit={onSubmit}
+      style={{
+        display: "grid",
+        rowGap: "var(--dl-modal-row-gap)",
+        paddingInline: "var(--dl-modal-body-padding-x)",
+        paddingBottom: "var(--dl-modal-body-padding-bottom)",
+      }}
+    >
       {children}
     </form>
   );
