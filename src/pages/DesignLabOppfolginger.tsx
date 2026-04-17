@@ -3,28 +3,24 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { endOfWeek, format, isBefore, isToday, startOfDay } from "date-fns";
 import { nb } from "date-fns/locale";
-import { CalendarIcon, ExternalLink, Mail, Phone, Plus, X } from "lucide-react";
+import { CalendarIcon, Plus, X } from "lucide-react";
 
+import { ContactCardContent } from "@/components/ContactCardContent";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/queryKeys";
-import { cn } from "@/lib/utils";
 import {
   buildFollowUpViewModels,
   type FollowUpPriority,
   type FollowUpTaskRecord,
   type FollowUpViewModel,
-  type FollowUpVisualStatus,
-  mapVisualStatusToTaskStatus,
 } from "@/lib/followUpViewModel";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { C } from "@/components/designlab/theme";
 import {
-  DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS,
-  DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS,
-  DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS,
+  DesignLabIconButton,
   DesignLabSearchInput,
 } from "@/components/designlab/controls";
 import {
@@ -38,13 +34,10 @@ import {
   DesignLabModalLabel,
   DesignLabPrimaryAction,
   DesignLabReadonlyChip,
-  DesignLabSecondaryAction,
-  DesignLabSignalBadge,
   getDesignLabV2ActionStyle,
 } from "@/components/designlab/system";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -58,47 +51,6 @@ const FOLLOW_UP_ACTIVITY_QUERY_KEY = ["design-lab-follow-up-activities"] as cons
 const FOLLOW_UP_CONTACT_QUERY_KEY = ["design-lab-follow-up-modal-contacts"] as const;
 
 const VIEW_FILTERS = ["Alle", "Mine", "Forfalt", "Denne uka", "Uten eier"] as const satisfies readonly FollowUpViewFilter[];
-
-const STATUS_OPTIONS: Array<{ value: FollowUpVisualStatus; label: string }> = [
-  { value: "triage", label: "Triage" },
-  { value: "planned", label: "Planned" },
-  { value: "in_progress", label: "In progress" },
-  { value: "waiting", label: "Waiting" },
-  { value: "done", label: "Done" },
-];
-
-const STATUS_COLORS: Record<FollowUpVisualStatus, { background: string; color: string; border: string; fontWeight: number }> = {
-  triage: {
-    background: C.statusNeutralBg,
-    color: C.statusNeutral,
-    border: `1px solid ${C.statusNeutralBorder}`,
-    fontWeight: 500,
-  },
-  planned: {
-    background: C.infoBg,
-    color: C.info,
-    border: `1px solid rgba(26,79,160,0.18)`,
-    fontWeight: 600,
-  },
-  in_progress: {
-    background: C.accentBg,
-    color: C.accent,
-    border: `1px solid rgba(94,106,210,0.18)`,
-    fontWeight: 600,
-  },
-  waiting: {
-    background: C.warningBg,
-    color: C.warning,
-    border: `1px solid rgba(125,78,0,0.18)`,
-    fontWeight: 600,
-  },
-  done: {
-    background: C.successBg,
-    color: C.success,
-    border: `1px solid rgba(45,106,79,0.18)`,
-    fontWeight: 600,
-  },
-};
 
 const PRIORITY_COLORS: Record<Exclude<FollowUpPriority, null>, { background: string; color: string; border: string; fontWeight: number }> = {
   P1: {
@@ -161,11 +113,6 @@ function rowMeta(model: FollowUpViewModel) {
   return model.companyName || model.contactName || "Ingen kobling";
 }
 
-function detailMeta(model: FollowUpViewModel) {
-  const parts = [model.companyName, model.contactName, model.contactTitle].filter(Boolean);
-  return parts.join(" · ");
-}
-
 function getDateTone(value: string | null) {
   if (!value) return C.textFaint;
   if (isOverdueDate(value)) return C.danger;
@@ -181,6 +128,7 @@ export default function DesignLabOppfolginger() {
   const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [search, setSearch] = useState("");
   const [viewFilter, setViewFilter] = useState<FollowUpViewFilter>("Alle");
+  const [ownerFilter, setOwnerFilter] = useState("Alle");
   const [selectedId, setSelectedId] = useState<string | null>(searchParams.get("task"));
   const [createOpen, setCreateOpen] = useState(false);
   const [contactSearch, setContactSearch] = useState("");
@@ -272,16 +220,10 @@ export default function DesignLabOppfolginger() {
     [tasks, activities, profilesById, companiesById],
   );
 
-  const activitiesByContact = useMemo(() => {
-    const map = new Map<string, Array<{ id?: string; created_at: string; subject: string; description: string | null }>>();
-    for (const activity of activities) {
-      if (!activity.contact_id) continue;
-      const existing = map.get(activity.contact_id) || [];
-      existing.push(activity);
-      map.set(activity.contact_id, existing);
-    }
-    return map;
-  }, [activities]);
+  const ownerOptions = useMemo(() => {
+    const names = Array.from(new Set(viewModels.map((model) => model.ownerName).filter((value): value is string => Boolean(value))));
+    return ["Alle", ...names.sort((left, right) => left.localeCompare(right, "nb")), "Uten eier"];
+  }, [viewModels]);
 
   const filtered = useMemo(() => {
     const lowerSearch = search.trim().toLowerCase();
@@ -290,6 +232,8 @@ export default function DesignLabOppfolginger() {
 
     return viewModels
       .filter((model) => {
+        if (ownerFilter === "Uten eier" && model.ownerId) return false;
+        if (ownerFilter !== "Alle" && ownerFilter !== "Uten eier" && model.ownerName !== ownerFilter) return false;
         if (viewFilter === "Mine" && model.ownerId !== user?.id) return false;
         if (viewFilter === "Forfalt" && !isOverdueDate(model.nextFollowUpAt)) return false;
         if (viewFilter === "Denne uka") {
@@ -330,7 +274,7 @@ export default function DesignLabOppfolginger() {
 
         return (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt);
       });
-  }, [search, user?.id, viewFilter, viewModels]);
+  }, [ownerFilter, search, user?.id, viewFilter, viewModels]);
 
   useEffect(() => {
     const paramId = searchParams.get("task");
@@ -356,11 +300,6 @@ export default function DesignLabOppfolginger() {
     if (!selectedId) return null;
     return filtered.find((model) => model.id === selectedId) || viewModels.find((model) => model.id === selectedId) || null;
   }, [filtered, selectedId, viewModels]);
-
-  const selectedActivities = useMemo(() => {
-    if (!selected?.contactId) return [];
-    return (activitiesByContact.get(selected.contactId) || []).slice(0, 6);
-  }, [activitiesByContact, selected?.contactId]);
 
   const stats = useMemo(() => {
     const overdueCount = viewModels.filter((model) => isOverdueDate(model.nextFollowUpAt)).length;
@@ -392,37 +331,6 @@ export default function DesignLabOppfolginger() {
     ]);
   }
 
-  const updateTaskMutation = useMutation({
-    mutationFn: async ({
-      taskId,
-      patch,
-    }: {
-      taskId: string;
-      patch: Partial<{
-        assigned_to: string | null;
-        due_date: string | null;
-        status: string;
-        completed_at: string | null;
-        updated_at: string;
-      }>;
-    }) => {
-      const { error } = await supabase
-        .from("tasks")
-        .update({
-          ...patch,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", taskId);
-      if (error) throw error;
-    },
-    onSuccess: async () => {
-      await invalidateFollowUpData();
-    },
-    onError: () => {
-      toast.error("Kunne ikke oppdatere oppfølging");
-    },
-  });
-
   const createMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("tasks").insert({
@@ -450,34 +358,6 @@ export default function DesignLabOppfolginger() {
       toast.error("Kunne ikke opprette oppfølging");
     },
   });
-
-  const handleStatusChange = (model: FollowUpViewModel, nextStatus: FollowUpVisualStatus) => {
-    updateTaskMutation.mutate({
-      taskId: model.id,
-      patch: {
-        status: mapVisualStatusToTaskStatus(nextStatus),
-        completed_at: nextStatus === "done" ? new Date().toISOString() : null,
-      },
-    });
-  };
-
-  const handleOwnerChange = (model: FollowUpViewModel, nextOwner: string) => {
-    updateTaskMutation.mutate({
-      taskId: model.id,
-      patch: {
-        assigned_to: nextOwner === "unassigned" ? null : nextOwner,
-      },
-    });
-  };
-
-  const handleDateChange = (model: FollowUpViewModel, nextDate: Date | undefined) => {
-    updateTaskMutation.mutate({
-      taskId: model.id,
-      patch: {
-        due_date: nextDate ? format(nextDate, "yyyy-MM-dd") : null,
-      },
-    });
-  };
 
   const handleContactPick = (contact: any) => {
     setForm((current) => ({
@@ -654,7 +534,8 @@ export default function DesignLabOppfolginger() {
           </div>
         </header>
 
-        <div className="shrink-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
+        <div className="shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
+          <DesignLabFilterRow label="EIER" options={ownerOptions} value={ownerFilter} onChange={setOwnerFilter} />
           <div className="flex items-center justify-between gap-4">
             <DesignLabFilterRow
               label="VISNING"
@@ -662,9 +543,23 @@ export default function DesignLabOppfolginger() {
               value={viewFilter}
               onChange={(value) => setViewFilter(value)}
             />
-            <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500, whiteSpace: "nowrap" }}>
-              {stats.mineCount} mine · {stats.overdueCount} forfalte · {stats.unassignedCount} uten eier
-            </span>
+            <div className="flex items-center gap-3">
+              {(ownerFilter !== "Alle" || viewFilter !== "Alle") && (
+                <DesignLabGhostAction
+                  type="button"
+                  onClick={() => {
+                    setOwnerFilter("Alle");
+                    setViewFilter("Alle");
+                  }}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Nullstill
+                </DesignLabGhostAction>
+              )}
+              <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500, whiteSpace: "nowrap" }}>
+                {stats.mineCount} mine · {stats.overdueCount} forfalte · {stats.unassignedCount} uten eier
+              </span>
+            </div>
           </div>
         </div>
 
@@ -675,7 +570,7 @@ export default function DesignLabOppfolginger() {
                 <div
                   className="grid items-center sticky top-0 z-10"
                   style={{
-                    gridTemplateColumns: "minmax(0, 2.2fr) 118px 96px 92px 70px",
+                    gridTemplateColumns: "minmax(0, 2.5fr) 112px 92px 70px",
                     minHeight: 36,
                     padding: "0 24px",
                     borderBottom: `1px solid ${C.borderLight}`,
@@ -683,7 +578,6 @@ export default function DesignLabOppfolginger() {
                   }}
                 >
                   <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.01em", color: C.textMuted }}>Oppfølging</span>
-                  <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.01em", color: C.textMuted }}>Status</span>
                   <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.01em", color: C.textMuted }}>Eier</span>
                   <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.01em", color: C.textMuted }}>Dato</span>
                   <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.01em", color: C.textMuted, textAlign: "right" }}>Prioritet</span>
@@ -716,7 +610,7 @@ export default function DesignLabOppfolginger() {
                         onClick={() => setSelectedId(model.id)}
                         className="grid w-full items-center text-left transition-colors"
                         style={{
-                          gridTemplateColumns: "minmax(0, 2.2fr) 118px 96px 92px 70px",
+                          gridTemplateColumns: "minmax(0, 2.5fr) 112px 92px 70px",
                           minHeight: 52,
                           padding: "10px 24px",
                           borderBottom: `1px solid ${C.borderLight}`,
@@ -736,12 +630,6 @@ export default function DesignLabOppfolginger() {
                           <p style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }} className="truncate">
                             {rowMeta(model)}
                           </p>
-                        </div>
-
-                        <div>
-                          <DesignLabReadonlyChip active={true} activeColors={STATUS_COLORS[model.status]}>
-                            {model.statusLabel}
-                          </DesignLabReadonlyChip>
                         </div>
 
                         <span style={{ fontSize: 12, color: model.ownerName ? C.text : C.textFaint, fontWeight: model.ownerName ? 500 : 400 }} className="truncate">
@@ -771,237 +659,51 @@ export default function DesignLabOppfolginger() {
             <ResizableHandle withHandle />
 
             <ResizablePanel defaultSize={60} minSize={32}>
-              <div className="h-full overflow-y-auto" style={{ background: C.panel }}>
-                {selected ? (
-                  <div className="min-h-full" style={{ borderLeft: `1px solid ${C.borderLight}` }}>
-                    <div
-                      className="flex items-start justify-between gap-4"
-                      style={{ padding: "24px 28px 18px", borderBottom: `1px solid ${C.borderLight}` }}
-                    >
-                      <div className="min-w-0">
-                        <h2 style={{ fontSize: 16, fontWeight: 650, color: C.text, letterSpacing: "-0.01em", lineHeight: 1.25 }}>
-                          {selected.title}
-                        </h2>
-                        <p style={{ fontSize: 13, color: C.textMuted, marginTop: 8 }}>
-                          {detailMeta(selected) || "Ingen kontakt koblet til"}
-                        </p>
-                        <div className="mt-3 flex flex-wrap items-center gap-2">
-                          <DesignLabReadonlyChip active={true} activeColors={STATUS_COLORS[selected.status]}>
-                            {selected.statusLabel}
-                          </DesignLabReadonlyChip>
-                          {selected.signal ? <DesignLabSignalBadge signal={selected.signal} /> : null}
-                          {selected.priority ? (
-                            <DesignLabReadonlyChip active={true} activeColors={PRIORITY_COLORS[selected.priority]}>
-                              {selected.priority}
-                            </DesignLabReadonlyChip>
-                          ) : null}
-                        </div>
+              {selected ? (
+                <div
+                  className="h-full flex flex-col"
+                  style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}` }}
+                >
+                  <div
+                    className="shrink-0 flex items-center justify-end px-4"
+                    style={{ height: 32 }}
+                  >
+                    <DesignLabIconButton onClick={() => setSelectedId(null)} title="Lukk kontaktpanel">
+                      <X style={{ width: 16, height: 16 }} />
+                    </DesignLabIconButton>
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-6 py-5 dl-v8-theme">
+                    {selected.contactId ? (
+                      <ContactCardContent
+                        contactId={selected.contactId}
+                        editable
+                        enableProfileEditMode
+                        headerPaddingTop={12}
+                        onDataChanged={() => {
+                          void invalidateFollowUpData();
+                        }}
+                        defaultHidden={{
+                          techDna: true,
+                          notes: true,
+                          consultantMatch: true,
+                          linkedinIfEmpty: true,
+                          locationsIfEmpty: true,
+                        }}
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center" style={{ color: C.textMuted, fontSize: 13 }}>
+                        Denne oppfølgingen er ikke koblet til en kontakt
                       </div>
-                      <DesignLabGhostAction type="button" onClick={() => setSelectedId(null)}>
-                        <X className="h-3.5 w-3.5" />
-                      </DesignLabGhostAction>
-                    </div>
-
-                    <div className="space-y-6" style={{ padding: "22px 28px 32px" }}>
-                      <section className="grid gap-4 md:grid-cols-3">
-                        <DetailField label="Status">
-                          <Select value={selected.status} onValueChange={(value) => handleStatusChange(selected, value as FollowUpVisualStatus)}>
-                            <SelectTrigger className="h-8 rounded-[6px] text-[12px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {STATUS_OPTIONS.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </DetailField>
-
-                        <DetailField label="Eier">
-                          <Select
-                            value={selected.ownerId || "unassigned"}
-                            onValueChange={(value) => handleOwnerChange(selected, value)}
-                          >
-                            <SelectTrigger className="h-8 rounded-[6px] text-[12px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="unassigned">Ingen eier</SelectItem>
-                              {profiles.map((profile) => (
-                                <SelectItem key={profile.id} value={profile.id}>
-                                  {profile.full_name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </DetailField>
-
-                        <DetailField label="Neste oppfølging">
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <button
-                                type="button"
-                                className="flex h-8 w-full items-center justify-between rounded-[6px] border px-3 text-left"
-                                style={{ fontSize: 12, color: selected.nextFollowUpAt ? C.text : C.textFaint, borderColor: C.border }}
-                              >
-                                <span>
-                                  {selected.nextFollowUpAt
-                                    ? format(new Date(selected.nextFollowUpAt), "d. MMMM yyyy", { locale: nb })
-                                    : "Ingen dato"}
-                                </span>
-                                <CalendarIcon className="h-3.5 w-3.5" />
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={selected.nextFollowUpAt ? new Date(selected.nextFollowUpAt) : undefined}
-                                onSelect={(date) => handleDateChange(selected, date)}
-                                locale={nb}
-                                className="p-3 pointer-events-auto"
-                              />
-                              <div className="border-t px-3 py-2" style={{ borderColor: C.borderLight }}>
-                                <button
-                                  type="button"
-                                  className="text-[12px] font-medium"
-                                  style={{ color: C.textMuted }}
-                                  onClick={() => handleDateChange(selected, undefined)}
-                                >
-                                  Fjern dato
-                                </button>
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-                        </DetailField>
-                      </section>
-
-                      {selected.description ? (
-                        <section>
-                          <SectionLabel>Beskrivelse</SectionLabel>
-                          <div
-                            style={{
-                              marginTop: 8,
-                              padding: "14px 16px",
-                              borderRadius: 10,
-                              border: `1px solid ${C.borderLight}`,
-                              background: C.surface,
-                              fontSize: 13,
-                              color: C.textMuted,
-                              lineHeight: 1.6,
-                              whiteSpace: "pre-wrap",
-                            }}
-                          >
-                            {selected.description}
-                          </div>
-                        </section>
-                      ) : null}
-
-                      <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-                        <div>
-                          <SectionLabel>Siste aktivitet</SectionLabel>
-                          <div style={{ marginTop: 8, border: `1px solid ${C.borderLight}`, borderRadius: 10, overflow: "hidden", background: C.surface }}>
-                            {selectedActivities.length > 0 ? (
-                              selectedActivities.map((activity, index) => (
-                                <div
-                                  key={`${activity.created_at}-${index}`}
-                                  style={{
-                                    padding: "12px 16px",
-                                    borderBottom: index === selectedActivities.length - 1 ? "none" : `1px solid ${C.borderLight}`,
-                                  }}
-                                >
-                                  <p style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{activity.subject}</p>
-                                  <p style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>
-                                    {format(new Date(activity.created_at), "d. MMM yyyy", { locale: nb })}
-                                  </p>
-                                  {activity.description ? (
-                                    <p style={{ fontSize: 12, color: C.textFaint, marginTop: 6, lineHeight: 1.5 }}>
-                                      {activity.description}
-                                    </p>
-                                  ) : null}
-                                </div>
-                              ))
-                            ) : (
-                              <div style={{ padding: "14px 16px", fontSize: 12, color: C.textFaint }}>
-                                Ingen nyere aktivitet registrert
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div>
-                          <SectionLabel>Kontakt</SectionLabel>
-                          <div style={{ marginTop: 8, border: `1px solid ${C.borderLight}`, borderRadius: 10, background: C.surface, padding: "14px 16px" }}>
-                            <div className="space-y-2">
-                              <p style={{ fontSize: 13, fontWeight: 600, color: C.text }}>
-                                {selected.contactName || "Ingen kontakt"}
-                              </p>
-                              {selected.contactTitle ? (
-                                <p style={{ fontSize: 12, color: C.textMuted }}>{selected.contactTitle}</p>
-                              ) : null}
-                              {selected.companyName ? (
-                                <p style={{ fontSize: 12, color: C.textMuted }}>{selected.companyName}</p>
-                              ) : null}
-                              {selected.contactEmail ? (
-                                <div className="flex items-center gap-2" style={{ fontSize: 12, color: C.textMuted }}>
-                                  <Mail className="h-3.5 w-3.5" />
-                                  <span className="truncate">{selected.contactEmail}</span>
-                                </div>
-                              ) : null}
-                              {selected.contactPhone ? (
-                                <div className="flex items-center gap-2" style={{ fontSize: 12, color: C.textMuted }}>
-                                  <Phone className="h-3.5 w-3.5" />
-                                  <span>{selected.contactPhone}</span>
-                                </div>
-                              ) : null}
-                            </div>
-
-                            <div className="mt-4 flex flex-wrap gap-2">
-                              {selected.contactId ? (
-                                <DesignLabSecondaryAction onClick={() => navigate(`/design-lab/kontakter?contact=${selected.contactId}`)}>
-                                  Åpne kontakt
-                                </DesignLabSecondaryAction>
-                              ) : null}
-                              {selected.companyId ? (
-                                <DesignLabGhostAction onClick={() => navigate(`/design-lab/selskaper?company=${selected.companyId}`)}>
-                                  <ExternalLink className="h-3.5 w-3.5" />
-                                  Åpne selskap
-                                </DesignLabGhostAction>
-                              ) : null}
-                            </div>
-                          </div>
-                        </div>
-                      </section>
-                    </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="flex h-full items-center justify-center" style={{ color: C.textMuted, fontSize: 13 }}>
-                    Velg en oppfølging for å se detaljer
-                  </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="h-full" style={{ borderLeft: `1px solid ${C.borderLight}`, background: C.appBg }} />
+              )}
             </ResizablePanel>
           </ResizablePanelGroup>
         </div>
       </main>
     </div>
-  );
-}
-
-function DetailField({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <SectionLabel>{label}</SectionLabel>
-      {children}
-    </div>
-  );
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.03em", color: C.textMuted }}>
-      {children}
-    </p>
   );
 }

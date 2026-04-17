@@ -9,11 +9,25 @@ import { cn } from "@/lib/utils";
 import { getEffectiveSignal, getSignalBadgeStyle, upsertTaskSignalDescription } from "@/lib/categoryUtils";
 import { CONTACT_CV_EMAIL_REQUIRED_MESSAGE, contactHasEmail } from "@/lib/contactCvEligibility";
 import { getHeatResult, TEMP_CONFIG } from "@/lib/heatScore";
-import { Flame, ChevronLeft, ChevronRight, Radio, Loader2, MapPin, ChevronDown, X, Bell } from "lucide-react";
+import { ChevronLeft, ChevronRight, Radio, Loader2, ChevronDown, X } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Dialog } from "@/components/ui/dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { ContactCardContent } from "@/components/ContactCardContent";
+import {
+  DesignLabControlLabel,
+  DesignLabFilterButton,
+  DesignLabIconButton,
+} from "@/components/designlab/controls";
+import {
+  DESIGN_LAB_STATUS_NEUTRAL_CHIP_ACTIVE_COLORS,
+  DesignLabModalContent,
+  DesignLabPrimaryAction,
+  DesignLabReadonlyChip,
+  DesignLabSignalBadge,
+  getDesignLabCategoryChipActiveColors,
+} from "@/components/designlab/system";
 import { toast } from "sonner";
 import { C } from "@/theme";
 
@@ -118,6 +132,61 @@ function buildSignalSnapshot(lead: ScoredLead, signalOverride?: string) {
     tier: lead.tier,
   };
 }
+
+const DESIGN_LAB_HEAT_CHIP_COLORS: Record<ScoredLead["temperature"], { background: string; color: string; border: string; fontWeight: number }> = {
+  hett: {
+    background: C.dangerBg,
+    color: C.danger,
+    border: `1px solid rgba(139,29,32,0.18)`,
+    fontWeight: 600,
+  },
+  lovende: {
+    background: C.warningBg,
+    color: C.warning,
+    border: `1px solid rgba(125,78,0,0.18)`,
+    fontWeight: 600,
+  },
+  mulig: {
+    background: C.infoBg,
+    color: C.info,
+    border: `1px solid rgba(26,79,160,0.18)`,
+    fontWeight: 600,
+  },
+  sovende: {
+    background: C.statusNeutralBg,
+    color: C.statusNeutral,
+    border: `1px solid ${C.statusNeutralBorder}`,
+    fontWeight: 500,
+  },
+};
+
+const DESIGN_LAB_FINN_CHIP_COLORS = {
+  background: C.infoBg,
+  color: C.info,
+  border: `1px solid rgba(26,79,160,0.18)`,
+  fontWeight: 600,
+} as const;
+
+const DESIGN_LAB_BUYER_CHIP_COLORS = {
+  background: C.warningBg,
+  color: C.warning,
+  border: `1px solid rgba(125,78,0,0.18)`,
+  fontWeight: 600,
+} as const;
+
+const DESIGN_LAB_CV_EMAIL_CHIP_COLORS = {
+  background: C.infoBg,
+  color: C.info,
+  border: `1px solid rgba(26,79,160,0.18)`,
+  fontWeight: 600,
+} as const;
+
+const DESIGN_LAB_IRRELEVANT_CHIP_COLORS = {
+  background: C.dangerBg,
+  color: C.danger,
+  border: `1px solid rgba(139,29,32,0.18)`,
+  fontWeight: 600,
+} as const;
 
 interface DailyBriefProps {
   designLabMode?: boolean;
@@ -587,6 +656,20 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
     return [{ id: "alle", label: "Alle" }, ...(me ? [{ id: me.id, label: me.full_name }] : []), ...others];
   }, [allProfiles, user?.id]);
 
+  const handleOwnerFilterChange = useCallback(
+    (nextOwnerId: string) => {
+      if (nextOwnerId === ownerFilter) return;
+      setOwnerFilter(nextOwnerId);
+      setCurrentContactId(null);
+      historyRef.current = [];
+      futureHistoryRef.current = [];
+      setHistory([]);
+      setFutureHistory([]);
+      setCompletedAll(false);
+    },
+    [ownerFilter],
+  );
+
   const progress = eligibleScoredLeads.length > 0 ? (treatedCount / eligibleScoredLeads.length) * 100 : 0;
 
   const handleNudgeOkNeste = useCallback(async () => {
@@ -635,6 +718,68 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
     goNext,
     persistSignalToFollowUp,
     saveReview,
+  ]);
+
+  const handleAdvance = useCallback(() => {
+    if (!current) return;
+    const harSignal = !!currentSignal;
+    const harTask = !!current.nextTask;
+    const harForfalt = current.hasOverdue;
+    const erIkkeAktuell =
+      localIkkeAktuell[current.contact.id] ?? !!current.contact.ikke_aktuell_kontakt;
+
+    if (erIkkeAktuell) {
+      void saveReview(current.contact.id, "ikke_aktuell", current, currentSignal);
+      goNext("left", true);
+      return;
+    }
+
+    const openNudge = (
+      scenario: typeof nudgeScenario,
+      options?: { requireSignalChoice?: boolean },
+    ) => {
+      setNudgeScenario(scenario);
+      setNudgeSignal(currentSignal || "");
+      setNudgeRequiresSignalChoice(!currentSignal && !!options?.requireSignalChoice);
+      const taskId = current.nextTask?.id;
+      const chipVal = taskId ? selectedChipDate[taskId] : undefined;
+      if (chipVal !== undefined) {
+        setNudgeDate(chipVal === null ? "someday" : chipVal);
+        setNudgeCustomDate(taskId && customChipDate[taskId] ? customChipDate[taskId] : "");
+      } else {
+        setNudgeDate("someday");
+        setNudgeCustomDate("");
+      }
+      setNudgeOpen(true);
+    };
+
+    if (harForfalt) {
+      openNudge("forfalt", { requireSignalChoice: !harSignal });
+      return;
+    }
+    if (!harSignal && harTask) {
+      openNudge("ingen_signal_med_task", { requireSignalChoice: true });
+      return;
+    }
+    if (!harSignal && !harTask) {
+      openNudge("ingen_signal_ingen_task", { requireSignalChoice: true });
+      return;
+    }
+    if (harSignal && !harTask) {
+      openNudge("signal_ingen_task");
+      return;
+    }
+
+    void saveReview(current.contact.id, "beholdt", current, currentSignal);
+    goNext("left", true);
+  }, [
+    current,
+    currentSignal,
+    customChipDate,
+    goNext,
+    localIkkeAktuell,
+    saveReview,
+    selectedChipDate,
   ]);
 
   useEffect(() => {
@@ -690,32 +835,37 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
 
       {/* ── Filter + visningsvalg ── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground sm:w-14 sm:flex-shrink-0">
-          Eier
-        </span>
+        {designLabMode ? (
+          <DesignLabControlLabel>EIER</DesignLabControlLabel>
+        ) : (
+          <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground sm:w-14 sm:flex-shrink-0">
+            Eier
+          </span>
+        )}
         <div className="flex flex-wrap items-center gap-1.5 sm:flex-1">
           {filterOptions.map((opt) => (
-            <button
-              key={opt.id}
-              onClick={() => {
-                if (opt.id === ownerFilter) return;
-                setOwnerFilter(opt.id);
-                setCurrentContactId(null);
-                historyRef.current = [];
-                futureHistoryRef.current = [];
-                setHistory([]);
-                setFutureHistory([]);
-                setCompletedAll(false);
-              }}
-              className={cn(
-                "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
-                ownerFilter === opt.id
-                  ? "bg-foreground text-background border-foreground font-medium"
-                  : "border-border text-muted-foreground hover:bg-secondary",
-              )}
-            >
-              {opt.label}
-            </button>
+            designLabMode ? (
+              <DesignLabFilterButton
+                key={opt.id}
+                onClick={() => handleOwnerFilterChange(opt.id)}
+                active={ownerFilter === opt.id}
+              >
+                {opt.label}
+              </DesignLabFilterButton>
+            ) : (
+              <button
+                key={opt.id}
+                onClick={() => handleOwnerFilterChange(opt.id)}
+                className={cn(
+                  "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
+                  ownerFilter === opt.id
+                    ? "bg-foreground text-background border-foreground font-medium"
+                    : "border-border text-muted-foreground hover:bg-secondary",
+                )}
+              >
+                {opt.label}
+              </button>
+            )
           ))}
         </div>
 
@@ -752,15 +902,34 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
             <div className="space-y-2">
               <div
                 ref={cardRef}
-                className="w-full bg-card border border-border rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-visible"
-                style={{ cursor: isDragging ? "grabbing" : "grab", touchAction: "pan-y" }}
+                className={cn(
+                  "w-full overflow-visible",
+                  designLabMode
+                    ? "rounded-[12px]"
+                    : "bg-card border border-border rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)]",
+                )}
+                style={{
+                  cursor: isDragging ? "grabbing" : "grab",
+                  touchAction: "pan-y",
+                  ...(designLabMode
+                    ? {
+                        background: C.surface,
+                        border: `1px solid ${C.borderLight}`,
+                        boxShadow: C.shadow,
+                      }
+                    : {}),
+                }}
               >
                 {/* Temperaturstrek øverst */}
-                <div className="rounded-t-2xl overflow-hidden">
-                  <div className={cn("h-1", TEMP_CONFIG[current.temperature].bar)} />
-                </div>
+                {!designLabMode && (
+                  <div className="rounded-t-2xl overflow-hidden">
+                    <div className={cn("h-1", TEMP_CONFIG[current.temperature].bar)} />
+                  </div>
+                )}
 
-                <div className="flex items-center gap-2 px-4 pt-4 sm:px-5">
+                <div
+                  className={cn("flex items-center gap-2", designLabMode ? "px-5 pt-5" : "px-4 pt-4 sm:px-5")}
+                >
                   {/* Temperatur-badge */}
                   {(() => {
                     const tempBadge: Record<string, { bg: string; text: string }> = {
@@ -771,7 +940,11 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
                     };
                     const emoji = current.temperature === "hett" ? "🔥" : current.temperature === "lovende" ? "⚡" : current.temperature === "mulig" ? "💡" : "💤";
                     const tb = tempBadge[current.temperature];
-                    return (
+                    return designLabMode ? (
+                      <DesignLabReadonlyChip active={true} activeColors={DESIGN_LAB_HEAT_CHIP_COLORS[current.temperature]}>
+                        {emoji} {TEMP_CONFIG[current.temperature].label}
+                      </DesignLabReadonlyChip>
+                    ) : (
                       <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[0.75rem] font-medium", tb.bg, tb.text)}>
                         {emoji} {TEMP_CONFIG[current.temperature].label}
                       </span>
@@ -783,7 +956,11 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
                     if (!companyTech?.teknologier) return null;
                     const hasTech = Object.keys(companyTech.teknologier as Record<string, number>).length > 0;
                     if (!hasTech) return null;
-                    return (
+                    return designLabMode ? (
+                      <DesignLabReadonlyChip active={true} activeColors={DESIGN_LAB_FINN_CHIP_COLORS}>
+                        <Radio className="h-3 w-3" /> Finn.no
+                      </DesignLabReadonlyChip>
+                    ) : (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-blue-100 bg-blue-50 text-[0.75rem] font-medium text-blue-800">
                         <Radio className="h-3 w-3 text-blue-500" /> Finn.no
                       </span>
@@ -800,17 +977,23 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
                   )}
                 </div>
 
-                <div className="p-4 pt-3 sm:p-7 sm:pt-3">
+                <div className={cn(designLabMode ? "px-5 pb-5 pt-4" : "p-4 pt-3 sm:p-7 sm:pt-3")}>
                   {/* ── Sone 1: Navn + meta ── */}
-                  <div className="pb-5">
+                  <div className={cn(designLabMode ? "pb-4" : "pb-5")}>
                     <div className="space-y-1">
                       <button
                         onClick={() => navigate(getContactHref(current.contact.id))}
-                        className="text-[1.5rem] font-bold text-foreground hover:text-primary transition-colors text-left leading-tight"
+                        className={cn(
+                          "font-bold text-foreground hover:text-primary transition-colors text-left leading-tight",
+                          designLabMode ? "text-[1.125rem]" : "text-[1.5rem]",
+                        )}
                       >
                         {current.contact.first_name} {current.contact.last_name}
                       </button>
-                      <div className="flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground flex-wrap">
+                      <div
+                        className="flex items-center gap-1.5 flex-wrap"
+                        style={{ fontSize: designLabMode ? 13 : 13, color: C.textMuted }}
+                      >
                         {current.contact.title && <span>{current.contact.title}</span>}
                         {current.contact.companies?.name && (
                           <>
@@ -834,15 +1017,23 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
                   </div>
 
                   {/* Divider */}
-                  <div className="border-t border-border/50" />
+                  <div style={{ borderTop: `1px solid ${designLabMode ? C.borderLight : "rgba(0,0,0,0.08)"}` }} />
 
                   {/* ── Sone 2: Siste + Neste oppfølging ── */}
-                  <div className="py-6">
+                  <div className={cn(designLabMode ? "py-5" : "py-6")}>
                     {/* Snapshot-grid */}
                     <div className="flex flex-col gap-8">
                       {/* Siste */}
                       <div className="flex flex-col gap-1">
-                        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap">
+                        <p
+                          style={{
+                            fontSize: designLabMode ? 11 : 11,
+                            fontWeight: designLabMode ? 500 : 600,
+                            letterSpacing: designLabMode ? "0.03em" : "0.08em",
+                            color: C.textMuted,
+                          }}
+                          className="uppercase whitespace-nowrap"
+                        >
                           Siste oppfølging
                         </p>
                         {current.lastAct ? (
@@ -889,7 +1080,15 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
 
                       {/* Neste */}
                       <div className="flex flex-col gap-1.5">
-                        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap">
+                        <p
+                          style={{
+                            fontSize: designLabMode ? 11 : 11,
+                            fontWeight: designLabMode ? 500 : 600,
+                            letterSpacing: designLabMode ? "0.03em" : "0.08em",
+                            color: C.textMuted,
+                          }}
+                          className="uppercase whitespace-nowrap"
+                        >
                           Neste oppfølging
                         </p>
                         <div className="flex items-baseline gap-2 flex-wrap">
@@ -1019,11 +1218,35 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
                                       await updateTaskDueDate(chip.value);
                                     }}
                                     className={cn(
-                                      "h-9 px-4 text-[0.8125rem] rounded-full border transition-colors",
-                                      isActive
-                                        ? "bg-primary/10 text-primary border-primary/30 font-medium"
-                                        : "border-border text-muted-foreground hover:bg-secondary",
+                                      designLabMode
+                                        ? "h-7 px-3 rounded-[6px] transition-colors"
+                                        : "h-9 px-4 text-[0.8125rem] rounded-full border transition-colors",
+                                      !designLabMode &&
+                                        (isActive
+                                          ? "bg-primary/10 text-primary border-primary/30 font-medium"
+                                          : "border-border text-muted-foreground hover:bg-secondary"),
                                     )}
+                                    style={
+                                      designLabMode
+                                        ? {
+                                            fontSize: 12,
+                                            borderRadius: 6,
+                                            ...(isActive
+                                              ? {
+                                                  background: C.filterActiveBg,
+                                                  color: C.textPrimary,
+                                                  border: `1px solid ${C.filterActiveBorder}`,
+                                                  fontWeight: 600,
+                                                }
+                                              : {
+                                                  background: "transparent",
+                                                  color: C.textSecondary,
+                                                  border: `1px solid ${C.borderDefault}`,
+                                                  fontWeight: 500,
+                                                }),
+                                          }
+                                        : undefined
+                                    }
                                   >
                                     {chip.label}
                                   </button>
@@ -1040,12 +1263,28 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
                                   if (taskId) setCustomChipDate((prev) => ({ ...prev, [taskId]: newDate }));
                                   await updateTaskDueDate(newDate);
                                 }}
-                                  className={cn(
-                                   "h-9 px-3 text-[0.8125rem] rounded-full border bg-background transition-colors",
-                                   isCustomSelected
-                                     ? "bg-primary/10 text-primary border-primary/30 font-medium"
-                                     : "border-border text-muted-foreground hover:bg-secondary",
+                                className={cn(
+                                  designLabMode
+                                    ? "h-7 px-3 rounded-[6px] border transition-colors"
+                                    : "h-9 px-3 text-[0.8125rem] rounded-full border bg-background transition-colors",
+                                  !designLabMode &&
+                                    (isCustomSelected
+                                      ? "bg-primary/10 text-primary border-primary/30 font-medium"
+                                      : "border-border text-muted-foreground hover:bg-secondary"),
                                 )}
+                                style={
+                                  designLabMode
+                                    ? {
+                                        fontSize: 12,
+                                        background: isCustomSelected ? C.filterActiveBg : "#FFFFFF",
+                                        color: isCustomSelected ? C.textPrimary : C.textSecondary,
+                                        border: isCustomSelected
+                                          ? `1px solid ${C.filterActiveBorder}`
+                                          : `1px solid ${C.borderDefault}`,
+                                        fontWeight: isCustomSelected ? 600 : 500,
+                                      }
+                                    : undefined
+                                }
                               />
                             </div>
                           );
@@ -1055,28 +1294,46 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
                   </div>
 
                   {/* Divider */}
-                  <div className="border-t border-border/50" />
+                  <div style={{ borderTop: `1px solid ${designLabMode ? C.borderLight : "rgba(0,0,0,0.08)"}` }} />
 
                   {/* ── Sone 4: Toggle-piller ── */}
-                  <div className="py-5">
+                  <div className={cn(designLabMode ? "py-4" : "py-5")}>
                     <div className="flex flex-wrap items-center gap-2">
                       {/* Signal */}
                       <div className="relative">
-                        <button
-                          onClick={() => setActiveForm(activeForm === "signal" ? null : "signal")}
-                          className={cn(
-                            "inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[6px] border text-[0.75rem] font-medium transition-colors",
-                            currentSignal
-                              ? "bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8] font-semibold"
-                              : "bg-background text-muted-foreground border-border hover:bg-secondary",
-                          )}
-                        >
-                          {currentSignal || "Signal"} <ChevronDown className="h-3 w-3" />
-                        </button>
+                        {designLabMode ? (
+                          <DesignLabFilterButton
+                            onClick={() => setActiveForm(activeForm === "signal" ? null : "signal")}
+                            active={Boolean(currentSignal)}
+                            activeColors={currentSignal ? getDesignLabCategoryChipActiveColors(currentSignal) : DESIGN_LAB_STATUS_NEUTRAL_CHIP_ACTIVE_COLORS}
+                          >
+                            {currentSignal || "Signal"} <ChevronDown className="h-3 w-3" />
+                          </DesignLabFilterButton>
+                        ) : (
+                          <button
+                            onClick={() => setActiveForm(activeForm === "signal" ? null : "signal")}
+                            className={cn(
+                              "inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[6px] border text-[0.75rem] font-medium transition-colors",
+                              currentSignal
+                                ? "bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8] font-semibold"
+                                : "bg-background text-muted-foreground border-border hover:bg-secondary",
+                            )}
+                          >
+                            {currentSignal || "Signal"} <ChevronDown className="h-3 w-3" />
+                          </button>
+                        )}
                         {activeForm === "signal" && (
                           <>
                           <div className="fixed inset-0 z-40" onClick={() => setActiveForm(null)} />
-                          <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-xl shadow-lg py-1 min-w-[200px]">
+                          <div
+                            className="absolute top-full left-0 mt-1 z-50 py-1 min-w-[220px]"
+                            style={{
+                              background: C.surface,
+                              border: `1px solid ${C.borderLight}`,
+                              borderRadius: 10,
+                              boxShadow: C.shadowMd,
+                            }}
+                          >
                             {SIGNAL_CATEGORIES.map((cat) => (
                               <button
                                 key={cat.label}
@@ -1104,14 +1361,25 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
                                     toast.error("Kunne ikke oppdatere signal");
                                   }
                                 }}
-                                className="w-full flex items-center gap-2 px-3 py-2.5 text-[0.8125rem] hover:bg-secondary transition-colors text-left"
+                                className="w-full flex items-center gap-2 px-3 py-2.5 text-[0.8125rem] transition-colors text-left"
+                                style={{ color: C.text }}
+                                onMouseEnter={(event) => {
+                                  event.currentTarget.style.background = C.hoverSubtle;
+                                }}
+                                onMouseLeave={(event) => {
+                                  event.currentTarget.style.background = "transparent";
+                                }}
                               >
-                                <span
-                                  className="inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium h-7"
-                                  style={getSignalBadgeStyle(cat.label)}
-                                >
-                                  {cat.label}
-                                </span>
+                                {designLabMode ? (
+                                  <DesignLabSignalBadge signal={cat.label} size="md" />
+                                ) : (
+                                  <span
+                                    className="inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium h-7"
+                                    style={getSignalBadgeStyle(cat.label)}
+                                  >
+                                    {cat.label}
+                                  </span>
+                                )}
                                 {currentSignal === cat.label && <span className="ml-auto text-primary">✓</span>}
                               </button>
                             ))}
@@ -1121,7 +1389,30 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
                       </div>
 
                       {/* Innkjøper */}
-                      <button
+                      {designLabMode ? (
+                        <DesignLabFilterButton
+                          onClick={() => {
+                            const newVal = !current.contact.call_list;
+                            supabase
+                              .from("contacts")
+                              .update({ call_list: newVal })
+                              .eq("id", current.contact.id)
+                              .then(() =>
+                                queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
+                                  ...old,
+                                  rawContacts: old?.rawContacts?.map((c: any) =>
+                                    c.id === current.contact.id ? { ...c, call_list: newVal } : c,
+                                  ),
+                                })),
+                              );
+                          }}
+                          active={Boolean(current.contact.call_list)}
+                          activeColors={DESIGN_LAB_BUYER_CHIP_COLORS}
+                        >
+                          Innkjøper
+                        </DesignLabFilterButton>
+                      ) : (
+                        <button
                         onClick={() => {
                           const newVal = !current.contact.call_list;
                           supabase
@@ -1145,10 +1436,50 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
                         )}
                       >
                         Innkjøper
-                      </button>
+                        </button>
+                      )}
 
                       {/* CV-epost */}
-                      <button
+                      {designLabMode ? (
+                        <DesignLabFilterButton
+                          onClick={() => {
+                            const newVal = !current.contact.cv_email;
+                            if (newVal && !contactHasEmail(current.contact)) {
+                              toast.error(CONTACT_CV_EMAIL_REQUIRED_MESSAGE);
+                              return;
+                            }
+                            supabase
+                              .from("contacts")
+                              .update({ cv_email: newVal })
+                              .eq("id", current.contact.id)
+                              .then(({ error }) => {
+                                queryClient.setQueryData(["salgssenter-all", ownerFilter], (old: any) => ({
+                                  ...old,
+                                  rawContacts: old?.rawContacts?.map((c: any) =>
+                                    c.id === current.contact.id ? { ...c, cv_email: newVal } : c,
+                                  ),
+                                }));
+                                if (!error) {
+                                  supabase.functions.invoke("mailchimp-sync", {
+                                    body: { action: "sync-contact", contactId: current.contact.id },
+                                  }).then(({ data, error: mcErr }) => {
+                                    if (mcErr) {
+                                      console.error("Mailchimp sync feilet:", mcErr);
+                                      toast.error("Mailchimp-synk feilet");
+                                    } else {
+                                      toast.success(`Mailchimp: ${data?.status || "synkronisert"}`);
+                                    }
+                                  });
+                                }
+                              });
+                          }}
+                          active={Boolean(current.contact.cv_email)}
+                          activeColors={DESIGN_LAB_CV_EMAIL_CHIP_COLORS}
+                        >
+                          CV-epost
+                        </DesignLabFilterButton>
+                      ) : (
+                        <button
                         onClick={() => {
                           const newVal = !current.contact.cv_email;
                           if (newVal && !contactHasEmail(current.contact)) {
@@ -1188,10 +1519,34 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
                         )}
                       >
                         CV-epost
-                      </button>
+                        </button>
+                      )}
 
                       {/* Ikke relevant person */}
-                      <button
+                      {designLabMode ? (
+                        <DesignLabFilterButton
+                          onClick={async () => {
+                            const currentVal =
+                              localIkkeAktuell[current.contact.id] ?? !!current.contact.ikke_aktuell_kontakt;
+                            const newVal = !currentVal;
+                            setLocalIkkeAktuell((prev) => ({ ...prev, [current.contact.id]: newVal }));
+                            const { error } = await supabase
+                              .from("contacts")
+                              .update({ ikke_aktuell_kontakt: newVal })
+                              .eq("id", current.contact.id);
+                            if (error) {
+                              console.error("Feil ved oppdatering av ikke_aktuell_kontakt:", error);
+                              setLocalIkkeAktuell((prev) => ({ ...prev, [current.contact.id]: currentVal }));
+                            }
+                          }}
+                          active={Boolean(localIkkeAktuell[current.contact.id] ?? !!current.contact.ikke_aktuell_kontakt)}
+                          activeColors={DESIGN_LAB_IRRELEVANT_CHIP_COLORS}
+                          className="ml-auto"
+                        >
+                          Ikke relevant person å kontakte igjen
+                        </DesignLabFilterButton>
+                      ) : (
+                        <button
                         onClick={async () => {
                           const currentVal =
                             localIkkeAktuell[current.contact.id] ?? !!current.contact.ikke_aktuell_kontakt;
@@ -1214,82 +1569,69 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
                         )}
                       >
                         Ikke relevant person å kontakte igjen
-                      </button>
+                        </button>
+                      )}
                     </div>
                   </div>
 
                   {/* ── Sone 5: CTA ── */}
                   <div className="pt-1 pb-2">
-                    <button
-                      onClick={() => {
-                        if (!current) return;
-                        const harSignal = !!currentSignal;
-                        const harTask = !!current.nextTask;
-                        const harForfalt = current.hasOverdue;
-                        const erIkkeAktuell =
-                          localIkkeAktuell[current.contact.id] ?? !!current.contact.ikke_aktuell_kontakt;
-                        if (erIkkeAktuell) {
-                          void saveReview(current.contact.id, "ikke_aktuell", current, currentSignal);
-                          goNext("left", true);
-                          return;
-                        }
-                        const openNudge = (
-                          scenario: typeof nudgeScenario,
-                          options?: { requireSignalChoice?: boolean },
-                        ) => {
-                          setNudgeScenario(scenario);
-                          setNudgeSignal(currentSignal || "");
-                          setNudgeRequiresSignalChoice(!currentSignal && !!options?.requireSignalChoice);
-                          // Preserve date chip selection from the card
-                          const taskId = current.nextTask?.id;
-                          const chipVal = taskId ? selectedChipDate[taskId] : undefined;
-                          if (chipVal !== undefined) {
-                            // null means "Følg opp på sikt" on the card → "someday" in modal
-                            setNudgeDate(chipVal === null ? "someday" : chipVal);
-                            setNudgeCustomDate(taskId && customChipDate[taskId] ? customChipDate[taskId] : "");
-                          } else {
-                            setNudgeDate("someday");
-                            setNudgeCustomDate("");
-                          }
-                          setNudgeOpen(true);
-                        };
-                        if (harForfalt) {
-                          openNudge("forfalt", { requireSignalChoice: !harSignal });
-                          return;
-                        }
-                        if (!harSignal && harTask) {
-                          openNudge("ingen_signal_med_task", { requireSignalChoice: true });
-                          return;
-                        }
-                        if (!harSignal && !harTask) {
-                          openNudge("ingen_signal_ingen_task", { requireSignalChoice: true });
-                          return;
-                        }
-                        if (harSignal && !harTask) {
-                          openNudge("signal_ingen_task");
-                          return;
-                        }
-                        void saveReview(current.contact.id, "beholdt", current, currentSignal);
-                        goNext("left", true);
-                      }}
+                    {designLabMode ? (
+                      <DesignLabPrimaryAction
+                        onClick={handleAdvance}
+                        style={{ width: "100%", justifyContent: "center", height: 40, fontSize: 13 }}
+                      >
+                        Ok, neste →
+                      </DesignLabPrimaryAction>
+                    ) : (
+                      <button
+                      onClick={handleAdvance}
                       className="w-full h-[46px] rounded-xl bg-foreground text-background text-[0.9375rem] font-medium hover:opacity-90 active:scale-[0.99] transition-all"
                     >
                       Ok, neste →
-                    </button>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Navigasjon under kortet */}
-              <div className="flex items-center justify-between px-1 sm:px-2">
-                <button
+              <div className={cn("flex items-center justify-between", designLabMode ? "px-0 pt-1" : "px-1 sm:px-2")}>
+                {designLabMode ? (
+                  <DesignLabIconButton
+                    onClick={() => goNext("right")}
+                    disabled={history.length === 0}
+                    title="Forrige lead"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </DesignLabIconButton>
+                ) : (
+                  <button
                   onClick={() => goNext("right")}
                   disabled={history.length === 0}
                   className="flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-15 disabled:pointer-events-none transition-all"
                 >
                   <ChevronLeft className="h-4 w-4" />
-                </button>
-                <button
+                  </button>
+                )}
+                {designLabMode ? (
+                  <DesignLabIconButton
+                    onClick={() => goNext("left")}
+                    disabled={(() => {
+                      if (futureHistory.length > 0) return false;
+                      const idx = eligibleScoredLeads.findIndex((s) => s.contact.id === current?.contact.id);
+                      const afterCurrent = eligibleScoredLeads.slice(idx + 1).filter((l) => !treated.has(l.contact.id));
+                      const beforeCurrent = eligibleScoredLeads
+                        .slice(0, Math.max(idx, 0))
+                        .filter((l) => !treated.has(l.contact.id));
+                      return afterCurrent.length === 0 && beforeCurrent.length === 0;
+                    })()}
+                    title="Neste lead"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </DesignLabIconButton>
+                ) : (
+                  <button
                   onClick={() => goNext("left")}
                   disabled={(() => {
                     if (futureHistory.length > 0) return false;
@@ -1303,7 +1645,8 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
                   className="flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-secondary disabled:opacity-15 disabled:pointer-events-none transition-all"
                 >
                   <ChevronRight className="h-4 w-4" />
-                </button>
+                  </button>
+                )}
               </div>
             </div>
           ) : null}
@@ -1412,6 +1755,133 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
             { label: "1 måned", value: format(addMonths(new Date(), 1), "yyyy-MM-dd") },
             { label: "3 måneder", value: format(addMonths(new Date(), 3), "yyyy-MM-dd") },
           ];
+
+          if (designLabMode) {
+            return (
+              <Dialog open={nudgeOpen} onOpenChange={setNudgeOpen}>
+                <DesignLabModalContent title={`Hva er status på ${navn}?`}>
+                  <div
+                    style={{
+                      display: "grid",
+                      rowGap: "var(--dl-modal-row-gap)",
+                      paddingInline: "var(--dl-modal-body-padding-x)",
+                      paddingBottom: "var(--dl-modal-body-padding-bottom)",
+                    }}
+                  >
+                    <div>
+                      <p
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 500,
+                          letterSpacing: "0.04em",
+                          color: C.textMuted,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {nudgeHarEksisterendeTask
+                          ? nudgeScenario === "forfalt"
+                            ? `Sett ny dato for: "${current.nextTask?.title}"`
+                            : "Sett ny dato for oppfølging"
+                          : 'Sett ny dato for: "Følg opp om behov"'}
+                      </p>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                          gap: "var(--dl-modal-grid-gap)",
+                          marginTop: "calc(var(--dl-modal-label-gap) + 6px)",
+                        }}
+                      >
+                        {NUDGE_DATE_CHIPS.map((chip) => (
+                          <DesignLabFilterButton
+                            key={chip.value}
+                            onClick={() => setNudgeDate(chip.value)}
+                            active={nudgeDate === chip.value}
+                          >
+                            {nudgeDate === chip.value ? "✓ " : ""}
+                            {chip.label}
+                          </DesignLabFilterButton>
+                        ))}
+                        <input
+                          type="date"
+                          value={nudgeCustomDate}
+                          onChange={(e) => {
+                            setNudgeCustomDate(e.target.value);
+                            setNudgeDate("custom");
+                          }}
+                          style={{
+                            height: 28,
+                            width: "100%",
+                            paddingInline: 10,
+                            borderRadius: 6,
+                            fontSize: 12,
+                            background: nudgeDate === "custom" ? C.filterActiveBg : "#FFFFFF",
+                            color: nudgeDate === "custom" ? C.textPrimary : C.textSecondary,
+                            border: nudgeDate === "custom"
+                              ? `1px solid ${C.filterActiveBorder}`
+                              : `1px solid ${C.borderDefault}`,
+                            fontWeight: nudgeDate === "custom" ? 600 : 500,
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ borderTop: `1px solid ${C.borderLight}` }} />
+
+                    <div>
+                      <p
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 500,
+                          letterSpacing: "0.04em",
+                          color: C.textMuted,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Hva er signalet nå?
+                      </p>
+                      {nudgeRequiresSignalChoice && !nudgeSignal && (
+                        <p style={{ fontSize: 12, color: C.danger, marginTop: 8 }}>Velg et signal for å gå videre.</p>
+                      )}
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                          gap: "var(--dl-modal-grid-gap)",
+                          marginTop: "calc(var(--dl-modal-label-gap) + 6px)",
+                        }}
+                      >
+                        {[
+                          "Behov nå",
+                          "Får fremtidig behov",
+                          "Får kanskje behov",
+                          "Ukjent om behov",
+                        ].map((label) => (
+                          <DesignLabFilterButton
+                            key={label}
+                            onClick={() => setNudgeSignal(label)}
+                            active={nudgeSignal === label}
+                            activeColors={getDesignLabCategoryChipActiveColors(label)}
+                          >
+                            {nudgeSignal === label ? "✓ " : ""}
+                            {label}
+                          </DesignLabFilterButton>
+                        ))}
+                      </div>
+                    </div>
+
+                    <DesignLabPrimaryAction
+                      disabled={!nudgeCanSubmit}
+                      onClick={handleNudgeOkNeste}
+                      style={{ width: "100%", justifyContent: "center", marginTop: "var(--dl-modal-section-gap)" }}
+                    >
+                      Ok, neste →
+                    </DesignLabPrimaryAction>
+                  </div>
+                </DesignLabModalContent>
+              </Dialog>
+            );
+          }
 
           return (
             <div className="fixed inset-0 z-[100] flex items-center justify-center">
@@ -1553,9 +2023,24 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
 
           <ResizablePanel defaultSize={60} minSize={32}>
             <div className="flex h-full flex-col" style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}` }}>
-              <div className="flex-1 overflow-y-auto px-6 py-5">
+              <div className="flex-1 overflow-y-auto px-6 py-5 dl-v8-theme">
                 {current ? (
-                  <ContactCardContent contactId={current.contact.id} editable={true} />
+                  <ContactCardContent
+                    contactId={current.contact.id}
+                    editable={true}
+                    enableProfileEditMode
+                    headerPaddingTop={12}
+                    onDataChanged={() => {
+                      void queryClient.invalidateQueries({ queryKey: crmQueryKeys.dailyBrief.all(ownerFilter) });
+                    }}
+                    defaultHidden={{
+                      techDna: true,
+                      notes: true,
+                      consultantMatch: true,
+                      linkedinIfEmpty: true,
+                      locationsIfEmpty: true,
+                    }}
+                  />
                 ) : (
                   <div className="flex h-full items-center justify-center px-6 text-center">
                     <div>
