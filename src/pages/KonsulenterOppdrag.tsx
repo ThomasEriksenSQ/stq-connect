@@ -396,7 +396,7 @@ export default function KonsulenterOppdrag({
                     <div className="h-full pr-2">
                       <div className="h-full border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
                       <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background sticky top-0 z-10">
-                        {["Konsulent", "Kunde", "Type", "Utpris", "Margin", "Forny", "Status"].map((h) => (
+                        {["Konsulent", "Kunde", "Type", "Utpris", "Margin", "Margin %", "Forny", "Status"].map((h) => (
                           <span
                             key={h}
                             className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground"
@@ -418,7 +418,7 @@ export default function KonsulenterOppdrag({
                                 setEditSheetOpen(true);
                               }}
                               className={cn(
-                                "grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 items-center px-4 py-3 transition-colors cursor-pointer",
+                                "grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_96px_72px_100px_90px] gap-3 items-center px-4 py-3 transition-colors cursor-pointer",
                                 isInaktiv && "opacity-60",
                                 isSelected ? "bg-muted/60" : "hover:bg-muted/40",
                               )}
@@ -496,7 +496,9 @@ export default function KonsulenterOppdrag({
                               >
                                 kr {formatNOK(o.marginPerTime)}/t
                               </p>
-                              <p className="text-[0.6875rem] text-muted-foreground">{o.marginPct.toFixed(1)}%</p>
+                            </div>
+                            <div>
+                              <p className="text-[0.8125rem] text-muted-foreground">{o.marginPct.toFixed(1)}%</p>
                             </div>
                             <div className="text-[0.8125rem]">
                               {o.daysUntilForny === null ? (
@@ -512,16 +514,7 @@ export default function KonsulenterOppdrag({
                               )}
                             </div>
                             <div>
-                              <span
-                                className={cn(
-                                  "inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold",
-                                  o.status === "Aktiv" && "bg-emerald-100 text-emerald-700",
-                                  o.status === "Oppstart" && "bg-amber-100 text-amber-700",
-                                  o.status === "Inaktiv" && "bg-muted text-muted-foreground",
-                                )}
-                              >
-                                {o.status}
-                              </span>
+                              <OppdragStatusTag status={o.status} />
                             </div>
                             </div>
                           );
@@ -570,8 +563,8 @@ export default function KonsulenterOppdrag({
           ) : (
             <>
               <div className="hidden md:block border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
-                <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
-                  {["Konsulent", "Kunde", "Type", "Utpris", "Margin", "Forny", "Status"].map((h) => (
+                <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_96px_72px_100px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+                  {["Konsulent", "Kunde", "Type", "Utpris", "Margin", "Margin %", "Forny", "Status"].map((h) => (
                     <span
                       key={h}
                       className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground"
@@ -589,7 +582,7 @@ export default function KonsulenterOppdrag({
                         key={o.id}
                         onClick={() => setSelectedRowId(o.id)}
                         className={cn(
-                          "grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 items-center px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer",
+                          "grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_96px_72px_100px_90px] gap-3 items-center px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer",
                           isInaktiv && "opacity-60",
                         )}
                       >
@@ -663,7 +656,9 @@ export default function KonsulenterOppdrag({
                           >
                             kr {formatNOK(o.marginPerTime)}/t
                           </p>
-                          <p className="text-[0.6875rem] text-muted-foreground">{o.marginPct.toFixed(1)}%</p>
+                        </div>
+                        <div>
+                          <p className="text-[0.8125rem] text-muted-foreground">{o.marginPct.toFixed(1)}%</p>
                         </div>
                         <div className="text-[0.8125rem]">
                           {o.daysUntilForny === null ? (
@@ -790,7 +785,7 @@ function OppdragSummaryCard({
 function OppdragStatusTag({ status }: { status: string }) {
   const colors =
     status === "Aktiv"
-      ? DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS
+      ? { background: "#EAF7EF", color: "#197A52", border: "1px solid rgba(25,122,82,0.16)", fontWeight: 600 }
       : status === "Oppstart"
         ? { background: "#F6EFE2", color: "#9A7A2A", border: "1px solid rgba(154,122,42,0.16)", fontWeight: 600 }
         : { background: "#F7F8FA", color: "#8C929C", border: "1px solid #E3E6EB", fontWeight: 500 };
