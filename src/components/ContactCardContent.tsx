@@ -746,6 +746,23 @@ export function ContactCardContent({
     })),
   );
   const signalCat = effectiveSignal ? CATEGORIES.find((c) => c.label === effectiveSignal) : null;
+  const shouldAnalyzeAiSignal = editable && sanitizedActivities.length > 0;
+  const shouldHideTechDnaSection = Boolean(defaultHidden?.techDna && !showTechDna && !hasVisibleAiSuggestion);
+  const shouldRenderTechDnaSection =
+    !defaultHidden?.techDna || showTechDna || hasVisibleAiSuggestion || shouldAnalyzeAiSignal;
+  const aiSignalActivities = sanitizedActivities
+    .slice(0, 5)
+    .map((activity) => ({ type: activity.type, subject: activity.subject, created_at: activity.created_at }));
+  const lastTaskDueDate = tasks.length > 0 ? tasks[0]?.due_date || null : null;
+  const handleAddAiTechnologies = async (techs: string[]) => {
+    const existing = ((contact as any).teknologier as string[]) || [];
+    const merged = [...new Set([...existing, ...techs])];
+    await supabase
+      .from("contacts")
+      .update({ teknologier: merged })
+      .eq("id", contactId);
+    queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.detail(contactId) });
+  };
 
   return (
     <div>
@@ -1220,52 +1237,9 @@ export function ContactCardContent({
       </div>
 
       <div className="space-y-0">
-        {editable && sanitizedActivities.length > 0 && defaultHidden?.techDna && !showTechDna && !hasVisibleAiSuggestion && (
-          <div className="hidden" aria-hidden="true">
-            {(() => {
-              const effectiveSignal = getEffectiveSignal(
-                sanitizedActivities.map((a) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
-                tasks.map((t) => ({
-                  created_at: t.created_at,
-                  title: t.title,
-                  description: t.description,
-                  due_date: t.due_date,
-                })),
-              );
-              const lastTaskDue = tasks.length > 0 ? tasks[0]?.due_date || null : null;
-              return (
-                <AiSignalBanner
-                  contactId={contactId}
-                  contactName={`${contact.first_name} ${contact.last_name}`}
-                  contactEmail={contact.email || null}
-                  currentSignal={effectiveSignal}
-                  currentTechnologies={((contact as any).teknologier as string[]) || []}
-                  activities={sanitizedActivities
-                    .slice(0, 5)
-                    .map((a) => ({ type: a.type, subject: a.subject, created_at: a.created_at }))}
-                  lastTaskDueDate={lastTaskDue}
-                  onUpdateSignal={(signal) => {
-                    updateSignalMutation.mutate(signal);
-                  }}
-                  onAddTechnologies={async (techs) => {
-                    const existing = ((contact as any).teknologier as string[]) || [];
-                    const merged = [...new Set([...existing, ...techs])];
-                    await supabase
-                      .from("contacts")
-                      .update({ teknologier: merged })
-                      .eq("id", contactId);
-                    queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.detail(contactId) });
-                  }}
-                  onVisibilityChange={setHasVisibleAiSuggestion}
-                  hideContent
-                />
-              );
-            })()}
-          </div>
-        )}
         {/* ── Tekniske behov ── */}
-        {(!defaultHidden?.techDna || showTechDna || hasVisibleAiSuggestion) && (
-        <div className="mb-5">
+        {shouldRenderTechDnaSection && (
+        <div className={cn("mb-5", shouldHideTechDnaSection && "hidden")} aria-hidden={shouldHideTechDnaSection || undefined}>
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
@@ -1308,46 +1282,23 @@ export function ContactCardContent({
           </div>
 
           {/* AI Signal suggestion */}
-          {editable &&
-            sanitizedActivities.length > 0 &&
-            (() => {
-              const effectiveSignal = getEffectiveSignal(
-                sanitizedActivities.map((a) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
-                tasks.map((t) => ({
-                  created_at: t.created_at,
-                  title: t.title,
-                  description: t.description,
-                  due_date: t.due_date,
-                })),
-              );
-              const lastTaskDue = tasks.length > 0 ? tasks[0]?.due_date || null : null;
-              return (
-                <AiSignalBanner
-                  contactId={contactId}
-                  contactName={`${contact.first_name} ${contact.last_name}`}
-                  contactEmail={contact.email || null}
-                  currentSignal={effectiveSignal}
-                  currentTechnologies={((contact as any).teknologier as string[]) || []}
-                  activities={sanitizedActivities
-                    .slice(0, 5)
-                    .map((a) => ({ type: a.type, subject: a.subject, created_at: a.created_at }))}
-                  lastTaskDueDate={lastTaskDue}
-                  onUpdateSignal={(signal) => {
-                    updateSignalMutation.mutate(signal);
-                  }}
-                  onAddTechnologies={async (techs) => {
-                    const existing = ((contact as any).teknologier as string[]) || [];
-                    const merged = [...new Set([...existing, ...techs])];
-                    await supabase
-                      .from("contacts")
-                      .update({ teknologier: merged })
-                      .eq("id", contactId);
-                    queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.detail(contactId) });
-                  }}
-                  onVisibilityChange={setHasVisibleAiSuggestion}
-                />
-              );
-            })()}
+          {shouldAnalyzeAiSignal && (
+            <AiSignalBanner
+              contactId={contactId}
+              contactName={`${contact.first_name} ${contact.last_name}`}
+              contactEmail={contact.email || null}
+              currentSignal={effectiveSignal}
+              currentTechnologies={((contact as any).teknologier as string[]) || []}
+              activities={aiSignalActivities}
+              lastTaskDueDate={lastTaskDueDate}
+              onUpdateSignal={(signal) => {
+                updateSignalMutation.mutate(signal);
+              }}
+              onAddTechnologies={handleAddAiTechnologies}
+              onVisibilityChange={setHasVisibleAiSuggestion}
+              hideContent={shouldHideTechDnaSection}
+            />
+          )}
         </div>
         )}
 
