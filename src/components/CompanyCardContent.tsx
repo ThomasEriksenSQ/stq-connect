@@ -107,6 +107,7 @@ import {
   getSignalBadgeStyle,
   upsertTaskSignalDescription,
 } from "@/lib/categoryUtils";
+import { coerceDisplayText } from "@/lib/outlookMail";
 import { C, SIGNAL_COLORS } from "@/theme";
 
 /* ── Category system (shared with ContactCardContent) ── */
@@ -131,9 +132,7 @@ function normalizeCategoryLabel(label: string | null | undefined): string {
 }
 
 function safeText(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (typeof value === "number") return String(value);
-  return "";
+  return coerceDisplayText(value);
 }
 
 function splitCommaSeparatedText(value: unknown): string[] {
@@ -462,14 +461,40 @@ export function CompanyCardContent({
     enabled: !!companyId && contactIds.length > 0,
   });
 
-  const allActivitiesMap = new Map<string, any>();
-  companyActivities.forEach((a) => allActivitiesMap.set(a.id, a));
-  contactActivities.forEach((a) => {
-    if (!allActivitiesMap.has(a.id)) allActivitiesMap.set(a.id, a);
-  });
-  const activities = Array.from(allActivitiesMap.values()).sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-  );
+  const activities = useMemo(() => {
+    const allActivitiesMap = new Map<string, any>();
+    const normalizeActivity = (activity: any, index: number) => ({
+      ...activity,
+      id: safeText(activity?.id) || `activity-${index}`,
+      created_at: safeText(activity?.created_at),
+      subject: safeText(activity?.subject),
+      description: safeText(activity?.description) || null,
+      type: safeText(activity?.type),
+      created_by: safeText(activity?.created_by) || null,
+      contact_id: safeText(activity?.contact_id) || null,
+      contacts:
+        activity?.contacts && typeof activity.contacts === "object"
+          ? {
+              ...activity.contacts,
+              first_name: safeText((activity.contacts as any)?.first_name),
+              last_name: safeText((activity.contacts as any)?.last_name),
+            }
+          : null,
+    });
+
+    companyActivities.forEach((activity: any, index: number) => {
+      const normalized = normalizeActivity(activity, index);
+      allActivitiesMap.set(normalized.id, normalized);
+    });
+    contactActivities.forEach((activity: any, index: number) => {
+      const normalized = normalizeActivity(activity, index + companyActivities.length);
+      if (!allActivitiesMap.has(normalized.id)) allActivitiesMap.set(normalized.id, normalized);
+    });
+
+    return Array.from(allActivitiesMap.values()).sort(
+      (a, b) => (parseValidDate(b.created_at)?.getTime() ?? -Infinity) - (parseValidDate(a.created_at)?.getTime() ?? -Infinity),
+    );
+  }, [companyActivities, contactActivities]);
 
   const { data: companyTasks = [] } = useQuery({
     queryKey: crmQueryKeys.companies.tasks(companyId),

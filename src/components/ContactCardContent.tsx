@@ -325,6 +325,20 @@ export function ContactCardContent({
     enabled: !!contactId,
   });
 
+  const sanitizedActivities = useMemo(
+    () =>
+      activities.map((activity: any, index: number) => ({
+        ...activity,
+        id: coerceDisplayText(activity?.id) || `activity-${index}`,
+        created_at: coerceDisplayText(activity?.created_at),
+        subject: coerceDisplayText(activity?.subject),
+        description: coerceDisplayText(activity?.description) || null,
+        type: coerceDisplayText(activity?.type),
+        created_by: coerceDisplayText(activity?.created_by) || null,
+      })),
+    [activities],
+  );
+
   const profileMap = Object.fromEntries(
     allProfiles
       .filter((p) => p?.id)
@@ -389,7 +403,7 @@ export function ContactCardContent({
 
   useEffect(() => {
     if (!contact) return;
-    setShowNotes(Boolean(contact.notes?.trim()));
+    setShowNotes(Boolean(coerceDisplayText(contact.notes).trim()));
   }, [contactId, contact?.notes]);
 
   useEffect(() => {
@@ -723,7 +737,7 @@ export function ContactCardContent({
   const canEditProfile = editable && (!enableProfileEditMode || profileEditMode);
   const showProfileEditMenu = editable && enableProfileEditMode;
   const effectiveSignal = getEffectiveSignal(
-    activities.map((a) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+    sanitizedActivities.map((a) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
     tasks.map((t) => ({
       created_at: t.created_at,
       title: t.title,
@@ -1206,11 +1220,11 @@ export function ContactCardContent({
       </div>
 
       <div className="space-y-0">
-        {editable && activities.length > 0 && defaultHidden?.techDna && !showTechDna && !hasVisibleAiSuggestion && (
+        {editable && sanitizedActivities.length > 0 && defaultHidden?.techDna && !showTechDna && !hasVisibleAiSuggestion && (
           <div className="hidden" aria-hidden="true">
             {(() => {
               const effectiveSignal = getEffectiveSignal(
-                activities.map((a) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+                sanitizedActivities.map((a) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
                 tasks.map((t) => ({
                   created_at: t.created_at,
                   title: t.title,
@@ -1226,7 +1240,7 @@ export function ContactCardContent({
                   contactEmail={contact.email || null}
                   currentSignal={effectiveSignal}
                   currentTechnologies={((contact as any).teknologier as string[]) || []}
-                  activities={activities
+                  activities={sanitizedActivities
                     .slice(0, 5)
                     .map((a) => ({ type: a.type, subject: a.subject, created_at: a.created_at }))}
                   lastTaskDueDate={lastTaskDue}
@@ -1295,10 +1309,10 @@ export function ContactCardContent({
 
           {/* AI Signal suggestion */}
           {editable &&
-            activities.length > 0 &&
+            sanitizedActivities.length > 0 &&
             (() => {
               const effectiveSignal = getEffectiveSignal(
-                activities.map((a) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+                sanitizedActivities.map((a) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
                 tasks.map((t) => ({
                   created_at: t.created_at,
                   title: t.title,
@@ -1314,7 +1328,7 @@ export function ContactCardContent({
                   contactEmail={contact.email || null}
                   currentSignal={effectiveSignal}
                   currentTechnologies={((contact as any).teknologier as string[]) || []}
-                  activities={activities
+                  activities={sanitizedActivities
                     .slice(0, 5)
                     .map((a) => ({ type: a.type, subject: a.subject, created_at: a.created_at }))}
                   lastTaskDueDate={lastTaskDue}
@@ -1730,7 +1744,7 @@ export function ContactCardContent({
         {/* ── Aktiviteter ── */}
         <div className="mt-5">
           <ActivityTimeline
-            activities={activities}
+            activities={sanitizedActivities}
             profileMap={profileMapFull}
             editable={editable}
             onDelete={(id) => deleteActivityMutation.mutate(id)}

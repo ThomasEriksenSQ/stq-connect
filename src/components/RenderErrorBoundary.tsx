@@ -1,5 +1,7 @@
 import { Component, type ReactNode } from "react";
 
+const SHOW_RENDER_ERROR_DETAILS = import.meta.env.DEV;
+
 interface RenderErrorBoundaryProps {
   children: ReactNode;
   resetKey?: string | number | null;
@@ -8,10 +10,11 @@ interface RenderErrorBoundaryProps {
 
 interface RenderErrorBoundaryState {
   hasError: boolean;
+  errorMessage?: string | null;
 }
 
 export class RenderErrorBoundary extends Component<RenderErrorBoundaryProps, RenderErrorBoundaryState> {
-  state: RenderErrorBoundaryState = { hasError: false };
+  state: RenderErrorBoundaryState = { hasError: false, errorMessage: null };
 
   static getDerivedStateFromError() {
     return { hasError: true };
@@ -19,11 +22,12 @@ export class RenderErrorBoundary extends Component<RenderErrorBoundaryProps, Ren
 
   componentDidCatch(error: Error) {
     console.error("RenderErrorBoundary:", error);
+    this.setState({ errorMessage: error?.message || "Ukjent render-feil" });
   }
 
   componentDidUpdate(prevProps: RenderErrorBoundaryProps) {
     if (prevProps.resetKey !== this.props.resetKey && this.state.hasError) {
-      this.setState({ hasError: false });
+      this.setState({ hasError: false, errorMessage: null });
     }
   }
 
@@ -34,8 +38,13 @@ export class RenderErrorBoundary extends Component<RenderErrorBoundaryProps, Ren
           <p className="text-muted-foreground text-sm">
             {this.props.fallbackMessage || "Kunne ikke laste denne seksjonen."}
           </p>
+          {SHOW_RENDER_ERROR_DETAILS && this.state.errorMessage ? (
+            <p className="text-[12px] text-destructive mt-2 break-words">
+              {this.state.errorMessage}
+            </p>
+          ) : null}
           <button
-            onClick={() => this.setState({ hasError: false })}
+            onClick={() => this.setState({ hasError: false, errorMessage: null })}
             className="text-primary text-sm mt-2 hover:underline"
           >
             Prøv igjen
