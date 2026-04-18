@@ -32,8 +32,37 @@ export const LEGACY_CATEGORY_MAP: Record<string, string> = {
 function coerceText(value: unknown): string {
   if (typeof value === "string") return value;
   if (typeof value === "number") return String(value);
+  if (typeof value === "boolean") return String(value);
+  if (value instanceof Date) return value.toISOString();
   if (value == null) return "";
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    for (const key of [
+      "label",
+      "name",
+      "title",
+      "subject",
+      "description",
+      "text",
+      "content",
+      "value",
+      "date",
+      "created_at",
+      "updated_at",
+      "due_date",
+    ]) {
+      const nested = coerceText(record[key]);
+      if (nested) return nested;
+    }
+  }
   return "";
+}
+
+function parseDateValue(value: unknown): Date | null {
+  const text = coerceText(value);
+  if (!text) return null;
+  const date = new Date(text);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 export function normalizeCategoryLabel(label: string | null | undefined): string {
@@ -177,18 +206,29 @@ export function getEffectiveSignal(
 ): string {
   const now = new Date();
 
-  const sortedTasks = [...tasks]
+  const normalizedTasks = tasks.map((task) => ({
+    createdAt: parseDateValue(task.created_at),
+    updatedAt: parseDateValue(task.updated_at),
+    dueDate: parseDateValue(task.due_date),
+    title: coerceText(task.title),
+    description: coerceText(task.description) || null,
+    status: coerceText(task.status) || null,
+  }));
+
+  const sortedTasks = [...normalizedTasks]
     .filter((task) => task.status !== "done")
     .sort((a, b) => {
-      if (a.due_date && b.due_date && a.due_date !== b.due_date) {
-        return a.due_date.localeCompare(b.due_date);
+      const aDueTime = a.dueDate?.getTime() ?? null;
+      const bDueTime = b.dueDate?.getTime() ?? null;
+      if (aDueTime != null && bDueTime != null && aDueTime !== bDueTime) {
+        return aDueTime - bDueTime;
       }
-      if (a.due_date && !b.due_date) return -1;
-      if (!a.due_date && b.due_date) return 1;
+      if (aDueTime != null && bDueTime == null) return -1;
+      if (aDueTime == null && bDueTime != null) return 1;
 
-      const aTouchedAt = a.updated_at || a.created_at;
-      const bTouchedAt = b.updated_at || b.created_at;
-      return bTouchedAt.localeCompare(aTouchedAt);
+      const aTouchedAt = a.updatedAt?.getTime() ?? a.createdAt?.getTime() ?? -Infinity;
+      const bTouchedAt = b.updatedAt?.getTime() ?? b.createdAt?.getTime() ?? -Infinity;
+      return bTouchedAt - aTouchedAt;
     });
 
   for (const task of sortedTasks) {
@@ -196,9 +236,17 @@ export function getEffectiveSignal(
     if (cat) return cat;
   }
 
-  const sortedActs = [...activities].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const normalizedActivities = activities.map((activity) => ({
+    createdAt: parseDateValue(activity.created_at),
+    subject: coerceText(activity.subject),
+    description: coerceText(activity.description) || null,
+  }));
+
+  const sortedActs = [...normalizedActivities].sort(
+    (a, b) => (b.createdAt?.getTime() ?? -Infinity) - (a.createdAt?.getTime() ?? -Infinity),
+  );
   for (const act of sortedActs) {
-    if (new Date(act.created_at) > now) continue;
+    if (act.createdAt && act.createdAt > now) continue;
     const cat = extractCategory(act.subject, act.description);
     if (cat) return cat;
   }
