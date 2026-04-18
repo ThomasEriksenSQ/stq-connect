@@ -51,6 +51,7 @@ import {
   DesignLabModalLabel,
   DesignLabPrimaryAction,
 } from "@/components/designlab/system";
+import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
 import {
   Phone,
   Mail,
@@ -124,8 +125,9 @@ const LEGACY_CATEGORY_MAP: Record<string, string> = {
   "Aldri aktuelt": "Ikke aktuelt",
 };
 
-function normalizeCategoryLabel(label: string): string {
-  return LEGACY_CATEGORY_MAP[label] || label;
+function normalizeCategoryLabel(label: string | null | undefined): string {
+  const normalizedLabel = safeText(label).trim();
+  return LEGACY_CATEGORY_MAP[normalizedLabel] || normalizedLabel;
 }
 
 function safeText(value: unknown): string {
@@ -201,30 +203,34 @@ function CategoryPicker({ selected, onSelect }: { selected: string; onSelect: (v
   );
 }
 
-function buildDescriptionWithCategory(category: string, description: string): string {
-  if (!category) return description;
-  return description ? `[${category}]\n${description}` : `[${category}]`;
+function buildDescriptionWithCategory(category: string | null | undefined, description: string | null | undefined): string {
+  const normalizedCategory = normalizeCategoryLabel(category);
+  const normalizedDescription = safeText(description);
+  if (!normalizedCategory) return normalizedDescription;
+  return normalizedDescription ? `[${normalizedCategory}]\n${normalizedDescription}` : `[${normalizedCategory}]`;
 }
 
-function parseDescriptionCategory(description: string | null): { category: string; text: string } {
-  if (!description) return { category: "", text: "" };
-  const match = description.match(/^\[([^\]]+)\]\n?([\s\S]*)$/);
+function parseDescriptionCategory(description: unknown): { category: string; text: string } {
+  const normalizedDescription = safeText(description);
+  if (!normalizedDescription) return { category: "", text: "" };
+  const match = normalizedDescription.match(/^\[([^\]]+)\]\n?([\s\S]*)$/);
   if (match) {
     const cat = match[1];
     if (CATEGORIES.some((c) => c.label === cat) || Object.keys(LEGACY_CATEGORY_MAP).includes(cat)) {
       return { category: normalizeCategoryLabel(cat), text: match[2].trim() };
     }
   }
-  return { category: "", text: description };
+  return { category: "", text: normalizedDescription };
 }
 
-function extractTitleAndCategory(subject: string, description: string | null) {
-  const normalizedSubject = normalizeCategoryLabel(subject);
+function extractTitleAndCategory(subject: unknown, description: unknown) {
+  const safeSubject = safeText(subject);
+  const normalizedSubject = normalizeCategoryLabel(safeSubject);
   if (CATEGORIES.some((c) => c.label === normalizedSubject)) {
     return { title: normalizedSubject, category: normalizedSubject, cleanDesc: "" };
   }
   const parsed = parseDescriptionCategory(description);
-  return { title: subject, category: parsed.category, cleanDesc: cleanDescription(parsed.text) || "" };
+  return { title: safeSubject, category: parsed.category, cleanDesc: cleanDescription(parsed.text) || "" };
 }
 
 const statusLabels: Record<string, { label: string; className: string }> = {
@@ -389,7 +395,7 @@ export function CompanyCardContent({
       return data;
     },
   });
-  const profileMapFull = Object.fromEntries(allProfiles.map((p) => [p.id, p.full_name]));
+  const profileMapFull = Object.fromEntries(allProfiles.map((p) => [p.id, safeText(p.full_name)]));
 
   const { data: contacts = [] } = useQuery({
     queryKey: crmQueryKeys.companies.contacts(companyId),
@@ -406,6 +412,26 @@ export function CompanyCardContent({
   });
 
   const contactIds = contacts.map((c) => c.id);
+  const sanitizedContacts = useMemo(
+    () =>
+      contacts.map((contact) => {
+        const firstName = safeText((contact as any).first_name);
+        const lastName = safeText((contact as any).last_name);
+        const title = safeText((contact as any).title);
+        const ownerName = safeText((contact as any).profiles?.full_name);
+        const displayName = [firstName, lastName].filter(Boolean).join(" ").trim() || "Uten navn";
+
+        return {
+          ...contact,
+          first_name: firstName,
+          last_name: lastName,
+          title,
+          ownerName,
+          displayName,
+        };
+      }),
+    [contacts],
+  );
 
   const { data: companyActivities = [] } = useQuery({
     queryKey: crmQueryKeys.companies.activities(companyId),
@@ -622,7 +648,7 @@ export function CompanyCardContent({
   const currentStatus =
     STATUS_OPTIONS.find((s) => s.value === company.status || (s.value === "customer" && company.status === "kunde")) ||
     STATUS_OPTIONS[0];
-  const ownerFullName = (company as any).profiles?.full_name || null;
+  const ownerFullName = safeText((company as any).profiles?.full_name) || null;
 
   const effectiveSignal = getEffectiveSignal(
     activities.map((a) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
@@ -1224,14 +1250,13 @@ export function CompanyCardContent({
         )}
       </div>
 
-      {contacts.length === 0 ? (
+      {sanitizedContacts.length === 0 ? (
         <p className="py-2 text-[11px] text-[#8C929C]">Ingen kontakter</p>
       ) : (
         <div className="space-y-0.5">
-          {contacts.map((c) => {
+          {sanitizedContacts.map((c) => {
             const isActive = activeContactId === c.id;
-            const contactOwner = (c as any).profiles?.full_name || null;
-            const secondaryText = [c.title, contactOwner].filter(Boolean).join(" · ");
+            const secondaryText = [c.title, c.ownerName].filter(Boolean).join(" · ");
 
             return (
               <button
@@ -1254,7 +1279,7 @@ export function CompanyCardContent({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <p className="truncate text-[12px] font-medium text-[#1A1C1F]">
-                        {c.first_name} {c.last_name}
+                        {c.displayName}
                       </p>
                       <div className="flex shrink-0 items-center gap-1.5">
                         {c.cv_email && <DesignLabStaticTag>CV</DesignLabStaticTag>}
@@ -1291,7 +1316,7 @@ export function CompanyCardContent({
             {editable ? (
               <button
                 onClick={() => {
-                  const defaultContact = activities.find((a) => a.contact_id)?.contact_id || contacts[0]?.id || "";
+                  const defaultContact = activities.find((a) => a.contact_id)?.contact_id || sanitizedContacts[0]?.id || "";
                   setSignalContactId(defaultContact);
                   setSignalPickerOpen(true);
                 }}
@@ -1375,7 +1400,7 @@ export function CompanyCardContent({
                           border: `1px solid ${C.statusNeutralBorder}`,
                         }}
                       >
-                        {p.full_name}
+                        {safeText(p.full_name) || "Uten navn"}
                       </span>
                     </DropdownMenuItem>
                   ))}
@@ -1427,9 +1452,9 @@ export function CompanyCardContent({
                       onChange={(e) => setSignalContactId(e.target.value)}
                       className="w-full h-10 rounded-lg border border-input bg-background px-3 text-[0.8125rem]"
                     >
-                      {contacts.map((c) => (
+                      {sanitizedContacts.map((c) => (
                         <option key={c.id} value={c.id}>
-                          {c.first_name} {c.last_name}
+                          {c.displayName}
                         </option>
                       ))}
                     </select>
@@ -1451,17 +1476,17 @@ export function CompanyCardContent({
               </DialogContent>
             </Dialog>
             {/* Edit company dialog */}
-            <Dialog
+            <DesignLabEntitySheet
               open={editCompanyOpen && !mergeCompanyDialogOpen}
               onOpenChange={(nextOpen) => {
                 if (mergeCompanyDialogOpen && nextOpen) return;
                 setEditCompanyOpen(nextOpen);
               }}
+              contentClassName="px-6 py-6"
             >
-              <DialogContent className="w-[calc(100vw-2rem)] max-w-[440px] overflow-x-hidden rounded-xl">
-                <DialogHeader>
-                  <DialogTitle>Rediger selskap</DialogTitle>
-                </DialogHeader>
+              <div className="mb-5">
+                <h2 className="text-[1.125rem] font-bold text-foreground">Rediger selskap</h2>
+              </div>
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -1607,8 +1632,7 @@ export function CompanyCardContent({
                     </div>
                   </div>
                 </form>
-              </DialogContent>
-            </Dialog>
+            </DesignLabEntitySheet>
             <AlertDialog open={deleteCompanyDialogOpen} onOpenChange={setDeleteCompanyDialogOpen}>
               <AlertDialogContent>
                 <AlertDialogHeader>
@@ -1957,12 +1981,16 @@ function CompanyActivityRow({
   navigate: (path: string) => void;
 }) {
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const inDesignLab = location.pathname.startsWith("/design-lab");
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editDate, setEditDate] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const getActivityContactHref = (contactId: string) =>
+    inDesignLab ? `/design-lab/kontakter?contact=${contactId}` : `/kontakter/${contactId}`;
 
   const {
     title: displayTitle,
@@ -1971,9 +1999,9 @@ function CompanyActivityRow({
   } = extractTitleAndCategory(activity.subject, activity.description);
   const ownerName = activity.created_by ? profileMap[activity.created_by] : null;
   const createdDate = parseValidDate(activity.created_at);
-  const contactName = (activity.contacts as any)?.first_name
-    ? `${(activity.contacts as any).first_name} ${(activity.contacts as any).last_name}`
-    : null;
+  const contactFirstName = safeText((activity.contacts as any)?.first_name);
+  const contactLastName = safeText((activity.contacts as any)?.last_name);
+  const contactName = [contactFirstName, contactLastName].filter(Boolean).join(" ").trim() || null;
 
   const typeIcon =
     activity.type === "call" || activity.type === "phone" ? (
@@ -1986,8 +2014,9 @@ function CompanyActivityRow({
     if (!editable || editing) return;
     const parsed = extractTitleAndCategory(activity.subject, activity.description);
     let cat = parsed.category;
-    if (!cat && CATEGORIES.some((c) => c.label === activity.subject)) {
-      cat = activity.subject;
+    const activitySubject = safeText(activity.subject);
+    if (!cat && CATEGORIES.some((c) => c.label === activitySubject)) {
+      cat = activitySubject;
     }
     setEditTitle(parsed.title);
     setEditCategory(cat);
@@ -2133,7 +2162,7 @@ function CompanyActivityRow({
 
               {contactName && (
                 <a
-                  href={activity.contact_id ? getContactHref(activity.contact_id) : undefined}
+                  href={activity.contact_id ? getActivityContactHref(activity.contact_id) : undefined}
                   onClick={(e) => e.stopPropagation()}
                   className="text-[0.8125rem] font-semibold text-blue-600 hover:underline block mt-0.5"
                 >

@@ -176,10 +176,14 @@ export function ForespørselSheet({
   row,
   onClose,
   onExpandChange,
+  startInEditMode = false,
+  onRequestEdit,
 }: {
   row: any;
   onClose: () => void;
   onExpandChange?: (expanded: boolean) => void;
+  startInEditMode?: boolean;
+  onRequestEdit?: () => void;
 }) {
   const queryClient = useQueryClient();
   const { interne: cachedInterne, eksterne: cachedEksterne } = useConsultantCache();
@@ -299,10 +303,10 @@ export function ForespørselSheet({
     setMatchResults(null);
     setMatchUpdatedAt(null);
     setMatching(false);
-    setEditMode(false);
+    setEditMode(startInEditMode);
     setEditingKommentar(false);
     setKommentar(row?.kommentar || "");
-  }, [row?.id]);
+  }, [row?.id, startInEditMode]);
 
   // Sync form when entering edit mode
   useEffect(() => {
@@ -394,7 +398,8 @@ export function ForespørselSheet({
     if (error) { toast.error("Kunne ikke oppdatere"); return; }
     toast.success("Forespørsel oppdatert");
     queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.list() });
-    setEditMode(false);
+    if (startInEditMode) onClose();
+    else setEditMode(false);
   };
 
   const handleDelete = async () => {
@@ -610,7 +615,13 @@ export function ForespørselSheet({
           </div>
           {!editMode && (
             <button
-              onClick={() => setEditMode(true)}
+              onClick={() => {
+                if (onRequestEdit) {
+                  onRequestEdit();
+                  return;
+                }
+                setEditMode(true);
+              }}
               className="flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 hover:bg-muted transition-colors shrink-0"
             >
               <Pencil className="h-3.5 w-3.5" />
@@ -979,7 +990,10 @@ export function ForespørselSheet({
         {editMode ? (
           <div className="flex flex-col-reverse sm:flex-row gap-3">
             <button
-              onClick={() => setEditMode(false)}
+              onClick={() => {
+                if (startInEditMode) onClose();
+                else setEditMode(false);
+              }}
               className="flex-1 h-9 text-[0.8125rem] rounded-lg border border-border text-muted-foreground hover:bg-secondary transition-colors"
             >
               Avbryt

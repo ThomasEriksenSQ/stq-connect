@@ -11,15 +11,13 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip as ReTooltip, ResponsiveContainer, ReferenceLine,
 } from "recharts";
-import {
-  Dialog, DialogContent, DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { C } from "@/components/designlab/theme";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { DesignLabColumnHeader } from "@/components/designlab/system";
+import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
 
 /* Colors imported from @/components/designlab/theme */
 
@@ -190,14 +188,10 @@ export default function DesignLabStacqPrisen() {
         {/* Content */}
         <div className="flex-1 overflow-y-auto" style={{ padding: "24px 24px 48px" }}>
           <div
-            className="flex flex-col gap-6 xl:grid xl:grid-cols-[minmax(420px,0.95fr)_minmax(0,1.25fr)] xl:items-start"
-            style={{ maxWidth: 2100, margin: "0 auto" }}
+            className="flex flex-col gap-4 xl:grid xl:grid-cols-[minmax(860px,1.18fr)_minmax(620px,0.92fr)] xl:items-start"
+            style={{ maxWidth: "none", margin: 0 }}
           >
             <div className="min-w-0 w-full">
-              <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted, marginBottom: 10 }}>
-                Bidrag per konsulent
-              </p>
-
               {isLoading ? (
                 <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster…</div>
               ) : (
@@ -452,15 +446,16 @@ function EditModal({ row, onClose, queryClient }: { row: any; onClose: () => voi
   });
 
   return (
-    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent
-        className="max-w-sm rounded-xl p-6 gap-0"
-        style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text }}
-        onInteractOutside={(e) => e.preventDefault()}
-      >
-        <DialogTitle style={{ fontSize: 16, fontWeight: 600, color: C.text, marginBottom: 16 }}>
+    <DesignLabEntitySheet
+      open
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose();
+      }}
+      contentClassName="px-6 py-6"
+    >
+        <h2 style={{ fontSize: 16, fontWeight: 600, color: C.text, marginBottom: 16 }}>
           Juster STACQ Prisen — {row.kandidat}
-        </DialogTitle>
+        </h2>
         <div className="space-y-3">
           <div>
             <label style={{ ...thStyle, display: "block", marginBottom: 4 }}>Utpris</label>
@@ -487,7 +482,6 @@ function EditModal({ row, onClose, queryClient }: { row: any; onClose: () => voi
             {saving ? "Lagrer…" : "Lagre"}
           </button>
         </div>
-      </DialogContent>
-    </Dialog>
+    </DesignLabEntitySheet>
   );
 }

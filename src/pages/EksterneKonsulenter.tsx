@@ -14,11 +14,18 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
+import {
+  DesignLabFilterButton,
+  DesignLabStaticTag,
+  DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS,
+  DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS,
+  DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS,
+} from "@/components/designlab/controls";
 
 type TypeFilter = "Alle" | "freelance" | "partner";
 type StatusFilter = "Alle" | "ledig" | "utilgjengelig";
@@ -37,11 +44,16 @@ const STATUS_LABELS: Record<string, string> = {
   utilgjengelig: "Ikke ledig",
   utgått: "Ikke ledig",
 };
-const STATUS_COLORS: Record<string, string> = {
-  ledig: "bg-emerald-100 text-emerald-700",
-  aktiv: "bg-emerald-100 text-emerald-700",
-  utilgjengelig: "bg-muted text-muted-foreground",
-  utgått: "bg-muted text-muted-foreground",
+const STATUS_TAG_COLORS: Record<string, { background: string; color: string; border: string; fontWeight: number }> = {
+  ledig: { background: "#E8ECF5", color: "#1A1C1F", border: "1px solid #C5CBE8", fontWeight: 600 },
+  aktiv: { background: "#E8ECF5", color: "#1A1C1F", border: "1px solid #C5CBE8", fontWeight: 600 },
+  utilgjengelig: { background: "#F7F8FA", color: "#8C929C", border: "1px solid #E3E6EB", fontWeight: 500 },
+  utgått: { background: "#F7F8FA", color: "#8C929C", border: "1px solid #E3E6EB", fontWeight: 500 },
+};
+
+const TYPE_TAG_COLORS: Record<string, { background: string; color: string; border: string; fontWeight: number }> = {
+  freelance: { background: "#E8ECF5", color: "#1A1C1F", border: "1px solid #C5CBE8", fontWeight: 600 },
+  partner: { background: "#F7F8FA", color: "#5C636E", border: "1px solid #DDE0E7", fontWeight: 500 },
 };
 
 const SUGGESTED_TECH = [
@@ -240,22 +252,20 @@ export default function EksterneKonsulenter({
                         <span className="text-[0.8125rem] font-medium text-foreground truncate">{name}</span>
                         <span className="text-[0.8125rem] text-muted-foreground truncate">{company}</span>
                         <div>
-                          <span className={cn(
-                            "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
-                            row.type === "freelance" ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
-                            "bg-violet-100 text-violet-700 border-violet-200"
-                          )}>
+                          <span>
+                            <DesignLabStaticTag colors={TYPE_TAG_COLORS[row.type] || DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>
                             {TYPE_LABELS[row.type] || row.type}
+                            </DesignLabStaticTag>
                           </span>
                         </div>
                         <div>
-                          <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_COLORS[row.status] || "bg-muted text-muted-foreground")}>
+                          <DesignLabStaticTag colors={STATUS_TAG_COLORS[row.status] || DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>
                             {STATUS_LABELS[row.status] || row.status}
-                          </span>
+                          </DesignLabStaticTag>
                         </div>
                         <div className="flex flex-wrap gap-1">
                           {(row.teknologier || []).slice(0, 3).map((t: string) => (
-                            <span key={t} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] text-muted-foreground">{t}</span>
+                            <DesignLabStaticTag key={t} colors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>{t}</DesignLabStaticTag>
                           ))}
                           {(row.teknologier || []).length > 3 && (
                             <span className="text-[0.6875rem] text-muted-foreground">+{row.teknologier.length - 3}</span>
@@ -318,22 +328,18 @@ export default function EksterneKonsulenter({
                   <span className="text-[0.8125rem] font-medium text-foreground truncate">{name}</span>
                   <span className="text-[0.8125rem] text-muted-foreground truncate">{company}</span>
                   <div>
-                    <span className={cn(
-                      "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
-                      row.type === "freelance" ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
-                      "bg-violet-100 text-violet-700 border-violet-200"
-                    )}>
+                    <DesignLabStaticTag colors={TYPE_TAG_COLORS[row.type] || DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>
                       {TYPE_LABELS[row.type] || row.type}
-                    </span>
+                    </DesignLabStaticTag>
                   </div>
                   <div>
-                    <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_COLORS[row.status] || "bg-muted text-muted-foreground")}>
+                    <DesignLabStaticTag colors={STATUS_TAG_COLORS[row.status] || DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>
                       {STATUS_LABELS[row.status] || row.status}
-                    </span>
+                    </DesignLabStaticTag>
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {(row.teknologier || []).slice(0, 3).map((t: string) => (
-                      <span key={t} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] text-muted-foreground">{t}</span>
+                      <DesignLabStaticTag key={t} colors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>{t}</DesignLabStaticTag>
                     ))}
                     {(row.teknologier || []).length > 3 && (
                       <span className="text-[0.6875rem] text-muted-foreground">+{row.teknologier.length - 3}</span>
@@ -432,19 +438,12 @@ function ExternalConsultantDetailCard({
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 justify-end">
-              <span className={cn(
-                "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
-                row.type === "freelance" ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
-                "bg-violet-100 text-violet-700 border-violet-200"
-              )}>
+              <DesignLabStaticTag colors={TYPE_TAG_COLORS[row.type] || DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>
                 {TYPE_LABELS[row.type] || row.type}
-              </span>
-              <span className={cn(
-                "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-                STATUS_COLORS[row.status] || "bg-muted text-muted-foreground",
-              )}>
+              </DesignLabStaticTag>
+              <DesignLabStaticTag colors={STATUS_TAG_COLORS[row.status] || DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>
                 {STATUS_LABELS[row.status] || row.status}
-              </span>
+              </DesignLabStaticTag>
             </div>
           </div>
         </div>
@@ -481,12 +480,12 @@ function ExternalConsultantDetailCard({
             {technologies.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {technologies.map((tech: string) => (
-                  <span
+                  <DesignLabStaticTag
                     key={tech}
-                    className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-[0.75rem] text-foreground border border-border"
+                    colors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
                   >
                     {tech}
-                  </span>
+                  </DesignLabStaticTag>
                 ))}
               </div>
             ) : (
@@ -748,11 +747,17 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
     ) : null;
 
   return (
-    <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-lg rounded-xl p-6 gap-0 max-h-[90vh] overflow-y-auto">
-        <DialogTitle className="text-[1.125rem] font-bold text-foreground mb-5">
+    <>
+      <DesignLabEntitySheet
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) onClose();
+        }}
+        contentClassName="px-6 py-6"
+      >
+        <h2 className="text-[1.125rem] font-bold text-foreground mb-5">
           {isCreate ? "Ny ekstern konsulent" : "Rediger konsulent"}
-        </DialogTitle>
+        </h2>
 
         {/* STEP 1: Type selection (create only) */}
         {showTypeSelection && (
@@ -787,20 +792,26 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
               <div>
                 <label className={LABEL}>Type</label>
                 <div className="flex gap-2 mt-1">
-                  <button
+                  <DesignLabFilterButton
                     type="button"
                     onClick={() => { set("type", "freelance"); set("company_id", ""); }}
-                    className={form.type === "freelance" ? CHIP_ON : CHIP_OFF}
+                    active={form.type === "freelance"}
+                    activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                    inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                    inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
                   >
                     Freelance
-                  </button>
-                  <button
+                  </DesignLabFilterButton>
+                  <DesignLabFilterButton
                     type="button"
                     onClick={() => set("type", "partner")}
-                    className={form.type === "partner" ? CHIP_ON : CHIP_OFF}
+                    active={form.type === "partner"}
+                    activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                    inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                    inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
                   >
                     Via partner
-                  </button>
+                  </DesignLabFilterButton>
                 </div>
               </div>
             )}
@@ -930,10 +941,10 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-1.5 p-2 border border-border rounded-lg bg-background min-h-[38px]">
                 {form.teknologier.map(t => (
-                  <span key={t} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-[0.75rem] text-foreground">
+                  <DesignLabStaticTag key={t} colors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS} className="gap-1">
                     {t}
-                    <button onClick={() => set("teknologier", form.teknologier.filter(x => x !== t))} className="hover:text-destructive"><X className="h-3 w-3" /></button>
-                  </span>
+                    <button type="button" onClick={() => set("teknologier", form.teknologier.filter(x => x !== t))} className="hover:text-destructive"><X className="h-3 w-3" /></button>
+                  </DesignLabStaticTag>
                 ))}
                 <input
                   value={tagInput}
@@ -945,9 +956,17 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
               </div>
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {SUGGESTED_TECH.filter(s => !form.teknologier.includes(s)).slice(0, 10).map(s => (
-                  <button key={s} onClick={() => addTag(s)} className="h-7 px-2.5 text-[0.75rem] rounded-[6px] border border-border text-muted-foreground hover:bg-secondary transition-colors font-medium">
+                  <DesignLabFilterButton
+                    key={s}
+                    type="button"
+                    onClick={() => addTag(s)}
+                    active={false}
+                    activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                    inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                    inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+                  >
                     {s}
-                  </button>
+                  </DesignLabFilterButton>
                 ))}
               </div>
             </div>
@@ -956,8 +975,26 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
             <div>
               <label className={LABEL + " block mb-1.5"}>Status</label>
               <div className="flex gap-1.5">
-                <button onClick={() => set("status", "ledig")} className={form.status === "ledig" ? CHIP_ON : CHIP_OFF}>Tilgjengelig</button>
-                <button onClick={() => set("status", "utilgjengelig")} className={form.status === "utilgjengelig" ? CHIP_ON : CHIP_OFF}>Ikke ledig</button>
+                <DesignLabFilterButton
+                  type="button"
+                  onClick={() => set("status", "ledig")}
+                  active={form.status === "ledig"}
+                  activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                  inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                  inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+                >
+                  Tilgjengelig
+                </DesignLabFilterButton>
+                <DesignLabFilterButton
+                  type="button"
+                  onClick={() => set("status", "utilgjengelig")}
+                  active={form.status === "utilgjengelig"}
+                  activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                  inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                  inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+                >
+                  Ikke ledig
+                </DesignLabFilterButton>
               </div>
             </div>
 
@@ -1035,7 +1072,7 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
             </div>
           </div>
         )}
-      </DialogContent>
+      </DesignLabEntitySheet>
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
@@ -1056,6 +1093,6 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Dialog>
+    </>
   );
 }

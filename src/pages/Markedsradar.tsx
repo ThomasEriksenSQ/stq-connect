@@ -167,9 +167,6 @@ export default function Markedsradar({ hidePageIntro = false, designLabMode = fa
       <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div>
           {!hidePageIntro && <h1 className="text-[1.5rem] font-bold text-foreground">Markedsradar</h1>}
-          <p className="text-[0.8125rem] text-muted-foreground">
-            Handlingsrettet oversikt over Finn-importerte selskaper, teknologier og kontaktpunkter.
-          </p>
         </div>
         <Button onClick={() => setImportOpen(true)} className="w-full gap-2 sm:w-auto">
           <Download className="h-4 w-4" />

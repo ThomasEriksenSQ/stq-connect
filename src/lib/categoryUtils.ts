@@ -29,8 +29,16 @@ export const LEGACY_CATEGORY_MAP: Record<string, string> = {
   "Aldri aktuelt": "Ikke aktuelt",
 };
 
-export function normalizeCategoryLabel(label: string): string {
-  return LEGACY_CATEGORY_MAP[label] || label;
+function coerceText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return String(value);
+  if (value == null) return "";
+  return "";
+}
+
+export function normalizeCategoryLabel(label: string | null | undefined): string {
+  const normalizedLabel = coerceText(label).trim();
+  return LEGACY_CATEGORY_MAP[normalizedLabel] || normalizedLabel;
 }
 
 export function getSignalBadgeColors(category: string | null) {
@@ -57,35 +65,38 @@ export function getSignalBadgeStyle(category: string | null) {
   };
 }
 
-export function buildDescriptionWithCategory(category: string, description: string): string {
-  if (!category) return description;
-  return description ? `[${category}]\n${description}` : `[${category}]`;
+export function buildDescriptionWithCategory(category: string | null | undefined, description: string | null | undefined): string {
+  const normalizedCategory = normalizeCategoryLabel(category);
+  const normalizedDescription = coerceText(description);
+  if (!normalizedCategory) return normalizedDescription;
+  return normalizedDescription ? `[${normalizedCategory}]\n${normalizedDescription}` : `[${normalizedCategory}]`;
 }
 
-export function parseDescriptionCategory(description: string | null): { category: string; text: string } {
-  if (!description) return { category: "", text: "" };
+export function parseDescriptionCategory(description: unknown): { category: string; text: string } {
+  const normalizedDescription = coerceText(description);
+  if (!normalizedDescription) return { category: "", text: "" };
 
-  const match = description.match(/^\[([^\]]+)\]\n?([\s\S]*)$/);
-  if (!match) return { category: "", text: description };
+  const match = normalizedDescription.match(/^\[([^\]]+)\]\n?([\s\S]*)$/);
+  if (!match) return { category: "", text: normalizedDescription };
 
   const category = normalizeCategoryLabel(match[1]);
   if (!CATEGORIES.some((c) => c.label === category)) {
-    return { category: "", text: description };
+    return { category: "", text: normalizedDescription };
   }
 
   return { category, text: match[2].trim() };
 }
 
-export function hasSomedayMarker(description: string | null): boolean {
-  return /\[someday\]/i.test(description || "");
+export function hasSomedayMarker(description: unknown): boolean {
+  return /\[someday\]/i.test(coerceText(description));
 }
 
-export function stripSomedayMarker(description: string | null): string {
-  return (description || "").replace(/\n?\[someday\]/gi, "").trim();
+export function stripSomedayMarker(description: unknown): string {
+  return coerceText(description).replace(/\n?\[someday\]/gi, "").trim();
 }
 
 export function upsertTaskSignalDescription(
-  description: string | null,
+  description: unknown,
   signal: string,
   someday = hasSomedayMarker(description),
 ): string | null {
@@ -103,9 +114,12 @@ export function upsertTaskSignalDescription(
  * Extract category from an activity/task using subject and description.
  * Checks: exact subject match, subject contains label, description bracket prefix.
  */
-export function extractCategory(subject: string | null, description: string | null): string {
-  if (subject) {
-    const trimmed = subject.trim();
+export function extractCategory(subject: unknown, description: unknown): string {
+  const normalizedSubjectText = coerceText(subject);
+  const normalizedDescription = coerceText(description);
+
+  if (normalizedSubjectText) {
+    const trimmed = normalizedSubjectText.trim();
     // Exact match (case-insensitive) against current labels
     const normalizedSubject = normalizeCategoryLabel(trimmed);
     if (CATEGORIES.some((c) => c.label.toLowerCase() === normalizedSubject.toLowerCase())) {
@@ -116,8 +130,8 @@ export function extractCategory(subject: string | null, description: string | nu
       if (trimmed.toLowerCase() === legacy.toLowerCase()) return mapped;
     }
   }
-  if (description) {
-    const match = description.match(/^\[([^\]]+)\]\n?/);
+  if (normalizedDescription) {
+    const match = normalizedDescription.match(/^\[([^\]]+)\]\n?/);
     if (match) {
       const cat = normalizeCategoryLabel(match[1]);
       if (CATEGORIES.some((c) => c.label === cat)) return cat;

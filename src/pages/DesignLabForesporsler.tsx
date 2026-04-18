@@ -11,6 +11,7 @@ import { differenceInDays, format } from "date-fns";
 import { nb } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
 import { ForespørselSheet } from "@/components/ForespørselSheet";
+import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
 import { crmQueryKeys } from "@/lib/queryKeys";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
@@ -114,6 +115,7 @@ export default function DesignLabForesporsler() {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "mottatt_dato", dir: "desc" });
   const [selectedRowId, setSelectedRowId] = useState<number | null>(Number(searchParams.get("id") || "") || null);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
 
@@ -214,6 +216,10 @@ export default function DesignLabForesporsler() {
     if (!selectedRowId) return null;
     return rows.find((r: any) => r.id === selectedRowId) || null;
   }, [selectedRowId, rows]);
+
+  useEffect(() => {
+    if (!selectedRow) setEditSheetOpen(false);
+  }, [selectedRow]);
 
   // Keyboard nav
   useEffect(() => {
@@ -341,6 +347,7 @@ export default function DesignLabForesporsler() {
                       row={selectedRow}
                       onClose={() => setSelectedRowId(null)}
                       onExpandChange={() => {}}
+                      onRequestEdit={() => setEditSheetOpen(true)}
                     />
                   </div>
                 </div>
@@ -358,6 +365,21 @@ export default function DesignLabForesporsler() {
           </ResizablePanelGroup>
         </div>
       </main>
+
+      <DesignLabEntitySheet
+        open={editSheetOpen && Boolean(selectedRow)}
+        onOpenChange={setEditSheetOpen}
+        contentClassName="dl-v8-theme"
+      >
+        {selectedRow ? (
+          <ForespørselSheet
+            row={selectedRow}
+            onClose={() => setEditSheetOpen(false)}
+            onExpandChange={() => {}}
+            startInEditMode
+          />
+        ) : null}
+      </DesignLabEntitySheet>
     </div>
   );
 }

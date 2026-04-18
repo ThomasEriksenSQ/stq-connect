@@ -8,6 +8,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { OppdragEditSheet } from "@/components/OppdragEditSheet";
 import { FornyelsesTimeline } from "@/components/FornyelsesTimeline";
+import { DesignLabStaticTag, DesignLabFilterButton, DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS, DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS, DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS } from "@/components/designlab/controls";
 
 type Filter = "Alle" | "Aktiv" | "Oppstart" | "Inaktiv";
 const TIMER_PER_DAG = 7.5;
@@ -46,6 +47,13 @@ export default function KonsulenterOppdrag({
   const [filter, setFilter] = useState<Filter>("Aktiv");
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
+
+  const openCreateSheet = () => {
+    setSelectedRowId(null);
+    setEditSheetOpen(false);
+    setCreateOpen(true);
+  };
   
   const today = new Date();
 
@@ -203,7 +211,7 @@ export default function KonsulenterOppdrag({
       {hidePageIntro ? (
         <div className="flex justify-end mb-6">
           <button
-            onClick={() => setCreateOpen(true)}
+            onClick={openCreateSheet}
             className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity shrink-0"
           >
             <Plus className="h-4 w-4" />
@@ -211,7 +219,7 @@ export default function KonsulenterOppdrag({
           </button>
         </div>
       ) : (
-        <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <h1 className="text-[1.375rem] font-bold">Aktive oppdrag</h1>
             <span className="bg-secondary text-muted-foreground rounded-full px-2.5 py-0.5 text-xs font-medium">
@@ -219,7 +227,7 @@ export default function KonsulenterOppdrag({
             </span>
           </div>
           <button
-            onClick={() => setCreateOpen(true)}
+            onClick={openCreateSheet}
             className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity shrink-0"
           >
             <Plus className="h-4 w-4" />
@@ -231,7 +239,7 @@ export default function KonsulenterOppdrag({
 
       {/* Stat cards */}
           {/* Stat cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 rounded-xl px-5 py-4 shadow-sm">
               <Briefcase className="h-4 w-4 text-emerald-600 mb-1" />
               <p className="text-2xl font-bold text-emerald-600">{stats.aktive}</p>
@@ -260,20 +268,19 @@ export default function KonsulenterOppdrag({
           {!embeddedSplit && <FornyelsesTimeline enriched={enriched} />}
 
           {/* Filter chips */}
-          <div className="flex flex-wrap items-center gap-2 mb-4">
+          <div className="flex flex-wrap items-center gap-2 mb-3">
             {chips.map((c) => (
-              <button
+              <DesignLabFilterButton
                 key={c}
                 onClick={() => setFilter(c)}
-                className={cn(
-                  "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
-                  filter === c
-                    ? "bg-foreground text-background border-foreground"
-                    : "border-border text-muted-foreground hover:bg-secondary",
-                )}
+                active={filter === c}
+                activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+                className="h-8 px-3 text-[0.8125rem]"
               >
                 {c}
-              </button>
+              </DesignLabFilterButton>
             ))}
           </div>
 
@@ -326,15 +333,8 @@ export default function KonsulenterOppdrag({
                         <p className="mt-1 text-[0.8125rem] text-muted-foreground truncate">{o.kunde}</p>
                       </div>
                     </div>
-                    <span
-                      className={cn(
-                        "inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold shrink-0",
-                        o.status === "Aktiv" && "bg-emerald-100 text-emerald-700",
-                        o.status === "Oppstart" && "bg-amber-100 text-amber-700",
-                        o.status === "Inaktiv" && "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {o.status}
+                    <span className="shrink-0">
+                      <OppdragStatusTag status={o.status} />
                     </span>
                   </div>
 
@@ -382,35 +382,39 @@ export default function KonsulenterOppdrag({
           </div>
 
           {embeddedSplit ? (
-            <div className="hidden md:block min-h-[860px]">
-              <ResizablePanelGroup direction="horizontal" className="h-full">
-                <ResizablePanel defaultSize={46} minSize={28}>
-                  <div className="h-full border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
-                    <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background sticky top-0 z-10">
-                      {["Konsulent", "Kunde", "Type", "Utpris", "Margin", "Forny", "Status"].map((h) => (
-                        <span
-                          key={h}
-                          className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground"
-                        >
-                          {h}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="divide-y divide-border">
-                      {filtered.map((o: any) => {
-                        const isInaktiv = o.status === "Inaktiv";
-                        const isSelected = selectedRowId === o.id;
-
-                        return (
-                          <div
-                            key={o.id}
-                            onClick={() => setSelectedRowId(o.id)}
-                            className={cn(
-                              "grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 items-center px-4 py-3 transition-colors cursor-pointer",
-                              isInaktiv && "opacity-60",
-                              isSelected ? "bg-muted/60" : "hover:bg-muted/40",
-                            )}
+            <>
+              <div className="hidden md:block min-h-[860px]">
+                <ResizablePanelGroup direction="horizontal" className="h-full">
+                  <ResizablePanel defaultSize={46} minSize={28}>
+                    <div className="h-full border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
+                      <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background sticky top-0 z-10">
+                        {["Konsulent", "Kunde", "Type", "Utpris", "Margin", "Forny", "Status"].map((h) => (
+                          <span
+                            key={h}
+                            className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground"
                           >
+                            {h}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="divide-y divide-border">
+                        {filtered.map((o: any) => {
+                          const isInaktiv = o.status === "Inaktiv";
+                          const isSelected = selectedRowId === o.id;
+
+                          return (
+                            <div
+                              key={o.id}
+                              onClick={() => {
+                                setSelectedRowId(o.id);
+                                setEditSheetOpen(true);
+                              }}
+                              className={cn(
+                                "grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 items-center px-4 py-3 transition-colors cursor-pointer",
+                                isInaktiv && "opacity-60",
+                                isSelected ? "bg-muted/60" : "hover:bg-muted/40",
+                              )}
+                            >
                             <div className="flex items-center gap-2 min-w-0">
                               {(() => {
                                 const isAnsatt = o.er_ansatt === true;
@@ -511,69 +515,60 @@ export default function KonsulenterOppdrag({
                                 {o.status}
                               </span>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {filtered.length === 0 && <p className="text-muted-foreground text-center py-12">Ingen oppdrag å vise</p>}
-                  </div>
-                </ResizablePanel>
-
-                <ResizableHandle
-                  withHandle
-                  className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
-                />
-
-                <ResizablePanel defaultSize={54} minSize={32}>
-                  <div className="h-full rounded-lg border border-border bg-card overflow-hidden">
-                    <div className="h-full overflow-y-auto px-5 py-5 space-y-5">
-                      <div>
-                        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-3">
-                          Fornyelseskalender
-                        </p>
-                        <FornyelsesTimeline enriched={enriched} />
+                            </div>
+                          );
+                        })}
                       </div>
+                      {filtered.length === 0 && <p className="text-muted-foreground text-center py-12">Ingen oppdrag å vise</p>}
+                    </div>
+                  </ResizablePanel>
 
-                      <div className="rounded-lg border border-border bg-background overflow-hidden">
-                        <div className="flex items-center justify-between px-5 py-3 border-b border-border">
-                          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                            {createOpen ? "Nytt oppdrag" : selectedOppdrag ? "Oppdragsdetaljer" : "Velg oppdrag"}
+                  <ResizableHandle
+                    withHandle
+                    className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
+                  />
+
+                  <ResizablePanel defaultSize={54} minSize={32}>
+                    <div className="h-full rounded-lg border border-border bg-card overflow-hidden">
+                      <div className="h-full overflow-y-auto px-5 py-5 space-y-5">
+                        <div>
+                          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-3">
+                            Fornyelseskalender
                           </p>
-                          {(createOpen || selectedOppdrag) && (
-                            <button
-                              onClick={() => {
-                                setSelectedRowId(null);
-                                setCreateOpen(false);
-                              }}
-                              className="text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                              Lukk
-                            </button>
-                          )}
+                          <FornyelsesTimeline enriched={enriched} />
                         </div>
 
-                        {createOpen || selectedOppdrag ? (
-                          <OppdragEditSheet
-                            key={createOpen ? "create-oppdrag-inline" : `edit-oppdrag-inline-${selectedOppdrag?.id ?? "none"}`}
-                            row={selectedOppdrag}
-                            onClose={() => {
-                              setSelectedRowId(null);
-                              setCreateOpen(false);
-                            }}
-                          />
-                        ) : (
-                          <div className="px-5 py-10 text-center">
-                            <p className="text-[0.875rem] text-muted-foreground">
-                              Velg et oppdrag i tabellen for å vise detaljer.
-                            </p>
-                          </div>
-                        )}
+                        <div className="rounded-lg border border-border bg-background px-5 py-10">
+                          <p className="text-[0.8125rem] text-muted-foreground">
+                            Klikk et oppdrag i tabellen for å redigere direkte.
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </ResizablePanel>
-              </ResizablePanelGroup>
-            </div>
+                  </ResizablePanel>
+                </ResizablePanelGroup>
+              </div>
+              <Sheet
+                open={editSheetOpen || createOpen}
+                onOpenChange={(open) => {
+                  if (!open) {
+                    setEditSheetOpen(false);
+                    setCreateOpen(false);
+                  }
+                }}
+              >
+                <SheetContent side="right" className="w-full sm:w-[920px] p-0" hideCloseButton>
+                  <OppdragEditSheet
+                    key={createOpen ? "create-oppdrag-inline-sheet" : `edit-oppdrag-inline-sheet-${selectedOppdrag?.id ?? "none"}`}
+                    row={createOpen ? null : selectedOppdrag}
+                    onClose={() => {
+                      setEditSheetOpen(false);
+                      setCreateOpen(false);
+                    }}
+                  />
+                </SheetContent>
+              </Sheet>
+            </>
           ) : (
             <>
               <div className="hidden md:block border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
@@ -686,17 +681,8 @@ export default function KonsulenterOppdrag({
                           )}
                         </div>
                         <div>
-                          <span
-                            className={cn(
-                              "inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold",
-                              o.status === "Aktiv" && "bg-emerald-100 text-emerald-700",
-                              o.status === "Oppstart" && "bg-amber-100 text-amber-700",
-                              o.status === "Inaktiv" && "bg-muted text-muted-foreground",
-                            )}
-                          >
-                            {o.status}
-                          </span>
-                        </div>
+                              <OppdragStatusTag status={o.status} />
+                            </div>
                       </div>
                     );
                   })}
@@ -729,4 +715,87 @@ export default function KonsulenterOppdrag({
 
     </div>
   );
+}
+
+function OppdragSummaryCard({
+  oppdrag,
+  companyStatus,
+  onEdit,
+}: {
+  oppdrag: any;
+  companyStatus: string | null;
+  onEdit: () => void;
+}) {
+  const formatDateLabel = (value?: string | null) => {
+    if (!value) return "—";
+    const parsed = parseOppdragDate(value);
+    if (!parsed) return "—";
+    return format(parsed, "dd.MM.yyyy");
+  };
+
+  const companyTypeLabel =
+    companyStatus === "partner"
+      ? "Partner"
+      : companyStatus === "customer" || companyStatus === "kunde"
+        ? "Kunde"
+        : companyStatus === "prospect"
+          ? "Potensiell"
+          : "—";
+
+  return (
+    <div className="px-5 py-5 space-y-5">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h3 className="text-[1.125rem] font-semibold text-foreground truncate">{oppdrag.kandidat || "Ukjent konsulent"}</h3>
+          <p className="mt-1 text-[0.875rem] text-muted-foreground truncate">{oppdrag.kunde || "Ukjent kunde"}</p>
+        </div>
+        <button
+          onClick={onEdit}
+          className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors shrink-0"
+        >
+          Rediger
+        </button>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Kundetype</p>
+          <p className="mt-1 text-[0.875rem] text-foreground">{companyTypeLabel}</p>
+        </div>
+        <div>
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Status</p>
+          <p className="mt-1 text-[0.875rem] text-foreground">{oppdrag.status}</p>
+        </div>
+        <div>
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Utpris</p>
+          <p className="mt-1 text-[0.875rem] text-foreground">kr {formatNOK(Number(oppdrag.utpris) || 0)}/t</p>
+        </div>
+        <div>
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Margin</p>
+          <p className="mt-1 text-[0.875rem] text-foreground">
+            kr {formatNOK(oppdrag.marginPerTime || 0)}/t · {oppdrag.marginPct?.toFixed(1) || "0.0"}%
+          </p>
+        </div>
+        <div>
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Start</p>
+          <p className="mt-1 text-[0.875rem] text-foreground">{formatDateLabel(oppdrag.start_dato)}</p>
+        </div>
+        <div>
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Fornyelse</p>
+          <p className="mt-1 text-[0.875rem] text-foreground">{formatDateLabel(oppdrag.forny_dato)}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OppdragStatusTag({ status }: { status: string }) {
+  const colors =
+    status === "Aktiv"
+      ? DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS
+      : status === "Oppstart"
+        ? { background: "#F6EFE2", color: "#9A7A2A", border: "1px solid rgba(154,122,42,0.16)", fontWeight: 600 }
+        : { background: "#F7F8FA", color: "#8C929C", border: "1px solid #E3E6EB", fontWeight: 500 };
+
+  return <DesignLabStaticTag colors={colors}>{status}</DesignLabStaticTag>;
 }

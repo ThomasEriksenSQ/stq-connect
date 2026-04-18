@@ -83,6 +83,13 @@ import {
   DESIGN_LAB_STATUS_NEUTRAL_CHIP_ACTIVE_COLORS,
   getDesignLabCategoryChipActiveColors,
 } from "@/components/designlab/system";
+import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
+import {
+  DesignLabFieldGrid,
+  DesignLabFieldLabel,
+  DesignLabFieldStack,
+  DesignLabTextField,
+} from "@/components/designlab/system/fields";
 import { mergeTechnologyTags } from "@/lib/technologyTags";
 import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/queryKeys";
 /* ── Helpers for storing/retrieving category in description ── */
@@ -122,6 +129,7 @@ interface ContactCardContentProps {
   contactId: string;
   editable?: boolean;
   enableProfileEditMode?: boolean;
+  startInProfileEditMode?: boolean;
   onOpenCompany?: (companyId: string) => void;
   onNavigateToFullPage?: () => void;
   defaultHidden?: DefaultHiddenConfig;
@@ -225,6 +233,7 @@ export function ContactCardContent({
   contactId,
   editable = false,
   enableProfileEditMode = false,
+  startInProfileEditMode = false,
   onOpenCompany,
   onNavigateToFullPage,
   defaultHidden,
@@ -264,6 +273,7 @@ export function ContactCardContent({
   const [showNotes, setShowNotes] = useState(false);
   const [showConsultantMatch, setShowConsultantMatch] = useState(!defaultHidden?.consultantMatch);
   const [profileEditMode, setProfileEditMode] = useState(false);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
   const notifyDataChanged = () => {
     onDataChanged?.();
   };
@@ -647,6 +657,19 @@ export function ContactCardContent({
     setEditingNotes(false);
   };
 
+  useEffect(() => {
+    setProfileEditMode(startInProfileEditMode);
+  }, [contactId, startInProfileEditMode]);
+
+  const useProfileEditSheet = inDesignLab && editable && enableProfileEditMode && !startInProfileEditMode;
+  const openProfileEditor = () => {
+    if (useProfileEditSheet) {
+      setEditSheetOpen(true);
+      return;
+    }
+    setProfileEditMode(true);
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast("Kopiert!", { duration: 1500 });
@@ -786,10 +809,11 @@ export function ContactCardContent({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" sideOffset={4}>
                   <DropdownMenuItem onClick={() => {
-                    if (profileEditMode) exitProfileEditMode();
-                    else setProfileEditMode(true);
+                    if (!useProfileEditSheet && profileEditMode) exitProfileEditMode();
+                    else openProfileEditor();
                   }}>
-                    <Pencil className="h-3.5 w-3.5 mr-2" /> {profileEditMode ? "Avslutt redigering" : "Rediger profil"}
+                    <Pencil className="h-3.5 w-3.5 mr-2" />
+                    {!useProfileEditSheet && profileEditMode ? "Avslutt redigering" : "Rediger profil"}
                   </DropdownMenuItem>
                   {defaultHidden && (
                     <>
@@ -802,7 +826,7 @@ export function ContactCardContent({
                       <DropdownMenuItem onClick={() => {
                         setShowNotes((prev) => !prev);
                         if (!showNotes && !contact.notes) {
-                          setProfileEditMode(true);
+                          openProfileEditor();
                           setNotesDraft("");
                           setTimeout(() => setEditingNotes(true), 50);
                         }
@@ -1649,6 +1673,327 @@ export function ContactCardContent({
           />
         </div>
       </div>
+
+      <DesignLabEntitySheet
+        open={editSheetOpen}
+        onOpenChange={setEditSheetOpen}
+        contentClassName="px-6 py-5 dl-v8-theme"
+      >
+        <ContactProfileEditor
+          contact={contact}
+          companyName={companyName}
+          companyLocations={companyLocations}
+          profiles={allProfiles}
+          onCancel={() => setEditSheetOpen(false)}
+          onSave={async (updates) => {
+            await updateMutation.mutateAsync(updates);
+            setEditSheetOpen(false);
+          }}
+          defaultHidden={defaultHidden}
+        />
+      </DesignLabEntitySheet>
+    </div>
+  );
+}
+
+function ContactProfileEditor({
+  contact,
+  companyName,
+  companyLocations,
+  profiles,
+  defaultHidden,
+  onCancel,
+  onSave,
+}: {
+  contact: any;
+  companyName?: string | null;
+  companyLocations: string[];
+  profiles: Array<{ id: string; full_name: string }>;
+  defaultHidden?: DefaultHiddenConfig;
+  onCancel: () => void;
+  onSave: (updates: Record<string, any>) => Promise<unknown>;
+}) {
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    first_name: "",
+    last_name: "",
+    title: "",
+    department: "",
+    email: "",
+    phone: "",
+    linkedin: "",
+    owner_id: "",
+    locations: [] as string[],
+    cv_email: false,
+    call_list: false,
+    ikke_aktuell_kontakt: false,
+    notes: "",
+  });
+
+  useEffect(() => {
+    setForm({
+      first_name: contact?.first_name || "",
+      last_name: contact?.last_name || "",
+      title: contact?.title || "",
+      department: (contact as any)?.department || "",
+      email: contact?.email || "",
+      phone: contact?.phone || "",
+      linkedin: contact?.linkedin || "",
+      owner_id: contact?.owner_id || "",
+      locations: Array.isArray((contact as any)?.locations) ? (contact as any).locations : [],
+      cv_email: Boolean((contact as any)?.cv_email),
+      call_list: Boolean((contact as any)?.call_list),
+      ikke_aktuell_kontakt: Boolean((contact as any)?.ikke_aktuell_kontakt),
+      notes: contact?.notes || "",
+    });
+  }, [contact]);
+
+  const isUnsubscribed =
+    (contact as any)?.mailchimp_status === "unsubscribed" || (contact as any)?.mailchimp_status === "cleaned";
+
+  const setField = (field: string, value: any) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const toggleLocation = (location: string) => {
+    setForm((prev) => ({
+      ...prev,
+      locations: prev.locations.includes(location)
+        ? prev.locations.filter((item) => item !== location)
+        : [...prev.locations, location],
+    }));
+  };
+
+  const toggleCvEmail = () => {
+    if (!form.cv_email && !contactHasEmail({ email: form.email })) {
+      toast.error(CONTACT_CV_EMAIL_REQUIRED_MESSAGE);
+      return;
+    }
+    if (!form.cv_email && isUnsubscribed) {
+      toast.info("Kontakten har avmeldt seg via Mailchimp og kan ikke re-abonneres.");
+      return;
+    }
+    setField("cv_email", !form.cv_email);
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!form.first_name.trim() || !form.last_name.trim()) {
+      toast.error("Fornavn og etternavn må fylles ut");
+      return;
+    }
+    if (form.cv_email && !contactHasEmail({ email: form.email })) {
+      toast.error(CONTACT_CV_EMAIL_REQUIRED_MESSAGE);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await onSave({
+        first_name: form.first_name.trim(),
+        last_name: form.last_name.trim(),
+        title: form.title.trim() || null,
+        department: form.department.trim() || null,
+        email: form.email.trim() || null,
+        phone: form.phone.trim() || null,
+        linkedin: form.linkedin.trim() || null,
+        owner_id: form.owner_id || null,
+        locations: form.locations,
+        cv_email: sanitizeContactCvEmail(form.email, form.cv_email),
+        call_list: form.call_list,
+        ikke_aktuell_kontakt: form.ikke_aktuell_kontakt,
+        notes: form.notes.trim() || null,
+      });
+    } catch (error) {
+      return;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="w-full max-w-full min-w-0">
+      <div className="mb-5">
+        <h2 className="text-[1.125rem] font-bold text-foreground">Rediger profil</h2>
+        <p className="mt-1 text-[0.8125rem] text-muted-foreground">
+          {companyName ? companyName : "Kontakt"}
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="w-full max-w-full min-w-0 space-y-4 overflow-x-hidden">
+        <DesignLabFieldGrid>
+          <DesignLabFieldStack>
+            <DesignLabFieldLabel>Fornavn</DesignLabFieldLabel>
+            <DesignLabTextField
+              value={form.first_name}
+              onChange={(e) => setField("first_name", e.target.value)}
+              required
+              className="h-10 rounded-lg"
+            />
+          </DesignLabFieldStack>
+          <DesignLabFieldStack>
+            <DesignLabFieldLabel>Etternavn</DesignLabFieldLabel>
+            <DesignLabTextField
+              value={form.last_name}
+              onChange={(e) => setField("last_name", e.target.value)}
+              required
+              className="h-10 rounded-lg"
+            />
+          </DesignLabFieldStack>
+        </DesignLabFieldGrid>
+
+        <DesignLabFieldGrid>
+          <DesignLabFieldStack>
+            <DesignLabFieldLabel>Stilling</DesignLabFieldLabel>
+            <DesignLabTextField
+              value={form.title}
+              onChange={(e) => setField("title", e.target.value)}
+              className="h-10 rounded-lg"
+            />
+          </DesignLabFieldStack>
+          <DesignLabFieldStack>
+            <DesignLabFieldLabel>Avdeling</DesignLabFieldLabel>
+            <DesignLabTextField
+              value={form.department}
+              onChange={(e) => setField("department", e.target.value)}
+              className="h-10 rounded-lg"
+            />
+          </DesignLabFieldStack>
+        </DesignLabFieldGrid>
+
+        <DesignLabFieldGrid>
+          <DesignLabFieldStack>
+            <DesignLabFieldLabel>E-post</DesignLabFieldLabel>
+            <DesignLabTextField
+              type="email"
+              value={form.email}
+              onChange={(e) => setField("email", e.target.value)}
+              className="h-10 rounded-lg"
+            />
+          </DesignLabFieldStack>
+          <DesignLabFieldStack>
+            <DesignLabFieldLabel>Telefon</DesignLabFieldLabel>
+            <DesignLabTextField
+              value={form.phone}
+              onChange={(e) => setField("phone", e.target.value)}
+              className="h-10 rounded-lg"
+            />
+          </DesignLabFieldStack>
+        </DesignLabFieldGrid>
+
+        <DesignLabFieldStack>
+          <DesignLabFieldLabel>LinkedIn</DesignLabFieldLabel>
+          <DesignLabTextField
+            value={form.linkedin}
+            onChange={(e) => setField("linkedin", e.target.value)}
+            placeholder="https://linkedin.com/in/..."
+            className="h-10 rounded-lg"
+          />
+        </DesignLabFieldStack>
+
+        {companyLocations.length > 0 && (
+          <DesignLabFieldStack>
+            <DesignLabFieldLabel>Geografisk sted</DesignLabFieldLabel>
+            <div className="flex flex-wrap gap-1.5">
+              {companyLocations.map((location) => (
+                <DesignLabFilterButton
+                  key={location}
+                  type="button"
+                  onClick={() => toggleLocation(location)}
+                  active={form.locations.includes(location)}
+                  activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                  inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                  inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+                >
+                  {location}
+                </DesignLabFilterButton>
+              ))}
+            </div>
+          </DesignLabFieldStack>
+        )}
+
+        <DesignLabFieldStack>
+          <DesignLabFieldLabel>Eier</DesignLabFieldLabel>
+          <div className="flex flex-wrap gap-1.5">
+            {profiles.map((profile) => (
+              <DesignLabFilterButton
+                key={profile.id}
+                type="button"
+                onClick={() => setField("owner_id", profile.id)}
+                active={form.owner_id === profile.id}
+              >
+                {profile.full_name}
+              </DesignLabFilterButton>
+            ))}
+          </div>
+        </DesignLabFieldStack>
+
+        <DesignLabFieldStack>
+          <DesignLabFieldLabel>Egenskaper</DesignLabFieldLabel>
+          <div className="flex flex-wrap gap-1.5">
+            <DesignLabFilterButton
+              type="button"
+              onClick={toggleCvEmail}
+              active={form.cv_email && !isUnsubscribed}
+              activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+              inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+              inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+              style={form.cv_email && isUnsubscribed ? { color: C.textFaint } : undefined}
+            >
+              {form.cv_email && isUnsubscribed ? "CV-Epost ✗" : form.cv_email ? "✓ CV-Epost" : "CV-Epost"}
+            </DesignLabFilterButton>
+            <DesignLabFilterButton
+              type="button"
+              onClick={() => setField("call_list", !form.call_list)}
+              active={form.call_list}
+              activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+              inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+              inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+            >
+              {form.call_list ? "✓ Innkjøper" : "Innkjøper"}
+            </DesignLabFilterButton>
+            <DesignLabFilterButton
+              type="button"
+              onClick={() => setField("ikke_aktuell_kontakt", !form.ikke_aktuell_kontakt)}
+              active={form.ikke_aktuell_kontakt}
+              activeColors={getDesignLabCategoryChipActiveColors("Ikke aktuelt")}
+            >
+              {form.ikke_aktuell_kontakt ? "✕ Ikke relevant person å kontakte igjen" : "Ikke relevant person å kontakte igjen"}
+            </DesignLabFilterButton>
+          </div>
+        </DesignLabFieldStack>
+
+        {!(defaultHidden?.notes && !form.notes) && (
+          <DesignLabFieldStack>
+            <DesignLabFieldLabel>Notat</DesignLabFieldLabel>
+            <Textarea
+              value={form.notes}
+              onChange={(e) => setField("notes", e.target.value)}
+              rows={6}
+              className="min-h-[140px] rounded-lg text-[0.875rem]"
+            />
+          </DesignLabFieldStack>
+        )}
+
+        <div className="mt-2 border-t border-border/80 pt-4">
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              className="inline-flex h-10 min-w-[110px] items-center justify-center rounded-lg border border-input bg-background px-4 text-[0.8125rem] font-medium text-foreground transition-colors hover:bg-accent"
+              onClick={onCancel}
+            >
+              Avbryt
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex h-10 min-w-[110px] items-center justify-center rounded-lg bg-primary px-4 text-[0.8125rem] font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {saving ? "Lagrer..." : "Lagre"}
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   );
 }
