@@ -99,26 +99,25 @@ export function AiSignalBanner({
     return () => { cancelled = true; };
   }, [contactId, currentSignal, activities.length, outlookEmails.length]);
 
-  if (dismissed || loading || !result) return null;
-
   // Filter new technologies not already on contact
   const normalizedCurrentTechnologies = normalizeTechnologyTags(currentTechnologies);
   const normalizedExisting = new Set(normalizedCurrentTechnologies.map((t) => t.toLowerCase()));
-  const normalizedSuggestedTechnologies = normalizeTechnologyTags(result.teknologier_funnet);
+  const normalizedSuggestedTechnologies = normalizeTechnologyTags(result?.teknologier_funnet ?? []);
   const newTechs = normalizedSuggestedTechnologies.filter(
     (t) => !normalizedExisting.has(t.toLowerCase())
   );
 
-  const signalChanged = result.anbefalt_signal !== currentSignal;
+  const hasResult = Boolean(result);
+  const signalChanged = Boolean(result && result.anbefalt_signal !== currentSignal);
   const hasNewTechs = newTechs.length > 0 && !techsAdded;
-  const isVisible = !dismissed && !loading && !!result && !(applied && !hasNewTechs) && (signalChanged || hasNewTechs);
+  const isVisible = !dismissed && !loading && hasResult && !(applied && !hasNewTechs) && (signalChanged || hasNewTechs);
 
   useEffect(() => {
     onVisibilityChange?.(isVisible);
   }, [isVisible, onVisibilityChange]);
 
   // Don't show if nothing actionable
-  if (!isVisible || hideContent) return null;
+  if (!hasResult || !isVisible || hideContent) return null;
 
   const borderColor =
     result.konfidens === "høy"
