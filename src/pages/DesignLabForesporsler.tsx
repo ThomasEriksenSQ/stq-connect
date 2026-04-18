@@ -28,6 +28,7 @@ import {
   DesignLabPrimaryAction,
   DesignLabReadonlyChip,
 } from "@/components/designlab/system";
+import { NyForesporselModal } from "@/pages/Foresporsler";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
@@ -116,6 +117,7 @@ export default function DesignLabForesporsler() {
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "mottatt_dato", dir: "desc" });
   const [selectedRowId, setSelectedRowId] = useState<number | null>(Number(searchParams.get("id") || "") || null);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
 
@@ -259,7 +261,7 @@ export default function DesignLabForesporsler() {
               placeholder="Søk forespørsler…"
               style={{ width: 220 }}
             />
-            <DesignLabPrimaryAction>
+            <DesignLabPrimaryAction onClick={() => setCreateOpen(true)}>
               + Ny forespørsel
             </DesignLabPrimaryAction>
           </div>
@@ -380,6 +382,7 @@ export default function DesignLabForesporsler() {
           />
         ) : null}
       </DesignLabEntitySheet>
+      <NyForesporselModal open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   );
 }

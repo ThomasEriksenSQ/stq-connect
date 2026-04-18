@@ -209,7 +209,7 @@ export default function KonsulenterOppdrag({
     <div>
       {/* Header */}
       {hidePageIntro ? (
-        <div className="flex justify-end mb-6">
+        <div className="flex justify-end mb-3">
           <button
             onClick={openCreateSheet}
             className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity shrink-0"
@@ -219,7 +219,7 @@ export default function KonsulenterOppdrag({
           </button>
         </div>
       ) : (
-        <div className="flex flex-col gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 mb-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <h1 className="text-[1.375rem] font-bold">Aktive oppdrag</h1>
             <span className="bg-secondary text-muted-foreground rounded-full px-2.5 py-0.5 text-xs font-medium">
@@ -239,7 +239,7 @@ export default function KonsulenterOppdrag({
 
       {/* Stat cards */}
           {/* Stat cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
             <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 rounded-xl px-5 py-4 shadow-sm">
               <Briefcase className="h-4 w-4 text-emerald-600 mb-1" />
               <p className="text-2xl font-bold text-emerald-600">{stats.aktive}</p>
@@ -536,12 +536,6 @@ export default function KonsulenterOppdrag({
                             Fornyelseskalender
                           </p>
                           <FornyelsesTimeline enriched={enriched} />
-                        </div>
-
-                        <div className="rounded-lg border border-border bg-background px-5 py-10">
-                          <p className="text-[0.8125rem] text-muted-foreground">
-                            Klikk et oppdrag i tabellen for å redigere direkte.
-                          </p>
                         </div>
                       </div>
                     </div>

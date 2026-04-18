@@ -9,11 +9,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { getInitials, cn } from "@/lib/utils";
 import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Sheet,
   SheetContent,
 } from "@/components/ui/sheet";
@@ -39,6 +34,7 @@ import { format, differenceInDays, parseISO, startOfDay } from "date-fns";
 import { nb } from "date-fns/locale";
 import { crmQueryKeys } from "@/lib/queryKeys";
 import { useSearchParams } from "react-router-dom";
+import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
 
 type StatusFilter = "aktive" | "utgatte" | "alle";
 type TypeFilter = "Alle" | "DIR" | "VIA";
@@ -262,7 +258,7 @@ function AiTeknologiBox({
 
 /* ─── Ny forespørsel modal ─── */
 
-function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -456,11 +452,12 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
   const canSubmit = selskap.trim() && kontaktId && !submitting;
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-md rounded-xl p-6 gap-0" hideCloseButton>
-        <DialogTitle className="text-[1.125rem] font-bold text-foreground mb-5">Ny forespørsel</DialogTitle>
+    <DesignLabEntitySheet open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }} contentClassName="px-6 py-6">
+      <div className="mb-5">
+        <h2 className="text-[1.125rem] font-bold text-foreground">Ny forespørsel</h2>
+      </div>
 
-        <div className="space-y-4">
+      <div className="space-y-4">
           {/* Mottatt dato */}
           <div>
             <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Mottatt</label>
@@ -737,27 +734,25 @@ function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => v
               className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-[0.875rem] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
             />
           </div>
-        </div>
+      </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
-          <button onClick={onClose} className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">
-            Avbryt
-          </button>
-          <button
-            disabled={!canSubmit}
-            onClick={handleSubmit}
-            className={`inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg transition-colors ${
-              canSubmit
-                ? "bg-primary text-primary-foreground hover:opacity-90"
-                : "bg-muted text-muted-foreground cursor-not-allowed"
-            }`}
-          >
-            {submitting ? "Oppretter..." : "Opprett forespørsel"}
-          </button>
-        </div>
-      </DialogContent>
-    </Dialog>
+      <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
+        <button onClick={onClose} className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">
+          Avbryt
+        </button>
+        <button
+          disabled={!canSubmit}
+          onClick={handleSubmit}
+          className={`inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg transition-colors ${
+            canSubmit
+              ? "bg-primary text-primary-foreground hover:opacity-90"
+              : "bg-muted text-muted-foreground cursor-not-allowed"
+          }`}
+        >
+          {submitting ? "Oppretter..." : "Opprett forespørsel"}
+        </button>
+      </div>
+    </DesignLabEntitySheet>
   );
 }
 

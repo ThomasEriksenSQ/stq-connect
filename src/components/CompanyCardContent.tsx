@@ -1075,20 +1075,22 @@ export function CompanyCardContent({
       <div className="mb-2 flex items-center justify-between gap-3">
         <h3 className="text-[12px] font-medium text-[#5C636E]">Kontakter · {contacts.length}</h3>
         {editable && (
-          <Dialog
-            open={newContactOpen}
-            onOpenChange={(nextOpen) => {
-              setNewContactOpen(nextOpen);
-              if (!nextOpen) resetNewContactForm();
-            }}
-          >
-            <DialogTrigger asChild>
-              <DesignLabPrimaryAction>
-                <Plus className="h-3.5 w-3.5" />
-                Ny kontakt
-              </DesignLabPrimaryAction>
-            </DialogTrigger>
-            <DesignLabModalContent title="Ny kontakt">
+          <>
+            <DesignLabPrimaryAction onClick={() => setNewContactOpen(true)}>
+              <Plus className="h-3.5 w-3.5" />
+              Ny kontakt
+            </DesignLabPrimaryAction>
+            <DesignLabEntitySheet
+              open={newContactOpen}
+              onOpenChange={(nextOpen) => {
+                setNewContactOpen(nextOpen);
+                if (!nextOpen) resetNewContactForm();
+              }}
+              contentClassName="px-6 py-6 dl-v8-theme"
+            >
+              <div className="mb-5">
+                <h2 className="text-[1.125rem] font-bold text-foreground">Ny kontakt</h2>
+              </div>
               <DesignLabModalForm
                 onSubmit={async (e) => {
                   e.preventDefault();
@@ -1245,8 +1247,8 @@ export function CompanyCardContent({
                   </DesignLabGhostAction>
                 </DesignLabModalActions>
               </DesignLabModalForm>
-            </DesignLabModalContent>
-          </Dialog>
+            </DesignLabEntitySheet>
+          </>
         )}
       </div>
 

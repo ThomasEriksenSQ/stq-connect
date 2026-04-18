@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,6 +46,7 @@ import {
   getDesignLabModalInputStyle,
   useDesignLabModalScale,
 } from "@/components/designlab/system";
+import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
 
 const TYPE_BADGE_COLORS: Record<string, { label: string; badgeColor: string }> = {
   prospect: { label: "Potensiell kunde", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" },
@@ -502,151 +502,153 @@ const Companies = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-[1.375rem] font-bold">Selskaper</h1>
-        <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-          <DialogTrigger asChild>
-            <Button className="rounded-lg h-9 px-3.5 text-[0.8125rem] font-medium gap-1.5 w-full sm:w-auto">
-              <Plus className="h-4 w-4" />
-              Nytt selskap
-            </Button>
-          </DialogTrigger>
-          <DesignLabModalContent title="Nytt selskap">
-            <DesignLabModalForm
-              onSubmit={(e) => {
-                e.preventDefault();
-                createMutation.mutate();
-              }}
-            >
-              <DesignLabModalField>
-                <DesignLabModalLabel>Selskapsnavn</DesignLabModalLabel>
-                <BrregSearch
-                  value={form.name}
-                  onChange={(name) => setForm((f) => ({ ...f, name }))}
-                  onSelect={(r) => setForm((f) => ({ ...f, name: r.name, org_number: r.org_number, city: r.city }))}
-                  showSearchIcon={false}
-                  inputClassName="focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#5E6AD2] focus-visible:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]"
-                  inputStyle={getDesignLabModalInputStyle(modalScale)}
-                  dropdownClassName="rounded-[8px] border-[#E8EAEE] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
-                  resultClassName="px-3 py-2 hover:bg-[#F8F9FB]"
-                  resultStyle={{ font: "inherit" }}
-                  resultTitleClassName="font-medium text-[#1A1C1F]"
-                  resultTitleStyle={{ fontSize: "inherit", lineHeight: 1.25 }}
-                  resultMetaClassName="mt-0.5 text-[#8C929C]"
-                  resultMetaStyle={{ fontSize: "inherit", lineHeight: 1.2 }}
-                  emptyStateClassName="px-3 py-3 text-[#8C929C]"
-                  emptyStateStyle={{ fontSize: "inherit", lineHeight: 1.2 }}
-                />
-              </DesignLabModalField>
-              <DesignLabModalField>
-                <DesignLabModalLabel>Org.nr</DesignLabModalLabel>
-                <OrgNrInput
-                  value={form.org_number}
-                  onChange={(org_number) => setForm((f) => ({ ...f, org_number }))}
-                  onLookup={(name, city) => setForm((f) => ({ ...f, name: name || f.name, city: city || f.city }))}
-                  className="focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] focus-visible:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]"
-                  style={getDesignLabModalInputStyle(modalScale)}
-                />
-              </DesignLabModalField>
-              <DesignLabModalField>
-                <DesignLabModalLabel>Geografisk sted</DesignLabModalLabel>
-                <div style={{ display: "grid", rowGap: "var(--dl-modal-chip-gap)" }}>
-                  {locations.map((loc, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <DesignLabModalInput
-                        value={loc}
-                        onChange={(e) => {
-                          const next = [...locations];
-                          next[i] = e.target.value;
-                          setLocations(next);
-                        }}
-                        placeholder="By eller sted"
-                        style={{ flex: 1 }}
-                      />
-                      {locations.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => setLocations(locations.filter((_, j) => j !== i))}
-                          className="inline-flex items-center justify-center rounded-[6px] text-[#8C929C] transition-colors hover:bg-[#F0F2F6] hover:text-[#1A1C1F]"
-                          style={{ width: modalScale.controlHeight, height: modalScale.controlHeight }}
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  <DesignLabModalInlineAction type="button" onClick={() => setLocations([...locations, ""])}>
-                    <Plus className="h-3.5 w-3.5" />
-                    Legg til sted
-                  </DesignLabModalInlineAction>
-                </div>
-              </DesignLabModalField>
-              <DesignLabModalField>
-                <DesignLabModalLabel>Nettside</DesignLabModalLabel>
-                <DesignLabModalInput
-                  value={form.website}
-                  onChange={(e) => setForm((prev) => ({ ...prev, website: e.target.value }))}
-                  placeholder="https://"
-                  type="url"
-                />
-              </DesignLabModalField>
-              <DesignLabModalField>
-                <DesignLabModalLabel>LinkedIn</DesignLabModalLabel>
-                <DesignLabModalInput
-                  value={form.linkedin}
-                  onChange={(e) => setForm((prev) => ({ ...prev, linkedin: e.target.value }))}
-                  placeholder="https://linkedin.com/company/..."
-                  type="url"
-                />
-              </DesignLabModalField>
-              <DesignLabModalField>
-                <DesignLabModalLabel>Type</DesignLabModalLabel>
-                <DesignLabModalChipGroup>
-                  {TYPE_OPTIONS.map((option) => (
-                    <DesignLabFilterButton
-                      key={option.value}
-                      type="button"
-                      onClick={() => setForm((prev) => ({ ...prev, status: option.value }))}
-                      active={form.status === option.value}
-                      activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
-                      inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
-                      inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
-                    >
-                      {option.label}
-                    </DesignLabFilterButton>
-                  ))}
-                </DesignLabModalChipGroup>
-              </DesignLabModalField>
-              {ownerList.length > 0 && (
-                <DesignLabModalField>
-                  <DesignLabModalLabel>Eier</DesignLabModalLabel>
-                  <DesignLabModalChipGroup>
-                    {ownerList.map(([id, name]) => (
-                      <DesignLabFilterButton
-                        key={id}
-                        type="button"
-                        onClick={() => setForm((prev) => ({ ...prev, owner_id: prev.owner_id === id ? "" : id }))}
-                        active={form.owner_id === id}
-                        activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
-                        inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
-                        inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
-                      >
-                        {name}
-                      </DesignLabFilterButton>
-                    ))}
-                  </DesignLabModalChipGroup>
-                </DesignLabModalField>
-              )}
-              <DesignLabModalActions>
-                <DesignLabPrimaryAction type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "Oppretter..." : "Opprett"}
-                </DesignLabPrimaryAction>
-                <DesignLabGhostAction type="button" onClick={() => handleDialogOpenChange(false)}>
-                  Avbryt
-                </DesignLabGhostAction>
-              </DesignLabModalActions>
-            </DesignLabModalForm>
-          </DesignLabModalContent>
-        </Dialog>
+        <Button
+          className="rounded-lg h-9 px-3.5 text-[0.8125rem] font-medium gap-1.5 w-full sm:w-auto"
+          onClick={() => handleDialogOpenChange(true)}
+        >
+          <Plus className="h-4 w-4" />
+          Nytt selskap
+        </Button>
       </div>
+      <DesignLabEntitySheet open={open} onOpenChange={handleDialogOpenChange} contentClassName="px-6 py-6 dl-v8-theme">
+        <div className="mb-5">
+          <h2 className="text-[1.125rem] font-bold text-foreground">Nytt selskap</h2>
+        </div>
+        <DesignLabModalForm
+          onSubmit={(e) => {
+            e.preventDefault();
+            createMutation.mutate();
+          }}
+        >
+          <DesignLabModalField>
+            <DesignLabModalLabel>Selskapsnavn</DesignLabModalLabel>
+            <BrregSearch
+              value={form.name}
+              onChange={(name) => setForm((f) => ({ ...f, name }))}
+              onSelect={(r) => setForm((f) => ({ ...f, name: r.name, org_number: r.org_number, city: r.city }))}
+              showSearchIcon={false}
+              inputClassName="focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#5E6AD2] focus-visible:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]"
+              inputStyle={getDesignLabModalInputStyle(modalScale)}
+              dropdownClassName="rounded-[8px] border-[#E8EAEE] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
+              resultClassName="px-3 py-2 hover:bg-[#F8F9FB]"
+              resultStyle={{ font: "inherit" }}
+              resultTitleClassName="font-medium text-[#1A1C1F]"
+              resultTitleStyle={{ fontSize: "inherit", lineHeight: 1.25 }}
+              resultMetaClassName="mt-0.5 text-[#8C929C]"
+              resultMetaStyle={{ fontSize: "inherit", lineHeight: 1.2 }}
+              emptyStateClassName="px-3 py-3 text-[#8C929C]"
+              emptyStateStyle={{ fontSize: "inherit", lineHeight: 1.2 }}
+            />
+          </DesignLabModalField>
+          <DesignLabModalField>
+            <DesignLabModalLabel>Org.nr</DesignLabModalLabel>
+            <OrgNrInput
+              value={form.org_number}
+              onChange={(org_number) => setForm((f) => ({ ...f, org_number }))}
+              onLookup={(name, city) => setForm((f) => ({ ...f, name: name || f.name, city: city || f.city }))}
+              className="focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] focus-visible:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]"
+              style={getDesignLabModalInputStyle(modalScale)}
+            />
+          </DesignLabModalField>
+          <DesignLabModalField>
+            <DesignLabModalLabel>Geografisk sted</DesignLabModalLabel>
+            <div style={{ display: "grid", rowGap: "var(--dl-modal-chip-gap)" }}>
+              {locations.map((loc, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <DesignLabModalInput
+                    value={loc}
+                    onChange={(e) => {
+                      const next = [...locations];
+                      next[i] = e.target.value;
+                      setLocations(next);
+                    }}
+                    placeholder="By eller sted"
+                    style={{ flex: 1 }}
+                  />
+                  {locations.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setLocations(locations.filter((_, j) => j !== i))}
+                      className="inline-flex items-center justify-center rounded-[6px] text-[#8C929C] transition-colors hover:bg-[#F0F2F6] hover:text-[#1A1C1F]"
+                      style={{ width: modalScale.controlHeight, height: modalScale.controlHeight }}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <DesignLabModalInlineAction type="button" onClick={() => setLocations([...locations, ""])}>
+                <Plus className="h-3.5 w-3.5" />
+                Legg til sted
+              </DesignLabModalInlineAction>
+            </div>
+          </DesignLabModalField>
+          <DesignLabModalField>
+            <DesignLabModalLabel>Nettside</DesignLabModalLabel>
+            <DesignLabModalInput
+              value={form.website}
+              onChange={(e) => setForm((prev) => ({ ...prev, website: e.target.value }))}
+              placeholder="https://"
+              type="url"
+            />
+          </DesignLabModalField>
+          <DesignLabModalField>
+            <DesignLabModalLabel>LinkedIn</DesignLabModalLabel>
+            <DesignLabModalInput
+              value={form.linkedin}
+              onChange={(e) => setForm((prev) => ({ ...prev, linkedin: e.target.value }))}
+              placeholder="https://linkedin.com/company/..."
+              type="url"
+            />
+          </DesignLabModalField>
+          <DesignLabModalField>
+            <DesignLabModalLabel>Type</DesignLabModalLabel>
+            <DesignLabModalChipGroup>
+              {TYPE_OPTIONS.map((option) => (
+                <DesignLabFilterButton
+                  key={option.value}
+                  type="button"
+                  onClick={() => setForm((prev) => ({ ...prev, status: option.value }))}
+                  active={form.status === option.value}
+                  activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                  inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                  inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+                >
+                  {option.label}
+                </DesignLabFilterButton>
+              ))}
+            </DesignLabModalChipGroup>
+          </DesignLabModalField>
+          {ownerList.length > 0 && (
+            <DesignLabModalField>
+              <DesignLabModalLabel>Eier</DesignLabModalLabel>
+              <DesignLabModalChipGroup>
+                {ownerList.map(([id, name]) => (
+                  <DesignLabFilterButton
+                    key={id}
+                    type="button"
+                    onClick={() => setForm((prev) => ({ ...prev, owner_id: prev.owner_id === id ? "" : id }))}
+                    active={form.owner_id === id}
+                    activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                    inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                    inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+                  >
+                    {name}
+                  </DesignLabFilterButton>
+                ))}
+              </DesignLabModalChipGroup>
+            </DesignLabModalField>
+          )}
+          <DesignLabModalActions>
+            <DesignLabPrimaryAction type="submit" disabled={createMutation.isPending}>
+              {createMutation.isPending ? "Oppretter..." : "Opprett"}
+            </DesignLabPrimaryAction>
+            <DesignLabGhostAction type="button" onClick={() => handleDialogOpenChange(false)}>
+              Avbryt
+            </DesignLabGhostAction>
+          </DesignLabModalActions>
+        </DesignLabModalForm>
+      </DesignLabEntitySheet>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1 max-w-full sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
