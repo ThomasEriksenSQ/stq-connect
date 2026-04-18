@@ -1864,6 +1864,7 @@ export default function DesignLabContacts() {
   // Keyboard nav
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (cmdOpen) return;
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         if (!sorted.length) return;
         e.preventDefault();
@@ -1874,7 +1875,7 @@ export default function DesignLabContacts() {
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [sorted, selectedId]);
+  }, [cmdOpen, sorted, selectedId]);
 
   /* ═══ RENDER ═══ */
   return (

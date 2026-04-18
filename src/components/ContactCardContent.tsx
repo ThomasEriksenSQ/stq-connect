@@ -735,6 +735,7 @@ export function ContactCardContent({
     : [];
   const showAvdeling = companyLocations.length > 1;
   const canEditProfile = editable && (!enableProfileEditMode || profileEditMode);
+  const canToggleContactFlags = editable;
   const showProfileEditMenu = editable && enableProfileEditMode;
   const effectiveSignal = getEffectiveSignal(
     sanitizedActivities.map((a) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
@@ -762,6 +763,38 @@ export function ContactCardContent({
       .update({ teknologier: merged })
       .eq("id", contactId);
     queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.detail(contactId) });
+  };
+  const handleToggleCvEmail = () => {
+    const isUnsubscribed =
+      (contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned";
+    if ((contact as any).cv_email && isUnsubscribed) {
+      toast.info("Kontakten har avmeldt seg via Mailchimp og kan ikke re-abonneres.");
+      return;
+    }
+    if (!(contact as any).cv_email && !contactHasEmail(contact as any)) {
+      toast.error(CONTACT_CV_EMAIL_REQUIRED_MESSAGE);
+      return;
+    }
+    const newVal = !(contact as any).cv_email;
+    updateMutation.mutate(
+      { cv_email: newVal },
+      {
+        onSuccess: () => {
+          supabase.functions
+            .invoke("mailchimp-sync", {
+              body: { action: "sync-contact", contactId },
+            })
+            .then(({ data, error: mcErr }) => {
+              if (mcErr) {
+                console.error("Mailchimp sync feilet:", mcErr);
+                toast.error("Mailchimp-synk feilet");
+              } else {
+                toast.success(`Mailchimp: ${data?.status || "synkronisert"}`);
+              }
+            });
+        },
+      },
+    );
   };
 
   return (
@@ -1099,34 +1132,9 @@ export function ContactCardContent({
         {/* Status-piller */}
         <div className="flex items-center gap-2 flex-wrap mt-2 pt-2 border-t border-border/40">
           {/* CV-Epost */}
-          {canEditProfile ? (
+          {canToggleContactFlags ? (
             <DesignLabFilterButton
-              onClick={() => {
-                const isUnsubscribed = (contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned";
-                if ((contact as any).cv_email && isUnsubscribed) {
-                  toast.info("Kontakten har avmeldt seg via Mailchimp og kan ikke re-abonneres.");
-                  return;
-                }
-                if (!contact.cv_email && !contactHasEmail(contact as any)) {
-                  toast.error(CONTACT_CV_EMAIL_REQUIRED_MESSAGE);
-                  return;
-                }
-                const newVal = !(contact as any).cv_email;
-                updateMutation.mutate({ cv_email: newVal }, {
-                  onSuccess: () => {
-                    supabase.functions.invoke("mailchimp-sync", {
-                      body: { action: "sync-contact", contactId },
-                    }).then(({ data, error: mcErr }) => {
-                      if (mcErr) {
-                        console.error("Mailchimp sync feilet:", mcErr);
-                        toast.error("Mailchimp-synk feilet");
-                      } else {
-                        toast.success(`Mailchimp: ${data?.status || "synkronisert"}`);
-                      }
-                    });
-                  },
-                });
-              }}
+              onClick={handleToggleCvEmail}
               active={(contact as any).cv_email && !((contact as any).mailchimp_status === "unsubscribed" || (contact as any).mailchimp_status === "cleaned")}
               activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
               inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
@@ -1150,7 +1158,7 @@ export function ContactCardContent({
             </DesignLabReadonlyChip>
           )}
           {/* Innkjøper */}
-          {canEditProfile ? (
+          {canToggleContactFlags ? (
             <DesignLabFilterButton
               onClick={() => updateMutation.mutate({ call_list: !(contact as any).call_list })}
               active={Boolean((contact as any).call_list)}
@@ -1169,7 +1177,7 @@ export function ContactCardContent({
             </DesignLabReadonlyChip>
           )}
           {/* Ikke aktuell å kontakte */}
-          {canEditProfile ? (
+          {canToggleContactFlags ? (
             <DesignLabFilterButton
               onClick={() => updateMutation.mutate({ ikke_aktuell_kontakt: !(contact as any).ikke_aktuell_kontakt })}
               active={Boolean((contact as any).ikke_aktuell_kontakt)}

@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { addDays, format, isAfter, isBefore, startOfDay } from "date-fns";
 import { nb } from "date-fns/locale";
 import { Plus, X, Search, CalendarIcon, Upload, CheckCircle2, Loader2, Users, User, Mail, Phone, Building2, Clock3, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -38,12 +38,6 @@ const TYPE_LABELS: Record<string, string> = {
   freelance: "Freelance",
   partner: "Via partner",
 };
-const STATUS_LABELS: Record<string, string> = {
-  ledig: "Tilgjengelig",
-  aktiv: "Tilgjengelig",
-  utilgjengelig: "Ikke ledig",
-  utgått: "Ikke ledig",
-};
 const STATUS_TAG_COLORS: Record<string, { background: string; color: string; border: string; fontWeight: number }> = {
   ledig: { background: "#E8ECF5", color: "#1A1C1F", border: "1px solid #C5CBE8", fontWeight: 600 },
   aktiv: { background: "#E8ECF5", color: "#1A1C1F", border: "1px solid #C5CBE8", fontWeight: 600 },
@@ -55,11 +49,30 @@ const TYPE_TAG_COLORS: Record<string, { background: string; color: string; borde
   freelance: { background: "#E8ECF5", color: "#1A1C1F", border: "1px solid #C5CBE8", fontWeight: 600 },
   partner: { background: "#F7F8FA", color: "#5C636E", border: "1px solid #DDE0E7", fontWeight: 500 },
 };
+const AVAILABILITY_WINDOW_DAYS = 60;
 
 const SUGGESTED_TECH = [
   "C++", "C", "Embedded", "Yocto", "Linux", "Qt", "FPGA",
   "Python", "SPI/I2C", "MCU", "Embedded Linux", "Sikkerhet",
 ];
+
+function getExternalAvailabilityMeta(availableFrom: string | null | undefined) {
+  if (!availableFrom) {
+    return { isAvailable: false, statusKey: "utilgjengelig", label: "Ikke ledig" };
+  }
+  const startDate = startOfDay(new Date(availableFrom));
+  if (Number.isNaN(startDate.getTime())) {
+    return { isAvailable: false, statusKey: "utilgjengelig", label: "Ikke ledig" };
+  }
+  const today = startOfDay(new Date());
+  const expiryDate = addDays(startDate, AVAILABILITY_WINDOW_DAYS);
+  const isAvailable = !isBefore(today, startDate) && !isAfter(today, expiryDate);
+  return {
+    isAvailable,
+    statusKey: isAvailable ? "ledig" : "utilgjengelig",
+    label: isAvailable ? "Tilgjengelig" : "Ikke ledig",
+  };
+}
 
 interface EksterneKonsulenterProps {
   hidePageTitle?: boolean;
@@ -99,9 +112,9 @@ export default function EksterneKonsulenter({
     if (typeFilter !== "Alle") items = items.filter((r: any) => r.type === typeFilter);
     if (statusFilter !== "Alle") {
       if (statusFilter === "ledig") {
-        items = items.filter((r: any) => r.status === "ledig" || r.status === "aktiv");
+        items = items.filter((r: any) => getExternalAvailabilityMeta(r.tilgjengelig_fra).isAvailable);
       } else {
-        items = items.filter((r: any) => r.status === "utilgjengelig" || r.status === "utgått");
+        items = items.filter((r: any) => !getExternalAvailabilityMeta(r.tilgjengelig_fra).isAvailable);
       }
     }
     if (search.trim()) {
@@ -240,6 +253,7 @@ export default function EksterneKonsulenter({
                     const name = (row as any).navn || "—";
                     const company = row.companies?.name || (row as any).selskap_tekst || "—";
                     const isSelected = selectedId === row.id;
+                    const availability = getExternalAvailabilityMeta(row.tilgjengelig_fra);
                     return (
                       <div
                         key={row.id}
@@ -259,8 +273,8 @@ export default function EksterneKonsulenter({
                           </span>
                         </div>
                         <div>
-                          <DesignLabStaticTag colors={STATUS_TAG_COLORS[row.status] || DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>
-                            {STATUS_LABELS[row.status] || row.status}
+                          <DesignLabStaticTag colors={STATUS_TAG_COLORS[availability.statusKey] || DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>
+                            {availability.label}
                           </DesignLabStaticTag>
                         </div>
                         <div className="flex flex-wrap gap-1">
@@ -319,6 +333,7 @@ export default function EksterneKonsulenter({
             {filtered.map((row: any) => {
               const name = (row as any).navn || "—";
               const company = row.companies?.name || (row as any).selskap_tekst || "—";
+              const availability = getExternalAvailabilityMeta(row.tilgjengelig_fra);
               return (
                 <div
                   key={row.id}
@@ -333,8 +348,8 @@ export default function EksterneKonsulenter({
                     </DesignLabStaticTag>
                   </div>
                   <div>
-                    <DesignLabStaticTag colors={STATUS_TAG_COLORS[row.status] || DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>
-                      {STATUS_LABELS[row.status] || row.status}
+                    <DesignLabStaticTag colors={STATUS_TAG_COLORS[availability.statusKey] || DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>
+                      {availability.label}
                     </DesignLabStaticTag>
                   </div>
                   <div className="flex flex-wrap gap-1">
@@ -399,6 +414,7 @@ function ExternalConsultantDetailCard({
   const companyName = row.companies?.name || (row as any).selskap_tekst || "Ikke koblet til selskap";
   const technologies = Array.isArray(row.teknologier) ? row.teknologier : [];
   const note = (row as any).notat || "";
+  const availability = getExternalAvailabilityMeta(row.tilgjengelig_fra);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -441,8 +457,8 @@ function ExternalConsultantDetailCard({
               <DesignLabStaticTag colors={TYPE_TAG_COLORS[row.type] || DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>
                 {TYPE_LABELS[row.type] || row.type}
               </DesignLabStaticTag>
-              <DesignLabStaticTag colors={STATUS_TAG_COLORS[row.status] || DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>
-                {STATUS_LABELS[row.status] || row.status}
+              <DesignLabStaticTag colors={STATUS_TAG_COLORS[availability.statusKey] || DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>
+                {availability.label}
               </DesignLabStaticTag>
             </div>
           </div>
@@ -697,6 +713,7 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
     if (form.type === "partner" && !form.company_id) { toast.error("Velg partnerselskap"); return; }
 
     setSaving(true);
+    const availability = getExternalAvailabilityMeta(form.tilgjengelig_fra || null);
     const payload: any = {
       type: form.type,
       navn: form.navn.trim(),
@@ -705,7 +722,7 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
       company_id: form.type === "partner" ? (form.company_id || null) : null,
       selskap_tekst: form.type === "freelance" ? (form.selskap_tekst.trim() || null) : null,
       teknologier: normalizeTechnologyTags(form.teknologier),
-      status: form.status,
+      status: availability.statusKey,
       tilgjengelig_fra: form.tilgjengelig_fra || null,
       cv_tekst: form.cv_tekst || null,
       notat: form.kommentar.trim() || null,
@@ -971,33 +988,6 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
               </div>
             </div>
 
-            {/* Status */}
-            <div>
-              <label className={LABEL + " block mb-1.5"}>Status</label>
-              <div className="flex gap-1.5">
-                <DesignLabFilterButton
-                  type="button"
-                  onClick={() => set("status", "ledig")}
-                  active={form.status === "ledig"}
-                  activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
-                  inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
-                  inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
-                >
-                  Tilgjengelig
-                </DesignLabFilterButton>
-                <DesignLabFilterButton
-                  type="button"
-                  onClick={() => set("status", "utilgjengelig")}
-                  active={form.status === "utilgjengelig"}
-                  activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
-                  inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
-                  inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
-                >
-                  Ikke ledig
-                </DesignLabFilterButton>
-              </div>
-            </div>
-
             {/* Oppdragsmatch — only in edit mode */}
             {!isCreate && form.teknologier.length > 0 && (
               <div className="pt-2 border-t border-border">
@@ -1015,9 +1005,12 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
             {/* Tilgjengelig fra */}
             <div>
               <label className={LABEL}>Tilgjengelig fra</label>
+              <p className="mt-1 text-[0.75rem] text-muted-foreground">
+                Tilgjengelig-badge vises automatisk fra denne datoen og i {AVAILABILITY_WINDOW_DAYS} dager.
+              </p>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("mt-1 w-full justify-start text-left text-[0.875rem] font-normal", !form.tilgjengelig_fra && "text-muted-foreground")}>
+                  <Button variant="outline" className={cn("mt-2 w-full justify-start text-left text-[0.875rem] font-normal", !form.tilgjengelig_fra && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {form.tilgjengelig_fra ? format(new Date(form.tilgjengelig_fra), "d. MMM yyyy", { locale: nb }) : "Velg dato"}
                   </Button>

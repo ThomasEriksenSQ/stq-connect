@@ -101,6 +101,14 @@ function mapToSignal(raw: string): Signal {
   return "Ukjent om behov";
 }
 
+function getPrimaryLocation(value: string | null | undefined) {
+  if (!value) return "";
+  return value
+    .split(/[;,/]/)
+    .map((part) => part.trim())
+    .find(Boolean) || value.trim();
+}
+
 function OrgNrInput({
   value,
   onChange,
@@ -334,8 +342,9 @@ export default function DesignLabCompanies() {
   });
 
   useEffect(() => {
-    if (createForm.city && createLocations[0] === "") {
-      setCreateLocations((prev) => [createForm.city, ...prev.slice(1)]);
+    const primaryLocation = getPrimaryLocation(createForm.city);
+    if (primaryLocation && createLocations[0] === "") {
+      setCreateLocations((prev) => [primaryLocation, ...prev.slice(1)]);
     }
   }, [createForm.city, createLocations]);
 
@@ -814,7 +823,7 @@ export default function DesignLabCompanies() {
               </DesignLabModalChipGroup>
             </DesignLabModalField>
           )}
-          <DesignLabModalActions>
+          <DesignLabModalActions style={{ marginTop: 24 }}>
             <DesignLabPrimaryAction type="submit" disabled={createMutation.isPending}>
               {createMutation.isPending ? "Oppretter..." : "Opprett"}
             </DesignLabPrimaryAction>
@@ -845,8 +854,7 @@ export default function DesignLabCompanies() {
         selectedContact={null}
         selectedCompany={selectedCompany ? { id: selectedCompany.id, name: selectedCompany.name } : null}
         onSelectContact={() => {}}
-        onSelectCompany={(companyId, companyName) => {
-          setSearch(companyName);
+        onSelectCompany={(companyId) => {
           setSelectedId(companyId);
         }}
         onFilterByCompany={(companyName) => {

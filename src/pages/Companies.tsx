@@ -97,6 +97,14 @@ const CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-[6px] border transition-col
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
 const CHIP_ON = `${CHIP_BASE} bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8] font-semibold`;
 
+const getPrimaryLocation = (value: string | null | undefined) => {
+  if (!value) return "";
+  return value
+    .split(/[;,/]/)
+    .map((part) => part.trim())
+    .find(Boolean) || value.trim();
+};
+
 const OrgNrInput = ({
   value,
   onChange,
@@ -159,8 +167,9 @@ const Companies = () => {
   const [locations, setLocations] = useState<string[]>([""]);
   const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
-    if (form.city && locations[0] === "") {
-      setLocations((prev) => [form.city, ...prev.slice(1)]);
+    const primaryLocation = getPrimaryLocation(form.city);
+    if (primaryLocation && locations[0] === "") {
+      setLocations((prev) => [primaryLocation, ...prev.slice(1)]);
     }
   }, [form.city]);
   const [sort, setSort] = usePersistentState<{ field: SortField; dir: SortDir }>("stacq:companies:sort", {
@@ -639,7 +648,7 @@ const Companies = () => {
               </DesignLabModalChipGroup>
             </DesignLabModalField>
           )}
-          <DesignLabModalActions>
+          <DesignLabModalActions style={{ marginTop: 24 }}>
             <DesignLabPrimaryAction type="submit" disabled={createMutation.isPending}>
               {createMutation.isPending ? "Oppretter..." : "Opprett"}
             </DesignLabPrimaryAction>

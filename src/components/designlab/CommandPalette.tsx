@@ -159,15 +159,19 @@ export function CommandPalette({
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
+      e.stopPropagation();
       setActiveIdx((p) => Math.min(p + 1, items.length - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
+      e.stopPropagation();
       setActiveIdx((p) => Math.max(p - 1, 0));
     } else if (e.key === "Enter" && items[activeIdx]) {
       e.preventDefault();
+      e.stopPropagation();
       items[activeIdx].action();
     } else if (e.key === "Escape") {
       e.preventDefault();
+      e.stopPropagation();
       onClose();
     }
   }, [items, activeIdx, onClose]);

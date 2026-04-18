@@ -570,7 +570,7 @@ export default function DesignLabOppfolginger() {
                 <div
                   className="grid items-center sticky top-0 z-10"
                   style={{
-                    gridTemplateColumns: "minmax(0, 2.5fr) 112px 92px 70px",
+                    gridTemplateColumns: "minmax(0, 2.2fr) minmax(0, 180px) 92px 70px",
                     minHeight: 36,
                     padding: "0 24px",
                     borderBottom: `1px solid ${C.borderLight}`,
@@ -610,7 +610,7 @@ export default function DesignLabOppfolginger() {
                         onClick={() => setSelectedId(model.id)}
                         className="grid w-full items-center text-left transition-colors"
                         style={{
-                          gridTemplateColumns: "minmax(0, 2.5fr) 112px 92px 70px",
+                          gridTemplateColumns: "minmax(0, 2.2fr) minmax(0, 180px) 92px 70px",
                           minHeight: 52,
                           padding: "10px 24px",
                           borderBottom: `1px solid ${C.borderLight}`,
@@ -632,9 +632,25 @@ export default function DesignLabOppfolginger() {
                           </p>
                         </div>
 
-                        <span style={{ fontSize: 12, color: model.ownerName ? C.text : C.textFaint, fontWeight: model.ownerName ? 500 : 400 }} className="truncate">
-                          {model.ownerShortName || "Ingen"}
-                        </span>
+                        <div className="min-w-0">
+                          {model.ownerName ? (
+                            <span
+                              className="inline-flex max-w-full items-center truncate rounded-full border px-2 py-1"
+                              style={{
+                                fontSize: 12,
+                                color: C.text,
+                                fontWeight: 500,
+                                background: C.hoverSubtle,
+                                borderColor: C.border,
+                              }}
+                              title={model.ownerName}
+                            >
+                              {model.ownerName}
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: 12, color: C.textFaint }}>Ingen</span>
+                          )}
+                        </div>
 
                         <span style={{ fontSize: 12, color: getDateTone(model.nextFollowUpAt), fontWeight: isOverdueDate(model.nextFollowUpAt) ? 600 : 500 }}>
                           {formatListDate(model.nextFollowUpAt)}

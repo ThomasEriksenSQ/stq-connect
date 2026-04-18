@@ -32,7 +32,6 @@ const STATUS_OPTIONS = ["Aktiv", "Oppstart", "Inaktiv"] as const;
 const TYPE_OPTIONS = [
   { value: "DIR", label: "Direkte" },
   { value: "VIA", label: "Via partner" },
-  { value: "VIA_M", label: "Via megler" },
 ] as const;
 
 interface CompanyResult {
@@ -389,7 +388,7 @@ export function OppdragEditSheet({
     }
 
     setStatus(row.status || "Aktiv");
-    setDealType(row.deal_type || "DIR");
+    setDealType(row.deal_type === "VIA_M" ? "VIA" : row.deal_type || "DIR");
     setUtpris(String(row.utpris || ""));
     setTilKonsulent(String(row.til_konsulent || ""));
     setStartDato(row.start_dato ? new Date(row.start_dato) : undefined);

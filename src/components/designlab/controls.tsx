@@ -200,10 +200,10 @@ export const DesignLabActionButton = forwardRef<HTMLButtonElement, ButtonHTMLAtt
 }, ref) {
   const variantMap: Record<ActionVariant, { background: string; border: string; color: string; hoverBackground: string }> = {
     primary: {
-      background: C.accent,
+      background: "#2563EB",
       border: "1px solid transparent",
-      color: C.onAccent,
-      hoverBackground: C.accentHover,
+      color: "#FFFFFF",
+      hoverBackground: "#1D4ED8",
     },
     secondary: {
       background: "transparent",
@@ -220,9 +220,9 @@ export const DesignLabActionButton = forwardRef<HTMLButtonElement, ButtonHTMLAtt
   };
 
   const config = variantMap[variant];
-  const disabledBackground = variant === "primary" ? C.accentBg : "transparent";
+  const disabledBackground = variant === "primary" ? "rgba(37,99,235,0.12)" : "transparent";
   const disabledBorder = variant === "secondary" ? `1px solid ${C.borderDefault}` : "1px solid transparent";
-  const disabledColor = variant === "primary" ? C.accent : C.textGhost;
+  const disabledColor = variant === "primary" ? "#2563EB" : C.textGhost;
 
   return (
     <button

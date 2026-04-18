@@ -13,6 +13,7 @@ import { DesignLabPrimaryAction } from "@/components/designlab/system";
 
 type Filter = "Alle" | "Aktiv" | "Oppstart" | "Inaktiv";
 const TIMER_PER_DAG = 7.5;
+const OPPDRAG_GRID_TEMPLATE = "minmax(0,1.3fr) minmax(0,1.2fr) 80px 90px 96px 72px 100px 90px";
 
 interface KonsulenterOppdragProps {
   hidePageIntro?: boolean;
@@ -395,11 +396,14 @@ export default function KonsulenterOppdrag({
                   <ResizablePanel defaultSize={46} minSize={28}>
                     <div className="h-full pr-2">
                       <div className="h-full border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
-                      <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background sticky top-0 z-10">
+                      <div
+                        className="grid gap-3 px-4 py-2.5 border-b border-border bg-background sticky top-0 z-10"
+                        style={{ gridTemplateColumns: OPPDRAG_GRID_TEMPLATE }}
+                      >
                         {["Konsulent", "Kunde", "Type", "Utpris", "Margin", "Margin %", "Forny", "Status"].map((h) => (
                           <span
                             key={h}
-                            className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground"
+                            className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap"
                           >
                             {h}
                           </span>
@@ -418,10 +422,11 @@ export default function KonsulenterOppdrag({
                                 setEditSheetOpen(true);
                               }}
                               className={cn(
-                                "grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_96px_72px_100px_90px] gap-3 items-center px-4 py-3 transition-colors cursor-pointer",
+                                "grid gap-3 items-center px-4 min-h-[44px] py-2 transition-colors cursor-pointer",
                                 isInaktiv && "opacity-60",
                                 isSelected ? "bg-muted/60" : "hover:bg-muted/40",
                               )}
+                              style={{ gridTemplateColumns: OPPDRAG_GRID_TEMPLATE }}
                             >
                             <div className="flex items-center gap-2 min-w-0">
                               {(() => {
@@ -563,11 +568,14 @@ export default function KonsulenterOppdrag({
           ) : (
             <>
               <div className="hidden md:block border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
-                <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_96px_72px_100px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+                <div
+                  className="grid gap-3 px-4 py-2.5 border-b border-border bg-background"
+                  style={{ gridTemplateColumns: OPPDRAG_GRID_TEMPLATE }}
+                >
                   {["Konsulent", "Kunde", "Type", "Utpris", "Margin", "Margin %", "Forny", "Status"].map((h) => (
                     <span
                       key={h}
-                      className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground"
+                      className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap"
                     >
                       {h}
                     </span>
@@ -582,9 +590,10 @@ export default function KonsulenterOppdrag({
                         key={o.id}
                         onClick={() => setSelectedRowId(o.id)}
                         className={cn(
-                          "grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_96px_72px_100px_90px] gap-3 items-center px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer",
+                          "grid gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-muted/40 transition-colors cursor-pointer",
                           isInaktiv && "opacity-60",
                         )}
+                        style={{ gridTemplateColumns: OPPDRAG_GRID_TEMPLATE }}
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           {(() => {

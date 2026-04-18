@@ -33,13 +33,15 @@ export interface HuntAvailabilityMeta {
   isVisible: boolean;
 }
 
+const AVAILABILITY_BADGE_WINDOW_DAYS = 60;
+
 function toDateOnly(dateStr: string) {
   const date = new Date(dateStr);
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
 export function hasConsultantAvailability(dateStr?: string | null): boolean {
-  return Boolean(dateStr);
+  return getConsultantAvailabilityMeta(dateStr).isVisible;
 }
 
 export function getConsultantAvailabilityMeta(dateStr?: string | null): HuntAvailabilityMeta {
@@ -52,7 +54,28 @@ export function getConsultantAvailabilityMeta(dateStr?: string | null): HuntAvai
     };
   }
 
-  const diff = differenceInCalendarDays(toDateOnly(dateStr), toDateOnly(new Date().toISOString()));
+  const availableFrom = toDateOnly(dateStr);
+  const today = toDateOnly(new Date().toISOString());
+  const diff = differenceInCalendarDays(availableFrom, today);
+  const daysSinceAvailable = differenceInCalendarDays(today, availableFrom);
+
+  if (diff > 0) {
+    return {
+      daysUntil: diff,
+      label: `Tilgjengelig ${format(availableFrom, "d. MMM", { locale: nb })}`,
+      tone: "later",
+      isVisible: false,
+    };
+  }
+
+  if (daysSinceAvailable > AVAILABILITY_BADGE_WINDOW_DAYS) {
+    return {
+      daysUntil: diff,
+      label: "Tilgjengelighet utløpt",
+      tone: "unknown",
+      isVisible: false,
+    };
+  }
 
   if (diff <= 0) {
     return {
@@ -63,29 +86,11 @@ export function getConsultantAvailabilityMeta(dateStr?: string | null): HuntAvai
     };
   }
 
-  if (diff === 1) {
-    return {
-      daysUntil: diff,
-      label: "Tilgjengelig i morgen",
-      tone: "soon",
-      isVisible: true,
-    };
-  }
-
-  if (diff <= 30) {
-    return {
-      daysUntil: diff,
-      label: `Tilgjengelig om ${diff} dager`,
-      tone: "soon",
-      isVisible: true,
-    };
-  }
-
   return {
     daysUntil: diff,
-    label: `Tilgjengelig ${format(new Date(dateStr), "d. MMM", { locale: nb })}`,
-    tone: "later",
-    isVisible: true,
+    label: "Tilgjengelighetsdato ukjent",
+    tone: "unknown",
+    isVisible: false,
   };
 }
 
