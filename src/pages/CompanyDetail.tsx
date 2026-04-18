@@ -1,6 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { CompanyCardContent } from "@/components/CompanyCardContent";
+import { RenderErrorBoundary } from "@/components/RenderErrorBoundary";
 
 const CompanyDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -13,7 +14,12 @@ const CompanyDetail = () => {
         <ArrowLeft className="h-3.5 w-3.5 stroke-[1.5]" />
         Selskaper
       </Link>
-      <CompanyCardContent companyId={id} editable />
+      <RenderErrorBoundary
+        resetKey={id}
+        fallbackMessage="Kunne ikke laste selskapskortet. Prøv å laste siden på nytt."
+      >
+        <CompanyCardContent companyId={id} editable />
+      </RenderErrorBoundary>
     </div>
   );
 };

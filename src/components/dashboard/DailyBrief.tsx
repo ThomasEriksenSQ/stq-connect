@@ -16,6 +16,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { ContactCardContent } from "@/components/ContactCardContent";
 import {
+  DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS,
   DesignLabControlLabel,
   DesignLabFilterButton,
   DesignLabIconButton,
@@ -161,20 +162,6 @@ const DESIGN_LAB_HEAT_CHIP_COLORS: Record<ScoredLead["temperature"], { backgroun
 };
 
 const DESIGN_LAB_FINN_CHIP_COLORS = {
-  background: C.infoBg,
-  color: C.info,
-  border: `1px solid rgba(26,79,160,0.18)`,
-  fontWeight: 600,
-} as const;
-
-const DESIGN_LAB_BUYER_CHIP_COLORS = {
-  background: C.warningBg,
-  color: C.warning,
-  border: `1px solid rgba(125,78,0,0.18)`,
-  fontWeight: 600,
-} as const;
-
-const DESIGN_LAB_CV_EMAIL_CHIP_COLORS = {
   background: C.infoBg,
   color: C.info,
   border: `1px solid rgba(26,79,160,0.18)`,
@@ -1407,7 +1394,7 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
                               );
                           }}
                           active={Boolean(current.contact.call_list)}
-                          activeColors={DESIGN_LAB_BUYER_CHIP_COLORS}
+                          activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
                         >
                           Innkjøper
                         </DesignLabFilterButton>
@@ -1474,7 +1461,7 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
                               });
                           }}
                           active={Boolean(current.contact.cv_email)}
-                          activeColors={DESIGN_LAB_CV_EMAIL_CHIP_COLORS}
+                          activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
                         >
                           CV-epost
                         </DesignLabFilterButton>

@@ -128,6 +128,26 @@ function normalizeCategoryLabel(label: string): string {
   return LEGACY_CATEGORY_MAP[label] || label;
 }
 
+function safeText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return String(value);
+  return "";
+}
+
+function splitCommaSeparatedText(value: unknown): string[] {
+  return safeText(value)
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+function parseValidDate(value: unknown): Date | null {
+  if (!value || typeof value !== "string") return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+}
+
 function getCategoryPickerActiveColors(label: string) {
   const normalized = normalizeCategoryLabel(label);
   const colors = SIGNAL_COLORS[normalized as keyof typeof SIGNAL_COLORS];
@@ -318,18 +338,13 @@ export function CompanyCardContent({
   // Pre-fill edit form when dialog opens
   useEffect(() => {
     if (editCompanyOpen && company) {
-      const locs = company.city
-        ? company.city
-            .split(",")
-            .map((l: string) => l.trim())
-            .filter(Boolean)
-        : [];
+      const locs = splitCommaSeparatedText(company.city);
       setEditForm({
-        name: company.name || "",
-        org_number: company.org_number || "",
-        city: company.city || "",
-        website: company.website || "",
-        linkedin: company.linkedin || "",
+        name: safeText(company.name),
+        org_number: safeText(company.org_number),
+        city: safeText(company.city),
+        website: safeText(company.website),
+        linkedin: safeText(company.linkedin),
         locations: locs.length > 0 ? locs : [],
       });
       setNewLocation("");
@@ -339,12 +354,7 @@ export function CompanyCardContent({
   // Pre-fill contact location when dialog opens
   useEffect(() => {
     if (newContactOpen && company) {
-      const locs = company.city
-        ? company.city
-            .split(",")
-            .map((s: string) => s.trim())
-            .filter(Boolean)
-        : [];
+      const locs = splitCommaSeparatedText(company.city);
       if (locs.length === 1) {
         setContactForm((prev) => ({ ...prev, location: locs[0] }));
       }
@@ -353,7 +363,7 @@ export function CompanyCardContent({
 
   useEffect(() => {
     if (!company) return;
-    setShowNotes(Boolean(company.notes?.trim()));
+    setShowNotes(Boolean(safeText((company as any).notes).trim()));
   }, [companyId, company?.notes]);
 
   // BRREG lookup when org.nr is 9 digits
@@ -594,6 +604,15 @@ export function CompanyCardContent({
   }
   if (!company) return <p className="text-sm text-muted-foreground">Selskap ikke funnet</p>;
 
+  const companyName = safeText(company.name) || "Uten navn";
+  const companyOrgNumber = safeText(company.org_number);
+  const companyCity = safeText(company.city);
+  const companyWebsite = safeText(company.website);
+  const companyLinkedin = safeText(company.linkedin);
+  const companyEmail = safeText((company as any).email);
+  const companyNotes = safeText((company as any).notes);
+  const companyLocations = splitCommaSeparatedText(companyCity);
+
   const STATUS_OPTIONS = [
     { value: "prospect", label: "Potensiell kunde" },
     { value: "customer", label: "Kunde" },
@@ -634,7 +653,7 @@ export function CompanyCardContent({
       const { data, error } = await supabase.functions.invoke("match-consultants", {
         body: {
           teknologier,
-          sted: company?.city || "",
+          sted: companyCity,
           interne: cachedInterne,
           eksterne: cachedEksterne,
           kontakt_er_innkjoper: false,
@@ -688,17 +707,12 @@ export function CompanyCardContent({
   const openEditCompanyDialog = () => {
     if (!company) return;
     setEditForm({
-      name: company.name || "",
-      org_number: company.org_number || "",
-      city: company.city || "",
-      website: company.website || "",
-      linkedin: company.linkedin || "",
-      locations: company.city
-        ? company.city
-            .split(",")
-            .map((s: string) => s.trim())
-            .filter(Boolean)
-        : [],
+      name: companyName,
+      org_number: companyOrgNumber,
+      city: companyCity,
+      website: companyWebsite,
+      linkedin: companyLinkedin,
+      locations: companyLocations,
     });
     setNewLocation("");
     setEditCompanyOpen(true);
@@ -718,7 +732,7 @@ export function CompanyCardContent({
           <div className="mb-2">
             <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                Teknisk DNA for {company.name}
+                Teknisk DNA for {companyName}
                 {techProfile?.konsulent_hyppighet ? (
                   <span className="ml-2 text-muted-foreground/50 font-normal normal-case tracking-normal">
                     · {techProfile.konsulent_hyppighet} annonser
@@ -935,8 +949,9 @@ export function CompanyCardContent({
           </div>
           <div className="space-y-px">
             {tasks.map((task) => {
-              const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
-              const today = task.due_date && isToday(new Date(task.due_date));
+              const dueDate = parseValidDate(task.due_date);
+              const overdue = dueDate ? isPast(dueDate) && !isToday(dueDate) : false;
+              const today = dueDate ? isToday(dueDate) : false;
               const contactName = (task.contacts as any)?.first_name
                 ? `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}`
                 : null;
@@ -990,7 +1005,7 @@ export function CompanyCardContent({
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
-                    {task.due_date && (
+                    {dueDate && (
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span
@@ -1003,10 +1018,10 @@ export function CompanyCardContent({
                                   : "text-muted-foreground",
                             )}
                           >
-                            {format(new Date(task.due_date), "d. MMM yyyy", { locale: nb })}
+                            {format(dueDate, "d. MMM yyyy", { locale: nb })}
                           </span>
                         </TooltipTrigger>
-                        <TooltipContent>{fullDate(task.due_date)}</TooltipContent>
+                        <TooltipContent>{fullDate(dueDate.toISOString())}</TooltipContent>
                       </Tooltip>
                     )}
                     {displayCategory && <CategoryBadge label={displayCategory} />}
@@ -1133,12 +1148,7 @@ export function CompanyCardContent({
                   />
                 </DesignLabModalField>
                 {(() => {
-                  const locs: string[] = company.city
-                    ? company.city
-                        .split(",")
-                        .map((s: string) => s.trim())
-                        .filter(Boolean)
-                    : [];
+                  const locs = companyLocations;
                   if (locs.length === 0) return null;
                   return (
                     <DesignLabModalField>
@@ -1271,10 +1281,10 @@ export function CompanyCardContent({
         <div className="flex items-center gap-3">
           {editable ? (
             <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">
-              <InlineEdit value={company.name} onSave={updateField("name")} className="text-[1.5rem] font-bold" />
+              <InlineEdit value={companyName} onSave={updateField("name")} className="text-[1.5rem] font-bold" />
             </h2>
           ) : (
-            <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">{company.name}</h2>
+            <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">{companyName}</h2>
           )}
           <div className="ml-auto flex items-center gap-2 flex-shrink-0">
             {/* Signal badge */}
@@ -1619,7 +1629,7 @@ export function CompanyCardContent({
               open={mergeCompanyDialogOpen}
               onOpenChange={setMergeCompanyDialogOpen}
               sourceCompanyId={companyId}
-              sourceCompanyName={company.name}
+              sourceCompanyName={companyName}
               onMerged={(targetCompanyId) => {
                 setEditCompanyOpen(false);
                 setMergeCompanyDialogOpen(false);
@@ -1654,14 +1664,14 @@ export function CompanyCardContent({
                         return;
                       }
                       setShowNotes(true);
-                      if (!company.notes) {
+                      if (!companyNotes) {
                         setNotesDraft("");
                         setTimeout(() => setEditingNotes(true), 50);
                       }
                     }}
                   >
                     <StickyNote className="h-3.5 w-3.5 mr-2" />
-                    {showNotes ? "Skjul notat" : company.notes ? "Vis notat" : "Legg til notat"}
+                    {showNotes ? "Skjul notat" : companyNotes ? "Vis notat" : "Legg til notat"}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setShowTechDna((prev) => !prev)}>
                     {showTechDna ? <EyeOff className="h-3.5 w-3.5 mr-2" /> : <Eye className="h-3.5 w-3.5 mr-2" />}
@@ -1680,43 +1690,38 @@ export function CompanyCardContent({
 
         {/* Org.nr · city · phone · links */}
         <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap mt-0.5">
-          {company.org_number && <span>Org.nr {company.org_number}</span>}
-          {company.city &&
-            company.city
-              .split(",")
-              .map((loc: string) => loc.trim())
-              .filter(Boolean)
-              .map((loc: string, i: number) => (
-                <a
-                  key={i}
-                  href={`https://maps.google.com/?q=${encodeURIComponent(loc)},Norge`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-                >
-                  <MapPin className="h-3.5 w-3.5" />
-                  {loc}
-                </a>
-              ))}
-          {company.website && (
+          {companyOrgNumber && <span>Org.nr {companyOrgNumber}</span>}
+          {companyLocations.map((loc, i) => (
+            <a
+              key={i}
+              href={`https://maps.google.com/?q=${encodeURIComponent(loc)},Norge`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+            >
+              <MapPin className="h-3.5 w-3.5" />
+              {loc}
+            </a>
+          ))}
+          {companyWebsite && (
             <>
               <span className="text-muted-foreground/40">·</span>
               <a
-                href={company.website}
+                href={companyWebsite}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-primary hover:underline"
               >
                 <Globe className="h-3 w-3" />
-                {company.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
+                {companyWebsite.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
               </a>
             </>
           )}
-          {company.linkedin && (
+          {companyLinkedin && (
             <>
               <span className="text-muted-foreground/40">·</span>
               <a
-                href={company.linkedin}
+                href={companyLinkedin}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-primary hover:underline"
@@ -1726,15 +1731,15 @@ export function CompanyCardContent({
               </a>
             </>
           )}
-          {company.email && (
+          {companyEmail && (
             <>
               <span className="text-muted-foreground/40">·</span>
               <a
-                href={`mailto:${company.email}`}
+                href={`mailto:${companyEmail}`}
                 className="inline-flex items-center gap-1 text-primary hover:underline"
               >
                 <Mail className="h-3 w-3" />
-                {company.email}
+                {companyEmail}
               </a>
             </>
           )}
@@ -1783,23 +1788,23 @@ export function CompanyCardContent({
                 </DesignLabActionButton>
               </div>
             </div>
-          ) : company.notes ? (
+          ) : companyNotes ? (
             editable ? (
               <button
                 type="button"
                 onClick={() => {
-                  setNotesDraft(company.notes || "");
+                  setNotesDraft(companyNotes);
                   setEditingNotes(true);
                 }}
                 className="group relative block w-full text-left"
               >
                 <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap transition-colors group-hover:text-foreground/80">
-                  {company.notes}
+                  {companyNotes}
                 </p>
               </button>
             ) : (
               <div className="group relative">
-                <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{company.notes}</p>
+                <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{companyNotes}</p>
               </div>
             )
           ) : editable ? (
@@ -1872,7 +1877,8 @@ function CompanyActivityTimeline({
     const groups: { key: string; label: string; period: string; items: any[] }[] = [];
     let currentKey = "";
     for (const act of activities) {
-      const d = new Date(act.created_at);
+      const d = parseValidDate(act.created_at);
+      if (!d) continue;
       const monthKey = format(d, "yyyy-MM");
       if (monthKey !== currentKey) {
         currentKey = monthKey;
@@ -1964,7 +1970,7 @@ function CompanyActivityRow({
     cleanDesc,
   } = extractTitleAndCategory(activity.subject, activity.description);
   const ownerName = activity.created_by ? profileMap[activity.created_by] : null;
-  const d = new Date(activity.created_at);
+  const createdDate = parseValidDate(activity.created_at);
   const contactName = (activity.contacts as any)?.first_name
     ? `${(activity.contacts as any).first_name} ${(activity.contacts as any).last_name}`
     : null;
@@ -1986,7 +1992,7 @@ function CompanyActivityRow({
     setEditTitle(parsed.title);
     setEditCategory(cat);
     setEditDesc(parsed.cleanDesc);
-    setEditDate(activity.created_at ? format(new Date(activity.created_at), "yyyy-MM-dd") : "");
+    setEditDate(createdDate ? format(createdDate, "yyyy-MM-dd") : "");
     setConfirmDelete(false);
     setEditing(true);
   };
@@ -2158,14 +2164,18 @@ function CompanyActivityRow({
             </div>
 
             <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="text-[0.8125rem] text-muted-foreground">
-                    {format(d, "d. MMM yyyy", { locale: nb })}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
-              </Tooltip>
+              {createdDate ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-[0.8125rem] text-muted-foreground">
+                      {format(createdDate, "d. MMM yyyy", { locale: nb })}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>{fullDate(createdDate.toISOString())}</TooltipContent>
+                </Tooltip>
+              ) : (
+                <span className="text-[0.8125rem] text-muted-foreground/60">Ukjent dato</span>
+              )}
               {displayCategory && <CategoryBadge label={displayCategory} />}
             </div>
           </div>

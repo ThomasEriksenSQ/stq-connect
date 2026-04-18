@@ -189,8 +189,11 @@ export default function DesignLabStacqPrisen() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto" style={{ padding: "24px 24px 48px" }}>
-          <div className="flex flex-col gap-6 2xl:grid 2xl:grid-cols-[minmax(0,1.05fr)_minmax(620px,0.95fr)] 2xl:items-start" style={{ maxWidth: 1900, margin: "0 auto" }}>
-            <div className="order-2 min-w-0 w-full 2xl:order-1">
+          <div
+            className="flex flex-col gap-6 xl:grid xl:grid-cols-[minmax(420px,0.95fr)_minmax(0,1.25fr)] xl:items-start"
+            style={{ maxWidth: 2100, margin: "0 auto" }}
+          >
+            <div className="min-w-0 w-full">
               <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted, marginBottom: 10 }}>
                 Bidrag per konsulent
               </p>
@@ -270,8 +273,8 @@ export default function DesignLabStacqPrisen() {
               )}
             </div>
 
-            <aside className="order-1 w-full space-y-6 2xl:sticky 2xl:top-6 2xl:order-2">
-              <div className="grid grid-cols-2 gap-3">
+            <aside className="w-full space-y-6 xl:sticky xl:top-6">
+              <div className="grid grid-cols-2 gap-4">
                 <TopStatCard
                   label="STACQ Prisen / time"
                   value={`kr ${formatKr(Math.round(stacqTotalPerTime))}`}
@@ -300,11 +303,11 @@ export default function DesignLabStacqPrisen() {
                 />
               </div>
 
-              <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, background: C.surface, padding: 20 }}>
+              <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, background: C.surface, padding: 24 }}>
                 <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted, marginBottom: 16 }}>
                   STACQ Prisen — ukentlig utvikling
                 </p>
-                <div style={{ height: 320 }}>
+                <div style={{ height: 420 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
                       <defs>

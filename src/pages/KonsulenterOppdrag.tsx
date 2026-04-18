@@ -5,6 +5,7 @@ import { cn, formatNOK, getInitials } from "@/lib/utils";
 import { format, differenceInDays, startOfDay } from "date-fns";
 import { Briefcase, CalendarCheck, BarChart2, Plus } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { OppdragEditSheet } from "@/components/OppdragEditSheet";
 import { FornyelsesTimeline } from "@/components/FornyelsesTimeline";
 
@@ -13,6 +14,7 @@ const TIMER_PER_DAG = 7.5;
 
 interface KonsulenterOppdragProps {
   hidePageIntro?: boolean;
+  embeddedSplit?: boolean;
 }
 
 function computeOppdragStatus(oppdrag: any): string {
@@ -37,7 +39,10 @@ function parseOppdragDate(value?: string | null): Date | null {
   return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
 }
 
-export default function KonsulenterOppdrag({ hidePageIntro = false }: KonsulenterOppdragProps = {}) {
+export default function KonsulenterOppdrag({
+  hidePageIntro = false,
+  embeddedSplit = false,
+}: KonsulenterOppdragProps = {}) {
   const [filter, setFilter] = useState<Filter>("Aktiv");
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -252,7 +257,7 @@ export default function KonsulenterOppdrag({ hidePageIntro = false }: Konsulente
           </div>
 
           {/* Renewal timeline */}
-          <FornyelsesTimeline enriched={enriched} />
+          {!embeddedSplit && <FornyelsesTimeline enriched={enriched} />}
 
           {/* Filter chips */}
           <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -376,163 +381,350 @@ export default function KonsulenterOppdrag({ hidePageIntro = false }: Konsulente
             {filtered.length === 0 && <p className="text-muted-foreground text-center py-12">Ingen oppdrag å vise</p>}
           </div>
 
-          {/* Table */}
-          <div className="hidden md:block border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
-            {/* Header row */}
-            <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
-              {["Konsulent", "Kunde", "Type", "Utpris", "Margin", "Forny", "Status"].map((h) => (
-                <span
-                  key={h}
-                  className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground"
-                >
-                  {h}
-                </span>
-              ))}
-            </div>
-            {/* Data rows */}
-            <div className="divide-y divide-border">
-              {filtered.map((o: any) => {
-                const isInaktiv = o.status === "Inaktiv";
+          {embeddedSplit ? (
+            <div className="hidden md:block min-h-[860px]">
+              <ResizablePanelGroup direction="horizontal" className="h-full">
+                <ResizablePanel defaultSize={46} minSize={28}>
+                  <div className="h-full border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
+                    <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background sticky top-0 z-10">
+                      {["Konsulent", "Kunde", "Type", "Utpris", "Margin", "Forny", "Status"].map((h) => (
+                        <span
+                          key={h}
+                          className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground"
+                        >
+                          {h}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="divide-y divide-border">
+                      {filtered.map((o: any) => {
+                        const isInaktiv = o.status === "Inaktiv";
+                        const isSelected = selectedRowId === o.id;
 
-                return (
-                  <div
-                    key={o.id}
-                    onClick={() => setSelectedRowId(o.id)}
-                    className={cn(
-                      "grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 items-center px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer",
-                      isInaktiv && "opacity-60",
-                    )}
-                  >
-                    {/* KONSULENT */}
-                    <div className="flex items-center gap-2 min-w-0">
-                      {(() => {
-                        const isAnsatt = o.er_ansatt === true;
-                        const ansattId = isAnsatt
-                          ? o.ansatt_id ?? nameToAnsattId.get(o.kandidat?.trim().toLowerCase())
-                          : undefined;
-                        const portrait = ansattId ? portraitByAnsattId.get(ansattId) : undefined;
-                        if (isAnsatt && portrait) {
-                          return <img src={portrait} alt={o.kandidat} className="w-7 h-7 rounded-full object-cover border border-border flex-shrink-0" />;
-                        }
-                        if (isAnsatt) {
-                          return (
-                            <div className="w-7 h-7 rounded-full bg-primary/10 text-primary text-[0.625rem] font-bold flex items-center justify-center flex-shrink-0">
-                              {getInitials(o.kandidat || "?")}
-                            </div>
-                          );
-                        }
                         return (
-                          <div className="w-7 h-7 rounded-full bg-muted text-muted-foreground text-[0.625rem] font-bold flex items-center justify-center flex-shrink-0">
-                            {getInitials(o.kandidat || "?")}
+                          <div
+                            key={o.id}
+                            onClick={() => setSelectedRowId(o.id)}
+                            className={cn(
+                              "grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 items-center px-4 py-3 transition-colors cursor-pointer",
+                              isInaktiv && "opacity-60",
+                              isSelected ? "bg-muted/60" : "hover:bg-muted/40",
+                            )}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              {(() => {
+                                const isAnsatt = o.er_ansatt === true;
+                                const ansattId = isAnsatt
+                                  ? o.ansatt_id ?? nameToAnsattId.get(o.kandidat?.trim().toLowerCase())
+                                  : undefined;
+                                const portrait = ansattId ? portraitByAnsattId.get(ansattId) : undefined;
+                                if (isAnsatt && portrait) {
+                                  return <img src={portrait} alt={o.kandidat} className="w-7 h-7 rounded-full object-cover border border-border flex-shrink-0" />;
+                                }
+                                if (isAnsatt) {
+                                  return (
+                                    <div className="w-7 h-7 rounded-full bg-primary/10 text-primary text-[0.625rem] font-bold flex items-center justify-center flex-shrink-0">
+                                      {getInitials(o.kandidat || "?")}
+                                    </div>
+                                  );
+                                }
+                                return (
+                                  <div className="w-7 h-7 rounded-full bg-muted text-muted-foreground text-[0.625rem] font-bold flex items-center justify-center flex-shrink-0">
+                                    {getInitials(o.kandidat || "?")}
+                                  </div>
+                                );
+                              })()}
+                              <p className="text-[0.875rem] font-semibold text-foreground truncate">{o.kandidat}</p>
+                            </div>
+                            <span className="text-[0.875rem] font-medium text-foreground truncate">{o.kunde}</span>
+                            <div>
+                              {(() => {
+                                const cs = o.selskap_id ? companyStatusMap[o.selskap_id] : null;
+                                if (cs === "partner") {
+                                  return (
+                                    <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
+                                      Partner
+                                    </span>
+                                  );
+                                }
+                                if (cs === "customer" || cs === "kunde") {
+                                  return (
+                                    <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
+                                      Kunde
+                                    </span>
+                                  );
+                                }
+                                if (cs === "prospect") {
+                                  return (
+                                    <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
+                                      Potensiell
+                                    </span>
+                                  );
+                                }
+                                return (
+                                  <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-500 border border-gray-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
+                                    —
+                                  </span>
+                                );
+                              })()}
+                            </div>
+                            <span className="text-[0.8125rem] font-medium text-foreground">
+                              kr {formatNOK(Number(o.utpris) || 0)}/t
+                            </span>
+                            <div>
+                              <p
+                                className={cn(
+                                  "text-[0.8125rem] font-medium",
+                                  o.marginPct >= 28
+                                    ? "text-emerald-600"
+                                    : o.marginPct >= 20
+                                      ? "text-amber-600"
+                                      : "text-destructive",
+                                )}
+                              >
+                                kr {formatNOK(o.marginPerTime)}/t
+                              </p>
+                              <p className="text-[0.6875rem] text-muted-foreground">{o.marginPct.toFixed(1)}%</p>
+                            </div>
+                            <div className="text-[0.8125rem]">
+                              {o.daysUntilForny === null ? (
+                                <span className="text-muted-foreground">–</span>
+                              ) : o.daysUntilForny < 0 ? (
+                                <span className="text-destructive font-medium">Utløpt</span>
+                              ) : o.daysUntilForny <= 30 ? (
+                                <span className="text-amber-600 font-medium">Om {o.daysUntilForny}d</span>
+                              ) : o.daysUntilForny <= 90 ? (
+                                <span className="text-amber-600">{format(new Date(o.forny_dato), "dd.MM.yy")}</span>
+                              ) : (
+                                <span className="text-muted-foreground">{format(new Date(o.forny_dato), "dd.MM.yy")}</span>
+                              )}
+                            </div>
+                            <div>
+                              <span
+                                className={cn(
+                                  "inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold",
+                                  o.status === "Aktiv" && "bg-emerald-100 text-emerald-700",
+                                  o.status === "Oppstart" && "bg-amber-100 text-amber-700",
+                                  o.status === "Inaktiv" && "bg-muted text-muted-foreground",
+                                )}
+                              >
+                                {o.status}
+                              </span>
+                            </div>
                           </div>
                         );
-                      })()}
-                      <p className="text-[0.875rem] font-semibold text-foreground truncate">{o.kandidat}</p>
+                      })}
                     </div>
-                    {/* KUNDE */}
-                    <span className="text-[0.875rem] font-medium text-foreground truncate">{o.kunde}</span>
-                    {/* TYPE */}
-                    <div>
-                      {(() => {
-                        const cs = o.selskap_id ? companyStatusMap[o.selskap_id] : null;
-                        if (cs === "partner")
-                          return (
-                            <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-                              Partner
-                            </span>
-                          );
-                        if (cs === "customer" || cs === "kunde")
-                          return (
-                            <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-                              Kunde
-                            </span>
-                          );
-                        if (cs === "prospect")
-                          return (
-                            <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-                              Potensiell
-                            </span>
-                          );
-                        return (
-                          <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-500 border border-gray-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-                            —
-                          </span>
-                        );
-                      })()}
-                    </div>
-                    {/* UTPRIS */}
-                    <span className="text-[0.8125rem] font-medium text-foreground">
-                      kr {formatNOK(Number(o.utpris) || 0)}/t
-                    </span>
-                    {/* MARGIN */}
-                    <div>
-                      <p
-                        className={cn(
-                          "text-[0.8125rem] font-medium",
-                          o.marginPct >= 28
-                            ? "text-emerald-600"
-                            : o.marginPct >= 20
-                              ? "text-amber-600"
-                              : "text-destructive",
+                    {filtered.length === 0 && <p className="text-muted-foreground text-center py-12">Ingen oppdrag å vise</p>}
+                  </div>
+                </ResizablePanel>
+
+                <ResizableHandle
+                  withHandle
+                  className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
+                />
+
+                <ResizablePanel defaultSize={54} minSize={32}>
+                  <div className="h-full rounded-lg border border-border bg-card overflow-hidden">
+                    <div className="h-full overflow-y-auto px-5 py-5 space-y-5">
+                      <div>
+                        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-3">
+                          Fornyelseskalender
+                        </p>
+                        <FornyelsesTimeline enriched={enriched} />
+                      </div>
+
+                      <div className="rounded-lg border border-border bg-background overflow-hidden">
+                        <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+                          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                            {createOpen ? "Nytt oppdrag" : selectedOppdrag ? "Oppdragsdetaljer" : "Velg oppdrag"}
+                          </p>
+                          {(createOpen || selectedOppdrag) && (
+                            <button
+                              onClick={() => {
+                                setSelectedRowId(null);
+                                setCreateOpen(false);
+                              }}
+                              className="text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              Lukk
+                            </button>
+                          )}
+                        </div>
+
+                        {createOpen || selectedOppdrag ? (
+                          <OppdragEditSheet
+                            key={createOpen ? "create-oppdrag-inline" : `edit-oppdrag-inline-${selectedOppdrag?.id ?? "none"}`}
+                            row={selectedOppdrag}
+                            onClose={() => {
+                              setSelectedRowId(null);
+                              setCreateOpen(false);
+                            }}
+                          />
+                        ) : (
+                          <div className="px-5 py-10 text-center">
+                            <p className="text-[0.875rem] text-muted-foreground">
+                              Velg et oppdrag i tabellen for å vise detaljer.
+                            </p>
+                          </div>
                         )}
-                      >
-                        kr {formatNOK(o.marginPerTime)}/t
-                      </p>
-                      <p className="text-[0.6875rem] text-muted-foreground">{o.marginPct.toFixed(1)}%</p>
-                    </div>
-                    {/* FORNY */}
-                    <div className="text-[0.8125rem]">
-                      {o.daysUntilForny === null ? (
-                        <span className="text-muted-foreground">–</span>
-                      ) : o.daysUntilForny < 0 ? (
-                        <span className="text-destructive font-medium">Utløpt</span>
-                      ) : o.daysUntilForny <= 30 ? (
-                        <span className="text-amber-600 font-medium">Om {o.daysUntilForny}d</span>
-                      ) : o.daysUntilForny <= 90 ? (
-                        <span className="text-amber-600">{format(new Date(o.forny_dato), "dd.MM.yy")}</span>
-                      ) : (
-                        <span className="text-muted-foreground">{format(new Date(o.forny_dato), "dd.MM.yy")}</span>
-                      )}
-                    </div>
-                    {/* STATUS */}
-                    <div>
-                      <span
-                        className={cn(
-                          "inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold",
-                          o.status === "Aktiv" && "bg-emerald-100 text-emerald-700",
-                          o.status === "Oppstart" && "bg-amber-100 text-amber-700",
-                          o.status === "Inaktiv" && "bg-muted text-muted-foreground",
-                        )}
-                      >
-                        {o.status}
-                      </span>
+                      </div>
                     </div>
                   </div>
-                );
-              })}
+                </ResizablePanel>
+              </ResizablePanelGroup>
             </div>
-            {filtered.length === 0 && <p className="text-muted-foreground text-center py-12">Ingen oppdrag å vise</p>}
-          </div>
-          <Sheet
-            open={selectedRowId !== null || createOpen}
-            onOpenChange={(o) => {
-              if (!o) {
-                setSelectedRowId(null);
-                setCreateOpen(false);
-              }
-            }}
-          >
-            <SheetContent side="right" className="w-full sm:w-[920px] p-0" hideCloseButton>
-              <OppdragEditSheet
-                key={createOpen ? "create-oppdrag" : `edit-oppdrag-${selectedOppdrag?.id ?? "none"}`}
-                row={selectedOppdrag}
-                onClose={() => {
-                  setSelectedRowId(null);
-                  setCreateOpen(false);
+          ) : (
+            <>
+              <div className="hidden md:block border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
+                <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+                  {["Konsulent", "Kunde", "Type", "Utpris", "Margin", "Forny", "Status"].map((h) => (
+                    <span
+                      key={h}
+                      className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground"
+                    >
+                      {h}
+                    </span>
+                  ))}
+                </div>
+                <div className="divide-y divide-border">
+                  {filtered.map((o: any) => {
+                    const isInaktiv = o.status === "Inaktiv";
+
+                    return (
+                      <div
+                        key={o.id}
+                        onClick={() => setSelectedRowId(o.id)}
+                        className={cn(
+                          "grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 items-center px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer",
+                          isInaktiv && "opacity-60",
+                        )}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          {(() => {
+                            const isAnsatt = o.er_ansatt === true;
+                            const ansattId = isAnsatt
+                              ? o.ansatt_id ?? nameToAnsattId.get(o.kandidat?.trim().toLowerCase())
+                              : undefined;
+                            const portrait = ansattId ? portraitByAnsattId.get(ansattId) : undefined;
+                            if (isAnsatt && portrait) {
+                              return <img src={portrait} alt={o.kandidat} className="w-7 h-7 rounded-full object-cover border border-border flex-shrink-0" />;
+                            }
+                            if (isAnsatt) {
+                              return (
+                                <div className="w-7 h-7 rounded-full bg-primary/10 text-primary text-[0.625rem] font-bold flex items-center justify-center flex-shrink-0">
+                                  {getInitials(o.kandidat || "?")}
+                                </div>
+                              );
+                            }
+                            return (
+                              <div className="w-7 h-7 rounded-full bg-muted text-muted-foreground text-[0.625rem] font-bold flex items-center justify-center flex-shrink-0">
+                                {getInitials(o.kandidat || "?")}
+                              </div>
+                            );
+                          })()}
+                          <p className="text-[0.875rem] font-semibold text-foreground truncate">{o.kandidat}</p>
+                        </div>
+                        <span className="text-[0.875rem] font-medium text-foreground truncate">{o.kunde}</span>
+                        <div>
+                          {(() => {
+                            const cs = o.selskap_id ? companyStatusMap[o.selskap_id] : null;
+                            if (cs === "partner")
+                              return (
+                                <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
+                                  Partner
+                                </span>
+                              );
+                            if (cs === "customer" || cs === "kunde")
+                              return (
+                                <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
+                                  Kunde
+                                </span>
+                              );
+                            if (cs === "prospect")
+                              return (
+                                <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
+                                  Potensiell
+                                </span>
+                              );
+                            return (
+                              <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-500 border border-gray-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
+                                —
+                              </span>
+                            );
+                          })()}
+                        </div>
+                        <span className="text-[0.8125rem] font-medium text-foreground">
+                          kr {formatNOK(Number(o.utpris) || 0)}/t
+                        </span>
+                        <div>
+                          <p
+                            className={cn(
+                              "text-[0.8125rem] font-medium",
+                              o.marginPct >= 28
+                                ? "text-emerald-600"
+                                : o.marginPct >= 20
+                                  ? "text-amber-600"
+                                  : "text-destructive",
+                            )}
+                          >
+                            kr {formatNOK(o.marginPerTime)}/t
+                          </p>
+                          <p className="text-[0.6875rem] text-muted-foreground">{o.marginPct.toFixed(1)}%</p>
+                        </div>
+                        <div className="text-[0.8125rem]">
+                          {o.daysUntilForny === null ? (
+                            <span className="text-muted-foreground">–</span>
+                          ) : o.daysUntilForny < 0 ? (
+                            <span className="text-destructive font-medium">Utløpt</span>
+                          ) : o.daysUntilForny <= 30 ? (
+                            <span className="text-amber-600 font-medium">Om {o.daysUntilForny}d</span>
+                          ) : o.daysUntilForny <= 90 ? (
+                            <span className="text-amber-600">{format(new Date(o.forny_dato), "dd.MM.yy")}</span>
+                          ) : (
+                            <span className="text-muted-foreground">{format(new Date(o.forny_dato), "dd.MM.yy")}</span>
+                          )}
+                        </div>
+                        <div>
+                          <span
+                            className={cn(
+                              "inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold",
+                              o.status === "Aktiv" && "bg-emerald-100 text-emerald-700",
+                              o.status === "Oppstart" && "bg-amber-100 text-amber-700",
+                              o.status === "Inaktiv" && "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            {o.status}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {filtered.length === 0 && <p className="text-muted-foreground text-center py-12">Ingen oppdrag å vise</p>}
+              </div>
+              <Sheet
+                open={selectedRowId !== null || createOpen}
+                onOpenChange={(o) => {
+                  if (!o) {
+                    setSelectedRowId(null);
+                    setCreateOpen(false);
+                  }
                 }}
-              />
-            </SheetContent>
-          </Sheet>
+              >
+                <SheetContent side="right" className="w-full sm:w-[920px] p-0" hideCloseButton>
+                  <OppdragEditSheet
+                    key={createOpen ? "create-oppdrag" : `edit-oppdrag-${selectedOppdrag?.id ?? "none"}`}
+                    row={selectedOppdrag}
+                    onClose={() => {
+                      setSelectedRowId(null);
+                      setCreateOpen(false);
+                    }}
+                  />
+                </SheetContent>
+              </Sheet>
+            </>
+          )}
 
 
     </div>

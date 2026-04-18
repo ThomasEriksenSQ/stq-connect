@@ -4,12 +4,13 @@ import { useMemo, useState, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
-import { Plus, X, Search, CalendarIcon, Upload, CheckCircle2, Loader2, Users, User } from "lucide-react";
+import { Plus, X, Search, CalendarIcon, Upload, CheckCircle2, Loader2, Users, User, Mail, Phone, Building2, Clock3, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatCleanupSummary } from "@/lib/candidateIdentity";
 import { normalizeTechnologyTags } from "@/lib/technologyTags";
 import { relativeFutureDate } from "@/lib/relativeDate";
 import { OppdragsMatchPanel } from "@/components/OppdragsMatchPanel";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -50,9 +51,13 @@ const SUGGESTED_TECH = [
 
 interface EksterneKonsulenterProps {
   hidePageTitle?: boolean;
+  embeddedSplit?: boolean;
 }
 
-export default function EksterneKonsulenter({ hidePageTitle = false }: EksterneKonsulenterProps) {
+export default function EksterneKonsulenter({
+  hidePageTitle = false,
+  embeddedSplit = false,
+}: EksterneKonsulenterProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -61,6 +66,7 @@ export default function EksterneKonsulenter({ hidePageTitle = false }: EksterneK
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [cleanupOpen, setCleanupOpen] = useState(false);
   const [cleanupRunning, setCleanupRunning] = useState(false);
 
@@ -97,6 +103,11 @@ export default function EksterneKonsulenter({ hidePageTitle = false }: EksterneK
     }
     return items;
   }, [rows, typeFilter, statusFilter, search]);
+
+  const selectedRow = useMemo(
+    () => rows.find((row: any) => row.id === selectedId) ?? null,
+    [rows, selectedId],
+  );
 
   const openEdit = (row: any) => {
     setEditId(row.id);
@@ -202,60 +213,144 @@ export default function EksterneKonsulenter({ hidePageTitle = false }: EksterneK
         </div>
       </div>
 
-      {/* Table */}
-      <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
-        {/* Header */}
-        <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_100px_110px_minmax(0,1.5fr)_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
-          {["NAVN", "SELSKAP", "TYPE", "STATUS", "TEKNOLOGIER", "TILGJ. FRA"].map(h => (
-            <span key={h} className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">{h}</span>
-          ))}
-        </div>
-        {/* Rows */}
-        <div className="divide-y divide-border">
-          {filtered.map((row: any) => {
-            const name = (row as any).navn || "—";
-            const company = row.companies?.name || (row as any).selskap_tekst || "—";
-            return (
-              <div
-                key={row.id}
-                onClick={() => openEdit(row)}
-                className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_100px_110px_minmax(0,1.5fr)_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 cursor-pointer"
-              >
-                <span className="text-[0.8125rem] font-medium text-foreground truncate">{name}</span>
-                <span className="text-[0.8125rem] text-muted-foreground truncate">{company}</span>
-                <div>
-                  <span className={cn(
-                    "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
-                    row.type === "freelance" ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
-                    "bg-violet-100 text-violet-700 border-violet-200"
-                  )}>
-                    {TYPE_LABELS[row.type] || row.type}
-                  </span>
-                </div>
-                <div>
-                  <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_COLORS[row.status] || "bg-muted text-muted-foreground")}>
-                    {STATUS_LABELS[row.status] || row.status}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {(row.teknologier || []).slice(0, 3).map((t: string) => (
-                    <span key={t} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] text-muted-foreground">{t}</span>
+      {embeddedSplit ? (
+        <div className="hidden md:block min-h-[820px]">
+          <ResizablePanelGroup direction="horizontal" className="h-full">
+            <ResizablePanel defaultSize={40} minSize={26}>
+              <div className="h-full border border-border rounded-lg overflow-hidden bg-card shadow-card">
+                <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_100px_110px_minmax(0,1.5fr)_100px] gap-3 px-4 py-2.5 border-b border-border bg-background sticky top-0 z-10">
+                  {["NAVN", "SELSKAP", "TYPE", "STATUS", "TEKNOLOGIER", "TILGJ. FRA"].map(h => (
+                    <span key={h} className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">{h}</span>
                   ))}
-                  {(row.teknologier || []).length > 3 && (
-                    <span className="text-[0.6875rem] text-muted-foreground">+{row.teknologier.length - 3}</span>
-                  )}
                 </div>
-                <span className="text-[0.8125rem] text-muted-foreground">
-                  {relativeFutureDate(row.tilgjengelig_fra)}
-                </span>
+                <div className="divide-y divide-border">
+                  {filtered.map((row: any) => {
+                    const name = (row as any).navn || "—";
+                    const company = row.companies?.name || (row as any).selskap_tekst || "—";
+                    const isSelected = selectedId === row.id;
+                    return (
+                      <div
+                        key={row.id}
+                        onClick={() => setSelectedId(row.id)}
+                        className={cn(
+                          "grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_100px_110px_minmax(0,1.5fr)_100px] gap-3 items-center px-4 min-h-[44px] py-2 transition-colors duration-75 cursor-pointer",
+                          isSelected ? "bg-muted/60" : "hover:bg-background/80",
+                        )}
+                      >
+                        <span className="text-[0.8125rem] font-medium text-foreground truncate">{name}</span>
+                        <span className="text-[0.8125rem] text-muted-foreground truncate">{company}</span>
+                        <div>
+                          <span className={cn(
+                            "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+                            row.type === "freelance" ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
+                            "bg-violet-100 text-violet-700 border-violet-200"
+                          )}>
+                            {TYPE_LABELS[row.type] || row.type}
+                          </span>
+                        </div>
+                        <div>
+                          <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_COLORS[row.status] || "bg-muted text-muted-foreground")}>
+                            {STATUS_LABELS[row.status] || row.status}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {(row.teknologier || []).slice(0, 3).map((t: string) => (
+                            <span key={t} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] text-muted-foreground">{t}</span>
+                          ))}
+                          {(row.teknologier || []).length > 3 && (
+                            <span className="text-[0.6875rem] text-muted-foreground">+{row.teknologier.length - 3}</span>
+                          )}
+                        </div>
+                        <span className="text-[0.8125rem] text-muted-foreground">
+                          {relativeFutureDate(row.tilgjengelig_fra)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {filtered.length === 0 && (
+                  <p className="text-muted-foreground text-center py-12">Ingen eksterne konsulenter å vise</p>
+                )}
               </div>
-            );
-          })}
+            </ResizablePanel>
+
+            <ResizableHandle
+              withHandle
+              className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
+            />
+
+            <ResizablePanel defaultSize={60} minSize={34}>
+              <div className="h-full rounded-lg border border-border bg-card overflow-hidden">
+                {selectedRow ? (
+                  <ExternalConsultantDetailCard
+                    row={selectedRow}
+                    onEdit={() => openEdit(selectedRow)}
+                    onClear={() => setSelectedId(null)}
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center px-6">
+                    <p className="text-[0.875rem] text-muted-foreground">
+                      Velg en ekstern konsulent for å vise profil.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </div>
-        {filtered.length === 0 && (
-          <p className="text-muted-foreground text-center py-12">Ingen eksterne konsulenter å vise</p>
-        )}
-      </div>
+      ) : (
+        <div className="border border-border rounded-lg overflow-hidden bg-card shadow-card">
+          <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_100px_110px_minmax(0,1.5fr)_100px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+            {["NAVN", "SELSKAP", "TYPE", "STATUS", "TEKNOLOGIER", "TILGJ. FRA"].map(h => (
+              <span key={h} className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">{h}</span>
+            ))}
+          </div>
+          <div className="divide-y divide-border">
+            {filtered.map((row: any) => {
+              const name = (row as any).navn || "—";
+              const company = row.companies?.name || (row as any).selskap_tekst || "—";
+              return (
+                <div
+                  key={row.id}
+                  onClick={() => openEdit(row)}
+                  className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_100px_110px_minmax(0,1.5fr)_100px] gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-background/80 transition-colors duration-75 cursor-pointer"
+                >
+                  <span className="text-[0.8125rem] font-medium text-foreground truncate">{name}</span>
+                  <span className="text-[0.8125rem] text-muted-foreground truncate">{company}</span>
+                  <div>
+                    <span className={cn(
+                      "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+                      row.type === "freelance" ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
+                      "bg-violet-100 text-violet-700 border-violet-200"
+                    )}>
+                      {TYPE_LABELS[row.type] || row.type}
+                    </span>
+                  </div>
+                  <div>
+                    <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_COLORS[row.status] || "bg-muted text-muted-foreground")}>
+                      {STATUS_LABELS[row.status] || row.status}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {(row.teknologier || []).slice(0, 3).map((t: string) => (
+                      <span key={t} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] text-muted-foreground">{t}</span>
+                    ))}
+                    {(row.teknologier || []).length > 3 && (
+                      <span className="text-[0.6875rem] text-muted-foreground">+{row.teknologier.length - 3}</span>
+                    )}
+                  </div>
+                  <span className="text-[0.8125rem] text-muted-foreground">
+                    {relativeFutureDate(row.tilgjengelig_fra)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          {filtered.length === 0 && (
+            <p className="text-muted-foreground text-center py-12">Ingen eksterne konsulenter å vise</p>
+          )}
+        </div>
+      )}
 
       {/* Modal */}
       <ConsultantModal
@@ -281,6 +376,154 @@ export default function EksterneKonsulenter({ hidePageTitle = false }: EksterneK
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+function ExternalConsultantDetailCard({
+  row,
+  onEdit,
+  onClear,
+}: {
+  row: any;
+  onEdit: () => void;
+  onClear: () => void;
+}) {
+  const consultantName = (row as any).navn || "Ukjent konsulent";
+  const companyName = row.companies?.name || (row as any).selskap_tekst || "Ikke koblet til selskap";
+  const technologies = Array.isArray(row.teknologier) ? row.teknologier : [];
+  const note = (row as any).notat || "";
+
+  return (
+    <div className="h-full overflow-y-auto">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+        <div>
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Konsulentprofil
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onEdit}
+            className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.75rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Rediger
+          </button>
+          <button
+            onClick={onClear}
+            className="text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Lukk
+          </button>
+        </div>
+      </div>
+
+      <div className="px-5 py-5 space-y-6">
+        <div>
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h2 className="text-[1.5rem] font-bold text-foreground truncate">{consultantName}</h2>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-[0.9375rem] text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                  <Building2 className="h-4 w-4" />
+                  {companyName}
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 justify-end">
+              <span className={cn(
+                "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+                row.type === "freelance" ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
+                "bg-violet-100 text-violet-700 border-violet-200"
+              )}>
+                {TYPE_LABELS[row.type] || row.type}
+              </span>
+              <span className={cn(
+                "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+                STATUS_COLORS[row.status] || "bg-muted text-muted-foreground",
+              )}>
+                {STATUS_LABELS[row.status] || row.status}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-2">
+          <div className="space-y-3">
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Kontakt
+            </p>
+            <div className="space-y-2 text-[0.875rem]">
+              {row.epost ? (
+                <div className="flex items-center gap-2 text-foreground">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span>{row.epost}</span>
+                </div>
+              ) : null}
+              {row.telefon ? (
+                <div className="flex items-center gap-2 text-foreground">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <span>{row.telefon}</span>
+                </div>
+              ) : null}
+              <div className="flex items-center gap-2 text-foreground">
+                <Clock3 className="h-4 w-4 text-muted-foreground" />
+                <span>{relativeFutureDate(row.tilgjengelig_fra)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Teknologier
+            </p>
+            {technologies.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {technologies.map((tech: string) => (
+                  <span
+                    key={tech}
+                    className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-[0.75rem] text-foreground border border-border"
+                  >
+                    {tech}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[0.8125rem] text-muted-foreground">Ingen teknologier lagt til ennå.</p>
+            )}
+          </div>
+        </div>
+
+        {note ? (
+          <div className="space-y-3">
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Kommentar
+            </p>
+            <div className="rounded-lg border border-border bg-background px-4 py-3">
+              <p className="text-[0.875rem] leading-relaxed whitespace-pre-wrap text-foreground/80">{note}</p>
+            </div>
+          </div>
+        ) : null}
+
+        {technologies.length > 0 ? (
+          <div className="space-y-3">
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Oppdragsmatch
+            </p>
+            <div className="rounded-lg border border-border bg-background px-4 py-4">
+              <OppdragsMatchPanel
+                konsulent={{
+                  navn: consultantName,
+                  teknologier: technologies,
+                  cv_tekst: (row as any).cv_tekst || null,
+                  ekstern_id: row.id,
+                }}
+              />
+            </div>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

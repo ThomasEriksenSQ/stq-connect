@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { CompanyCardContent } from "@/components/CompanyCardContent";
+import { RenderErrorBoundary } from "@/components/RenderErrorBoundary";
 import { Input } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
 import {
@@ -567,16 +568,21 @@ export default function DesignLabCompanies() {
                     </DesignLabIconButton>
                   </div>
                   <div className="flex-1 overflow-y-auto px-6 py-5 dl-v8-theme">
-                    <CompanyCardContent
-                      companyId={selectedId}
-                      editable
-                      headerPaddingTop={12}
-                      defaultHidden={{
-                        techDna: true,
-                        notes: true,
-                      }}
-                      onNavigateToFullPage={() => navigate(`/design-lab/selskaper?company=${selectedId}`)}
-                    />
+                    <RenderErrorBoundary
+                      resetKey={selectedId}
+                      fallbackMessage="Kunne ikke laste selskapskortet. Prøv et annet selskap eller last siden på nytt."
+                    >
+                      <CompanyCardContent
+                        companyId={selectedId}
+                        editable
+                        headerPaddingTop={12}
+                        defaultHidden={{
+                          techDna: true,
+                          notes: true,
+                        }}
+                        onNavigateToFullPage={() => navigate(`/design-lab/selskaper?company=${selectedId}`)}
+                      />
+                    </RenderErrorBoundary>
                   </div>
                 </div>
               ) : (

@@ -1,5 +1,23 @@
 export type TechnologyFrequencyMap = Record<string, number>;
 
+function coerceTechnologyInputs(value: unknown): string[] {
+  if (value == null) return [];
+  if (typeof value === "string") return [value];
+  if (Array.isArray(value)) return value.flatMap((entry) => coerceTechnologyInputs(entry));
+
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    for (const key of ["name", "label", "tag", "technology", "value"]) {
+      const candidate = record[key];
+      if (typeof candidate === "string" && candidate.trim()) {
+        return [candidate];
+      }
+    }
+  }
+
+  return [];
+}
+
 type TechnologyRule = {
   label: string;
   patterns: RegExp[];
@@ -259,7 +277,7 @@ export function normalizeTechnologyTag(token: string | null | undefined): string
 export function normalizeTechnologyTags(
   values: Array<string | null | undefined> | string | null | undefined,
 ): string[] {
-  const inputs = Array.isArray(values) ? values : values ? [values] : [];
+  const inputs = coerceTechnologyInputs(values);
   const result = new Set<string>();
 
   const pushValue = (value: string) => {
