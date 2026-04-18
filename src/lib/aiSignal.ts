@@ -31,6 +31,11 @@ function coerceStringArray(value: unknown): string[] {
   return text ? [text] : [];
 }
 
+function toDateLabel(value: unknown): string {
+  const text = coerceDisplayText(value);
+  return text ? text.slice(0, 10) : "ukjent dato";
+}
+
 export function parseAiSignalResult(raw: unknown): AiSignalResult | null {
   if (!raw || typeof raw !== "object") return null;
 
@@ -51,6 +56,46 @@ export function parseAiSignalResult(raw: unknown): AiSignalResult | null {
     teknologier_funnet: coerceStringArray(record.teknologier_funnet),
     tidsramme: coerceDisplayText(record.tidsramme) || null,
   };
+}
+
+export function buildAiSignalUserContent(input: {
+  currentSignal: string | null;
+  activities: Array<{ type: string; subject: string; created_at: string }>;
+  lastTaskDueDate: string | null;
+  contactName: string;
+  emails?: Array<{ subject: string; body_text: string; received_at: string }>;
+  currentTechnologies?: unknown;
+}): string {
+  const activityText = (Array.isArray(input.activities) ? input.activities : [])
+    .slice(0, 5)
+    .map((activity) => {
+      const subject = coerceDisplayText(activity.subject) || "Uten tittel";
+      const type = coerceDisplayText(activity.type) || "aktivitet";
+      return `- ${toDateLabel(activity.created_at)}: [${type}] ${subject}`;
+    })
+    .join("\n");
+
+  const emailText = (Array.isArray(input.emails) ? input.emails : [])
+    .slice(0, 5)
+    .map((email) => {
+      const body = coerceDisplayText(email.body_text).slice(0, 500);
+      const subject = coerceDisplayText(email.subject) || "Uten emne";
+      return `[${toDateLabel(email.received_at)}] Emne: ${subject}\n${body}`;
+    })
+    .join("\n---\n");
+
+  const techList = coerceStringArray(input.currentTechnologies).join(", ");
+
+  return `Kontakt: ${coerceDisplayText(input.contactName) || "Ukjent kontakt"}
+Nåværende signal: ${coerceDisplayText(input.currentSignal) || "ingen"}
+Eksisterende teknologier: ${techList || "(ingen)"}
+Siste oppfølging: ${coerceDisplayText(input.lastTaskDueDate) || "ingen"}
+
+Aktiviteter:
+${activityText || "(ingen aktiviteter)"}
+
+E-poster:
+${emailText || "(ingen e-poster)"}`;
 }
 
 const SYSTEM_PROMPT = `Du er CRM-assistent for STACQ, et norsk IT-konsulentbyrå som leverer embedded/firmware/C/C++-konsulenter.
@@ -76,35 +121,10 @@ export async function analyzeSignal(input: {
   lastTaskDueDate: string | null;
   contactName: string;
   emails?: Array<{ subject: string; body_text: string; received_at: string }>;
-  currentTechnologies?: string[];
+  currentTechnologies?: unknown;
 }): Promise<AiSignalResult | null> {
-  const activityText = input.activities
-    .slice(0, 5)
-    .map((a) => `- ${a.created_at.slice(0, 10)}: [${a.type}] ${a.subject}`)
-    .join("\n");
-
-  const emailText = (input.emails || [])
-    .slice(0, 5)
-    .map((e) => {
-      const body = (e.body_text || "").slice(0, 500);
-      return `[${e.received_at?.slice(0, 10)}] Emne: ${e.subject}\n${body}`;
-    })
-    .join("\n---\n");
-
-  const techList = (input.currentTechnologies || []).join(", ");
-
-  const userContent = `Kontakt: ${input.contactName}
-Nåværende signal: ${input.currentSignal || "ingen"}
-Eksisterende teknologier: ${techList || "(ingen)"}
-Siste oppfølging: ${input.lastTaskDueDate || "ingen"}
-
-Aktiviteter:
-${activityText || "(ingen aktiviteter)"}
-
-E-poster:
-${emailText || "(ingen e-poster)"}`;
-
   try {
+    const userContent = buildAiSignalUserContent(input);
     const { supabase } = await import("@/integrations/supabase/client");
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) return null;
