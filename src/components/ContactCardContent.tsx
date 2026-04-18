@@ -2333,6 +2333,11 @@ function ActivityTimeline({
   contactEmail?: string;
 }) {
   const currentYear = getYear(new Date());
+  const parseSafeDate = (value?: string | null) => {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
 
   // Fetch Outlook emails for this contact
   const { data: outlookEmails = [] } = useQuery({
@@ -2343,18 +2348,23 @@ function ActivityTimeline({
       });
       if (error) throw error;
       if (data?.error === "no_outlook_connected") return [];
-      return (data?.emails || []).map((e: any) => ({
-        id: `outlook-${e.id}`,
-        type: "email" as const,
-        subject: e.subject,
-        created_at: e.date,
-        from: e.from,
-        from_name: e.from_name,
-        to: e.to,
-        preview: e.preview,
-        body_text: e.body_text,
-        is_read: e.is_read,
-      }));
+      return (data?.emails || [])
+        .map((e: any) => {
+          const createdAt = typeof e.date === "string" ? e.date : null;
+          return {
+            id: `outlook-${e.id}`,
+            type: "email" as const,
+            subject: e.subject,
+            created_at: createdAt,
+            from: e.from,
+            from_name: e.from_name,
+            to: e.to,
+            preview: e.preview,
+            body_text: e.body_text,
+            is_read: e.is_read,
+          };
+        })
+        .filter((e: any) => parseSafeDate(e.created_at));
     },
     enabled: !!contactEmail,
     staleTime: 5 * 60 * 1000,
@@ -2365,7 +2375,11 @@ function ActivityTimeline({
     const activityItems = activities.map((a) => ({ ...a, _source: "activity" as const }));
     const emailItems = (outlookEmails || []).map((e: any) => ({ ...e, _source: "email" as const }));
     return [...activityItems, ...emailItems].sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      (a, b) => {
+        const aTime = parseSafeDate(a.created_at)?.getTime() ?? 0;
+        const bTime = parseSafeDate(b.created_at)?.getTime() ?? 0;
+        return bTime - aTime;
+      },
     );
   }, [activities, outlookEmails]);
 
@@ -2380,7 +2394,8 @@ function ActivityTimeline({
     const groups: { key: string; label: string; period: string; items: any[] }[] = [];
     let currentKey = "";
     for (const item of filteredItems) {
-      const d = new Date(item.created_at);
+      const d = parseSafeDate(item.created_at);
+      if (!d) continue;
       const monthKey = format(d, "yyyy-MM");
       if (monthKey !== currentKey) {
         currentKey = monthKey;
@@ -2509,7 +2524,8 @@ function splitEmailThread(bodyText: string): { latest: string; rest: string | nu
 function EmailRow({ email }: { email: any }) {
   const [expanded, setExpanded] = useState(false);
   const [showThread, setShowThread] = useState(false);
-  const d = new Date(email.created_at);
+  const parsedDate = email.created_at ? new Date(email.created_at) : null;
+  const hasValidDate = parsedDate && !Number.isNaN(parsedDate.getTime());
   const { latest, rest } = useMemo(() => splitEmailThread(email.body_text || ""), [email.body_text]);
 
   return (
@@ -2569,7 +2585,7 @@ function EmailRow({ email }: { email: any }) {
 
           <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
             <span className="text-[0.8125rem] text-muted-foreground">
-              {format(d, "d. MMM yyyy", { locale: nb })}
+              {hasValidDate ? format(parsedDate, "d. MMM yyyy", { locale: nb }) : "Ukjent dato"}
             </span>
             <DesignLabStatusBadge tone="signal">
               E-post

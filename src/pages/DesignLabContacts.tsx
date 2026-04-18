@@ -27,6 +27,7 @@ import {
 } from "@/lib/contactHunt";
 import { useAuth } from "@/hooks/useAuth";
 import { ContactCardContent } from "@/components/ContactCardContent";
+import { RenderErrorBoundary } from "@/components/RenderErrorBoundary";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
 import { C } from "@/components/designlab/theme";
 import { CommandPalette } from "@/components/designlab/CommandPalette";
@@ -2417,22 +2418,27 @@ export default function DesignLabContacts() {
                     </DesignLabIconButton>
                   </div>
                   <div className="flex-1 overflow-y-auto px-6 py-5 dl-v8-theme">
-                    <ContactCardContent
-                      contactId={sel.id}
-                      editable
-                      enableProfileEditMode
-                      headerPaddingTop={12}
-                      onDataChanged={() => {
-                        void invalidateDesignLabQueries();
-                      }}
-                      defaultHidden={{
-                        techDna: true,
-                        notes: true,
-                        consultantMatch: true,
-                        linkedinIfEmpty: true,
-                        locationsIfEmpty: true,
-                      }}
-                    />
+                    <RenderErrorBoundary
+                      resetKey={sel.id}
+                      fallbackMessage="Kunne ikke laste kontaktkortet. Prøv en annen kontakt eller last siden på nytt."
+                    >
+                      <ContactCardContent
+                        contactId={sel.id}
+                        editable
+                        enableProfileEditMode
+                        headerPaddingTop={12}
+                        onDataChanged={() => {
+                          void invalidateDesignLabQueries();
+                        }}
+                        defaultHidden={{
+                          techDna: true,
+                          notes: true,
+                          consultantMatch: true,
+                          linkedinIfEmpty: true,
+                          locationsIfEmpty: true,
+                        }}
+                      />
+                    </RenderErrorBoundary>
                   </div>
                 </div>
               ) : (
