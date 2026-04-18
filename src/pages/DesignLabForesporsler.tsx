@@ -16,6 +16,7 @@ import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designla
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { C } from "@/components/designlab/theme";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
+import { getInitials } from "@/lib/utils";
 import {
   DesignLabIconButton,
   DesignLabSearchInput,
@@ -63,6 +64,26 @@ function relTime(days: number): string {
   if (days < 30) return `${Math.floor(days / 7)}u`;
   if (days < 365) return `${Math.floor(days / 30)}m`;
   return `${Math.floor(days / 365)}å`;
+}
+
+function getVisibleTechnologies(tags: unknown): { visible: string[]; hiddenCount: number } {
+  const normalized = Array.isArray(tags)
+    ? tags
+        .map((tag) => (typeof tag === "string" ? tag.trim() : ""))
+        .filter(Boolean)
+    : [];
+
+  const visible: string[] = [];
+  let charBudget = 24;
+
+  for (const tag of normalized) {
+    const nextCost = tag.length + (visible.length > 0 ? 2 : 0);
+    if (visible.length >= 2 || nextCost > charBudget) break;
+    visible.push(tag);
+    charBudget -= nextCost;
+  }
+
+  return { visible, hiddenCount: Math.max(0, normalized.length - visible.length) };
 }
 
 
@@ -153,12 +174,34 @@ export default function DesignLabForesporsler() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("foresporsler")
-        .select("*, contacts(id, first_name, last_name, title, email, phone), foresporsler_konsulenter(id, konsulent_type, status, status_updated_at, stacq_ansatte(navn), external_consultants(navn))")
+        .select("*, contacts(id, first_name, last_name, title, email, phone), foresporsler_konsulenter(id, konsulent_type, status, status_updated_at, stacq_ansatte(id, navn), external_consultants(id, navn))")
         .order("mottatt_dato", { ascending: false });
       if (error) throw error;
       return data || [];
     },
   });
+
+  const { data: ansattePortraits = [] } = useQuery({
+    queryKey: ["foresporsler-ansatte-portraits"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cv_documents")
+        .select("ansatt_id, portrait_url")
+        .not("portrait_url", "is", null);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const portraitByAnsattId = useMemo(() => {
+    const map = new Map<number, string>();
+    (ansattePortraits as any[]).forEach((item) => {
+      if (item.ansatt_id && item.portrait_url) {
+        map.set(item.ansatt_id, item.portrait_url);
+      }
+    });
+    return map;
+  }, [ansattePortraits]);
 
   // ── Stats ──
   const stats = useMemo(() => {
@@ -315,6 +358,7 @@ export default function DesignLabForesporsler() {
                     <ForespRow
                       key={row.id}
                       row={row}
+                      portraitByAnsattId={portraitByAnsattId}
                       isActive={selectedRowId === row.id}
                       onClick={() => setSelectedRowId(row.id)}
                     />
@@ -409,10 +453,21 @@ function TableHeader({ sort, onSort }: { sort: { field: SortField; dir: SortDir 
   );
 }
 
-function ForespRow({ row, isActive, onClick }: { row: any; isActive: boolean; onClick: () => void }) {
+function ForespRow({
+  row,
+  portraitByAnsattId,
+  isActive,
+  onClick,
+}: {
+  row: any;
+  portraitByAnsattId: Map<number, string>;
+  isActive: boolean;
+  onClick: () => void;
+}) {
   const days = getDaysAgo(row.mottatt_dato);
   const kontaktNavn = row.contacts ? `${row.contacts.first_name} ${row.contacts.last_name}`.trim() : "—";
   const sendt = row.foresporsler_konsulenter || [];
+  const technologies = getVisibleTechnologies(row.teknologier);
   const cols = "92px minmax(220px,1.5fr) minmax(170px,0.95fr) 88px minmax(180px,1.05fr) minmax(190px,1.15fr) minmax(138px,0.85fr)";
 
   return (
@@ -449,16 +504,21 @@ function ForespRow({ row, isActive, onClick }: { row: any; isActive: boolean; on
       <div style={{ paddingTop: 1 }}>
         <TypeChip type={row.type} />
       </div>
-      <div className="min-w-0 overflow-hidden pr-4">
-        <div className="flex items-center gap-1.5 flex-nowrap overflow-hidden">
-          {(row.teknologier || []).slice(0, 3).map((t: string) => (
+      <div className="min-w-0 pr-4">
+        <div className="flex items-center gap-1.5 flex-nowrap">
+          {technologies.visible.map((t) => (
             <DesignLabReadonlyChip key={t} active={false}>
               {t}
             </DesignLabReadonlyChip>
           ))}
-          {(row.teknologier || []).length > 3 && (
-            <span className="shrink-0" style={{ fontSize: 11, color: C.textGhost }}>+{row.teknologier.length - 3}</span>
+          {technologies.hiddenCount > 0 && (
+            <span className="shrink-0" style={{ fontSize: 11, color: C.textGhost }}>
+              +{technologies.hiddenCount}
+            </span>
           )}
+          {technologies.visible.length === 0 && technologies.hiddenCount === 0 ? (
+            <span style={{ fontSize: 12, color: C.textGhost }}>—</span>
+          ) : null}
         </div>
       </div>
       <div className="flex flex-col items-start gap-2 pr-3" style={{ paddingTop: 2 }}>
@@ -469,8 +529,37 @@ function ForespRow({ row, isActive, onClick }: { row: any; isActive: boolean; on
         ) : (
           sendt.map((k: any) => {
             const navn = (k.konsulent_type === "intern" ? k.stacq_ansatte?.navn : k.external_consultants?.navn) || "Ukjent";
+            const portrait =
+              k.konsulent_type === "intern" && k.stacq_ansatte?.id
+                ? portraitByAnsattId.get(k.stacq_ansatte.id) || null
+                : null;
             return (
-              <div key={k.id} style={{ minHeight: 28, display: "flex", alignItems: "center" }}>
+              <div key={k.id} style={{ minHeight: 28, display: "flex", alignItems: "center", gap: 8 }}>
+                {portrait ? (
+                  <img
+                    src={portrait}
+                    alt={navn}
+                    style={{ width: 22, height: 22, borderRadius: "999px", objectFit: "cover", flexShrink: 0 }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: "999px",
+                      flexShrink: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: C.accentSoft,
+                      color: C.accent,
+                      fontSize: 10,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {getInitials(navn)}
+                  </div>
+                )}
                 <span style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.2, whiteSpace: "normal" }}>
                   {navn}
                 </span>

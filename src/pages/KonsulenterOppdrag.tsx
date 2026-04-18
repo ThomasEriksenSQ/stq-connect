@@ -393,7 +393,8 @@ export default function KonsulenterOppdrag({
               <div className="hidden md:block min-h-[860px]">
                 <ResizablePanelGroup direction="horizontal" className="h-full">
                   <ResizablePanel defaultSize={46} minSize={28}>
-                    <div className="h-full border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
+                    <div className="h-full pr-2">
+                      <div className="h-full border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
                       <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_80px_90px_110px_100px_90px] gap-3 px-4 py-2.5 border-b border-border bg-background sticky top-0 z-10">
                         {["Konsulent", "Kunde", "Type", "Utpris", "Margin", "Forny", "Status"].map((h) => (
                           <span
@@ -528,6 +529,7 @@ export default function KonsulenterOppdrag({
                       </div>
                       {filtered.length === 0 && <p className="text-muted-foreground text-center py-12">Ingen oppdrag å vise</p>}
                     </div>
+                    </div>
                   </ResizablePanel>
 
                   <ResizableHandle
@@ -536,8 +538,8 @@ export default function KonsulenterOppdrag({
                   />
 
                   <ResizablePanel defaultSize={54} minSize={32}>
-                    <div className="h-full rounded-lg border border-border bg-card overflow-hidden">
-                      <div className="h-full overflow-y-auto px-5 py-5">
+                    <div className="h-full pl-2">
+                      <div className="h-full overflow-y-auto">
                         <FornyelsesTimeline enriched={enriched} />
                       </div>
                     </div>

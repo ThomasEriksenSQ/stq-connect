@@ -35,6 +35,11 @@ interface SelectedContact {
   signal: string;
 }
 
+interface SelectedCompany {
+  id: string;
+  name: string;
+}
+
 interface CommandPaletteProps {
   open: boolean;
   onClose: () => void;
@@ -42,7 +47,9 @@ interface CommandPaletteProps {
   contacts: ContactItem[];
   companies: CompanyItem[];
   selectedContact: SelectedContact | null;
+  selectedCompany?: SelectedCompany | null;
   onSelectContact: (id: string) => void;
+  onSelectCompany?: (id: string, companyName: string) => void;
   onFilterByCompany: (companyName: string) => void;
 }
 
@@ -70,7 +77,9 @@ export function CommandPalette({
   contacts,
   companies,
   selectedContact,
+  selectedCompany,
   onSelectContact,
+  onSelectCompany,
   onFilterByCompany,
 }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
@@ -129,13 +138,17 @@ export function CommandPalette({
           meta: `${c.contactCount} kontakter`,
           icon: Building2,
           section: "Selskaper",
-          action: () => { onFilterByCompany(c.name); onClose(); },
+          action: () => {
+            if (onSelectCompany) onSelectCompany(c.id, c.name);
+            else onFilterByCompany(c.name);
+            onClose();
+          },
         });
       });
     }
 
     return result;
-  }, [query, contacts, companies, onSelectContact, onFilterByCompany, onClose]);
+  }, [query, contacts, companies, onSelectContact, onSelectCompany, onFilterByCompany, onClose]);
 
   // Clamp activeIdx
   useEffect(() => {
@@ -241,6 +254,22 @@ export function CommandPalette({
 
         {/* Results */}
         <div ref={listRef} style={{ flex: 1, overflowY: "auto", padding: "4px 0 0" }}>
+          {selectedContact || selectedCompany ? (
+            <div style={{ padding: "6px 12px 8px", borderBottom: `1px solid ${C.borderLight}`, background: "#FCFCFD" }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#8C929C", paddingBottom: 4 }}>
+                Valgt
+              </div>
+              {selectedContact ? (
+                <div style={{ fontSize: 12, color: C.text }}>
+                  {selectedContact.firstName} {selectedContact.lastName}
+                </div>
+              ) : selectedCompany ? (
+                <div style={{ fontSize: 12, color: C.text }}>
+                  {selectedCompany.name}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           {displaySections.length === 0 ? (
             <div style={{ padding: "24px 16px", fontSize: 13, color: "#8C929C" }}>
               Ingen resultater for «{query}»

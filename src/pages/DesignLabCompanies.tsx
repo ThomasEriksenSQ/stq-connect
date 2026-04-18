@@ -456,6 +456,16 @@ export default function DesignLabCompanies() {
     [companies],
   );
 
+  const selectedCompany = useMemo(
+    () =>
+      selectedId
+        ? sorted.find((company: any) => company.id === selectedId) ??
+          companies.find((company: any) => company.id === selectedId) ??
+          null
+        : null,
+    [companies, selectedId, sorted],
+  );
+
   const renderRow = useCallback((company: any) => {
     const daysSince = company.lastActivity ? differenceInDays(new Date(), new Date(company.lastActivity)) : null;
     const typeLabel = TYPE_VALUE_TO_LABEL[company.status] || company.status;
@@ -497,6 +507,26 @@ export default function DesignLabCompanies() {
       </div>
     );
   }, [selectedId]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (cmdOpen) return;
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        if (!sorted.length) return;
+        e.preventDefault();
+        const idx = sorted.findIndex((company: any) => company.id === selectedId);
+        if (idx === -1) {
+          const initial = e.key === "ArrowDown" ? sorted[0] : sorted[sorted.length - 1];
+          if (initial) setSelectedId(initial.id);
+          return;
+        }
+        const next = e.key === "ArrowDown" ? Math.min(idx + 1, sorted.length - 1) : Math.max(idx - 1, 0);
+        setSelectedId(sorted[next].id);
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [cmdOpen, selectedId, sorted]);
 
   const ownerOptions = useMemo(
     () =>
@@ -813,7 +843,12 @@ export default function DesignLabCompanies() {
         contacts={[]}
         companies={companiesList}
         selectedContact={null}
+        selectedCompany={selectedCompany ? { id: selectedCompany.id, name: selectedCompany.name } : null}
         onSelectContact={() => {}}
+        onSelectCompany={(companyId, companyName) => {
+          setSearch(companyName);
+          setSelectedId(companyId);
+        }}
         onFilterByCompany={(companyName) => {
           setSearch(companyName);
           const selectedCompany = companies.find((company: any) => company.name === companyName);

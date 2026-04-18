@@ -22,6 +22,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
 import {
   DesignLabPrimaryAction,
+  DesignLabSecondaryAction,
   DesignLabReadonlyChip,
   DESIGN_LAB_STATUS_NEUTRAL_CHIP_ACTIVE_COLORS,
 } from "@/components/designlab/system";
@@ -301,27 +302,24 @@ const AnsattDetail = ({
           </div>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <button
+          <DesignLabSecondaryAction
             onClick={() => navigate(`/cv-admin/${ansatt.id}`)}
-            className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
           >
             <ExternalLink className="h-3.5 w-3.5" />
             CV-editor
-          </button>
-          <button
+          </DesignLabSecondaryAction>
+          <DesignLabPrimaryAction
             onClick={() => setMatchSheetOpen(true)}
-            className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
           >
             <Sparkles className="h-3.5 w-3.5" />
             Finn oppdrag
-          </button>
-          <button
+          </DesignLabPrimaryAction>
+          <DesignLabSecondaryAction
             onClick={() => setEditSheetOpen(true)}
-            className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary"
           >
             <Pencil className="h-3.5 w-3.5" />
             Rediger
-          </button>
+          </DesignLabSecondaryAction>
         </div>
       </div>
 
