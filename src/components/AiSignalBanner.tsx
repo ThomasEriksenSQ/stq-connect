@@ -27,6 +27,8 @@ interface AiSignalBannerProps {
   lastTaskDueDate: string | null;
   onUpdateSignal: (signal: string) => void;
   onAddTechnologies: (techs: string[]) => void;
+  onVisibilityChange?: (visible: boolean) => void;
+  hideContent?: boolean;
 }
 
 export function AiSignalBanner({
@@ -39,6 +41,8 @@ export function AiSignalBanner({
   lastTaskDueDate,
   onUpdateSignal,
   onAddTechnologies,
+  onVisibilityChange,
+  hideContent = false,
 }: AiSignalBannerProps) {
   const [result, setResult] = useState<AiSignalResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -99,10 +103,14 @@ export function AiSignalBanner({
 
   const signalChanged = result.anbefalt_signal !== currentSignal;
   const hasNewTechs = newTechs.length > 0 && !techsAdded;
+  const isVisible = !dismissed && !loading && !!result && !(applied && !hasNewTechs) && (signalChanged || hasNewTechs);
+
+  useEffect(() => {
+    onVisibilityChange?.(isVisible);
+  }, [isVisible, onVisibilityChange]);
 
   // Don't show if nothing actionable
-  if (applied && !hasNewTechs) return null;
-  if (!signalChanged && !hasNewTechs) return null;
+  if (!isVisible || hideContent) return null;
 
   const borderColor =
     result.konfidens === "høy"

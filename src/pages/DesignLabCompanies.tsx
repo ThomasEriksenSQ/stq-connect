@@ -16,6 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { C } from "@/components/designlab/theme";
 import { crmQueryKeys } from "@/lib/queryKeys";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
+import { CommandPalette } from "@/components/designlab/CommandPalette";
 import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { BrregSearch, lookupByOrgNr } from "@/components/BrregSearch";
@@ -165,6 +166,7 @@ export default function DesignLabCompanies() {
   const modalScale = useDesignLabModalScale();
   const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [search, setSearch] = useState("");
+  const [cmdOpen, setCmdOpen] = useState(false);
   const [ownerFilter, setOwnerFilter] = useState("Alle");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "name", dir: "asc" });
@@ -219,6 +221,21 @@ export default function DesignLabCompanies() {
     );
     setCreateLocations([""]);
   }, [prefillCompanyName]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCmdOpen(true);
+      }
+      if (e.key === "Escape" && !cmdOpen) {
+        setSelectedId(null);
+        searchRef.current?.blur();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [cmdOpen]);
 
   // ── Data query (same pattern as Companies.tsx) ──
   const { data: companies = [], isLoading } = useQuery({
@@ -428,6 +445,16 @@ export default function DesignLabCompanies() {
     });
     return arr;
   }, [filtered, sort]);
+
+  const companiesList = useMemo(
+    () =>
+      companies.map((company: any) => ({
+        id: company.id,
+        name: company.name,
+        contactCount: company.contactCount || 0,
+      })),
+    [companies],
+  );
 
   const renderRow = useCallback((company: any) => {
     const daysSince = company.lastActivity ? differenceInDays(new Date(), new Date(company.lastActivity)) : null;
@@ -778,6 +805,23 @@ export default function DesignLabCompanies() {
           </DesignLabModalActions>
         </DesignLabModalForm>
       </DesignLabEntitySheet>
+
+      <CommandPalette
+        open={cmdOpen}
+        onClose={() => setCmdOpen(false)}
+        textSize={textSize}
+        contacts={[]}
+        companies={companiesList}
+        selectedContact={null}
+        onSelectContact={() => {}}
+        onFilterByCompany={(companyName) => {
+          setSearch(companyName);
+          const selectedCompany = companies.find((company: any) => company.name === companyName);
+          if (selectedCompany) {
+            setSelectedId(selectedCompany.id);
+          }
+        }}
+      />
     </div>
   );
 }

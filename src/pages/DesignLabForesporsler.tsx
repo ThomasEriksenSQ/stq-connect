@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import {
   X,
-  ArrowUpRight,
 } from "lucide-react";
 import { differenceInDays, format } from "date-fns";
 import { nb } from "date-fns/locale";
@@ -154,7 +153,7 @@ export default function DesignLabForesporsler() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("foresporsler")
-        .select("*, contacts(id, first_name, last_name), foresporsler_konsulenter(id, konsulent_type, status, status_updated_at, stacq_ansatte(navn), external_consultants(navn))")
+        .select("*, contacts(id, first_name, last_name, title, email, phone), foresporsler_konsulenter(id, konsulent_type, status, status_updated_at, stacq_ansatte(navn), external_consultants(navn))")
         .order("mottatt_dato", { ascending: false });
       if (error) throw error;
       return data || [];
@@ -330,15 +329,8 @@ export default function DesignLabForesporsler() {
             <ResizablePanel defaultSize={62} minSize={34}>
               {selectedRow ? (
                 <div className="h-full flex flex-col" style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}` }}>
-                  <div className="shrink-0 flex items-center justify-between px-6" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
-                    <div className="flex items-center gap-2">
-                      <h2 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{(selectedRow as any).selskap_navn}</h2>
-                      <TypeChip type={(selectedRow as any).type} />
-                    </div>
+                  <div className="shrink-0 flex items-center justify-end px-6" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
                     <div className="flex items-center gap-1.5">
-                      <DesignLabIconButton title="Åpne i CRM" onClick={() => navigate(`/foresporsler?id=${selectedRowId}`)}>
-                        <ArrowUpRight style={{ width: 15, height: 15 }} />
-                      </DesignLabIconButton>
                       <DesignLabIconButton title="Lukk" onClick={() => setSelectedRowId(null)}>
                         <X style={{ width: 15, height: 15 }} />
                       </DesignLabIconButton>
@@ -457,15 +449,17 @@ function ForespRow({ row, isActive, onClick }: { row: any; isActive: boolean; on
       <div style={{ paddingTop: 1 }}>
         <TypeChip type={row.type} />
       </div>
-      <div className="flex items-center gap-1.5 flex-wrap pr-4">
-        {(row.teknologier || []).slice(0, 3).map((t: string) => (
-          <DesignLabReadonlyChip key={t} active={false}>
-            {t}
-          </DesignLabReadonlyChip>
-        ))}
-        {(row.teknologier || []).length > 3 && (
-          <span style={{ fontSize: 11, color: C.textGhost }}>+{row.teknologier.length - 3}</span>
-        )}
+      <div className="min-w-0 overflow-hidden pr-4">
+        <div className="flex items-center gap-1.5 flex-nowrap overflow-hidden">
+          {(row.teknologier || []).slice(0, 3).map((t: string) => (
+            <DesignLabReadonlyChip key={t} active={false}>
+              {t}
+            </DesignLabReadonlyChip>
+          ))}
+          {(row.teknologier || []).length > 3 && (
+            <span className="shrink-0" style={{ fontSize: 11, color: C.textGhost }}>+{row.teknologier.length - 3}</span>
+          )}
+        </div>
       </div>
       <div className="flex flex-col items-start gap-2 pr-3" style={{ paddingTop: 2 }}>
         {sendt.length === 0 ? (
@@ -526,7 +520,7 @@ function ForespRow({ row, isActive, onClick }: { row: any; isActive: boolean; on
 function TypeChip({ type }: { type: string | null }) {
   const isDir = type === "DIR" || type === "direktekunde";
   const isVia = type === "VIA" || type === "via_partner";
-  const label = isDir ? "DIR" : isVia ? "VIA" : "—";
+  const label = isDir ? "Direkte" : isVia ? "Via" : "—";
   const color = isDir ? C.accent : isVia ? C.warning : C.textGhost;
   return (
     <span className="inline-flex items-center rounded-[6px]" style={{

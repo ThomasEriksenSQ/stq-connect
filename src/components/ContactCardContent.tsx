@@ -270,6 +270,7 @@ export function ContactCardContent({
   const [matchSourceFilter, setMatchSourceFilter] = useState<"Alle" | "Ansatte" | "Eksterne">("Alle");
   const [matchUpdatedAt, setMatchUpdatedAt] = useState<string | null>(null);
   const [showTechDna, setShowTechDna] = useState(!defaultHidden?.techDna);
+  const [hasVisibleAiSuggestion, setHasVisibleAiSuggestion] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const [showConsultantMatch, setShowConsultantMatch] = useState(!defaultHidden?.consultantMatch);
   const [profileEditMode, setProfileEditMode] = useState(false);
@@ -370,6 +371,10 @@ export function ContactCardContent({
     if (!contact) return;
     setShowNotes(Boolean(contact.notes?.trim()));
   }, [contactId, contact?.notes]);
+
+  useEffect(() => {
+    setHasVisibleAiSuggestion(false);
+  }, [contactId]);
 
   const updateMutation = useMutation({
     mutationFn: async (updates: Record<string, any>) => {
@@ -1181,13 +1186,56 @@ export function ContactCardContent({
       </div>
 
       <div className="space-y-0">
+        {editable && activities.length > 0 && defaultHidden?.techDna && !showTechDna && !hasVisibleAiSuggestion && (
+          <div className="hidden" aria-hidden="true">
+            {(() => {
+              const effectiveSignal = getEffectiveSignal(
+                activities.map((a) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+                tasks.map((t) => ({
+                  created_at: t.created_at,
+                  title: t.title,
+                  description: t.description,
+                  due_date: t.due_date,
+                })),
+              );
+              const lastTaskDue = tasks.length > 0 ? tasks[0]?.due_date || null : null;
+              return (
+                <AiSignalBanner
+                  contactId={contactId}
+                  contactName={`${contact.first_name} ${contact.last_name}`}
+                  contactEmail={contact.email || null}
+                  currentSignal={effectiveSignal}
+                  currentTechnologies={((contact as any).teknologier as string[]) || []}
+                  activities={activities
+                    .slice(0, 5)
+                    .map((a) => ({ type: a.type, subject: a.subject, created_at: a.created_at }))}
+                  lastTaskDueDate={lastTaskDue}
+                  onUpdateSignal={(signal) => {
+                    updateSignalMutation.mutate(signal);
+                  }}
+                  onAddTechnologies={async (techs) => {
+                    const existing = ((contact as any).teknologier as string[]) || [];
+                    const merged = [...new Set([...existing, ...techs])];
+                    await supabase
+                      .from("contacts")
+                      .update({ teknologier: merged })
+                      .eq("id", contactId);
+                    queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.detail(contactId) });
+                  }}
+                  onVisibilityChange={setHasVisibleAiSuggestion}
+                  hideContent
+                />
+              );
+            })()}
+          </div>
+        )}
         {/* ── Tekniske behov ── */}
-        {(!defaultHidden?.techDna || showTechDna) && (
+        {(!defaultHidden?.techDna || showTechDna || hasVisibleAiSuggestion) && (
         <div className="mb-5">
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                Teknisk DNA for {contact.first_name} {contact.last_name}
+                Teknologier
               </span>
               {contact.teknologier && (contact.teknologier as string[]).length > 0 && (
                 <DesignLabActionButton
@@ -1208,10 +1256,6 @@ export function ContactCardContent({
                 </DesignLabActionButton>
               )}
             </div>
-
-            <p className="text-[0.75rem] text-muted-foreground mb-2">
-              Bygges automatisk fra foresporsler og sikre Finn-treff.
-            </p>
 
             {(contact as any).teknologier?.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
@@ -1266,6 +1310,7 @@ export function ContactCardContent({
                       .eq("id", contactId);
                     queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.detail(contactId) });
                   }}
+                  onVisibilityChange={setHasVisibleAiSuggestion}
                 />
               );
             })()}

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn, formatNOK, getInitials } from "@/lib/utils";
 import { format, differenceInDays, startOfDay } from "date-fns";
 import { Briefcase, CalendarCheck, BarChart2, Plus } from "lucide-react";
@@ -9,6 +9,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { OppdragEditSheet } from "@/components/OppdragEditSheet";
 import { FornyelsesTimeline } from "@/components/FornyelsesTimeline";
 import { DesignLabStaticTag, DesignLabFilterButton, DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS, DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS, DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS } from "@/components/designlab/controls";
+import { DesignLabPrimaryAction } from "@/components/designlab/system";
 
 type Filter = "Alle" | "Aktiv" | "Oppstart" | "Inaktiv";
 const TIMER_PER_DAG = 7.5;
@@ -16,6 +17,8 @@ const TIMER_PER_DAG = 7.5;
 interface KonsulenterOppdragProps {
   hidePageIntro?: boolean;
   embeddedSplit?: boolean;
+  showCreateButton?: boolean;
+  createRequestId?: number;
 }
 
 function computeOppdragStatus(oppdrag: any): string {
@@ -43,6 +46,8 @@ function parseOppdragDate(value?: string | null): Date | null {
 export default function KonsulenterOppdrag({
   hidePageIntro = false,
   embeddedSplit = false,
+  showCreateButton = true,
+  createRequestId = 0,
 }: KonsulenterOppdragProps = {}) {
   const [filter, setFilter] = useState<Filter>("Aktiv");
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
@@ -54,6 +59,12 @@ export default function KonsulenterOppdrag({
     setEditSheetOpen(false);
     setCreateOpen(true);
   };
+
+  useEffect(() => {
+    if (createRequestId > 0) {
+      openCreateSheet();
+    }
+  }, [createRequestId]);
   
   const today = new Date();
 
@@ -209,15 +220,14 @@ export default function KonsulenterOppdrag({
     <div>
       {/* Header */}
       {hidePageIntro ? (
-        <div className="flex justify-end mb-3">
-          <button
-            onClick={openCreateSheet}
-            className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity shrink-0"
-          >
-            <Plus className="h-4 w-4" />
-            Nytt oppdrag
-          </button>
-        </div>
+        showCreateButton ? (
+          <div className="flex justify-end mb-3">
+            <DesignLabPrimaryAction onClick={openCreateSheet}>
+              <Plus className="h-4 w-4" />
+              Nytt oppdrag
+            </DesignLabPrimaryAction>
+          </div>
+        ) : null
       ) : (
         <div className="flex flex-col gap-2 mb-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3 min-w-0">
@@ -226,13 +236,10 @@ export default function KonsulenterOppdrag({
               {stats.aktive + stats.oppstart}
             </span>
           </div>
-          <button
-            onClick={openCreateSheet}
-            className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity shrink-0"
-          >
+          <DesignLabPrimaryAction onClick={openCreateSheet}>
             <Plus className="h-4 w-4" />
             Nytt oppdrag
-          </button>
+          </DesignLabPrimaryAction>
         </div>
       )}
 
@@ -530,13 +537,8 @@ export default function KonsulenterOppdrag({
 
                   <ResizablePanel defaultSize={54} minSize={32}>
                     <div className="h-full rounded-lg border border-border bg-card overflow-hidden">
-                      <div className="h-full overflow-y-auto px-5 py-5 space-y-5">
-                        <div>
-                          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-3">
-                            Fornyelseskalender
-                          </p>
-                          <FornyelsesTimeline enriched={enriched} />
-                        </div>
+                      <div className="h-full overflow-y-auto px-5 py-5">
+                        <FornyelsesTimeline enriched={enriched} />
                       </div>
                     </div>
                   </ResizablePanel>

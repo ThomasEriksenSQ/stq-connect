@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { X, Pencil, Trash2, Sparkles, Loader2, ChevronDown, Plus, Target } from "lucide-react";
+import { X, Pencil, Trash2, Sparkles, Loader2, ChevronDown, Plus, Target, Phone, Mail, MapPin } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -185,6 +186,8 @@ export function ForespørselSheet({
   startInEditMode?: boolean;
   onRequestEdit?: () => void;
 }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { interne: cachedInterne, eksterne: cachedEksterne } = useConsultantCache();
   const [editMode, setEditMode] = useState(false);
@@ -593,7 +596,15 @@ export function ForespørselSheet({
 
   if (!row) return null;
 
-  const contactName = row.contacts ? `${row.contacts.first_name} ${row.contacts.last_name}` : null;
+  const contactName = row.contacts ? `${row.contacts.first_name || ""} ${row.contacts.last_name || ""}`.trim() : null;
+  const contactTitle = row.contacts?.title || null;
+  const contactEmail = row.contacts?.email || null;
+  const contactPhone = row.contacts?.phone || null;
+  const companyHref = row.selskap_id
+    ? (location.pathname.startsWith("/design-lab")
+        ? `/design-lab/selskaper?company=${row.selskap_id}`
+        : `/selskaper?company=${row.selskap_id}`)
+    : null;
   const alreadyLinkedIds = new Set([
     ...linkedKonsulenter.filter((k: any) => k.konsulent_type === "intern").map((k: any) => k.ansatt_id),
     ...linkedKonsulenter.filter((k: any) => k.konsulent_type === "ekstern").map((k: any) => k.ekstern_id),
@@ -606,12 +617,52 @@ export function ForespørselSheet({
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <h2 className="text-[1.25rem] font-bold text-foreground truncate">
-              {row.selskap_navn}
+              {contactName || row.selskap_navn}
             </h2>
-            <p className="text-[0.8125rem] text-muted-foreground mt-0.5">
-              {row.sted || "Ukjent sted"}
-              {row.avdeling && ` · ${row.avdeling}`}
-            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-[0.8125rem] text-muted-foreground">
+              {companyHref ? (
+                <button
+                  type="button"
+                  onClick={() => navigate(companyHref)}
+                  className="font-medium text-primary hover:underline"
+                >
+                  {row.selskap_navn}
+                </button>
+              ) : (
+                <span className="font-medium text-primary">{row.selskap_navn}</span>
+              )}
+              {row.sted && (
+                <>
+                  <span className="text-muted-foreground/40">·</span>
+                  <span className="inline-flex items-center gap-1">
+                    <MapPin className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+                    {row.sted}
+                  </span>
+                </>
+              )}
+              {(contactTitle || row.avdeling) && (
+                <>
+                  <span className="text-muted-foreground/40">·</span>
+                  <span>{contactTitle || row.avdeling}</span>
+                </>
+              )}
+            </div>
+            {(contactPhone || contactEmail) && (
+              <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[0.8125rem] text-muted-foreground">
+                {contactPhone && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5" />
+                    {contactPhone}
+                  </span>
+                )}
+                {contactEmail && (
+                  <span className="inline-flex items-center gap-1.5 break-all">
+                    <Mail className="h-3.5 w-3.5 shrink-0" />
+                    {contactEmail}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           {!editMode && (
             <button
@@ -690,7 +741,7 @@ export function ForespørselSheet({
                 )}
 
                 {/* Info row */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-start">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
                   <div>
                     <p className={LABEL}>Mottatt</p>
                     <Tooltip>
@@ -701,12 +752,6 @@ export function ForespørselSheet({
                       </TooltipTrigger>
                       {row.mottatt_dato && <TooltipContent>{fullDate(row.mottatt_dato)}</TooltipContent>}
                     </Tooltip>
-                  </div>
-                  <div>
-                    <p className={LABEL}>Kontakt</p>
-                    <p className="text-[0.875rem] text-foreground mt-1">
-                      {contactName || "—"}
-                    </p>
                   </div>
                   {!matchResults && !matching && (
                     <div className="sm:justify-self-end">

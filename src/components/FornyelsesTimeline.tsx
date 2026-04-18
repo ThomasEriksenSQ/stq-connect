@@ -97,13 +97,9 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
   if (rows.length === 0) return null;
 
   return (
-    <div className="mb-6">
-      <h2 className="text-[0.8125rem] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-3">
-        Fornyelser {year}
-      </h2>
-
-      <div className="border border-border rounded-lg bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)] relative">
-        <div className="overflow-x-auto">
+    <div className="h-full">
+      <div className="border border-border rounded-lg bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)] relative h-full flex flex-col">
+        <div className="overflow-x-auto flex-1">
           <div className="min-w-[900px]">
             {/* Header */}
             <div className="flex border-b border-border bg-background sticky top-0 z-20">

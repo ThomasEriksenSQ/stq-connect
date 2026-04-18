@@ -187,10 +187,40 @@ export default function DesignLabStacqPrisen() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto" style={{ padding: "24px 24px 48px" }}>
-          <div
-            className="flex flex-col gap-4 xl:grid xl:grid-cols-[minmax(860px,1.18fr)_minmax(620px,0.92fr)] xl:items-start"
-            style={{ maxWidth: "none", margin: 0 }}
-          >
+          <div className="flex flex-col gap-4" style={{ maxWidth: "none", margin: 0 }}>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <TopStatCard
+                label="STACQ Prisen / time"
+                value={`kr ${formatKr(Math.round(stacqTotalPerTime))}`}
+                sub={`${aktive.length} konsulenter i oppdrag`}
+                accent="emerald"
+                suffix="/ time"
+              />
+              <TopStatCard
+                label="STACQ Prisen / mnd"
+                value={`kr ${formatKr(Math.round(monthlyTotal))}`}
+                sub={`${workdayCount} arbeidsdager · ${format(now, "MMMM yyyy", { locale: nb })}`}
+                suffix="/ mnd"
+              />
+              <TopStatCard
+                label="Snitt per konsulent"
+                value={`kr ${formatKr(Math.round(avgPrisPerTime))}`}
+                sub="gjennomsnitt"
+                suffix="/ time"
+              />
+              <TopStatCard
+                label="Oppstart"
+                value={`+ kr ${formatKr(Math.round(oppstartTotalPerTime))}`}
+                sub={`${oppstart.length} konsulenter kommer snart`}
+                accent="amber"
+                suffix="/ time"
+              />
+            </div>
+
+            <div
+              className="flex flex-col gap-4 xl:grid xl:grid-cols-[minmax(860px,1.18fr)_minmax(620px,0.92fr)] xl:items-stretch"
+              style={{ maxWidth: "none", margin: 0 }}
+            >
             <div className="min-w-0 w-full">
               {isLoading ? (
                 <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster…</div>
@@ -267,41 +297,22 @@ export default function DesignLabStacqPrisen() {
               )}
             </div>
 
-            <aside className="w-full space-y-6 xl:sticky xl:top-6">
-              <div className="grid grid-cols-2 gap-4">
-                <TopStatCard
-                  label="STACQ Prisen / time"
-                  value={`kr ${formatKr(Math.round(stacqTotalPerTime))}`}
-                  sub={`${aktive.length} konsulenter i oppdrag`}
-                  accent="emerald"
-                  suffix="/ time"
-                />
-                <TopStatCard
-                  label="STACQ Prisen / mnd"
-                  value={`kr ${formatKr(Math.round(monthlyTotal))}`}
-                  sub={`${workdayCount} arbeidsdager · ${format(now, "MMMM yyyy", { locale: nb })}`}
-                  suffix="/ mnd"
-                />
-                <TopStatCard
-                  label="Snitt per konsulent"
-                  value={`kr ${formatKr(Math.round(avgPrisPerTime))}`}
-                  sub="gjennomsnitt"
-                  suffix="/ time"
-                />
-                <TopStatCard
-                  label="Oppstart"
-                  value={`+ kr ${formatKr(Math.round(oppstartTotalPerTime))}`}
-                  sub={`${oppstart.length} konsulenter kommer snart`}
-                  accent="amber"
-                  suffix="/ time"
-                />
-              </div>
-
-              <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, background: C.surface, padding: 24 }}>
+            <aside className="w-full h-full">
+              <div
+                style={{
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 8,
+                  background: C.surface,
+                  padding: 24,
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
                 <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted, marginBottom: 16 }}>
                   STACQ Prisen — ukentlig utvikling
                 </p>
-                <div style={{ height: 420 }}>
+                <div style={{ flex: 1, minHeight: 420 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
                       <defs>
@@ -330,6 +341,7 @@ export default function DesignLabStacqPrisen() {
                 )}
               </div>
             </aside>
+          </div>
           </div>
         </div>
       </main>
