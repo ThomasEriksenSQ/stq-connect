@@ -4,12 +4,53 @@
  * Combines both activity history and email data for a unified analysis.
  */
 
+import { coerceDisplayText } from "@/lib/outlookMail";
+
 export interface AiSignalResult {
   anbefalt_signal: string;
   begrunnelse: string;
   konfidens: "høy" | "middels" | "lav";
   teknologier_funnet: string[];
   tidsramme: string | null;
+}
+
+const VALID_SIGNALS = new Set([
+  "Behov nå",
+  "Får fremtidig behov",
+  "Får kanskje behov",
+  "Ukjent om behov",
+  "Ikke aktuelt",
+]);
+
+function coerceStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map((entry) => coerceDisplayText(entry)).filter(Boolean);
+  }
+
+  const text = coerceDisplayText(value);
+  return text ? [text] : [];
+}
+
+export function parseAiSignalResult(raw: unknown): AiSignalResult | null {
+  if (!raw || typeof raw !== "object") return null;
+
+  const record = raw as Record<string, unknown>;
+  const anbefaltSignal = coerceDisplayText(record.anbefalt_signal);
+  if (!VALID_SIGNALS.has(anbefaltSignal)) return null;
+
+  const konfidensRaw = coerceDisplayText(record.konfidens).toLowerCase();
+  const konfidens =
+    konfidensRaw === "høy" || konfidensRaw === "middels" || konfidensRaw === "lav"
+      ? (konfidensRaw as AiSignalResult["konfidens"])
+      : "lav";
+
+  return {
+    anbefalt_signal: anbefaltSignal,
+    begrunnelse: coerceDisplayText(record.begrunnelse),
+    konfidens,
+    teknologier_funnet: coerceStringArray(record.teknologier_funnet),
+    tidsramme: coerceDisplayText(record.tidsramme) || null,
+  };
 }
 
 const SYSTEM_PROMPT = `Du er CRM-assistent for STACQ, et norsk IT-konsulentbyrå som leverer embedded/firmware/C/C++-konsulenter.
@@ -87,13 +128,7 @@ ${emailText || "(ingen e-poster)"}`;
     const data = await resp.json();
     const text = (data.text || "").replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(text);
-    return {
-      anbefalt_signal: parsed.anbefalt_signal,
-      begrunnelse: parsed.begrunnelse,
-      konfidens: parsed.konfidens,
-      teknologier_funnet: parsed.teknologier_funnet || [],
-      tidsramme: parsed.tidsramme || null,
-    } as AiSignalResult;
+    return parseAiSignalResult(parsed);
   } catch {
     return null;
   }

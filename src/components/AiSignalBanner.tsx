@@ -5,6 +5,7 @@ import { analyzeSignal, type AiSignalResult } from "@/lib/aiSignal";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeTechnologyTags } from "@/lib/technologyTags";
+import { normalizeOutlookMailItems } from "@/lib/outlookMail";
 
 const CATEGORIES = [
   { label: "Behov nå", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
@@ -62,7 +63,11 @@ export function AiSignalBanner({
         body: { email: contactEmail },
       });
       if (error) return [];
-      return (data?.emails || []) as Array<{ subject: string; body_text: string; received_at: string }>;
+      return normalizeOutlookMailItems(data?.emails).map((email) => ({
+        subject: email.subject,
+        body_text: email.bodyText,
+        received_at: email.receivedAt || "",
+      }));
     },
     enabled: !!contactEmail,
     staleTime: 5 * 60 * 1000,

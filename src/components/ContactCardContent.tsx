@@ -92,17 +92,20 @@ import {
 } from "@/components/designlab/system/fields";
 import { mergeTechnologyTags } from "@/lib/technologyTags";
 import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/queryKeys";
+import { coerceDisplayText, normalizeOutlookMailItems } from "@/lib/outlookMail";
 /* ── Helpers for storing/retrieving category in description ── */
 
 /**
  * For legacy data: subject IS the category. For new data: subject is free-text title, category in description.
  */
-function extractTitleAndCategory(subject: string, description: string | null) {
-  const normalizedSubject = normalizeCategoryLabel(subject);
+function extractTitleAndCategory(subject: unknown, description: unknown) {
+  const subjectText = coerceDisplayText(subject);
+  const normalizedSubject = normalizeCategoryLabel(subjectText);
   // Strip bracket-only descriptions (e.g. "[Behov nå]")
-  const stripBracketOnly = (d: string | null | undefined): string => {
-    if (!d) return "";
-    return /^\[.+\]$/.test(d.trim()) ? "" : d || "";
+  const stripBracketOnly = (d: unknown): string => {
+    const text = coerceDisplayText(d);
+    if (!text) return "";
+    return /^\[.+\]$/.test(text.trim()) ? "" : text;
   };
   // Legacy: subject is a known category label
   if (CATEGORIES.some((c) => c.label === normalizedSubject)) {
@@ -111,7 +114,7 @@ function extractTitleAndCategory(subject: string, description: string | null) {
   // New format: category in description prefix
   const parsed = parseDescriptionCategory(description);
   return {
-    title: subject,
+    title: subjectText,
     category: parsed.category,
     cleanDesc: cleanDescription(stripBracketOnly(parsed.text)) || "",
   };
@@ -2084,7 +2087,7 @@ function TaskRow({
 }) {
   const [completing, setCompleting] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(task.title);
+  const [editTitle, setEditTitle] = useState(coerceDisplayText(task.title));
   const [editCategory, setEditCategory] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const parsedDueDate = parseSafeDate(task.due_date);
@@ -2367,20 +2370,20 @@ function ActivityTimeline({
       });
       if (error) throw error;
       if (data?.error === "no_outlook_connected") return [];
-      return (data?.emails || [])
-        .map((e: any) => {
-          const createdAt = typeof e.date === "string" ? e.date : null;
+      return normalizeOutlookMailItems(data?.emails)
+        .map((email) => {
+          const createdAt = email.receivedAt;
           return {
-            id: `outlook-${e.id}`,
+            id: `outlook-${email.id}`,
             type: "email" as const,
-            subject: e.subject,
+            subject: email.subject,
             created_at: createdAt,
-            from: e.from,
-            from_name: e.from_name,
-            to: e.to,
-            preview: e.preview,
-            body_text: e.body_text,
-            is_read: e.is_read,
+            from: email.from,
+            from_name: email.fromName,
+            to: email.to,
+            preview: email.preview,
+            body_text: email.bodyText,
+            is_read: email.isRead,
           };
         })
         .filter((e: any) => parseSafeDate(e.created_at));
@@ -2546,6 +2549,10 @@ function EmailRow({ email }: { email: any }) {
   const parsedDate = email.created_at ? new Date(email.created_at) : null;
   const hasValidDate = parsedDate && !Number.isNaN(parsedDate.getTime());
   const { latest, rest } = useMemo(() => splitEmailThread(email.body_text || ""), [email.body_text]);
+  const fromLabel = coerceDisplayText(email.from_name || email.from) || "Ukjent avsender";
+  const toLabel = coerceDisplayText(email.to) || "Ukjent mottaker";
+  const subject = coerceDisplayText(email.subject) || "Uten emne";
+  const preview = coerceDisplayText(email.preview);
 
   return (
     <div className="relative group">
@@ -2561,7 +2568,7 @@ function EmailRow({ email }: { email: any }) {
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="text-[1.0625rem] font-bold text-foreground truncate">{email.subject}</span>
+              <span className="text-[1.0625rem] font-bold text-foreground truncate">{subject}</span>
               <ChevronDown
                 className={cn(
                   "h-3.5 w-3.5 text-muted-foreground transition-transform flex-shrink-0",
@@ -2570,7 +2577,7 @@ function EmailRow({ email }: { email: any }) {
               />
             </div>
             <p className="text-[0.8125rem] text-muted-foreground mt-0.5">
-              {email.from_name || email.from} → {email.to}
+              {fromLabel} → {toLabel}
             </p>
 
             {expanded ? (
@@ -2597,8 +2604,8 @@ function EmailRow({ email }: { email: any }) {
                   </>
                 )}
               </div>
-            ) : email.preview ? (
-              <p className="text-[0.9375rem] text-foreground/70 line-clamp-2 mt-0.5">{email.preview}</p>
+            ) : preview ? (
+              <p className="text-[0.9375rem] text-foreground/70 line-clamp-2 mt-0.5">{preview}</p>
             ) : null}
           </div>
 
@@ -2633,7 +2640,7 @@ function ActivityRow({
   onUpdateActivity: (id: string, updates: Record<string, any>) => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(activity.subject);
+  const [editTitle, setEditTitle] = useState(coerceDisplayText(activity.subject));
   const [editCategory, setEditCategory] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const parsedActivityDate = parseSafeDate(activity.created_at);
