@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { analyzeSignal, type AiSignalResult } from "@/lib/aiSignal";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeTechnologyTags } from "@/lib/technologyTags";
 
 const CATEGORIES = [
   { label: "Behov nå", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" },
@@ -22,7 +23,7 @@ interface AiSignalBannerProps {
   contactName: string;
   contactEmail: string | null;
   currentSignal: string | null;
-  currentTechnologies: string[];
+  currentTechnologies: unknown;
   activities: Array<{ type: string; subject: string; created_at: string }>;
   lastTaskDueDate: string | null;
   onUpdateSignal: (signal: string) => void;
@@ -96,8 +97,10 @@ export function AiSignalBanner({
   if (dismissed || loading || !result) return null;
 
   // Filter new technologies not already on contact
-  const normalizedExisting = new Set(currentTechnologies.map((t) => t.toLowerCase()));
-  const newTechs = (result.teknologier_funnet || []).filter(
+  const normalizedCurrentTechnologies = normalizeTechnologyTags(currentTechnologies);
+  const normalizedExisting = new Set(normalizedCurrentTechnologies.map((t) => t.toLowerCase()));
+  const normalizedSuggestedTechnologies = normalizeTechnologyTags(result.teknologier_funnet);
+  const newTechs = normalizedSuggestedTechnologies.filter(
     (t) => !normalizedExisting.has(t.toLowerCase())
   );
 
