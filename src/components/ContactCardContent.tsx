@@ -117,6 +117,12 @@ function extractTitleAndCategory(subject: string, description: string | null) {
   };
 }
 
+function parseSafeDate(value?: string | null): Date | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 interface DefaultHiddenConfig {
   techDna?: boolean;
   notes?: boolean;
@@ -316,8 +322,19 @@ export function ContactCardContent({
     enabled: !!contactId,
   });
 
-  const profileMap = Object.fromEntries(allProfiles.map((p) => [p.id, p.full_name.split(" ")[0]]));
-  const profileMapFull = Object.fromEntries(allProfiles.map((p) => [p.id, p.full_name]));
+  const profileMap = Object.fromEntries(
+    allProfiles
+      .filter((p) => p?.id)
+      .map((p) => {
+        const fullName = typeof p.full_name === "string" ? p.full_name.trim() : "";
+        return [p.id, fullName ? fullName.split(/\s+/)[0] : "Ukjent"];
+      }),
+  );
+  const profileMapFull = Object.fromEntries(
+    allProfiles
+      .filter((p) => p?.id)
+      .map((p) => [p.id, typeof p.full_name === "string" && p.full_name.trim() ? p.full_name.trim() : "Ukjent"]),
+  );
 
   // Outlook connection status
   const { data: outlookStatus } = useQuery({
@@ -1686,14 +1703,15 @@ export function ContactCardContent({
             </div>
             <div className="space-y-px">
               {tasks.map((task) => {
-                const overdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
-                const today = task.due_date && isToday(new Date(task.due_date));
+                const dueDate = parseSafeDate(task.due_date);
+                const overdue = Boolean(dueDate && isPast(dueDate) && !isToday(dueDate));
+                const today = Boolean(dueDate && isToday(dueDate));
                 return (
                   <TaskRow
                     key={task.id}
                     task={task}
-                    overdue={!!overdue}
-                    today={!!today}
+                    overdue={overdue}
+                    today={today}
                     profileMap={profileMapFull}
                     onToggle={() => toggleTaskMutation.mutate(task.id)}
                     onDelete={(id) => deleteTaskMutation.mutate(id)}
@@ -2069,7 +2087,8 @@ function TaskRow({
   const [editTitle, setEditTitle] = useState(task.title);
   const [editCategory, setEditCategory] = useState("");
   const [editDesc, setEditDesc] = useState("");
-  const [editDate, setEditDate] = useState(task.due_date || "");
+  const parsedDueDate = parseSafeDate(task.due_date);
+  const [editDate, setEditDate] = useState(parsedDueDate ? format(parsedDueDate, "yyyy-MM-dd") : task.due_date || "");
   const [editChipIdx, setEditChipIdx] = useState<number | null>(null);
   const [editEmailNotify, setEditEmailNotify] = useState(task.email_notify ?? false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -2302,10 +2321,10 @@ function TaskRow({
                   overdue ? "text-destructive" : today ? "text-[hsl(var(--warning))]" : "text-muted-foreground",
                 )}
               >
-                {format(new Date(task.due_date), "d. MMM yyyy", { locale: nb })}
+                {parsedDueDate ? format(parsedDueDate, "d. MMM yyyy", { locale: nb }) : "Ukjent dato"}
               </span>
             </TooltipTrigger>
-            <TooltipContent>{fullDate(task.due_date)}</TooltipContent>
+            <TooltipContent>{parsedDueDate ? fullDate(task.due_date) : "Ukjent dato"}</TooltipContent>
           </Tooltip>
         ) : task.description?.includes("[someday]") || !task.due_date ? (
           <span className="text-[0.8125rem] font-medium text-muted-foreground italic">Følg opp på sikt</span>
@@ -2617,9 +2636,8 @@ function ActivityRow({
   const [editTitle, setEditTitle] = useState(activity.subject);
   const [editCategory, setEditCategory] = useState("");
   const [editDesc, setEditDesc] = useState("");
-  const [editDate, setEditDate] = useState(
-    activity.created_at ? format(new Date(activity.created_at), "yyyy-MM-dd") : "",
-  );
+  const parsedActivityDate = parseSafeDate(activity.created_at);
+  const [editDate, setEditDate] = useState(parsedActivityDate ? format(parsedActivityDate, "yyyy-MM-dd") : "");
   const [expanded, setExpanded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -2629,7 +2647,7 @@ function ActivityRow({
     cleanDesc,
   } = extractTitleAndCategory(activity.subject, activity.description);
   const ownerName = activity.created_by ? profileMap[activity.created_by] : null;
-  const d = new Date(activity.created_at);
+  const d = parsedActivityDate;
 
   const typeIcon =
     activity.type === "call" || activity.type === "phone" ? (
@@ -2661,7 +2679,7 @@ function ActivityRow({
     setEditTitle(parsed.title);
     setEditCategory(cat);
     setEditDesc(parsed.cleanDesc);
-    setEditDate(activity.created_at ? format(new Date(activity.created_at), "yyyy-MM-dd") : "");
+    setEditDate(parsedActivityDate ? format(parsedActivityDate, "yyyy-MM-dd") : "");
     setConfirmDelete(false);
     setEditing(true);
   };
@@ -2822,10 +2840,10 @@ function ActivityRow({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="text-[0.8125rem] text-muted-foreground">
-                    {format(d, "d. MMM yyyy", { locale: nb })}
+                    {d ? format(d, "d. MMM yyyy", { locale: nb }) : "Ukjent dato"}
                   </span>
                 </TooltipTrigger>
-                <TooltipContent>{fullDate(activity.created_at)}</TooltipContent>
+                <TooltipContent>{d ? fullDate(activity.created_at) : "Ukjent dato"}</TooltipContent>
               </Tooltip>
               {displayCategory && <DesignLabCategoryBadge label={displayCategory} />}
             </div>
