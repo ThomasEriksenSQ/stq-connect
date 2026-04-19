@@ -163,16 +163,25 @@ export default function Markedsradar({ hidePageIntro = false, designLabMode = fa
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <div>
-          {!hidePageIntro && <h1 className="text-[1.5rem] font-bold text-foreground">Markedsradar</h1>}
+    <div className={designLabMode ? "space-y-3" : "space-y-6"}>
+      {designLabMode ? (
+        <div className="flex justify-end">
+          <Button onClick={() => setImportOpen(true)} size="sm" variant="outline" className="gap-2">
+            <Download className="h-4 w-4" />
+            Importer uke
+          </Button>
         </div>
-        <Button onClick={() => setImportOpen(true)} className="w-full gap-2 sm:w-auto">
-          <Download className="h-4 w-4" />
-          Importer uke
-        </Button>
-      </div>
+      ) : (
+        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div>
+            {!hidePageIntro && <h1 className="text-[1.5rem] font-bold text-foreground">Markedsradar</h1>}
+          </div>
+          <Button onClick={() => setImportOpen(true)} className="w-full gap-2 sm:w-auto">
+            <Download className="h-4 w-4" />
+            Importer uke
+          </Button>
+        </div>
+      )}
 
       <Tabs defaultValue="radar">
         <TabsList className="h-auto w-full flex-wrap justify-start">
