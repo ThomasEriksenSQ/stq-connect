@@ -1,57 +1,39 @@
 
-
 ## Mål
-Vise ekstern konsulent-detaljer i høyre panel på `/design-lab/eksterne` med samme V2/Design Lab-shell som kontaktkortet på `/design-lab/kontakter`.
+Erstatte tekst-knappen "Skjul" nederst i Design Lab-sidebaren med en mer moderne, minimalistisk løsning for å collapse/expand menyen.
 
 ## Funn
-**Kontaktpanel (`DesignLabContacts.tsx` linje 2403–2450):**
-- Wrapper: `h-full flex flex-col` med `background: C.panel`, `borderLeft: 1px solid C.borderLight`
-- Topp-bar: 32px høy, kun X-knapp (`DesignLabIconButton`) høyrejustert
-- Innhold: `flex-1 overflow-y-auto px-6 py-5 dl-v8-theme`
-- Selve innholdet rendres via en delt komponent (`ContactCardContent`)
+I `src/components/designlab/DesignLabSidebar.tsx` (linje ~135–158) ligger collapse-knappen som en full-bredde rad med ChevronsLeft-ikon + teksten "Skjul". Dette tar unødvendig plass og duplikerer footer-mønsteret til "Innstillinger" og "Logg ut", noe som gjør det visuelt tyngre enn nødvendig.
 
-**Eksternt panel (`EksterneKonsulenter.tsx` linje 326–343, `ExternalConsultantDetailCard` linje 439–579):**
-- Wrapper: `border border-border rounded-lg bg-card` (kort-stil, V1-aktig)
-- Egen header med "KONSULENTPROFIL"-label + Rediger/Lukk-knapper i én rad
-- Bruker `text-[1.5rem] font-bold`, `text-[0.6875rem] uppercase` osv. (V1-typografi)
-- Mangler `dl-v8-theme`-klasse og V2-tokens (`C.panel`, `C.borderLight`)
+## Forslag (anbefalt)
+Flytt collapse-toggle til en liten, diskret ikon-knapp øverst til høyre i sidebaren — ved siden av/under logoen. Mønsteret er kjent fra Linear, Notion og Height: en liten `PanelLeft`-ikonknapp som vises ved hover på sidebaren.
 
-## Plan
+### Konkret plan
+1. **Fjerne** den eksisterende "Skjul"-knappen fra footer-blokken (linje ~135–158).
+2. **Legge til** en liten ikon-knapp i logo-raden, høyrejustert:
+   - Ikon: `PanelLeft` (lucide) — moderne standard for sidebar-toggle
+   - Størrelse: 14×14, stroke 1.5
+   - Container: 22×22, radius 4px, transparent bakgrunn
+   - Vises kun ved hover på sidebaren (opacity 0 → 1, transition 150ms) — holder UI rent når musen er borte
+   - Tooltip via `title`: "Skjul sidebar" / "Utvid sidebar"
+3. **I collapsed-modus**: Knappen vises sentrert under logoen (alltid synlig der, siden det er eneste måten å utvide tilbake), bruker `PanelLeftOpen`-ikon.
+4. **Farger**: `C.textFaint` default, `C.text` på hover, hover-bg `C.hoverSubtle`.
+5. **Group-hover**: Legge `group` på `<aside>` og `opacity-0 group-hover:opacity-100` på knappen i expanded modus.
 
-### 1. Oppdatere shell-wrapper i `EksterneKonsulenter.tsx` (linje 325–344)
-Erstatte `<div className="h-full rounded-lg border border-border bg-card overflow-hidden">` med samme struktur som kontaktpanelet:
-```tsx
-<div className="h-full flex flex-col" style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}` }}>
-  <div className="shrink-0 flex items-center justify-end px-4" style={{ height: 32 }}>
-    <DesignLabIconButton onClick={onClear} title="Lukk panel">
-      <X style={{ width: 16, height: 16 }} />
-    </DesignLabIconButton>
-  </div>
-  <div className="flex-1 overflow-y-auto px-6 py-5 dl-v8-theme">
-    <ExternalConsultantDetailCard row={selectedRow} onEdit={() => openEdit(selectedRow)} />
-  </div>
-</div>
+### Visuelt resultat
 ```
-- Importere `DesignLabIconButton` fra `@/components/designlab/controls`
-- Lukk-knapp flyttes ut av `ExternalConsultantDetailCard` og opp i shell (samme mønster som kontaktpanelet)
+Expanded:                Collapsed:
+┌──────────────────┐     ┌────┐
+│ [STACQ logo]  ‹‹ │     │ ▣  │
+│                  │     │ ›› │
+│ CRM              │     │    │
+│  Salgsagent      │     │ ▣  │
+│  Selskaper       │     │ ▣  │
+```
 
-### 2. Forenkle `ExternalConsultantDetailCard` (linje 439–579)
-- Fjerne ytre `overflow-y-auto` (skjer nå i shell)
-- Fjerne den egne header-raden (KONSULENTPROFIL + Rediger + Lukk) — beholde bare Rediger-knappen plassert øverst i kortet (eller som en inline action ved navnet)
-- Fjerne padding-wrapper `px-5 py-5`, la shellets `px-6 py-5` styre
-- Konvertere `space-y-6` indre seksjoner til samme tetthet som kontaktkortet
-- Beholde innholdsstrukturen: navn, kontakt-info, teknologier, kommentar, OppdragsMatchPanel
-- Tilpasse typografi til V2/Design Lab nivå: navn 18–20px / 600 (ikke 1.5rem bold), labels 11px medium uten uppercase-vekt-overdrivelse
-
-### 3. Plassering av Rediger-knapp
-Plasser "Rediger"-knappen i øvre høyre hjørne av selve kortinnholdet (over navn), slik kontaktkortet håndterer sine handlinger via `enableProfileEditMode`-mønsteret. Bruke `DesignLabSecondaryAction` eller eksisterende inline action-stil.
-
-## Effekt
-- Høyre panel på `/design-lab/eksterne` får samme visuelle ramme som kontaktkortet: hvit panel-bakgrunn, venstre kant-border, 32px topp-bar med X-knapp, scroll i innhold, V2-typografi via `dl-v8-theme`.
-- Innholdet (navn, teknologier, oppdragsmatch) beholdes uendret funksjonelt.
+Ikonet ligger inline i logo-raden i stedet for som en egen rad nederst — mer moderne, mindre støy.
 
 ## Utenfor scope
-- Endre selve `ContactCardContent` eller bygge ekstern variant av den.
-- Endre tabellen til venstre eller filterene.
-- Endre redigeringsmodalen (`ConsultantModal`).
-
+- Endre selve animasjonen av sidebar-bredden.
+- Endre footer-knappene (Innstillinger, Logg ut, brukeravatar).
+- Legge til tastatursnarvei (kan vurderes som oppfølging).
