@@ -82,11 +82,15 @@ function getExternalAvailabilityMeta(availableFrom: string | null | undefined) {
 interface EksterneKonsulenterProps {
   hidePageTitle?: boolean;
   embeddedSplit?: boolean;
+  showActionBar?: boolean;
+  createRequestId?: number;
 }
 
 export default function EksterneKonsulenter({
   hidePageTitle = false,
   embeddedSplit = false,
+  showActionBar = true,
+  createRequestId,
 }: EksterneKonsulenterProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -116,6 +120,13 @@ export default function EksterneKonsulenter({
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [embeddedSplit, cmdOpen]);
+
+  useEffect(() => {
+    if (createRequestId === undefined) return;
+    if (createRequestId === 0) return;
+    setEditId(null);
+    setModalOpen(true);
+  }, [createRequestId]);
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["external-consultants"],
@@ -203,41 +214,42 @@ export default function EksterneKonsulenter({
       )}
 
       {/* Search + count + Add */}
-      <div className="flex items-center gap-3">
-        <div className="relative max-w-xs flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-          <Input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Søk navn, selskap, teknologi..."
-            className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border"
-          />
+      {showActionBar && !embeddedSplit && (
+        <div className="flex items-center gap-3">
+          <div className="relative max-w-xs flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+            <Input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Søk navn, selskap, teknologi..."
+              className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border"
+            />
+          </div>
+          <div className="ml-auto" />
+          <button
+            onClick={() => navigate("/stacq/importer-cver")}
+            className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
+          >
+            <Upload className="h-4 w-4" />
+            Importer CVer
+          </button>
+          <button
+            onClick={() => setCleanupOpen(true)}
+            disabled={cleanupRunning}
+            className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+          >
+            {cleanupRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
+            Rydd dubletter
+          </button>
+          <button
+            onClick={openCreate}
+            className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+          >
+            <Plus className="h-4 w-4" />
+            Legg til
+          </button>
         </div>
-        <div className="ml-auto" />
-        <button
-          onClick={() => navigate("/stacq/importer-cver")}
-          className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
-        >
-          <Upload className="h-4 w-4" />
-          Importer CVer
-        </button>
-        <button
-          onClick={() => setCleanupOpen(true)}
-          disabled={cleanupRunning}
-          className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
-        >
-          {cleanupRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
-          Rydd dubletter
-        </button>
-        <button
-          onClick={openCreate}
-          className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-        >
-          <Plus className="h-4 w-4" />
-          Legg til
-        </button>
-      </div>
-
+      )}
       {/* Filters */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
