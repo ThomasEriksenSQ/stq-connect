@@ -2,36 +2,56 @@
 
 ## Funn
 
-I `src/pages/KonsulenterOppdrag.tsx` rendres "Type"-kolonnen som en pille basert på `companyStatusMap[o.selskap_id]` (Sluttkunde/Partner/Potensiell/—). Det er feil — det er selskapets rolle, ikke oppdragets type. Riktig kilde er `o.deal_type` (`"DIR"` → "Direkte", `"VIA"` → "Via partner").
+På `/design-lab/aktive-oppdrag` ligger fire stat-kort i en `grid grid-cols-2 md:grid-cols-4` (linje 229–252) i `src/pages/KonsulenterOppdrag.tsx`:
+- Aktive oppdrag (emerald)
+- I oppstart (amber)
+- Fornyelser under 30 dager (amber)
+- Fornyelser under 60 dager (amber)
 
-Feilen finnes på tre steder:
-- Mobile cards (linje ~298–304): `kundeType` settes fra `companyStatusMap`.
-- Embedded split-tabell (linje ~459–489): pille fra `companyStatusMap`.
-- Standalone-tabell (linje ~645–672): samme pille fra `companyStatusMap`.
+Brukeren vil ha et nytt kort **rett etter "I oppstart"** som teller oppdrag som er i ferd med å avsluttes — definert som aktive oppdrag der `slutt_dato` er satt og ligger i fremtiden (innen et fornuftig vindu). Datakilden er `enriched`, der `slutt_dato` allerede er tilgjengelig.
 
-Header-rekkefølgen er allerede `… Sluttkunde, Via partner, Type, Utpris …`, så kolonnen Type er den fjerde — den skal vise oppdragets formidlingstype.
+## Tolkning av "Avsluttes"
+
+"Sluttdato er satt på et oppdrag" alene treffer for vidt — alle ferdig planlagte oppdrag har sluttdato. For at kortet skal være handlingsrelevant (parallell til "Fornyelser under 30/60 dager") foreslås:
+
+**Avsluttes innen 60 dager**: `status ∈ {Aktiv, Oppstart}` AND `slutt_dato` satt AND dager til `slutt_dato` er mellom 0 og 60.
+
+Dette gjør kortet meningsfullt sammen med fornyelseskortene og fanger oppdrag som faktisk skal termineres snart (i motsetning til løpende fornyelser).
 
 ## Plan
 
 ### `src/pages/KonsulenterOppdrag.tsx`
 
-**1. Embedded split-tabell (linje ~459–489)** — erstatt hele `<div>{(() => { const cs = … })()}</div>`-blokken med en enkel pille basert på `o.deal_type`:
-- `o.deal_type === "VIA"` → "Via partner" (lys ravgul: `bg-amber-100 text-amber-700 border-amber-200`)
-- ellers (default `"DIR"`) → "Direkte" (lys grå-blå nøytral: `bg-slate-100 text-slate-700 border-slate-200`)
-
-Stil følger eksisterende pille-mønster: `inline-flex items-center rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold`.
-
-**2. Standalone-tabell (linje ~645–672)** — identisk endring som over.
-
-**3. Mobile cards (linje ~298–304)** — bytt `kundeType`-utregningen til:
+**1. Stats-beregning (linje 122–168)** — legg til `avsluttes60`:
 ```
-const kundeType = o.deal_type === "VIA" ? "Via partner" : "Direkte";
+const avsluttes60 = enriched.filter((o) =>
+  (o.status === "Aktiv" || o.status === "Oppstart") &&
+  o.slutt_dato &&
+  (() => {
+    const d = differenceInDays(parseOppdragDate(o.slutt_dato)!, today);
+    return d >= 0 && d <= 60;
+  })()
+).length;
 ```
-Beholder samme visningssted i kortet (under konsulent/sluttkunde-meta).
+Returner `avsluttes60` i stats-objektet.
+
+**2. Grid (linje 229)** — utvid fra 4 til 5 kort: `grid-cols-2 md:grid-cols-5`.
+
+**3. Nytt kort (sett inn rett etter "I oppstart", før "Fornyelser under 30 dager")** — bruk samme amber-stil som omkringliggende kort for visuell konsistens, med `Hourglass`-ikon (importeres fra `lucide-react`):
+```
+<div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 rounded-xl px-5 py-4 shadow-sm">
+  <Hourglass className="h-4 w-4 text-amber-600 mb-1" />
+  <p className="text-2xl font-bold text-amber-600">{stats.avsluttes60}</p>
+  <p className="text-[0.8125rem] text-muted-foreground">Avsluttes under 60 dager</p>
+  <p className="text-xs text-muted-foreground">Sluttdato satt</p>
+</div>
+```
+
+**4. Import (linje 6)** — legg til `Hourglass` i `lucide-react`-importen.
 
 ### Utenfor scope
-- Ingen endring i header-rekkefølge eller grid-template (kolonnene er allerede riktige).
-- Ingen endring i "Sluttkunde"-kolonnen eller "Via partner"-kolonnen.
-- Ingen DB- eller `oppdragForm`-endring.
-- Ingen V1-endringer utenfor denne filen.
+- Ingen nytt filter-chip "Avsluttes" (kan legges til senere ved behov).
+- Ingen endring i tabellrader, kolonner eller pille-stiler.
+- Ingen endring i V1-flater.
+- Ingen endring i `oppdragForm` eller DB.
 
