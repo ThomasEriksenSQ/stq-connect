@@ -399,7 +399,7 @@ export default function KonsulenterOppdrag({
                         className="grid gap-3 px-4 py-2.5 border-b border-border bg-background sticky top-0 z-10"
                         style={{ gridTemplateColumns: OPPDRAG_GRID_TEMPLATE }}
                       >
-                        {["Konsulent", "Kunde", "Via partner", "Type", "Utpris", "Margin", "Margin %", "Forny", "Status"].map((h) => (
+                        {["Konsulent", "Sluttkunde", "Via partner", "Type", "Utpris", "Margin", "Margin %", "Forny", "Status"].map((h) => (
                           <span
                             key={h}
                             className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap"
@@ -590,7 +590,7 @@ export default function KonsulenterOppdrag({
                   className="grid gap-3 px-4 py-2.5 border-b border-border bg-background"
                   style={{ gridTemplateColumns: OPPDRAG_GRID_TEMPLATE }}
                 >
-                  {["Konsulent", "Kunde", "Via partner", "Type", "Utpris", "Margin", "Margin %", "Forny", "Status"].map((h) => (
+                  {["Konsulent", "Sluttkunde", "Via partner", "Type", "Utpris", "Margin", "Margin %", "Forny", "Status"].map((h) => (
                     <span
                       key={h}
                       className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap"
