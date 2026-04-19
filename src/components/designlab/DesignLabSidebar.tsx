@@ -49,6 +49,18 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
 
   const isActive = (href: string) => href === activePath;
 
+  // Cmd/Ctrl + \ shortcut to toggle sidebar
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "\\") {
+        e.preventDefault();
+        setCollapsed((p) => !p);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [setCollapsed]);
+
   return (
     <aside
       className="group flex h-screen min-h-0 flex-col shrink-0 overflow-hidden"
