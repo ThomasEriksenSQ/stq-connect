@@ -18,11 +18,7 @@ import {
   DesignLabStaticTag,
   DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS,
 } from "@/components/designlab/controls";
-import {
-  DesignLabFilterRow,
-  DesignLabPrimaryAction,
-  DesignLabSecondaryAction,
-} from "@/components/designlab/system";
+import { DesignLabFilterRow, DesignLabPrimaryAction, DesignLabSecondaryAction } from "@/components/designlab/system";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import {
   AlertDialog,
@@ -124,10 +120,7 @@ export default function DesignLabEksterneKonsulenter() {
     return items;
   }, [rows, typeFilter, statusFilter, search]);
 
-  const selectedRow = useMemo(
-    () => (rows as any[]).find((row) => row.id === selectedId) ?? null,
-    [rows, selectedId],
-  );
+  const selectedRow = useMemo(() => (rows as any[]).find((row) => row.id === selectedId) ?? null, [rows, selectedId]);
 
   const openEdit = (row: any) => {
     setEditId(row.id);
@@ -184,21 +177,29 @@ export default function DesignLabEksterneKonsulenter() {
           event.currentTarget.style.background = isSelected ? C.selected : "transparent";
         }}
       >
-        <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{name}</span>
-        <span className="truncate" style={{ fontSize: 13, color: C.textMuted }}>{company}</span>
+        <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>
+          {name}
+        </span>
+        <span className="truncate" style={{ fontSize: 13, color: C.textMuted }}>
+          {company}
+        </span>
         <div>
           <DesignLabStaticTag colors={TYPE_TAG_COLORS[row.type] || DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>
             {TYPE_LABELS[row.type] || row.type}
           </DesignLabStaticTag>
         </div>
         <div>
-          <DesignLabStaticTag colors={STATUS_TAG_COLORS[availability.statusKey] || DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>
+          <DesignLabStaticTag
+            colors={STATUS_TAG_COLORS[availability.statusKey] || DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+          >
             {availability.label}
           </DesignLabStaticTag>
         </div>
         <div className="flex flex-nowrap items-center gap-1 overflow-hidden">
           {(row.teknologier || []).slice(0, 2).map((t: string) => (
-            <DesignLabStaticTag key={t} colors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>{t}</DesignLabStaticTag>
+            <DesignLabStaticTag key={t} colors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>
+              {t}
+            </DesignLabStaticTag>
           ))}
           {(row.teknologier || []).length > 2 && (
             <span className="flex-shrink-0" style={{ fontSize: 11, color: C.textFaint }}>
@@ -206,9 +207,7 @@ export default function DesignLabEksterneKonsulenter() {
             </span>
           )}
         </div>
-        <span style={{ fontSize: 13, color: C.textMuted }}>
-          {relativeFutureDate(row.tilgjengelig_fra)}
-        </span>
+        <span style={{ fontSize: 13, color: C.textMuted }}>{relativeFutureDate(row.tilgjengelig_fra)}</span>
       </button>
     );
   };
@@ -274,10 +273,7 @@ export default function DesignLabEksterneKonsulenter() {
         <div className="flex-1 min-h-0 flex">
           <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel defaultSize={38} minSize={24} maxSize={60}>
-              <div
-                className="h-full overflow-y-auto"
-                style={{ scrollbarColor: `${C.borderStrong} ${C.surfaceAlt}` }}
-              >
+              <div className="h-full overflow-y-auto" style={{ scrollbarColor: `${C.borderStrong} ${C.surfaceAlt}` }}>
                 <div
                   className="sticky top-0 z-10"
                   style={{ background: C.surfaceAlt, borderBottom: `1px solid ${C.border}` }}
@@ -338,10 +334,7 @@ export default function DesignLabEksterneKonsulenter() {
                     </DesignLabIconButton>
                   </div>
                   <div className="flex-1 overflow-y-auto px-6 py-5 dl-v8-theme">
-                    <ExternalConsultantDetailCard
-                      row={selectedRow}
-                      onEdit={() => openEdit(selectedRow)}
-                    />
+                    <ExternalConsultantDetailCard row={selectedRow} onEdit={() => openEdit(selectedRow)} />
                   </div>
                 </div>
               ) : (
@@ -349,9 +342,7 @@ export default function DesignLabEksterneKonsulenter() {
                   className="flex h-full items-center justify-center"
                   style={{ borderLeft: `1px solid ${C.borderLight}`, background: C.panel }}
                 >
-                  <p style={{ fontSize: 13, color: C.textFaint }}>
-                    Velg en ekstern konsulent — eller trykk ⌘K for å søke.
-                  </p>
+                  <p style={{ fontSize: 13, color: C.textFaint }}>Trykk ⌘K for å søke.</p>
                 </div>
               )}
             </ResizablePanel>
@@ -371,7 +362,8 @@ export default function DesignLabEksterneKonsulenter() {
           <AlertDialogHeader>
             <AlertDialogTitle>Rydd eksterne konsulenter?</AlertDialogTitle>
             <AlertDialogDescription>
-              Dette fjerner åpenbare dubletter og eksterne kandidater som matcher ansatte. Rader som allerede er koblet til en forespørsel blir hoppet over.
+              Dette fjerner åpenbare dubletter og eksterne kandidater som matcher ansatte. Rader som allerede er koblet
+              til en forespørsel blir hoppet over.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
