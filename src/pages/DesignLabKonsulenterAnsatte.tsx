@@ -384,9 +384,6 @@ export default function DesignLabKonsulenterAnsatte() {
               value={filter}
               onChange={(value) => setFilter(value)}
             />
-            <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500, whiteSpace: "nowrap" }}>
-              {stats.aktive + stats.kommende} aktive eller kommende
-            </span>
           </div>
         </div>
 
