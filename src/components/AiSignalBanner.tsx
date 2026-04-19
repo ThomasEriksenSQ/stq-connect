@@ -106,10 +106,11 @@ export function AiSignalBanner({
   const newTechs = normalizedSuggestedTechnologies.filter(
     (t) => !normalizedExisting.has(t.toLowerCase())
   );
+  const remainingTechs = newTechs.filter((t) => !addedTechs.has(t.toLowerCase()));
 
   const hasResult = Boolean(result);
   const signalChanged = Boolean(result && result.anbefalt_signal !== currentSignal);
-  const hasNewTechs = newTechs.length > 0 && !techsAdded;
+  const hasNewTechs = remainingTechs.length > 0;
   const isVisible = !dismissed && !loading && hasResult && !(applied && !hasNewTechs) && (signalChanged || hasNewTechs);
 
   useEffect(() => {
