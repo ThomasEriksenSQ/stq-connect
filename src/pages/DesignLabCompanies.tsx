@@ -613,7 +613,7 @@ export default function DesignLabCompanies() {
                 <div
                   className="grid items-center"
                   style={{
-                    gridTemplateColumns: "minmax(220px,2.2fr) minmax(140px,1.2fr) minmax(180px,1.4fr) 132px",
+                    gridTemplateColumns: "minmax(220px,2.2fr) minmax(140px,1.2fr) minmax(180px,1.4fr) 110px 132px",
                     height: 32,
                     paddingLeft: 16, paddingRight: 16,
                   }}
@@ -621,6 +621,9 @@ export default function DesignLabCompanies() {
                   <DesignLabColumnHeader label="Selskap" field="name" sort={sort} onSort={toggleSort} />
                   <DesignLabColumnHeader label="Type" field="type" sort={sort} onSort={toggleSort} />
                   <DesignLabColumnHeader label="Sted" field="city" sort={sort} onSort={toggleSort} />
+                  <div style={{ fontSize: 11, fontWeight: 500, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.04em", textAlign: "right" }}>
+                    Kontakter
+                  </div>
                   <DesignLabColumnHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
                 </div>
                 </div>
