@@ -1,25 +1,22 @@
-import { useState, useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState } from "react";
 import { format, startOfDay } from "date-fns";
 import { nb } from "date-fns/locale";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { calcStacqPris } from "@/lib/stacqPris";
 import { countNorwegianWorkdays } from "@/lib/norwegianHolidays";
 import { getInitials } from "@/lib/utils";
-import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip as ReTooltip, ResponsiveContainer, ReferenceLine,
 } from "recharts";
-import { Input } from "@/components/ui/input";
 import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { C } from "@/components/designlab/theme";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { DesignLabColumnHeader } from "@/components/designlab/system";
-import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
 import { computeOppdragStatus as computeSharedOppdragStatus } from "@/lib/oppdragForm";
 
 /* Colors imported from @/components/designlab/theme */
@@ -83,10 +80,8 @@ function parseOppdragDate(value?: string | null): Date | null {
    ═══════════════════════════════════════════════════════════ */
 export default function DesignLabStacqPrisen() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { signOut, user } = useAuth();
   const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
-  const [editRow, setEditRow] = useState<any | null>(null);
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "stacq", dir: "desc" });
 
   const { data: rows = [], isLoading } = useQuery({
@@ -277,8 +272,9 @@ export default function DesignLabStacqPrisen() {
                     return (
                       <div
                         key={row.id}
-                        onClick={() => setEditRow(row)}
+                        onClick={() => navigate("/design-lab/aktive-oppdrag")}
                         className="grid items-center cursor-pointer"
+                        title="Rediger på Aktive oppdrag"
                         style={{
                           gridTemplateColumns: "minmax(0,1.6fr) minmax(0,1.4fr) 100px 88px 80px 112px 64px 84px",
                           minHeight: 38, paddingInline: 16,
@@ -397,12 +393,6 @@ export default function DesignLabStacqPrisen() {
         </div>
       </main>
 
-      {/* Edit modal */}
-      {editRow && (
-        <div className="dl-v8-theme">
-          <EditModal row={editRow} onClose={() => setEditRow(null)} queryClient={queryClient} />
-        </div>
-      )}
     </div>
   );
 }
@@ -494,69 +484,5 @@ function StatusBadge({ status }: { status: string }) {
     >
       {status}
     </span>
-  );
-}
-
-function EditModal({ row, onClose, queryClient }: { row: any; onClose: () => void; queryClient: any }) {
-  const [utpris, setUtpris] = useState(row.utpris?.toString() || "");
-  const [override, setOverride] = useState(row.til_konsulent_override?.toString() || "");
-  const [ekstra, setEkstra] = useState(row.ekstra_kostnad?.toString() || "");
-  const [saving, setSaving] = useState(false);
-
-  const saveMut = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("stacq_oppdrag").update({
-        utpris: utpris ? Number(utpris) : null,
-        til_konsulent_override: override ? Number(override) : null,
-        ekstra_kostnad: ekstra ? Number(ekstra) : null,
-      }).eq("id", row.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Oppdatert");
-      queryClient.invalidateQueries({ queryKey: ["stacq-oppdrag-prisen"] });
-      onClose();
-    },
-    onError: () => toast.error("Kunne ikke lagre"),
-  });
-
-  return (
-    <DesignLabEntitySheet
-      open
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) onClose();
-      }}
-      contentClassName="px-6 py-6"
-    >
-        <h2 style={{ fontSize: 16, fontWeight: 600, color: C.text, marginBottom: 16 }}>
-          Juster STACQ Prisen — {row.kandidat}
-        </h2>
-        <div className="space-y-3">
-          <div>
-            <label style={{ ...thStyle, display: "block", marginBottom: 4 }}>Utpris</label>
-            <Input type="number" value={utpris} onChange={(e) => setUtpris(e.target.value)} style={{ height: 32, fontSize: 13, border: `1px solid ${C.border}` }} />
-          </div>
-          <div>
-            <label style={{ ...thStyle, display: "block", marginBottom: 4 }}>Til konsulent override</label>
-            <Input type="number" value={override} onChange={(e) => setOverride(e.target.value)} placeholder="Tom = standard 70%" style={{ height: 32, fontSize: 13, border: `1px solid ${C.border}` }} />
-          </div>
-          <div>
-            <label style={{ ...thStyle, display: "block", marginBottom: 4 }}>Ekstra kostnad / time</label>
-            <Input type="number" value={ekstra} onChange={(e) => setEkstra(e.target.value)} placeholder="f.eks. 80 for deal-bonus" style={{ height: 32, fontSize: 13, border: `1px solid ${C.border}` }} />
-            <p style={{ fontSize: 12, color: C.textFaint, marginTop: 4 }}>Ekstra kostnad trekkes fra STACQ Prisen. Brukes for deal-avtaler, bonus-forpliktelser e.l.</p>
-          </div>
-        </div>
-        <div className="flex items-center justify-between mt-5 pt-4" style={{ borderTop: `1px solid ${C.border}` }}>
-          <button onClick={onClose} style={{ fontSize: 13, color: C.textFaint }} className="hover:opacity-80 transition-opacity">Avbryt</button>
-          <button
-            disabled={saving}
-            onClick={() => { setSaving(true); saveMut.mutate(); }}
-            className="inline-flex items-center gap-1.5 rounded-md transition-opacity hover:opacity-90"
-            style={{ height: 30, paddingInline: 11, fontSize: 13, fontWeight: 500, background: C.accent, color: "#fff", borderRadius: 5 }}
-          >
-            {saving ? "Lagrer…" : "Lagre"}
-          </button>
-        </div>
-    </DesignLabEntitySheet>
   );
 }
