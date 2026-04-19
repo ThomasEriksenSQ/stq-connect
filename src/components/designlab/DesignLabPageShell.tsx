@@ -10,6 +10,7 @@ import { C } from "@/components/designlab/theme";
 interface DesignLabPageShellProps {
   activePath: string;
   title: string;
+  count?: number | null;
   children: ReactNode;
   maxWidth?: number | string | null;
   headerRight?: ReactNode;
@@ -20,6 +21,7 @@ interface DesignLabPageShellProps {
 export function DesignLabPageShell({
   activePath,
   title,
+  count,
   children,
   maxWidth = 1180,
   headerRight,
@@ -41,6 +43,9 @@ export function DesignLabPageShell({
         <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
           <div className="flex items-baseline gap-2.5">
             <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{title}</h1>
+            {typeof count === "number" ? (
+              <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {count}</span>
+            ) : null}
           </div>
           <div className="flex items-center gap-2">
             {headerRight}
