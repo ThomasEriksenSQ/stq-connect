@@ -463,6 +463,6 @@ export function VarslingsInnstillingerV2() {
           </DesignLabSecondaryAction>
         </div>
       </SectionCard>
-    </div>
+    </>
   );
 }
