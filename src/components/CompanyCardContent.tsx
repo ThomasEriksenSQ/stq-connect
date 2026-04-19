@@ -1116,7 +1116,9 @@ export function CompanyCardContent({
   const relatedContactsContent = (
     <div className="pt-4 md:pt-0">
       <div className="mb-3 flex items-center justify-between gap-3" style={{ minHeight: 32 }}>
-        <h3 className="text-[12px] font-medium text-[#5C636E]">Kontakter · {contacts.length}</h3>
+        <h3 className="text-[13px] font-medium text-[#1A1C1F]">
+          Kontakter <span className="font-normal text-[#8C929C]">· {contacts.length}</span>
+        </h3>
         {editable && (
           <>
             <DesignLabPrimaryAction onClick={() => setNewContactOpen(true)}>
@@ -2159,8 +2161,8 @@ function CompanyActivityTimeline({
     return (
       <div>
         <div className="flex items-center" style={{ minHeight: 32 }}>
-          <h3 className="text-[12px] font-medium text-[#5C636E]">
-            Aktiviteter · 0
+          <h3 className="text-[13px] font-medium text-[#1A1C1F]">
+            Aktiviteter <span className="font-normal text-[#8C929C]">· 0</span>
           </h3>
         </div>
         <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen aktiviteter</p>
@@ -2171,8 +2173,8 @@ function CompanyActivityTimeline({
   return (
     <div>
       <div className="flex items-center mb-3" style={{ minHeight: 32 }}>
-        <h3 className="text-[12px] font-medium text-[#5C636E]">
-          Aktiviteter · {activities.length}
+        <h3 className="text-[13px] font-medium text-[#1A1C1F]">
+          Aktiviteter <span className="font-normal text-[#8C929C]">· {activities.length}</span>
         </h3>
       </div>
 
