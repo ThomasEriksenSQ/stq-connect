@@ -23,7 +23,7 @@ export function DesignVersionToggle() {
       className={cn(
         "fixed bottom-5 right-5 z-[9999] inline-flex items-center rounded-full px-4 py-2 text-[0.8125rem] font-medium shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2",
         isV2Active
-          ? "border border-transparent bg-[#5E6AD2] text-white hover:bg-[#4F5AB8] focus:ring-[#5E6AD2]"
+          ? "border border-transparent bg-[#2563EB] text-white hover:bg-[#1D4ED8] focus:ring-[#2563EB]"
           : "border border-[#DDE0E7] bg-[#F4F5F8] text-[#5C636E] hover:bg-[#ECEFF4] focus:ring-[#DDE0E7]",
       )}
     >
