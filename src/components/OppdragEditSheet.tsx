@@ -766,6 +766,8 @@ export function OppdragEditSheet({
             Status settes automatisk basert på start- og sluttdato.
           </p>
         </div>
+
+        <div>
           <label className={LABEL}>Kommentar</label>
           <textarea
             value={kommentar}
