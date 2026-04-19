@@ -394,6 +394,7 @@ export function OppdragEditSheet({
     setUtpris(String(row.utpris || ""));
     setTilKonsulent(String(row.til_konsulent || ""));
     setStartDato(row.start_dato ? new Date(row.start_dato) : undefined);
+    setSluttDato(row.slutt_dato ? new Date(row.slutt_dato) : undefined);
     setKommentar(row.kommentar || "");
     setSelskapId(row.selskap_id || null);
     setSelskapNavn(row.kunde || null);
