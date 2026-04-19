@@ -1,61 +1,57 @@
 
-
 ## Mål
-Standardisere kolonneoverskriftene i alle V2 Design Lab-tabeller til samme "sannhet" som "Aktive oppdrag" og "Eksterne" (som per skjermbildet er fasit): **11px / font-weight 500 / UPPERCASE / letter-spacing 0.08em / farge `C.textMuted`**.
+Omorganiser kolonner i Forespørsler-tabellen (Design Lab), legg til Signal-kolonne, og match stylen på Kontakt og Selskap til hvordan de samme tingene vises i Kontakter-tabellen.
 
-## Sannhet (referanse)
-Fra `KonsulenterOppdrag.tsx` (linje 403–409) og `EksterneKonsulenter.tsx` (linje 248):
-```
-text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground
-```
-= `fontSize: 11, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em", color: C.textMuted`
-
-## Funn — avvik mot sannheten
-
-| Tabell | Komponent / fil | Nåværende stil | Avvik |
+## Ny kolonne-rekkefølge
+| # | Kolonne | Kilde | Stil |
 |---|---|---|---|
-| Aktive oppdrag | `KonsulenterOppdrag.tsx` | 11/500/UPPER/0.08em | ✅ sannhet |
-| Eksterne | `EksterneKonsulenter.tsx` | 11/500/UPPER/0.08em | ✅ sannhet |
-| Ansatte | `DesignLabKonsulenterAnsatte.tsx` | 11/500/UPPER/**0.04em** | letter-spacing for tett |
-| Selskaper | `DesignLabCompanies.tsx` via `DesignLabColumnHeader` | 11/500/**ingen uppercase**/0.01em | mangler uppercase + spacing |
-| Kontakter | `DesignLabContacts.tsx` via `DesignLabColumnHeader` | 11/500/**ingen uppercase**/0.01em + "Finn" på `C.textFaint` | mangler uppercase + spacing |
-| Forespørsler | `DesignLabForesporsler.tsx` via `DesignLabColumnHeader` + spans (0.04em) | blandet | mangler uppercase, blandet spacing |
-| Stacq Prisen | `DesignLabStacqPrisen.tsx` via `DesignLabColumnHeader` + `thStyle` (0.04em) | blandet | mangler uppercase, blandet spacing |
-
-Brukeren sier også at Ansatte "ser ut til å være korrekt" — men målt mot Aktive oppdrag/Eksterne er den marginalt for tett (0.04em vs 0.08em). Jeg justerer Ansatte og alle de andre opp til 0.08em så alt matcher 100 %.
+| 1 | **Kontakt** | `row.contacts.first_name + last_name` | 13px / 500 / `C.text` (samme som "Navn" i Kontakter) |
+| 2 | **Signal** | Utledet via `getEffectiveSignal(activities, tasks)` per kontakt | `DesignLabSignalBadge` (samme komponent som Kontakter) |
+| 3 | **Selskap** | `row.selskap_navn` | 12px / `C.textMuted` (samme som "Selskap"-kolonnen i Kontakter, ikke fet) |
+| 4 | **Type** | `row.type` | `TypeChip` (uendret) |
+| 5 | **Teknologier** | `row.teknologier` | `DesignLabReadonlyChip` (uendret) |
+| 6 | **Konsulent** | `foresporsler_konsulenter` | Avatar + navn (uendret) |
+| 7 | **Status** | Pipeline-status per konsulent | Status-pill (uendret) |
+| 8 | **Mottatt** | `row.mottatt_dato` via `relTime(days)` | 13px / 500 + fargekoder (uendret stil, ny posisjon) |
 
 ## Endringer
 
-**1. `src/components/designlab/system/table.tsx` — `DesignLabColumnHeader`**
-Endre stil til sannheten:
-- `fontSize: 11`
-- `fontWeight: 500` (også når aktiv — drop 600)
-- `letterSpacing: "0.08em"`
-- `textTransform: "uppercase"`
-- `color: C.textMuted` (også når aktiv)
+### 1. Henting av Signal per kontakt
+I `useQuery` i `DesignLabForesporsler.tsx`:
+- Samle alle unike `contact_id` fra `rows` etter at hovedspørringen er ferdig.
+- Legg til en ny `useQuery` som henter `activity_log` og `tasks` for disse kontaktene.
+- Bygg et `signalByContactId: Map<string, string>` ved å kjøre `getEffectiveSignal(activities, tasks)` per kontakt (samme mønster som i `DesignLabContacts.tsx` linjer 739–757).
 
-Dette løfter Selskaper, Kontakter, Forespørsler og Stacq Prisen automatisk siden alle bruker denne komponenten.
-
-**2. `src/pages/DesignLabStacqPrisen.tsx`**
-Oppdater `thStyle` (linje 363–365):
-```ts
-const thStyle = { fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted };
+### 2. `TableHeader` (linje 423–447)
+Ny kolonnedefinisjon:
 ```
+"minmax(180px,1.3fr) 132px minmax(180px,1.2fr) 88px minmax(180px,1.05fr) minmax(190px,1.15fr) minmax(120px,0.85fr) 92px"
+```
+Rekkefølge på `<DesignLabColumnHeader>`/spans: Kontakt → Signal → Selskap → Type → Teknologier → Konsulent → Status → Mottatt.
 
-**3. `src/pages/DesignLabForesporsler.tsx`** (linje 441–443)
-Endre de tre inline `<span>` for "Type", "Teknologier", "Konsulent" fra 0.04em til 0.08em + `textTransform: "uppercase"`.
+Sortering:
+- "Kontakt" → `field="kontakt"` (allerede definert i `SortField`)
+- "Signal" → ny `field="signal"` (legg til i `SortField` + sort-switch som sorterer på Signal-rangering tilsvarende `SIGNAL_ORDER` fra Kontakter)
+- "Selskap" → `field="selskap_navn"`
+- "Status" → `field="sendt_count"` (uendret)
+- "Mottatt" → `field="mottatt_dato"` (uendret)
 
-**4. `src/pages/DesignLabContacts.tsx`** (linje 2242)
-Endre "Finn"-spanet fra `color: C.textFaint` uten uppercase til samme stil som de andre overskriftene (11/500/UPPER/0.08em/`C.textMuted`).
+### 3. `ForespRow` (linje 449–596)
+Samme nye `cols` som header. Send `signalByContactId` inn som prop og slå opp med `row.contacts?.id`.
 
-**5. `src/pages/DesignLabKonsulenterAnsatte.tsx`** (linje 401–408)
-Endre `letterSpacing: "0.04em"` → `"0.08em"`.
+Render-rekkefølge:
+1. **Kontakt**: `<span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>` med `kontaktNavn`. Hvis ingen kontakt: `—` i `C.textGhost`.
+2. **Signal**: `signal ? <DesignLabSignalBadge signal={signal} /> : <span style={{ fontSize: 11, color: C.textGhost }}>—</span>` (samme mønster som Kontakter linje 2293–2299).
+3. **Selskap**: `<span className="block truncate" style={{ fontSize: 12, color: C.textMuted }}>{row.selskap_navn}</span>` (matcher Kontakter linje 2313).
+4. **Type / Teknologier / Konsulent / Status**: uendret blokker, bare flyttet i rekkefølge.
+5. **Mottatt**: eksisterende `relTime(days)`-span med fargekoder, flyttet til sist.
 
-## Visuell effekt
-Alle Design Lab-tabellene får samme overskriftsstil som "Aktive oppdrag" og "Eksterne" på skjermbildet: jevn UPPERCASE, 11px, lett demped grå, samme letter-spacing.
+### 4. Imports
+Legg til i `DesignLabForesporsler.tsx`:
+- `DesignLabSignalBadge` fra `@/components/designlab/system`
+- `getEffectiveSignal`, `normalizeCategoryLabel` fra `@/lib/categoryUtils`
 
 ## Utenfor scope
-- Ingen endring i radhøyder, kolonnebredder eller datacelle-styling.
-- V1-flatene (`/markedsradar`, `/kontakter`, `/selskaper` osv.) er allerede på sannheten der det gjelder; ingen endring der.
-- Ingen endring av sortering/funksjonalitet i `DesignLabColumnHeader`.
-
+- Ingen endring i filtre, stat-linje, header eller detaljpanel.
+- Ingen endring i V1 `/foresporsler`.
+- Ingen endring i kolonneoverskrift-stilen (allerede standardisert i forrige runde).
