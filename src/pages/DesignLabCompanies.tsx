@@ -498,7 +498,7 @@ export default function DesignLabCompanies() {
         onClick={() => setSelectedId(isSelected ? null : company.id)}
         className="grid items-center cursor-pointer group"
         style={{
-          gridTemplateColumns: "minmax(220px,2.2fr) minmax(140px,1.2fr) minmax(180px,1.4fr) 132px",
+          gridTemplateColumns: "minmax(220px,2.2fr) minmax(140px,1.2fr) minmax(180px,1.4fr) 110px 132px",
           minHeight: 38, paddingLeft: 16, paddingRight: 16,
           borderBottom: `1px solid ${C.borderLight}`,
           background: isSelected ? C.activeBg : "transparent",
