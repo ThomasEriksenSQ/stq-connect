@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { addDays, format } from "date-fns";
 import { buildOppdragWritePayload, createOppdragFormState } from "@/lib/oppdragForm";
 
 describe("oppdragForm", () => {
@@ -59,5 +60,49 @@ describe("oppdragForm", () => {
         }),
       ),
     ).toThrow("Velg intern eller ekstern konsulent først");
+  });
+
+  it("derives status Inaktiv when sluttdato is in the past", () => {
+    const payload = buildOppdragWritePayload(
+      createOppdragFormState({
+        kandidat: "Anders Nilsen",
+        personType: "ansatt",
+        ansattId: 5,
+        status: "Aktiv",
+        startDato: addDays(new Date(), -60),
+        sluttDato: addDays(new Date(), -1),
+      }),
+    );
+
+    expect(payload.status).toBe("Inaktiv");
+    expect(payload.slutt_dato).toBe(format(addDays(new Date(), -1), "yyyy-MM-dd"));
+  });
+
+  it("derives status Oppstart when startdato is in the future", () => {
+    const payload = buildOppdragWritePayload(
+      createOppdragFormState({
+        kandidat: "Anders Nilsen",
+        personType: "ansatt",
+        ansattId: 5,
+        status: "Aktiv",
+        startDato: addDays(new Date(), 7),
+      }),
+    );
+
+    expect(payload.status).toBe("Oppstart");
+  });
+
+  it("derives status Aktiv when startdato is today and no sluttdato", () => {
+    const payload = buildOppdragWritePayload(
+      createOppdragFormState({
+        kandidat: "Anders Nilsen",
+        personType: "ansatt",
+        ansattId: 5,
+        status: "Oppstart",
+        startDato: new Date(),
+      }),
+    );
+
+    expect(payload.status).toBe("Aktiv");
   });
 });
