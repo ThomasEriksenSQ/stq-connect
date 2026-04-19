@@ -42,9 +42,9 @@ type SortField = "mottatt_dato" | "selskap_navn" | "sendt_count" | "kontakt" | "
 type SortDir = "asc" | "desc";
 
 const STATUS_CHIPS: { value: StatusFilter; label: string }[] = [
-  { value: "aktive", label: "Aktive" },
-  { value: "utgatte", label: "Utgåtte" },
   { value: "alle", label: "Alle" },
+  { value: "aktive", label: "Aktive (siste 45 dager)" },
+  { value: "utgatte", label: "Utgåtte" },
 ];
 
 const TYPE_CHIPS: { value: TypeFilter; label: string }[] = [
@@ -373,7 +373,7 @@ export default function DesignLabForesporsler() {
           <DesignLabFilterRow
             label="TID"
             options={STATUS_CHIPS.map((option) => option.label)}
-            value={STATUS_CHIPS.find((option) => option.value === statusFilter)?.label ?? "Aktive"}
+            value={STATUS_CHIPS.find((option) => option.value === statusFilter)?.label ?? "Aktive (siste 45 dager)"}
             onChange={(value) => {
               const next = STATUS_CHIPS.find((option) => option.label === value);
               if (next) setStatusFilter(next.value);
