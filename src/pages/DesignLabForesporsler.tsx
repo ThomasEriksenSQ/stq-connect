@@ -515,6 +515,21 @@ export default function DesignLabForesporsler() {
         ) : null}
       </DesignLabEntitySheet>
       <NyForesporselModal open={createOpen} onClose={() => setCreateOpen(false)} />
+
+      <CommandPalette
+        open={cmdOpen}
+        onClose={() => setCmdOpen(false)}
+        textSize={textSize}
+        contacts={paletteContacts}
+        companies={paletteCompanies}
+        selectedContact={null}
+        onSelectContact={(id) => {
+          const row = (rows as any[]).find((r) => r.contacts?.id === id);
+          if (row) setSelectedRowId(row.id);
+        }}
+        onFilterByCompany={(name) => setSearch(name)}
+        onResetSearch={search ? () => setSearch("") : undefined}
+      />
     </div>
   );
 }
