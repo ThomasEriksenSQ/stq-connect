@@ -48,8 +48,8 @@ export function DesignLabPageShell({
             ) : null}
           </div>
           <div className="flex items-center gap-2">
-            {headerRight}
             <TextSizeControl value={textSize} onChange={setTextSize} />
+            {headerRight}
           </div>
         </header>
 
