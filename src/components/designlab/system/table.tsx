@@ -24,9 +24,10 @@ export function DesignLabColumnHeader<TField extends string>({
       className={cn("flex items-center gap-0.5 transition-colors", className)}
       style={{
         fontSize: 11,
-        fontWeight: active ? 600 : 500,
-        letterSpacing: "0.01em",
-        color: active ? C.text : C.textMuted,
+        fontWeight: 500,
+        letterSpacing: "0.08em",
+        textTransform: "uppercase",
+        color: C.textMuted,
       }}
     >
       {label}

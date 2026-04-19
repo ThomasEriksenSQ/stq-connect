@@ -2239,7 +2239,7 @@ export default function DesignLabContacts() {
                     >
                       <DesignLabColumnHeader label="Navn" field="name" sort={sort} onSort={toggleSort} />
                       <DesignLabColumnHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
-                      <span style={{ fontSize: 11, fontWeight: 500, color: C.textFaint }}>Finn</span>
+                      <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Finn</span>
                       <DesignLabColumnHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
                       <DesignLabColumnHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />
                       <DesignLabColumnHeader label="Tags" field="priority" sort={sort} onSort={toggleSort} />
