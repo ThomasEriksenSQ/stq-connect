@@ -456,14 +456,12 @@ function TopStatCard({
   );
 }
 
-function TypeBadge({ status }: { status: string | null }) {
-  let label = "—";
-  let bg: string = "rgba(0,0,0,0.04)";
-  let color: string = C.textFaint;
-  let borderColor: string = C.border;
-  if (status === "partner") { label = "Partner"; bg = C.warningBg; color = C.warning; borderColor = "rgba(154,122,42,0.15)"; }
-  else if (status === "customer" || status === "kunde") { label = "Kunde"; bg = C.successBg; color = C.success; borderColor = "rgba(74,154,106,0.15)"; }
-  else if (status === "prospect") { label = "Potensiell"; bg = C.accentBg; color = C.accent; borderColor = "rgba(1,105,111,0.15)"; }
+function TypeBadge({ dealType }: { dealType: string | null }) {
+  const isVia = dealType === "VIA";
+  const label = isVia ? "Via partner" : "Direkte";
+  const bg = isVia ? C.warningBg : C.surfaceAlt;
+  const color = isVia ? C.warning : C.textMuted;
+  const borderColor = isVia ? "rgba(154,122,42,0.15)" : C.border;
   return (
     <span className="inline-flex items-center rounded" style={{ fontSize: 11, fontWeight: 500, paddingInline: 8, paddingBlock: 2, background: bg, color, border: `1px solid ${borderColor}` }}>
       {label}
