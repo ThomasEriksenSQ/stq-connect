@@ -233,6 +233,23 @@ function PersonSearchField({
     },
   });
 
+  const { data: cvPortraits = [] } = useQuery({
+    queryKey: ["oppdrag-create-portraits"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("cv_documents")
+        .select("ansatt_id, portrait_url")
+        .not("portrait_url", "is", null);
+      return data || [];
+    },
+  });
+
+  const portraitByAnsattId = new Map<number, string>(
+    (cvPortraits as any[])
+      .filter((c) => c.ansatt_id && c.portrait_url)
+      .map((c) => [c.ansatt_id, c.portrait_url] as [number, string]),
+  );
+
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 50);
@@ -305,14 +322,28 @@ function PersonSearchField({
                 className="w-full text-left px-2 py-2 rounded hover:bg-muted transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <div
-                    className={cn(
-                      "h-6 w-6 rounded-full flex items-center justify-center text-[0.625rem] font-semibold shrink-0",
-                      isIntern ? "bg-primary/10 text-primary" : "bg-blue-100 text-blue-700",
-                    )}
-                  >
-                    {getInitials(candidate.navn || "?")}
-                  </div>
+                  {(() => {
+                    const portrait = isIntern ? portraitByAnsattId.get(candidate.id) : undefined;
+                    if (portrait) {
+                      return (
+                        <img
+                          src={portrait}
+                          alt={candidate.navn || ""}
+                          className="h-6 w-6 rounded-full object-cover shrink-0 border border-border"
+                        />
+                      );
+                    }
+                    return (
+                      <div
+                        className={cn(
+                          "h-6 w-6 rounded-full flex items-center justify-center text-[0.625rem] font-semibold shrink-0",
+                          isIntern ? "bg-primary/10 text-primary" : "bg-blue-100 text-blue-700",
+                        )}
+                      >
+                        {getInitials(candidate.navn || "?")}
+                      </div>
+                    );
+                  })()}
                   <span className="text-[0.8125rem] font-medium text-foreground">{candidate.navn || "Ukjent"}</span>
                 </div>
                 {isIntern && candidate.kompetanse?.length > 0 && (
