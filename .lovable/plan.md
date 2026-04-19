@@ -2,42 +2,68 @@
 
 ## Funn
 
-I `src/lib/followUpViewModel.ts` mapper `SIGNAL_TO_PRIORITY` i dag både "Ukjent om behov" og "Ikke aktuelt" til **P4**. Det betyr at "død" lead og "vet ikke ennå" får samme visuelle vekt — uheldig når man scanner listen.
+I dag styres prioritet kun av kontaktens salgssignal (P1–P5) i `src/lib/followUpViewModel.ts`. Feltene `email_notify` (DB) og `calendarSync` (kun runtime, ikke persistert i dag) settes i `FollowUpModal.tsx`, men brukes ikke til prioritering.
 
-I `src/pages/DesignLabOppfolginger.tsx` (linje 56–81) defineres farger/stiler kun for P1–P4. P4 er nøytral grå.
+I `FollowUpViewModel` finnes allerede `emailNotify: boolean` (mappet fra `task.email_notify`). Kalender-sync er derimot ikke lagret per i dag — den brukes kun til å opprette Outlook-event ved oppretting.
+
+## Tolkning av krav
+
+> "Hvis Epostvarsling ved forfall eller Legg til Outlook-kalender er sjekket av på en oppfølging, skal den få **P1**-prioritet avhengig av signal satt."
+
+Jeg leser dette som: **Hvis brukeren aktivt har bedt om varsling (e-post eller kalender), er oppgaven viktig nok til å løftes til P1** — uavhengig av hvilket signal kontakten har. Signalet bestemmer fortsatt prioritet når ingen varsling er aktiv.
+
+Kort sagt: varsling = "jeg vil ikke glemme denne" → P1.
+
+(Si fra hvis du heller mente noe annet, f.eks. "kun løft til P1 hvis signalet allerede er P2/P3" — da justerer jeg.)
 
 ## Plan
 
-Innfør **P5** dedikert til "Ikke aktuelt", slik at det skiller seg visuelt fra P4 ("Ukjent om behov"). Alt annet beholdes uendret.
+### Endring 1 — Persister kalendervalget
 
-### Endring 1 — `src/lib/followUpViewModel.ts`
+I dag lagres ikke `calendarSync` på tasken. Vi må vite om kalendersync er valgt for å kunne bruke det i prioritetsberegning.
 
-- Utvid `FollowUpPriority`-typen: `"P1" | "P2" | "P3" | "P4" | "P5" | null`
-- Endre `SIGNAL_TO_PRIORITY`:
-  - `"Ikke aktuelt"` → `"P5"` (i stedet for P4)
-  - "Ukjent om behov" forblir P4
-- Legg til `P5: 5` i `PRIORITY_RANK` slik at sortering plasserer P5 etter P4
+- Legg til kolonne `calendar_sync boolean default false` på `tasks` (migration).
+- Oppdater `DesignLabOppfolginger.tsx` (linje ~370 hvor task opprettes) til å lagre `calendar_sync`.
+- Oppdater `FollowUpTaskRecord`-typen og `buildFollowUpViewModels` til å lese feltet.
+- Legg `calendarSync: boolean` i `FollowUpViewModel`.
 
-### Endring 2 — `src/pages/DesignLabOppfolginger.tsx`
+### Endring 2 — Løft til P1 ved varsling
 
-- Legg til P5-stil i prioritets-fargekartet (rundt linje 56–81). Forslag: enda mer dempet/utvasket enn P4 — f.eks. lys rød-grå tone som signaliserer "lukket/ikke aktuelt" uten å rope. Konkret: bakgrunn `#F1E9E9`, tekst `#8C7A7A`, border `#E5D8D8` (i tråd med V8 desaturert palett).
-- Sørg for at badge-renderingen håndterer "P5" på samme måte som de andre nivåene.
+I `mapPriority`-logikken i `src/lib/followUpViewModel.ts`:
+
+```ts
+function mapPriority(signal, taskPriority, emailNotify, calendarSync) {
+  if (emailNotify || calendarSync) return "P1";
+  // eksisterende signal-basert mapping
+  ...
+}
+```
+
+Oppdater kall i `buildFollowUpViewModels` til å sende inn `task.email_notify` og `task.calendar_sync`.
+
+### Endring 3 — Sortering oppdateres automatisk
+
+`priorityRank` regnes allerede ut fra resultat av `mapPriority`, så P1-løftede oppgaver havner automatisk øverst sammen med "Behov nå"-oppgavene. Ingen ekstra sorteringsendring trengs.
+
+### Endring 4 — Ingen visuell endring
+
+P1-badgen er allerede definert i `DesignLabOppfolginger.tsx`. Den brukes uendret. Brukeren ser bare at oppgaver med varsling får rød P1-pille.
 
 ### Resultat
 
-| Salgssignal | Prioritet (før) | Prioritet (etter) |
-|---|---|---|
-| Behov nå | P1 | P1 |
-| Får fremtidig behov | P2 | P2 |
-| Får kanskje behov | P3 | P3 |
-| Ukjent om behov | P4 | P4 |
-| Ikke aktuelt | P4 | **P5** |
-
-Sortering: P1 → P2 → P3 → P4 → P5 → uten prioritet. "Ikke aktuelt"-rader synker dermed lenger ned i listen, som ønsket.
+| Tilstand | Prioritet |
+|---|---|
+| Epostvarsling ✓ eller Kalender ✓ | **P1** (uansett signal) |
+| Behov nå (uten varsling) | P1 |
+| Får fremtidig behov | P2 |
+| Får kanskje behov | P3 |
+| Ukjent om behov | P4 |
+| Ikke aktuelt | P5 |
 
 ## Utenfor scope
 
-- Ingen endringer i V1-flater (Tasks, Dashboard).
-- Ingen endring av selve signal-kategoriene eller `categoryUtils.ts`.
-- Ingen manuell overstyring av prioritet — fortsatt drevet av kontaktens signal.
+- Ingen UI-endring i `FollowUpModal` — checkboxene finnes allerede.
+- Ingen V1-flate berøres (`Tasks.tsx`, `OppfolgingerSection.tsx`).
+- Ingen retroaktiv migrering av eksisterende tasks — `calendar_sync` blir `false` på alle gamle rader (ingen konsekvens, da modalen aldri lagret feltet før).
+- Ingen overstyring per task manuelt utover varslingscheckboxene.
 
