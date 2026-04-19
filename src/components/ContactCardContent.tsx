@@ -2868,8 +2868,7 @@ function ActivityRow({
               </Tooltip>
               {displayCategory && <DesignLabCategoryBadge label={displayCategory} />}
             </div>
-          </div>
-        )}
+          </ActivityRowBody>
       </div>
     </div>
   );
