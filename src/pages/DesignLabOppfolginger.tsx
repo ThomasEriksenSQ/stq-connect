@@ -240,7 +240,6 @@ export default function DesignLabOppfolginger() {
           const date = new Date(model.nextFollowUpAt);
           if (date < today || date > weekEnd) return false;
         }
-        if (viewFilter === "Uten eier" && model.ownerId) return false;
         if (!lowerSearch) return true;
 
         return [
