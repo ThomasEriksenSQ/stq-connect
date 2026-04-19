@@ -205,6 +205,65 @@ export default function DesignLabForesporsler() {
     return map;
   }, [ansattePortraits]);
 
+  // ── Signal per kontakt (matcher Kontakter-tabellen) ──
+  const contactIds = useMemo(() => {
+    const set = new Set<string>();
+    (rows as any[]).forEach((r) => {
+      if (r.contacts?.id) set.add(r.contacts.id);
+    });
+    return Array.from(set);
+  }, [rows]);
+
+  const { data: signalByContactId = new Map<string, string>() } = useQuery({
+    queryKey: ["foresporsler-contact-signals", contactIds.sort().join(",")],
+    enabled: contactIds.length > 0,
+    queryFn: async () => {
+      const [actsRes, tasksRes] = await Promise.all([
+        supabase
+          .from("activities")
+          .select("contact_id, created_at, subject, description")
+          .in("contact_id", contactIds)
+          .order("created_at", { ascending: false })
+          .limit(5000),
+        supabase
+          .from("tasks")
+          .select("contact_id, created_at, updated_at, title, description, due_date, status")
+          .in("contact_id", contactIds)
+          .limit(5000),
+      ]);
+      const acts = actsRes.data || [];
+      const tasks = tasksRes.data || [];
+      const actsByContact: Record<string, any[]> = {};
+      const tasksByContact: Record<string, any[]> = {};
+      acts.forEach((a: any) => {
+        if (a.contact_id) (actsByContact[a.contact_id] ??= []).push(a);
+      });
+      tasks.forEach((t: any) => {
+        if (t.contact_id) (tasksByContact[t.contact_id] ??= []).push(t);
+      });
+      const map = new Map<string, string>();
+      for (const cid of contactIds) {
+        const sig = getEffectiveSignal(
+          (actsByContact[cid] || []).map((a) => ({
+            created_at: a.created_at,
+            subject: a.subject || "",
+            description: a.description,
+          })),
+          (tasksByContact[cid] || []).map((t) => ({
+            created_at: t.created_at,
+            updated_at: t.updated_at,
+            title: t.title || "",
+            description: t.description,
+            due_date: t.due_date,
+            status: t.status,
+          })),
+        );
+        if (sig) map.set(cid, sig);
+      }
+      return map;
+    },
+  });
+
   // ── Stats ──
   const stats = useMemo(() => {
     const cutoff = new Date();
@@ -252,11 +311,16 @@ export default function DesignLabForesporsler() {
           const nb2 = b.contacts ? `${b.contacts.first_name} ${b.contacts.last_name}` : "";
           return dir * na.localeCompare(nb2, "nb");
         }
+        case "signal": {
+          const sa = a.contacts?.id ? signalByContactId.get(a.contacts.id) || null : null;
+          const sb = b.contacts?.id ? signalByContactId.get(b.contacts.id) || null : null;
+          return dir * (getSignalRank(sa) - getSignalRank(sb));
+        }
         case "sendt_count": return dir * ((a.foresporsler_konsulenter?.length || 0) - (b.foresporsler_konsulenter?.length || 0));
         default: return 0;
       }
     });
-  }, [filtered, sort]);
+  }, [filtered, sort, signalByContactId]);
 
   const selectedRow = useMemo(() => {
     if (!selectedRowId) return null;
