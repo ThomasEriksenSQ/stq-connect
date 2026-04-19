@@ -194,6 +194,22 @@ export function AiSignalBanner({
                 Oppdater signal
               </button>
             )}
+            {hasNewTechs && (
+              <button
+                onClick={() => {
+                  onAddTechnologies(remainingTechs);
+                  setAddedTechs((prev) => {
+                    const next = new Set(prev);
+                    remainingTechs.forEach((t) => next.add(t.toLowerCase()));
+                    return next;
+                  });
+                }}
+                className="inline-flex items-center gap-1 text-[0.75rem] font-medium text-primary hover:text-primary/80 transition-colors"
+              >
+                <Plus className="h-3 w-3" />
+                Oppdater alle
+              </button>
+            )}
             <button
               onClick={() => {
                 localStorage.setItem(dismissKey, new Date().toISOString());
