@@ -2413,9 +2413,9 @@ function ActivityTimeline({
   if (totalCount === 0) {
     return (
       <div>
-        <div className="flex items-center justify-between">
-          <h3 className="text-[12px] font-medium text-[#5C636E]">
-            Aktiviteter · 0
+        <div className="flex items-center justify-between" style={{ minHeight: 32 }}>
+          <h3 className="text-[13px] font-medium text-[#1A1C1F]">
+            Aktiviteter <span className="font-normal text-[#8C929C]">· 0</span>
           </h3>
           {hasEmails && (
             <DesignLabFilterButton
@@ -2435,9 +2435,9 @@ function ActivityTimeline({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3 mt-5">
-        <h3 className="text-[12px] font-medium text-[#5C636E]">
-          Aktiviteter · {totalCount}
+      <div className="flex items-center justify-between mb-3 mt-5" style={{ minHeight: 32 }}>
+        <h3 className="text-[13px] font-medium text-[#1A1C1F]">
+          Aktiviteter <span className="font-normal text-[#8C929C]">· {totalCount}</span>
         </h3>
         {hasEmails && (
           <DesignLabFilterButton
