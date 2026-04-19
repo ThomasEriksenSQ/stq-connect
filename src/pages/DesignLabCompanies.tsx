@@ -624,7 +624,7 @@ export default function DesignLabCompanies() {
               withHandle
               className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
             />
-            <ResizablePanel defaultSize={65} minSize={30}>
+            <ResizablePanel defaultSize={62} minSize={34}>
               {selectedId ? (
                 <div className="h-full flex flex-col" style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}` }}>
                   <div className="shrink-0 flex items-center justify-end px-4" style={{ height: 32 }}>
@@ -669,7 +669,7 @@ export default function DesignLabCompanies() {
               withHandle
               className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
             />
-            <ResizablePanel defaultSize={0} minSize={0} maxSize={40}>
+            <ResizablePanel defaultSize={0} minSize={0} maxSize={30}>
               <div className="h-full" style={{ background: C.appBg }} />
             </ResizablePanel>
           </ResizablePanelGroup>
