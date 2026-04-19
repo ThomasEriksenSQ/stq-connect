@@ -332,8 +332,8 @@ export default function EksterneKonsulenter({
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center px-6">
-                    <p className="text-[0.875rem] text-muted-foreground">
-                      Velg en ekstern konsulent for å vise profil.
+                    <p style={{ fontSize: 13, color: C.textFaint }}>
+                      Trykk ⌘K for å søke.
                     </p>
                   </div>
                 )}
