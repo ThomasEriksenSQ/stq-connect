@@ -520,7 +520,7 @@ export function ExternalConsultantDetailCard({
 
       <div className="grid gap-5 xl:grid-cols-2">
         <div className="space-y-2">
-          <p style={{ fontSize: 11, fontWeight: 500, color: C.textFaint }}>Kontakt</p>
+          <h3 className="text-[13px] font-medium text-[#1A1C1F]">Kontakt</h3>
           <div className="space-y-1.5" style={{ fontSize: 13, color: C.text }}>
             {row.epost ? (
               <div className="flex items-center gap-2">
@@ -542,7 +542,7 @@ export function ExternalConsultantDetailCard({
         </div>
 
         <div className="space-y-2">
-          <p style={{ fontSize: 11, fontWeight: 500, color: C.textFaint }}>Teknologier</p>
+          <h3 className="text-[13px] font-medium text-[#1A1C1F]">Teknologier</h3>
           {technologies.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
               {technologies.map((tech: string) => (
@@ -559,7 +559,7 @@ export function ExternalConsultantDetailCard({
 
       {note ? (
         <div className="space-y-2">
-          <p style={{ fontSize: 11, fontWeight: 500, color: C.textFaint }}>Kommentar</p>
+          <h3 className="text-[13px] font-medium text-[#1A1C1F]">Kommentar</h3>
           <div
             className="rounded-md px-3 py-2.5"
             style={{ border: `1px solid ${C.borderLight}`, background: C.appBg }}
@@ -576,7 +576,7 @@ export function ExternalConsultantDetailCard({
 
       {technologies.length > 0 ? (
         <div className="space-y-2">
-          <p style={{ fontSize: 11, fontWeight: 500, color: C.textFaint }}>Oppdragsmatch</p>
+          <h3 className="text-[13px] font-medium text-[#1A1C1F]">Oppdragsmatch</h3>
           <div
             className="rounded-md px-3 py-3"
             style={{ border: `1px solid ${C.borderLight}`, background: C.appBg }}
