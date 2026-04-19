@@ -58,11 +58,11 @@ function getKundeTypeLabel(companyStatus: string | null): string {
 }
 
 function computeOppdragStatus(r: any): string {
-  if (r.status === "Inaktiv") return "Inaktiv";
-  const today = startOfDay(new Date());
-  const startDate = parseOppdragDate(r.start_dato);
-  if (startDate && startDate > today) return "Oppstart";
-  return "Aktiv";
+  return computeSharedOppdragStatus({
+    status: r.status,
+    start_dato: r.start_dato,
+    slutt_dato: r.slutt_dato,
+  });
 }
 
 function parseOppdragDate(value?: string | null): Date | null {
