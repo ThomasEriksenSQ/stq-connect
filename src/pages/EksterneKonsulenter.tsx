@@ -259,7 +259,7 @@ export default function EksterneKonsulenter({
       </div>
 
       {embeddedSplit ? (
-        <div className="hidden md:block min-h-[820px]">
+        <div className="hidden md:block h-[820px]">
           <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel defaultSize={40} minSize={26}>
               <div className="h-full border border-border rounded-lg overflow-hidden bg-card shadow-card">
