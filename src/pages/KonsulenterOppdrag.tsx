@@ -298,7 +298,7 @@ export default function KonsulenterOppdrag({
               const kundeType = (() => {
                 const cs = o.selskap_id ? companyStatusMap[o.selskap_id] : null;
                 if (cs === "partner") return "Partner";
-                if (cs === "customer" || cs === "kunde") return "Kunde";
+                if (cs === "customer" || cs === "kunde") return "Sluttkunde";
                 if (cs === "prospect") return "Potensiell";
                 return "—";
               })();
@@ -469,7 +469,7 @@ export default function KonsulenterOppdrag({
                                 if (cs === "customer" || cs === "kunde") {
                                   return (
                                     <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-                                      Kunde
+                                      Sluttkunde
                                     </span>
                                   );
                                 }
@@ -654,7 +654,7 @@ export default function KonsulenterOppdrag({
                             if (cs === "customer" || cs === "kunde")
                               return (
                                 <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-                                  Kunde
+                                  Sluttkunde
                                 </span>
                               );
                             if (cs === "prospect")
@@ -760,7 +760,7 @@ function OppdragSummaryCard({
     companyStatus === "partner"
       ? "Partner"
       : companyStatus === "customer" || companyStatus === "kunde"
-        ? "Kunde"
+        ? "Sluttkunde"
         : companyStatus === "prospect"
           ? "Potensiell"
           : "—";
