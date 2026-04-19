@@ -92,7 +92,7 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
           <img
             src={stacqLogoIcon}
             alt="STACQ"
-            style={{ height: px(22), width: px(22), display: "block" }}
+            style={{ height: px(24), width: px(24), display: "block" }}
           />
         )}
       </div>
@@ -183,7 +183,7 @@ function CollapseToggle({
         ["--dl-focus-ring" as string]: C.borderFocus,
         ["--dl-focus-offset" as string]: C.sidebarBg,
         width: fullRow ? "100%" : px(24),
-        height: px(24),
+        height: fullRow ? px(34) : px(24),
         borderRadius: px(5),
         color: C.textFaint,
         background: "transparent",
@@ -192,7 +192,7 @@ function CollapseToggle({
       onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverSubtle; e.currentTarget.style.color = C.text; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = C.textFaint; }}
     >
-      <Icon style={{ width: px(14), height: px(14), strokeWidth: 1.5 }} />
+      <Icon style={{ width: fullRow ? px(20) : px(14), height: fullRow ? px(20) : px(14), strokeWidth: 1.5 }} />
     </button>
   );
 }
@@ -231,7 +231,7 @@ function NavGroup({
               color: active ? C.text : C.textMuted,
               background: active ? C.filterActiveBg : "transparent",
               borderRadius: px(6),
-              height: px(28),
+              height: collapsed ? px(34) : px(28),
               gap: px(8),
               justifyContent: collapsed ? "center" : "flex-start",
               paddingLeft: collapsed ? 0 : px(10),
@@ -243,7 +243,7 @@ function NavGroup({
             onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = C.hoverSubtle; e.currentTarget.style.color = C.text; } }}
             onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = C.textMuted; } }}
           >
-            <item.icon style={{ width: px(14), height: px(14), strokeWidth: 1.5, color: active ? C.text : C.textFaint, flexShrink: 0 }} />
+            <item.icon style={{ width: collapsed ? px(20) : px(14), height: collapsed ? px(20) : px(14), strokeWidth: 1.5, color: active ? C.text : C.textFaint, flexShrink: 0 }} />
             {!collapsed && item.label}
           </button>
         );
@@ -284,7 +284,7 @@ function FooterBtn({
         color: baseColor,
         background: active ? C.filterActiveBg : "transparent",
         borderRadius: px(6),
-        height: px(28),
+        height: collapsed ? px(34) : px(28),
         gap: px(8),
         justifyContent: collapsed ? "center" : "flex-start",
         paddingLeft: collapsed ? 0 : px(8),
@@ -295,7 +295,7 @@ function FooterBtn({
       onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = C.hoverSubtle; e.currentTarget.style.color = C.text; } }}
       onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = baseColor; } }}
     >
-      <Icon style={{ width: px(14), height: px(14), strokeWidth: 1.5, color: active ? C.text : C.textFaint, flexShrink: 0 }} />
+      <Icon style={{ width: collapsed ? px(20) : px(14), height: collapsed ? px(20) : px(14), strokeWidth: 1.5, color: active ? C.text : C.textFaint, flexShrink: 0 }} />
       {!collapsed && label}
     </button>
   );
