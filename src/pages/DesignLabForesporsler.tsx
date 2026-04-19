@@ -27,7 +27,9 @@ import {
   DesignLabGhostAction,
   DesignLabPrimaryAction,
   DesignLabReadonlyChip,
+  DesignLabSignalBadge,
 } from "@/components/designlab/system";
+import { getEffectiveSignal, getSignalRank } from "@/lib/categoryUtils";
 import { NyForesporselModal } from "@/pages/Foresporsler";
 
 /* ═══════════════════════════════════════════════════════════
@@ -36,7 +38,7 @@ import { NyForesporselModal } from "@/pages/Foresporsler";
 
 type StatusFilter = "aktive" | "utgatte" | "alle";
 type TypeFilter = "Alle" | "DIR" | "VIA";
-type SortField = "mottatt_dato" | "selskap_navn" | "sendt_count" | "kontakt";
+type SortField = "mottatt_dato" | "selskap_navn" | "sendt_count" | "kontakt" | "signal";
 type SortDir = "asc" | "desc";
 
 const STATUS_CHIPS: { value: StatusFilter; label: string }[] = [
