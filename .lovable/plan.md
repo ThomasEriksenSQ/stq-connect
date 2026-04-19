@@ -1,38 +1,45 @@
 
+
+## Mål
+
+Legge til feltet **Ekstra kostnad / time** (samme som finnes på STACQ Prisen-redigering i dag) i **Aktive oppdrag → Nytt oppdrag** og **Rediger oppdrag**. Beløpet trekkes fra timesprisen som del av STACQ-prisberegningen (`stacqPris.ts` håndterer det allerede via `ekstra_kostnad`).
+
 ## Funn
 
-Feilen ligger på riktig side: `src/pages/DesignLabStacqPrisen.tsx`.
+- `stacq_oppdrag.ekstra_kostnad` finnes allerede i DB og brukes av `calcStacqPris()`.
+- I dag eksponeres feltet kun i `DesignLabStacqPrisen.tsx` (EditModal, linje 503/511/543-547) og `StacqPrisen.tsx`.
+- `OppdragEditSheet.tsx` (brukt av Aktive oppdrag for både opprett og rediger) har felt for Utpris og Innpris, men ingen `ekstra_kostnad`.
+- `src/lib/oppdragForm.ts` definerer `OppdragFormState` og `buildOppdragWritePayload()` — disse må utvides så `ekstra_kostnad` kommer med i insert/update.
 
-Der er det fortsatt to gamle avvik fra logikken i resten av appen:
-1. Queryen filtrerer bort rader allerede i databasen med `.neq("status", "Inaktiv")`.
-2. Lokal `computeOppdragStatus()` tar bare hensyn til manuell `status` og `start_dato`, men ignorerer `slutt_dato`.
+## Endringer
 
-Konsekvens: Hvis Tom Erik har lagret `status = "Inaktiv"` i DB, men `slutt_dato` fortsatt er frem i tid, blir han ekskludert før siden får regnet ham som aktiv. Det er derfor han ikke vises i `/design-lab/stacq-prisen`, selv om han vises under Aktive oppdrag.
+**1. `src/lib/oppdragForm.ts`**
+- Legg til `ekstraKostnad: string` i `OppdragFormState` og `OPPDRAG_DEFAULTS` (default `""`).
+- Inkluder `ekstra_kostnad: toNullableNumber(value.ekstraKostnad)` i `buildOppdragWritePayload`-returobjektet.
 
-## Plan
+**2. `src/components/OppdragEditSheet.tsx`**
+- Ny `useState` `ekstraKostnad` (string).
+- Reset i `useEffect` for create-mode (tom) og populer fra `row.ekstra_kostnad` i edit-mode.
+- Inkluder `ekstraKostnad` i `buildFormState()`.
+- Oppdater `marginPerTime`-beregningen så den også trekker fra `ekstraKostnad`:  
+  `(utpris) - (tilKonsulent) - (ekstraKostnad)` slik at "Margin (beregnet)" reflekterer netto STACQ-pris pr. time.
+- Legg inn nytt input-felt rett under "Innpris / time" (samme V1-stil som de andre feltene i sheetet — `LABEL` + `Input type="number"`):
+  - Label: `Ekstra kostnad / time`
+  - Placeholder: `f.eks. 80`
+  - Liten hjelpetekst under: *"Trekkes fra STACQ Prisen. Brukes for deal-avtaler, bonus-forpliktelser e.l."*
 
-### `src/pages/DesignLabStacqPrisen.tsx`
+**3. Type-utvidelse for row**
+- `OppdragEditSheet` leser `row.ekstra_kostnad` i load-effekten. Feltet finnes allerede i `Database["public"]["Tables"]["stacq_oppdrag"]["Row"]`, så ingen typeendringer ut over riktig casting.
 
-**1. Fjern databasefilteret som skjuler rader for tidlig**
-- Ta bort `.neq("status", "Inaktiv")` fra `stacq_oppdrag`-queryen.
-- Siden må hente alle relevante oppdrag og la klienten beregne reell status.
+## Hvor feltet vises
 
-**2. Bytt til delt statuslogikk**
-- Importer `computeOppdragStatus` fra `@/lib/oppdragForm`.
-- Fjern/erstatt den lokale `computeOppdragStatus()`-funksjonen i filen.
-- La status beregnes med samme regler som brukes i Aktive oppdrag og V1 STACQ Prisen:
-  - passert `slutt_dato` => `Inaktiv`
-  - fremtidig `start_dato` => `Oppstart`
-  - ellers `Aktiv`
+Sidepanel `OppdragEditSheet` brukes både fra:
+- `KonsulenterOppdrag.tsx` (V1 `/konsulenter/i-oppdrag`)
+- `DesignLabKonsulenterOppdrag.tsx` (V2 `/design-lab/aktive-oppdrag`)
 
-**3. Filtrer først etter beregnet status**
-- I `enriched`-listen: beregn status først, deretter filtrer bort kun rader der beregnet status er `Inaktiv`.
-- Da kommer Tom Erik med dersom `slutt_dato` er frem i tid.
-
-**4. Hold resten av Design Lab-tabellen uendret**
-- Ingen visuelle endringer i layout, sortering eller kort.
-- Kun logikkjustering så listen blir korrekt.
+Begge får automatisk det nye feltet med samme V1-stil som resten av sheetet (project-knowledge V1-regler — vi endrer ikke styling i sheetet).
 
 ## Forventet resultat
 
-Etter endringen vil `/design-lab/stacq-prisen` bruke samme oppdragsstatus som resten av systemet, og Tom Erik vil vises i tabellen så lenge sluttdatoen hans ikke er passert.
+På Aktive oppdrag → "Nytt oppdrag" og "Rediger" finnes nå et felt **Ekstra kostnad / time**. Tallet lagres i `stacq_oppdrag.ekstra_kostnad`, viser direkte i margin-boksen i sheetet, og brukes av `calcStacqPris()` slik at STACQ Prisen-tabellen automatisk får riktig verdi uten dobbeltvedlikehold.
+
