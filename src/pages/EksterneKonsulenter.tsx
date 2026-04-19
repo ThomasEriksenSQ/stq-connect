@@ -259,7 +259,7 @@ export default function EksterneKonsulenter({
                         key={row.id}
                         onClick={() => setSelectedId(row.id)}
                         className={cn(
-                          "grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_100px_110px_minmax(0,1.5fr)_100px] gap-3 items-center px-4 min-h-[44px] py-2 transition-colors duration-75 cursor-pointer",
+                          "grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_100px_110px_minmax(0,1.5fr)_100px] gap-3 items-center px-4 min-h-[38px] py-1 transition-colors duration-75 cursor-pointer",
                           isSelected ? "bg-muted/60" : "hover:bg-background/80",
                         )}
                       >
@@ -277,12 +277,12 @@ export default function EksterneKonsulenter({
                             {availability.label}
                           </DesignLabStaticTag>
                         </div>
-                        <div className="flex flex-wrap gap-1">
-                          {(row.teknologier || []).slice(0, 3).map((t: string) => (
+                        <div className="flex flex-nowrap overflow-hidden items-center gap-1">
+                          {(row.teknologier || []).slice(0, 2).map((t: string) => (
                             <DesignLabStaticTag key={t} colors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>{t}</DesignLabStaticTag>
                           ))}
-                          {(row.teknologier || []).length > 3 && (
-                            <span className="text-[0.6875rem] text-muted-foreground">+{row.teknologier.length - 3}</span>
+                          {(row.teknologier || []).length > 2 && (
+                            <span className="text-[0.6875rem] text-muted-foreground flex-shrink-0">+{row.teknologier.length - 2}</span>
                           )}
                         </div>
                         <span className="text-[0.8125rem] text-muted-foreground">
