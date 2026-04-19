@@ -1,28 +1,29 @@
 
 
 ## Mål
-Eksponere `/innstillinger` (V2-rendringen) som en navigerbar lenke i Design Lab-sidebaren, slik at den er tilgjengelig fra `/design-lab/*`-flatene.
+Få `/innstillinger` (V2) til å bruke samme bredde-/layoutstrategi som andre V2-flater (ultrawide-vennlig, ingen smal sentrert maxWidth).
 
 ## Funn
-- `Innstillinger.tsx` håndterer allerede V1/V2-rendring via `useDesignVersion()` — V2 bruker `DesignLabPageShell` med `activePath="/innstillinger"`.
-- Ruten `/innstillinger` finnes allerede i `App.tsx` og fungerer for begge versjoner. Ingen ny rute trengs.
-- `DesignLabSidebar.tsx` er sannhetskilden for navigasjon i alle Design Lab-flater. Sjekker hvilke nav-items som finnes der i dag for å plassere "Innstillinger" på naturlig sted (sannsynligvis nederst, ved siden av profil/logg ut).
+- `InnstillingerV2` bruker `DesignLabPageShell` med `maxWidth={1180}` — dette tvinger innholdet inn i en smal sentrert kolonne på ultrawide-skjermer (4117px viewport vist på skjermbildet).
+- Andre V2-flater (f.eks. `DesignLabContacts`, `DesignLabForesporsler`, `DesignLabKonsulenterAnsatte`) bruker enten `maxWidth={null}` eller ingen maxWidth, slik at innholdet flyter ut til full bredde og utnytter ultrawide.
+- Skjermbildet viser tydelig at innstillinger-kortene er klemt sammen i en smal kolonne mens resten av Design Lab strekker seg ut.
+- `VarslingsInnstillingerV2` bruker `xl:grid-cols-3` — som er bra, men begrenses av shellets `maxWidth={1180}`.
 
 ## Endring
 
-**`src/components/designlab/DesignLabSidebar.tsx`**
-- Legg til et nytt nav-item "Innstillinger" som peker på `/innstillinger`.
-- Bruk `Settings`-ikonet fra `lucide-react`.
-- Plasseres nederst i sidebaren (over eller ved siden av bruker/logg ut-blokken) — matcher V2-konvensjonen om at innstillinger ligger i bunnen.
-- Aktiv-tilstand fungerer automatisk siden `DesignLabPageShell` allerede sender `activePath="/innstillinger"`.
+**`src/pages/Innstillinger.tsx`** — `InnstillingerV2`:
+
+1. Bytt `maxWidth={1180}` → `maxWidth={null}` på `DesignLabPageShell` (matcher andre V2-lister).
+2. Topp-rad: behold `md:grid-cols-2` for Outlook/Mailchimp, men la kortene flyte i full bredde uten kunstig tak.
+3. Sørg for at `VarslingsInnstillingerV2` får utnytte breddene — bekreft at den allerede har `xl:grid-cols-3` (eller juster til `2xl:grid-cols-3` hvis 3-kolonner blir for trangt på mellomstore skjermer).
+
+Ingen endring i V1 eller `VarslingsInnstillinger.tsx`.
 
 ## Effekt
-- Brukere på V2-flatene (`/design-lab/*`) kan navigere direkte til Innstillinger fra sidebaren, og siden rendres med V2-design (allerede implementert).
-- Ingen ny rute opprettes — eksisterende `/innstillinger` brukes.
-- V1 og V1-sidebar er uendret.
+- V2 `/innstillinger` får samme ultrawide-oppførsel som resten av Design Lab — kortene strekker seg naturlig ut, ingen smal sentrert kolonne.
+- Layout og typografi forblir V2-konform (13px, kort med `C.borderLight`, accent-blå knapper).
 
 ## Utenfor scope
-- Ingen ny `/design-lab/innstillinger`-rute (V2-bryteren på `/innstillinger` håndterer rendering).
-- Ingen endringer i `Innstillinger.tsx` eller `VarslingsInnstillingerV2.tsx`.
-- Ingen endring i V1 `AppSidebar` eller toppmeny.
+- V1-rendring og `VarslingsInnstillinger.tsx`.
+- Endringer i `DesignLabPageShell` (det er allerede en støttet `maxWidth={null}`-modus).
 
