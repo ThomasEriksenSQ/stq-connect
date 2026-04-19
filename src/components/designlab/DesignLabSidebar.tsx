@@ -72,56 +72,29 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
         background: C.sidebarBg,
       }}
     >
-      {/* Logo + collapse toggle */}
+      {/* Logo */}
       <div
         className="flex items-center shrink-0"
         style={{
           height: px(40),
           paddingLeft: collapsed ? 0 : px(12),
           paddingRight: collapsed ? 0 : px(8),
-          justifyContent: collapsed ? "center" : "space-between",
-          gap: px(8),
+          justifyContent: collapsed ? "center" : "flex-start",
         }}
       >
-        {!collapsed && (
+        {!collapsed ? (
           <img
             src={stacqLogoFull}
             alt="STACQ"
             style={{ height: px(18), width: "auto", display: "block" }}
           />
-        )}
-        {collapsed && (
+        ) : (
           <img
             src={stacqLogoIcon}
             alt="STACQ"
             style={{ height: px(22), width: px(22), display: "block" }}
           />
         )}
-        <button
-          onClick={() => setCollapsed((p) => !p)}
-          title={collapsed ? "Utvid sidebar" : "Skjul sidebar"}
-          aria-label={collapsed ? "Utvid sidebar" : "Skjul sidebar"}
-          className={`flex items-center justify-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dl-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--dl-focus-offset)] ${collapsed ? "absolute left-1/2 -translate-x-1/2" : "opacity-0 group-hover:opacity-100"}`}
-          style={{
-            ["--dl-focus-ring" as string]: C.borderFocus,
-            ["--dl-focus-offset" as string]: C.sidebarBg,
-            width: px(22),
-            height: px(22),
-            borderRadius: px(4),
-            color: C.textFaint,
-            background: "transparent",
-            flexShrink: 0,
-            top: collapsed ? px(44) : undefined,
-            position: collapsed ? "absolute" : "relative",
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverSubtle; e.currentTarget.style.color = C.text; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = C.textFaint; }}
-        >
-          {collapsed
-            ? <PanelLeftOpen style={{ width: px(14), height: px(14), strokeWidth: 1.5 }} />
-            : <PanelLeft style={{ width: px(14), height: px(14), strokeWidth: 1.5 }} />
-          }
-        </button>
       </div>
 
       {/* Nav */}
@@ -163,12 +136,64 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
             >
               {initials}
             </div>
-            <span className="truncate" style={{ fontSize: px(12), color: C.textGhost }}>{user.email}</span>
+            <span className="truncate flex-1 min-w-0" style={{ fontSize: px(12), color: C.textGhost }}>{user.email}</span>
+            <CollapseToggle collapsed={collapsed} onClick={() => setCollapsed((p) => !p)} scale={scale} />
+          </div>
+        )}
+
+        {!user && !collapsed && (
+          <div className="flex items-center justify-end px-2 pt-2 pb-1">
+            <CollapseToggle collapsed={collapsed} onClick={() => setCollapsed((p) => !p)} scale={scale} />
+          </div>
+        )}
+
+        {collapsed && (
+          <div className="pt-1">
+            <CollapseToggle collapsed={collapsed} onClick={() => setCollapsed((p) => !p)} scale={scale} fullRow />
           </div>
         )}
 
       </div>
     </aside>
+  );
+}
+
+/* ═══ COLLAPSE TOGGLE ═══ */
+
+function CollapseToggle({
+  collapsed,
+  onClick,
+  scale,
+  fullRow,
+}: {
+  collapsed: boolean;
+  onClick: () => void;
+  scale: number;
+  fullRow?: boolean;
+}) {
+  const px = (value: number) => Math.round(value * scale * 100) / 100;
+  const Icon = collapsed ? PanelLeftOpen : PanelLeftClose;
+  return (
+    <button
+      onClick={onClick}
+      title={collapsed ? "Utvid sidebar (⌘\\)" : "Skjul sidebar (⌘\\)"}
+      aria-label={collapsed ? "Utvid sidebar" : "Skjul sidebar"}
+      className="flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dl-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--dl-focus-offset)]"
+      style={{
+        ["--dl-focus-ring" as string]: C.borderFocus,
+        ["--dl-focus-offset" as string]: C.sidebarBg,
+        width: fullRow ? "100%" : px(24),
+        height: px(24),
+        borderRadius: px(5),
+        color: C.textFaint,
+        background: "transparent",
+        flexShrink: 0,
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverSubtle; e.currentTarget.style.color = C.text; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = C.textFaint; }}
+    >
+      <Icon style={{ width: px(14), height: px(14), strokeWidth: 1.5 }} />
+    </button>
   );
 }
 
