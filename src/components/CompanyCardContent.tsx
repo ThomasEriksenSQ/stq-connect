@@ -50,8 +50,15 @@ import {
   DesignLabModalInput,
   DesignLabModalLabel,
   DesignLabPrimaryAction,
+  DesignLabSectionLabel,
 } from "@/components/designlab/system";
-import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
+import {
+  DesignLabEntitySheet,
+  DesignLabFormSheet,
+  DesignLabFormSheetBody,
+  DesignLabFormSheetFooter,
+  DesignLabFormSheetHeader,
+} from "@/components/designlab/DesignLabEntitySheet";
 import {
   Phone,
   Mail,
@@ -1107,18 +1114,16 @@ export function CompanyCardContent({
               <Plus className="h-3.5 w-3.5" />
               Ny kontakt
             </DesignLabPrimaryAction>
-            <DesignLabEntitySheet
+            <DesignLabFormSheet
               open={newContactOpen}
               onOpenChange={(nextOpen) => {
                 setNewContactOpen(nextOpen);
                 if (!nextOpen) resetNewContactForm();
               }}
-              contentClassName="px-6 py-6 dl-v8-theme"
             >
-              <div className="mb-5">
-                <h2 className="text-[1.125rem] font-bold text-foreground">Ny kontakt</h2>
-              </div>
-              <DesignLabModalForm
+              <DesignLabFormSheetHeader title="Ny kontakt" />
+              <form
+                className="flex flex-1 flex-col min-h-0"
                 onSubmit={async (e) => {
                   e.preventDefault();
                   const { error } = await supabase.from("contacts").insert({
@@ -1146,123 +1151,128 @@ export function CompanyCardContent({
                   toast.success("Kontakt opprettet");
                 }}
               >
-                <DesignLabModalFieldGrid>
-                  <DesignLabModalField>
-                    <DesignLabModalLabel>Fornavn</DesignLabModalLabel>
-                    <DesignLabModalInput
-                      value={contactForm.first_name}
-                      onChange={(e) => setContactForm({ ...contactForm, first_name: e.target.value })}
-                      required
-                    />
-                  </DesignLabModalField>
-                  <DesignLabModalField>
-                    <DesignLabModalLabel>Etternavn</DesignLabModalLabel>
-                    <DesignLabModalInput
-                      value={contactForm.last_name}
-                      onChange={(e) => setContactForm({ ...contactForm, last_name: e.target.value })}
-                      required
-                    />
-                  </DesignLabModalField>
-                </DesignLabModalFieldGrid>
-                <DesignLabModalField>
-                  <DesignLabModalLabel>Stilling</DesignLabModalLabel>
-                  <DesignLabModalInput
-                    value={contactForm.title}
-                    onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })}
-                  />
-                </DesignLabModalField>
-                <DesignLabModalFieldGrid>
-                  <DesignLabModalField>
-                    <DesignLabModalLabel>E-post</DesignLabModalLabel>
-                    <DesignLabModalInput
-                      value={contactForm.email}
-                      onChange={(e) =>
-                        setContactForm({
-                          ...contactForm,
-                          email: e.target.value,
-                          cv_email: sanitizeContactCvEmail(e.target.value, contactForm.cv_email),
-                        })
-                      }
-                      type="email"
-                    />
-                  </DesignLabModalField>
-                  <DesignLabModalField>
-                    <DesignLabModalLabel>Telefon</DesignLabModalLabel>
-                    <DesignLabModalInput
-                      value={contactForm.phone}
-                      onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-                    />
-                  </DesignLabModalField>
-                </DesignLabModalFieldGrid>
-                <DesignLabModalField>
-                  <DesignLabModalLabel>LinkedIn</DesignLabModalLabel>
-                  <DesignLabModalInput
-                    value={contactForm.linkedin}
-                    onChange={(e) => setContactForm({ ...contactForm, linkedin: e.target.value })}
-                    placeholder="https://linkedin.com/in/..."
-                  />
-                </DesignLabModalField>
-                {(() => {
-                  const locs = companyLocations;
-                  if (locs.length === 0) return null;
-                  return (
+                <DesignLabFormSheetBody>
+                  <DesignLabModalFieldGrid>
                     <DesignLabModalField>
-                      <DesignLabModalLabel>Geografisk sted</DesignLabModalLabel>
-                      <DesignLabModalChipGroup>
-                        {locs.map((loc) => (
-                          <DesignLabFilterButton
-                            key={loc}
-                            type="button"
-                            onClick={() =>
-                              setContactForm({ ...contactForm, location: loc === contactForm.location ? "" : loc })
-                            }
-                      active={contactForm.location === loc}
-                      activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
-                      inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
-                      inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
-                    >
-                      {loc}
-                    </DesignLabFilterButton>
-                        ))}
-                      </DesignLabModalChipGroup>
+                      <DesignLabSectionLabel required>Fornavn</DesignLabSectionLabel>
+                      <DesignLabModalInput
+                        value={contactForm.first_name}
+                        onChange={(e) => setContactForm({ ...contactForm, first_name: e.target.value })}
+                        required
+                      />
                     </DesignLabModalField>
-                  );
-                })()}
-                <DesignLabModalField>
-                  <DesignLabModalLabel>Egenskaper</DesignLabModalLabel>
-                  <DesignLabModalChipGroup>
-                    <DesignLabFilterButton
-                      type="button"
-                      onClick={() => {
-                        if (!contactForm.cv_email && !contactHasEmail(contactForm)) {
-                          toast.error(CONTACT_CV_EMAIL_REQUIRED_MESSAGE);
-                          return;
+                    <DesignLabModalField>
+                      <DesignLabSectionLabel required>Etternavn</DesignLabSectionLabel>
+                      <DesignLabModalInput
+                        value={contactForm.last_name}
+                        onChange={(e) => setContactForm({ ...contactForm, last_name: e.target.value })}
+                        required
+                      />
+                    </DesignLabModalField>
+                  </DesignLabModalFieldGrid>
+
+                  <DesignLabModalField>
+                    <DesignLabSectionLabel>Stilling</DesignLabSectionLabel>
+                    <DesignLabModalInput
+                      value={contactForm.title}
+                      onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })}
+                    />
+                  </DesignLabModalField>
+
+                  <DesignLabModalFieldGrid>
+                    <DesignLabModalField>
+                      <DesignLabSectionLabel>E-post</DesignLabSectionLabel>
+                      <DesignLabModalInput
+                        value={contactForm.email}
+                        onChange={(e) =>
+                          setContactForm({
+                            ...contactForm,
+                            email: e.target.value,
+                            cv_email: sanitizeContactCvEmail(e.target.value, contactForm.cv_email),
+                          })
                         }
-                        setContactForm({ ...contactForm, cv_email: !contactForm.cv_email });
-                      }}
-                      active={contactForm.cv_email}
-                      activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
-                      inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
-                      inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
-                    >
-                      CV-Epost
-                    </DesignLabFilterButton>
-                    <DesignLabFilterButton
-                      type="button"
-                      onClick={() => setContactForm({ ...contactForm, call_list: !contactForm.call_list })}
-                      active={contactForm.call_list}
-                      activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
-                      inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
-                      inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
-                    >
-                      Innkjøper
-                    </DesignLabFilterButton>
-                  </DesignLabModalChipGroup>
-                </DesignLabModalField>
-                <DesignLabModalActions>
-                  <DesignLabPrimaryAction type="submit">
-                    Opprett
-                  </DesignLabPrimaryAction>
+                        type="email"
+                      />
+                    </DesignLabModalField>
+                    <DesignLabModalField>
+                      <DesignLabSectionLabel>Telefon</DesignLabSectionLabel>
+                      <DesignLabModalInput
+                        value={contactForm.phone}
+                        onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                      />
+                    </DesignLabModalField>
+                  </DesignLabModalFieldGrid>
+
+                  <DesignLabModalField>
+                    <DesignLabSectionLabel>LinkedIn</DesignLabSectionLabel>
+                    <DesignLabModalInput
+                      value={contactForm.linkedin}
+                      onChange={(e) => setContactForm({ ...contactForm, linkedin: e.target.value })}
+                      placeholder="https://linkedin.com/in/..."
+                    />
+                  </DesignLabModalField>
+
+                  {(() => {
+                    const locs = companyLocations;
+                    if (locs.length === 0) return null;
+                    return (
+                      <DesignLabModalField>
+                        <DesignLabSectionLabel>Geografisk sted</DesignLabSectionLabel>
+                        <DesignLabModalChipGroup>
+                          {locs.map((loc) => (
+                            <DesignLabFilterButton
+                              key={loc}
+                              type="button"
+                              onClick={() =>
+                                setContactForm({ ...contactForm, location: loc === contactForm.location ? "" : loc })
+                              }
+                              active={contactForm.location === loc}
+                              activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                              inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                              inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+                            >
+                              {loc}
+                            </DesignLabFilterButton>
+                          ))}
+                        </DesignLabModalChipGroup>
+                      </DesignLabModalField>
+                    );
+                  })()}
+
+                  <DesignLabModalField>
+                    <DesignLabSectionLabel>Egenskaper</DesignLabSectionLabel>
+                    <DesignLabModalChipGroup>
+                      <DesignLabFilterButton
+                        type="button"
+                        onClick={() => {
+                          if (!contactForm.cv_email && !contactHasEmail(contactForm)) {
+                            toast.error(CONTACT_CV_EMAIL_REQUIRED_MESSAGE);
+                            return;
+                          }
+                          setContactForm({ ...contactForm, cv_email: !contactForm.cv_email });
+                        }}
+                        active={contactForm.cv_email}
+                        activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                        inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                        inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+                      >
+                        CV-Epost
+                      </DesignLabFilterButton>
+                      <DesignLabFilterButton
+                        type="button"
+                        onClick={() => setContactForm({ ...contactForm, call_list: !contactForm.call_list })}
+                        active={contactForm.call_list}
+                        activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                        inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                        inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+                      >
+                        Innkjøper
+                      </DesignLabFilterButton>
+                    </DesignLabModalChipGroup>
+                  </DesignLabModalField>
+                </DesignLabFormSheetBody>
+
+                <DesignLabFormSheetFooter>
                   <DesignLabGhostAction
                     type="button"
                     onClick={() => {
@@ -1272,9 +1282,15 @@ export function CompanyCardContent({
                   >
                     Avbryt
                   </DesignLabGhostAction>
-                </DesignLabModalActions>
-              </DesignLabModalForm>
-            </DesignLabEntitySheet>
+                  <DesignLabPrimaryAction
+                    type="submit"
+                    disabled={!contactForm.first_name.trim() || !contactForm.last_name.trim()}
+                  >
+                    Opprett kontakt
+                  </DesignLabPrimaryAction>
+                </DesignLabFormSheetFooter>
+              </form>
+            </DesignLabFormSheet>
           </>
         )}
       </div>

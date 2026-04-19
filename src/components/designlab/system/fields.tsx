@@ -62,6 +62,41 @@ export function DesignLabFieldLabel({
   );
 }
 
+/**
+ * Uppercase, tracked section label used inside V2 form sheets
+ * (matches the "MOTTATT", "SELSKAP *" headings in Ny forespørsel).
+ */
+export function DesignLabSectionLabel({
+  children,
+  required,
+  className,
+  style,
+}: {
+  children: ReactNode;
+  required?: boolean;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <span
+      className={cn("block", className)}
+      style={{
+        fontSize: `calc(var(--dl-modal-font-size, 13px) * 0.82)`,
+        fontFamily: "inherit",
+        fontWeight: 600,
+        letterSpacing: "0.08em",
+        textTransform: "uppercase",
+        color: "#8C929C",
+        lineHeight: 1.2,
+        ...style,
+      }}
+    >
+      {children}
+      {required ? <span style={{ color: "#E5484D", marginLeft: 3 }}>*</span> : null}
+    </span>
+  );
+}
+
 export const DesignLabTextField = forwardRef<HTMLInputElement, ComponentPropsWithoutRef<typeof Input>>(
   ({ className, style, ...props }, ref) => {
     return (
