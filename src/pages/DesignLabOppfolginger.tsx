@@ -558,11 +558,6 @@ export default function DesignLabOppfolginger() {
               value={viewFilter}
               onChange={(value) => setViewFilter(value)}
             />
-            <div className="flex items-center gap-3">
-              <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500, whiteSpace: "nowrap" }}>
-                {stats.mineCount} mine · {stats.overdueCount} forfalte · {stats.unassignedCount} uten eier
-              </span>
-            </div>
           </div>
         </div>
 
