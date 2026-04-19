@@ -103,12 +103,12 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
           <div className="min-w-[900px]">
             {/* Header */}
             <div className="flex border-b border-border bg-background sticky top-0 z-20">
-              <div className="w-[190px] shrink-0 px-3 py-2 sticky left-0 z-30 bg-background" />
+              <div className="w-[190px] shrink-0 px-3 py-1 sticky left-0 z-30 bg-background" />
               {MONTHS_SHORT.map((m, i) => (
                 <div
                   key={m}
                   className={cn(
-                    "flex-1 min-w-[56px] text-center py-2 text-[0.6875rem] font-medium uppercase tracking-[0.06em]",
+                    "flex-1 min-w-[56px] text-center py-1 text-[0.6875rem] font-medium uppercase tracking-[0.06em]",
                     i === currentMonth
                       ? "text-primary font-bold"
                       : "text-muted-foreground"
