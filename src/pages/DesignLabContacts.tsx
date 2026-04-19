@@ -66,6 +66,7 @@ import {
 import {
   DesignLabColumnHeader,
   DesignLabFilterRow,
+  DesignLabHeatBadge,
   DesignLabMatchFilterChip,
   DesignLabPrimaryAction,
   DesignLabSignalBadge,
