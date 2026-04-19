@@ -2542,7 +2542,7 @@ function EmailRow({ email }: { email: any }) {
         <Mail className="h-3.5 w-3.5 text-primary" />
       </div>
 
-      <EmailRowToggle expanded={expanded} onToggle={() => setExpanded(!expanded)}>
+      <EmailRowBody onToggle={() => setExpanded(!expanded)}>
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
@@ -2596,7 +2596,7 @@ function EmailRow({ email }: { email: any }) {
             </DesignLabStatusBadge>
           </div>
         </div>
-      </div>
+      </EmailRowBody>
     </div>
   );
 }
