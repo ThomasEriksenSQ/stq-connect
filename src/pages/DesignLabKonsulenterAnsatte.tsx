@@ -12,7 +12,7 @@ import { usePersistentState } from "@/hooks/usePersistentState";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { C } from "@/components/designlab/theme";
-import { DesignLabSearchInput, DesignLabIconButton } from "@/components/designlab/controls";
+import { DesignLabIconButton } from "@/components/designlab/controls";
 import {
   DesignLabPrimaryAction,
   DesignLabFilterRow,
@@ -54,7 +54,7 @@ export default function DesignLabKonsulenterAnsatte() {
   const queryClient = useQueryClient();
   const { signOut, user } = useAuth();
   const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
-  const [search, setSearch] = useState("");
+  const [search] = useState("");
   const [filter, setFilter] = useState<Filter>("Aktiv");
   const [createOpen, setCreateOpen] = useState(false);
   const today = new Date();
@@ -362,12 +362,6 @@ export default function DesignLabKonsulenterAnsatte() {
             <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {filtered.length}</span>
           </div>
           <div className="flex items-center gap-2">
-            <DesignLabSearchInput
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Søk ansatte…"
-              style={{ width: 220 }}
-            />
             <DesignLabPrimaryAction onClick={() => setCreateOpen(true)}>
               <Plus className="h-3.5 w-3.5" />
               Ny ansatt
