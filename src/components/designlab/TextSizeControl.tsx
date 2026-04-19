@@ -1,4 +1,3 @@
-import { Type } from "lucide-react";
 import type { CSSProperties } from "react";
 
 import { DesignLabFilterButton } from "@/components/designlab/controls";
