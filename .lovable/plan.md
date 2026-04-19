@@ -1,39 +1,48 @@
 
 
 ## Mål
-Vis profilbilde (eller initialer) foran konsulentnavnet i tabellen på `/design-lab/stacq-prisen`, slik at den matcher visuell stil fra `FornyelsesTimeline` og andre V2-flater.
+Harmoniser radhøyder og typografi i fire V2-tabeller (STACQ Prisen, Aktive oppdrag, Ansatte, Eksterne) til samme uttrykk som Kontakter-tabellen (`minHeight: 38`, 13px tekst). Fiks også at TEKNOLOGIER-kolonnen i Eksterne kan flyte over i flere rader.
 
-## Funn
-- `DesignLabStacqPrisen.tsx` har en rad-grid på linje 246–280 hvor første kolonne kun viser `row.kandidat` som tekst.
-- Hver `row` har allerede `er_ansatt` og `kandidat` (fullt navn). Det finnes ingen direkte `ansatt_id` på `stacq_oppdrag`-rader, så vi må mappe navn → `ansatt_id` → `portrait_url`, akkurat som `FornyelsesTimeline.tsx` gjør (linje 31–60).
-- Eksterne konsulenter (`er_ansatt === false`) har ikke portrett — de skal vise dempet initialavatar.
-- `getInitials` finnes i `@/lib/utils` (brukt i `FornyelsesTimeline`).
+## Referanse: Kontakter-tabellen (`DesignLabContacts.tsx` linje 2270–2290)
+- `minHeight: 38`
+- Navn: `fontSize: 13, fontWeight: 500`
+- Selskap/sekundær: `fontSize: 12–13, color: C.textMuted`
+- Ingen avatar i raden
 
-## Endring
+## Endringer
 
-**`src/pages/DesignLabStacqPrisen.tsx`**
+### 1. `src/pages/DesignLabStacqPrisen.tsx`
+- Datarad (linje 289): `minHeight: 40` → `minHeight: 38`.
+- TOTAL-rad (linje 339): `minHeight: 40` → `minHeight: 38`.
+- Avatar (20×20) beholdes — passer fortsatt i 38px.
 
-1. Legg til to ekstra `useQuery`-kall (parallelt med eksisterende), identisk med `FornyelsesTimeline`:
-   - `stacq_ansatte` → `id, navn` (for navn→id-map).
-   - `cv_documents` → `ansatt_id, portrait_url` filtrert `not null`.
-2. Bygg to maps i `useMemo`: `nameToAnsattId` og `portraitByAnsattId`.
-3. Importer `getInitials` fra `@/lib/utils`.
-4. I rad-renderen (linje 250–278): erstatt den enkle `<span>{row.kandidat}</span>` med en flex-container:
-   - **Hvis ansatt + portrett finnes:** `<img>` 20x20px, rounded-full, `object-cover`, 1px `C.borderLight`-ramme.
-   - **Hvis ansatt uten portrett:** sirkel 20x20px med `C.accentBg` bakgrunn, `C.accent` tekst, initialer 9px/600.
-   - **Hvis ekstern:** sirkel 20x20px med `C.surfaceAlt` bakgrunn, `C.textMuted` tekst, initialer 9px/600.
-   - Etterfulgt av navnet uendret (13px/500/`C.text`).
-5. På "TOTAL"-raden (linje 282–295): la første kolonne fortsatt vise "TOTAL" uten avatar (samme indent — bruk en transparent 20px-spacer for å holde tekstjustering konsistent med radene over).
+### 2. `src/pages/KonsulenterOppdrag.tsx` (kun V2-grenen, `embeddedSplit === true`)
+Linje 418–525 (embeddedSplit-grenen):
+- Rad: `min-h-[44px] py-2` → `min-h-[38px] py-1`.
+- Avatar: `w-7 h-7` → `w-6 h-6`, `text-[0.625rem]` beholdes.
+- Konsulent-navn (linje 454): `text-[0.875rem] font-semibold` → `text-[0.8125rem] font-medium` (matcher Kontakter).
+- Kunde (linje 456): `text-[0.875rem] font-medium text-foreground` → `text-[0.8125rem] text-muted-foreground` (matcher Kontakter "Selskap"-kolonne, dempet).
+- V1-grenen (linje 569+, ikke-embeddedSplit) er **urørt**.
 
-Avatar-størrelse 20px valgt fordi rad-`minHeight` er 40px — gir tett, Linear-aktig uttrykk uten å forstyrre eksisterende grid-kolonnebredder.
+### 3. `src/pages/DesignLabKonsulenterAnsatte.tsx`
+- Rad (linje 266): `minHeight: 44` → `minHeight: 38`.
+- Avatar (linje 281, 283–288): `h-8 w-8` → `h-6 w-6`, initialer `fontSize: 11` → `fontSize: 10`.
+- Tekstgap `gap-3` → `gap-2`.
+
+### 4. `src/pages/EksterneKonsulenter.tsx` (kun V2-grenen, `embeddedSplit === true`)
+Linje 256–289 (embeddedSplit-grenen):
+- Rad (linje 262): `min-h-[44px] py-2` → `min-h-[38px] py-1`.
+- TEKNOLOGIER-kolonne (linje 280): erstatt `flex flex-wrap` med `flex flex-nowrap overflow-hidden items-center`. Reduser fra `slice(0, 3)` → `slice(0, 2)` for å sikre at to tagger + "+N" alltid får plass på én linje uten wrap. Vis "+N" når det finnes flere enn 2.
+- V1-grenen (linje 326+, ikke-embeddedSplit) er **urørt**.
 
 ## Effekt
-- Konsulentkolonnen viser portrett/initialer foran navnet — matcher FornyelsesTimeline-mønsteret og gir umiddelbar visuell gjenkjenning.
-- Ingen layout-shift: avatar er 20px, navn beholder samme posisjon med 8px gap.
-- TOTAL-raden forblir tekstjustert med konsulentnavnene over.
+- Alle fire V2-tabeller får 38px radhøyde — visuell rytme matcher Kontakter.
+- Aktive oppdrag bruker 13px / dempet farge på Kunde-kolonnen, identisk med Kontakter sin Selskap-kolonne.
+- TEKNOLOGIER i Eksterne forblir én linje med "+N"-overflow.
+- V1-flatene `/aktive-oppdrag` og `/eksterne` (ikke-embeddedSplit) er bit-for-bit urørt.
 
 ## Utenfor scope
-- V1 `/stacq-prisen` (ingen V1-versjon påvirkes).
-- Endringer i datamodell eller `stacq_oppdrag`-skjema.
-- Avatar i edit-modalen.
+- V1-rendring i `KonsulenterOppdrag` og `EksterneKonsulenter`.
+- Endring av kolonnebredder eller grid-templates.
+- Endring av sortering/filter/data-logikk.
 
