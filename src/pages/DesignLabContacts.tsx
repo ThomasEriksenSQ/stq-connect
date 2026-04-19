@@ -1921,12 +1921,7 @@ export default function DesignLabContacts() {
           {!selectedConsultant ? (
             <>
               <DesignLabFilterRow label="EIER" options={ownerOptions} value={ownerFilter} onChange={setOwnerFilter} />
-              <div className="flex items-center justify-between">
-                <DesignLabFilterRow label="SIGNAL" options={["Alle", ...SIGNALS]} value={signalFilter} onChange={setSignalFilter} />
-                <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500, whiteSpace: "nowrap", paddingLeft: 12 }}>
-                  {visibleResultCount} kontakter
-                </span>
-              </div>
+              <DesignLabFilterRow label="SIGNAL" options={["Alle", ...SIGNALS]} value={signalFilter} onChange={setSignalFilter} />
               <div className="flex items-center justify-between">
                 <DesignLabFilterRow
                   label="TYPE"
