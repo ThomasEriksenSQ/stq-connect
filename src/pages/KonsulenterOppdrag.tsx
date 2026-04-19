@@ -422,7 +422,7 @@ export default function KonsulenterOppdrag({
                                 setEditSheetOpen(true);
                               }}
                               className={cn(
-                                "grid gap-3 items-center px-4 min-h-[44px] py-2 transition-colors cursor-pointer",
+                                "grid gap-3 items-center px-4 min-h-[38px] py-1 transition-colors cursor-pointer",
                                 isInaktiv && "opacity-60",
                                 isSelected ? "bg-muted/60" : "hover:bg-muted/40",
                               )}
@@ -436,24 +436,24 @@ export default function KonsulenterOppdrag({
                                   : undefined;
                                 const portrait = ansattId ? portraitByAnsattId.get(ansattId) : undefined;
                                 if (isAnsatt && portrait) {
-                                  return <img src={portrait} alt={o.kandidat} className="w-7 h-7 rounded-full object-cover border border-border flex-shrink-0" />;
+                                  return <img src={portrait} alt={o.kandidat} className="w-6 h-6 rounded-full object-cover border border-border flex-shrink-0" />;
                                 }
                                 if (isAnsatt) {
                                   return (
-                                    <div className="w-7 h-7 rounded-full bg-primary/10 text-primary text-[0.625rem] font-bold flex items-center justify-center flex-shrink-0">
+                                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary text-[0.625rem] font-bold flex items-center justify-center flex-shrink-0">
                                       {getInitials(o.kandidat || "?")}
                                     </div>
                                   );
                                 }
                                 return (
-                                  <div className="w-7 h-7 rounded-full bg-muted text-muted-foreground text-[0.625rem] font-bold flex items-center justify-center flex-shrink-0">
+                                  <div className="w-6 h-6 rounded-full bg-muted text-muted-foreground text-[0.625rem] font-bold flex items-center justify-center flex-shrink-0">
                                     {getInitials(o.kandidat || "?")}
                                   </div>
                                 );
                               })()}
-                              <p className="text-[0.875rem] font-semibold text-foreground truncate">{o.kandidat}</p>
+                              <p className="text-[0.8125rem] font-medium text-foreground truncate">{o.kandidat}</p>
                             </div>
-                            <span className="text-[0.875rem] font-medium text-foreground truncate">{o.kunde}</span>
+                            <span className="text-[0.8125rem] text-muted-foreground truncate">{o.kunde}</span>
                             <div>
                               {(() => {
                                 const cs = o.selskap_id ? companyStatusMap[o.selskap_id] : null;

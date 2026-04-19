@@ -263,7 +263,7 @@ export default function DesignLabKonsulenterAnsatte() {
         className="grid w-full items-center text-left transition-colors"
         style={{
           gridTemplateColumns: GRID_TEMPLATE,
-          minHeight: 44,
+          minHeight: 38,
           paddingInline: 16,
           borderBottom: `1px solid ${C.borderLight}`,
           background: selected ? C.selected : "transparent",
@@ -276,13 +276,13 @@ export default function DesignLabKonsulenterAnsatte() {
           event.currentTarget.style.background = selected ? C.selected : "transparent";
         }}
       >
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 items-center gap-2">
           {portrait ? (
-            <img src={portrait} alt={row.navn} className="h-8 w-8 rounded-full border object-cover" style={{ borderColor: C.border }} />
+            <img src={portrait} alt={row.navn} className="h-6 w-6 rounded-full border object-cover" style={{ borderColor: C.border }} />
           ) : (
             <div
-              className="flex h-8 w-8 items-center justify-center rounded-full"
-              style={{ background: C.accentBg, color: C.accent, fontSize: 11, fontWeight: 700 }}
+              className="flex h-6 w-6 items-center justify-center rounded-full"
+              style={{ background: C.accentBg, color: C.accent, fontSize: 10, fontWeight: 700 }}
             >
               {getInitials(row.navn)}
             </div>

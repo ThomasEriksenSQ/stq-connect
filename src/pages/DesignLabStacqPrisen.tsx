@@ -286,7 +286,7 @@ export default function DesignLabStacqPrisen() {
                         className="grid items-center cursor-pointer"
                         style={{
                           gridTemplateColumns: "minmax(0,2fr) minmax(0,1.5fr) 80px 80px 80px 100px 56px 80px",
-                          minHeight: 40, paddingInline: 16,
+                          minHeight: 38, paddingInline: 16,
                           borderBottom: `1px solid ${C.borderLight}`,
                           transition: "background 50ms",
                         }}
@@ -336,7 +336,7 @@ export default function DesignLabStacqPrisen() {
                     className="grid items-center"
                     style={{
                       gridTemplateColumns: "minmax(0,2fr) minmax(0,1.5fr) 80px 80px 80px 100px 56px 80px",
-                      minHeight: 40, paddingInline: 16,
+                      minHeight: 38, paddingInline: 16,
                       background: C.surfaceAlt, fontWeight: 600,
                     }}
                   >
