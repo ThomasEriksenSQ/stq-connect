@@ -2,59 +2,43 @@
 
 ## Funn
 
-Bruker satte sluttdato fram i tid på et oppdrag som var `Inaktiv`, men status forblir `Inaktiv` etter lagring.
+I `OppdragEditSheet.tsx` finnes "TYPE"-blokken med chips "Direkte" / "Via partner" som styrer `dealType` (`"DIR"` / `"PARTNER"`). I dag finnes kun ett selskaps-felt ("Kunde"), som representerer sluttkunden. Når deal er via partner mangler det en måte å registrere hvilket partnerselskap som formidler oppdraget.
 
-Roten ligger i `computeOppdragStatus` i `src/lib/oppdragForm.ts`:
+Datamodellen `stacq_oppdrag` har kun `selskap_id` + `kunde` (sluttkunde). Det finnes ingen kolonne for partnerselskap.
 
-```ts
-if (input.status === "Inaktiv") return "Inaktiv";
-```
-
-Denne early-return ble lagt inn for å la "Avslutt oppdrag"-knappen være en hard manuell avslutning som ikke overstyres av datoer. Men nå brukes den samme funksjonen i `buildOppdragWritePayload` ved hver lagring — og siden `OppdragEditSheet` fortsatt sender med eksisterende `status: "Inaktiv"` fra raden, blir oppdraget låst som Inaktiv selv om brukeren forlenger sluttdatoen til fremtiden.
-
-Med andre ord: så snart et oppdrag har blitt `Inaktiv` én gang, klarer det aldri å komme tilbake til `Aktiv` via redigering — selv ikke ved å sette en gyldig fremtidig sluttdato.
+`buildOppdragWritePayload` mapper `selskapId` → `selskap_id` og `selskapNavn` → `kunde`.
 
 ## Plan
 
-### Endring i `src/lib/oppdragForm.ts`
+### 1. Database — ny migrasjon
+Legg til to kolonner på `stacq_oppdrag`:
+- `partner_selskap_id uuid` (FK til `companies.id`, nullable, ON DELETE SET NULL)
+- `partner_navn text` (denormalisert visningsnavn, nullable)
 
-Snu logikken slik at datoer er sannheten, og `Inaktiv` kun "vinner" når det ikke finnes datogrunnlag som tilsier noe annet:
+Index på `partner_selskap_id` for oppslag.
 
-```ts
-export function computeOppdragStatus(input): OppdragStatus {
-  const today = startOfDay(new Date());
-  const slutt = parseOppdragDate(input.slutt_dato);
-  const start = parseOppdragDate(input.start_dato);
+### 2. `src/lib/oppdragForm.ts`
+- Utvid `OppdragFormState` med `partnerSelskapId: string | null` og `partnerSelskapNavn: string | null`.
+- Default `null` i `OPPDRAG_DEFAULTS`.
+- `buildOppdragWritePayload`: skriv `partner_selskap_id` og `partner_navn` kun når `dealType === "PARTNER"`. Hvis Direkte → tving begge til `null` (rensing ved bytte).
 
-  // Sluttdato passert → Inaktiv
-  if (slutt && slutt < today) return "Inaktiv";
+### 3. `src/components/OppdragEditSheet.tsx`
+- Behold eksisterende TYPE-blokk uendret.
+- Når `dealType === "PARTNER"`: render ny "PARTNER"-blokk under TYPE med samme selskaps-velger-mønster som "Kunde"-feltet (gjenbruk samme `CompanyCombobox`/søk som allerede brukes). Plassering: rett under TYPE-chipsene, før KUNDE.
+- Når brukeren bytter til Direkte: nullstill partner-state lokalt (UI) — `buildOppdragWritePayload` sørger for DB-rensing.
+- Init fra eksisterende rad: les `partner_selskap_id`/`partner_navn` inn i form-state ved åpning.
+- Behold lagrings-kall uendret.
 
-  // Startdato i fremtiden → Oppstart
-  if (start && start > today) return "Oppstart";
+### 4. Lesing/visning (utenfor scope nå)
+Liste-/detaljvisning av oppdrag oppdateres ikke i denne iterasjonen — kun lagring. Kan legges til når brukeren ønsker å se partner i tabellen.
 
-  // Har gyldig dato-grunnlag for å være aktivt
-  if (start || slutt) return "Aktiv";
-
-  // Ingen datoer satt — respekter eksisterende manuell Inaktiv
-  if (input.status === "Inaktiv") return "Inaktiv";
-
-  return "Aktiv";
-}
-```
-
-Dette gir:
-- Forleng sluttdato til fremtiden på et `Inaktiv` oppdrag → blir `Aktiv` (eller `Oppstart` hvis startdato også flyttes fram).
-- "Avslutt oppdrag"-knappen fungerer fortsatt — den setter `slutt_dato = i dag` + `status = "Inaktiv"`, og siden sluttdato er ≤ i dag returnerer funksjonen `Inaktiv`.
-- Manuell `Inaktiv` uten datoer respekteres fortsatt.
-
-### Test-oppdatering i `src/test/oppdragForm.test.ts`
-
-Legg til ett nytt case:
-- Reaktivering: `status: "Inaktiv"` + `slutt_dato` i fremtiden + `start_dato` i fortiden → payload.status = `"Aktiv"`.
-
-Eksisterende tester forblir grønne (sjekket mot ny logikk: sluttdato i fortiden → Inaktiv; startdato i fremtiden → Oppstart; startdato i dag uten sluttdato → Aktiv).
+### 5. Tester
+Utvid `src/test/oppdragForm.test.ts`:
+- PARTNER + valgt partnerselskap → payload inneholder `partner_selskap_id` og `partner_navn`.
+- DIR → payload har `partner_selskap_id: null` og `partner_navn: null` selv om state har verdier (rensing).
 
 ## Utenfor scope
-- Ingen UI-endring i `OppdragEditSheet.tsx`.
-- Ingen endring i `terminateOppdrag` eller listevisningen.
+- V1-flater (`OppdragEditSheet` brukes både i V1 og V2; UI-endringen vises begge steder, men ingen V1-spesifikk logikk endres).
+- Visning av partner i lister/timeline.
+- Migrering av historiske data (eksisterende rader får `null` på de nye kolonnene).
 
