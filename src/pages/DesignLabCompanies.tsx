@@ -499,7 +499,7 @@ export default function DesignLabCompanies() {
         className="grid items-center cursor-pointer group"
         style={{
           gridTemplateColumns: "minmax(220px,2.2fr) minmax(140px,1.2fr) minmax(180px,1.4fr) 110px 132px",
-          minHeight: 38, paddingLeft: 16, paddingRight: 16,
+          minHeight: 38, paddingLeft: 16, paddingRight: 16, paddingTop: 4, paddingBottom: 4,
           borderBottom: `1px solid ${C.borderLight}`,
           background: isSelected ? C.activeBg : "transparent",
         }}
