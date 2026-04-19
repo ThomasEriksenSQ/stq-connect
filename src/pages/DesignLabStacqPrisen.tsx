@@ -18,6 +18,7 @@ import { C } from "@/components/designlab/theme";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { DesignLabColumnHeader } from "@/components/designlab/system";
 import { computeOppdragStatus as computeSharedOppdragStatus } from "@/lib/oppdragForm";
+import { DesignLabStaticTag } from "@/components/designlab/controls";
 
 /* Colors imported from @/components/designlab/theme */
 
