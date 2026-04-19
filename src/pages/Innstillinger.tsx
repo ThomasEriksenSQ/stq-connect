@@ -297,7 +297,7 @@ function InnstillingerV2() {
   };
 
   return (
-    <DesignLabPageShell activePath="/innstillinger" title="Innstillinger" maxWidth={1180}>
+    <DesignLabPageShell activePath="/innstillinger" title="Innstillinger" maxWidth={null}>
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {/* Outlook + Mailchimp side by side */}
         <div style={{ display: "grid", gap: 16 }} className="md:grid-cols-2">
