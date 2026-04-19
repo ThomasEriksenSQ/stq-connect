@@ -122,7 +122,7 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
 
       {/* Tekststørrelse — over footer-streken, gruppert med nav */}
       {!collapsed && (
-        <div className="shrink-0" style={{ paddingInline: px(12), paddingBottom: px(8) }}>
+        <div className="shrink-0" style={{ paddingInline: px(10), paddingBottom: px(10) }}>
           <TextSizeControlSidebar value={textSize} onChange={setTextSize} />
         </div>
       )}

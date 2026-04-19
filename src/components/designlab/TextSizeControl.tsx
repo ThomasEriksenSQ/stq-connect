@@ -84,34 +84,78 @@ export function TextSizeControl({ value, onChange }: Props) {
 }
 
 /**
- * Sidebar variant — kompakt, uten ikon, optimalisert for 220px sidebar-bredde.
- * Label til venstre, pill-rad høyrejustert.
+ * Sidebar variant — Linear-stil segmented control.
+ * T-ikon venstre, segmentert kontroll høyrejustert.
  */
 export function TextSizeControlSidebar({ value, onChange }: Props) {
   return (
     <div
-      className="flex items-center justify-between"
-      style={{ paddingLeft: 10, paddingRight: 8, height: 28, gap: 8 }}
+      className="flex items-center"
+      style={{ paddingInline: 10, height: 32, gap: 10 }}
+      title="Tekststørrelse"
     >
-      <Type size={13} color={C.textFaint} strokeWidth={1.5} />
-      <div className="flex items-center gap-0.5">
+      <Type
+        size={12}
+        color={C.textFaint}
+        strokeWidth={1.75}
+        aria-hidden="true"
+        style={{ flexShrink: 0 }}
+      />
+      <div
+        role="group"
+        aria-label="Tekststørrelse"
+        className="flex items-center"
+        style={{
+          marginLeft: "auto",
+          height: 24,
+          padding: 2,
+          borderRadius: 6,
+          background: C.surfaceAlt,
+          border: `1px solid ${C.borderLight}`,
+        }}
+      >
         {SIZES.map((s) => {
           const active = s === value;
           return (
-            <DesignLabFilterButton
+            <button
               key={s}
+              type="button"
               onClick={() => onChange(s)}
-              active={active}
+              aria-pressed={active}
               title={`${s} · ${TEXT_SIZE_PRESETS[s].description} · ${Math.round(TEXT_SIZE_PRESETS[s].scale * 100)}%`}
+              className="flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dl-seg-focus)]"
               style={{
-                minWidth: 22,
-                paddingInline: 4,
+                ["--dl-seg-focus" as string]: C.borderFocus,
+                height: 20,
+                minWidth: 26,
+                paddingInline: 6,
                 fontSize: 11,
-                transition: "all 120ms ease",
+                fontWeight: active ? 500 : 400,
+                color: active ? C.text : C.textMuted,
+                background: active ? C.panel : "transparent",
+                borderRadius: 4,
+                border: "none",
+                boxShadow: active
+                  ? "0 1px 2px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.04)"
+                  : "none",
+                transition: "background-color 120ms ease, color 120ms ease",
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => {
+                if (!active) {
+                  e.currentTarget.style.background = C.hoverBg;
+                  e.currentTarget.style.color = C.text;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!active) {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.color = C.textMuted;
+                }
               }}
             >
               {s}
-            </DesignLabFilterButton>
+            </button>
           );
         })}
       </div>
