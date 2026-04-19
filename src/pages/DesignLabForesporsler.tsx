@@ -488,7 +488,7 @@ export default function DesignLabForesporsler() {
    ═══════════════════════════════════════════════════════════ */
 
 function TableHeader({ sort, onSort }: { sort: { field: SortField; dir: SortDir }; onSort: (f: SortField) => void }) {
-  const cols = "92px minmax(220px,1.5fr) minmax(170px,0.95fr) 88px minmax(180px,1.05fr) minmax(190px,1.15fr) minmax(138px,0.85fr)";
+  const cols = "minmax(180px,1.3fr) 132px minmax(180px,1.2fr) 88px minmax(180px,1.05fr) minmax(190px,1.15fr) minmax(120px,0.85fr) 92px";
 
   return (
     <div
@@ -502,13 +502,14 @@ function TableHeader({ sort, onSort }: { sort: { field: SortField; dir: SortDir 
         paddingRight: 16,
       }}
     >
-      <DesignLabColumnHeader label="Mottatt" field="mottatt_dato" sort={sort} onSort={onSort} />
-      <DesignLabColumnHeader label="Selskap" field="selskap_navn" sort={sort} onSort={onSort} />
       <DesignLabColumnHeader label="Kontakt" field="kontakt" sort={sort} onSort={onSort} />
+      <DesignLabColumnHeader label="Signal" field="signal" sort={sort} onSort={onSort} />
+      <DesignLabColumnHeader label="Selskap" field="selskap_navn" sort={sort} onSort={onSort} />
       <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Type</span>
       <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Teknologier</span>
       <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Konsulent</span>
       <DesignLabColumnHeader label="Status" field="sendt_count" sort={sort} onSort={onSort} />
+      <DesignLabColumnHeader label="Mottatt" field="mottatt_dato" sort={sort} onSort={onSort} />
     </div>
   );
 }
@@ -516,19 +517,22 @@ function TableHeader({ sort, onSort }: { sort: { field: SortField; dir: SortDir 
 function ForespRow({
   row,
   portraitByAnsattId,
+  signalByContactId,
   isActive,
   onClick,
 }: {
   row: any;
   portraitByAnsattId: Map<number, string>;
+  signalByContactId: Map<string, string>;
   isActive: boolean;
   onClick: () => void;
 }) {
   const days = getDaysAgo(row.mottatt_dato);
-  const kontaktNavn = row.contacts ? `${row.contacts.first_name} ${row.contacts.last_name}`.trim() : "—";
+  const kontaktNavn = row.contacts ? `${row.contacts.first_name} ${row.contacts.last_name}`.trim() : "";
   const sendt = row.foresporsler_konsulenter || [];
   const technologies = getVisibleTechnologies(row.teknologier);
-  const cols = "92px minmax(220px,1.5fr) minmax(170px,0.95fr) 88px minmax(180px,1.05fr) minmax(190px,1.15fr) minmax(138px,0.85fr)";
+  const signal = row.contacts?.id ? signalByContactId.get(row.contacts.id) || null : null;
+  const cols = "minmax(180px,1.3fr) 132px minmax(180px,1.2fr) 88px minmax(180px,1.05fr) minmax(190px,1.15fr) minmax(120px,0.85fr) 92px";
 
   return (
     <div
@@ -548,22 +552,35 @@ function ForespRow({
       onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = C.hoverBg; }}
       onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = isActive ? C.activeBg : ""; }}
     >
-      <span style={{ fontSize: 13, fontWeight: 500, color: days <= 7 ? C.text : days <= 21 ? C.warning : C.danger, paddingTop: 2 }}>
-        {relTime(days)}
-      </span>
+      {/* Kontakt */}
       <div className="min-w-0 pr-4" style={{ paddingTop: 2 }}>
-        <span className="block truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>
+        {kontaktNavn ? (
+          <span className="block truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>
+            {kontaktNavn}
+          </span>
+        ) : (
+          <span style={{ fontSize: 13, color: C.textGhost }}>—</span>
+        )}
+      </div>
+      {/* Signal */}
+      <div className="flex items-center" style={{ paddingTop: 1 }}>
+        {signal ? (
+          <DesignLabSignalBadge signal={signal} />
+        ) : (
+          <span style={{ fontSize: 11, color: C.textGhost }}>—</span>
+        )}
+      </div>
+      {/* Selskap */}
+      <div className="min-w-0 pr-4" style={{ paddingTop: 2 }}>
+        <span className="block truncate" style={{ fontSize: 12, color: C.textMuted }}>
           {row.selskap_navn}
         </span>
       </div>
-      <div className="min-w-0 pr-4" style={{ paddingTop: 2 }}>
-        <span className="block truncate" style={{ fontSize: 13, color: C.textMuted }}>
-          {kontaktNavn}
-        </span>
-      </div>
+      {/* Type */}
       <div style={{ paddingTop: 1 }}>
         <TypeChip type={row.type} />
       </div>
+      {/* Teknologier */}
       <div className="min-w-0 pr-4">
         <div className="flex items-center gap-1.5 flex-nowrap">
           {technologies.visible.map((t) => (
@@ -581,6 +598,7 @@ function ForespRow({
           ) : null}
         </div>
       </div>
+      {/* Konsulent */}
       <div className="flex flex-col items-start gap-2 pr-3" style={{ paddingTop: 2 }}>
         {sendt.length === 0 ? (
           <div style={{ minHeight: 28, display: "flex", alignItems: "center" }}>
@@ -628,6 +646,7 @@ function ForespRow({
           })
         )}
       </div>
+      {/* Status */}
       <div className="flex flex-col items-start gap-2" style={{ paddingTop: 1 }}>
         {sendt.length === 0 ? (
           <div style={{ minHeight: 28, display: "flex", alignItems: "center" }}>
@@ -658,6 +677,10 @@ function ForespRow({
           })
         )}
       </div>
+      {/* Mottatt */}
+      <span style={{ fontSize: 13, fontWeight: 500, color: days <= 7 ? C.text : days <= 21 ? C.warning : C.danger, paddingTop: 2 }}>
+        {relTime(days)}
+      </span>
     </div>
   );
 }
