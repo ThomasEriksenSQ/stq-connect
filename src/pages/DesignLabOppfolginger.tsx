@@ -616,10 +616,10 @@ export default function DesignLabOppfolginger() {
                     background: C.surfaceAlt,
                   }}
                 >
-                  <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.01em", color: C.textMuted }}>Oppfølging</span>
-                  <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.01em", color: C.textMuted }}>Eier</span>
-                  <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.01em", color: C.textMuted }}>Dato</span>
-                  <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.01em", color: C.textMuted, textAlign: "right" }}>Prioritet</span>
+                  <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", color: C.textMuted, textTransform: "uppercase" }}>Oppfølging</span>
+                  <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", color: C.textMuted, textTransform: "uppercase" }}>Eier</span>
+                  <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", color: C.textMuted, textTransform: "uppercase" }}>Dato</span>
+                  <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", color: C.textMuted, textTransform: "uppercase", textAlign: "right" }}>Prioritet</span>
                 </div>
 
                 {isLoading ? (
