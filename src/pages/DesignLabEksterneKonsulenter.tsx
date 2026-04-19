@@ -232,12 +232,6 @@ export default function DesignLabEksterneKonsulenter() {
             <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {filtered.length}</span>
           </div>
           <div className="flex items-center gap-2">
-            <DesignLabSearchInput
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Søk navn, selskap, teknologi…"
-              style={{ width: 220 }}
-            />
             <DesignLabSecondaryAction onClick={() => navigate("/stacq/importer-cver")}>
               <Upload className="h-3.5 w-3.5" />
               Importer CVer
