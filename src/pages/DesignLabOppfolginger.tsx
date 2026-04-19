@@ -403,6 +403,7 @@ export default function DesignLabOppfolginger() {
             />
           </div>
           <div className="flex items-center ml-auto gap-2">
+            <TextSizeControl value={textSize} onChange={setTextSize} />
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
               <DialogTrigger asChild>
                 <DesignLabPrimaryAction>
@@ -544,6 +545,7 @@ export default function DesignLabOppfolginger() {
                   </DesignLabModalActions>
                 </DesignLabModalForm>
               </DesignLabModalContent>
+            </Dialog>
           </div>
         </header>
         </header>
