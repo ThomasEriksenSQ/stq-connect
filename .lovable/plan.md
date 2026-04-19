@@ -1,62 +1,43 @@
 
 ## Mål
-Gjøre ikonene i collapsed Design Lab-sidebar betydelig større, mens de fortsatt skalerer med tekststørrelse-kontrollen (S/M/L/XL/XXL).
+Gi `/design-lab/eksterne` samme header-layout som `/design-lab/aktive-oppdrag`: tittel + antall til venstre, tekststørrelse + primærknapper helt til høyre, og horisontal strek under — i stedet for dagens inline søk + knapperad inne i embed-innholdet.
 
 ## Funn
-I `src/components/designlab/DesignLabSidebar.tsx`:
-- Nav-ikoner: `width/height: px(14)` i både expanded og collapsed modus
-- Footer-ikoner (Innstillinger, Logg ut, Toggle): `px(14)`
-- Rad-høyde: `px(28)` — knappen er kun 28px høy i collapsed modus, så ikonet kan ikke være mye større enn ~16px uten å sprenge
-
-I expanded modus skal ikonene forbli 14px (matcher 13px tekst — Linear-stil). Men i **collapsed** modus er det ingen tekst, og dagens 14px ikoner ser unødvendig små og "tapte" ut i en 48px bred sidebar (jf. skjermbilde).
+- `DesignLabPageShell` rendrer allerede tittel, count, `TextSizeControl` og `headerRight` med `border-bottom: 1px solid C.border` (linje 41 i shellen). Aktive oppdrag bruker `headerRight` for "Nytt oppdrag" — det er mønsteret.
+- `DesignLabEksterneKonsulenter.tsx` sender ingen `headerRight` i dag, og embedder hele `EksterneKonsulenter` som har sin egen knapperad (Importer CVer, Rydd dubletter, Legg til) + søkefelt på linje 205–239. Dette dupliserer chrome under shell-headeren.
+- `EksterneKonsulenter` har Cmd+K (`embeddedSplit`-modus åpner palette), så søkefeltet på linje 207–215 er allerede unødvendig i embed — i tråd med `mem://style/design-lab-search-placement` (skjul søk når Cmd+K finnes).
 
 ## Løsning
-Bruk forskjellig ikonstørrelse og radhøyde basert på `collapsed`-tilstand:
 
-### Endringer i `DesignLabSidebar.tsx`
+### 1) `DesignLabEksterneKonsulenter.tsx` — løft knappene til shell-header
+Legg til `headerRight` med to handlinger som matcher Aktive oppdrag-mønsteret:
+- **Importer CVer** (sekundær — `DesignLabIconButton`-stil eller ghost): navigerer til `/stacq/importer-cver`
+- **Legg til** (primær — `DesignLabPrimaryAction` med `<Plus />`): trigger opprettelse i embedded siden via en `createRequestId`-counter, samme mekanikk som `DesignLabKonsulenterOppdrag`
 
-1. **Nav-ikoner i `NavGroup`**:
-   - Expanded: `px(14)` (uendret)
-   - Collapsed: `px(20)` — ca 43% større, mye bedre touch-target og visuell vekt
-   - Rad-høyde collapsed: `px(34)` (fra `px(28)`) for å gi rom
+"Rydd dubletter" droppes fra header (sjelden brukt admin-handling) — beholdes inne i listevisningen som en mindre handling, eller flyttes til en overflow-meny senere.
 
-2. **Footer-knapper i `FooterBtn`** (Innstillinger, Logg ut):
-   - Samme behandling: `px(20)` i collapsed, `px(34)` rad-høyde
+### 2) `EksterneKonsulenter.tsx` — skjul intern knapperad i embed
+- Legg til ny prop `showActionBar?: boolean` (default `true`).
+- Når `embeddedSplit` er true → skjul hele blokken på linje 205–239 (søkefelt + tre knapper). Filtrene (Type/Status, linje 241–259) beholdes — de hører til listen, ikke header.
+- Legg til `createRequestId?: number` prop som via `useEffect` åpner opprettelses-modalen (`setModalOpen(true)` + reset `editId`) når den øker — samme pattern som `KonsulenterOppdrag`.
 
-3. **CollapseToggle**:
-   - Collapsed (full row): ikon `px(20)`, høyde `px(34)`
-   - Expanded (i avatar-raden): forblir `px(14)` / `px(24)` (kompakt)
-
-4. **Logo i collapsed modus**:
-   - Justere fra `px(22)` → `px(24)` for bedre visuell balanse mot de større ikonene
-
-### Sidebar-bredde
-Beholder 48px collapsed bredde — 20px ikoner sentrert i 48px gir 14px luft hver side, perfekt visuell balanse.
-
-### Skalering bevart
-Alle verdier bruker `px(value)` som multipliserer med `scale` fra `SCALE_MAP[textSize]`. Dermed:
-- S (0.85): nav-ikon collapsed = 17px
-- M (1.0): 20px
-- L (1.15): 23px
-- XL (1.30): 26px
-- XXL (1.45): 29px
-
-### Visuelt resultat
+### 3) Resultat
 ```
-Før (collapsed):     Etter (collapsed):
-┌────┐               ┌────┐
-│ ▣  │ 14px          │ ▣  │ 20px
-│ ▣  │               │    │
-│ ▣  │               │ ▣  │
-│ ▣  │               │    │
-└────┘               │ ▣  │
-                     └────┘
+┌──────────────────────────────────────────────────────────┐
+│ Eksterne · 42         T S M L XL XXL  [Importer] [+ Legg til] │
+├──────────────────────────────────────────────────────────┤  ← strek (allerede i shell)
+│ Type:   [Alle] [Freelance] [Via partner]                 │
+│ Status: [Alle] [Tilgjengelig] [Ikke ledig]               │
+│ ┌─ liste ──────────────┬─ detaljpanel ──────────────┐    │
+│ │ ...                  │ Trykk ⌘K for å søke.       │    │
+└──────────────────────────────────────────────────────────┘
 ```
 
 ## Filer som endres
-- `src/components/designlab/DesignLabSidebar.tsx` — kun ikon- og radhøyde-tall, ingen strukturelle endringer
+- `src/pages/DesignLabEksterneKonsulenter.tsx` — legg til `headerRight` (Importer CVer + Legg til), bruk `createRequestId`-state
+- `src/pages/EksterneKonsulenter.tsx` — skjul søk + handlingsrad når `embeddedSplit` er true, godta `createRequestId`-prop som åpner opprettelses-modalen
 
 ## Utenfor scope
-- Endre sidebar-bredden i collapsed (48px beholdes)
-- Endre expanded-modus ikonstørrelser (forblir 14px for Linear-tetthet)
-- Endre `SCALE_MAP` eller tekststørrelse-systemet
+- Endre V1-versjonen av `/eksterne` (kun embed-pathen påvirkes via `embeddedSplit`)
+- Flytte filtrene til shell-header
+- Endre "Rydd dubletter"-flyten utover å fjerne den fra hovedheaderen
