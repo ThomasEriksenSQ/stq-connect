@@ -105,4 +105,19 @@ describe("oppdragForm", () => {
 
     expect(payload.status).toBe("Aktiv");
   });
+
+  it("reactivates Inaktiv oppdrag when sluttdato is moved to the future", () => {
+    const payload = buildOppdragWritePayload(
+      createOppdragFormState({
+        kandidat: "Anders Nilsen",
+        personType: "ansatt",
+        ansattId: 5,
+        status: "Inaktiv",
+        startDato: addDays(new Date(), -30),
+        sluttDato: addDays(new Date(), 30),
+      }),
+    );
+
+    expect(payload.status).toBe("Aktiv");
+  });
 });
