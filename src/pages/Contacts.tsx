@@ -173,7 +173,7 @@ const CHIP_ON = `${CHIP_BASE} bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8] font-
 const JAKT_CHIPS: Array<{ value: HuntChipValue; label: string }> = [
   { value: "alle", label: "Alle" },
   { value: "foresporsler", label: "Forespørsler" },
-  { value: "finn", label: "Finn-match" },
+  { value: "finn", label: "Finn annonser" },
   { value: "siste_aktivitet", label: "Siste aktivitet" },
   { value: "innkjoper", label: "Innkjøper" },
   { value: "kunder", label: "Kunder" },
