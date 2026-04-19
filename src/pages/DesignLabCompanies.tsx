@@ -7,6 +7,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/componen
 import { CompanyCardContent } from "@/components/CompanyCardContent";
 import { RenderErrorBoundary } from "@/components/RenderErrorBoundary";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import {
   X, Plus, Loader2,
 } from "lucide-react";
@@ -642,6 +643,7 @@ export default function DesignLabCompanies() {
                       <CompanyCardContent
                         companyId={selectedId}
                         editable
+                        useV1CreateSheet
                         headerPaddingTop={12}
                         showContactsDivider
                         defaultHidden={{
