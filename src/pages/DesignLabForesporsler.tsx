@@ -599,7 +599,7 @@ function ForespRow({
         </div>
       </div>
       {/* Konsulent */}
-      <div className="flex flex-col items-start gap-2 pr-3" style={{ paddingTop: 2 }}>
+      <div className="flex flex-col items-start gap-2 pr-8" style={{ paddingTop: 2 }}>
         {sendt.length === 0 ? (
           <div style={{ minHeight: 28, display: "flex", alignItems: "center" }}>
             <span style={{ fontSize: 12, color: C.textGhost }}>—</span>
