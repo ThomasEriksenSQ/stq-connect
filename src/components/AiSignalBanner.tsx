@@ -50,7 +50,7 @@ export function AiSignalBanner({
   const [loading, setLoading] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [applied, setApplied] = useState(false);
-  const [techsAdded, setTechsAdded] = useState(false);
+  const [addedTechs, setAddedTechs] = useState<Set<string>>(new Set());
 
   const dismissKey = `dismissed_signal_${contactId}`;
 
@@ -106,10 +106,11 @@ export function AiSignalBanner({
   const newTechs = normalizedSuggestedTechnologies.filter(
     (t) => !normalizedExisting.has(t.toLowerCase())
   );
+  const remainingTechs = newTechs.filter((t) => !addedTechs.has(t.toLowerCase()));
 
   const hasResult = Boolean(result);
   const signalChanged = Boolean(result && result.anbefalt_signal !== currentSignal);
-  const hasNewTechs = newTechs.length > 0 && !techsAdded;
+  const hasNewTechs = remainingTechs.length > 0;
   const isVisible = !dismissed && !loading && hasResult && !(applied && !hasNewTechs) && (signalChanged || hasNewTechs);
 
   useEffect(() => {
@@ -153,17 +154,28 @@ export function AiSignalBanner({
             </div>
           )}
 
-          {/* Nye teknologier */}
+          {/* Nye teknologier — klikkbare for individuell tillegging */}
           {hasNewTechs && (
             <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
               <span className="text-[0.6875rem] text-muted-foreground">Teknologier:</span>
-              {newTechs.map((t) => (
-                <span
+              {remainingTechs.map((t) => (
+                <button
                   key={t}
-                  className="chip chip--tech"
+                  type="button"
+                  onClick={() => {
+                    onAddTechnologies([t]);
+                    setAddedTechs((prev) => {
+                      const next = new Set(prev);
+                      next.add(t.toLowerCase());
+                      return next;
+                    });
+                  }}
+                  className="chip chip--tech inline-flex items-center gap-1 hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-colors cursor-pointer"
+                  title={`Legg til ${t}`}
                 >
+                  <Plus className="h-3 w-3" />
                   {t}
-                </span>
+                </button>
               ))}
             </div>
           )}
@@ -180,18 +192,6 @@ export function AiSignalBanner({
               >
                 <Check className="h-3 w-3" />
                 Oppdater signal
-              </button>
-            )}
-            {hasNewTechs && (
-              <button
-                onClick={() => {
-                  onAddTechnologies(newTechs);
-                  setTechsAdded(true);
-                }}
-                className="inline-flex items-center gap-1 text-[0.75rem] font-medium text-primary hover:text-primary/80 transition-colors"
-              >
-                <Plus className="h-3 w-3" />
-                Legg til teknologier
               </button>
             )}
             <button
