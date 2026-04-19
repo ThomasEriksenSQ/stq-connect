@@ -57,7 +57,7 @@ export function usePersistentState<T>(
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener(EVENT_NAME, handleCustom as EventListener);
     };
-  }, [key, initialValue]);
+  }, [key]);
 
   return [value, setValue];
 }
