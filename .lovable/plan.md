@@ -1,40 +1,34 @@
 
 
-## Vurdering
+## Risikovurdering
 
-I dag har sidebar-versjonen av tekststørrelse-kontrollen (`TextSizeControlSidebar`) en T-ikon til venstre + en segmentert kontroll høyrejustert med 5 knapper (S, M, L, XL, XXL) på ca 26px hver. Brukeren vil fjerne T-ikonet og la knappene fylle hele bredden av sidebar-innholdet.
+Ja — dette er en **lav-risk plan**. Her er hvorfor:
 
-Dette er riktig i Linear-stil: ikonet er dekorativt — knappenes bokstaver kommuniserer hva kontrollen er. Å fjerne T og strekke segmentene gir bedre touch-targets, ren symmetri, og full utnyttelse av sidebar-bredden uten å øke visuell vekt.
+### Hva som gjør den trygg
 
-## Designprinsipper anvendt
+1. **Ingen logikkendring** — alle eksisterende `onClick`-callbacks beholdes uendret. Hooken er en ren gatekeeper som bestemmer *når* klikket teller, ikke *hva* som skjer.
 
-- **Selvforklarende uten ikon**: S/M/L/XL/XXL er universelle størrelse-tegn — T-ikonet var redundant.
-- **Lik bredde per segment**: `flex: 1` på hvert segment gir perfekt symmetri og forutsigbarhet (Linear-mønster).
-- **Beholder eksisterende høyde, radius og farger**: ingen ny visuell vekt, bare bedre proporsjoner.
-- **Beholder padding**: containeren beholder `paddingInline: px(10)` slik at kontrollen flukter med øvrige sidebar-elementer.
+2. **`<button>` → `<span role="button" tabIndex={0}>`** er semantisk likeverdig for skjermlesere så lenge vi legger på `onKeyDown` for Enter/Space. Dette er et veletablert ARIA-mønster.
 
-## Plan
+3. **Isolert scope** — kun 4 filer, og 3 av dem er presentasjonskomponenter uten datamutasjoner. Hooken er ny og brukes bare på de stedene vi eksplisitt kobler den inn.
 
-### `src/components/designlab/TextSizeControl.tsx` — `TextSizeControlSidebar`
+4. **Ingen endring i mailto/tel-lenker, sletteknapper, lagre-knapper, eller skjema-submit** — vi rører kun visningstekst-wrappers.
 
-1. Fjern `<Type>`-ikonet og dets wrapper-gap.
-2. Endre ytre wrapper: dropp `gap: 10`, behold `paddingInline: 10` og `height: 32`.
-3. Endre segmentert kontroll-container:
-   - `width: "100%"` (fyller sidebar-innholdet)
-   - Fjern `marginLeft: "auto"` (ikke lenger nødvendig)
-4. Endre hver segment-knapp:
-   - `flex: 1` (lik bredde)
-   - Fjern `minWidth: 26`
-   - Behold høyde 20, radius 4, font 11, vekt og farge-logikk
-5. Behold tooltip (`title`) på hver knapp — gir "Kompakt", "Standard" osv. ved hover siden ikonet fjernes.
-6. Behold `aria-label="Tekststørrelse"` på gruppen for tilgjengelighet (erstatter ikon-konteksten).
+5. **Reversibel** — endringen er mekanisk og lett å rulle tilbake per komponent hvis noe oppfører seg uventet.
 
-Ingen endringer i `TextSizeControl` (header-varianten brukt i Stilark/StacqPrisen) — den beholder T-ikonet siden den ligger i en bredere header-kontekst.
+### Hvor risiko finnes (lav, men reell)
 
-## Filer som endres
-- `src/components/designlab/TextSizeControl.tsx`
+- **Aktivitetsrad og e-postrad** har bredere klikk-overflate. Hvis brukeren markerer tekst og slipper musen *utenfor* den opprinnelige raden, må vi sjekke selection-state korrekt slik at vi ikke ved et uhell *aldri* åpner edit/expand. Hooken håndterer dette ved å nullstille på `mousedown`.
+- **Tastaturbrukere** mister `<button>`s innebygde Enter/Space-håndtering. Mitigasjon: eksplisitt `onKeyDown` på alle konverterte elementer.
+- **Fokusring** på `<span role="button">` arves ikke automatisk fra `<button>`. Mitigasjon: behold eksisterende Tailwind-klasser (de fleste bruker uansett `focus-visible:ring`-pattern via globale stiler) og verifiser visuelt.
 
-## Utenfor scope
-- `TextSizeControl` (header-variant) — uendret
-- Skala-logikk, presets eller persistens — uendret
+### Hva som *ikke* berøres
+
+- Ingen DB-kall, ingen mutations, ingen RLS, ingen edge functions.
+- Ingen V1/V2-tokens eller theme-filer.
+- Ingen andre kort (Oppdrag, Forespørsel, Ansatt) — kan migreres senere ved behov.
+
+### Konklusjon
+
+Lav risiko, høy verdi. Den eneste måten dette kan brekke noe på er hvis terskelen for "drag vs klikk" (4px) er feil kalibrert — i så fall kan vi justere til 6–8px uten arkitekturendring. Anbefaler å gå videre med planen som den står.
 
