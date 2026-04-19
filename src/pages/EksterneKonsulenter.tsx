@@ -1,7 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useMemo, useState, useRef, useCallback } from "react";
+import { useMemo, useState, useRef, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
+import { C } from "@/components/designlab/theme";
+import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { addDays, format, isAfter, isBefore, startOfDay } from "date-fns";
 import { nb } from "date-fns/locale";
 import { Plus, X, Search, CalendarIcon, Upload, CheckCircle2, Loader2, Users, User, Mail, Phone, Building2, Clock3, Pencil } from "lucide-react";
@@ -94,6 +98,23 @@ export default function EksterneKonsulenter({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [cleanupOpen, setCleanupOpen] = useState(false);
   const [cleanupRunning, setCleanupRunning] = useState(false);
+  const [cmdOpen, setCmdOpen] = useState(false);
+  const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
+
+  useEffect(() => {
+    if (!embeddedSplit) return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCmdOpen(true);
+      }
+      if (e.key === "Escape" && !cmdOpen) {
+        setSelectedId(null);
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [embeddedSplit, cmdOpen]);
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["external-consultants"],
@@ -311,8 +332,8 @@ export default function EksterneKonsulenter({
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center px-6">
-                    <p className="text-[0.875rem] text-muted-foreground">
-                      Velg en ekstern konsulent for å vise profil.
+                    <p style={{ fontSize: 13, color: C.textFaint }}>
+                      Trykk ⌘K for å søke.
                     </p>
                   </div>
                 )}
@@ -395,6 +416,19 @@ export default function EksterneKonsulenter({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {embeddedSplit && (
+        <ExternalCommandPalette
+          open={cmdOpen}
+          onClose={() => setCmdOpen(false)}
+          textSize={textSize}
+          rows={rows}
+          onSelect={(id) => {
+            setSelectedId(id);
+            setCmdOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -1085,5 +1119,221 @@ function ConsultantModal({ open, onClose, editRow, userId }: {
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ExternalCommandPalette (V2 only) — ⌘K søk på Eksterne
+   ───────────────────────────────────────────────────────────── */
+
+interface ExternalCommandPaletteProps {
+  open: boolean;
+  onClose: () => void;
+  textSize: TextSize;
+  rows: any[];
+  onSelect: (id: string) => void;
+}
+
+function ExternalCommandPalette({ open, onClose, textSize, rows, onSelect }: ExternalCommandPaletteProps) {
+  const [query, setQuery] = useState("");
+  const [activeIdx, setActiveIdx] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      setQuery("");
+      setActiveIdx(0);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }, [open]);
+
+  const items = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    const matched = rows.filter((r: any) => {
+      if (!q) return true;
+      const name = (r.navn || "").toLowerCase();
+      const company = (r.companies?.name || r.selskap_tekst || "").toLowerCase();
+      const tech = (r.teknologier || []).join(" ").toLowerCase();
+      return name.includes(q) || company.includes(q) || tech.includes(q);
+    });
+    return matched.slice(0, 12);
+  }, [query, rows]);
+
+  useEffect(() => {
+    setActiveIdx((prev) => Math.min(prev, Math.max(0, items.length - 1)));
+  }, [items.length]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        e.stopPropagation();
+        setActiveIdx((p) => Math.min(p + 1, items.length - 1));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        e.stopPropagation();
+        setActiveIdx((p) => Math.max(p - 1, 0));
+      } else if (e.key === "Enter" && items[activeIdx]) {
+        e.preventDefault();
+        e.stopPropagation();
+        onSelect(items[activeIdx].id);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    },
+    [items, activeIdx, onSelect, onClose],
+  );
+
+  useEffect(() => {
+    const el = listRef.current?.querySelector(`[data-idx="${activeIdx}"]`);
+    el?.scrollIntoView({ block: "nearest" });
+  }, [activeIdx]);
+
+  if (!open) return null;
+
+  return createPortal(
+    <div
+      style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.10)" }}
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={handleKeyDown}
+        style={{
+          position: "fixed",
+          top: "18vh",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: 560,
+          maxHeight: 420,
+          background: "#FFFFFF",
+          border: "1px solid #E2E4E9",
+          borderRadius: 10,
+          boxShadow: "0 0 0 1px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.10), 0 24px 48px rgba(0,0,0,0.06)",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          ...getDesignLabTextSizeStyle(textSize),
+        }}
+      >
+        <div style={{ position: "relative", height: 44, borderBottom: "1px solid #EAECEF" }}>
+          <Search
+            style={{
+              position: "absolute",
+              left: 14,
+              top: "50%",
+              transform: "translateY(-50%)",
+              width: 15,
+              height: 15,
+              color: "#B0B7C3",
+            }}
+          />
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setActiveIdx(0);
+            }}
+            placeholder="Søk navn, selskap eller teknologi..."
+            style={{
+              width: "100%",
+              height: "100%",
+              border: "none",
+              outline: "none",
+              background: "transparent",
+              fontSize: 13,
+              fontWeight: 400,
+              color: "#1A1C1F",
+              fontFamily: "inherit",
+              padding: "0 14px 0 40px",
+            }}
+          />
+        </div>
+
+        <div ref={listRef} style={{ flex: 1, overflowY: "auto", padding: "4px 0 0" }}>
+          {items.length === 0 ? (
+            <div style={{ padding: "24px 16px", fontSize: 13, color: "#8C929C" }}>
+              Ingen resultater for «{query}»
+            </div>
+          ) : (
+            <div>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: "#8C929C",
+                  padding: "8px 12px 4px",
+                }}
+              >
+                Eksterne konsulenter
+              </div>
+              {items.map((row: any, idx: number) => {
+                const isActive = idx === activeIdx;
+                const company = row.companies?.name || row.selskap_tekst || "";
+                return (
+                  <div
+                    key={row.id}
+                    data-idx={idx}
+                    onClick={() => onSelect(row.id)}
+                    onMouseEnter={() => setActiveIdx(idx)}
+                    style={{
+                      height: 28,
+                      padding: "0 8px",
+                      margin: "1px 6px",
+                      borderRadius: 6,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      fontSize: 13,
+                      fontWeight: 400,
+                      color: "#1A1C1F",
+                      cursor: "pointer",
+                      background: isActive ? "#F3F5F9" : "#FFFFFF",
+                      transition: "background 120ms ease",
+                    }}
+                  >
+                    <User
+                      style={{
+                        width: 14,
+                        height: 14,
+                        color: isActive ? "#8C929C" : "#C1C7D0",
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span
+                      style={{
+                        flex: 1,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {row.navn || "—"}
+                    </span>
+                    {company && (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: isActive ? "#6B7280" : "#8C929C",
+                          marginLeft: "auto",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {company}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
