@@ -100,7 +100,7 @@ export function AiSignalBanner({
   }, [contactId, currentSignal, activities.length, outlookEmails.length]);
 
   // Filter new technologies not already on contact
-  const normalizedCurrentTechnologies = normalizeTechnologyTags(currentTechnologies);
+  const normalizedCurrentTechnologies = normalizeTechnologyTags(currentTechnologies as string | string[] | null | undefined);
   const normalizedExisting = new Set(normalizedCurrentTechnologies.map((t) => t.toLowerCase()));
   const normalizedSuggestedTechnologies = normalizeTechnologyTags(result?.teknologier_funnet ?? []);
   const newTechs = normalizedSuggestedTechnologies.filter(

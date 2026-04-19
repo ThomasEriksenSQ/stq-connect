@@ -74,6 +74,7 @@ import {
   buildContactCvSafeUpdates,
   CONTACT_CV_EMAIL_REQUIRED_MESSAGE,
   contactHasEmail,
+  sanitizeContactCvEmail,
 } from "@/lib/contactCvEligibility";
 import {
   DesignLabCategoryBadge,

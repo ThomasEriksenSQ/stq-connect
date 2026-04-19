@@ -202,7 +202,7 @@ export default function DesignLabKonsulenterAnsatte() {
 
     const days = differenceInDays(effectiveDate, new Date());
     let label = format(effectiveDate, "dd.MM.yy");
-    let color = C.textFaint;
+    let color: string = C.textFaint;
     let weight: number | undefined;
 
     if (days < 0) {
@@ -266,14 +266,14 @@ export default function DesignLabKonsulenterAnsatte() {
           minHeight: 44,
           paddingInline: 16,
           borderBottom: `1px solid ${C.borderLight}`,
-          background: selected ? C.rowSelected : "transparent",
+          background: selected ? C.selected : "transparent",
           opacity: status === "Sluttet" ? 0.55 : status === "Kommende" ? 0.82 : 1,
         }}
         onMouseEnter={(event) => {
           if (!selected) event.currentTarget.style.background = C.hoverBg;
         }}
         onMouseLeave={(event) => {
-          event.currentTarget.style.background = selected ? C.rowSelected : "transparent";
+          event.currentTarget.style.background = selected ? C.selected : "transparent";
         }}
       >
         <div className="flex min-w-0 items-center gap-3">

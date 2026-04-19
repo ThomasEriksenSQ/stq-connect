@@ -2124,13 +2124,14 @@ export default function DesignLabContacts() {
                         const isActive = isContactMatchLead(lead) && selectedId === lead.id;
                         const leadDate = getMatchLeadDate(lead);
                         const confidence = getConfidenceConfig(lead.confidenceBand);
+                        const requestTemp = isRequestMatchLead(lead) ? lead.temperature : undefined;
                         const heatColor = isContactMatchLead(lead)
                           ? getHeatBarColor(lead.heatResult)
-                          : lead.temperature === "hett"
+                          : requestTemp === "hett"
                             ? C.danger
-                            : lead.temperature === "lovende"
+                            : requestTemp === "lovende"
                               ? C.heatPromising
-                              : lead.temperature === "mulig"
+                              : requestTemp === "mulig"
                                 ? C.heatPossible
                                 : "transparent";
                         const heatLabel = isContactMatchLead(lead)
