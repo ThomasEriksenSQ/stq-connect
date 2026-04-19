@@ -402,7 +402,7 @@ export default function DesignLabOppfolginger() {
               style={{ width: 220 }}
             />
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center ml-auto">
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
               <DialogTrigger asChild>
                 <DesignLabPrimaryAction>
