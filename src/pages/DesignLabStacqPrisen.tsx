@@ -473,14 +473,25 @@ function TypeBadge({ dealType }: { dealType: string | null }) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const isActive = status === "Aktiv";
+  const colors =
+    status === "Aktiv"
+      ? { background: "#EAF7EF", color: "#197A52", border: "1px solid rgba(25,122,82,0.16)", fontWeight: 600 }
+      : status === "Oppstart"
+        ? { background: "#F6EFE2", color: "#9A7A2A", border: "1px solid rgba(154,122,42,0.16)", fontWeight: 600 }
+        : { background: "#F7F8FA", color: "#8C929C", border: "1px solid #E3E6EB", fontWeight: 500 };
   return (
-    <span className="inline-flex items-center rounded" style={{
-      fontSize: 11, fontWeight: 500, paddingInline: 8, paddingBlock: 2,
-      background: isActive ? C.successBg : C.warningBg,
-      color: isActive ? C.success : C.warning,
-      border: `1px solid ${isActive ? "rgba(74,154,106,0.15)" : "rgba(154,122,42,0.15)"}`,
-    }}>
+    <span
+      className="inline-flex items-center rounded"
+      style={{
+        fontSize: 11,
+        paddingInline: 8,
+        paddingBlock: 2,
+        background: colors.background,
+        color: colors.color,
+        border: colors.border,
+        fontWeight: colors.fontWeight,
+      }}
+    >
       {status}
     </span>
   );
