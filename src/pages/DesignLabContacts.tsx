@@ -1903,13 +1903,6 @@ export default function DesignLabContacts() {
           </div>
           <div className="flex items-center gap-2">
             <TextSizeControl value={textSize} onChange={setTextSize} />
-            <DesignLabSearchInput
-              ref={searchRef}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Søk kontakter…"
-              style={{ width: 220 }}
-            />
           </div>
         </header>
 
