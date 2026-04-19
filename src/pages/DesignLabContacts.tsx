@@ -2082,7 +2082,7 @@ export default function DesignLabContacts() {
                       <div
                         className="grid items-center"
                         style={{
-                          gridTemplateColumns: "minmax(220px,2fr) minmax(140px,1.2fr) minmax(120px,1fr) 110px 110px 96px",
+                          gridTemplateColumns: "minmax(220px,1.6fr) minmax(140px,1fr) minmax(140px,1fr) 140px 120px 110px",
                           height: 32,
                           paddingLeft: 16,
                           paddingRight: 16,
