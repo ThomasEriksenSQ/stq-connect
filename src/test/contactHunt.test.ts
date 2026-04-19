@@ -31,7 +31,7 @@ describe("contactHunt", () => {
     expect(sorted.map((consultant) => consultant.navn)).toEqual(["Bente", "Zara", "Anders"]);
   });
 
-  it("marks availability as visible only inside the 60 day window", () => {
+  it("marks availability as visible whenever a date is set", () => {
     expect(hasConsultantAvailability(null)).toBe(false);
     expect(getConsultantAvailabilityMeta(null)).toEqual({
       daysUntil: Number.POSITIVE_INFINITY,
@@ -50,7 +50,7 @@ describe("contactHunt", () => {
     expect(getConsultantAvailabilityMeta(isoDate(120))).toMatchObject({
       daysUntil: 120,
       tone: "later",
-      isVisible: false,
+      isVisible: true,
     });
 
     expect(hasConsultantAvailability(isoDate(0))).toBe(true);
@@ -59,7 +59,7 @@ describe("contactHunt", () => {
       daysUntil: -61,
       label: "Tilgjengelighet utløpt",
       tone: "unknown",
-      isVisible: false,
+      isVisible: true,
     });
   });
 
