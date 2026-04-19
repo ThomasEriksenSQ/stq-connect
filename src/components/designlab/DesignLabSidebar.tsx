@@ -143,19 +143,6 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
 
         <FooterBtn icon={Settings} label="Innstillinger" onClick={() => navigate("/design-lab/innstillinger")} active={isActive("/design-lab/innstillinger")} collapsed={collapsed} scale={scale} />
         <FooterBtn icon={LogOut} label="Logg ut" onClick={signOut} muted collapsed={collapsed} scale={scale} />
-
-        {!collapsed && (
-          <div className="flex items-center justify-end px-2 pt-2 pb-1">
-            <CollapseToggle collapsed={collapsed} onClick={() => setCollapsed((p) => !p)} scale={scale} />
-          </div>
-        )}
-
-        {collapsed && (
-          <div className="pt-1">
-            <CollapseToggle collapsed={collapsed} onClick={() => setCollapsed((p) => !p)} scale={scale} fullRow />
-          </div>
-        )}
-
       </div>
     </aside>
   );
