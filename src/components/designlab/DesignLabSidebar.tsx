@@ -93,7 +93,7 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
         className="mt-auto shrink-0 space-y-0.5"
         style={{ borderTop: `1px solid ${C.border}`, padding: `${px(8)}px ${collapsed ? px(6) : px(12)}px` }}
       >
-        <FooterBtn icon={Settings} label="Innstillinger" onClick={() => navigate("/innstillinger")} collapsed={collapsed} scale={scale} />
+        <FooterBtn icon={Settings} label="Innstillinger" onClick={() => navigate("/innstillinger")} active={isActive("/innstillinger")} collapsed={collapsed} scale={scale} />
         <FooterBtn icon={LogOut} label="Logg ut" onClick={signOut} muted collapsed={collapsed} scale={scale} />
 
         {user && !collapsed && (
@@ -197,6 +197,7 @@ function FooterBtn({
   label,
   onClick,
   muted,
+  active,
   collapsed,
   scale,
 }: {
@@ -204,10 +205,12 @@ function FooterBtn({
   label: string;
   onClick: () => void;
   muted?: boolean;
+  active?: boolean;
   collapsed: boolean;
   scale: number;
 }) {
   const px = (value: number) => Math.round(value * scale * 100) / 100;
+  const baseColor = active ? C.text : muted ? C.textGhost : C.textMuted;
   return (
     <button
       onClick={onClick}
@@ -217,8 +220,9 @@ function FooterBtn({
         ["--dl-focus-ring" as string]: C.borderFocus,
         ["--dl-focus-offset" as string]: C.sidebarBg,
         fontSize: px(13),
-        fontWeight: 400,
-        color: muted ? C.textGhost : C.textMuted,
+        fontWeight: active ? 500 : 400,
+        color: baseColor,
+        background: active ? C.filterActiveBg : "transparent",
         borderRadius: px(6),
         height: px(28),
         gap: px(8),
@@ -228,10 +232,10 @@ function FooterBtn({
         whiteSpace: "nowrap",
         overflow: "hidden",
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverSubtle; e.currentTarget.style.color = C.text; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = muted ? C.textGhost : C.textMuted; }}
+      onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = C.hoverSubtle; e.currentTarget.style.color = C.text; } }}
+      onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = baseColor; } }}
     >
-      <Icon style={{ width: px(14), height: px(14), strokeWidth: 1.5, color: C.textFaint, flexShrink: 0 }} />
+      <Icon style={{ width: px(14), height: px(14), strokeWidth: 1.5, color: active ? C.text : C.textFaint, flexShrink: 0 }} />
       {!collapsed && label}
     </button>
   );
