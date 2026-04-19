@@ -651,7 +651,7 @@ export default function DesignLabOppfolginger() {
                         onClick={() => setSelectedId(model.id)}
                         className="grid w-full items-center text-left transition-colors"
                         style={{
-                          gridTemplateColumns: "minmax(0, 2.2fr) minmax(0, 180px) 92px 70px",
+                          gridTemplateColumns: "minmax(0, 1fr) 220px 240px 140px 92px 70px",
                           minHeight: 52,
                           padding: "10px 24px",
                           borderBottom: `1px solid ${C.borderLight}`,
@@ -668,9 +668,26 @@ export default function DesignLabOppfolginger() {
                           <p style={{ fontSize: 13, fontWeight: 600, color: C.text, lineHeight: 1.25 }} className="truncate">
                             {model.title}
                           </p>
-                          <p style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }} className="truncate">
-                            {rowMeta(model)}
-                          </p>
+                        </div>
+
+                        <div className="min-w-0 pr-3">
+                          {model.contactName ? (
+                            <p style={{ fontSize: 13, fontWeight: 400, color: C.textMuted }} className="truncate">
+                              {model.contactName}
+                            </p>
+                          ) : (
+                            <span style={{ fontSize: 13, color: C.textGhost }}>—</span>
+                          )}
+                        </div>
+
+                        <div className="min-w-0 pr-3">
+                          {model.companyName ? (
+                            <p style={{ fontSize: 13, fontWeight: 400, color: C.textMuted }} className="truncate">
+                              {model.companyName}
+                            </p>
+                          ) : (
+                            <span style={{ fontSize: 13, color: C.textGhost }}>—</span>
+                          )}
                         </div>
 
                         <div className="min-w-0">
