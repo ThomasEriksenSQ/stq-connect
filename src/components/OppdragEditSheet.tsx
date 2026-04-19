@@ -233,6 +233,23 @@ function PersonSearchField({
     },
   });
 
+  const { data: cvPortraits = [] } = useQuery({
+    queryKey: ["oppdrag-create-portraits"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("cv_documents")
+        .select("ansatt_id, portrait_url")
+        .not("portrait_url", "is", null);
+      return data || [];
+    },
+  });
+
+  const portraitByAnsattId = new Map<number, string>(
+    (cvPortraits as any[])
+      .filter((c) => c.ansatt_id && c.portrait_url)
+      .map((c) => [c.ansatt_id, c.portrait_url] as [number, string]),
+  );
+
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 50);
