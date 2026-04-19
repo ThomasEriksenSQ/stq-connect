@@ -1250,10 +1250,10 @@ export function ContactCardContent({
         {shouldRenderTechDnaSection && (
         <div className={cn("mb-5", shouldHideTechDnaSection && "hidden")} aria-hidden={shouldHideTechDnaSection || undefined}>
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+            <div className="flex items-center justify-between mb-3" style={{ minHeight: 32 }}>
+              <h3 className="text-[13px] font-medium text-[#1A1C1F]">
                 Teknologier
-              </span>
+              </h3>
               {contact.teknologier && (contact.teknologier as string[]).length > 0 && (
                 <DesignLabActionButton
                   onClick={handleFinnKonsulent}
@@ -1673,9 +1673,9 @@ export function ContactCardContent({
         {/* ── Oppfølginger ── */}
         {tasks.length > 0 && (
           <div className="bg-card border border-border rounded-lg shadow-card p-4 mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                Oppfølginger · {tasks.length}
+            <div className="flex items-center justify-between mb-3" style={{ minHeight: 32 }}>
+              <h3 className="text-[13px] font-medium text-[#1A1C1F]">
+                Oppfølginger <span className="font-normal text-[#8C929C]">· {tasks.length}</span>
               </h3>
             </div>
             <div className="space-y-px">
