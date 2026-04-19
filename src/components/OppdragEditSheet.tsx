@@ -690,7 +690,7 @@ export function OppdragEditSheet({
             placeholder="f.eks. 80"
           />
           <p className="mt-1 text-[0.75rem] text-muted-foreground">
-            Trekkes fra STACQ Prisen. Brukes for deal-avtaler, bonus-forpliktelser e.l.
+            Trekkes fra timesprisen. Brukes for deal-avtaler, bonus-forpliktelser e.l.
           </p>
         </div>
 
