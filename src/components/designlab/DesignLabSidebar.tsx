@@ -72,30 +72,38 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
         background: C.sidebarBg,
       }}
     >
-      {/* Logo */}
-      <div
-        className="flex items-center shrink-0"
-        style={{
-          height: px(40),
-          paddingLeft: collapsed ? 0 : px(12),
-          paddingRight: collapsed ? 0 : px(8),
-          justifyContent: collapsed ? "center" : "flex-start",
-        }}
-      >
-        {!collapsed ? (
+      {/* Logo + collapse-toggle */}
+      {!collapsed ? (
+        <div
+          className="flex items-center shrink-0"
+          style={{
+            height: px(40),
+            paddingLeft: px(12),
+            paddingRight: px(8),
+            justifyContent: "space-between",
+            gap: px(8),
+          }}
+        >
           <img
             src={stacqLogoFull}
             alt="STACQ"
             style={{ height: px(18), width: "auto", display: "block" }}
           />
-        ) : (
+          <CollapseToggle collapsed={collapsed} onClick={() => setCollapsed((p) => !p)} scale={scale} />
+        </div>
+      ) : (
+        <div
+          className="flex flex-col items-center shrink-0"
+          style={{ paddingTop: px(8), paddingBottom: px(4), gap: px(4) }}
+        >
           <img
             src={stacqLogoIcon}
             alt="STACQ"
             style={{ height: px(24), width: px(24), display: "block" }}
           />
-        )}
-      </div>
+          <CollapseToggle collapsed={collapsed} onClick={() => setCollapsed((p) => !p)} scale={scale} />
+        </div>
+      )}
 
       {/* Nav */}
       <nav
@@ -135,19 +143,6 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
 
         <FooterBtn icon={Settings} label="Innstillinger" onClick={() => navigate("/design-lab/innstillinger")} active={isActive("/design-lab/innstillinger")} collapsed={collapsed} scale={scale} />
         <FooterBtn icon={LogOut} label="Logg ut" onClick={signOut} muted collapsed={collapsed} scale={scale} />
-
-        {!collapsed && (
-          <div className="flex items-center justify-end px-2 pt-2 pb-1">
-            <CollapseToggle collapsed={collapsed} onClick={() => setCollapsed((p) => !p)} scale={scale} />
-          </div>
-        )}
-
-        {collapsed && (
-          <div className="pt-1">
-            <CollapseToggle collapsed={collapsed} onClick={() => setCollapsed((p) => !p)} scale={scale} fullRow />
-          </div>
-        )}
-
       </div>
     </aside>
   );
