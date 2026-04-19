@@ -91,18 +91,9 @@ export function TextSizeControlSidebar({ value, onChange }: Props) {
   return (
     <div
       className="flex items-center justify-between"
-      style={{ paddingInline: 8, height: 28, gap: 8 }}
+      style={{ paddingLeft: 10, paddingRight: 8, height: 28, gap: 8 }}
     >
-      <span
-        style={{
-          fontSize: 11,
-          fontWeight: 500,
-          color: C.textFaint,
-          whiteSpace: "nowrap",
-        }}
-      >
-        Tekststørrelse
-      </span>
+      <Type size={13} color={C.textFaint} strokeWidth={1.5} />
       <div className="flex items-center gap-0.5">
         {SIZES.map((s) => {
           const active = s === value;
