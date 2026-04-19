@@ -298,62 +298,66 @@ function InnstillingerV2() {
 
   return (
     <DesignLabPageShell activePath="/innstillinger" title="Innstillinger" maxWidth={null}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {/* Outlook + Mailchimp side by side */}
-        <div style={{ display: "grid", gap: 16 }} className="md:grid-cols-2">
-          <SectionCard title="Microsoft Outlook" description="Koble til Outlook for å synkronisere e-post og kalender.">
-            {outlookLoading ? (
-              <StatusDot tone="loading" label="Sjekker tilkobling..." />
-            ) : outlookStatus?.connected ? (
-              <StatusDot tone="success" label="Tilkoblet" />
-            ) : (
-              <StatusDot tone="muted" label="Ikke tilkoblet" />
-            )}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+          gap: 16,
+          alignItems: "start",
+        }}
+      >
+        <SectionCard title="Microsoft Outlook" description="Koble til Outlook for å synkronisere e-post og kalender.">
+          {outlookLoading ? (
+            <StatusDot tone="loading" label="Sjekker tilkobling..." />
+          ) : outlookStatus?.connected ? (
+            <StatusDot tone="success" label="Tilkoblet" />
+          ) : (
+            <StatusDot tone="muted" label="Ikke tilkoblet" />
+          )}
 
-            <div>
-              <DesignLabPrimaryAction onClick={handleConnectOutlook} disabled={connecting}>
-                {connecting
-                  ? "Kobler til..."
-                  : outlookStatus?.connected
-                    ? "Koble til på nytt"
-                    : "Koble til Outlook"}
-              </DesignLabPrimaryAction>
+          <div>
+            <DesignLabPrimaryAction onClick={handleConnectOutlook} disabled={connecting}>
+              {connecting
+                ? "Kobler til..."
+                : outlookStatus?.connected
+                  ? "Koble til på nytt"
+                  : "Koble til Outlook"}
+            </DesignLabPrimaryAction>
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          title="Mailchimp CV-Epost"
+          description="Synkroniser alle kontakter med CV-Epost aktivert til Mailchimp-audiencen. Endringer synkroniseres automatisk ved toggle."
+        >
+          {mcResult ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13 }}>
+              <span style={{ color: C.success, fontWeight: 500 }}>{mcResult.active} aktive</span>
+              <span style={{ color: C.textMuted }}>{mcResult.inactive} inaktive</span>
+              <span style={{ color: C.textMuted }}>{mcResult.total} totalt</span>
             </div>
-          </SectionCard>
+          ) : (
+            <StatusDot tone="muted" label="Ikke synkronisert i denne økten" />
+          )}
 
-          <SectionCard
-            title="Mailchimp CV-Epost"
-            description="Synkroniser alle kontakter med CV-Epost aktivert til Mailchimp-audiencen. Endringer synkroniseres automatisk ved toggle."
-          >
-            {mcResult ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13 }}>
-                <span style={{ color: C.success, fontWeight: 500 }}>{mcResult.active} aktive</span>
-                <span style={{ color: C.textMuted }}>{mcResult.inactive} inaktive</span>
-                <span style={{ color: C.textMuted }}>{mcResult.total} totalt</span>
-              </div>
-            ) : (
-              <StatusDot tone="muted" label="Ikke synkronisert i denne økten" />
-            )}
+          <div>
+            <DesignLabSecondaryAction onClick={handleMailchimpSyncAll} disabled={mcSyncing}>
+              {mcSyncing ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Synkroniserer...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Synk alle til Mailchimp
+                </>
+              )}
+            </DesignLabSecondaryAction>
+          </div>
+        </SectionCard>
 
-            <div>
-              <DesignLabSecondaryAction onClick={handleMailchimpSyncAll} disabled={mcSyncing}>
-                {mcSyncing ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Synkroniserer...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="h-3.5 w-3.5" />
-                    Synk alle til Mailchimp
-                  </>
-                )}
-              </DesignLabSecondaryAction>
-            </div>
-          </SectionCard>
-        </div>
-
-        {/* Varslingsinnstillinger */}
+        {/* Varslingsinnstillinger — flat-rendered cards i samme grid */}
         <VarslingsInnstillingerV2 />
       </div>
     </DesignLabPageShell>

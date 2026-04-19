@@ -192,7 +192,7 @@ export function VarslingsInnstillingerV2() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="flex items-center justify-center py-20" style={{ gridColumn: "1 / -1" }}>
         <Loader2 className="h-5 w-5 animate-spin" style={{ color: C.textMuted }} />
       </div>
     );
@@ -324,7 +324,7 @@ export function VarslingsInnstillingerV2() {
   };
 
   return (
-    <div style={{ display: "grid", gap: 16 }} className="xl:grid-cols-3">
+    <>
       {/* Fornyelse */}
       <SectionCard title="Fornyelsesvarsler" description="Ukentlig e-post om oppdrag som nærmer seg slutt.">
         <RecipientList
@@ -463,6 +463,6 @@ export function VarslingsInnstillingerV2() {
           </DesignLabSecondaryAction>
         </div>
       </SectionCard>
-    </div>
+    </>
   );
 }
