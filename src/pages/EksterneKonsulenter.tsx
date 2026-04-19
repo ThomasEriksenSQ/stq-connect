@@ -191,9 +191,7 @@ export default function EksterneKonsulenter({
             className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border"
           />
         </div>
-        <span className="text-[0.75rem] text-muted-foreground ml-auto">
-          {filtered.length} konsulenter
-        </span>
+        <div className="ml-auto" />
         <button
           onClick={() => navigate("/stacq/importer-cver")}
           className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-background text-foreground hover:bg-secondary transition-colors"
