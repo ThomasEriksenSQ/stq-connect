@@ -2478,8 +2478,12 @@ export default function DesignLabContacts() {
             ? { id: sel.id, firstName: sel.firstName, lastName: sel.lastName, email: sel.email, signal: sel.signal }
             : null
         }
-        onSelectContact={(id) => setSelectedId(id)}
+        onSelectContact={(id) => {
+          setSearch("");
+          setSelectedId(id);
+        }}
         onFilterByCompany={(name) => setSearch(name)}
+        onResetSearch={search.trim() ? () => setSearch("") : undefined}
       />
     </div>
   );

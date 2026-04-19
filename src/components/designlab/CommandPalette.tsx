@@ -51,6 +51,8 @@ interface CommandPaletteProps {
   onSelectContact: (id: string) => void;
   onSelectCompany?: (id: string, companyName: string) => void;
   onFilterByCompany: (companyName: string) => void;
+  onResetSearch?: () => void;
+  resetSearchLabel?: string;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -81,6 +83,8 @@ export function CommandPalette({
   onSelectContact,
   onSelectCompany,
   onFilterByCompany,
+  onResetSearch,
+  resetSearchLabel = "Nullstill søk",
 }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
@@ -102,6 +106,20 @@ export function CommandPalette({
   const items = useMemo(() => {
     const q = query.toLowerCase().trim();
     const result: PaletteItem[] = [];
+
+    if (!q && onResetSearch) {
+      result.push({
+        id: "reset-search",
+        label: resetSearchLabel,
+        meta: "Vis hele listen igjen",
+        icon: Search,
+        section: "Handlinger",
+        action: () => {
+          onResetSearch();
+          onClose();
+        },
+      });
+    }
 
     // Kontakter
     if (contacts.length > 0) {
@@ -148,7 +166,7 @@ export function CommandPalette({
     }
 
     return result;
-  }, [query, contacts, companies, onSelectContact, onSelectCompany, onFilterByCompany, onClose]);
+  }, [query, contacts, companies, onSelectContact, onSelectCompany, onFilterByCompany, onResetSearch, resetSearchLabel, onClose]);
 
   // Clamp activeIdx
   useEffect(() => {
