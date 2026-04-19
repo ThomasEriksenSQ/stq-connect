@@ -331,7 +331,10 @@ export default function EksterneKonsulenter({
                     onClear={() => setSelectedId(null)}
                   />
                 ) : (
-                  <div className="flex h-full items-center justify-center px-6">
+                  <div
+                    className="flex h-full items-center justify-center"
+                    style={{ borderLeft: `1px solid ${C.borderLight}`, background: C.appBg }}
+                  >
                     <p style={{ fontSize: 13, color: C.textFaint }}>
                       Trykk ⌘K for å søke.
                     </p>
