@@ -34,6 +34,7 @@ import {
   DesignLabModalLabel,
   DesignLabPrimaryAction,
   DesignLabReadonlyChip,
+  DesignLabStatusBadge,
   getDesignLabV2ActionStyle,
 } from "@/components/designlab/system";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
