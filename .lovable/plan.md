@@ -2,37 +2,39 @@
 
 ## Vurdering
 
-I "Ny oppfølging"-skjemaet inne i `ContactCardContent` kan brukeren i dag trykke "Lagre oppfølging" så lenge tittel og kategori er fylt ut — "Når?" (dato) er ikke validert. Dette skaper oppfølginger uten forfallsdato ved et uhell, noe som forurenser dashbordet.
+I dag har sidebar-versjonen av tekststørrelse-kontrollen (`TextSizeControlSidebar`) en T-ikon til venstre + en segmentert kontroll høyrejustert med 5 knapper (S, M, L, XL, XXL) på ca 26px hver. Brukeren vil fjerne T-ikonet og la knappene fylle hele bredden av sidebar-innholdet.
 
-Regelen skal være: alle tre felter (tittel, kategori, når) må være satt før knappen er aktiv.
+Dette er riktig i Linear-stil: ikonet er dekorativt — knappenes bokstaver kommuniserer hva kontrollen er. Å fjerne T og strekke segmentene gir bedre touch-targets, ren symmetri, og full utnyttelse av sidebar-bredden uten å øke visuell vekt.
 
-Merk: "Følg opp på sikt" (someday) er en legitim variant der `due_date` er null. Hvis skjemaet har en eksplisitt "På sikt"-chip blant dato-valgene, teller den som gyldig "Når?"-valg. Hvis ikke, må bruker velge en konkret dato eller en preset-chip.
+## Designprinsipper anvendt
 
-## Funn jeg må gjøre først
-
-Lese `ContactCardContent.tsx` for å finne:
-- `activeForm`-grenen som rendrer "Ny oppfølging"-skjemaet
-- Nåværende `disabled`-betingelse på "Lagre oppfølging"-knappen
-- Hvilken state som holder "Når?"-valget (date chip eller custom date)
-- Om "På sikt" finnes som valg
+- **Selvforklarende uten ikon**: S/M/L/XL/XXL er universelle størrelse-tegn — T-ikonet var redundant.
+- **Lik bredde per segment**: `flex: 1` på hvert segment gir perfekt symmetri og forutsigbarhet (Linear-mønster).
+- **Beholder eksisterende høyde, radius og farger**: ingen ny visuell vekt, bare bedre proporsjoner.
+- **Beholder padding**: containeren beholder `paddingInline: px(10)` slik at kontrollen flukter med øvrige sidebar-elementer.
 
 ## Plan
 
-### `src/components/ContactCardContent.tsx`
+### `src/components/designlab/TextSizeControl.tsx` — `TextSizeControlSidebar`
 
-I "Ny oppfølging"-skjemaet:
-1. Identifiser state for valgt dato/dato-chip (sannsynligvis `selectedDate` + `customDate`, parallelt med `FollowUpModal`-mønsteret).
-2. Definer `hasWhen` = sant hvis en dato-chip er valgt ELLER custom-dato er satt ELLER "På sikt" er valgt (hvis den finnes).
-3. Oppdater `disabled`-prop på "Lagre oppfølging"-knappen til å kreve `title.trim() && category && hasWhen`.
-4. Behold visuell disabled-stil som allerede brukes for andre disabled-knapper i V2 (dempet bakgrunn, `cursor-not-allowed`).
+1. Fjern `<Type>`-ikonet og dets wrapper-gap.
+2. Endre ytre wrapper: dropp `gap: 10`, behold `paddingInline: 10` og `height: 32`.
+3. Endre segmentert kontroll-container:
+   - `width: "100%"` (fyller sidebar-innholdet)
+   - Fjern `marginLeft: "auto"` (ikke lenger nødvendig)
+4. Endre hver segment-knapp:
+   - `flex: 1` (lik bredde)
+   - Fjern `minWidth: 26`
+   - Behold høyde 20, radius 4, font 11, vekt og farge-logikk
+5. Behold tooltip (`title`) på hver knapp — gir "Kompakt", "Standard" osv. ved hover siden ikonet fjernes.
+6. Behold `aria-label="Tekststørrelse"` på gruppen for tilgjengelighet (erstatter ikon-konteksten).
 
-Ingen endring i submit-handler, persist-logikk eller default-verdier — kun strammere validering.
+Ingen endringer i `TextSizeControl` (header-varianten brukt i Stilark/StacqPrisen) — den beholder T-ikonet siden den ligger i en bredere header-kontekst.
 
 ## Filer som endres
-- `src/components/ContactCardContent.tsx`
+- `src/components/designlab/TextSizeControl.tsx`
 
 ## Utenfor scope
-- `FollowUpModal` (separat komponent, har allerede egen validering)
-- Endring av default-dato per signal
-- Visuell omdesign av skjemaet
+- `TextSizeControl` (header-variant) — uendret
+- Skala-logikk, presets eller persistens — uendret
 
