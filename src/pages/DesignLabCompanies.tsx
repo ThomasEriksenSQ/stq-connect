@@ -23,11 +23,16 @@ import { BrregSearch, lookupByOrgNr } from "@/components/BrregSearch";
 import { toast } from "sonner";
 import {
   DesignLabEntitySheet,
-  DesignLabFormSheet,
-  DesignLabFormSheetBody,
-  DesignLabFormSheetFooter,
-  DesignLabFormSheetHeader,
 } from "@/components/designlab/DesignLabEntitySheet";
+import {
+  AktivOppdragStyleSheet,
+  AktivOppdragLabel,
+  AktivOppdragChip,
+  AktivOppdragFooterRow,
+  AktivOppdragCancelButton,
+  AktivOppdragPrimaryButton,
+  AKTIV_OPPDRAG_INPUT,
+} from "@/components/designlab/AktivOppdragStyleSheet";
 import {
   DesignLabFilterButton,
   DesignLabIconButton,
