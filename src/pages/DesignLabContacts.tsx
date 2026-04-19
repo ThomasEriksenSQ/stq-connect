@@ -2230,12 +2230,17 @@ export default function DesignLabContacts() {
                 ) : (
                   <>
                     <div
-                      className="grid items-center sticky top-0 z-10"
+                      className="sticky top-0 z-10"
+                      style={{
+                        background: C.surfaceAlt,
+                        borderBottom: `1px solid ${C.border}`,
+                      }}
+                    >
+                    <div
+                      className="grid items-center"
                       style={{
                         gridTemplateColumns: "minmax(160px,2fr) 132px 52px minmax(120px,1.5fr) minmax(100px,1fr) 132px 80px",
                         height: 32,
-                        borderBottom: `1px solid ${C.border}`,
-                        background: C.surfaceAlt,
                         paddingLeft: 16,
                         paddingRight: 16,
                       }}
@@ -2247,6 +2252,7 @@ export default function DesignLabContacts() {
                       <DesignLabColumnHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />
                       <DesignLabColumnHeader label="Tags" field="tags" sort={sort} onSort={toggleSort} />
                       <DesignLabColumnHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
+                    </div>
                     </div>
                     {isLoading || isLoadingParity ? (
                       <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>
