@@ -13,9 +13,10 @@ import { C } from "@/theme";
 
 export default function Innstillinger() {
   const { isV2Active } = useDesignVersion();
+  return isV2Active ? <InnstillingerV2 /> : <InnstillingerV1 />;
+}
 
-  if (isV2Active) return <InnstillingerV2 />;
-
+function InnstillingerV1() {
   const [connecting, setConnecting] = useState(false);
   const [mcSyncing, setMcSyncing] = useState(false);
   const [mcResult, setMcResult] = useState<{ total: number; active: number; inactive: number; batches: number } | null>(null);
