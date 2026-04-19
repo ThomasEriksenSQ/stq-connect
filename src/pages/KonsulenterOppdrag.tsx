@@ -11,6 +11,7 @@ import { FornyelsesTimeline, buildMonthlySummary } from "@/components/Fornyelses
 import { DesignLabStaticTag, DesignLabFilterButton, DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS, DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS, DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS } from "@/components/designlab/controls";
 import { DesignLabPrimaryAction } from "@/components/designlab/system";
 import { computeOppdragStatus, parseOppdragDate } from "@/lib/oppdragForm";
+import { C } from "@/theme";
 
 type Filter = "Alle" | "Aktiv" | "Oppstart" | "Inaktiv";
 const TIMER_PER_DAG = 7.5;
