@@ -252,6 +252,7 @@ interface CompanyCardContentProps {
   onNavigateToFullPage?: () => void;
   headerPaddingTop?: number;
   defaultHidden?: DefaultHiddenConfig;
+  showContactsDivider?: boolean;
 }
 
 export function CompanyCardContent({
@@ -261,6 +262,7 @@ export function CompanyCardContent({
   onNavigateToFullPage,
   headerPaddingTop,
   defaultHidden,
+  showContactsDivider = false,
 }: CompanyCardContentProps) {
   const navigate = useNavigate();
   const location = useLocation();
