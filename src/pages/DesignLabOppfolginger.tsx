@@ -610,7 +610,7 @@ export default function DesignLabOppfolginger() {
           <DesignLabFilterRow label="EIER" options={ownerOptions} value={ownerFilter} onChange={setOwnerFilter} />
           <div className="flex items-center justify-between gap-4">
             <DesignLabFilterRow
-              label="VISNING"
+              label="PERIODE"
               options={VIEW_FILTERS}
               value={viewFilter}
               onChange={(value) => setViewFilter(value)}
