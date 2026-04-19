@@ -751,7 +751,7 @@ function KompetanseCollapsible({ kompetanse }: { kompetanse: string[] }) {
       {needsTruncation && (
         <button
           onClick={() => setExpanded(!expanded)}
-          className="text-[0.75rem] text-primary hover:underline mt-1"
+          className="text-[0.75rem] text-primary hover:underline mt-3"
         >
           {expanded ? "Vis mindre" : "Vis mer"}
         </button>
