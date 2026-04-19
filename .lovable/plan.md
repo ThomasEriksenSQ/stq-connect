@@ -2,32 +2,58 @@
 
 ## Funn
 
-Alle tre sider (`DesignLabForesporsler`, `DesignLabCompanies`, `DesignLabContacts`) bruker samme 3-panel `ResizablePanelGroup` med prosent-baserte bredder. Tabellen (venstre panel) er allerede identisk konfigurert på 38 %, men midt-panelet (detaljvisning) er ulikt:
+Tabellheaderen i alle tre sider (`DesignLabCompanies`, `DesignLabContacts`, `DesignLabForesporsler`) er en `grid` med `background: C.surfaceAlt` plassert **inne i** en scroll-container (`overflow-y-auto`).
 
-| Side | Liste | Detalj | Tom |
-|---|---|---|---|
-| Forespørsler | `defaultSize={38}` `minSize={24}` `maxSize={60}` | `defaultSize={62}` `minSize={34}` | `defaultSize={0}` `maxSize={30}` |
-| Selskaper | `defaultSize={38}` `minSize={24}` `maxSize={60}` | `defaultSize={65}` `minSize={30}` | `defaultSize={0}` `maxSize={40}` |
-| Kontakter | `defaultSize={38}` `minSize={24}` `maxSize={60}` | `defaultSize={65}` `minSize={30}` | `defaultSize={0}` `maxSize={40}` |
+```
+<div className="overflow-y-auto">           ← scroll-container (ingen bg)
+  <div className="grid sticky top-0"        ← header (grå bg)
+       style={{ background: C.surfaceAlt, paddingRight: 16 }}>
+    ...kolonner...
+  </div>
+  ...rader...
+</div>
+```
 
-Listebredden (38 %) er **allerede lik**. Det som gjør at tabellene *føles* ulik bredde er at totalsummen 38 + 65 + 0 = 103 (panel-gruppen normaliserer dette internt), mens Forespørsler summerer korrekt til 100. Dette gir Forespørsler en stabil og forutsigbar 38/62-fordeling, mens Selskaper/Kontakter blir litt smalere på listen etter normalisering.
+Det lille hvite gapet helt til høyre i headeren er plassen som scroll-gutteren / sub-pixel grensen mellom listepanelet og detaljpanelet opptar. Headerens bakgrunn er låst til grid-bredden, mens scroll-containeren bak er hvit/lys (`C.appBg` eller `C.panel` fra detaljpanelet skinner gjennom).
 
 ## Plan
 
-Justér midt- og tom-panelet på Selskaper og Kontakter til samme verdier som Forespørsler, slik at listen får samme effektive bredde:
+Sett `background: C.surfaceAlt` på en sticky wrapper som dekker **hele containerbredden** (inkludert evt. scroll-gutter), og behold gridet med kolonnene inni — uten egen bakgrunn.
 
-**`src/pages/DesignLabCompanies.tsx`** (linje 627 og 672)
-- `defaultSize={65}` `minSize={30}` → `defaultSize={62}` `minSize={34}`
-- Tomt panel: `maxSize={40}` → `maxSize={30}`
+### Endringer (3 filer, samme grep)
 
-**`src/pages/DesignLabContacts.tsx`** (linje 2410 og 2463)
-- `defaultSize={65}` `minSize={30}` → `defaultSize={62}` `minSize={34}`
-- Tomt panel: `maxSize={40}` → `maxSize={30}`
+**`src/pages/DesignLabForesporsler.tsx`** — `TableHeader` (linje 552–562):
+- Wrap eksisterende `<div className="grid sticky top-0">` i en ny `<div>` som har `background: C.surfaceAlt`, `borderBottom`, `position: sticky`, `top: 0`, `zIndex: 10`.
+- Fjern `background`, `borderBottom`, `sticky`, `top-0`, `z-10` fra det indre grid-elementet (beholder kun `gridTemplateColumns`, `height: 32`, `paddingLeft/Right: 16`, `display: grid`, `items-center`).
+
+**`src/pages/DesignLabCompanies.tsx`** — header-blokk (linje 601–613):
+- Samme grep: ny ytre wrapper med grå bakgrunn + sticky, indre grid uten bakgrunn.
+
+**`src/pages/DesignLabContacts.tsx`** — header-blokk (linje 2232–2250):
+- Samme grep.
+
+### Resultat
+
+```
+<div className="sticky top-0 z-10"           ← NY wrapper, full bredde, grå
+     style={{ background: C.surfaceAlt, borderBottom: ... }}>
+  <div className="grid items-center"          ← grid uten bg, samme kolonner
+       style={{ gridTemplateColumns: ..., height: 32, paddingLeft: 16, paddingRight: 16 }}>
+    ...kolonner...
+  </div>
+</div>
+```
 
 ## Hvorfor lav-risk
 
-- Kun seks numeriske verdier endres i to filer.
-- Ingen logikk-endring, ingen data-endring, ingen layout-omskriving.
-- Resultat: identisk listebredde på alle tre flater.
+- Ren JSX-omstrukturering: ingen logikk, ingen state, ingen data, ingen kolonneendring.
+- Sticky-oppførsel og høyde (32px) bevares 1:1.
+- Gjelder kun de tre headerne — radene under er uendret.
 - Reversibelt med samme grep.
+- Identisk fix på alle tre flatene gir konsekvent visuelt resultat.
+
+## Utenfor scope
+
+- Radhøyder, kolonnebredder, sortering, filtre, scroll-oppførsel.
+- Andre tabeller (Ansatte, Konsulenter, Markedsradar) — kan migreres senere ved behov.
 
