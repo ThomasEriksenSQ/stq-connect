@@ -42,9 +42,9 @@ type SortField = "mottatt_dato" | "selskap_navn" | "sendt_count" | "kontakt" | "
 type SortDir = "asc" | "desc";
 
 const STATUS_CHIPS: { value: StatusFilter; label: string }[] = [
-  { value: "aktive", label: "Aktive" },
-  { value: "utgatte", label: "Utgåtte" },
   { value: "alle", label: "Alle" },
+  { value: "aktive", label: "Aktive (siste 45 dager)" },
+  { value: "utgatte", label: "Utgåtte" },
 ];
 
 const TYPE_CHIPS: { value: TypeFilter; label: string }[] = [
