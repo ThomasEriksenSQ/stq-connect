@@ -58,7 +58,7 @@ interface Props {
 export function TextSizeControl({ value, onChange }: Props) {
   return (
     <div className="flex items-center gap-1.5">
-      <Type size={13} color={C.textFaint} />
+      <TypeIconPlaceholder />
       {SIZES.map((s) => {
         const active = s === value;
         return (
@@ -80,6 +80,13 @@ export function TextSizeControl({ value, onChange }: Props) {
       })}
     </div>
   );
+}
+
+function TypeIconPlaceholder() {
+  // Header-varianten beholder T-ikonet
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { Type } = require("lucide-react");
+  return <Type size={13} color={C.textFaint} />;
 }
 
 /**
