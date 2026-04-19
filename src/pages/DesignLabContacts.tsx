@@ -9,8 +9,8 @@ import {
   ChevronDown,
   ChevronUp,
   X,
-  Wifi,
 } from "lucide-react";
+import finnIcon from "@/assets/finn-icon.webp";
 import { differenceInDays, format } from "date-fns";
 import { nb } from "date-fns/locale";
 import { getEffectiveSignal, normalizeCategoryLabel } from "@/lib/categoryUtils";
@@ -2311,7 +2311,16 @@ export default function DesignLabContacts() {
                               }
                             >
                               {c.hasMarkedsradar && (
-                                <Wifi style={{ width: 14, height: 14, color: C.info }} />
+                                <img
+                                  src={finnIcon}
+                                  alt="Finn"
+                                  style={{
+                                    width: 14,
+                                    height: 14,
+                                    filter: "grayscale(1) opacity(0.65)",
+                                    objectFit: "contain",
+                                  }}
+                                />
                               )}
                             </div>
                             <div className="min-w-0">
