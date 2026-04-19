@@ -272,17 +272,12 @@ export default function DesignLabStacqPrisen() {
                     return (
                       <div
                         key={row.id}
-                        onClick={() => navigate("/design-lab/aktive-oppdrag")}
-                        className="grid items-center cursor-pointer"
-                        title="Rediger på Aktive oppdrag"
+                        className="grid items-center"
                         style={{
                           gridTemplateColumns: "minmax(0,1.6fr) minmax(0,1.4fr) 100px 88px 80px 112px 64px 84px",
                           minHeight: 38, paddingInline: 16,
                           borderBottom: `1px solid ${C.borderLight}`,
-                          transition: "background 50ms",
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           {(() => {
