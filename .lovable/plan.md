@@ -2,49 +2,42 @@
 
 ## Funn
 
-Bildet viser e-postraden nederst i venstremenyen i Design Lab — en pille med initialer (TH) + `thomas@stacq...` + collapse-knapp.
+I `src/lib/followUpViewModel.ts` mapper `SIGNAL_TO_PRIORITY` i dag både "Ukjent om behov" og "Ikke aktuelt" til **P4**. Det betyr at "død" lead og "vet ikke ennå" får samme visuelle vekt — uheldig når man scanner listen.
 
-I `src/components/designlab/DesignLabSidebar.tsx` (linje 139–150) rendres dette som en egen rad under "Innstillinger" og "Logg ut". Den viser:
-- Initialer-avatar (TH)
-- E-postadresse (truncated)
-- Collapse-toggle (⌘\)
-
-## Vurdering
-
-E-posten er overflødig fordi:
-- Det er kun 2 brukere i systemet (Jon Richard og Thomas) — de vet hvem de er logget inn som
-- "Logg ut" rett over gir allerede kontotilknytning
-- Tar opp en hel rad nederst uten å gi reell verdi
-- Initialer-pillen duplikerer info
-
-Collapse-toggle (⌘\) må derimot beholdes — den er den eneste UI-måten å skjule sidebaren på.
+I `src/pages/DesignLabOppfolginger.tsx` (linje 56–81) defineres farger/stiler kun for P1–P4. P4 er nøytral grå.
 
 ## Plan
 
-Fjern hele e-post/avatar-raden i footer i `DesignLabSidebar.tsx`. Behold collapse-toggle ved å flytte den til en enkel rad nederst (samme som dagens `!user`-variant — høyrejustert toggle).
+Innfør **P5** dedikert til "Ikke aktuelt", slik at det skiller seg visuelt fra P4 ("Ukjent om behov"). Alt annet beholdes uendret.
 
-### Endringer i `src/components/designlab/DesignLabSidebar.tsx`
+### Endring 1 — `src/lib/followUpViewModel.ts`
 
-1. Fjern `user`-blokken (linje 139–150) som rendrer avatar + e-post + toggle.
-2. Fjern `!user`-blokken (linje 152–156) — blir overflødig.
-3. Erstatt med én enkel rad som alltid viser collapse-toggle høyrejustert når sidebaren er utvidet.
-4. Behold `collapsed`-blokken (linje 158–162) uendret — full-row toggle når sidebar er kollapset.
-5. Fjern `User`-import fra `@supabase/supabase-js` og `initials`-variabelen hvis ingen andre bruker dem (sjekk: `user`-prop blir fortsatt mottatt for fremtidig bruk, men kan også fjernes fra props hvis ren opprydding ønskes — anbefaler å beholde prop-signaturen for å unngå ringvirkninger på `DesignLabPageShell`).
+- Utvid `FollowUpPriority`-typen: `"P1" | "P2" | "P3" | "P4" | "P5" | null`
+- Endre `SIGNAL_TO_PRIORITY`:
+  - `"Ikke aktuelt"` → `"P5"` (i stedet for P4)
+  - "Ukjent om behov" forblir P4
+- Legg til `P5: 5` i `PRIORITY_RANK` slik at sortering plasserer P5 etter P4
+
+### Endring 2 — `src/pages/DesignLabOppfolginger.tsx`
+
+- Legg til P5-stil i prioritets-fargekartet (rundt linje 56–81). Forslag: enda mer dempet/utvasket enn P4 — f.eks. lys rød-grå tone som signaliserer "lukket/ikke aktuelt" uten å rope. Konkret: bakgrunn `#F1E9E9`, tekst `#8C7A7A`, border `#E5D8D8` (i tråd med V8 desaturert palett).
+- Sørg for at badge-renderingen håndterer "P5" på samme måte som de andre nivåene.
 
 ### Resultat
 
-Footer blir:
-```
-─────────────────
-⚙  Innstillinger
-↪  Logg ut
-                ⟨  ← collapse-toggle høyrejustert
-```
+| Salgssignal | Prioritet (før) | Prioritet (etter) |
+|---|---|---|
+| Behov nå | P1 | P1 |
+| Får fremtidig behov | P2 | P2 |
+| Får kanskje behov | P3 | P3 |
+| Ukjent om behov | P4 | P4 |
+| Ikke aktuelt | P4 | **P5** |
 
-Renere, mer i tråd med Linear-estetikken (kontrollert tetthet), og fjerner duplikat-info.
+Sortering: P1 → P2 → P3 → P4 → P5 → uten prioritet. "Ikke aktuelt"-rader synker dermed lenger ned i listen, som ønsket.
 
 ## Utenfor scope
 
-- Ingen endringer i `AppSidebar.tsx` (V1).
-- Ingen endring av `signOut`-flyt eller auth-logikk.
+- Ingen endringer i V1-flater (Tasks, Dashboard).
+- Ingen endring av selve signal-kategoriene eller `categoryUtils.ts`.
+- Ingen manuell overstyring av prioritet — fortsatt drevet av kontaktens signal.
 
