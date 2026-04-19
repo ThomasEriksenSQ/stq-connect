@@ -260,6 +260,8 @@ interface CompanyCardContentProps {
   headerPaddingTop?: number;
   defaultHidden?: DefaultHiddenConfig;
   showContactsDivider?: boolean;
+  /** When true, the "Ny kontakt" overlay uses the V1-style sheet that mirrors OppdragEditSheet. */
+  useV1CreateSheet?: boolean;
 }
 
 export function CompanyCardContent({
@@ -270,6 +272,7 @@ export function CompanyCardContent({
   headerPaddingTop,
   defaultHidden,
   showContactsDivider = false,
+  useV1CreateSheet = false,
 }: CompanyCardContentProps) {
   const navigate = useNavigate();
   const location = useLocation();
