@@ -2869,6 +2869,7 @@ function ActivityRow({
               {displayCategory && <DesignLabCategoryBadge label={displayCategory} />}
             </div>
           </ActivityRowBody>
+        )}
       </div>
     </div>
   );
