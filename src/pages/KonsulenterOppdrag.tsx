@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useState } from "react";
 import { cn, formatNOK, getInitials } from "@/lib/utils";
 import { format, differenceInDays, startOfDay } from "date-fns";
-import { Briefcase, CalendarCheck, BarChart2, Plus } from "lucide-react";
+import { Briefcase, CalendarCheck, BarChart2, Plus, Hourglass } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { OppdragEditSheet } from "@/components/OppdragEditSheet";
@@ -153,6 +153,16 @@ export default function KonsulenterOppdrag({
         o.daysUntilForny <= 60,
     ).length;
 
+    const todayStart = startOfDay(now);
+    const avsluttes60 = enriched.filter((o: any) => {
+      if (o.status !== "Aktiv" && o.status !== "Oppstart") return false;
+      if (!o.slutt_dato) return false;
+      const parsed = parseOppdragDate(o.slutt_dato);
+      if (!parsed) return false;
+      const d = differenceInDays(parsed, todayStart);
+      return d >= 0 && d <= 60;
+    }).length;
+
     return {
       aktive: aktive.length,
       oppstart: oppstart.length,
@@ -164,6 +174,7 @@ export default function KonsulenterOppdrag({
       oppstartMarginPerTime,
       fornyelser30,
       fornyelser60,
+      avsluttes60,
     };
   }, [enriched]);
 
@@ -226,7 +237,7 @@ export default function KonsulenterOppdrag({
 
       {/* Stat cards */}
           {/* Stat cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-3">
             <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 rounded-xl px-5 py-4 shadow-sm">
               <Briefcase className="h-4 w-4 text-emerald-600 mb-1" />
               <p className="text-2xl font-bold text-emerald-600">{stats.aktive}</p>
@@ -236,6 +247,12 @@ export default function KonsulenterOppdrag({
               <CalendarCheck className="h-4 w-4 text-amber-600 mb-1" />
               <p className="text-2xl font-bold text-amber-600">{stats.oppstart}</p>
               <p className="text-[0.8125rem] text-muted-foreground">I oppstart</p>
+            </div>
+            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 rounded-xl px-5 py-4 shadow-sm">
+              <Hourglass className="h-4 w-4 text-amber-600 mb-1" />
+              <p className="text-2xl font-bold text-amber-600">{stats.avsluttes60}</p>
+              <p className="text-[0.8125rem] text-muted-foreground">Avsluttes under 60 dager</p>
+              <p className="text-xs text-muted-foreground">Sluttdato satt</p>
             </div>
             <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 rounded-xl px-5 py-4 shadow-sm">
               <BarChart2 className="h-4 w-4 text-amber-600 mb-1" />
