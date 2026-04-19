@@ -13,6 +13,7 @@ export interface OppdragFormState {
   dealType: string;
   utpris: string;
   tilKonsulent: string;
+  ekstraKostnad: string;
   fornyDato: Date | undefined;
   startDato: Date | undefined;
   sluttDato: Date | undefined;
@@ -39,6 +40,7 @@ export const OPPDRAG_DEFAULTS: OppdragFormState = {
   dealType: "DIR",
   utpris: "",
   tilKonsulent: "",
+  ekstraKostnad: "",
   fornyDato: undefined,
   startDato: undefined,
   sluttDato: undefined,
@@ -156,6 +158,7 @@ export function buildOppdragWritePayload(
     deal_type: value.dealType || OPPDRAG_DEFAULTS.dealType,
     utpris: toNullableNumber(value.utpris),
     til_konsulent: toNullableNumber(value.tilKonsulent),
+    ekstra_kostnad: toNullableNumber(value.ekstraKostnad),
     lopende_30_dager: value.isLopende,
     forny_dato: getRenewalDate(value),
     start_dato: startIso,

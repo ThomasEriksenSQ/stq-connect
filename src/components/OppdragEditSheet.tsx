@@ -352,6 +352,7 @@ export function OppdragEditSheet({
   const [dealType, setDealType] = useState("");
   const [utpris, setUtpris] = useState("");
   const [tilKonsulent, setTilKonsulent] = useState("");
+  const [ekstraKostnad, setEkstraKostnad] = useState("");
   const [fornyDato, setFornyDato] = useState<Date | undefined>();
   const [startDato, setStartDato] = useState<Date | undefined>();
   const [sluttDato, setSluttDato] = useState<Date | undefined>();
@@ -376,6 +377,7 @@ export function OppdragEditSheet({
       setDealType(defaults.dealType);
       setUtpris(defaults.utpris);
       setTilKonsulent(defaults.tilKonsulent);
+      setEkstraKostnad(defaults.ekstraKostnad);
       setFornyDato(defaults.fornyDato);
       setStartDato(defaults.startDato);
       setSluttDato(defaults.sluttDato);
@@ -397,6 +399,7 @@ export function OppdragEditSheet({
     setDealType(row.deal_type === "VIA_M" ? "VIA" : row.deal_type || "DIR");
     setUtpris(String(row.utpris || ""));
     setTilKonsulent(String(row.til_konsulent || ""));
+    setEkstraKostnad(row.ekstra_kostnad != null ? String(row.ekstra_kostnad) : "");
     setStartDato(row.start_dato ? new Date(row.start_dato) : undefined);
     setSluttDato(row.slutt_dato ? new Date(row.slutt_dato) : undefined);
     setKommentar(row.kommentar || "");
@@ -422,7 +425,8 @@ export function OppdragEditSheet({
     }
   }, [row?.id, isCreateMode]);
 
-  const marginPerTime = (Number(utpris) || 0) - (Number(tilKonsulent) || 0);
+  const marginPerTime =
+    (Number(utpris) || 0) - (Number(tilKonsulent) || 0) - (Number(ekstraKostnad) || 0);
   const marginPct = Number(utpris) > 0 ? (marginPerTime / Number(utpris)) * 100 : 0;
 
   const handleCompanyChange = (id: string | null, name: string | null) => {
@@ -447,6 +451,7 @@ export function OppdragEditSheet({
       dealType,
       utpris,
       tilKonsulent,
+      ekstraKostnad,
       fornyDato,
       startDato,
       sluttDato,
@@ -642,6 +647,20 @@ export function OppdragEditSheet({
             className="mt-1 text-[0.875rem]"
             placeholder="f.eks. 1100"
           />
+        </div>
+
+        <div>
+          <label className={LABEL}>Ekstra kostnad / time</label>
+          <Input
+            type="number"
+            value={ekstraKostnad}
+            onChange={(event) => setEkstraKostnad(event.target.value)}
+            className="mt-1 text-[0.875rem]"
+            placeholder="f.eks. 80"
+          />
+          <p className="mt-1 text-[0.75rem] text-muted-foreground">
+            Trekkes fra STACQ Prisen. Brukes for deal-avtaler, bonus-forpliktelser e.l.
+          </p>
         </div>
 
         <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
