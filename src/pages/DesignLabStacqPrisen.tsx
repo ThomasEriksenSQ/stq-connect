@@ -14,7 +14,7 @@ import {
   Tooltip as ReTooltip, ResponsiveContainer, ReferenceLine,
 } from "recharts";
 import { Input } from "@/components/ui/input";
-import { TextSizeControl, getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
+import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { C } from "@/components/designlab/theme";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
@@ -209,7 +209,7 @@ export default function DesignLabStacqPrisen() {
           <div className="flex items-baseline gap-2.5">
             <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>STACQ Prisen</h1>
           </div>
-          <TextSizeControl value={textSize} onChange={setTextSize} />
+          
         </header>
 
         {/* Content */}
