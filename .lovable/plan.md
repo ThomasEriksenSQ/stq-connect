@@ -1,60 +1,54 @@
 
 ## Mål
-På `/design-lab/aktive-oppdrag`:
-1. Match radhøyde og header-høyde mellom venstre tabell og høyre tidslinje.
-2. Flytt månedsoppsummeringen (`Apr: 3 fornyelser …`) ut av tidslinje-kortet og under hele tabell-/tidslinje-arealet.
-3. Gjør den blå "aktiv måned"-bakgrunnen kontinuerlig nedover hele kolonnen (alle rader + tomme områder), ikke bare på rader med pille.
-4. Gi konsulent-kolonnen i tidslinjen en `KONSULENT`-header, og match font + avatar-stil 1:1 med venstre tabell.
+Bytt ut tekstlogoen øverst i venstremenyen med ekte STACQ-logo. Bruk full logo (ikon + tekst) når sidebar er utvidet, og kun ikon når den er kollapset. Støtt både lys og mørk variant.
 
 ## Funn
-- Venstre tabell (`KonsulenterOppdrag.tsx`): header `py-2.5`, rad `min-h-[38px] py-1`, navn `text-[0.8125rem] font-medium`, avatar `w-6 h-6` med initialer `text-[0.625rem]`.
-- Tidslinje (`FornyelsesTimeline.tsx`): header `py-1` (lavere), rad `min-h-[38px]`, navn `text-[0.8125rem] font-semibold` (feil vekt), avatar-initialer `text-[0.5625rem]` (feil), første kolonne har ingen tittel.
-- Aktiv-måned-bakgrunn (`bg-primary/[0.03]`) settes per celle inni hver rad → vises kun der det er rader, ikke som én sammenhengende vertikal stripe.
-- Summary er inni `border-t` av tidslinje-kortet (`FornyelsesTimeline.tsx`).
+- **Filer som må endres**: `src/components/AppSidebar.tsx` (V1, linje 30–37) og `src/components/designlab/DesignLabSidebar.tsx` (V2, linje 56–73).
+- I dag vises `"S"` (collapsed) eller `"STACQ"` (expanded) som tekst.
+- `src/assets/` er tom — logoene må kopieres inn.
+- Fire opplastede filer:
+  - `Logo_og_tekst_-_svart_transparent_-_1475x364-2.png` → svart logo med tekst
+  - `Logo_og_tekst_-_hvit_transparent_-_1475x364.png` → hvit logo med tekst
+  - `Logo_ikon_-_1920x1920_svart_transparent-2.png` → svart ikon
+  - `Logo_ikon_-_1920x1920_hvit_transparent.png` → hvit ikon
+- V1 sidebar bruker `text-sidebar-accent-foreground` — må sjekke om sidebar-bakgrunnen er lys eller mørk for å velge riktig logovariant. Basert på user preference (lys/varm tema) og dagens tema-tokens er begge sidebars lyse → bruk **svart logo** som default.
+- V2 sidebar har `background: C.sidebarBg` (#F3F3F4, lys) → svart logo.
 
 ## Plan
 
-### 1. `src/components/FornyelsesTimeline.tsx`
-- Header: bytt `py-1` → `py-2.5` for å matche venstre tabell.
-- Konsulent-kolonne (header): erstatt tom `w-[190px]`-div med samme uppercase-label som de andre månedene:
-  ```tsx
-  <div className="w-[190px] shrink-0 px-3 py-2.5 sticky left-0 z-30 bg-background text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-    Konsulent
-  </div>
-  ```
-- Rad: behold `min-h-[38px]`, men bytt navnet `font-semibold` → `font-medium` for å matche venstre.
-- Avatar-initialer: bytt `text-[0.5625rem]` → `text-[0.625rem]` (begge to steder: ansatt + ekstern).
-- Fjern hele `monthlySummary`-blokken fra bunnen av komponenten (vi flytter den ut). Returner `monthlySummary` som del av komponentens API ikke behov — vi flytter logikken til parent i stedet.
-- For den blå aktiv-måned-bakgrunnen: I stedet for å sette `bg-primary/[0.03]` på hver celle, legg til ett absolutt-posisjonert overlay som dekker hele aktiv-månedens kolonne fra top til bunn:
-  - Wrap `min-w-[900px]`-div med `relative`.
-  - Beregn aktiv måneds offset: konsulent-kolonne er 190px, hver måned er `flex-1 min-w-[56px]` (12 like store kolonner i resten). Bruk en CSS-grid eller absolutt overlay som matcher aktiv kolonne.
-  - Enklere løsning: behold `flex` for header og rader, og rendere et absolutt overlay `<div>` etter/før innhold med `style={{ left: 'calc(190px + (100% - 190px) * 3/12)', width: 'calc((100% - 190px) / 12)', top: 0, bottom: 0, background: 'rgba(94,106,210,0.05)', pointerEvents: 'none' }}` og fjern per-celle `bg-primary/[0.03]`.
-  - Behold den tynne `h-[2px] bg-primary` indikatoren under aktiv måneds header som i dag.
+### 1. Kopier logoer til `src/assets/`
+Bruk `lov-copy` for alle fire varianter:
+- `src/assets/stacq-logo-full-black.png`
+- `src/assets/stacq-logo-full-white.png`
+- `src/assets/stacq-logo-icon-black.png`
+- `src/assets/stacq-logo-icon-white.png`
 
-### 2. `src/pages/KonsulenterOppdrag.tsx` (kun `embeddedSplit`-grenen, ~linje 392–546)
-- Eksporter `monthlySummary`-data fra `FornyelsesTimeline` (eller dupliser beregningen i parent — enklere: dupliser, siden `enriched` er tilgjengelig i parent).
-- Wrap hele `<ResizablePanelGroup>` i et `<div>`. Etter gruppen, legg til en bunntekst som spenner over begge paneler:
-  ```tsx
-  <div className="px-4 py-2 border-t border-border bg-background mt-2 rounded-b-lg">
-    <p className="text-[0.75rem] text-muted-foreground">
-      {monthlySummary.map(...)}
-    </p>
-  </div>
-  ```
-- Fjern egen border-t-summary fra tidslinje-kortet (gjort i steg 1).
+Begge fargevarianter kopieres inn slik at vi har hvit klar hvis sidebar-temaet senere blir mørkt — men vi importerer og bruker kun de svarte variantene nå.
 
-### 3. Ikke rør
-- V1-flate `/konsulenter/i-oppdrag` bruker samme komponenter, men `embeddedSplit=false`. Endringene i `FornyelsesTimeline` (header-padding, navnvekt, avatar-tekstr, overlay-tilnærming) påvirker også V1-tidslinjen — det er en kosmetisk forbedring som er konsistent og ufarlig. Summary-flytting gjøres kun i V2 (parent-grenen `embeddedSplit`); V1 beholder summary-en i bunnen av tidslinje-kortet (eller vi fjerner den der også for konsistens — anbefalt: fjern fra `FornyelsesTimeline` helt, og legg til samme bunnlinje i V1-kallet på linje 276 hvis nødvendig).
+### 2. `src/components/AppSidebar.tsx`
+- Importer `stacq-logo-full-black.png` og `stacq-logo-icon-black.png` som ES6 modules.
+- Erstatt `<span>` med `<img>`:
+  - Collapsed: ikon, ca. 22×22px, sentrert.
+  - Expanded: full logo, høyde ~18–20px, auto-bredde, venstrejustert.
+- Behold padding-strukturen (`px-4 pt-6 pb-8`).
 
-Beslutning: fjern summary fra `FornyelsesTimeline` helt, og legg den til i parent både for V1 (`!embeddedSplit`) og V2 — gir én kilde til sannhet.
+### 3. `src/components/designlab/DesignLabSidebar.tsx`
+- Importer samme to logoer.
+- Erstatt logo-blokken (linje 56–72): fjern det blå "S"-firkant-ikonet og `<span>STACQ</span>`.
+- Collapsed: ikon ~22×22px (skalert med `px(22)`), sentrert i logo-raden.
+- Expanded: full logo, høyde `px(18)`, auto-bredde, venstrejustert med `paddingLeft: px(16)`.
+- Logoen skal fortsatt skalere med tekststørrelse-valget (S/M/L/XL/XXL) via `px()`-helperen.
+
+### 4. Ikke rør
+- `NAV_STACQ`-seksjonslabel ("STACQ" som tekst over STACQ-undermenyen) beholdes — det er en seksjonsoverskrift, ikke logo.
+- `Login.tsx` og andre branding-flater er utenfor scope.
 
 ## Effekt
-- Header og rader er pixel-like høye på venstre og høyre side.
-- Konsulent-kolonnen får tittel "KONSULENT" i samme font/farge som "KUNDE" osv.
-- Navne-vekt og avatar-størrelser matcher venstre tabell eksakt.
-- Aktiv måned (april) får en sammenhengende, lys lavendel vertikal stripe gjennom hele tabellhøyden, inkl. tomme rader.
-- Månedsoppsummeringen ligger i en egen rad under hele split-en, visuelt knyttet til begge paneler.
+- Begge sidebars (V1 + V2) viser ekte STACQ-logo i stedet for tekst.
+- Kollapset sidebar viser kun ikon-versjonen.
+- V2-logoen skalerer korrekt med tekststørrelse-kontrollen.
+- Hvit-variantene er tilgjengelige i `src/assets/` for fremtidig bruk (f.eks. mørkt tema).
 
 ## Utenfor scope
-- Endring av kolonnebredder, sortering, filterlogikk, eller fargelogikk for forny-pillene.
-- Endring av V1-flatens layout utover summary-flytting.
+- Bytting av login-side-logo eller andre branding-flater.
+- Automatisk lys/mørk-tema-switching for logoen (vi bruker svart fast nå siden alle sidebars er lyse).
