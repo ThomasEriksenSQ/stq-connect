@@ -2234,7 +2234,7 @@ export default function DesignLabContacts() {
                     <div
                       className="grid items-center sticky top-0 z-10"
                       style={{
-                        gridTemplateColumns: "52px minmax(160px,2fr) 132px minmax(120px,1.5fr) minmax(100px,1fr) 132px 80px",
+                        gridTemplateColumns: "minmax(160px,2fr) 132px 52px minmax(120px,1.5fr) minmax(100px,1fr) 132px 80px",
                         height: 32,
                         borderBottom: `1px solid ${C.border}`,
                         background: C.surfaceAlt,
@@ -2242,9 +2242,9 @@ export default function DesignLabContacts() {
                         paddingRight: 16,
                       }}
                     >
-                      <DesignLabColumnHeader label="Finn" field="finn" sort={sort} onSort={toggleSort} className="justify-center" />
                       <DesignLabColumnHeader label="Navn" field="name" sort={sort} onSort={toggleSort} />
                       <DesignLabColumnHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
+                      <DesignLabColumnHeader label="Finn" field="finn" sort={sort} onSort={toggleSort} className="justify-center" />
                       <DesignLabColumnHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
                       <DesignLabColumnHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />
                       <DesignLabColumnHeader label="Tags" field="tags" sort={sort} onSort={toggleSort} />
@@ -2267,7 +2267,7 @@ export default function DesignLabContacts() {
                             onClick={() => setSelectedId(isActive ? null : c.id)}
                             className="grid items-center cursor-pointer group"
                             style={{
-                              gridTemplateColumns: "52px minmax(160px,2fr) 132px minmax(120px,1.5fr) minmax(100px,1fr) 132px 80px",
+                              gridTemplateColumns: "minmax(160px,2fr) 132px 52px minmax(120px,1.5fr) minmax(100px,1fr) 132px 80px",
                               minHeight: 38,
                               paddingLeft: 16,
                               paddingRight: 16,
