@@ -2239,7 +2239,7 @@ export default function DesignLabContacts() {
                     <div
                       className="grid items-center"
                       style={{
-                        gridTemplateColumns: "minmax(160px,2fr) 132px 52px minmax(120px,1.5fr) minmax(100px,1fr) 132px 80px",
+                        gridTemplateColumns: "minmax(160px,1.2fr) 132px 52px minmax(120px,1.2fr) minmax(100px,1fr) 132px 80px",
                         height: 32,
                         paddingLeft: 16,
                         paddingRight: 16,
@@ -2271,7 +2271,7 @@ export default function DesignLabContacts() {
                             onClick={() => setSelectedId(isActive ? null : c.id)}
                             className="grid items-center cursor-pointer group"
                             style={{
-                              gridTemplateColumns: "minmax(160px,2fr) 132px 52px minmax(120px,1.5fr) minmax(100px,1fr) 132px 80px",
+                              gridTemplateColumns: "minmax(160px,1.2fr) 132px 52px minmax(120px,1.2fr) minmax(100px,1fr) 132px 80px",
                               minHeight: 38,
                               paddingLeft: 16,
                               paddingRight: 16,
