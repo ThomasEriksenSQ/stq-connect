@@ -1011,9 +1011,9 @@ export function CompanyCardContent({
 
       {tasks.length > 0 && (
         <div className="bg-card border border-border rounded-lg shadow-card p-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-              Oppfølginger · {tasks.length}
+          <div className="flex items-center mb-3" style={{ minHeight: 32 }}>
+            <h3 className="text-[13px] font-medium text-[#1A1C1F]">
+              Oppfølginger <span className="font-normal text-[#8C929C]">· {tasks.length}</span>
             </h3>
           </div>
           <div className="space-y-px">
