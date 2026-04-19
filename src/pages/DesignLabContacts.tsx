@@ -89,7 +89,7 @@ const SIGNALS: Signal[] = ["Behov nå", "Får fremtidig behov", "Får kanskje be
 const TYPES = ["Alle", "Innkjøper", "CV-Epost", "Ikke relevant kontakt"] as const;
 type TypeFilter = (typeof TYPES)[number];
 
-type SortField = "name" | "signal" | "company" | "title" | "owner" | "last_activity" | "priority";
+type SortField = "name" | "signal" | "company" | "title" | "owner" | "last_activity" | "priority" | "tags" | "finn";
 type SortDir = "asc" | "desc";
 type HuntSortField = "default" | "match" | "varme";
 
@@ -1038,7 +1038,7 @@ export default function DesignLabContacts() {
     setSort((current) =>
       current.field === field
         ? { field, dir: current.dir === "asc" ? "desc" : "asc" }
-        : { field, dir: field === "last_activity" || field === "priority" ? "desc" : "asc" },
+        : { field, dir: field === "last_activity" || field === "priority" || field === "tags" || field === "finn" ? "desc" : "asc" },
     );
   }, []);
 
@@ -1692,6 +1692,16 @@ export default function DesignLabContacts() {
           return d * a.lastActivityAt.localeCompare(b.lastActivityAt);
         case "priority":
           return compareByPriority(a, b, sort.dir);
+        case "tags": {
+          const aCount = mergeTechnologyTags(a.contactTechnologyTags, a.companyTechnologyTags, a.requestTechnologyTags).length;
+          const bCount = mergeTechnologyTags(b.contactTechnologyTags, b.companyTechnologyTags, b.requestTechnologyTags).length;
+          return d * (aCount - bCount);
+        }
+        case "finn": {
+          const aFinn = a.hasMarkedsradar ? 1 : 0;
+          const bFinn = b.hasMarkedsradar ? 1 : 0;
+          return d * (aFinn - bFinn);
+        }
         default:
           return 0;
       }
@@ -2239,10 +2249,10 @@ export default function DesignLabContacts() {
                     >
                       <DesignLabColumnHeader label="Navn" field="name" sort={sort} onSort={toggleSort} />
                       <DesignLabColumnHeader label="Signal" field="signal" sort={sort} onSort={toggleSort} />
-                      <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Finn</span>
+                      <DesignLabColumnHeader label="Finn" field="finn" sort={sort} onSort={toggleSort} />
                       <DesignLabColumnHeader label="Selskap" field="company" sort={sort} onSort={toggleSort} />
                       <DesignLabColumnHeader label="Stilling" field="title" sort={sort} onSort={toggleSort} />
-                      <DesignLabColumnHeader label="Tags" field="priority" sort={sort} onSort={toggleSort} />
+                      <DesignLabColumnHeader label="Tags" field="tags" sort={sort} onSort={toggleSort} />
                       <DesignLabColumnHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
                     </div>
                     {isLoading || isLoadingParity ? (
