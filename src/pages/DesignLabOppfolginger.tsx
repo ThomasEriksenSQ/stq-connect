@@ -141,6 +141,19 @@ export default function DesignLabOppfolginger() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [dueDateOpen, setDueDateOpen] = useState(false);
   const contactInputRef = useRef<HTMLInputElement | null>(null);
+  const [cmdOpen, setCmdOpen] = useState(false);
+
+  // ⌘K shortcut
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCmdOpen(true);
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: FOLLOW_UP_QUERY_KEY,
