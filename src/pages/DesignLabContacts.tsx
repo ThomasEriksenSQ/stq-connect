@@ -2282,6 +2282,26 @@ export default function DesignLabContacts() {
                               if (!isActive) e.currentTarget.style.background = isActive ? C.activeBg : "transparent";
                             }}
                           >
+                            <div className="min-w-0 flex items-center gap-2">
+                              <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>
+                                {c.firstName} {c.lastName}
+                              </span>
+                              {c.heatResult.needsReview && (
+                                <span
+                                  title="Trenger oppfølging"
+                                  style={{ fontSize: 11, fontWeight: 700, color: C.warning, flexShrink: 0 }}
+                                >
+                                  !
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              {c.signal ? (
+                                <DesignLabSignalBadge signal={c.signal as Signal} />
+                              ) : (
+                                <span style={{ fontSize: 11, color: C.textGhost }}>—</span>
+                              )}
+                            </div>
                             <div
                               className="flex items-center justify-center"
                               title={
@@ -2301,26 +2321,6 @@ export default function DesignLabContacts() {
                                     objectFit: "contain",
                                   }}
                                 />
-                              )}
-                            </div>
-                            <div className="min-w-0 flex items-center gap-2">
-                              <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>
-                                {c.firstName} {c.lastName}
-                              </span>
-                              {c.heatResult.needsReview && (
-                                <span
-                                  title="Trenger oppfølging"
-                                  style={{ fontSize: 11, fontWeight: 700, color: C.warning, flexShrink: 0 }}
-                                >
-                                  !
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              {c.signal ? (
-                                <DesignLabSignalBadge signal={c.signal as Signal} />
-                              ) : (
-                                <span style={{ fontSize: 11, color: C.textGhost }}>—</span>
                               )}
                             </div>
                             <div className="min-w-0">
