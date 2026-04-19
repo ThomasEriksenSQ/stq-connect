@@ -1,45 +1,35 @@
 
 
-## Mål
+## Bekreftelse: ja, all interaksjonslogikk er intakt
 
-Legge til feltet **Ekstra kostnad / time** (samme som finnes på STACQ Prisen-redigering i dag) i **Aktive oppdrag → Nytt oppdrag** og **Rediger oppdrag**. Beløpet trekkes fra timesprisen som del av STACQ-prisberegningen (`stacqPris.ts` håndterer det allerede via `ekstra_kostnad`).
+Jeg har sjekket `src/pages/DesignLabContacts.tsx` (linje 2008–2066 og rundt klikk-handlerne). Hele systemet rundt "Tilgjengelig for oppdrag"-baren ligger der fortsatt:
 
-## Funn
+### Hva som finnes i koden i dag
 
-- `stacq_oppdrag.ekstra_kostnad` finnes allerede i DB og brukes av `calcStacqPris()`.
-- I dag eksponeres feltet kun i `DesignLabStacqPrisen.tsx` (EditModal, linje 503/511/543-547) og `StacqPrisen.tsx`.
-- `OppdragEditSheet.tsx` (brukt av Aktive oppdrag for både opprett og rediger) har felt for Utpris og Innpris, men ingen `ekstra_kostnad`.
-- `src/lib/oppdragForm.ts` definerer `OppdragFormState` og `buildOppdragWritePayload()` — disse må utvides så `ekstra_kostnad` kommer med i insert/update.
+1. **Selve baren** (linje 2008–2066) — horisontal scrollbar rad med konsulent-kort, hvert kort viser navn, kompetanse-tags og tilgjengelighets-badge.
+2. **Klikk-handler på konsulent-kort** — setter `activeConsultantFilter` til konsulentens navn/id, som filtrerer kontaktlisten til kun de kontakter som matcher konsulentens kompetanse (via `getConsultantMatchTags`).
+3. **Aktiv-tilstand** — det valgte kortet får visuell markering (border/bakgrunn) når filteret er aktivt.
+4. **Match-tags på kontaktrader** — når en konsulent er valgt, vises overlappende teknologi-tags på hver kontakt-rad slik at man ser *hvorfor* kontakten matcher.
+5. **Avbryt-filter** — klikk på samme kort igjen, eller på "X" i filterindikatoren, fjerner `activeConsultantFilter`.
+6. **Sortering** — kontakter sorteres slik at de med flest matchende tags kommer øverst når et konsulentfilter er aktivt.
+7. **Hjelpefunksjoner** i `src/lib/contactHunt.ts`: `sortHuntConsultants`, `getConsultantMatchTags`, `getTechnologyMatchTags` — alle uendret.
 
-## Endringer
+### Hva som skjer etter endringen i alternativ A
 
-**1. `src/lib/oppdragForm.ts`**
-- Legg til `ekstraKostnad: string` i `OppdragFormState` og `OPPDRAG_DEFAULTS` (default `""`).
-- Inkluder `ekstra_kostnad: toNullableNumber(value.ekstraKostnad)` i `buildOppdragWritePayload`-returobjektet.
+Endringen jeg foreslår er **kun** i `getConsultantAvailabilityMeta` (synlighetsregelen). All klikk-, filter- og match-logikken over er helt urørt. Når Tom Erik (24. apr.) og de tre andre (1. sep.) blir synlige igjen, vil de:
 
-**2. `src/components/OppdragEditSheet.tsx`**
-- Ny `useState` `ekstraKostnad` (string).
-- Reset i `useEffect` for create-mode (tom) og populer fra `row.ekstra_kostnad` i edit-mode.
-- Inkluder `ekstraKostnad` i `buildFormState()`.
-- Oppdater `marginPerTime`-beregningen så den også trekker fra `ekstraKostnad`:  
-  `(utpris) - (tilKonsulent) - (ekstraKostnad)` slik at "Margin (beregnet)" reflekterer netto STACQ-pris pr. time.
-- Legg inn nytt input-felt rett under "Innpris / time" (samme V1-stil som de andre feltene i sheetet — `LABEL` + `Input type="number"`):
-  - Label: `Ekstra kostnad / time`
-  - Placeholder: `f.eks. 80`
-  - Liten hjelpetekst under: *"Trekkes fra STACQ Prisen. Brukes for deal-avtaler, bonus-forpliktelser e.l."*
+- vises som kort i baren med "Tilgjengelig 24. apr." / "Tilgjengelig 1. sep." badge
+- være klikkbare → setter konsulentfilter på kontaktlisten
+- vise match-tags på kontaktene som matcher deres kompetanse
+- kunne avbrytes ved klikk igjen
 
-**3. Type-utvidelse for row**
-- `OppdragEditSheet` leser `row.ekstra_kostnad` i load-effekten. Feltet finnes allerede i `Database["public"]["Tables"]["stacq_oppdrag"]["Row"]`, så ingen typeendringer ut over riktig casting.
+### Bekreftelse før jeg gjør endringen
 
-## Hvor feltet vises
+Jeg trenger bare grønt lys på vindusbredden:
 
-Sidepanel `OppdragEditSheet` brukes både fra:
-- `KonsulenterOppdrag.tsx` (V1 `/konsulenter/i-oppdrag`)
-- `DesignLabKonsulenterOppdrag.tsx` (V2 `/design-lab/aktive-oppdrag`)
+- **90 dager fram** (min anbefaling — fanger Tom Erik tydelig, viser sept.-konsulentene som "later")
+- **60 dager fram** (samme vindu som bakover, mer symmetrisk — sept.-konsulentene faller utenfor)
+- **Annet antall dager**
 
-Begge får automatisk det nye feltet med samme V1-stil som resten av sheetet (project-knowledge V1-regler — vi endrer ikke styling i sheetet).
-
-## Forventet resultat
-
-På Aktive oppdrag → "Nytt oppdrag" og "Rediger" finnes nå et felt **Ekstra kostnad / time**. Tallet lagres i `stacq_oppdrag.ekstra_kostnad`, viser direkte i margin-boksen i sheetet, og brukes av `calcStacqPris()` slik at STACQ Prisen-tabellen automatisk får riktig verdi uten dobbeltvedlikehold.
+Når du har valgt, gjør jeg minimal endring i `src/lib/contactHunt.ts` + oppdaterer `src/test/contactHunt.test.ts`. Ingen endringer i `DesignLabContacts.tsx` eller andre filer — klikk-/filterlogikken plukker opp synligheten automatisk.
 
