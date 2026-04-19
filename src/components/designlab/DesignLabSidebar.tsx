@@ -1,7 +1,7 @@
 import { User } from "@supabase/supabase-js";
 import {
   Users, Building2, LayoutDashboard, Briefcase, Settings, LogOut,
-  UserPlus, Radar, TrendingUp, Globe, Clock, ChevronsLeft, ChevronsRight,
+  UserPlus, Radar, TrendingUp, Globe, Clock, PanelLeft, PanelLeftOpen,
   SwatchBook,
 } from "lucide-react";
 import { C } from "@/components/designlab/theme";
@@ -50,7 +50,7 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
 
   return (
     <aside
-      className="flex h-screen min-h-0 flex-col shrink-0 overflow-hidden"
+      className="group flex h-screen min-h-0 flex-col shrink-0 overflow-hidden"
       style={{
         ...getDesignLabTextSizeVars(textSize),
         width: collapsed ? 48 : 220,
@@ -59,24 +59,56 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
         background: C.sidebarBg,
       }}
     >
-      {/* Logo */}
+      {/* Logo + collapse toggle */}
       <div
         className="flex items-center shrink-0"
         style={{
           height: px(40),
-          paddingLeft: collapsed ? 0 : px(16),
-          justifyContent: collapsed ? "center" : "flex-start",
+          paddingLeft: collapsed ? 0 : px(12),
+          paddingRight: collapsed ? 0 : px(8),
+          justifyContent: collapsed ? "center" : "space-between",
+          gap: px(8),
         }}
       >
-        <img
-          src={collapsed ? stacqLogoIcon : stacqLogoFull}
-          alt="STACQ"
+        {!collapsed && (
+          <img
+            src={stacqLogoFull}
+            alt="STACQ"
+            style={{ height: px(18), width: "auto", display: "block" }}
+          />
+        )}
+        {collapsed && (
+          <img
+            src={stacqLogoIcon}
+            alt="STACQ"
+            style={{ height: px(22), width: px(22), display: "block" }}
+          />
+        )}
+        <button
+          onClick={() => setCollapsed((p) => !p)}
+          title={collapsed ? "Utvid sidebar" : "Skjul sidebar"}
+          aria-label={collapsed ? "Utvid sidebar" : "Skjul sidebar"}
+          className={`flex items-center justify-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dl-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--dl-focus-offset)] ${collapsed ? "absolute left-1/2 -translate-x-1/2" : "opacity-0 group-hover:opacity-100"}`}
           style={{
-            height: collapsed ? px(22) : px(18),
-            width: collapsed ? px(22) : "auto",
-            display: "block",
+            ["--dl-focus-ring" as string]: C.borderFocus,
+            ["--dl-focus-offset" as string]: C.sidebarBg,
+            width: px(22),
+            height: px(22),
+            borderRadius: px(4),
+            color: C.textFaint,
+            background: "transparent",
+            flexShrink: 0,
+            top: collapsed ? px(44) : undefined,
+            position: collapsed ? "absolute" : "relative",
           }}
-        />
+          onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverSubtle; e.currentTarget.style.color = C.text; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = C.textFaint; }}
+        >
+          {collapsed
+            ? <PanelLeftOpen style={{ width: px(14), height: px(14), strokeWidth: 1.5 }} />
+            : <PanelLeft style={{ width: px(14), height: px(14), strokeWidth: 1.5 }} />
+          }
+        </button>
       </div>
 
       {/* Nav */}
@@ -122,30 +154,6 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
           </div>
         )}
 
-        {/* Collapse toggle */}
-        <button
-          onClick={() => setCollapsed((p) => !p)}
-          title={collapsed ? "Utvid sidebar" : "Skjul sidebar"}
-          className="flex items-center w-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dl-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--dl-focus-offset)]"
-          style={{
-            ["--dl-focus-ring" as string]: C.borderFocus,
-            ["--dl-focus-offset" as string]: C.sidebarBg,
-            height: px(28),
-            borderRadius: px(6),
-            justifyContent: collapsed ? "center" : "flex-start",
-            paddingLeft: collapsed ? 0 : px(8),
-            gap: px(8),
-            color: C.textFaint,
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverSubtle; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-        >
-          {collapsed
-            ? <ChevronsRight style={{ width: px(14), height: px(14), strokeWidth: 1.5 }} />
-            : <ChevronsLeft style={{ width: px(14), height: px(14), strokeWidth: 1.5 }} />
-          }
-          {!collapsed && <span style={{ fontSize: px(12), whiteSpace: "nowrap" }}>Skjul</span>}
-        </button>
       </div>
     </aside>
   );
