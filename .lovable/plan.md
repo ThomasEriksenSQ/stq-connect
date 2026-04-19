@@ -1,30 +1,59 @@
 
 ## Funn
 
-I `src/pages/DesignLabCompanies.tsx` har den sticky tabellheaderen (linje 606–612) bakgrunnen `C.surfaceAlt` (#F3F3F4 — lett grå). Resten av listeområdet under headeren har `C.appBg` (#FCFCFD — nesten hvit) som arves fra `<main>`. Det skaper en synlig "hvit glippe":
+I `src/pages/DesignLabStacqPrisen.tsx` (linje 167–173) beregnes `workdayCount` slik:
 
-- Mellom den grå header-stripen (kun i venstre panel) og panelets høyre kant/ResizableHandle, vises bakgrunnen som en lys vertikal strek.
-- Den grå headerstripen står i kontrast mot det nesten hvite radområdet under, som også kan oppfattes som en "stripe".
+```ts
+for (let d = 1; d <= dim; d++) {
+  const dow = new Date(y, m, d).getDay();
+  if (dow !== 0 && dow !== 6) wd++;
+}
+```
 
-Denne påvirker også samme mønster på andre Design Lab-sider med sticky header (Kontakter, Forespørsler, Oppfølginger), men brukeren peker spesifikt på selskaper-tabellen.
+Den teller alle mandag–fredag, men trekker **ikke fra norske røde dager**. På topp-stat-kortet "STACQ Prisen / mnd" vises tallet som `${workdayCount} arbeidsdager · ${måned}`, og brukes også til å multiplisere månedsomsetningen (`monthlyTotal = stacqTotalPerTime * 7.5 * workdayCount`). Det betyr at både visningen og månedstotalen blir for høy i måneder med helligdager (f.eks. mai med 1. mai, 17. mai, Kr.h.farts, 2. pinsedag).
 
 ## Plan
 
-Endre kun den sticky tabellheaderens bakgrunn slik at den smelter sømløst inn med listeområdet. Ingen layout-, kolonne- eller logikkendringer.
+Legg til en delt hjelpefunksjon for norske helligdager og bruk den til å trekke fra røde dager (mandag–fredag) i `workdayCount`-beregningen.
 
-### Fil
-- `src/pages/DesignLabCompanies.tsx` (linje ~606–612)
+### 1) Ny fil: `src/lib/norwegianHolidays.ts`
 
-### Endring
-- Sett header-wrapper sin `background` fra `C.surfaceAlt` (#F3F3F4) til `C.appBg` (#FCFCFD) — samme som listeområdet under, slik at det ikke lenger ser ut som en farget stripe.
-- Behold `borderBottom: 1px solid C.border` som visuell separator.
-- Behold `position: sticky` og `z-10` for fortsatt scroll-stickyness.
+Eksporter to funksjoner:
 
-### Hvorfor lav-risk
-- Ren tokenbytte på én bakgrunnsfarge.
-- Ingen påvirkning på sortering, filtre, kolonnebredder eller detaljpanel.
-- Følger V2-prinsippet om at hierarki skapes via typografi/border, ikke fargede flater.
+- `getNorwegianHolidays(year: number): Date[]` — returnerer alle norske offentlige fridager for året:
+  - Faste: 1. jan (Nyttårsdag), 1. mai (Off. høytidsdag), 17. mai (Grunnlovsdagen), 25. des (1. juledag), 26. des (2. juledag).
+  - Bevegelige (utledet fra påskedag via Anonymous Gregorian-algoritmen):
+    - Skjærtorsdag (påske − 3)
+    - Langfredag (påske − 2)
+    - 2. påskedag (påske + 1)
+    - Kristi himmelfartsdag (påske + 39)
+    - 1. pinsedag (påske + 49)
+    - 2. pinsedag (påske + 50)
+- `countNorwegianWorkdays(year: number, month: number): number` — returnerer antall mandag–fredag i måneden minus røde dager som faller på en hverdag.
 
-### Utenfor scope
-- Andre Design Lab-sider (Kontakter, Forespørsler, Oppfølginger). Kan harmoniseres etterpå hvis ønsket.
-- V1 Companies-side.
+### 2) Bruk funksjonen i `DesignLabStacqPrisen.tsx`
+
+- Erstatt den lokale løkken (linje 167–173) med:
+  ```ts
+  const workdayCount = countNorwegianWorkdays(now.getFullYear(), now.getMonth());
+  ```
+- `monthlyTotal` og kortets undertekst (`${workdayCount} arbeidsdager · …`) får automatisk korrekt verdi.
+
+### 3) Test: `src/test/norwegianHolidays.test.ts`
+
+Korte vitest-caser for å sikre korrekthet:
+- Påskedag 2025 = 20. april, 2026 = 5. april (verifiser bevegelige datoer).
+- Mai 2025: 22 hverdager − 4 røde (1. mai tor, 17. mai lør → ikke trekkes, Kr.h.farts 29. mai, 1. pinsedag fredag 2026? bekreft per år) → forventet verdi.
+- April 2026 inneholder skjærtorsdag, langfredag, 2. påskedag → trekkes fra.
+
+## Hvorfor trygt
+
+- Ren, isolert utvidelse i `src/lib/` + ett kall i én fil.
+- Ingen DB-endringer, ingen API-kall, ingen avhengigheter.
+- Påvirker kun visningen av "arbeidsdager" og månedstotal på STACQ Prisen — samme tall som allerede vises i dag, bare korrekt.
+
+## Utenfor scope
+
+- Ingen brukervalgt periode/justering — alltid inneværende måned, som i dag.
+- Ingen halve dager (f.eks. onsdag før skjærtorsdag) — telles som hel arbeidsdag.
+- Ingen V1-side berøres.
