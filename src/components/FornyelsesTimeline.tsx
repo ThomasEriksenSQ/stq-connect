@@ -125,15 +125,15 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
             />
 
             {/* Header */}
-            <div className="flex border-b border-border bg-background sticky top-0 z-20">
-              <div className="w-[190px] shrink-0 px-4 py-2.5 sticky left-0 z-30 bg-background text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+            <div className="flex border-b border-border bg-background sticky top-0 z-20 h-[41px]">
+              <div className="w-[190px] shrink-0 px-4 sticky left-0 z-30 bg-background text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground flex items-center">
                 Konsulent
               </div>
               {MONTHS_SHORT.map((m, i) => (
                 <div
                   key={m}
                   className={cn(
-                    "flex-1 min-w-[56px] text-center py-2.5 text-[0.6875rem] font-medium uppercase tracking-[0.08em]",
+                    "flex-1 min-w-[56px] text-center text-[0.6875rem] font-medium uppercase tracking-[0.08em] relative flex items-center justify-center",
                     i === currentMonth
                       ? "text-primary font-bold"
                       : "text-muted-foreground"
@@ -141,7 +141,7 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
                 >
                   {m}
                   {i === currentMonth && (
-                    <div className="h-[2px] bg-primary rounded-full mt-1 mx-2" />
+                    <div className="absolute bottom-1 left-2 right-2 h-[2px] bg-primary rounded-full" />
                   )}
                 </div>
               ))}
