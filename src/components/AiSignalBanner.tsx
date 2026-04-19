@@ -157,7 +157,7 @@ export function AiSignalBanner({
           {/* Nye teknologier — klikkbare for individuell tillegging */}
           {hasNewTechs && (
             <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-              <span className="text-[0.6875rem] text-muted-foreground">Teknologier:</span>
+              <span className="text-[0.6875rem] text-muted-foreground">Foreslåtte teknologier (klikk for legge til):</span>
               {remainingTechs.map((t) => (
                 <button
                   key={t}
