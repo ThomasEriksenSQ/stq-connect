@@ -154,30 +154,6 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
           </div>
         )}
 
-        {/* Collapse toggle */}
-        <button
-          onClick={() => setCollapsed((p) => !p)}
-          title={collapsed ? "Utvid sidebar" : "Skjul sidebar"}
-          className="flex items-center w-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dl-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--dl-focus-offset)]"
-          style={{
-            ["--dl-focus-ring" as string]: C.borderFocus,
-            ["--dl-focus-offset" as string]: C.sidebarBg,
-            height: px(28),
-            borderRadius: px(6),
-            justifyContent: collapsed ? "center" : "flex-start",
-            paddingLeft: collapsed ? 0 : px(8),
-            gap: px(8),
-            color: C.textFaint,
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverSubtle; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-        >
-          {collapsed
-            ? <ChevronsRight style={{ width: px(14), height: px(14), strokeWidth: 1.5 }} />
-            : <ChevronsLeft style={{ width: px(14), height: px(14), strokeWidth: 1.5 }} />
-          }
-          {!collapsed && <span style={{ fontSize: px(12), whiteSpace: "nowrap" }}>Skjul</span>}
-        </button>
       </div>
     </aside>
   );
