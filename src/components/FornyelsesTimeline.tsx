@@ -126,7 +126,7 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
 
             {/* Header */}
             <div className="flex border-b border-border bg-background sticky top-0 z-20">
-              <div className="w-[190px] shrink-0 px-3 py-2.5 sticky left-0 z-30 bg-background text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+              <div className="w-[190px] shrink-0 px-4 py-2.5 sticky left-0 z-30 bg-background text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">
                 Konsulent
               </div>
               {MONTHS_SHORT.map((m, i) => (
