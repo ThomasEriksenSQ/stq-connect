@@ -2070,7 +2070,7 @@ export default function DesignLabContacts() {
         {/* Content: list + detail */}
         <div className="flex-1 min-h-0 flex">
           <ResizablePanelGroup direction="horizontal" className="h-full">
-            <ResizablePanel defaultSize={35} minSize={20} maxSize={60}>
+            <ResizablePanel defaultSize={38} minSize={24} maxSize={60}>
               <div className="h-full overflow-y-auto" style={{ scrollbarColor: `${C.borderStrong} ${C.surfaceAlt}` }}>
                 {selectedConsultant ? (
                   <>
