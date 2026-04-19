@@ -76,7 +76,7 @@ function getVisibleTechnologies(tags: unknown): { visible: string[]; hiddenCount
     : [];
 
   const visible: string[] = [];
-  let charBudget = 24;
+  let charBudget = 18;
 
   for (const tag of normalized) {
     const nextCost = tag.length + (visible.length > 0 ? 2 : 0);
@@ -581,8 +581,8 @@ function ForespRow({
         <TypeChip type={row.type} />
       </div>
       {/* Teknologier */}
-      <div className="min-w-0 pr-4">
-        <div className="flex items-center gap-1.5 flex-nowrap">
+      <div className="min-w-0 pr-4" style={{ overflow: "hidden" }}>
+        <div className="flex items-center gap-1.5 flex-nowrap" style={{ minWidth: 0, overflow: "hidden" }}>
           {technologies.visible.map((t) => (
             <DesignLabReadonlyChip key={t} active={false}>
               {t}
@@ -612,33 +612,29 @@ function ForespRow({
                 ? portraitByAnsattId.get(k.stacq_ansatte.id) || null
                 : null;
             return (
-              <div key={k.id} style={{ minHeight: 28, display: "flex", alignItems: "center", gap: 8 }}>
+              <div key={k.id} style={{ minHeight: 32, display: "flex", alignItems: "center", gap: 12 }}>
                 {portrait ? (
                   <img
                     src={portrait}
                     alt={navn}
-                    style={{ width: 22, height: 22, borderRadius: "999px", objectFit: "cover", flexShrink: 0 }}
+                    className="h-8 w-8 rounded-full border object-cover"
+                    style={{ borderColor: C.border, flexShrink: 0 }}
                   />
                 ) : (
                   <div
+                    className="flex h-8 w-8 items-center justify-center rounded-full"
                     style={{
-                      width: 22,
-                      height: 22,
-                      borderRadius: "999px",
                       flexShrink: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
                       background: C.accentBg,
                       color: C.accent,
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: 700,
                     }}
                   >
                     {getInitials(navn)}
                   </div>
                 )}
-                <span style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.2, whiteSpace: "normal" }}>
+                <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text, lineHeight: 1.2 }}>
                   {navn}
                 </span>
               </div>
@@ -656,7 +652,7 @@ function ForespRow({
           sendt.map((k: any) => {
             const cfg = PIPELINE[k.status] || { label: "Ny", color: C.textFaint };
             return (
-              <div key={k.id} style={{ minHeight: 28, display: "flex", alignItems: "center" }}>
+              <div key={k.id} style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
                 <span
                   className="inline-flex items-center rounded-[6px]"
                   style={{
