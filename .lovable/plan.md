@@ -2,91 +2,48 @@
 
 ## Vurdering
 
-Du er på `/design-lab/oppfolginger` (V2-flate), og både `ContactCardContent` og `ForespørselSheet` rendres innenfor V2-skall (`dl-v8-theme`). Da gjelder V2-typografi: 13px / 500 / `#1A1C1F` for tittel, 12px / 400 / dempet for meta. Akkurat nå skriker disse sub-titlene fortsatt V1-uppercase mens resten av kortet leser V2.
+Akkurat nå er "AI foreslår"-banneret i Kontaktkortet et alt-eller-ingenting-valg: bruker får én "Legg til teknologier"-knapp som legger til alle foreslåtte tags samlet, eller "Ignorer" som forkaster alle. Det er for grovt — typisk vil AI foreslå f.eks. `Hardware`, `Software`, `RTOS`, `Bluetooth`, og brukeren vil bare ha 2 av 4. I dag må de da legge til alle og slette manuelt etterpå, eller ignorere alt og skrive inn manuelt.
 
-**MEN** — `ContactCardContent` brukes også på V1-flater (`/kontakter/:id` via `src/pages/ContactDetail.tsx`), og `ForespørselSheet` brukes også i `/foresporsler` (V1). Endrer vi klassene direkte, bytter vi typografi i V1 også, og det bryter V1-regelen "Ikke endre V1-design". 
+Riktig mønster: hver foreslåtte tag skal være sin egen klikkbare chip. Klikk på en chip → legges til som permanent teknologi-tag og forsvinner fra forslagslista. Når lista er tom (eller bruker klikker "Ignorer alle"), forsvinner banneret.
 
-### To strategier — én må velges
+## Funn
 
-**Strategi A — Global migrering (anbefalt for konsistens)**: Endre headerne direkte. Pro: konsistens, mindre kodevedlikehold. Kontra: V1-flatene (`/kontakter/:id`, `/foresporsler`) får V2-typografi på disse seksjonene mens resten av V1-siden er uendret → potensielt stilbrudd i V1.
+Jeg må først lokalisere AI-forslagsbanneret i `ContactCardContent.tsx`. Basert på skjermbildet vises det rett under teknologi-chipsene, med "AI foreslår:"-tittel, begrunnelse, "Tidsramme", "Teknologier:" rad med chips, og en "+ Legg til teknologier" / "✕ Ignorer"-rad.
 
-**Strategi B — Variant-flagg**: Legg til en `v2?: boolean` prop som kun aktiverer V2-typografi når komponenten mountes fra `/design-lab/*`. Pro: respekterer V1/V2-skillet. Kontra: mer kompleksitet, dobbelt sett klasser å vedlikeholde.
-
-**Min anbefaling: Strategi A**. Resonnement: V1 og V2 har samme tekstinnhold ("Oppfølginger · 1"), og V2-stilen (13px / 500 / mørk) er ikke verre i V1-sammenheng — den er bare litt mer dempet enn V1-uppercase. Og siden vi allerede har migrert "Oppfølginger / Aktiviteter / Kontakter" på selskapskortet uten variant-flagg, er det konsekvent å gjøre det samme her. Hvis det skurrer i V1 kan vi raskt rulle tilbake til variant-løsning.
-
-## Funn — eksakt liste over headere som migreres
-
-### `src/components/ContactCardContent.tsx` (Kontaktkortet)
-1. **Linje 1254** — "Teknologier" (i Tekniske behov-seksjonen)
-2. **Linje 1677** — "Oppfølginger · {tasks.length}" (oppfølgings-seksjonen, samme V1-kort-wrapper som vi nettopp ryddet på selskapskortet)
-
-### `src/components/ForespørselSheet.tsx` (Forespørselskortet, read-only visning)
-3. **Linje 746** — "Mottatt"
-4. **Linje 773** — "Teknologier"  
-5. **Linje 873** — "Kommentar"
-
-Alle bruker konstanten `LABEL` (linje 45) eller den dupliserte versjonen i EditMode (linje 1197):
-```ts
-const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
-```
+Dette ser ut til å være `AiSignalBanner.tsx`-komponenten (i `src/components/`). Må verifisere:
+- Hvordan banneret rendres (inline i ContactCardContent vs separat komponent)
+- Hvordan "Legg til teknologier" wires opp i dag (callback-prop med array)
+- Om samme banner brukes andre steder (ContactDetail V1, evt. i selskapskortet)
 
 ## Plan
 
-### 1. `src/components/ForespørselSheet.tsx`
-Endre `LABEL`-konstanten på **linje 45** (read-only/preview-mode) til V2-stil:
+### 1. Endre interaksjonsmodell i `AiSignalBanner.tsx`
+- Hver foreslåtte tag rendres som klikkbar chip (samme V2-stil som dagens "Hardware"/"Software" chips, men med tydelig "klikkbar" affordance — liten `+` ikon eller hover-state).
+- Klikk på chip kaller `onAddTag(tag)` (ny single-tag callback) i stedet for `onAddAll(tags[])`.
+- Lokal state holder `remainingSuggestions` — chip fjernes fra banneret straks den er lagt til, slik at brukeren får umiddelbar visuell bekreftelse.
+- "+ Legg til teknologier" CTA-en fjernes (overflødig når hver chip er klikkbar). "✕ Ignorer" beholdes som "ignorer alle gjenværende".
+- Når `remainingSuggestions.length === 0`, kall `onDismiss()` automatisk så banneret forsvinner.
 
-```ts
-const LABEL = "text-[12px] font-medium text-[#5C636E]";
-```
+### 2. Oppdater wiring i `ContactCardContent.tsx`
+- Erstatt eksisterende `onAddTags(tags: string[])`-callback med `onAddTag(tag: string)` som legger én tag til `tekniske_behov`-array, dedupliserer, og persisterer via samme save-path som manuell tag-tillegging bruker.
+- Behold dagens persist-logikk; bare endre granulariteten.
 
-Dette løfter automatisk Mottatt, Teknologier, Kommentar, Konsulentmatch, Sendt inn, og alle andre `${LABEL}`-bruk i preview-grenen til V2 i ett kutt.
+### 3. Visuelt mønster (V2)
+- Foreslåtte chips: samme høyde/radius som dagens manuelle teknologi-chips (CHIP_BASE), men med dempet bakgrunn (`C.accentMuted` ~ rgba(94,106,210,0.05)) og liten `+` ikon (Lucide `Plus`, 12px) til venstre for label.
+- Hover: `C.accentBg` + cursor pointer.
+- Lagt-til-bekreftelse: chip animerer kort ut (fade) eller forsvinner umiddelbart — velger umiddelbart for å holde det enkelt.
 
-**Viktig**: Den dupliserte `LABEL` på **linje 1197** ligger inne i `EditMode`-komponenten (skjema med inputs). Der ER uppercase-labels et legitimt skjemadesign-mønster (input-feltlabels skal være tydelige og distinkte fra verdier). Vi lar den være — kun preview-LABEL endres.
-
-### 2. `src/components/ContactCardContent.tsx`
-
-**Linje 1252–1256** ("Teknologier"-header):
-```tsx
-<div className="flex items-center justify-between mb-3" style={{ minHeight: 32 }}>
-  <h3 className="text-[13px] font-medium text-[#1A1C1F]">
-    Teknologier
-  </h3>
-  ...
-```
-Bytter `<span>` → `<h3>` (semantisk konsistent med Aktiviteter/Kontakter/Oppfølginger), 13px / 500 / `#1A1C1F`. Ingen teller her, så ingen dempet `<span>`-del.
-
-**Linje 1675–1680** (Oppfølginger-headeren):
-- Erstatt header med samme V2-mønster:
-```tsx
-<div className="flex items-center justify-between mb-3" style={{ minHeight: 32 }}>
-  <h3 className="text-[13px] font-medium text-[#1A1C1F]">
-    Oppfølginger <span className="font-normal text-[#8C929C]">· {tasks.length}</span>
-  </h3>
-</div>
-```
-- Vurdering om kort-wrapperen (`bg-card border border-border rounded-lg shadow-card p-4`): samme situasjon som vi diskuterte på selskapskortet. **Holder vi scope tett denne runden**: behold wrapperen, kun typografi-fiks. Kan ryddes i en oppfølgende runde.
-
-## Designvalg (kort)
-
-- **Tittel (Mottatt, Teknologier, Kommentar)**: 13px på selskapskort vs 12px her? På selskapskortet brukte vi 13px fordi titlene var "primære innganger til kolonner". Her er Mottatt/Teknologier/Kommentar **felt-labels** i en mer skjema-aktig liste — 12px / 500 / `C.textMuted` (#5C636E) er V2-standard for "metadata/labels" (jf. project-knowledge: "Sekundærtitler 12–13px"). 
-
-  → **Velger 12px / 500 / #5C636E** for ForespørselSheet-feltene. Det matcher V2-tokens og bevarer tydelig skille mellom label og verdi (som vises i 13px / `C.text` under).
-
-- **Oppfølginger-headeren i ContactCardContent**: Dette ER en kolonneheader (over en liste), så her bruker vi **samme mønster som selskapskortet**: 13px / 500 / `#1A1C1F` + dempet teller. Konsistent med tidligere migrering.
-
-- **Teknologier-headeren i ContactCardContent**: Også en seksjonsheader med høyre-stilt knapp ("Finn konsulent"), ikke et skjema-felt → **13px / 500 / `#1A1C1F`**, samme som Oppfølginger. Konsistent kolonneheader-mønster.
-
-Kort sagt: to ulike V2-nivåer brukt riktig:
-- **Kolonneheadere over lister** (Oppfølginger, Teknologier-seksjon): 13px / 500 / mørk
-- **Felt-labels i skjema-aktig info-rad** (Mottatt, Teknologier-chips, Kommentar i ForespørselSheet): 12px / 500 / dempet
+### 4. Backwards-kompatibilitet
+- Sjekker først om `AiSignalBanner` brukes andre steder. Hvis ja, oppdaterer alle call sites til ny callback-signatur (eller beholder gammel `onAddAll` som valgfri prop for bakoverkompatibilitet).
 
 ## Filer som endres
-- `src/components/ForespørselSheet.tsx` — én konstant-endring (linje 45)
-- `src/components/ContactCardContent.tsx` — to header-erstatninger (linjer 1252–1256, 1675–1680)
+- `src/components/AiSignalBanner.tsx` — endre rendering av teknologi-chips til klikkbare, fjern samle-CTA, legg til lokal state for `remainingSuggestions`.
+- `src/components/ContactCardContent.tsx` — bytt callback fra batch (`onAddTags`) til single (`onAddTag`); behold persist-logikk.
+- (Potensielt) andre call sites til `AiSignalBanner` — verifiseres før endring og oppdateres tilsvarende.
 
 ## Utenfor scope
-- EditMode-skjema-labels i ForespørselSheet (linje 1197) — uppercase er legitimt skjemadesign der
-- Andre uppercase-labels i ContactCardContent som tilhører edit-skjemaer (Tittel, Kategori, Når? — alle inne i `activeForm`-grenen, brukes ved opprettelse av ny aktivitet)
-- Kort-wrapperen rundt Oppfølginger i ContactCardContent — vurderes i egen runde
-- V1-spesifikke flater (`/foresporsler`, `/kontakter/:id`) — får samme typografi som side-effekt av endringene; aksepteres som anbefalt strategi A
+- Endre AI-prompten eller hvordan teknologier ekstraheres.
+- Legge til sletting av allerede-eksisterende teknologi-tags fra banneret (banneret viser kun nye forslag).
+- "Legg til alle"-snarvei — kan vurderes senere hvis brukerne savner det, men startes uten for å holde mønsteret rent.
+- Tilsvarende endring i selskapskort/forespørsel — kan migreres i en oppfølgende runde hvis samme komponent brukes der.
 
