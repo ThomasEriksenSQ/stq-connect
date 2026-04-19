@@ -128,7 +128,12 @@ export default function DesignLabOppfolginger() {
   const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [search, setSearch] = useState("");
   const [viewFilter, setViewFilter] = useState<FollowUpViewFilter>("Alle");
-  const [ownerFilter, setOwnerFilter] = useState("Alle");
+  const [ownerFilter, setOwnerFilterState] = useState("Alle");
+  const ownerFilterTouched = useRef(false);
+  const setOwnerFilter = (value: string) => {
+    ownerFilterTouched.current = true;
+    setOwnerFilterState(value);
+  };
   const [selectedId, setSelectedId] = useState<string | null>(searchParams.get("task"));
   const [createOpen, setCreateOpen] = useState(false);
   const [contactSearch, setContactSearch] = useState("");
@@ -278,6 +283,15 @@ export default function DesignLabOppfolginger() {
     const paramId = searchParams.get("task");
     if (paramId !== selectedId) setSelectedId(paramId);
   }, [searchParams]);
+
+  // Default Eier-filter til innlogget bruker når profilene er lastet
+  useEffect(() => {
+    if (ownerFilterTouched.current) return;
+    if (!user?.id) return;
+    const me = profiles.find((p) => p.id === user.id);
+    if (!me?.full_name) return;
+    setOwnerFilterState(me.full_name);
+  }, [user?.id, profiles]);
 
   useEffect(() => {
     const current = searchParams.get("task");

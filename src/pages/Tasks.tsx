@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,7 +32,8 @@ const typeConfig: Record<string, { label: string; icon: typeof Phone; accent: st
 const Tasks = () => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [ownerFilter, setOwnerFilter] = useState("all");
+  const [ownerFilter, setOwnerFilter] = useState<string>("all");
+  const ownerFilterTouched = useRef(false);
   const [form, setForm] = useState({ title: "", description: "", priority: "medium", due_date: "", contact_id: "", company_id: "", email_notify: false });
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [pendingComplete, setPendingComplete] = useState<Set<string>>(new Set());
@@ -86,6 +87,15 @@ const Tasks = () => {
 
   const profileMap = Object.fromEntries(profiles.map(p => [p.id, p.full_name]));
   const profileFirstName = Object.fromEntries(profiles.map(p => [p.id, p.full_name.split(" ")[0]]));
+
+  // Default Eier-filter til innlogget bruker når profilene er lastet
+  useEffect(() => {
+    if (ownerFilterTouched.current) return;
+    if (!user?.id) return;
+    if (!profiles.some(p => p.id === user.id)) return;
+    setOwnerFilter(user.id);
+    ownerFilterTouched.current = true;
+  }, [user?.id, profiles]);
 
   // Get activities for selected contact panel
   const { data: contactActivities = [] } = useQuery({
@@ -406,7 +416,7 @@ const Tasks = () => {
             <Input placeholder="Søk..." value={search} onChange={(e) => setSearch(e.target.value)}
               className="pl-9 h-9 rounded-lg text-[0.8125rem] bg-card border-border" />
           </div>
-          <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+          <Select value={ownerFilter} onValueChange={(v) => { ownerFilterTouched.current = true; setOwnerFilter(v); }}>
             <SelectTrigger className="h-9 w-auto min-w-[100px] rounded-lg text-[0.8125rem] border-border bg-card">
               <SelectValue placeholder="Eier: Alle" />
             </SelectTrigger>
