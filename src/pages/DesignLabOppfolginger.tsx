@@ -747,6 +747,21 @@ export default function DesignLabOppfolginger() {
           </ResizablePanelGroup>
         </div>
       </main>
+
+      <CommandPalette
+        open={cmdOpen}
+        onClose={() => setCmdOpen(false)}
+        textSize={textSize}
+        contacts={paletteContacts}
+        companies={paletteCompanies}
+        selectedContact={null}
+        onSelectContact={(id) => {
+          const task = viewModels.find((vm) => vm.contactId === id);
+          if (task) setSelectedId(task.id);
+        }}
+        onFilterByCompany={(name) => setSearch(name)}
+        onResetSearch={search ? () => setSearch("") : undefined}
+      />
     </div>
   );
 }
