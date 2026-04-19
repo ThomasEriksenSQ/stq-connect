@@ -50,8 +50,15 @@ import {
   DesignLabModalInput,
   DesignLabModalLabel,
   DesignLabPrimaryAction,
+  DesignLabSectionLabel,
 } from "@/components/designlab/system";
-import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
+import {
+  DesignLabEntitySheet,
+  DesignLabFormSheet,
+  DesignLabFormSheetBody,
+  DesignLabFormSheetFooter,
+  DesignLabFormSheetHeader,
+} from "@/components/designlab/DesignLabEntitySheet";
 import {
   Phone,
   Mail,
