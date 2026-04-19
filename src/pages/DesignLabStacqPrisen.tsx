@@ -311,7 +311,7 @@ export default function DesignLabStacqPrisen() {
                           <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{row.kandidat}</span>
                         </div>
                         <span className="truncate" style={{ fontSize: 13, color: C.textMuted }}>{row.kunde || "–"}</span>
-                        <span><TypeBadge status={cs} /></span>
+                        <span><TypeBadge dealType={row.deal_type} /></span>
                         <span style={{ fontSize: 13, color: C.textMuted }}>{row.utpris ?? "–"}</span>
                         <span style={{ fontSize: 13 }}>
                           {(row.ekstra_kostnad ?? 0) > 0
