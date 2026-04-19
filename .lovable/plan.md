@@ -1,40 +1,37 @@
 
 ## Mål
-Legg til `/design-lab/innstillinger` som egen rute, og pek tannhjul-knappen i Design Lab-sidebaren dit i stedet for V1-`/innstillinger`. V2-designet for Innstillinger eksisterer allerede.
+Vis en hjelpetekst i det tomme høyre-panelet på `/design-lab/kontakter` og `/design-lab/selskaper`, tilsvarende "Velg en ansatt for å vise profil." på Ansatte. Teksten skal informere om Cmd+K-snarveien.
 
 ## Funn
-- `Innstillinger.tsx` har allerede en ferdig `InnstillingerV2`-komponent som bruker `DesignLabPageShell`, `SectionCard`, `DesignLabPrimaryAction/SecondaryAction`, `StatusDot` og `VarslingsInnstillingerV2`. Den gjengis i dag bare når `isV2Active === true` på V1-ruten `/innstillinger`.
-- `DesignLabSidebar.tsx` linje 96: tannhjulet navigerer til `/innstillinger` (V1-ruten) — derfor blir man kastet ut av Design Lab når man klikker.
-- `App.tsx` har ingen rute under `/design-lab/innstillinger`.
+- **Ansatte** (`DesignLabKonsulenterAnsatte.tsx` linje 447–456): Empty state har sentrert tekst i `C.textFaint`, 13px.
+- **Selskaper** (`DesignLabCompanies.tsx` linje 645–647): Empty panel er bare en tom div (`<div className="h-full" ... />`) — ingen tekst.
+- **Kontakter** (`DesignLabContacts.tsx` linje 2441–2443): Samme — tom div, ingen tekst.
 
 ## Plan
+Erstatt den tomme div-en i begge filer med samme mønster som Ansatte:
 
-1. **`src/pages/Innstillinger.tsx`**
-   - Eksporter `InnstillingerV2` som egen named export (f.eks. `export function InnstillingerV2()`), slik at den kan importeres direkte fra Design Lab-ruten.
-   - Behold `Innstillinger`-default-eksporten og V1/V2-bryteren uendret for `/innstillinger`-ruten (bakoverkompatibilitet).
-   - I `InnstillingerV2`: endre `activePath="/innstillinger"` → `activePath="/design-lab/innstillinger"` slik at tannhjulet markeres som aktivt i sidebaren når man står på siden.
+**`src/pages/DesignLabContacts.tsx`** (linje 2441–2443):
+```tsx
+) : (
+  <div
+    className="flex h-full items-center justify-center"
+    style={{ borderLeft: `1px solid ${C.borderLight}`, background: C.appBg }}
+  >
+    <p style={{ fontSize: 13, color: C.textFaint }}>
+      Trykk ⌘K for å søke.
+    </p>
+  </div>
+)}
+```
 
-2. **`src/App.tsx`**
-   - Legg til ny rute under `/design-lab`-blokken:
-     ```tsx
-     <Route path="innstillinger" element={<Suspense fallback={<LazyFallback/>}><DesignLabInnstillinger/></Suspense>} />
-     ```
-   - Lazy-importer `InnstillingerV2` som named export:
-     ```tsx
-     const DesignLabInnstillinger = lazy(() =>
-       import("./pages/Innstillinger").then(m => ({ default: m.InnstillingerV2 }))
-     );
-     ```
+**`src/pages/DesignLabCompanies.tsx`** (linje 645–647): identisk endring.
 
-3. **`src/components/designlab/DesignLabSidebar.tsx`**
-   - Endre tannhjul-knappens `onClick` fra `navigate("/innstillinger")` → `navigate("/design-lab/innstillinger")`.
-   - Endre `active={isActive("/innstillinger")}` → `active={isActive("/design-lab/innstillinger")}`.
+Bruker `⌘K` (Mac-symbol) for å matche Linear-stilen i Design Lab — kortere og renere enn "Cmd + K". Beholder samme typografi (13px, `C.textFaint`) som Ansatte for konsistens.
 
 ## Effekt
-- Ny rute `/design-lab/innstillinger` viser den eksisterende V2-Innstillinger-flaten med Design Lab-sidebar, header (40px) og samme grid (Outlook + Mailchimp + VarslingsInnstillingerV2).
-- Tannhjulet i Design Lab-sidebaren navigerer internt og markeres aktivt — ingen utkasting fra Design Lab.
-- V1-ruten `/innstillinger` fortsetter å fungere som før (med `isV2Active`-bryter for legacy).
+- Tomt panel på Kontakter og Selskaper viser nå en diskret hjelpetekst sentrert vertikalt og horisontalt.
+- Visuelt og tonemessig identisk med eksisterende Ansatte-empty-state.
 
 ## Utenfor scope
-- Endring av selve V2-innstillingenes innhold/atferd (Outlook, Mailchimp, varslingsmottakere).
-- Fjerning av V1-Innstillinger-ruten — den beholdes inntil videre.
+- Endring av Ansatte-teksten.
+- Andre flater (Forespørsler, Oppfølginger, etc.).
