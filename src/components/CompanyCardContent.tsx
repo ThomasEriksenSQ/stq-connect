@@ -1102,7 +1102,7 @@ export function CompanyCardContent({
         </div>
       )}
 
-      <div className="mt-5">
+      <div className={cn((tasks.length > 0 || showTechDna) && "mt-5")}>
         <CompanyActivityTimeline
           activities={activities}
           profileMap={profileMapFull}
