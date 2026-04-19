@@ -34,6 +34,7 @@ export interface HuntAvailabilityMeta {
 }
 
 const AVAILABILITY_BADGE_WINDOW_DAYS = 60;
+const AVAILABILITY_UPCOMING_WINDOW_DAYS = 90;
 
 function toDateOnly(dateStr: string) {
   const date = new Date(dateStr);
