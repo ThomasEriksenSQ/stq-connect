@@ -2,57 +2,46 @@
 
 ## Vurdering
 
-Ja — det er bedre design. Akkurat nå er det **brudd på visuell rytme** mellom selskapskortet og listen bak: når du lukker panelet ser du selskapsnavn i 13px / 500 / mørk (#1A1C1F), når du åpner det ser du «Kontakter · N» i 12px / 500 / dempet grå (#5C636E). Begge er primære "innganger" til innhold på samme nivå, men de leses med ulik vekt. I Linear/V8-systemet skal hierarki bygges på **én skala** (13px standard) der det som er handlekraftig innhold står i `C.text`, og kun ekte sekundærtekst dempes.
+Nei — de er **ikke like**. Det er to ulike avvik:
 
-Konsekvensen blir også at "Aktiviteter · N" må følge med — ellers får vi to kolonneheadere som leser ulikt mot hverandre, og det er nettopp det vi nettopp ryddet opp i (samme baseline-linje).
+### Funn
 
-## Mål
-Løfte kolonneheaderne **Aktiviteter · N** og **Kontakter · N** i selskapskortet til samme typografi som selskapsnavn i tabellen, slik at de leses som "primære innganger" — ikke som dempede labels.
+**Selskapsnavn i tabellen** (`DesignLabCompanies.tsx` linje ~511):
+- `fontSize: 13px`
+- `fontWeight: 500`
+- `color: #1A1C1F` (C.text)
+- font-family: Inter (arvet fra app-root)
 
-## Funn
-- Selskapsnavn i tabell (`DesignLabCompanies.tsx` linje 511):
-  `fontSize: 13, fontWeight: 500, color: C.text` (#1A1C1F)
-- Kontakter-header (`CompanyCardContent.tsx` linje 1119):
-  `text-[12px] font-medium text-[#5C636E]`
-- Aktiviteter-header (linjer 2162 og 2174): identisk med Kontakter.
-- Tellet «· N» er metadata, ikke del av tittelen.
+**"Kontakter" i selskapskortet** (`CompanyCardContent.tsx` linje 1119, etter siste endring):
+- `text-[13px]` ✅
+- `font-medium` (500) ✅
+- `text-[#1A1C1F]` ✅
+- font-family: Inter ✅
 
-## Designvalg
+På papiret er de identiske. **Men** — i bildene ser "Kontakter" tydelig **tyngre/fetere** ut enn "1X Technologies AS". Hvorfor?
 
-**Tittel-del**: 13px / vekt 500 / `C.text` (#1A1C1F) — match tabellen 1:1.
+### Sannsynlig årsak
 
-**Telle-del** («· N»): behold dempet for å bevare hierarki innenfor selve headeren — `C.textFaint` (#8C929C), vekt 400, samme 13px. Skiller signal (tittel) fra støy (antall) uten å bytte fontstørrelse — ren Linear-tilnærming.
+Brukeren er på `/design-lab/selskaper` med selskapskort åpent. Tekstskaleringen (`dl-text-size`-pillene i sidebaren) bruker CSS `zoom` på `<main>`-elementet. Hvis kortet og tabellen rendres innenfor samme `<main>` er skaleringen lik — men hvis selskapskortet er en `Sheet`/overlay som rendres utenfor `<main>` (via Radix portal til `<body>`), så får **ikke** kortet samme zoom som tabellen. Da kan tabellen være zoomet ned (f.eks. til "S" = 0.85) mens kortet rendres på 100%, og resultatet er at "Kontakter" leses som større/fetere selv om CSS-verdiene er identiske.
 
-**Hvorfor ikke gjøre hele headeren dempet i 13px?** Da mister vi vektkontrasten mot listeradene under (kontaktnavn / aktivitet-titler) som også er ~13px. Tittel i `C.text` + telle i `C.textFaint` gir to lesenivåer på én linje uten ny fontskala.
+Sekundær mulighet: `font-medium` i Tailwind = 500, men hvis tabellraden bruker inline `style={{ fontWeight: 500 }}` og kortet bruker Tailwind-klasse, er begge 500 — så vekt er ikke forskjellen. Det er **rendret pikselstørrelse** som skiller dem, og det peker på zoom/portal-mismatch.
 
-**Hvorfor ikke 13px / 600?** 600 finnes i V2-skalaen, men reserveres til sidetitler (18–20px). 500 er standard for primær UI-tekst — og tabellen bruker 500. Konsistens vinner.
+### Plan for verifikasjon (ingen kodeendringer ennå)
 
-**Min-height 32px og `mb-3` beholdes** — baseline-aligneringen vi nettopp etablerte må ikke brytes.
+1. **Bekreft hvor selskapskortet rendres**: les `DesignLabCompanies.tsx` rundt der `CompanyCardContent` mountes for å se om det er inni en `Sheet`/`Dialog` (portal til body) eller inline i `<main>`.
+2. **Bekreft hvor tekstskalering anvendes**: les `DesignLabPageShell.tsx` for å se hvilken DOM-node som får `zoom`/`fontSize`-skalering.
+3. **Konkluder**: 
+   - Hvis kortet er i portal → fix: anvend samme skalering på Sheet-content (eller flytt skalering til `<html>`/`<body>` så portaler arver).
+   - Hvis kortet er inline → typografien skal være pixel-identisk, og avviket er kun visuell illusjon (omkringliggende tekstmasse påvirker oppfattet vekt). Da er ingen endring nødvendig.
 
-## Plan
+### Filer som leses
+- `src/pages/DesignLabCompanies.tsx` (mount-stedet for kortet)
+- `src/components/designlab/DesignLabPageShell.tsx` (zoom-anvendelse)
+- `src/components/designlab/TextSizeControl.tsx` (skalerings-target)
 
-1. **`src/components/CompanyCardContent.tsx` — Kontakter-header (linje 1119)**:
-   ```tsx
-   <h3 className="text-[13px] font-medium text-[#1A1C1F]">
-     Kontakter <span className="font-normal text-[#8C929C]">· {contacts.length}</span>
-   </h3>
-   ```
+### Filer som potensielt endres (avhenger av funn)
+- `src/components/designlab/DesignLabPageShell.tsx` eller `TextSizeControl.tsx` — flytt zoom-target slik at portaler også skaleres.
 
-2. **`src/components/CompanyCardContent.tsx` — Aktiviteter-header (linjer 2162 og 2174, begge grener)**:
-   ```tsx
-   <h3 className="text-[13px] font-medium text-[#1A1C1F]">
-     Aktiviteter <span className="font-normal text-[#8C929C]">· {activities.length}</span>
-   </h3>
-   ```
-   Tilsvarende for tom-tilstanden (linje 2163: `· 0`).
-
-3. **Ingen øvrige endringer**: spacing, min-height, knapper, og avstand til streken over forblir uendret.
-
-## Filer som endres
-- `src/components/CompanyCardContent.tsx` — tre `<h3>`-erstatninger.
-
-## Utenfor scope
-- Andre seksjonsoverskrifter i selskapskortet (f.eks. «Notater», «Teknisk DNA», «Oppfølginger») — kan vurderes i en oppfølgende runde for full konsistens, men endres ikke nå for å holde scope tett.
-- Kontaktdetaljsiden eller andre flater.
-- Tabellradenes typografi (de er allerede fasit).
+### Utenfor scope
+- Endring av selve typografiverdiene — de er allerede korrekt linjert (13px / 500 / #1A1C1F).
 
