@@ -1115,7 +1115,7 @@ export function CompanyCardContent({
 
   const relatedContactsContent = (
     <div className="pt-4 md:pt-0">
-      <div className="mb-2 flex items-center justify-between gap-3">
+      <div className="mb-3 flex items-center justify-between gap-3" style={{ minHeight: 32 }}>
         <h3 className="text-[12px] font-medium text-[#5C636E]">Kontakter · {contacts.length}</h3>
         {editable && (
           <>
