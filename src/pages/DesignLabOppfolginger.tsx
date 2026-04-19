@@ -653,7 +653,7 @@ export default function DesignLabOppfolginger() {
                         style={{
                           gridTemplateColumns: "minmax(0, 1fr) 180px 200px 140px 92px 70px",
                           minHeight: 38,
-                          padding: "6px 24px",
+                          padding: "4px 24px",
                           borderBottom: `1px solid ${C.borderLight}`,
                           background: active ? C.selected : "transparent",
                         }}

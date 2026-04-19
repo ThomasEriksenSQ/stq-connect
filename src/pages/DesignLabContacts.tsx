@@ -2275,6 +2275,8 @@ export default function DesignLabContacts() {
                               minHeight: 38,
                               paddingLeft: 16,
                               paddingRight: 16,
+                              paddingTop: 4,
+                              paddingBottom: 4,
                               borderBottom: `1px solid ${C.borderLight}`,
                               background: isActive ? C.activeBg : "transparent",
                               boxShadow: `inset 3px 0 0 ${getHeatBarColor(c.heatResult)}`,
