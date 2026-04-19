@@ -1,35 +1,50 @@
 
 
-## Bekreftelse: ja, all interaksjonslogikk er intakt
+## Plan: Vis "Starter"-status basert på `tilgjengelig_fra`
 
-Jeg har sjekket `src/pages/DesignLabContacts.tsx` (linje 2008–2066 og rundt klikk-handlerne). Hele systemet rundt "Tilgjengelig for oppdrag"-baren ligger der fortsatt:
+### Diagnose
 
-### Hva som finnes i koden i dag
+I `src/pages/DesignLabKonsulenterAnsatte.tsx` bestemmes statusen av `getStatus()` (linje 128–132) — kun `start_dato` brukes til å avgjøre om en ansatt er "Kommende". `tilgjengelig_fra` er ikke en del av regelen.
 
-1. **Selve baren** (linje 2008–2066) — horisontal scrollbar rad med konsulent-kort, hvert kort viser navn, kompetanse-tags og tilgjengelighets-badge.
-2. **Klikk-handler på konsulent-kort** — setter `activeConsultantFilter` til konsulentens navn/id, som filtrerer kontaktlisten til kun de kontakter som matcher konsulentens kompetanse (via `getConsultantMatchTags`).
-3. **Aktiv-tilstand** — det valgte kortet får visuell markering (border/bakgrunn) når filteret er aktivt.
-4. **Match-tags på kontaktrader** — når en konsulent er valgt, vises overlappende teknologi-tags på hver kontakt-rad slik at man ser *hvorfor* kontakten matcher.
-5. **Avbryt-filter** — klikk på samme kort igjen, eller på "X" i filterindikatoren, fjerner `activeConsultantFilter`.
-6. **Sortering** — kontakter sorteres slik at de med flest matchende tags kommer øverst når et konsulentfilter er aktivt.
-7. **Hjelpefunksjoner** i `src/lib/contactHunt.ts`: `sortHuntConsultants`, `getConsultantMatchTags`, `getTechnologyMatchTags` — alle uendret.
+Database-bilde av alle 4 ansatte med fremtidig `tilgjengelig_fra`:
+- Harald, Trond, Herbert: `start_dato = tilgjengelig_fra = 01.09.2026` → vises korrekt som "Kommende — Starter 01.09"
+- **Tom Erik Lundesgaard**: `start_dato = 01.11.2025` (fortid), `tilgjengelig_fra = 24.04.2026` (fremtid) → vises som "Aktiv" i dag, ingen "Starter"-boks
 
-### Hva som skjer etter endringen i alternativ A
+Brukerens regel: hvis `tilgjengelig_fra` er satt (spesielt i fremtiden) skal den ansatte få en "Starter"-boks med den datoen, slik som de andre tre allerede har.
 
-Endringen jeg foreslår er **kun** i `getConsultantAvailabilityMeta` (synlighetsregelen). All klikk-, filter- og match-logikken over er helt urørt. Når Tom Erik (24. apr.) og de tre andre (1. sep.) blir synlige igjen, vil de:
+### Endring
 
-- vises som kort i baren med "Tilgjengelig 24. apr." / "Tilgjengelig 1. sep." badge
-- være klikkbare → setter konsulentfilter på kontaktlisten
-- vise match-tags på kontaktene som matcher deres kompetanse
-- kunne avbrytes ved klikk igjen
+Kun `src/pages/DesignLabKonsulenterAnsatte.tsx`:
 
-### Bekreftelse før jeg gjør endringen
+1. **Utvid `getStatus()`** så en ansatt klassifiseres som "Kommende" hvis enten:
+   - `start_dato` er i fremtiden, **eller**
+   - `tilgjengelig_fra` er i fremtiden (og ikke `SLUTTET`)
 
-Jeg trenger bare grønt lys på vindusbredden:
+2. **Velg visningsdato** for "Starter"-chipen ut fra hva som er mest relevant:
+   - Hvis `tilgjengelig_fra` er i fremtiden → bruk den ("Starter 24.04")
+   - Ellers (klassisk Kommende) → behold `start_dato`
 
-- **90 dager fram** (min anbefaling — fanger Tom Erik tydelig, viser sept.-konsulentene som "later")
-- **60 dager fram** (samme vindu som bakover, mer symmetrisk — sept.-konsulentene faller utenfor)
-- **Annet antall dager**
+3. **Stats-telling** (`stats.kommende`) plukker opp endringen automatisk siden den bruker `getStatus()`.
 
-Når du har valgt, gjør jeg minimal endring i `src/lib/contactHunt.ts` + oppdaterer `src/test/contactHunt.test.ts`. Ingen endringer i `DesignLabContacts.tsx` eller andre filer — klikk-/filterlogikken plukker opp synligheten automatisk.
+4. **Filter "Aktiv"** viser allerede både "Aktiv" og "Kommende" sammen, så Tom Erik blir liggende på samme sted som i dag — bare med oppdatert chip.
+
+5. Ingen DB-endringer, ingen migrasjoner, ingen andre filer.
+
+### Forventet resultat
+
+Tom Erik vil etter endringen vises med en gul **"Starter 24.04"**-chip i samme kolonne som de tre andre, og han teller med i `Kommende`-stat-tallet. De andre tre er uberørt.
+
+### Detaljer
+
+```text
+getStatus(row):
+  if status === 'SLUTTET' → 'Sluttet'
+  if start_dato i fremtiden → 'Kommende'
+  if tilgjengelig_fra i fremtiden → 'Kommende'   ← NY
+  → 'Aktiv'
+
+Visningsdato i "Starter"-chip:
+  if tilgjengelig_fra > i dag → tilgjengelig_fra
+  else → start_dato
+```
 
