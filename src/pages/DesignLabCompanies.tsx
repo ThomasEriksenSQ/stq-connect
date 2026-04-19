@@ -21,7 +21,13 @@ import { TextSizeControl, getDesignLabTextSizeStyle, type TextSize } from "@/com
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { BrregSearch, lookupByOrgNr } from "@/components/BrregSearch";
 import { toast } from "sonner";
-import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
+import {
+  DesignLabEntitySheet,
+  DesignLabFormSheet,
+  DesignLabFormSheetBody,
+  DesignLabFormSheetFooter,
+  DesignLabFormSheetHeader,
+} from "@/components/designlab/DesignLabEntitySheet";
 import {
   DesignLabFilterButton,
   DesignLabIconButton,
@@ -30,16 +36,16 @@ import {
 } from "@/components/designlab/controls";
 import {
   DesignLabColumnHeader,
+  DesignLabFieldGrid,
   DesignLabFilterRow,
   DesignLabGhostAction,
-  DesignLabModalActions,
   DesignLabModalChipGroup,
   DesignLabModalContent,
   DesignLabModalField,
+  DesignLabSectionLabel,
   DesignLabModalInlineAction,
   DesignLabModalForm,
   DesignLabModalInput,
-  DesignLabModalLabel,
   DesignLabPrimaryAction,
   useDesignLabModalScale,
   getDesignLabModalInputStyle,
