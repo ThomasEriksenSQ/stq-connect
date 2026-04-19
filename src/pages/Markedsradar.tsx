@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
@@ -108,11 +108,18 @@ function createCompanyRoute(name: string, designLabMode = false) {
 interface MarkedsradarProps {
   hidePageIntro?: boolean;
   designLabMode?: boolean;
+  importRequestId?: number;
 }
 
-export default function Markedsradar({ hidePageIntro = false, designLabMode = false }: MarkedsradarProps = {}) {
+export default function Markedsradar({ hidePageIntro = false, designLabMode = false, importRequestId = 0 }: MarkedsradarProps = {}) {
   const navigate = useNavigate();
   const [importOpen, setImportOpen] = useState(false);
+
+  useEffect(() => {
+    if (importRequestId > 0) {
+      setImportOpen(true);
+    }
+  }, [importRequestId]);
 
   const { data: annonser = [], refetch } = useQuery({
     queryKey: ["finn_annonser"],
@@ -163,15 +170,8 @@ export default function Markedsradar({ hidePageIntro = false, designLabMode = fa
   );
 
   return (
-    <div className={designLabMode ? "space-y-3" : "space-y-6"}>
-      {designLabMode ? (
-        <div className="flex justify-end">
-          <Button onClick={() => setImportOpen(true)} size="sm" variant="outline" className="gap-2">
-            <Download className="h-4 w-4" />
-            Importer uke
-          </Button>
-        </div>
-      ) : (
+    <div className={designLabMode ? "space-y-0" : "space-y-6"}>
+      {!designLabMode && (
         <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div>
             {!hidePageIntro && <h1 className="text-[1.5rem] font-bold text-foreground">Markedsradar</h1>}
