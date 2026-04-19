@@ -407,13 +407,14 @@ export default function KonsulenterOppdrag({
                     <div className="h-full pr-2">
                       <div className="h-full border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
                       <div
-                        className="grid gap-3 px-4 py-2.5 border-b border-border bg-background sticky top-0 z-10"
-                        style={{ gridTemplateColumns: OPPDRAG_GRID_TEMPLATE }}
+                        className="grid gap-3 px-4 border-b border-border sticky top-0 z-10"
+                        style={{ gridTemplateColumns: OPPDRAG_GRID_TEMPLATE, background: "#F3F3F4", height: 32, alignItems: "center" }}
                       >
                         {["Konsulent", "Sluttkunde", "Via partner", "Type", "Utpris", "Margin", "Margin %", "Forny", "Status"].map((h) => (
                           <span
                             key={h}
-                            className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap"
+                            className="whitespace-nowrap"
+                            style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "#5C636E" }}
                           >
                             {h}
                           </span>
