@@ -24,6 +24,26 @@ function getPillColor(fornyDate: Date, isOppstart: boolean) {
   return { bg: "bg-muted text-muted-foreground", border: isOppstart };
 }
 
+export function buildMonthlySummary(enriched: any[]) {
+  const year = new Date().getFullYear();
+  const counts: Record<number, number> = {};
+  enriched
+    .filter((o: any) => (o.status === "Aktiv" || o.status === "Oppstart") && (o.forny_dato || o.lopende_30_dager))
+    .forEach((o: any) => {
+      const now = new Date();
+      const d = o.lopende_30_dager
+        ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+        : new Date(o.forny_dato);
+      if (d.getFullYear() === year) {
+        const m = d.getMonth();
+        counts[m] = (counts[m] || 0) + 1;
+      }
+    });
+  return Object.entries(counts)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([m, count]) => ({ month: MONTHS_SHORT[Number(m)], count }));
+}
+
 export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
   const year = new Date().getFullYear();
   const currentMonth = new Date().getMonth();
@@ -84,31 +104,36 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
       .sort((a, b) => a.fornyDate.getTime() - b.fornyDate.getTime());
   }, [enriched, year]);
 
-  const monthlySummary = useMemo(() => {
-    const counts: Record<number, number> = {};
-    rows.forEach((r) => {
-      if (r.fornyMonth >= 0) counts[r.fornyMonth] = (counts[r.fornyMonth] || 0) + 1;
-    });
-    return Object.entries(counts)
-      .sort(([a], [b]) => Number(a) - Number(b))
-      .map(([m, count]) => ({ month: MONTHS_SHORT[Number(m)], count }));
-  }, [rows]);
-
   if (rows.length === 0) return null;
 
   return (
     <div className="h-full">
       <div className="border border-border rounded-lg bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)] relative h-full flex flex-col">
         <div className="overflow-x-auto flex-1">
-          <div className="min-w-[900px]">
+          <div className="min-w-[900px] relative">
+            {/* Active month vertical highlight overlay */}
+            <div
+              aria-hidden
+              className="absolute pointer-events-none z-0"
+              style={{
+                left: `calc(190px + (100% - 190px) * ${currentMonth} / 12)`,
+                width: `calc((100% - 190px) / 12)`,
+                top: 0,
+                bottom: 0,
+                background: "rgba(94,106,210,0.05)",
+              }}
+            />
+
             {/* Header */}
             <div className="flex border-b border-border bg-background sticky top-0 z-20">
-              <div className="w-[190px] shrink-0 px-3 py-1 sticky left-0 z-30 bg-background" />
+              <div className="w-[190px] shrink-0 px-3 py-2.5 sticky left-0 z-30 bg-background text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                Konsulent
+              </div>
               {MONTHS_SHORT.map((m, i) => (
                 <div
                   key={m}
                   className={cn(
-                    "flex-1 min-w-[56px] text-center py-1 text-[0.6875rem] font-medium uppercase tracking-[0.06em]",
+                    "flex-1 min-w-[56px] text-center py-2.5 text-[0.6875rem] font-medium uppercase tracking-[0.06em]",
                     i === currentMonth
                       ? "text-primary font-bold"
                       : "text-muted-foreground"
@@ -123,42 +148,39 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
             </div>
 
             {/* Rows */}
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-border relative z-10">
               {rows.map((r) => {
                 const pill = getPillColor(r.fornyDate, r.status === "Oppstart");
                 const ansattId = r.erAnsatt ? nameToAnsattId.get(r.fullName.trim().toLowerCase()) : undefined;
                 const portrait = ansattId ? portraitByAnsattId.get(ansattId) : undefined;
                 return (
-                  <div key={r.id} className="flex items-center min-h-[38px] hover:bg-muted/30 transition-colors">
-                    <div className="w-[190px] shrink-0 px-3 py-1 sticky left-0 z-10 bg-card flex items-center gap-2">
+                  <div key={r.id} className="flex items-center min-h-[38px] py-1 hover:bg-muted/30 transition-colors">
+                    <div className="w-[190px] shrink-0 px-3 sticky left-0 z-10 bg-card flex items-center gap-2">
                       {(() => {
                         if (r.erAnsatt && portrait) {
                           return <img src={portrait} alt={r.fullName} className="w-6 h-6 rounded-full object-cover border border-border flex-shrink-0" />;
                         }
                         if (r.erAnsatt) {
                           return (
-                            <div className="w-6 h-6 rounded-full bg-primary/10 text-primary text-[0.5625rem] font-bold flex items-center justify-center flex-shrink-0">
+                            <div className="w-6 h-6 rounded-full bg-primary/10 text-primary text-[0.625rem] font-bold flex items-center justify-center flex-shrink-0">
                               {getInitials(r.fullName)}
                             </div>
                           );
                         }
                         return (
-                          <div className="w-6 h-6 rounded-full bg-muted text-muted-foreground text-[0.5625rem] font-bold flex items-center justify-center flex-shrink-0">
+                          <div className="w-6 h-6 rounded-full bg-muted text-muted-foreground text-[0.625rem] font-bold flex items-center justify-center flex-shrink-0">
                             {getInitials(r.fullName)}
                           </div>
                         );
                       })()}
                       <div className="min-w-0">
-                        <p className="text-[0.8125rem] font-semibold text-foreground truncate">{r.navn}</p>
+                        <p className="text-[0.8125rem] font-medium text-foreground truncate">{r.navn}</p>
                       </div>
                     </div>
                     {MONTHS_SHORT.map((_, i) => (
                       <div
                         key={i}
-                        className={cn(
-                          "flex-1 min-w-[56px] flex items-center justify-center py-1",
-                          i === currentMonth && "bg-primary/[0.03]"
-                        )}
+                        className="flex-1 min-w-[56px] flex items-center justify-center"
                       >
                         {r.fornyMonth === i && (
                           <Tooltip>
@@ -188,20 +210,6 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
             </div>
           </div>
         </div>
-
-        {/* Summary */}
-        {monthlySummary.length > 0 && (
-          <div className="px-3 py-2 border-t border-border bg-background">
-            <p className="text-[0.75rem] text-muted-foreground">
-              {monthlySummary.map((s, i) => (
-                <span key={s.month}>
-                  {i > 0 && " · "}
-                  <span className="font-medium text-foreground">{s.month}:</span> {s.count} {s.count === 1 ? "fornyelse" : "fornyelser"}
-                </span>
-              ))}
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );
