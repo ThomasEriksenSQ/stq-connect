@@ -573,9 +573,6 @@ export default function DesignLabCompanies() {
           <div className="flex items-center justify-between">
             <DesignLabFilterRow label="TYPE" options={[...TYPE_FILTERS]} value={typeFilter} onChange={(v) => setTypeFilter(v as TypeFilter)} />
             <div className="flex items-center gap-3">
-              <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500, whiteSpace: "nowrap", paddingLeft: 12 }}>
-                {filtered.length} selskaper
-              </span>
               {(ownerFilter !== "Alle" || typeFilter !== "Alle") && (
                 <DesignLabGhostAction onClick={() => { setOwnerFilter("Alle"); setTypeFilter("Alle"); }}>
                   <X style={{ width: 12, height: 12 }} /> Nullstill
