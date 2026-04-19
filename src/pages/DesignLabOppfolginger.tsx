@@ -284,6 +284,15 @@ export default function DesignLabOppfolginger() {
     if (paramId !== selectedId) setSelectedId(paramId);
   }, [searchParams]);
 
+  // Default Eier-filter til innlogget bruker når profilene er lastet
+  useEffect(() => {
+    if (ownerFilterTouched.current) return;
+    if (!user?.id) return;
+    const me = profiles.find((p) => p.id === user.id);
+    if (!me?.full_name) return;
+    setOwnerFilterState(me.full_name);
+  }, [user?.id, profiles]);
+
   useEffect(() => {
     const current = searchParams.get("task");
     if (selectedId) {
