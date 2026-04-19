@@ -1554,6 +1554,7 @@ export function ContactCardContent({
                     disabled={
                       !formTitle.trim() ||
                       !formCategory ||
+                      (activeForm === "task" && !formDate) ||
                       (activeForm === "task" && createTaskMutation.isPending) ||
                       (activeForm !== "task" && createActivityMutation.isPending)
                     }
