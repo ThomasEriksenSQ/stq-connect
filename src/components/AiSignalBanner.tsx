@@ -50,7 +50,7 @@ export function AiSignalBanner({
   const [loading, setLoading] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [applied, setApplied] = useState(false);
-  const [techsAdded, setTechsAdded] = useState(false);
+  const [addedTechs, setAddedTechs] = useState<Set<string>>(new Set());
 
   const dismissKey = `dismissed_signal_${contactId}`;
 
