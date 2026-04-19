@@ -224,6 +224,40 @@ function InlineField({
   );
 }
 
+/** Wrapper that triggers `onEdit` on click but allows text selection / copy. */
+function NotesEditTrigger({ onEdit, children }: { onEdit: () => void; children: React.ReactNode }) {
+  const handlers = useClickWithoutSelection<HTMLDivElement>(onEdit);
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onMouseDown={handlers.onMouseDown}
+      onClick={handlers.onClick}
+      onKeyDown={activateOnEnterOrSpace(onEdit)}
+      className="group relative block w-full text-left cursor-text focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-sm"
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Wrapper for email row body — toggles expand on click but allows text selection. */
+function EmailRowBody({ onToggle, children }: { onToggle: () => void; children: React.ReactNode }) {
+  const handlers = useClickWithoutSelection<HTMLDivElement>(onToggle);
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onMouseDown={handlers.onMouseDown}
+      onClick={handlers.onClick}
+      onKeyDown={activateOnEnterOrSpace(onToggle)}
+      className="min-w-0 cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-sm"
+    >
+      {children}
+    </div>
+  );
+}
+
 const DATE_CHIPS = [
   { label: "Følg opp på sikt", fn: (): Date | null => null },
   { label: "I dag", fn: () => new Date() },
