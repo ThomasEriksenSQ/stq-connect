@@ -44,13 +44,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
-type FollowUpViewFilter = "Alle" | "Forfalt" | "Denne uka" | "Uten eier";
+type FollowUpViewFilter = "Alle" | "Forfalt" | "Denne uka";
 
 const FOLLOW_UP_QUERY_KEY = ["design-lab-follow-ups"] as const;
 const FOLLOW_UP_ACTIVITY_QUERY_KEY = ["design-lab-follow-up-activities"] as const;
 const FOLLOW_UP_CONTACT_QUERY_KEY = ["design-lab-follow-up-modal-contacts"] as const;
 
-const VIEW_FILTERS = ["Alle", "Forfalt", "Denne uka", "Uten eier"] as const satisfies readonly FollowUpViewFilter[];
+const VIEW_FILTERS = ["Alle", "Forfalt", "Denne uka"] as const satisfies readonly FollowUpViewFilter[];
 
 const PRIORITY_COLORS: Record<Exclude<FollowUpPriority, null>, { background: string; color: string; border: string; fontWeight: number }> = {
   P1: {
