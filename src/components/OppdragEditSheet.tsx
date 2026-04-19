@@ -657,7 +657,7 @@ export function OppdragEditSheet({
         </div>
 
         <div>
-          <label className={LABEL}>Fornyes / utløper</label>
+          <label className={LABEL}>Fornyelsesdato</label>
           <div className="mt-1">
             <Popover>
               <PopoverTrigger asChild>
