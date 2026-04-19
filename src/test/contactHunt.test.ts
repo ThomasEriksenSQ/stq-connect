@@ -42,12 +42,19 @@ describe("contactHunt", () => {
 
     expect(getConsultantAvailabilityMeta(isoDate(1))).toMatchObject({
       daysUntil: 1,
-      tone: "later",
-      isVisible: false,
+      tone: "soon",
+      isVisible: true,
     });
     expect(getConsultantAvailabilityMeta(isoDate(1)).label).toMatch(/^Tilgjengelig /);
 
+    expect(getConsultantAvailabilityMeta(isoDate(120))).toMatchObject({
+      daysUntil: 120,
+      tone: "later",
+      isVisible: false,
+    });
+
     expect(hasConsultantAvailability(isoDate(0))).toBe(true);
+    expect(hasConsultantAvailability(isoDate(45))).toBe(true);
     expect(getConsultantAvailabilityMeta(isoDate(-61))).toEqual({
       daysUntil: -61,
       label: "Tilgjengelighet utløpt",

@@ -34,6 +34,7 @@ export interface HuntAvailabilityMeta {
 }
 
 const AVAILABILITY_BADGE_WINDOW_DAYS = 60;
+const AVAILABILITY_UPCOMING_WINDOW_DAYS = 90;
 
 function toDateOnly(dateStr: string) {
   const date = new Date(dateStr);
@@ -60,11 +61,12 @@ export function getConsultantAvailabilityMeta(dateStr?: string | null): HuntAvai
   const daysSinceAvailable = differenceInCalendarDays(today, availableFrom);
 
   if (diff > 0) {
+    const tone: HuntAvailabilityMeta["tone"] = diff <= 30 ? "soon" : "later";
     return {
       daysUntil: diff,
       label: `Tilgjengelig ${format(availableFrom, "d. MMM", { locale: nb })}`,
-      tone: "later",
-      isVisible: false,
+      tone,
+      isVisible: diff <= AVAILABILITY_UPCOMING_WINDOW_DAYS,
     };
   }
 
