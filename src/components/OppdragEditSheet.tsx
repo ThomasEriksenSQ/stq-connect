@@ -354,6 +354,7 @@ export function OppdragEditSheet({
   const [tilKonsulent, setTilKonsulent] = useState("");
   const [fornyDato, setFornyDato] = useState<Date | undefined>();
   const [startDato, setStartDato] = useState<Date | undefined>();
+  const [sluttDato, setSluttDato] = useState<Date | undefined>();
   const [kommentar, setKommentar] = useState("");
   const [selskapId, setSelskapId] = useState<string | null>(null);
   const [selskapNavn, setSelskapNavn] = useState<string | null>(null);
