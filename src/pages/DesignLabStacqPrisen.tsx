@@ -154,7 +154,7 @@ export default function DesignLabStacqPrisen() {
         er_ansatt: r.er_ansatt ?? false,
         ekstra_kostnad: r.ekstra_kostnad ?? null,
       }),
-    })),
+    })).filter((r) => r.status !== "Inaktiv"),
     [rows]
   );
 
