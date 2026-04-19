@@ -647,19 +647,7 @@ export default function DesignLabOppfolginger() {
 
                         <div className="min-w-0">
                           {model.ownerName ? (
-                            <span
-                              className="inline-flex max-w-full items-center truncate rounded-full border px-2 py-1"
-                              style={{
-                                fontSize: 12,
-                                color: C.text,
-                                fontWeight: 500,
-                                background: C.hoverSubtle,
-                                borderColor: C.border,
-                              }}
-                              title={model.ownerName}
-                            >
-                              {model.ownerName}
-                            </span>
+                            <DesignLabStatusBadge tone="signal">{model.ownerName}</DesignLabStatusBadge>
                           ) : (
                             <span style={{ fontSize: 12, color: C.textFaint }}>Ingen</span>
                           )}
