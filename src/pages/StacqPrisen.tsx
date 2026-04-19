@@ -107,20 +107,22 @@ export default function StacqPrisen() {
   );
 
   const enriched = useMemo(() =>
-    rows.map((r) => {
-      const computedStatus = computeOppdragStatus(r);
-      return {
-        ...r,
-        status: computedStatus,
-        stacqPris: calcStacqPris({
-          utpris: r.utpris ?? 0,
-          til_konsulent: r.til_konsulent ?? null,
-          til_konsulent_override: r.til_konsulent_override ?? null,
-          er_ansatt: r.er_ansatt ?? false,
-          ekstra_kostnad: r.ekstra_kostnad ?? null,
-        }),
-      };
-    }),
+    rows
+      .map((r) => {
+        const computedStatus = computeOppdragStatus(r);
+        return {
+          ...r,
+          status: computedStatus,
+          stacqPris: calcStacqPris({
+            utpris: r.utpris ?? 0,
+            til_konsulent: r.til_konsulent ?? null,
+            til_konsulent_override: r.til_konsulent_override ?? null,
+            er_ansatt: r.er_ansatt ?? false,
+            ekstra_kostnad: r.ekstra_kostnad ?? null,
+          }),
+        };
+      })
+      .filter((r) => r.status !== "Inaktiv"),
     [rows]
   );
 
