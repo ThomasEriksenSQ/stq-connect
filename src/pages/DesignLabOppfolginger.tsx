@@ -407,14 +407,6 @@ export default function DesignLabOppfolginger() {
             <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Oppfølginger</h1>
             <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {filtered.length}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <DesignLabSearchInput
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Søk oppfølginger…"
-              style={{ width: 220 }}
-            />
-          </div>
           <div className="flex items-center ml-auto gap-2">
             <TextSizeControl value={textSize} onChange={setTextSize} />
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
