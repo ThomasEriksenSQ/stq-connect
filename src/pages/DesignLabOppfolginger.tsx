@@ -401,6 +401,8 @@ export default function DesignLabOppfolginger() {
               placeholder="Søk oppfølginger…"
               style={{ width: 220 }}
             />
+          </div>
+          <div className="flex items-center">
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
               <DialogTrigger asChild>
                 <DesignLabPrimaryAction>
