@@ -340,7 +340,10 @@ export default function DesignLabStacqPrisen() {
                       background: C.surfaceAlt, fontWeight: 600,
                     }}
                   >
-                    <span style={{ fontSize: 13, color: C.text }}>TOTAL</span>
+                    <div className="flex items-center gap-2">
+                      <div style={{ width: 20, height: 20, flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, color: C.text }}>TOTAL</span>
+                    </div>
                     <span /><span /><span /><span />
                     <span style={{ fontSize: 13, color: C.accent }}>kr {formatKr(Math.round(stacqTotalPerTime + oppstartTotalPerTime))}/t</span>
                     <span style={{ fontSize: 13, textAlign: "right", color: C.textMuted }}>{Math.round(totalPct)}%</span>
