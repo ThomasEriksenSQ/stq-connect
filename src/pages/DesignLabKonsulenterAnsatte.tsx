@@ -32,7 +32,7 @@ import AnsattDetail from "./AnsattDetail";
 
 type Filter = "Alle" | "Aktiv" | "Kommende" | "Sluttet";
 
-const GRID_TEMPLATE = "minmax(220px,2.2fr) 120px 120px 110px 110px";
+const GRID_TEMPLATE = "minmax(220px,2.2fr) 140px 90px 120px 120px 110px 110px";
 const ACTIVE_CHIP_COLORS = {
   background: C.successBg,
   color: C.success,
@@ -290,6 +290,14 @@ export default function DesignLabKonsulenterAnsatte() {
           <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{row.navn}</span>
         </div>
 
+        <div className="truncate" style={{ fontSize: 13, color: C.textMuted }}>
+          {row.geografi || "–"}
+        </div>
+
+        <div style={{ fontSize: 13, color: C.textMuted }}>
+          {row.erfaring_aar ? `${row.erfaring_aar} år` : "–"}
+        </div>
+
         <div style={{ fontSize: 13, color: C.textMuted }}>
           {status === "Kommende" && row.start_dato ? (
             <DesignLabReadonlyChip active={true} activeColors={UPCOMING_CHIP_COLORS}>
@@ -396,7 +404,7 @@ export default function DesignLabKonsulenterAnsatte() {
                     paddingInline: 16,
                   }}
                 >
-                  {["Navn", "Start", "Ansatt i", "Oppdrag", "Fornyes"].map((label, index) => (
+                  {["Navn", "Geografi", "Erfaring", "Start", "Ansatt i", "Oppdrag", "Fornyes"].map((label, index) => (
                     <span
                       key={`${label}-${index}`}
                       style={{
