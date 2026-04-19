@@ -541,7 +541,7 @@ function EditModal({ row, onClose, queryClient }: { row: any; onClose: () => voi
             <Input type="number" value={override} onChange={(e) => setOverride(e.target.value)} placeholder="Tom = standard 70%" style={{ height: 32, fontSize: 13, border: `1px solid ${C.border}` }} />
           </div>
           <div>
-            <label style={{ ...thStyle, display: "block", marginBottom: 4 }}>Ekstra kostnad / dag</label>
+            <label style={{ ...thStyle, display: "block", marginBottom: 4 }}>Ekstra kostnad / time</label>
             <Input type="number" value={ekstra} onChange={(e) => setEkstra(e.target.value)} placeholder="f.eks. 80 for deal-bonus" style={{ height: 32, fontSize: 13, border: `1px solid ${C.border}` }} />
             <p style={{ fontSize: 12, color: C.textFaint, marginTop: 4 }}>Ekstra kostnad trekkes fra STACQ Prisen. Brukes for deal-avtaler, bonus-forpliktelser e.l.</p>
           </div>
