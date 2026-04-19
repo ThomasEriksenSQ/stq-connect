@@ -162,9 +162,9 @@ export function buildOppdragWritePayload(
     slutt_dato: sluttIso,
     kunde: value.selskapNavn?.trim() || null,
     selskap_id: value.selskapId,
-    partner_selskap_id: value.dealType === "PARTNER" ? value.partnerSelskapId : null,
+    partner_selskap_id: value.dealType === "VIA" ? value.partnerSelskapId : null,
     partner_navn:
-      value.dealType === "PARTNER" ? value.partnerSelskapNavn?.trim() || null : null,
+      value.dealType === "VIA" ? value.partnerSelskapNavn?.trim() || null : null,
     kommentar: value.kommentar.trim() || null,
   };
 }
