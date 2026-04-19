@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { calcStacqPris } from "@/lib/stacqPris";
+import { getInitials } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -105,6 +106,37 @@ export default function DesignLabStacqPrisen() {
       return data || [];
     },
   });
+
+  const { data: ansatteListe = [] } = useQuery({
+    queryKey: ["ansatte-names-prisen"],
+    queryFn: async () => {
+      const { data } = await supabase.from("stacq_ansatte").select("id, navn");
+      return data || [];
+    },
+  });
+
+  const { data: cvPortraits = [] } = useQuery({
+    queryKey: ["cv-portraits-prisen"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("cv_documents")
+        .select("ansatt_id, portrait_url")
+        .not("portrait_url", "is", null);
+      return data || [];
+    },
+  });
+
+  const { nameToAnsattId, portraitByAnsattId } = useMemo(() => {
+    const nameMap = new Map<string, number>();
+    (ansatteListe as any[]).forEach((a) => {
+      if (a.id && a.navn) nameMap.set(a.navn.trim().toLowerCase(), a.id);
+    });
+    const portraitMap = new Map<number, string>();
+    (cvPortraits as any[]).forEach((c) => {
+      if (c.ansatt_id && c.portrait_url) portraitMap.set(c.ansatt_id, c.portrait_url);
+    });
+    return { nameToAnsattId: nameMap, portraitByAnsattId: portraitMap };
+  }, [ansatteListe, cvPortraits]);
 
   const companyStatusMap: Record<string, string> = Object.fromEntries(
     allCompanies.map((c: any) => [c.id, c.status])
@@ -261,7 +293,28 @@ export default function DesignLabStacqPrisen() {
                         onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverBg; }}
                         onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}
                       >
-                        <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{row.kandidat}</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          {(() => {
+                            const ansattId = row.er_ansatt ? nameToAnsattId.get((row.kandidat || "").trim().toLowerCase()) : undefined;
+                            const portrait = ansattId ? portraitByAnsattId.get(ansattId) : undefined;
+                            if (row.er_ansatt && portrait) {
+                              return <img src={portrait} alt={row.kandidat} style={{ width: 20, height: 20, borderRadius: 9999, objectFit: "cover", border: `1px solid ${C.borderLight}`, flexShrink: 0 }} />;
+                            }
+                            if (row.er_ansatt) {
+                              return (
+                                <div style={{ width: 20, height: 20, borderRadius: 9999, background: C.accentBg, color: C.accent, fontSize: 9, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                  {getInitials(row.kandidat || "?")}
+                                </div>
+                              );
+                            }
+                            return (
+                              <div style={{ width: 20, height: 20, borderRadius: 9999, background: C.surfaceAlt, color: C.textMuted, fontSize: 9, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                {getInitials(row.kandidat || "?")}
+                              </div>
+                            );
+                          })()}
+                          <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{row.kandidat}</span>
+                        </div>
                         <span className="truncate" style={{ fontSize: 13, color: C.textMuted }}>{row.kunde || "–"}</span>
                         <span><TypeBadge status={cs} /></span>
                         <span style={{ fontSize: 13, color: C.textMuted }}>{row.utpris ?? "–"}</span>
@@ -287,7 +340,10 @@ export default function DesignLabStacqPrisen() {
                       background: C.surfaceAlt, fontWeight: 600,
                     }}
                   >
-                    <span style={{ fontSize: 13, color: C.text }}>TOTAL</span>
+                    <div className="flex items-center gap-2">
+                      <div style={{ width: 20, height: 20, flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, color: C.text }}>TOTAL</span>
+                    </div>
                     <span /><span /><span /><span />
                     <span style={{ fontSize: 13, color: C.accent }}>kr {formatKr(Math.round(stacqTotalPerTime + oppstartTotalPerTime))}/t</span>
                     <span style={{ fontSize: 13, textAlign: "right", color: C.textMuted }}>{Math.round(totalPct)}%</span>
