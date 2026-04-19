@@ -574,6 +574,7 @@ function TableHeader({ sort, onSort }: { sort: { field: SortField; dir: SortDir 
       <DesignLabColumnHeader label="Status" field="sendt_count" sort={sort} onSort={onSort} />
       <DesignLabColumnHeader label="Mottatt" field="mottatt_dato" sort={sort} onSort={onSort} />
     </div>
+    </div>
   );
 }
 
