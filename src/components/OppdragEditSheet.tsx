@@ -543,7 +543,7 @@ export function OppdragEditSheet({
             </div>
 
             <div>
-              <p className={cn(LABEL, "mb-1.5")}>Kunde</p>
+              <p className={cn(LABEL, "mb-1.5")}>Sluttkunden</p>
               <CompanySearchField
                 currentName={selskapNavn}
                 currentId={selskapId}
