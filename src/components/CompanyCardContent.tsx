@@ -99,6 +99,7 @@ import { nb } from "date-fns/locale";
 import { relativeDate, fullDate } from "@/lib/relativeDate";
 import { cleanDescription } from "@/lib/cleanDescription";
 import InlineEdit from "@/components/InlineEdit";
+import { useClickWithoutSelection, activateOnEnterOrSpace } from "@/hooks/useClickWithoutSelection";
 import { lookupByOrgNr } from "@/components/BrregSearch";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -124,6 +125,51 @@ import {
 } from "@/lib/categoryUtils";
 import { coerceDisplayText } from "@/lib/outlookMail";
 import { C, SIGNAL_COLORS } from "@/theme";
+
+/** Wrapper for company notes — opens edit on click but allows text selection. */
+function CompanyNotesEditTrigger({ onEdit, children }: { onEdit: () => void; children: React.ReactNode }) {
+  const handlers = useClickWithoutSelection<HTMLDivElement>(onEdit);
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onMouseDown={handlers.onMouseDown}
+      onClick={handlers.onClick}
+      onKeyDown={activateOnEnterOrSpace(onEdit)}
+      className="group relative block w-full text-left cursor-text focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-sm"
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Wrapper for company activity row body — opens edit on click but allows text selection. */
+function CompanyActivityRowBody({
+  onActivate,
+  editable,
+  children,
+}: {
+  onActivate: () => void;
+  editable: boolean;
+  children: React.ReactNode;
+}) {
+  const handlers = useClickWithoutSelection<HTMLDivElement>(onActivate);
+  return (
+    <div
+      role={editable ? "button" : undefined}
+      tabIndex={editable ? 0 : undefined}
+      onMouseDown={editable ? handlers.onMouseDown : undefined}
+      onClick={editable ? handlers.onClick : undefined}
+      onKeyDown={editable ? activateOnEnterOrSpace(onActivate) : undefined}
+      className={cn(
+        "flex items-start gap-3 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-sm",
+        editable && "cursor-pointer",
+      )}
+    >
+      {children}
+    </div>
+  );
+}
 
 /* ── Category system (shared with ContactCardContent) ── */
 const CATEGORIES = [
@@ -2050,18 +2096,16 @@ export function CompanyCardContent({
             </div>
           ) : companyNotes ? (
             editable ? (
-              <button
-                type="button"
-                onClick={() => {
+              <CompanyNotesEditTrigger
+                onEdit={() => {
                   setNotesDraft(companyNotes);
                   setEditingNotes(true);
                 }}
-                className="group relative block w-full text-left"
               >
                 <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap transition-colors group-hover:text-foreground/80">
                   {companyNotes}
                 </p>
-              </button>
+              </CompanyNotesEditTrigger>
             ) : (
               <div className="group relative">
                 <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{companyNotes}</p>
@@ -2399,7 +2443,7 @@ function CompanyActivityRow({
             </div>
           </div>
         ) : (
-          <div onClick={handleRowClick} className={cn("flex items-start gap-3", editable && "cursor-pointer")}>
+          <CompanyActivityRowBody onActivate={handleRowClick} editable={editable}>
             <div className="flex-1 min-w-0">
               <span className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</span>
 
@@ -2450,7 +2494,7 @@ function CompanyActivityRow({
               )}
               {displayCategory && <CategoryBadge label={displayCategory} />}
             </div>
-          </div>
+          </CompanyActivityRowBody>
         )}
       </div>
     </div>

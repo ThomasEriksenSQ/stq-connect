@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Check, X, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useClickWithoutSelection, activateOnEnterOrSpace } from "@/hooks/useClickWithoutSelection";
 
 interface InlineEditProps {
   value: string;
@@ -80,11 +81,18 @@ const InlineEdit = ({ value, onSave, placeholder = "—", type = "text", mono, m
     );
   }
 
+  const startEdit = () => setEditing(true);
+  const clickHandlers = useClickWithoutSelection<HTMLSpanElement>(startEdit);
+
   return (
-    <button
-      onClick={() => setEditing(true)}
+    <span
+      role="button"
+      tabIndex={0}
+      onMouseDown={clickHandlers.onMouseDown}
+      onClick={clickHandlers.onClick}
+      onKeyDown={activateOnEnterOrSpace(startEdit)}
       className={cn(
-        "group inline-flex items-center gap-1.5 text-[14px] font-medium hover:text-foreground/60 transition-colors text-left max-w-full",
+        "group inline-flex items-center gap-1.5 text-[14px] font-medium hover:text-foreground/60 transition-colors text-left max-w-full cursor-text focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-sm",
         !value && "text-muted-foreground/40 italic",
         mono && "font-mono",
         className
@@ -92,7 +100,7 @@ const InlineEdit = ({ value, onSave, placeholder = "—", type = "text", mono, m
     >
       <span className="truncate">{value || placeholder}</span>
       <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60 transition-opacity flex-shrink-0" />
-    </button>
+    </span>
   );
 };
 

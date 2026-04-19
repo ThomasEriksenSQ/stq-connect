@@ -94,6 +94,7 @@ import {
 import { mergeTechnologyTags } from "@/lib/technologyTags";
 import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/queryKeys";
 import { coerceDisplayText, normalizeOutlookMailItems } from "@/lib/outlookMail";
+import { useClickWithoutSelection, activateOnEnterOrSpace } from "@/hooks/useClickWithoutSelection";
 /* ── Helpers for storing/retrieving category in description ── */
 
 /**
@@ -201,18 +202,87 @@ function InlineField({
     );
   }
 
+  const startEdit = () => setEditing(true);
+  const clickHandlers = useClickWithoutSelection<HTMLSpanElement>(startEdit);
+
   return (
-    <button
-      onClick={() => setEditing(true)}
+    <span
+      role="button"
+      tabIndex={0}
+      onMouseDown={clickHandlers.onMouseDown}
+      onClick={clickHandlers.onClick}
+      onKeyDown={activateOnEnterOrSpace(startEdit)}
       className={cn(
-        "group inline-flex items-center gap-1 hover:text-foreground/60 transition-colors cursor-text",
+        "group inline-flex items-center gap-1 hover:text-foreground/60 transition-colors cursor-text focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-sm",
         !value && "text-muted-foreground/40 italic",
         className,
       )}
     >
       <span>{value || placeholder || "—"}</span>
       <Pencil className="h-2.5 w-2.5 opacity-0 group-hover:opacity-50 transition-opacity flex-shrink-0" />
-    </button>
+    </span>
+  );
+}
+
+/** Wrapper that triggers `onEdit` on click but allows text selection / copy. */
+function NotesEditTrigger({ onEdit, children }: { onEdit: () => void; children: React.ReactNode }) {
+  const handlers = useClickWithoutSelection<HTMLDivElement>(onEdit);
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onMouseDown={handlers.onMouseDown}
+      onClick={handlers.onClick}
+      onKeyDown={activateOnEnterOrSpace(onEdit)}
+      className="group relative block w-full text-left cursor-text focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-sm"
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Wrapper for email row body — toggles expand on click but allows text selection. */
+function EmailRowBody({ onToggle, children }: { onToggle: () => void; children: React.ReactNode }) {
+  const handlers = useClickWithoutSelection<HTMLDivElement>(onToggle);
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onMouseDown={handlers.onMouseDown}
+      onClick={handlers.onClick}
+      onKeyDown={activateOnEnterOrSpace(onToggle)}
+      className="min-w-0 cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-sm"
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Wrapper for activity row body — opens edit on click but allows text selection. */
+function ActivityRowBody({
+  onActivate,
+  editable,
+  children,
+}: {
+  onActivate: () => void;
+  editable: boolean;
+  children: React.ReactNode;
+}) {
+  const handlers = useClickWithoutSelection<HTMLDivElement>(onActivate);
+  return (
+    <div
+      role={editable ? "button" : undefined}
+      tabIndex={editable ? 0 : undefined}
+      onMouseDown={editable ? handlers.onMouseDown : undefined}
+      onClick={editable ? handlers.onClick : undefined}
+      onKeyDown={editable ? activateOnEnterOrSpace(onActivate) : undefined}
+      className={cn(
+        "flex items-start gap-3 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-sm",
+        editable && "cursor-pointer",
+      )}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -1350,18 +1420,16 @@ export function ContactCardContent({
             </div>
           ) : contact.notes ? (
             canEditProfile ? (
-              <button
-                type="button"
-                onClick={() => {
+              <NotesEditTrigger
+                onEdit={() => {
                   setNotesDraft(contact.notes || "");
                   setEditingNotes(true);
                 }}
-                className="group relative block w-full text-left"
               >
                 <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap transition-colors group-hover:text-foreground/80">
                   {contact.notes}
                 </p>
-              </button>
+              </NotesEditTrigger>
             ) : (
               <div className="group relative">
                 <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">
@@ -2262,9 +2330,11 @@ function TaskRow({
     );
   }
 
+  const taskRowClickHandlers = useClickWithoutSelection<HTMLDivElement>(handleRowClick);
   return (
     <div
-      onClick={handleRowClick}
+      onMouseDown={taskRowClickHandlers.onMouseDown}
+      onClick={taskRowClickHandlers.onClick}
       className={cn(
         "flex items-start gap-2.5 py-2.5 px-1 rounded-md transition-all duration-200 group hover:bg-background/60",
         completing && "opacity-30 line-through scale-[0.98]",
@@ -2536,10 +2606,7 @@ function EmailRow({ email }: { email: any }) {
         <Mail className="h-3.5 w-3.5 text-primary" />
       </div>
 
-      <div
-        className="min-w-0 cursor-pointer"
-        onClick={() => setExpanded(!expanded)}
-      >
+      <EmailRowBody onToggle={() => setExpanded(!expanded)}>
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
@@ -2593,7 +2660,7 @@ function EmailRow({ email }: { email: any }) {
             </DesignLabStatusBadge>
           </div>
         </div>
-      </div>
+      </EmailRowBody>
     </div>
   );
 }
@@ -2767,7 +2834,7 @@ function ActivityRow({
             </div>
           </div>
         ) : (
-          <div onClick={handleRowClick} className={cn("flex items-start gap-3", editable && "cursor-pointer")}>
+          <ActivityRowBody onActivate={handleRowClick} editable={editable}>
             <div className="flex-1 min-w-0">
               {/* Title */}
               <span className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</span>
@@ -2829,7 +2896,7 @@ function ActivityRow({
               </Tooltip>
               {displayCategory && <DesignLabCategoryBadge label={displayCategory} />}
             </div>
-          </div>
+          </ActivityRowBody>
         )}
       </div>
     </div>
