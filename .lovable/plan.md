@@ -1,63 +1,52 @@
 
 
 ## Mål
-Flytte tekststørrelse-velgeren (S/M/L/XL/XXL) fra hver enkelt side-header inn i venstre sidebar, plassert rett over "Innstillinger"-knappen i footer-blokken. Felles, persistent kontroll i stedet for duplisert UI på hver side.
+Gjøre tekststørrelse-velgeren i sidebar-footeren proft og diskret:
+- Bring tilbake `T`-ikonet (Type fra lucide) som label-erstatning — ingen "Tekststørrelse"-tekst.
+- Flytt hele velger-raden **over** den horisontale streken (borderTop) som skiller footer fra navigasjon, slik at den visuelt grupperes med navigasjonen og ikke konkurrerer med Innstillinger/Logg ut.
+- Stram opp pill-radens proporsjoner og spacing.
 
 ## Funn
-- `TextSizeControl` rendres i dag i headeren på minst 7 flater: `DesignLabPageShell`, `DesignLabContacts`, `DesignLabCompanies`, `DesignLabForesporsler`, `DesignLabKonsulenterAnsatte`, `DesignLabStyleguide`, m.fl. Alle leser/skriver `usePersistentState<TextSize>("dl-text-size", "M")` — så state er allerede globalt synkronisert via localStorage.
-- `DesignLabSidebar` har allerede tilgang til samme state (linje 45) og bruker den til å skalere egne rader. Footer-blokken starter på linje 124 med `borderTop` over `Innstillinger`-knappen — det er der velgeren skal inn.
-- "Over streken over Innstillinger" = inne i footer-divens øverste del, like over `Innstillinger`-raden, men separert visuelt fra navigasjonen ovenfor av den eksisterende `borderTop`-streken.
+- I `DesignLabSidebar.tsx` ligger velgeren nå **inne i** footer-blokken (etter `borderTop`), like over `Innstillinger`. Det føles tungt og bryter rytmen.
+- `TextSizeControlSidebar` i `TextSizeControl.tsx` har label "Tekststørrelse" + pill-rad, ingen ikon.
+- Den allerede eksisterende `TextSizeControl` (ikke-sidebar) bruker `Type`-ikonet fra lucide foran pillene — samme mønster vi vil ha tilbake.
 
 ## Designvalg
 
-**Plassering:** Inni footer-blokken (under den eksisterende streken), som første element før `Innstillinger`. Dette gir velgeren samme "system/preferences"-status som Innstillinger og Logg ut, og holder den tydelig adskilt fra navigasjonen.
+**Plassering:** Flytt velgeren ut av footer-blokken. Render den som siste element i `<nav>`-blokken (eller rett etter `</nav>`, før footer-`<div>`-en med `borderTop`). Da havner den over den horisontale streken, gruppert med navigasjon, mens Innstillinger/Logg ut beholder sin rene system-gruppe under streken.
 
-**Layout — utvidet sidebar (220px):**
-- Liten label `Tekststørrelse` (11px, `C.textFaint`, vekt 500) til venstre
-- Pill-rad S/M/L/XL/XXL høyrejustert, kompakt (samme stil som dagens kontroll, men minimal padding)
-- Høyde ~28px, samme rytme som NavGroup-rader
-- Padding matcher `Innstillinger`-knappens horisontale padding (8px)
-- Ekstra `paddingBottom: px(6)` under raden for å skille den fra Innstillinger uten ny strek
+**Layout:**
+```
+[ T ]   [S][M][L][XL][XXL]
+```
+- Venstre: `Type`-ikon (14px, `C.textFaint`, strokeWidth 1.5), ingen tekstlabel.
+- Høyre: kompakt pill-rad, høyrejustert via `justify-between`.
+- Rad-høyde 28px (matcher NavGroup-rytme).
+- Horisontal padding `px(10)` venstre / `px(8)` høyre — matcher nav-radene.
+- Pills: `minWidth: 22`, `paddingInline: 4`, `fontSize: 11` — samme som nåværende sidebar-variant.
+- Bunnmargin `px(6)` for å puste mot `borderTop` under.
+- Skjul fortsatt helt i `collapsed` modus (ikke meningsfullt på 48px).
 
-**Layout — kollapset sidebar (48px):**
-- Skjul hele velgeren (ikke vis pill-rad i 48px bredde — bryter rytmen)
-- Alternativt: bare ett `T`-ikon som åpner en liten popover. For å holde scope lite: **skjul i kollapset modus**. Velgeren er en sjelden-justert preferanse; brukeren kan utvide sidebaren for å endre.
-
-**Visuell vekt:**
-- Bruk eksisterende `DesignLabFilterButton` fra `TextSizeControl` (uendret), men send inn `style` med litt mindre `minWidth` (24 i stedet for 28) for å passe i 220px-bredden.
-- Ikke vis `Type`-ikonet i sidebar-varianten — labelen "Tekststørrelse" erstatter det og er tydeligere i menykontekst.
+**Hvorfor over streken:** Streken er en gruppe-separator — alt under er "system/konto" (Innstillinger, Logg ut, brukerprofil, kollaps-toggle). Tekststørrelse er en lese-preferanse som tilhører selve appens visning, ikke kontoen. Plassering rett over streken — som en stillegående utvidelse av nav — er proft og hierarkisk korrekt.
 
 ## Plan
 
-1. **Lag ny variant i `TextSizeControl.tsx`**: Eksporter en ekstra komponent `TextSizeControlSidebar({ value, onChange })` som rendrer label + kompakt pill-rad uten `Type`-ikon, optimalisert for 220px bredde. Behold dagens `TextSizeControl` urørt for nå.
+1. **Oppdater `TextSizeControlSidebar` i `TextSizeControl.tsx`:**
+   - Fjern "Tekststørrelse"-tekst.
+   - Legg inn `<Type size={13} color={C.textFaint} strokeWidth={1.5} />` til venstre.
+   - Behold `justify-between` så pill-raden flyter til høyre.
+   - Behold pill-stilen (minWidth 22, fontSize 11, paddingInline 4).
 
-2. **Oppdater `DesignLabSidebar.tsx`**:
-   - Endre `usePersistentState<TextSize>("dl-text-size", "M")` til å hente både `textSize` og `setTextSize` (linje 45).
-   - I footer-blokken (linje 124–156), legg inn `<TextSizeControlSidebar>` som første barn etter `borderTop`, før `Innstillinger`-knappen. Skjul den når `collapsed === true`.
-
-3. **Fjern `TextSizeControl` fra alle side-headere** (siden den nå er global i sidebar):
-   - `DesignLabPageShell.tsx` (linje 51)
-   - `DesignLabContacts.tsx` (linje 1915)
-   - `DesignLabCompanies.tsx` (linje 575)
-   - `DesignLabForesporsler.tsx` (linje 404)
-   - `DesignLabKonsulenterAnsatte.tsx` (linje 365)
-   - `DesignLabStyleguide.tsx` (linje 88)
-   - Rydd opp i imports som da blir ubrukte (behold `getDesignLabTextSizeStyle` og `type TextSize` der disse fortsatt brukes til wrapper-styling).
-
-4. **Ikke endre**: `getDesignLabTextSizeStyle`, `getDesignLabTextSizeVars`, `SCALE_MAP`, `usePersistentState`-nøkkel `"dl-text-size"`, eller noen logikk som leser tekststørrelse. Kun visuell flytting.
+2. **Oppdater `DesignLabSidebar.tsx`:**
+   - Flytt `<TextSizeControlSidebar>`-blokken ut av footer-`<div>`-en.
+   - Plasser den rett **etter** `</nav>` og **før** footer-`<div>` med `borderTop`. Wrap i en liten `<div>` med `paddingInline: px(12)` (matcher nav) og `paddingBottom: px(8)`.
+   - Fjern den nåværende plasseringen i footer-blokken.
 
 ## Filer som endres
-- `src/components/designlab/TextSizeControl.tsx` — ny eksport `TextSizeControlSidebar`.
-- `src/components/designlab/DesignLabSidebar.tsx` — render velger i footer-blokken.
-- `src/components/designlab/DesignLabPageShell.tsx` — fjern fra header.
-- `src/pages/DesignLabContacts.tsx` — fjern fra header.
-- `src/pages/DesignLabCompanies.tsx` — fjern fra header.
-- `src/pages/DesignLabForesporsler.tsx` — fjern fra header.
-- `src/pages/DesignLabKonsulenterAnsatte.tsx` — fjern fra header.
-- `src/pages/DesignLabStyleguide.tsx` — fjern fra header.
+- `src/components/designlab/TextSizeControl.tsx` — sidebar-variant: T-ikon i stedet for tekst.
+- `src/components/designlab/DesignLabSidebar.tsx` — flytt blokken over `borderTop`.
 
 ## Utenfor scope
-- Ny popover-variant i kollapset sidebar (kan legges til senere ved behov).
-- Endring av selve skala-verdiene eller persistens-nøkkelen.
-- Endring av andre Design Lab-flater enn de som har `TextSizeControl` i header i dag.
+- Endring av selve skala-verdiene, persistens, eller pill-komponenten.
+- Synlighet i kollapset modus.
 
