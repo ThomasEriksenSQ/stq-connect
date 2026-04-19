@@ -10,6 +10,7 @@ import { OppdragEditSheet } from "@/components/OppdragEditSheet";
 import { FornyelsesTimeline, buildMonthlySummary } from "@/components/FornyelsesTimeline";
 import { DesignLabStaticTag, DesignLabFilterButton, DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS, DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS, DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS } from "@/components/designlab/controls";
 import { DesignLabPrimaryAction } from "@/components/designlab/system";
+import { computeOppdragStatus, parseOppdragDate } from "@/lib/oppdragForm";
 
 type Filter = "Alle" | "Aktiv" | "Oppstart" | "Inaktiv";
 const TIMER_PER_DAG = 7.5;
@@ -20,28 +21,6 @@ interface KonsulenterOppdragProps {
   embeddedSplit?: boolean;
   showCreateButton?: boolean;
   createRequestId?: number;
-}
-
-function computeOppdragStatus(oppdrag: any): string {
-  if (oppdrag.status === "Inaktiv") return "Inaktiv";
-  const today = startOfDay(new Date());
-  const startDate = parseOppdragDate(oppdrag.start_dato);
-  if (startDate && startDate > today) return "Oppstart";
-  return "Aktiv";
-}
-
-function parseOppdragDate(value?: string | null): Date | null {
-  if (!value) return null;
-
-  const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (dateOnlyMatch) {
-    const [, year, month, day] = dateOnlyMatch;
-    return new Date(Number(year), Number(month) - 1, Number(day));
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
 }
 
 export default function KonsulenterOppdrag({
