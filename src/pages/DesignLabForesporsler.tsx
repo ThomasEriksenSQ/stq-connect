@@ -418,6 +418,7 @@ export default function DesignLabForesporsler() {
                       key={row.id}
                       row={row}
                       portraitByAnsattId={portraitByAnsattId}
+                      signalByContactId={signalByContactId}
                       isActive={selectedRowId === row.id}
                       onClick={() => setSelectedRowId(row.id)}
                     />
