@@ -94,6 +94,7 @@ import {
 import { mergeTechnologyTags } from "@/lib/technologyTags";
 import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/queryKeys";
 import { coerceDisplayText, normalizeOutlookMailItems } from "@/lib/outlookMail";
+import { useClickWithoutSelection, activateOnEnterOrSpace } from "@/hooks/useClickWithoutSelection";
 /* ── Helpers for storing/retrieving category in description ── */
 
 /**
