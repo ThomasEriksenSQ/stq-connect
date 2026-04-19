@@ -604,7 +604,7 @@ export default function DesignLabOppfolginger() {
 
         <div className="flex-1 min-h-0 flex">
           <ResizablePanelGroup direction="horizontal" className="h-full">
-            <ResizablePanel defaultSize={40} minSize={26} maxSize={58}>
+            <ResizablePanel defaultSize={38} minSize={24} maxSize={60}>
               <div className="h-full overflow-y-auto" style={{ scrollbarColor: `${C.borderStrong} ${C.surfaceAlt}` }}>
                 <div
                   className="grid items-center sticky top-0 z-10"
@@ -701,7 +701,7 @@ export default function DesignLabOppfolginger() {
 
             <ResizableHandle withHandle />
 
-            <ResizablePanel defaultSize={60} minSize={32}>
+            <ResizablePanel defaultSize={62} minSize={34}>
               {selected ? (
                 <div
                   className="h-full flex flex-col"
