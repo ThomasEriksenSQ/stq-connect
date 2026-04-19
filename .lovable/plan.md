@@ -1,48 +1,47 @@
 
 
-## Mål
-Harmoniser radhøyder og typografi i fire V2-tabeller (STACQ Prisen, Aktive oppdrag, Ansatte, Eksterne) til samme uttrykk som Kontakter-tabellen (`minHeight: 38`, 13px tekst). Fiks også at TEKNOLOGIER-kolonnen i Eksterne kan flyte over i flere rader.
+## Problem (fra skjermbildet)
+På 4117px ultrawide ser `/innstillinger` slik ut:
+- Kortene er klemt sammen i venstre halvdel av siden — masse tom plass til høyre.
+- Outlook + Mailchimp ligger som `md:grid-cols-2` (egen rad).
+- Fornyelse + Markedsradar + Salgsagent ligger som `xl:grid-cols-3` (egen rad).
+- Resultat: smal kolonne hvor tekst som "Aktiver ukentlig e-postvarsel" og toggle-rader brytes hardt over flere linjer.
 
-## Referanse: Kontakter-tabellen (`DesignLabContacts.tsx` linje 2270–2290)
-- `minHeight: 38`
-- Navn: `fontSize: 13, fontWeight: 500`
-- Selskap/sekundær: `fontSize: 12–13, color: C.textMuted`
-- Ingen avatar i raden
+`DesignLabPageShell` har allerede `maxWidth={null}` — så det er **innholdsgriddet** som er feil, ikke shellet.
 
-## Endringer
+## Årsak
+- To separate grid-er (2-kol + 3-kol) gjør at hver rad bare bruker en del av tilgjengelig bredde. Når innholdet er kompakt får vi kolonnebredder under 280px på ultrawide, som forårsaker tekst-wrap.
+- `xl:` breakpointen (1280px) er for konservativ for ultrawide — vi får aldri mer enn 3 kolonner.
 
-### 1. `src/pages/DesignLabStacqPrisen.tsx`
-- Datarad (linje 289): `minHeight: 40` → `minHeight: 38`.
-- TOTAL-rad (linje 339): `minHeight: 40` → `minHeight: 38`.
-- Avatar (20×20) beholdes — passer fortsatt i 38px.
+## Løsning
+**Slå sammen alt til ett enkelt responsivt grid** med 5 kort på én rad på ultrawide, gracefully degradering til 1/2/3 kolonner på mindre skjermer.
 
-### 2. `src/pages/KonsulenterOppdrag.tsx` (kun V2-grenen, `embeddedSplit === true`)
-Linje 418–525 (embeddedSplit-grenen):
-- Rad: `min-h-[44px] py-2` → `min-h-[38px] py-1`.
-- Avatar: `w-7 h-7` → `w-6 h-6`, `text-[0.625rem]` beholdes.
-- Konsulent-navn (linje 454): `text-[0.875rem] font-semibold` → `text-[0.8125rem] font-medium` (matcher Kontakter).
-- Kunde (linje 456): `text-[0.875rem] font-medium text-foreground` → `text-[0.8125rem] text-muted-foreground` (matcher Kontakter "Selskap"-kolonne, dempet).
-- V1-grenen (linje 569+, ikke-embeddedSplit) er **urørt**.
+### Endring i `src/pages/Innstillinger.tsx` — `InnstillingerV2`
 
-### 3. `src/pages/DesignLabKonsulenterAnsatte.tsx`
-- Rad (linje 266): `minHeight: 44` → `minHeight: 38`.
-- Avatar (linje 281, 283–288): `h-8 w-8` → `h-6 w-6`, initialer `fontSize: 11` → `fontSize: 10`.
-- Tekstgap `gap-3` → `gap-2`.
+1. Fjern den nestede `md:grid-cols-2`-wrapperen rundt Outlook + Mailchimp.
+2. Erstatt `<VarslingsInnstillingerV2 />` (som har sin egen 3-kol grid) med en flat-rendret variant — eller flytt grid-styringen opp til `InnstillingerV2`.
+3. Bruk `gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))"` på en enkelt wrapper rundt alle 5 kortene. Da fyller kortene tilgjengelig bredde naturlig:
+   - 4117px → 5+ kolonner (alle på én rad)
+   - 1920px → 5 kolonner
+   - 1440px → 4 kolonner
+   - 1024px → 3 kolonner
+   - <768px → 1 kolonne
 
-### 4. `src/pages/EksterneKonsulenter.tsx` (kun V2-grenen, `embeddedSplit === true`)
-Linje 256–289 (embeddedSplit-grenen):
-- Rad (linje 262): `min-h-[44px] py-2` → `min-h-[38px] py-1`.
-- TEKNOLOGIER-kolonne (linje 280): erstatt `flex flex-wrap` med `flex flex-nowrap overflow-hidden items-center`. Reduser fra `slice(0, 3)` → `slice(0, 2)` for å sikre at to tagger + "+N" alltid får plass på én linje uten wrap. Vis "+N" når det finnes flere enn 2.
-- V1-grenen (linje 326+, ikke-embeddedSplit) er **urørt**.
+### Endring i `src/components/VarslingsInnstillingerV2.tsx`
+- Fjern `xl:grid-cols-3` og det ytre grid-wrapper'et i `VarslingsInnstillingerV2` — komponenten skal returnere kortene som `<>...</>` (Fragment) slik at parent kan grid'e dem inn i samme `auto-fit`-grid som Outlook og Mailchimp.
+- Alternativt: ekspose en `<VarslingsInnstillingerV2Cards />`-helper som rendrer kun kortene uten grid.
+
+### Bonus-finpuss
+- Sett `alignItems: "start"` på grid'et så kortene ikke strekkes til høyeste kort (ujevne høyder ser ryddigere ut i tett grid).
+- Behold `gap: 16` for visuell rytme.
 
 ## Effekt
-- Alle fire V2-tabeller får 38px radhøyde — visuell rytme matcher Kontakter.
-- Aktive oppdrag bruker 13px / dempet farge på Kunde-kolonnen, identisk med Kontakter sin Selskap-kolonne.
-- TEKNOLOGIER i Eksterne forblir én linje med "+N"-overflow.
-- V1-flatene `/aktive-oppdrag` og `/eksterne` (ikke-embeddedSplit) er bit-for-bit urørt.
+- På 4117px ultrawide: alle 5 kortene ligger pent på én rad, ingen tekst-wrap, bredden utnyttes.
+- På midtre bredder: grid faller naturlig ned til 4/3/2 kolonner uten ekstra breakpoints.
+- Mobil: 1 kolonne.
 
 ## Utenfor scope
-- V1-rendring i `KonsulenterOppdrag` og `EksterneKonsulenter`.
-- Endring av kolonnebredder eller grid-templates.
-- Endring av sortering/filter/data-logikk.
+- V1 `/innstillinger` (urørt).
+- Endringer i `VarslingsInnstillinger.tsx` (V1-versjon urørt).
+- Endring av kort-innhold, knapper eller felt-typografi.
 
