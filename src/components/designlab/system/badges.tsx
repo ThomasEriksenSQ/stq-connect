@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 
-import { C, SIGNAL_COLORS } from "@/components/designlab/theme";
+import { C, HEAT_COLORS, SIGNAL_COLORS } from "@/components/designlab/theme";
 import { CATEGORIES, normalizeCategoryLabel } from "@/lib/categoryUtils";
+import type { HeatResult } from "@/lib/heatScore";
 import { cn } from "@/lib/utils";
 
 export type DesignLabStatusBadgeTone = "default" | "signal" | "muted";
