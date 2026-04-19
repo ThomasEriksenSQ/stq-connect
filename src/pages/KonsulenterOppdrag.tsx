@@ -14,7 +14,7 @@ import { computeOppdragStatus, parseOppdragDate } from "@/lib/oppdragForm";
 
 type Filter = "Alle" | "Aktiv" | "Oppstart" | "Inaktiv";
 const TIMER_PER_DAG = 7.5;
-const OPPDRAG_GRID_TEMPLATE = "minmax(0,1.3fr) minmax(0,1.2fr) 80px 90px 96px 72px 100px 90px";
+const OPPDRAG_GRID_TEMPLATE = "minmax(0,1.3fr) minmax(0,1.2fr) minmax(0,1fr) 80px 90px 96px 72px 100px 90px";
 
 interface KonsulenterOppdragProps {
   hidePageIntro?: boolean;
@@ -399,7 +399,7 @@ export default function KonsulenterOppdrag({
                         className="grid gap-3 px-4 py-2.5 border-b border-border bg-background sticky top-0 z-10"
                         style={{ gridTemplateColumns: OPPDRAG_GRID_TEMPLATE }}
                       >
-                        {["Konsulent", "Kunde", "Type", "Utpris", "Margin", "Margin %", "Forny", "Status"].map((h) => (
+                        {["Konsulent", "Kunde", "Via partner", "Type", "Utpris", "Margin", "Margin %", "Forny", "Status"].map((h) => (
                           <span
                             key={h}
                             className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap"
@@ -453,6 +453,9 @@ export default function KonsulenterOppdrag({
                               <p className="text-[0.8125rem] font-medium text-foreground truncate">{o.kandidat}</p>
                             </div>
                             <span className="text-[0.8125rem] text-muted-foreground truncate">{o.kunde}</span>
+                            <span className="text-[0.8125rem] text-muted-foreground truncate">
+                              {o.deal_type === "VIA" && o.partner_navn ? o.partner_navn : "—"}
+                            </span>
                             <div>
                               {(() => {
                                 const cs = o.selskap_id ? companyStatusMap[o.selskap_id] : null;
@@ -587,7 +590,7 @@ export default function KonsulenterOppdrag({
                   className="grid gap-3 px-4 py-2.5 border-b border-border bg-background"
                   style={{ gridTemplateColumns: OPPDRAG_GRID_TEMPLATE }}
                 >
-                  {["Konsulent", "Kunde", "Type", "Utpris", "Margin", "Margin %", "Forny", "Status"].map((h) => (
+                  {["Konsulent", "Kunde", "Via partner", "Type", "Utpris", "Margin", "Margin %", "Forny", "Status"].map((h) => (
                     <span
                       key={h}
                       className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap"
@@ -636,6 +639,9 @@ export default function KonsulenterOppdrag({
                           <p className="text-[0.875rem] font-semibold text-foreground truncate">{o.kandidat}</p>
                         </div>
                         <span className="text-[0.875rem] font-medium text-foreground truncate">{o.kunde}</span>
+                        <span className="text-[0.8125rem] text-muted-foreground truncate">
+                          {o.deal_type === "VIA" && o.partner_navn ? o.partner_navn : "—"}
+                        </span>
                         <div>
                           {(() => {
                             const cs = o.selskap_id ? companyStatusMap[o.selskap_id] : null;
