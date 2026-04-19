@@ -82,11 +82,15 @@ function getExternalAvailabilityMeta(availableFrom: string | null | undefined) {
 interface EksterneKonsulenterProps {
   hidePageTitle?: boolean;
   embeddedSplit?: boolean;
+  showActionBar?: boolean;
+  createRequestId?: number;
 }
 
 export default function EksterneKonsulenter({
   hidePageTitle = false,
   embeddedSplit = false,
+  showActionBar = true,
+  createRequestId,
 }: EksterneKonsulenterProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
