@@ -1,7 +1,8 @@
-import { addDays, format } from "date-fns";
+import { addDays, format, startOfDay } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
 
 export type OppdragPersonType = "ansatt" | "ekstern";
+export type OppdragStatus = "Aktiv" | "Oppstart" | "Inaktiv";
 
 export interface OppdragFormState {
   kandidat: string;
@@ -14,6 +15,7 @@ export interface OppdragFormState {
   tilKonsulent: string;
   fornyDato: Date | undefined;
   startDato: Date | undefined;
+  sluttDato: Date | undefined;
   kommentar: string;
   selskapId: string | null;
   selskapNavn: string | null;
@@ -37,6 +39,7 @@ export const OPPDRAG_DEFAULTS: OppdragFormState = {
   tilKonsulent: "",
   fornyDato: undefined,
   startDato: undefined,
+  sluttDato: undefined,
   kommentar: "",
   selskapId: null,
   selskapNavn: null,
@@ -55,7 +58,7 @@ function toNullableNumber(value: string): number | null {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
-function toIsoDate(value: Date | string | undefined): string | null {
+function toIsoDate(value: Date | string | undefined | null): string | null {
   if (!value) return null;
   if (typeof value === "string") return value || null;
   return format(value, "yyyy-MM-dd");
@@ -70,6 +73,32 @@ function getRenewalDate(value: OppdragFormState): string | null {
 
 function hasSelectedPerson(value: OppdragFormState): boolean {
   return value.personType === "ansatt" ? value.ansattId !== null : value.eksternId !== null;
+}
+
+export function parseOppdragDate(value?: string | null): Date | null {
+  if (!value) return null;
+  const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnlyMatch) {
+    const [, year, month, day] = dateOnlyMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+}
+
+export function computeOppdragStatus(input: {
+  status?: string | null;
+  start_dato?: string | null;
+  slutt_dato?: string | null;
+}): OppdragStatus {
+  if (input.status === "Inaktiv") return "Inaktiv";
+  const today = startOfDay(new Date());
+  const slutt = parseOppdragDate(input.slutt_dato);
+  if (slutt && slutt < today) return "Inaktiv";
+  const start = parseOppdragDate(input.start_dato);
+  if (start && start > today) return "Oppstart";
+  return "Aktiv";
 }
 
 export function createOppdragFormState(
@@ -95,18 +124,28 @@ export function buildOppdragWritePayload(
     throw new Error("Velg intern eller ekstern konsulent først");
   }
 
+  const startIso = toIsoDate(value.startDato);
+  const sluttIso = toIsoDate(value.sluttDato);
+
+  const derivedStatus = computeOppdragStatus({
+    status: value.status,
+    start_dato: startIso,
+    slutt_dato: sluttIso,
+  });
+
   return {
     kandidat,
     er_ansatt: value.personType === "ansatt",
     ansatt_id: value.personType === "ansatt" ? value.ansattId : null,
     ekstern_id: value.personType === "ekstern" ? value.eksternId : null,
-    status: value.status || OPPDRAG_DEFAULTS.status,
+    status: derivedStatus,
     deal_type: value.dealType || OPPDRAG_DEFAULTS.dealType,
     utpris: toNullableNumber(value.utpris),
     til_konsulent: toNullableNumber(value.tilKonsulent),
     lopende_30_dager: value.isLopende,
     forny_dato: getRenewalDate(value),
-    start_dato: toIsoDate(value.startDato),
+    start_dato: startIso,
+    slutt_dato: sluttIso,
     kunde: value.selskapNavn?.trim() || null,
     selskap_id: value.selskapId,
     kommentar: value.kommentar.trim() || null,
