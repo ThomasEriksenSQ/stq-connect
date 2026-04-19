@@ -358,6 +358,8 @@ export function OppdragEditSheet({
   const [kommentar, setKommentar] = useState("");
   const [selskapId, setSelskapId] = useState<string | null>(null);
   const [selskapNavn, setSelskapNavn] = useState<string | null>(null);
+  const [partnerSelskapId, setPartnerSelskapId] = useState<string | null>(null);
+  const [partnerSelskapNavn, setPartnerSelskapNavn] = useState<string | null>(null);
   const [isLopende, setIsLopende] = useState(false);
   const [kandidat, setKandidat] = useState("");
   const [personType, setPersonType] = useState<OppdragPersonType>("ansatt");
@@ -380,6 +382,8 @@ export function OppdragEditSheet({
       setKommentar(defaults.kommentar);
       setSelskapId(defaults.selskapId);
       setSelskapNavn(defaults.selskapNavn);
+      setPartnerSelskapId(defaults.partnerSelskapId);
+      setPartnerSelskapNavn(defaults.partnerSelskapNavn);
       setIsLopende(defaults.isLopende);
       setKandidat(defaults.kandidat);
       setPersonType(defaults.personType);
@@ -398,6 +402,8 @@ export function OppdragEditSheet({
     setKommentar(row.kommentar || "");
     setSelskapId(row.selskap_id || null);
     setSelskapNavn(row.kunde || null);
+    setPartnerSelskapId((row as any).partner_selskap_id || null);
+    setPartnerSelskapNavn((row as any).partner_navn || null);
     setKandidat(row.kandidat || "");
     setPersonType(
       row.ekstern_id ? "ekstern" : row.ansatt_id ? "ansatt" : row.er_ansatt === false ? "ekstern" : "ansatt",
@@ -447,8 +453,23 @@ export function OppdragEditSheet({
       kommentar,
       selskapId,
       selskapNavn,
+      partnerSelskapId,
+      partnerSelskapNavn,
       isLopende,
     });
+
+  const handleDealTypeChange = (value: string) => {
+    setDealType(value);
+    if (value !== "VIA") {
+      setPartnerSelskapId(null);
+      setPartnerSelskapNavn(null);
+    }
+  };
+
+  const handlePartnerCompanyChange = (id: string | null, name: string | null) => {
+    setPartnerSelskapId(id);
+    setPartnerSelskapNavn(name);
+  };
 
   const handleSave = async () => {
     if (saving) return;
@@ -576,7 +597,7 @@ export function OppdragEditSheet({
             {TYPE_OPTIONS.map((option) => (
               <button
                 key={option.value}
-                onClick={() => setDealType(option.value)}
+                onClick={() => handleDealTypeChange(option.value)}
                 className={cn(
                   CHIP_BASE,
                   dealType === option.value
@@ -589,6 +610,17 @@ export function OppdragEditSheet({
             ))}
           </div>
         </div>
+
+        {dealType === "VIA" && (
+          <div>
+            <p className={cn(LABEL, "mb-1.5")}>Partner</p>
+            <CompanySearchField
+              currentName={partnerSelskapNavn}
+              currentId={partnerSelskapId}
+              onChange={handlePartnerCompanyChange}
+            />
+          </div>
+        )}
 
         <div>
           <label className={LABEL}>Utpris / time</label>

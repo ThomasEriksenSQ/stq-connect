@@ -120,4 +120,36 @@ describe("oppdragForm", () => {
 
     expect(payload.status).toBe("Aktiv");
   });
+
+  it("includes partner fields when dealType is VIA", () => {
+    const payload = buildOppdragWritePayload(
+      createOppdragFormState({
+        kandidat: "Anders Nilsen",
+        personType: "ansatt",
+        ansattId: 5,
+        dealType: "VIA",
+        partnerSelskapId: "partner-1",
+        partnerSelskapNavn: "Bouvet ASA",
+      }),
+    );
+
+    expect(payload.partner_selskap_id).toBe("partner-1");
+    expect(payload.partner_navn).toBe("Bouvet ASA");
+  });
+
+  it("clears partner fields when dealType is DIR even if state has values", () => {
+    const payload = buildOppdragWritePayload(
+      createOppdragFormState({
+        kandidat: "Anders Nilsen",
+        personType: "ansatt",
+        ansattId: 5,
+        dealType: "DIR",
+        partnerSelskapId: "partner-1",
+        partnerSelskapNavn: "Bouvet ASA",
+      }),
+    );
+
+    expect(payload.partner_selskap_id).toBeNull();
+    expect(payload.partner_navn).toBeNull();
+  });
 });
