@@ -398,6 +398,7 @@ export default function DesignLabForesporsler() {
           <div className="flex items-baseline gap-2.5">
             <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Forespørsler</h1>
             <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>{stats.aktive}</span>
+            <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500 }}>⌘K søk</span>
           </div>
           <div className="flex items-center gap-2">
             <TextSizeControl value={textSize} onChange={setTextSize} />
