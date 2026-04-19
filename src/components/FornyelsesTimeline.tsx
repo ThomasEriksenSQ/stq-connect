@@ -133,7 +133,7 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
                 <div
                   key={m}
                   className={cn(
-                    "flex-1 min-w-[56px] text-center py-2.5 text-[0.6875rem] font-medium uppercase tracking-[0.06em]",
+                    "flex-1 min-w-[56px] text-center py-2.5 text-[0.6875rem] font-medium uppercase tracking-[0.08em]",
                     i === currentMonth
                       ? "text-primary font-bold"
                       : "text-muted-foreground"
