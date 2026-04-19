@@ -166,7 +166,7 @@ export default function DesignLabOppfolginger() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks")
-        .select("id, title, description, status, priority, due_date, assigned_to, created_by, created_at, updated_at, contact_id, company_id, email_notify, contacts(id, first_name, last_name, phone, email, title, company_id, cv_email, call_list, companies(id, name, city))")
+        .select("id, title, description, status, priority, due_date, assigned_to, created_by, created_at, updated_at, contact_id, company_id, email_notify, calendar_synced, contacts(id, first_name, last_name, phone, email, title, company_id, cv_email, call_list, companies(id, name, city))")
         .neq("status", "done")
         .order("due_date", { ascending: true, nullsFirst: false });
       if (error) throw error;

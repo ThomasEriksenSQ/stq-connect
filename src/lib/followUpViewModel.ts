@@ -28,6 +28,7 @@ export interface FollowUpTaskRecord {
   contact_id: string | null;
   company_id: string | null;
   email_notify?: boolean | null;
+  calendar_synced?: boolean | null;
   contacts?: {
     id?: string | null;
     first_name?: string | null;
@@ -71,6 +72,7 @@ export interface FollowUpViewModel {
   createdAt: string;
   updatedAt: string | null;
   emailNotify: boolean;
+  calendarSynced: boolean;
   rawTask: FollowUpTaskRecord;
 }
 
@@ -128,7 +130,14 @@ function toFirstName(fullName: string | null) {
   return fullName ? fullName.split(" ")[0] : null;
 }
 
-function mapPriority(signal: string, taskPriority?: string | null): FollowUpPriority {
+function mapPriority(
+  signal: string,
+  taskPriority?: string | null,
+  emailNotify?: boolean | null,
+  calendarSynced?: boolean | null,
+): FollowUpPriority {
+  // Aktiv varsling (e-post eller kalender) løfter alltid til P1
+  if (emailNotify || calendarSynced) return "P1";
   if (signal && SIGNAL_TO_PRIORITY[signal]) return SIGNAL_TO_PRIORITY[signal];
   if (taskPriority && TASK_PRIORITY_TO_PRIORITY[taskPriority]) return TASK_PRIORITY_TO_PRIORITY[taskPriority];
   return null;
@@ -209,7 +218,7 @@ export function buildFollowUpViewModels({
           tasksByContact.get(contactId) || [],
         )
       : parsedDescription.category;
-    const priority = mapPriority(signal, task.priority);
+    const priority = mapPriority(signal, task.priority, task.email_notify, task.calendar_synced);
     const status = mapTaskStatusToVisual(task.status);
 
     return {
@@ -237,6 +246,7 @@ export function buildFollowUpViewModels({
       createdAt: task.created_at,
       updatedAt: task.updated_at,
       emailNotify: Boolean(task.email_notify),
+      calendarSynced: Boolean(task.calendar_synced),
       rawTask: task,
     };
   });
