@@ -93,7 +93,7 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
         className="mt-auto shrink-0 space-y-0.5"
         style={{ borderTop: `1px solid ${C.border}`, padding: `${px(8)}px ${collapsed ? px(6) : px(12)}px` }}
       >
-        <FooterBtn icon={Settings} label="Innstillinger" onClick={() => navigate("/innstillinger")} active={isActive("/innstillinger")} collapsed={collapsed} scale={scale} />
+        <FooterBtn icon={Settings} label="Innstillinger" onClick={() => navigate("/design-lab/innstillinger")} active={isActive("/design-lab/innstillinger")} collapsed={collapsed} scale={scale} />
         <FooterBtn icon={LogOut} label="Logg ut" onClick={signOut} muted collapsed={collapsed} scale={scale} />
 
         {user && !collapsed && (
