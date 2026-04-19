@@ -571,26 +571,6 @@ export function OppdragEditSheet({
 
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
         <div>
-          <p className={LABEL}>Status</p>
-          <div className="flex items-center gap-1.5 mt-1.5">
-            {STATUS_OPTIONS.map((option) => (
-              <button
-                key={option}
-                onClick={() => setStatus(option)}
-                className={cn(
-                  CHIP_BASE,
-                  status === option
-                    ? "bg-foreground text-background border-foreground"
-                    : "border-border text-muted-foreground hover:bg-secondary",
-                )}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
           <p className={LABEL}>Type</p>
           <div className="flex items-center gap-1.5 mt-1.5">
             {TYPE_OPTIONS.map((option) => (
