@@ -1,91 +1,66 @@
 
 
 ## Mål
-Heve tekststørrelse-velgeren i sidebar fra "funksjonell" til "proft Linear-nivå". Bedre spacing, tydeligere visuell hierarki, ryddigere proporsjoner, og en aktiv tilstand som faktisk leser som "valgt" — ikke bare som en svak ramme.
+"Aktiviteter · N" (venstre kolonne) og "Kontakter · N" (høyre kolonne) skal stå på **nøyaktig samme horisontale linje** rett under den fulle streken, slik at to-kolonne-layouten leser som en ren, balansert struktur. Gjelder når det ikke finnes en Oppfølging-blokk eller Teknisk DNA over Aktiviteter — da er Aktiviteter første element i venstre kolonne og må linjeres med Kontakter-headeren til høyre.
 
-## Funn (nåværende tilstand)
-Fra skjermbilde + kode (`TextSizeControl.tsx` linjer 73–108):
-- T-ikon ligger flush mot venstre kant uten visuell vekt — ser løsrevet ut.
-- Pillene har samme størrelse (~22px), tett pakket med `gap-0.5` (2px). Ingen luft mellom dem, og hver pille har rektangulær preg fordi `paddingInline: 4` + minWidth 22 + fontSize 11 gir nesten kvadratiske bokser.
-- Aktiv pille (XXL i bildet) har en lilla-aktig ramme via `DesignLabFilterButton`'s `active`-stil — men i sidebar-konteksten leser det som "outline", ikke som "valgt".
-- Hele raden er presset inn i `paddingInline: 10/8` med `height: 28` — gir lite pust over/under ikon vs pille-høyde.
-- Footer-streken ligger umiddelbart under, så raden henger oppå den uten margin.
+## Funn
+- Venstre kolonne (`companyDetailSections`, linje 792–1114):
+  - Teknisk DNA (valgfri) → Oppfølginger-kort (kun hvis `tasks.length > 0`) → `<div className="mt-5">` rundt `CompanyActivityTimeline`.
+  - Tidslinjens header er `<h3 className="text-[12px] font-medium text-[#5C636E] mb-3">Aktiviteter · N</h3>` (linje 2171).
+- Høyre kolonne (`relatedContactsContent`, linje 1116–):
+  - Wrapper `pt-4 md:pt-0` → header-rad `mb-2 flex items-center justify-between` med `<h3 className="text-[12px] font-medium text-[#5C636E]">Kontakter · N</h3>` + `Ny kontakt`-knappen (`DesignLabPrimaryAction`, ~28–32px høy).
+- I to-kolonne-visningen (linje 2095–2117) ligger venstre i `<div className="pr-5">` og høyre i `<div className="pl-4">`. Begge kolonner starter på samme topp.
+
+**Hvorfor de ikke linjerer i dag:**
+1. Venstre starter med `mt-5` (når Aktiviteter er første element rendres `mt-5` mot ingenting, men selve Aktiviteter-headeren har ingen høyde-utligning).
+2. Høyre header sitter i en `flex items-center justify-between`-rad der `Ny kontakt`-knappen tvinger rad-høyden opp til ~32px. Venstre header er bare tekst (~18px line-height) → baseline-forskjell på ca. 7–10px.
+3. `pt-4 md:pt-0` på høyre er nullstilt på desktop, men venstre har ingen tilsvarende reservert høyde.
 
 ## Designvalg
 
-**Layout — segmentert kontroll i stedet for fritt-stående pills**
-Bygg om pill-raden til en **segmented control** i Linear-stil:
-- Én sammenhengende container med subtil `C.surfaceAlt`-bakgrunn (`#F3F3F4`) og 1px `C.borderLight`-ramme, radius 6px.
-- Segmentene inni har **ingen egen ramme** — kun aktiv segment får hvit `C.panel`-bakgrunn + en mikro-skygge (`0 1px 2px rgba(0,0,0,0.04)`) som "løfter" det.
-- Inaktive segmenter er transparente; hover gir `C.hoverBg`.
-- Dette er det samme mønsteret Linear, Vercel og Raycast bruker for size/density-velgere — det leser umiddelbart som "ett valg ut av flere".
+**Tilnærming: standardiser begge kolonneheadre til en felles "kolonne-header-rad" med fast høyde 32px.**
 
-**Proporsjoner**
-- Container-høyde: 24px (kompakt, matcher Linears tetthet).
-- Segment-bredde: `minWidth: 26px`, `paddingInline: 6px` — gir litt mer pust enn dagens 22/4.
-- Segment-radius: 4px (1px mindre enn container 5px → "innfelt"-effekt).
-- Font: 11px / vekt 500 aktiv, vekt 400 inaktiv. Aktiv farge `C.text`, inaktiv `C.textMuted`, hover `C.text`.
+- Begge headere får samme container: `flex items-center justify-between` med `min-height: 32px` og `mb-3`.
+- Venstre header (Aktiviteter) får en usynlig høyrejustert "spacer" når den er topp-element, slik at høyden matcher knappen i høyre.
+- Faktisk implementasjon: pakk `Aktiviteter · N`-headeren i en flex-rad med samme `min-height: 32px` som høyre. Da linjerer baseline automatisk.
+- For høyre: bytt `mb-2` til `mb-3` (matcher venstre) og sett eksplisitt `min-height: 32px` på header-raden så `Ny kontakt`-knappen ikke kan endre høyden.
 
-**T-ikon**
-- Behold `Type` fra lucide, men:
-  - Reduser til `size={12}` (matcher 11px font).
-  - `strokeWidth={1.75}` (litt mer vekt — ikonet skal lese som label, ikke pynt).
-  - Farge `C.textFaint`.
-  - Gi det `aria-hidden` og `title="Tekststørrelse"` på wrapper-`<button>`-gruppen for tilgjengelighet.
+**Når det IKKE er tasks/Teknisk DNA over** (det vanlige tilfellet i skjermbildet): fjern `mt-5` på `<div>` rundt `CompanyActivityTimeline` slik at Aktiviteter-headeren starter helt på topp av venstre kolonne, og dermed på samme y-posisjon som Kontakter-headeren.
 
-**Spacing**
-- Rad-padding: `paddingInline: px(10)` (matcher nav-rader nøyaktig — visuelt linjert med navn på menypunkter over).
-- Rad-høyde: 32px (4px mer enn dagens 28 — gir luft rundt 24px-segmentet).
-- Gap mellom T-ikon og segmented control: `gap: px(10)` (ikke `justify-between` — det presser kontrollen ut til høyre kant og bryter rytmen mot footer-knappene under). I stedet: T-ikon venstre, kontroll høyrejustert via `marginLeft: auto` på kontroll-containeren. Dette gir kontrollerbar luft hvis sidebar-bredden endrer seg.
-- `paddingBottom: px(10)` på wrapper-divet (mot streken under) — luftigere enn dagens 8.
-
-**Mikro-detaljer**
-- Transitions: `background-color 120ms ease, color 120ms ease` på segmenter.
-- Aktiv segment-skygge: `0 1px 2px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.04)` — knapt synlig, men gir den "løftede" følelsen.
-- Ingen focus-ring på enkeltsegmenter (de sitter i en gruppe); behold focus-visible kun via tab på hver knapp med `outline: 2px solid C.borderFocus, outline-offset: 1px`.
-
-## ASCII-skisse
-
-```text
-sidebar (220px)
-┌────────────────────────────────────────┐
-│ ...nav...                              │
-│                                        │
-│  T      ┌──┬──┬──┬──┬───┐              │  ← 32px høyde, padding 10
-│         │S │M │L │XL│XXL│              │     segmented control 24px
-│         └──┴──┴──┴──┴───┘              │     aktiv = hvit + mikro-skygge
-├────────────────────────────────────────┤  ← borderTop (footer)
-│ ⚙  Innstillinger                       │
-│ ↪  Logg ut                             │
-└────────────────────────────────────────┘
-```
+**Når det ER en Oppfølging-blokk eller Teknisk DNA over:** behold den som naturlig flyt over Aktiviteter — da skal Aktiviteter ikke linjeres med Kontakter-headeren (det ville vært visuelt forvirrende). Kontakter står da alene på topp til høyre, og det er greit.
 
 ## Plan
 
-1. **Skriv om `TextSizeControlSidebar` i `src/components/designlab/TextSizeControl.tsx`:**
-   - Bytt ut `DesignLabFilterButton`-pills med en intern segmented control (egen `<div>` med `<button>`-segmenter).
-   - T-ikon venstre med faste dimensjoner og farge `C.textFaint`.
-   - Container med `C.surfaceAlt`-bakgrunn + `C.borderLight`-ramme.
-   - Aktivt segment: hvit bakgrunn, vekt 500, mikro-skygge.
-   - Inaktivt: transparent, vekt 400, hover `C.hoverBg`.
-   - Behold `value` + `onChange`-API uendret — kun visuell endring.
+1. **`src/components/CompanyCardContent.tsx` linje ~1105:** Endre `<div className="mt-5">` rundt `CompanyActivityTimeline` til betinget margin: kun `mt-5` når `tasks.length > 0` ELLER Teknisk DNA er synlig. Når Aktiviteter er første element → ingen top-margin, så headeren starter på topp.
+   ```tsx
+   <div className={cn((tasks.length > 0 || showTechDna) && "mt-5")}>
+     <CompanyActivityTimeline ... />
+   </div>
+   ```
 
-2. **Justér wrapper i `src/components/designlab/DesignLabSidebar.tsx`:**
-   - Endre wrapper-divets padding fra `paddingInline: px(12), paddingBottom: px(8)` til `paddingInline: px(10), paddingBottom: px(10)` for å matche nav-rader og puste mot streken.
-   - Ingen andre endringer i sidebar-strukturen.
+2. **`CompanyActivityTimeline` (linje 2169–2173):** Pakk `Aktiviteter · N`-headeren i en flex-rad med `min-height: 32px`, slik at høyden matcher Kontakter-headeren med knapp:
+   ```tsx
+   <div className="flex items-center mb-3" style={{ minHeight: 32 }}>
+     <h3 className="text-[12px] font-medium text-[#5C636E]">
+       Aktiviteter · {activities.length}
+     </h3>
+   </div>
+   ```
+   Samme behandling i tomtilstand-grenen (linje 2158–2166).
 
-3. **Behold uendret:**
-   - Persistens (`"dl-text-size"`-nøkkel).
-   - Synlighet kun i utvidet sidebar (skjult når kollapset).
-   - Plassering over footer-streken.
-   - Den eksisterende `TextSizeControl`-eksporten (header-varianten) — den brukes ikke lenger, men er ufarlig å beholde for nå.
+3. **`relatedContactsContent` (linje 1117–1119):** Sett eksplisitt `min-height: 32px` på header-raden og endre `mb-2` til `mb-3` slik at margin matcher venstre:
+   ```tsx
+   <div className="pt-4 md:pt-0">
+     <div className="mb-3 flex items-center justify-between gap-3" style={{ minHeight: 32 }}>
+       <h3 className="text-[12px] font-medium text-[#5C636E]">Kontakter · {contacts.length}</h3>
+       ...
+   ```
 
 ## Filer som endres
-- `src/components/designlab/TextSizeControl.tsx` — full omskriving av `TextSizeControlSidebar` til segmented control.
-- `src/components/designlab/DesignLabSidebar.tsx` — minor padding-justering på wrapper.
+- `src/components/CompanyCardContent.tsx` — tre små justeringer: betinget `mt-5`, header-wrapper på Aktiviteter (to steder: tom og normal), `min-height` + `mb-3` på Kontakter-header.
 
 ## Utenfor scope
-- Synlighet i kollapset modus.
-- Endring av skala-verdier eller persistens.
-- Endringer i header-varianten av `TextSizeControl`.
+- Endring av selve knappen `Ny kontakt` eller dens stil.
+- Endring av layout når Oppfølging eller Teknisk DNA er synlig over Aktiviteter (de bevares som i dag).
+- Andre flater enn selskapskortet.
 
