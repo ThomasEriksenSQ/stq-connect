@@ -156,7 +156,7 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
                       <div
                         key={i}
                         className={cn(
-                          "flex-1 min-w-[56px] flex items-center justify-center py-2.5",
+                          "flex-1 min-w-[56px] flex items-center justify-center py-1",
                           i === currentMonth && "bg-primary/[0.03]"
                         )}
                       >
