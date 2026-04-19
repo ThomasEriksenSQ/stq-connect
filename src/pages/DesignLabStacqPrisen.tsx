@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { calcStacqPris } from "@/lib/stacqPris";
+import { countNorwegianWorkdays } from "@/lib/norwegianHolidays";
 import { getInitials } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -164,13 +165,7 @@ export default function DesignLabStacqPrisen() {
   const avgPrisPerTime = aktive.length > 0 ? stacqTotalPerTime / aktive.length : 0;
 
   const now = new Date();
-  const workdayCount = (() => {
-    const y = now.getFullYear(), m = now.getMonth();
-    const dim = new Date(y, m + 1, 0).getDate();
-    let wd = 0;
-    for (let d = 1; d <= dim; d++) { const dow = new Date(y, m, d).getDay(); if (dow !== 0 && dow !== 6) wd++; }
-    return wd;
-  })();
+  const workdayCount = countNorwegianWorkdays(now.getFullYear(), now.getMonth());
   const monthlyTotal = stacqTotalPerTime * TIMER_PER_DAG * workdayCount;
 
   const chartData = useMemo(() => [
