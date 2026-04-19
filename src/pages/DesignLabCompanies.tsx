@@ -669,7 +669,7 @@ export default function DesignLabCompanies() {
           </ResizablePanelGroup>
         </div>
       </main>
-      <DesignLabEntitySheet
+      <DesignLabFormSheet
         open={createOpen}
         onOpenChange={(nextOpen) => {
           setCreateOpen(nextOpen);
@@ -682,155 +682,160 @@ export default function DesignLabCompanies() {
             }
           }
         }}
-        contentClassName="px-6 py-6 dl-v8-theme"
       >
-        <div className="mb-5">
-          <h2 className="text-[1.125rem] font-bold text-foreground">Nytt selskap</h2>
-        </div>
-        <DesignLabModalForm
+        <DesignLabFormSheetHeader title="Nytt selskap" />
+        <form
+          className="flex flex-1 flex-col min-h-0"
           onSubmit={(e) => {
             e.preventDefault();
             createMutation.mutate();
           }}
         >
-          <DesignLabModalField>
-            <DesignLabModalLabel>Selskapsnavn</DesignLabModalLabel>
-            <BrregSearch
-              value={createForm.name}
-              onChange={(name) => setCreateForm((prev) => ({ ...prev, name }))}
-              onSelect={(result) =>
-                setCreateForm((prev) => ({
-                  ...prev,
-                  name: result.name,
-                  org_number: result.org_number,
-                  city: result.city,
-                }))
-              }
-              showSearchIcon={false}
-              inputClassName="focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#5E6AD2] focus-visible:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]"
-              inputStyle={getDesignLabModalInputStyle(modalScale)}
-              dropdownClassName="rounded-[8px] border-[#E8EAEE] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
-              resultClassName="px-3 py-2 hover:bg-[#F8F9FB]"
-              resultStyle={{ font: "inherit" }}
-              resultTitleClassName="font-medium text-[#1A1C1F]"
-              resultTitleStyle={{ fontSize: "inherit", lineHeight: 1.25 }}
-              resultMetaClassName="mt-0.5 text-[#8C929C]"
-              resultMetaStyle={{ fontSize: "inherit", lineHeight: 1.2 }}
-              emptyStateClassName="px-3 py-3 text-[#8C929C]"
-              emptyStateStyle={{ fontSize: "inherit", lineHeight: 1.2 }}
-            />
-          </DesignLabModalField>
-          <DesignLabModalField>
-            <DesignLabModalLabel>Org.nr</DesignLabModalLabel>
-            <OrgNrInput
-              value={createForm.org_number}
-              onChange={(org_number) => setCreateForm((prev) => ({ ...prev, org_number }))}
-              onLookup={(name, city) =>
-                setCreateForm((prev) => ({
-                  ...prev,
-                  name: name || prev.name,
-                  city: city || prev.city,
-                }))
-              }
-              className="focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] focus-visible:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]"
-              style={getDesignLabModalInputStyle(modalScale)}
-            />
-          </DesignLabModalField>
-          <DesignLabModalField>
-            <DesignLabModalLabel>Geografisk sted</DesignLabModalLabel>
-            <div style={{ display: "grid", rowGap: "var(--dl-modal-chip-gap)" }}>
-              {createLocations.map((location, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <DesignLabModalInput
-                    value={location}
-                    onChange={(e) => {
-                      const next = [...createLocations];
-                      next[index] = e.target.value;
-                      setCreateLocations(next);
-                    }}
-                    placeholder="By eller sted"
-                    style={{ flex: 1 }}
-                  />
-                  {createLocations.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => setCreateLocations(createLocations.filter((_, itemIndex) => itemIndex !== index))}
-                      className="inline-flex items-center justify-center rounded-[6px] text-[#8C929C] transition-colors hover:bg-[#F0F2F6] hover:text-[#1A1C1F]"
-                      style={{ width: modalScale.controlHeight, height: modalScale.controlHeight }}
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              ))}
-              <DesignLabModalInlineAction
-                type="button"
-                onClick={() => setCreateLocations([...createLocations, ""])}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Legg til sted
-              </DesignLabModalInlineAction>
-            </div>
-          </DesignLabModalField>
-          <DesignLabModalField>
-            <DesignLabModalLabel>Nettside</DesignLabModalLabel>
-            <DesignLabModalInput
-              value={createForm.website}
-              onChange={(e) => setCreateForm((prev) => ({ ...prev, website: e.target.value }))}
-              placeholder="https://"
-              type="url"
-            />
-          </DesignLabModalField>
-          <DesignLabModalField>
-            <DesignLabModalLabel>LinkedIn</DesignLabModalLabel>
-            <DesignLabModalInput
-              value={createForm.linkedin}
-              onChange={(e) => setCreateForm((prev) => ({ ...prev, linkedin: e.target.value }))}
-              placeholder="https://linkedin.com/company/..."
-              type="url"
-            />
-          </DesignLabModalField>
-          <DesignLabModalField>
-            <DesignLabModalLabel>Type</DesignLabModalLabel>
-            <DesignLabModalChipGroup>
-              {TYPE_OPTIONS.map((option) => (
-                <DesignLabFilterButton
-                  key={option.value}
-                  type="button"
-                  onClick={() => setCreateForm((prev) => ({ ...prev, status: option.value }))}
-                  active={createForm.status === option.value}
-                >
-                  {option.label}
-                </DesignLabFilterButton>
-              ))}
-            </DesignLabModalChipGroup>
-          </DesignLabModalField>
-          {ownerOptions.length > 0 && (
+          <DesignLabFormSheetBody>
             <DesignLabModalField>
-              <DesignLabModalLabel>Eier</DesignLabModalLabel>
+              <DesignLabSectionLabel required>Selskapsnavn</DesignLabSectionLabel>
+              <BrregSearch
+                value={createForm.name}
+                onChange={(name) => setCreateForm((prev) => ({ ...prev, name }))}
+                onSelect={(result) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    name: result.name,
+                    org_number: result.org_number,
+                    city: result.city,
+                  }))
+                }
+                showSearchIcon={false}
+                inputClassName="focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#5E6AD2] focus-visible:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]"
+                inputStyle={getDesignLabModalInputStyle(modalScale)}
+                dropdownClassName="rounded-[8px] border-[#E8EAEE] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
+                resultClassName="px-3 py-2 hover:bg-[#F8F9FB]"
+                resultStyle={{ font: "inherit" }}
+                resultTitleClassName="font-medium text-[#1A1C1F]"
+                resultTitleStyle={{ fontSize: "inherit", lineHeight: 1.25 }}
+                resultMetaClassName="mt-0.5 text-[#8C929C]"
+                resultMetaStyle={{ fontSize: "inherit", lineHeight: 1.2 }}
+                emptyStateClassName="px-3 py-3 text-[#8C929C]"
+                emptyStateStyle={{ fontSize: "inherit", lineHeight: 1.2 }}
+              />
+            </DesignLabModalField>
+
+            <DesignLabModalField>
+              <DesignLabSectionLabel>Organisasjonsnummer</DesignLabSectionLabel>
+              <OrgNrInput
+                value={createForm.org_number}
+                onChange={(org_number) => setCreateForm((prev) => ({ ...prev, org_number }))}
+                onLookup={(name, city) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    name: name || prev.name,
+                    city: city || prev.city,
+                  }))
+                }
+                className="focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] focus-visible:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]"
+                style={getDesignLabModalInputStyle(modalScale)}
+              />
+            </DesignLabModalField>
+
+            <DesignLabModalField>
+              <DesignLabSectionLabel>Geografisk sted</DesignLabSectionLabel>
+              <div style={{ display: "grid", rowGap: "var(--dl-modal-chip-gap)" }}>
+                {createLocations.map((location, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <DesignLabModalInput
+                      value={location}
+                      onChange={(e) => {
+                        const next = [...createLocations];
+                        next[index] = e.target.value;
+                        setCreateLocations(next);
+                      }}
+                      placeholder="By eller sted"
+                      style={{ flex: 1 }}
+                    />
+                    {createLocations.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setCreateLocations(createLocations.filter((_, itemIndex) => itemIndex !== index))}
+                        className="inline-flex items-center justify-center rounded-[6px] text-[#8C929C] transition-colors hover:bg-[#F0F2F6] hover:text-[#1A1C1F]"
+                        style={{ width: modalScale.controlHeight, height: modalScale.controlHeight }}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <DesignLabModalInlineAction
+                  type="button"
+                  onClick={() => setCreateLocations([...createLocations, ""])}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Legg til sted
+                </DesignLabModalInlineAction>
+              </div>
+            </DesignLabModalField>
+
+            <DesignLabFieldGrid>
+              <DesignLabModalField>
+                <DesignLabSectionLabel>Nettside</DesignLabSectionLabel>
+                <DesignLabModalInput
+                  value={createForm.website}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, website: e.target.value }))}
+                  placeholder="https://"
+                  type="url"
+                />
+              </DesignLabModalField>
+              <DesignLabModalField>
+                <DesignLabSectionLabel>LinkedIn</DesignLabSectionLabel>
+                <DesignLabModalInput
+                  value={createForm.linkedin}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, linkedin: e.target.value }))}
+                  placeholder="https://linkedin.com/company/..."
+                  type="url"
+                />
+              </DesignLabModalField>
+            </DesignLabFieldGrid>
+
+            <DesignLabModalField>
+              <DesignLabSectionLabel>Type</DesignLabSectionLabel>
               <DesignLabModalChipGroup>
-                {ownerOptions.map((owner) => (
+                {TYPE_OPTIONS.map((option) => (
                   <DesignLabFilterButton
-                    key={owner.id}
+                    key={option.value}
                     type="button"
-                    onClick={() =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        owner_id: prev.owner_id === owner.id ? "" : owner.id,
-                      }))
-                    }
-                    active={createForm.owner_id === owner.id}
+                    onClick={() => setCreateForm((prev) => ({ ...prev, status: option.value }))}
+                    active={createForm.status === option.value}
                   >
-                    {owner.name}
+                    {option.label}
                   </DesignLabFilterButton>
                 ))}
               </DesignLabModalChipGroup>
             </DesignLabModalField>
-          )}
-          <DesignLabModalActions style={{ marginTop: 24 }}>
-            <DesignLabPrimaryAction type="submit" disabled={createMutation.isPending}>
-              {createMutation.isPending ? "Oppretter..." : "Opprett"}
-            </DesignLabPrimaryAction>
+
+            {ownerOptions.length > 0 && (
+              <DesignLabModalField>
+                <DesignLabSectionLabel>Eier</DesignLabSectionLabel>
+                <DesignLabModalChipGroup>
+                  {ownerOptions.map((owner) => (
+                    <DesignLabFilterButton
+                      key={owner.id}
+                      type="button"
+                      onClick={() =>
+                        setCreateForm((prev) => ({
+                          ...prev,
+                          owner_id: prev.owner_id === owner.id ? "" : owner.id,
+                        }))
+                      }
+                      active={createForm.owner_id === owner.id}
+                    >
+                      {owner.name}
+                    </DesignLabFilterButton>
+                  ))}
+                </DesignLabModalChipGroup>
+              </DesignLabModalField>
+            )}
+          </DesignLabFormSheetBody>
+
+          <DesignLabFormSheetFooter>
             <DesignLabGhostAction
               type="button"
               onClick={() => {
@@ -845,9 +850,12 @@ export default function DesignLabCompanies() {
             >
               Avbryt
             </DesignLabGhostAction>
-          </DesignLabModalActions>
-        </DesignLabModalForm>
-      </DesignLabEntitySheet>
+            <DesignLabPrimaryAction type="submit" disabled={createMutation.isPending || !createForm.name.trim()}>
+              {createMutation.isPending ? "Oppretter..." : "Opprett selskap"}
+            </DesignLabPrimaryAction>
+          </DesignLabFormSheetFooter>
+        </form>
+      </DesignLabFormSheet>
 
       <CommandPalette
         open={cmdOpen}
