@@ -31,6 +31,7 @@ import {
 } from "@/components/designlab/system";
 import { getEffectiveSignal, getSignalRank } from "@/lib/categoryUtils";
 import { NyForesporselModal } from "@/pages/Foresporsler";
+import { CommandPalette } from "@/components/designlab/CommandPalette";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES & CONSTANTS
