@@ -394,6 +394,42 @@ export default function DesignLabOppfolginger() {
     setContactSearch(`${contact.first_name} ${contact.last_name}`);
   };
 
+  // ── Command palette data ──
+  const paletteContacts = useMemo(() => {
+    const map = new Map<string, any>();
+    viewModels.forEach((vm) => {
+      if (!vm.contactId || map.has(vm.contactId)) return;
+      const [firstName, ...rest] = (vm.contactName || "").split(" ");
+      map.set(vm.contactId, {
+        id: vm.contactId,
+        firstName: firstName || "",
+        lastName: rest.join(" "),
+        company: vm.companyName || "",
+        companyId: vm.companyId,
+        email: vm.contactEmail || "",
+        phone: vm.contactPhone || "",
+        signal: vm.signal || "",
+        daysSince: 0,
+      });
+    });
+    return Array.from(map.values());
+  }, [viewModels]);
+
+  const paletteCompanies = useMemo(() => {
+    const counts = new Map<string, { id: string; name: string; contactCount: number }>();
+    viewModels.forEach((vm) => {
+      if (!vm.companyName) return;
+      const key = vm.companyId || `name:${vm.companyName.toLowerCase()}`;
+      const existing = counts.get(key);
+      if (existing) {
+        existing.contactCount += 1;
+      } else {
+        counts.set(key, { id: key, name: vm.companyName, contactCount: 1 });
+      }
+    });
+    return Array.from(counts.values()).sort((a, b) => a.name.localeCompare(b.name, "nb"));
+  }, [viewModels]);
+
   return (
     <div
       className="flex h-screen overflow-hidden select-none"
