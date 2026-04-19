@@ -1038,7 +1038,7 @@ export default function DesignLabContacts() {
     setSort((current) =>
       current.field === field
         ? { field, dir: current.dir === "asc" ? "desc" : "asc" }
-        : { field, dir: field === "last_activity" || field === "priority" ? "desc" : "asc" },
+        : { field, dir: field === "last_activity" || field === "priority" || field === "tags" || field === "finn" ? "desc" : "asc" },
     );
   }, []);
 
