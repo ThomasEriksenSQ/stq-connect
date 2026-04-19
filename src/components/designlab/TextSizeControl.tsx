@@ -14,11 +14,11 @@ type TextSizePreset = {
 };
 
 export const TEXT_SIZE_PRESETS: Record<TextSize, TextSizePreset> = {
-  S: { scale: 0.9, description: "Kompakt" },
-  M: { scale: 1, description: "Standard" },
-  L: { scale: 1.1, description: "Litt større" },
-  XL: { scale: 1.2, description: "Stor" },
-  XXL: { scale: 1.32, description: "Ekstra stor" },
+  S: { scale: 0.95, description: "Kompakt" },
+  M: { scale: 1.05, description: "Standard" },
+  L: { scale: 1.15, description: "Litt større" },
+  XL: { scale: 1.25, description: "Stor" },
+  XXL: { scale: 1.4, description: "Ekstra stor" },
 };
 
 export const SCALE_MAP: Record<TextSize, number> = Object.fromEntries(
