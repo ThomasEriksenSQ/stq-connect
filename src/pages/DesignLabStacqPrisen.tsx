@@ -18,6 +18,7 @@ import { C } from "@/components/designlab/theme";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { DesignLabColumnHeader } from "@/components/designlab/system";
 import { computeOppdragStatus as computeSharedOppdragStatus } from "@/lib/oppdragForm";
+import { DesignLabStaticTag } from "@/components/designlab/controls";
 
 /* Colors imported from @/components/designlab/theme */
 
@@ -464,20 +465,5 @@ function StatusBadge({ status }: { status: string }) {
       : status === "Oppstart"
         ? { background: "#F6EFE2", color: "#9A7A2A", border: "1px solid rgba(154,122,42,0.16)", fontWeight: 600 }
         : { background: "#F7F8FA", color: "#8C929C", border: "1px solid #E3E6EB", fontWeight: 500 };
-  return (
-    <span
-      className="inline-flex items-center rounded"
-      style={{
-        fontSize: 11,
-        paddingInline: 8,
-        paddingBlock: 2,
-        background: colors.background,
-        color: colors.color,
-        border: colors.border,
-        fontWeight: colors.fontWeight,
-      }}
-    >
-      {status}
-    </span>
-  );
+  return <DesignLabStaticTag colors={colors}>{status}</DesignLabStaticTag>;
 }
