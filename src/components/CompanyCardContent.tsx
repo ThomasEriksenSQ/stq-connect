@@ -60,6 +60,14 @@ import {
   DesignLabFormSheetHeader,
 } from "@/components/designlab/DesignLabEntitySheet";
 import {
+  AktivOppdragStyleSheet,
+  AktivOppdragLabel,
+  AktivOppdragChip,
+  AktivOppdragFooterRow,
+  AktivOppdragCancelButton,
+  AktivOppdragPrimaryButton,
+} from "@/components/designlab/AktivOppdragStyleSheet";
+import {
   Phone,
   Mail,
   Globe,
