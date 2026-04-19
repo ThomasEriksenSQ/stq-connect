@@ -548,7 +548,6 @@ export default function DesignLabOppfolginger() {
             </Dialog>
           </div>
         </header>
-        </header>
 
         <div className="shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
           <DesignLabFilterRow label="EIER" options={ownerOptions} value={ownerFilter} onChange={setOwnerFilter} />
