@@ -2450,6 +2450,13 @@ function CompanyActivityRow({
               {displayCategory && <CategoryBadge label={displayCategory} />}
             </div>
           </CompanyActivityRowBody>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Company DNA Panel ── */
 function CompanyDnaPanel({ companyId }: { companyId: string }) {
   const queryClient = useQueryClient();
 
