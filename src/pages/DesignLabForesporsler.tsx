@@ -358,7 +358,9 @@ export default function DesignLabForesporsler() {
         <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
           <div className="flex items-baseline gap-2.5">
             <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Forespørsler</h1>
-            <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>{filtered.length}</span>
+            <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500, whiteSpace: "nowrap" }}>
+              · {stats.aktive} aktive · {stats.utenKonsulent} uten konsulent · {stats.iProsess} i prosess · {stats.vunnet} vunnet
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <TextSizeControl value={textSize} onChange={setTextSize} />
@@ -389,9 +391,6 @@ export default function DesignLabForesporsler() {
                 if (next) setTypeFilter(next.value);
               }}
             />
-            <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500, whiteSpace: "nowrap", paddingLeft: 12 }}>
-              {stats.aktive} aktive · {stats.utenKonsulent} uten konsulent · {stats.iProsess} i prosess · {stats.vunnet} vunnet
-            </span>
           </div>
           {(statusFilter !== "aktive" || typeFilter !== "Alle") && (
             <div className="flex justify-end">
