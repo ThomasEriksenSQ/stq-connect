@@ -126,6 +126,51 @@ import {
 import { coerceDisplayText } from "@/lib/outlookMail";
 import { C, SIGNAL_COLORS } from "@/theme";
 
+/** Wrapper for company notes — opens edit on click but allows text selection. */
+function CompanyNotesEditTrigger({ onEdit, children }: { onEdit: () => void; children: React.ReactNode }) {
+  const handlers = useClickWithoutSelection<HTMLDivElement>(onEdit);
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onMouseDown={handlers.onMouseDown}
+      onClick={handlers.onClick}
+      onKeyDown={activateOnEnterOrSpace(onEdit)}
+      className="group relative block w-full text-left cursor-text focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-sm"
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Wrapper for company activity row body — opens edit on click but allows text selection. */
+function CompanyActivityRowBody({
+  onActivate,
+  editable,
+  children,
+}: {
+  onActivate: () => void;
+  editable: boolean;
+  children: React.ReactNode;
+}) {
+  const handlers = useClickWithoutSelection<HTMLDivElement>(onActivate);
+  return (
+    <div
+      role={editable ? "button" : undefined}
+      tabIndex={editable ? 0 : undefined}
+      onMouseDown={editable ? handlers.onMouseDown : undefined}
+      onClick={editable ? handlers.onClick : undefined}
+      onKeyDown={editable ? activateOnEnterOrSpace(onActivate) : undefined}
+      className={cn(
+        "flex items-start gap-3 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-sm",
+        editable && "cursor-pointer",
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
 /* ── Category system (shared with ContactCardContent) ── */
 const CATEGORIES = [
   { label: "Behov nå" },
