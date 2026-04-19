@@ -1,62 +1,34 @@
 
+
 ## Mål
-Bytte favicon på STACQ CRM til de opplastede filene (sort STACQ "stablet diamant"-logo).
+På Oppfølginger-siden skal **Eier-filteret** som standard være satt til den innloggede brukeren (i stedet for "Alle"), slik at man umiddelbart ser sine egne oppfølginger.
 
 ## Funn
-`index.html` referer i dag til:
-- `/favicon.ico`
-- `/favicon-32x32.png`
-- `/favicon-16x16.png`
-- `/apple-touch-icon.png`
+Tre flater viser oppfølginger:
+| Flate | Default i dag | Endring? |
+|---|---|---|
+| `src/components/dashboard/OppfolgingerSection.tsx` (Dashboard-tab) | `user?.id \|\| "all"` ✓ allerede korrekt | Nei |
+| `src/pages/Tasks.tsx` (V1 `/oppfolginger`) | `"all"` | Ja |
+| `src/pages/DesignLabOppfolginger.tsx` (V2 `/design-lab/oppfolginger`) | `"Alle"` | Ja |
 
-Brukeren har lastet opp et komplett favicon-sett:
-- `favicon-2.ico` → ny `.ico`
-- `favicon-96x96.png` → moderne PNG-favicon
-- `favicon.svg` → vektor-favicon (skarp på alle skjermer)
-- `apple-touch-icon-2.png` → iOS hjemskjerm
-- `web-app-manifest-192x192.png` + `web-app-manifest-512x512.png` → PWA/Android
+På opprettelse er `assigned_to: user?.id` allerede satt riktig overalt.
 
-## Plan
+## Endringer
 
-**1. Kopier opplastede filer til `public/`**
-- `user-uploads://favicon-2.ico` → `public/favicon.ico` (overskriver gammel — viktig fordi nettlesere ber om `/favicon.ico` automatisk)
-- `user-uploads://favicon.svg` → `public/favicon.svg`
-- `user-uploads://favicon-96x96.png` → `public/favicon-96x96.png`
-- `user-uploads://apple-touch-icon-2.png` → `public/apple-touch-icon.png` (overskriver)
-- `user-uploads://web-app-manifest-192x192.png` → `public/web-app-manifest-192x192.png`
-- `user-uploads://web-app-manifest-512x512.png` → `public/web-app-manifest-512x512.png`
+### 1. `src/pages/Tasks.tsx`
+- Hent `currentUserProfile` fra `profiles`-listen ved hjelp av `user?.id` (samme mønster som `OppfolgingerSection`).
+- Endre `useState("all")` for `ownerFilter` til å initialiseres tomt og settes via en `useEffect` når `user?.id` er tilgjengelig — alternativt en `useMemo`/inline default som faller tilbake til `"all"` hvis bruker ikke er innlogget enda.
+- Sikre at `Eier`-filterets `SelectValue` viser den innloggede brukerens fornavn som default.
 
-**2. Slett utdaterte favicon-filer i `public/`**
-- `public/favicon-32x32.png` og `public/favicon-16x16.png` (erstattes av SVG + 96x96 PNG, og `index.html` refererer ikke lenger til dem)
-
-**3. Oppdater `index.html` (`<head>`)**
-Bytt nåværende ikon-lenker til:
-```html
-<link rel="icon" type="image/x-icon" href="/favicon.ico" />
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-<link rel="manifest" href="/site.webmanifest" />
-```
-
-**4. Opprett `public/site.webmanifest`** for PWA-ikoner:
-```json
-{
-  "name": "STACQ CRM",
-  "short_name": "STACQ",
-  "icons": [
-    { "src": "/web-app-manifest-192x192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/web-app-manifest-512x512.png", "sizes": "512x512", "type": "image/png" }
-  ],
-  "theme_color": "#000000",
-  "background_color": "#ffffff",
-  "display": "standalone"
-}
-```
+### 2. `src/pages/DesignLabOppfolginger.tsx`
+- Endre `useState("Alle")` for `ownerFilter` slik at den initialiseres til den innloggede brukerens fulle navn (`profiles.find(p => p.id === user?.id)?.full_name`) når data er lastet.
+- Bruk samme `useEffect`-mønster: når `user?.id` og `profiles` er klare og `ownerFilter` fortsatt er "Alle" (uberørt), sett den til brukerens navn.
+- Behold "Alle" / "Uten eier" som valgbare alternativer i filteret — kun standardvalget endres.
 
 ## Effekt
-Faneikon, iOS hjemskjerm og Android/PWA installasjon bruker den nye sorte STACQ-logoen. Nettleser-cache kan kreve hard reload (Cmd+Shift+R) for å se endringen umiddelbart.
+Når Jon Richard eller Thomas åpner Oppfølginger-siden (både V1 og V2), ser de først sine egne oppfølginger. De kan fortsatt bytte til "Alle" eller en annen kollega via filteret.
 
 ## Utenfor scope
-- Ingen endring i `og-image.png` eller andre delingsbilder.
-- Ingen endring i appens UI eller theme-farger.
+- Ingen endring i `OppfolgingerSection.tsx` (allerede korrekt).
+- Ingen endring i opprettelsesflyten — `assigned_to` settes allerede til innlogget bruker.
+- Ingen endring i sortering, kolonner eller andre filtre.
