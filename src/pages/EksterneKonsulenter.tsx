@@ -121,6 +121,13 @@ export default function EksterneKonsulenter({
     return () => document.removeEventListener("keydown", handler);
   }, [embeddedSplit, cmdOpen]);
 
+  useEffect(() => {
+    if (createRequestId === undefined) return;
+    if (createRequestId === 0) return;
+    setEditId(null);
+    setModalOpen(true);
+  }, [createRequestId]);
+
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["external-consultants"],
     queryFn: async () => {
