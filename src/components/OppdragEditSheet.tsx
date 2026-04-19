@@ -728,6 +728,44 @@ export function OppdragEditSheet({
         </div>
 
         <div>
+          <label className={LABEL}>Sluttdato</label>
+          <div className="mt-1 flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  className={cn(
+                    "flex-1 h-9 px-3 rounded-lg border border-border bg-background text-left text-[0.875rem] flex items-center gap-2",
+                    !sluttDato && "text-muted-foreground",
+                  )}
+                >
+                  <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                  {sluttDato ? format(sluttDato, "d. MMMM yyyy", { locale: nb }) : "Velg dato"}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={sluttDato}
+                  onSelect={setSluttDato}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+            {sluttDato && (
+              <button
+                onClick={() => setSluttDato(undefined)}
+                className="h-9 w-9 flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-destructive hover:bg-secondary transition-colors"
+                title="Fjern sluttdato"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <p className="text-[0.75rem] text-muted-foreground mt-1.5">
+            Status settes automatisk basert på start- og sluttdato.
+          </p>
+        </div>
           <label className={LABEL}>Kommentar</label>
           <textarea
             value={kommentar}
