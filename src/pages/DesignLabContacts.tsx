@@ -89,7 +89,7 @@ const SIGNALS: Signal[] = ["Behov nå", "Får fremtidig behov", "Får kanskje be
 const TYPES = ["Alle", "Innkjøper", "CV-Epost", "Ikke relevant kontakt"] as const;
 type TypeFilter = (typeof TYPES)[number];
 
-type SortField = "name" | "signal" | "company" | "title" | "owner" | "last_activity" | "priority";
+type SortField = "name" | "signal" | "company" | "title" | "owner" | "last_activity" | "priority" | "tags" | "finn";
 type SortDir = "asc" | "desc";
 type HuntSortField = "default" | "match" | "varme";
 
