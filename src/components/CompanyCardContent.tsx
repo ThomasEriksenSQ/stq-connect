@@ -2158,9 +2158,11 @@ function CompanyActivityTimeline({
   if (activities.length === 0) {
     return (
       <div>
-        <h3 className="text-[12px] font-medium text-[#5C636E]">
-          Aktiviteter · 0
-        </h3>
+        <div className="flex items-center" style={{ minHeight: 32 }}>
+          <h3 className="text-[12px] font-medium text-[#5C636E]">
+            Aktiviteter · 0
+          </h3>
+        </div>
         <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen aktiviteter</p>
       </div>
     );
@@ -2168,9 +2170,11 @@ function CompanyActivityTimeline({
 
   return (
     <div>
-      <h3 className="text-[12px] font-medium text-[#5C636E] mb-3">
-        Aktiviteter · {activities.length}
-      </h3>
+      <div className="flex items-center mb-3" style={{ minHeight: 32 }}>
+        <h3 className="text-[12px] font-medium text-[#5C636E]">
+          Aktiviteter · {activities.length}
+        </h3>
+      </div>
 
       {grouped.map((group, gi) => (
         <div key={group.key}>
