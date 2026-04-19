@@ -2,58 +2,91 @@
 
 ## Vurdering
 
-Ja — definitivt. "Oppfølginger · 1" bruker fortsatt **gammel V1-typografi** (uppercase, 11px, bold, tracking) mens vi nettopp har løftet "Aktiviteter" og "Kontakter" til V2-standard (13px / 500 / `#1A1C1F` + dempet teller). Det blir et tydelig stilbrudd i samme kort: én header skriker "LABEL", de to andre leser som rolige primær-innganger.
+Du er på `/design-lab/oppfolginger` (V2-flate), og både `ContactCardContent` og `ForespørselSheet` rendres innenfor V2-skall (`dl-v8-theme`). Da gjelder V2-typografi: 13px / 500 / `#1A1C1F` for tittel, 12px / 400 / dempet for meta. Akkurat nå skriker disse sub-titlene fortsatt V1-uppercase mens resten av kortet leser V2.
 
-Siden vi er på `/design-lab/selskaper` (V2-flate) skal alle tre kolonneheaderne følge samme V2-mønster.
+**MEN** — `ContactCardContent` brukes også på V1-flater (`/kontakter/:id` via `src/pages/ContactDetail.tsx`), og `ForespørselSheet` brukes også i `/foresporsler` (V1). Endrer vi klassene direkte, bytter vi typografi i V1 også, og det bryter V1-regelen "Ikke endre V1-design". 
 
-## Funn
+### To strategier — én må velges
 
-`src/components/CompanyCardContent.tsx` linje 1015–1017:
-```tsx
-<h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-  Oppfølginger · {tasks.length}
-</h3>
-```
+**Strategi A — Global migrering (anbefalt for konsistens)**: Endre headerne direkte. Pro: konsistens, mindre kodevedlikehold. Kontra: V1-flatene (`/kontakter/:id`, `/foresporsler`) får V2-typografi på disse seksjonene mens resten av V1-siden er uendret → potensielt stilbrudd i V1.
 
-Dette er V1-seksjonstittel (11px / bold / uppercase / tracking 0.08em / muted) — samme mønster som ble brukt før vi migrerte Aktiviteter og Kontakter.
+**Strategi B — Variant-flagg**: Legg til en `v2?: boolean` prop som kun aktiverer V2-typografi når komponenten mountes fra `/design-lab/*`. Pro: respekterer V1/V2-skillet. Kontra: mer kompleksitet, dobbelt sett klasser å vedlikeholde.
 
-Til sammenligning (nåværende V2-mønster, linje 1119 og 2162/2174):
-```tsx
-<h3 className="text-[13px] font-medium text-[#1A1C1F]">
-  Kontakter <span className="font-normal text-[#8C929C]">· {contacts.length}</span>
-</h3>
+**Min anbefaling: Strategi A**. Resonnement: V1 og V2 har samme tekstinnhold ("Oppfølginger · 1"), og V2-stilen (13px / 500 / mørk) er ikke verre i V1-sammenheng — den er bare litt mer dempet enn V1-uppercase. Og siden vi allerede har migrert "Oppfølginger / Aktiviteter / Kontakter" på selskapskortet uten variant-flagg, er det konsekvent å gjøre det samme her. Hvis det skurrer i V1 kan vi raskt rulle tilbake til variant-løsning.
+
+## Funn — eksakt liste over headere som migreres
+
+### `src/components/ContactCardContent.tsx` (Kontaktkortet)
+1. **Linje 1254** — "Teknologier" (i Tekniske behov-seksjonen)
+2. **Linje 1677** — "Oppfølginger · {tasks.length}" (oppfølgings-seksjonen, samme V1-kort-wrapper som vi nettopp ryddet på selskapskortet)
+
+### `src/components/ForespørselSheet.tsx` (Forespørselskortet, read-only visning)
+3. **Linje 746** — "Mottatt"
+4. **Linje 773** — "Teknologier"  
+5. **Linje 873** — "Kommentar"
+
+Alle bruker konstanten `LABEL` (linje 45) eller den dupliserte versjonen i EditMode (linje 1197):
+```ts
+const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
 ```
 
 ## Plan
 
-**Én endring i `src/components/CompanyCardContent.tsx` linje 1014–1018**:
+### 1. `src/components/ForespørselSheet.tsx`
+Endre `LABEL`-konstanten på **linje 45** (read-only/preview-mode) til V2-stil:
 
+```ts
+const LABEL = "text-[12px] font-medium text-[#5C636E]";
+```
+
+Dette løfter automatisk Mottatt, Teknologier, Kommentar, Konsulentmatch, Sendt inn, og alle andre `${LABEL}`-bruk i preview-grenen til V2 i ett kutt.
+
+**Viktig**: Den dupliserte `LABEL` på **linje 1197** ligger inne i `EditMode`-komponenten (skjema med inputs). Der ER uppercase-labels et legitimt skjemadesign-mønster (input-feltlabels skal være tydelige og distinkte fra verdier). Vi lar den være — kun preview-LABEL endres.
+
+### 2. `src/components/ContactCardContent.tsx`
+
+**Linje 1252–1256** ("Teknologier"-header):
 ```tsx
-<div className="flex items-center mb-3" style={{ minHeight: 32 }}>
+<div className="flex items-center justify-between mb-3" style={{ minHeight: 32 }}>
+  <h3 className="text-[13px] font-medium text-[#1A1C1F]">
+    Teknologier
+  </h3>
+  ...
+```
+Bytter `<span>` → `<h3>` (semantisk konsistent med Aktiviteter/Kontakter/Oppfølginger), 13px / 500 / `#1A1C1F`. Ingen teller her, så ingen dempet `<span>`-del.
+
+**Linje 1675–1680** (Oppfølginger-headeren):
+- Erstatt header med samme V2-mønster:
+```tsx
+<div className="flex items-center justify-between mb-3" style={{ minHeight: 32 }}>
   <h3 className="text-[13px] font-medium text-[#1A1C1F]">
     Oppfølginger <span className="font-normal text-[#8C929C]">· {tasks.length}</span>
   </h3>
 </div>
 ```
+- Vurdering om kort-wrapperen (`bg-card border border-border rounded-lg shadow-card p-4`): samme situasjon som vi diskuterte på selskapskortet. **Holder vi scope tett denne runden**: behold wrapperen, kun typografi-fiks. Kan ryddes i en oppfølgende runde.
 
-Dette gir:
-- Samme typografi (13px / 500 / `#1A1C1F`) som Aktiviteter og Kontakter
-- Samme dempet teller-mønster (`#8C929C` / 400)
-- Samme `min-height: 32px` + `mb-3` så baseline-aligneringen er konsistent
-- `mb-2` → `mb-3` for å matche de andre headerne
+## Designvalg (kort)
 
-## Bonus-vurdering (kan tas i samme runde)
+- **Tittel (Mottatt, Teknologier, Kommentar)**: 13px på selskapskort vs 12px her? På selskapskortet brukte vi 13px fordi titlene var "primære innganger til kolonner". Her er Mottatt/Teknologier/Kommentar **felt-labels** i en mer skjema-aktig liste — 12px / 500 / `C.textMuted` (#5C636E) er V2-standard for "metadata/labels" (jf. project-knowledge: "Sekundærtitler 12–13px"). 
 
-Selve oppfølgings-kortet ligger fortsatt i en V1-container: `bg-card border border-border rounded-lg shadow-card p-4` (linje 1013). Dette er kort-på-kort layout som V2 eksplisitt skal unngå ("kort-på-kort layout" står i feillisten).
+  → **Velger 12px / 500 / #5C636E** for ForespørselSheet-feltene. Det matcher V2-tokens og bevarer tydelig skille mellom label og verdi (som vises i 13px / `C.text` under).
 
-**Anbefaling**: fjern også kort-wrapperen så Oppfølginger flyter som en seksjon på linje med Aktiviteter og Kontakter — bare header + liste, ingen ekstra ramme/skygge. Det gir tre konsistente kolonneseksjoner.
+- **Oppfølginger-headeren i ContactCardContent**: Dette ER en kolonneheader (over en liste), så her bruker vi **samme mønster som selskapskortet**: 13px / 500 / `#1A1C1F` + dempet teller. Konsistent med tidligere migrering.
 
-Hvis du vil holde scope tett i denne runden, gjør vi kun typografi-fiksen og lar kort-wrapperen vente.
+- **Teknologier-headeren i ContactCardContent**: Også en seksjonsheader med høyre-stilt knapp ("Finn konsulent"), ikke et skjema-felt → **13px / 500 / `#1A1C1F`**, samme som Oppfølginger. Konsistent kolonneheader-mønster.
+
+Kort sagt: to ulike V2-nivåer brukt riktig:
+- **Kolonneheadere over lister** (Oppfølginger, Teknologier-seksjon): 13px / 500 / mørk
+- **Felt-labels i skjema-aktig info-rad** (Mottatt, Teknologier-chips, Kommentar i ForespørselSheet): 12px / 500 / dempet
 
 ## Filer som endres
-- `src/components/CompanyCardContent.tsx` — header-erstatning på linje 1014–1018 (+ valgfritt: fjern kort-wrapper på linje 1013).
+- `src/components/ForespørselSheet.tsx` — én konstant-endring (linje 45)
+- `src/components/ContactCardContent.tsx` — to header-erstatninger (linjer 1252–1256, 1675–1680)
 
 ## Utenfor scope
-- Andre seksjoner (Notater, Teknisk DNA-headeren).
-- Selve oppfølgingsradenes innhold/layout.
+- EditMode-skjema-labels i ForespørselSheet (linje 1197) — uppercase er legitimt skjemadesign der
+- Andre uppercase-labels i ContactCardContent som tilhører edit-skjemaer (Tittel, Kategori, Når? — alle inne i `activeForm`-grenen, brukes ved opprettelse av ny aktivitet)
+- Kort-wrapperen rundt Oppfølginger i ContactCardContent — vurderes i egen runde
+- V1-spesifikke flater (`/foresporsler`, `/kontakter/:id`) — får samme typografi som side-effekt av endringene; aksepteres som anbefalt strategi A
 
