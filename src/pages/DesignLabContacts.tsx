@@ -1692,6 +1692,16 @@ export default function DesignLabContacts() {
           return d * a.lastActivityAt.localeCompare(b.lastActivityAt);
         case "priority":
           return compareByPriority(a, b, sort.dir);
+        case "tags": {
+          const aCount = mergeTechnologyTags(a.contactTechnologyTags, a.companyTechnologyTags, a.requestTechnologyTags).length;
+          const bCount = mergeTechnologyTags(b.contactTechnologyTags, b.companyTechnologyTags, b.requestTechnologyTags).length;
+          return d * (aCount - bCount);
+        }
+        case "finn": {
+          const aFinn = a.hasMarkedsradar ? 1 : 0;
+          const bFinn = b.hasMarkedsradar ? 1 : 0;
+          return d * (aFinn - bFinn);
+        }
         default:
           return 0;
       }
