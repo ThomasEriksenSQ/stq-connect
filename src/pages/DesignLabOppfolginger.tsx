@@ -609,7 +609,7 @@ export default function DesignLabOppfolginger() {
                 <div
                   className="grid items-center sticky top-0 z-10"
                   style={{
-                    gridTemplateColumns: "minmax(220px, 0.6fr) 180px 200px 140px 92px 70px",
+                    gridTemplateColumns: "minmax(220px, 1.4fr) minmax(180px, 1.2fr) minmax(220px, 1.4fr) 150px 96px 64px",
                     minHeight: 36,
                     padding: "0 24px",
                     borderBottom: `1px solid ${C.borderLight}`,
@@ -651,7 +651,7 @@ export default function DesignLabOppfolginger() {
                         onClick={() => setSelectedId(model.id)}
                         className="grid w-full items-center text-left transition-colors"
                         style={{
-                          gridTemplateColumns: "minmax(220px, 0.6fr) 180px 200px 140px 92px 70px",
+                          gridTemplateColumns: "minmax(220px, 1.4fr) minmax(180px, 1.2fr) minmax(220px, 1.4fr) 150px 96px 64px",
                           minHeight: 38,
                           padding: "4px 24px",
                           borderBottom: `1px solid ${C.borderLight}`,
