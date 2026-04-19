@@ -107,6 +107,37 @@ export default function DesignLabStacqPrisen() {
     },
   });
 
+  const { data: ansatteListe = [] } = useQuery({
+    queryKey: ["ansatte-names-prisen"],
+    queryFn: async () => {
+      const { data } = await supabase.from("stacq_ansatte").select("id, navn");
+      return data || [];
+    },
+  });
+
+  const { data: cvPortraits = [] } = useQuery({
+    queryKey: ["cv-portraits-prisen"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("cv_documents")
+        .select("ansatt_id, portrait_url")
+        .not("portrait_url", "is", null);
+      return data || [];
+    },
+  });
+
+  const { nameToAnsattId, portraitByAnsattId } = useMemo(() => {
+    const nameMap = new Map<string, number>();
+    (ansatteListe as any[]).forEach((a) => {
+      if (a.id && a.navn) nameMap.set(a.navn.trim().toLowerCase(), a.id);
+    });
+    const portraitMap = new Map<number, string>();
+    (cvPortraits as any[]).forEach((c) => {
+      if (c.ansatt_id && c.portrait_url) portraitMap.set(c.ansatt_id, c.portrait_url);
+    });
+    return { nameToAnsattId: nameMap, portraitByAnsattId: portraitMap };
+  }, [ansatteListe, cvPortraits]);
+
   const companyStatusMap: Record<string, string> = Object.fromEntries(
     allCompanies.map((c: any) => [c.id, c.status])
   );
