@@ -143,12 +143,13 @@ export default function DesignLabForesporsler() {
   const [createOpen, setCreateOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
+  const [cmdOpen, setCmdOpen] = useState(false);
 
 
   // ⌘K shortcut
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); searchRef.current?.focus(); }
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); setCmdOpen(true); }
       if (e.key === "Escape") { setSelectedRowId(null); searchRef.current?.blur(); }
     };
     document.addEventListener("keydown", handler);
