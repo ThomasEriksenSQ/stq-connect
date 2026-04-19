@@ -597,7 +597,7 @@ export function OppdragEditSheet({
             {TYPE_OPTIONS.map((option) => (
               <button
                 key={option.value}
-                onClick={() => setDealType(option.value)}
+                onClick={() => handleDealTypeChange(option.value)}
                 className={cn(
                   CHIP_BASE,
                   dealType === option.value
@@ -610,6 +610,17 @@ export function OppdragEditSheet({
             ))}
           </div>
         </div>
+
+        {dealType === "VIA" && (
+          <div>
+            <p className={cn(LABEL, "mb-1.5")}>Partner</p>
+            <CompanySearchField
+              currentName={partnerSelskapNavn}
+              currentId={partnerSelskapId}
+              onChange={handlePartnerCompanyChange}
+            />
+          </div>
+        )}
 
         <div>
           <label className={LABEL}>Utpris / time</label>
