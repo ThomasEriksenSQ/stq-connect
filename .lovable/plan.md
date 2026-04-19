@@ -1,50 +1,51 @@
 
-## Mål
-Legge til Cmd+K-søkepalett (samme som på Kontakter/Selskaper) på:
-- `/design-lab/foresporsler`
-- `/design-lab/oppfolginger`
 
-Og fjerne det vanlige søkefeltet i headeren på `/design-lab/oppfolginger` siden Cmd+K erstatter det.
+## Mål
+I `/design-lab/kontakter`-tabellen, bytt ut `Wifi`-ikonet i "FINN"-kolonnen med det opplastede Finn.no-logoikonet — i gråtone.
 
 ## Funn
-- `CommandPalette` (`src/components/designlab/CommandPalette.tsx`) er allerede en gjenbrukbar komponent som tar `contacts`, `companies`, og handlere for valg.
-- **Forespørsler**: Har ingen synlig `DesignLabSearchInput` i header — kun en intern `search`-state brukt til filtrering. Cmd+K-handler i dag fokuserer en `searchRef` som ikke finnes i DOM (no-op).
-- **Oppfølginger**: Har et synlig `DesignLabSearchInput` i headeren (linje 397–404) som skal fjernes. Ingen Cmd+K-handler i dag.
-- **Kontakter** og **Selskaper** bruker `CommandPalette` med `cmdOpen`-state og en `keydown`-handler som åpner paletten på ⌘K/Ctrl+K.
+- Ikonet rendres i `src/pages/DesignLabContacts.tsx` linje 2313–2315:
+  ```tsx
+  {c.hasMarkedsradar && (
+    <Wifi style={{ width: 14, height: 14, color: C.info }} />
+  )}
+  ```
+- Vises kun når `hasMarkedsradar === true` (selskapet har Finn-annonse siste 90 dager).
+- Hover-tittel og logikk forblir uendret.
+- Opplastet bilde (`finnnoikon.webp`) er Finn.no-logoen i blått — skal rendres i gråtone.
 
 ## Plan
 
-### 1. `src/pages/DesignLabForesporsler.tsx`
-- Importer `CommandPalette`.
-- Legg til `cmdOpen`-state.
-- Endre eksisterende ⌘K-handler: i stedet for å fokusere `searchRef`, sett `setCmdOpen(true)`.
-- Bygg `contacts`-liste og `companies`-liste fra `rows`:
-  - `contacts`: unike kontakter fra `rows[].contacts` (med firstName, lastName, company = `selskap_navn`, companyId, email, phone, signal fra `signalByContactId`, daysSince fra `mottatt_dato`).
-  - `companies`: unike selskaper basert på `selskap_navn` med `contactCount` = antall forespørsler. Bruker `selskap_id` hvis tilgjengelig, ellers en deterministisk nøkkel basert på navn.
-- Wire opp paletten:
-  - `onSelectContact(id)`: finn første rad med matching `contacts.id` og sett `setSelectedRowId`.
-  - `onFilterByCompany(name)`: sett `search` til selskapsnavnet (filtrerer listen).
-  - `onResetSearch`: nullstill `search`.
-- Render `<CommandPalette ... />` nederst i komponenten (etter `</main>` / før closing `</div>`).
-
-### 2. `src/pages/DesignLabOppfolginger.tsx`
-- Importer `CommandPalette`.
-- Legg til `cmdOpen`-state og en ⌘K `keydown`-handler som åpner paletten.
-- **Fjern** synlig søk-blokk i headeren (linje 397–404: `<div className="flex items-center gap-2"><DesignLabSearchInput ... /></div>`). Behold `search`-state og filterlogikk — paletten bruker den indirekte via callbacks.
-- Bygg `contacts`-liste og `companies`-liste fra `viewModels`/`tasks`:
-  - `contacts`: hent fra `tasks[].contacts` (firstName, lastName, company fra `companies.name`, companyId, email, phone, signal fra `viewModel.signal`, daysSince=0).
-  - `companies`: unike fra `tasks[].contacts.companies` + `tasks[].company_id` med `contactCount`.
-- Wire opp paletten:
-  - `onSelectContact(id)`: finn første task med matching `contact_id` og sett `setSelectedId(taskId)`.
-  - `onFilterByCompany(name)`: sett `search` til navnet (filtrerer listen).
-  - `onResetSearch`: nullstill `search` hvis satt.
-- Render `<CommandPalette ... />` nederst.
+1. **Kopier asset**: `user-uploads://finnnoikon.webp` → `src/assets/finn-icon.webp`.
+2. **Importer asset** i `src/pages/DesignLabContacts.tsx`:
+   ```tsx
+   import finnIcon from "@/assets/finn-icon.webp";
+   ```
+3. **Erstatt `<Wifi … />`** (linje 2313–2315) med et `<img>`:
+   ```tsx
+   {c.hasMarkedsradar && (
+     <img
+       src={finnIcon}
+       alt="Finn"
+       style={{
+         width: 14,
+         height: 14,
+         filter: "grayscale(1) opacity(0.65)",
+         objectFit: "contain",
+       }}
+     />
+   )}
+   ```
+   - `grayscale(1)` gir gråskala.
+   - `opacity(0.65)` gir en dempet, V2-kompatibel tone (matcher `C.textMuted`-vekt).
+4. **Rydd `Wifi`-import** fra lucide-react hvis ingen andre bruker den i filen (sjekkes ved implementering).
 
 ## Filer som endres
-- `src/pages/DesignLabForesporsler.tsx` — Cmd+K-palett wiring.
-- `src/pages/DesignLabOppfolginger.tsx` — Cmd+K-palett wiring + fjerne synlig søkefelt.
+- `src/assets/finn-icon.webp` (ny)
+- `src/pages/DesignLabContacts.tsx` (ikon-bytte + evt. import-opprydding)
 
 ## Utenfor scope
-- Endringer i `CommandPalette`-komponenten.
-- Endringer på andre Design Lab-sider.
-- Endring av filterlogikk eller listevisning utover å koble inn paletten.
+- Endring av kolonne-bredde, header-label eller hover-tittel.
+- Endring av FINN-logikk (`hasMarkedsradar`) eller sortering.
+- Andre Design Lab-sider.
+
