@@ -1892,7 +1892,10 @@ export function CompanyCardContent({
           <ResizablePanel defaultSize={76} minSize={52}>
             <div className="pr-5">{companyDetailSections}</div>
           </ResizablePanel>
-          <ResizableHandle className="group !w-1 !bg-transparent after:hidden hover:!bg-[#DDE0E7] data-[resize-handle-active]:!bg-[#5E6AD2] transition-colors focus-visible:!ring-0 focus-visible:!ring-offset-0">
+          <ResizableHandle className={cn(
+            "group after:hidden hover:!bg-[#DDE0E7] data-[resize-handle-active]:!bg-[#5E6AD2] transition-colors focus-visible:!ring-0 focus-visible:!ring-offset-0",
+            showContactsDivider ? "!w-px !bg-[#E8EAEE]" : "!w-1 !bg-transparent",
+          )}>
             <div
               aria-hidden="true"
               className="pointer-events-none absolute left-1/2 top-1/2 grid -translate-x-1/2 -translate-y-1/2 grid-cols-2 gap-[2px] opacity-0 transition-opacity group-hover:opacity-100"
