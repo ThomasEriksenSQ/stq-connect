@@ -296,13 +296,6 @@ export default function DesignLabForesporsler() {
           </div>
           <div className="flex items-center gap-2">
             <TextSizeControl value={textSize} onChange={setTextSize} />
-            <DesignLabSearchInput
-              ref={searchRef}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Søk forespørsler…"
-              style={{ width: 220 }}
-            />
             <DesignLabPrimaryAction onClick={() => setCreateOpen(true)}>
               + Ny forespørsel
             </DesignLabPrimaryAction>
