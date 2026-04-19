@@ -649,6 +649,20 @@ export function OppdragEditSheet({
           />
         </div>
 
+        <div>
+          <label className={LABEL}>Ekstra kostnad / time</label>
+          <Input
+            type="number"
+            value={ekstraKostnad}
+            onChange={(event) => setEkstraKostnad(event.target.value)}
+            className="mt-1 text-[0.875rem]"
+            placeholder="f.eks. 80"
+          />
+          <p className="mt-1 text-[0.75rem] text-muted-foreground">
+            Trekkes fra STACQ Prisen. Brukes for deal-avtaler, bonus-forpliktelser e.l.
+          </p>
+        </div>
+
         <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
           <p className={LABEL}>Margin (beregnet)</p>
           <p
