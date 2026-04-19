@@ -443,6 +443,7 @@ export function OppdragEditSheet({
       tilKonsulent,
       fornyDato,
       startDato,
+      sluttDato,
       kommentar,
       selskapId,
       selskapNavn,
