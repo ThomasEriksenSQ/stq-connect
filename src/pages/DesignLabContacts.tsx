@@ -1910,9 +1910,6 @@ export default function DesignLabContacts() {
               placeholder="Søk kontakter…"
               style={{ width: 220 }}
             />
-            <DesignLabPrimaryAction>
-              + Ny kontakt
-            </DesignLabPrimaryAction>
           </div>
         </header>
 
