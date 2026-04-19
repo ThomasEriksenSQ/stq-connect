@@ -1,7 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useMemo, useState, useRef, useCallback } from "react";
+import { useMemo, useState, useRef, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
+import { C } from "@/components/designlab/theme";
+import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { addDays, format, isAfter, isBefore, startOfDay } from "date-fns";
 import { nb } from "date-fns/locale";
 import { Plus, X, Search, CalendarIcon, Upload, CheckCircle2, Loader2, Users, User, Mail, Phone, Building2, Clock3, Pencil } from "lucide-react";
