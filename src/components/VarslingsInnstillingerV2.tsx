@@ -324,7 +324,7 @@ export function VarslingsInnstillingerV2() {
   };
 
   return (
-    <div style={{ display: "grid", gap: 16 }} className="xl:grid-cols-3">
+    <>
       {/* Fornyelse */}
       <SectionCard title="Fornyelsesvarsler" description="Ukentlig e-post om oppdrag som nærmer seg slutt.">
         <RecipientList
