@@ -1114,6 +1114,8 @@ export type Database = {
           kunde: string | null
           lopende_30_dager: boolean | null
           oppdrag_id: number | null
+          partner_navn: string | null
+          partner_selskap_id: string | null
           selskap_id: string | null
           slutt_dato: string | null
           start_dato: string | null
@@ -1136,6 +1138,8 @@ export type Database = {
           kunde?: string | null
           lopende_30_dager?: boolean | null
           oppdrag_id?: number | null
+          partner_navn?: string | null
+          partner_selskap_id?: string | null
           selskap_id?: string | null
           slutt_dato?: string | null
           start_dato?: string | null
@@ -1158,6 +1162,8 @@ export type Database = {
           kunde?: string | null
           lopende_30_dager?: boolean | null
           oppdrag_id?: number | null
+          partner_navn?: string | null
+          partner_selskap_id?: string | null
           selskap_id?: string | null
           slutt_dato?: string | null
           start_dato?: string | null
@@ -1179,6 +1185,13 @@ export type Database = {
             columns: ["ekstern_id"]
             isOneToOne: false
             referencedRelation: "external_consultants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stacq_oppdrag_partner_selskap_id_fkey"
+            columns: ["partner_selskap_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
