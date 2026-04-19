@@ -302,12 +302,12 @@ const AnsattDetail = ({
           </div>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <DesignLabSecondaryAction
+          <DesignLabPrimaryAction
             onClick={() => navigate(`/cv-admin/${ansatt.id}`)}
           >
             <ExternalLink className="h-3.5 w-3.5" />
             CV-editor
-          </DesignLabSecondaryAction>
+          </DesignLabPrimaryAction>
           <DesignLabPrimaryAction
             onClick={() => setMatchSheetOpen(true)}
           >
