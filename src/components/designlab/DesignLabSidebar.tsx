@@ -84,7 +84,14 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
         className="flex-1 overflow-y-auto px-1.5 space-y-4 pb-3 pt-1"
         style={{ minHeight: 0, paddingInline: collapsed ? px(6) : px(12), paddingTop: px(4), paddingBottom: px(12) }}
       >
-        <NavGroup items={NAV_MAIN} navigate={navigate} isActive={isActive} collapsed={collapsed} scale={scale} />
+        <div>
+          {!collapsed && (
+            <p className="px-2 pb-1.5 pt-1" style={{ fontSize: px(11), fontWeight: 500, color: C.textFaint, whiteSpace: "nowrap" }}>
+              CRM
+            </p>
+          )}
+          <NavGroup items={NAV_MAIN} navigate={navigate} isActive={isActive} collapsed={collapsed} scale={scale} />
+        </div>
         <div>
           {!collapsed && (
             <p className="px-2 pb-1.5 pt-1" style={{ fontSize: px(11), fontWeight: 500, color: C.textFaint, whiteSpace: "nowrap" }}>
