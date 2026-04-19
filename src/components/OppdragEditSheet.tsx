@@ -28,7 +28,7 @@ import {
 const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
 const CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-[6px] border transition-colors cursor-pointer select-none font-medium";
 
-const STATUS_OPTIONS = ["Aktiv", "Oppstart", "Inaktiv"] as const;
+
 const TYPE_OPTIONS = [
   { value: "DIR", label: "Direkte" },
   { value: "VIA", label: "Via partner" },
@@ -570,26 +570,6 @@ export function OppdragEditSheet({
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-        <div>
-          <p className={LABEL}>Status</p>
-          <div className="flex items-center gap-1.5 mt-1.5">
-            {STATUS_OPTIONS.map((option) => (
-              <button
-                key={option}
-                onClick={() => setStatus(option)}
-                className={cn(
-                  CHIP_BASE,
-                  status === option
-                    ? "bg-foreground text-background border-foreground"
-                    : "border-border text-muted-foreground hover:bg-secondary",
-                )}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </div>
-
         <div>
           <p className={LABEL}>Type</p>
           <div className="flex items-center gap-1.5 mt-1.5">
