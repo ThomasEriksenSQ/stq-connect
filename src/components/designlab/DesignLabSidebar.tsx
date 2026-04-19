@@ -120,16 +120,19 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
         </div>
       </nav>
 
+      {/* Tekststørrelse — over footer-streken, gruppert med nav */}
+      {!collapsed && (
+        <div className="shrink-0" style={{ paddingInline: px(12), paddingBottom: px(8) }}>
+          <TextSizeControlSidebar value={textSize} onChange={setTextSize} />
+        </div>
+      )}
+
       {/* Footer */}
       <div
         className="mt-auto shrink-0 space-y-0.5"
         style={{ borderTop: `1px solid ${C.border}`, padding: `${px(8)}px ${collapsed ? px(6) : px(12)}px` }}
       >
-        {!collapsed && (
-          <div style={{ paddingBottom: px(6) }}>
-            <TextSizeControlSidebar value={textSize} onChange={setTextSize} />
-          </div>
-        )}
+
         <FooterBtn icon={Settings} label="Innstillinger" onClick={() => navigate("/design-lab/innstillinger")} active={isActive("/design-lab/innstillinger")} collapsed={collapsed} scale={scale} />
         <FooterBtn icon={LogOut} label="Logg ut" onClick={signOut} muted collapsed={collapsed} scale={scale} />
 
