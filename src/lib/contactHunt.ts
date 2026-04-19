@@ -33,9 +33,6 @@ export interface HuntAvailabilityMeta {
   isVisible: boolean;
 }
 
-const AVAILABILITY_BADGE_WINDOW_DAYS = 60;
-const AVAILABILITY_UPCOMING_WINDOW_DAYS = 90;
-
 function toDateOnly(dateStr: string) {
   const date = new Date(dateStr);
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -58,7 +55,6 @@ export function getConsultantAvailabilityMeta(dateStr?: string | null): HuntAvai
   const availableFrom = toDateOnly(dateStr);
   const today = toDateOnly(new Date().toISOString());
   const diff = differenceInCalendarDays(availableFrom, today);
-  const daysSinceAvailable = differenceInCalendarDays(today, availableFrom);
 
   if (diff > 0) {
     const tone: HuntAvailabilityMeta["tone"] = diff <= 30 ? "soon" : "later";
@@ -66,20 +62,11 @@ export function getConsultantAvailabilityMeta(dateStr?: string | null): HuntAvai
       daysUntil: diff,
       label: `Tilgjengelig ${format(availableFrom, "d. MMM", { locale: nb })}`,
       tone,
-      isVisible: diff <= AVAILABILITY_UPCOMING_WINDOW_DAYS,
+      isVisible: true,
     };
   }
 
-  if (daysSinceAvailable > AVAILABILITY_BADGE_WINDOW_DAYS) {
-    return {
-      daysUntil: diff,
-      label: "Tilgjengelighet utløpt",
-      tone: "unknown",
-      isVisible: false,
-    };
-  }
-
-  if (diff <= 0) {
+  if (diff === 0) {
     return {
       daysUntil: 0,
       label: "Tilgjengelig nå",
@@ -90,9 +77,9 @@ export function getConsultantAvailabilityMeta(dateStr?: string | null): HuntAvai
 
   return {
     daysUntil: diff,
-    label: "Tilgjengelighetsdato ukjent",
+    label: "Tilgjengelighet utløpt",
     tone: "unknown",
-    isVisible: false,
+    isVisible: true,
   };
 }
 
