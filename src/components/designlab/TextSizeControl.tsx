@@ -85,28 +85,21 @@ export function TextSizeControl({ value, onChange }: Props) {
 
 /**
  * Sidebar variant — Linear-stil segmented control.
- * T-ikon venstre, segmentert kontroll høyrejustert.
+ * Fyller hele sidebar-bredden med likebrede segmenter.
  */
 export function TextSizeControlSidebar({ value, onChange }: Props) {
   return (
     <div
       className="flex items-center"
-      style={{ paddingInline: 10, height: 32, gap: 10 }}
+      style={{ paddingInline: 10, height: 32 }}
       title="Tekststørrelse"
     >
-      <Type
-        size={12}
-        color={C.textFaint}
-        strokeWidth={1.75}
-        aria-hidden="true"
-        style={{ flexShrink: 0 }}
-      />
       <div
         role="group"
         aria-label="Tekststørrelse"
         className="flex items-center"
         style={{
-          marginLeft: "auto",
+          width: "100%",
           height: 24,
           padding: 2,
           borderRadius: 6,
@@ -126,9 +119,9 @@ export function TextSizeControlSidebar({ value, onChange }: Props) {
               className="flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dl-seg-focus)]"
               style={{
                 ["--dl-seg-focus" as string]: C.borderFocus,
+                flex: 1,
                 height: 20,
-                minWidth: 26,
-                paddingInline: 6,
+                paddingInline: 4,
                 fontSize: 11,
                 fontWeight: active ? 500 : 400,
                 color: active ? C.text : C.textMuted,
