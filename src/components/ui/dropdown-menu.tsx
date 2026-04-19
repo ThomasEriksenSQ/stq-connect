@@ -2,109 +2,24 @@ import * as React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { Check, ChevronRight, Circle } from "lucide-react";
 
-import type { TextSize } from "@/components/designlab/TextSizeControl";
+import { scaleTextMetric, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { cn } from "@/lib/utils";
 
-const MENU_TYPOGRAPHY = {
-  S: {
-    itemFontSize: 11,
-    labelFontSize: 10,
-    shortcutFontSize: 10,
-    itemHeight: 30,
-    itemPaddingX: 9,
-    itemGap: 7,
-    menuPadding: 4,
-    labelPaddingY: 4,
-    iconSize: 13,
-    indicatorBox: 13,
-    indicatorLeft: 8,
-  },
-  M: {
-    itemFontSize: 12,
-    labelFontSize: 11,
-    shortcutFontSize: 10,
-    itemHeight: 32,
-    itemPaddingX: 10,
-    itemGap: 8,
-    menuPadding: 4,
-    labelPaddingY: 4,
-    iconSize: 14,
-    indicatorBox: 14,
-    indicatorLeft: 8,
-  },
-  L: {
-    itemFontSize: 13,
-    labelFontSize: 12,
-    shortcutFontSize: 11,
-    itemHeight: 34,
-    itemPaddingX: 11,
-    itemGap: 8,
-    menuPadding: 5,
-    labelPaddingY: 5,
-    iconSize: 15,
-    indicatorBox: 15,
-    indicatorLeft: 9,
-  },
-  XL: {
-    itemFontSize: 14,
-    labelFontSize: 13,
-    shortcutFontSize: 12,
-    itemHeight: 36,
-    itemPaddingX: 12,
-    itemGap: 9,
-    menuPadding: 5,
-    labelPaddingY: 5,
-    iconSize: 16,
-    indicatorBox: 16,
-    indicatorLeft: 10,
-  },
-  XXL: {
-    itemFontSize: 15,
-    labelFontSize: 14,
-    shortcutFontSize: 13,
-    itemHeight: 38,
-    itemPaddingX: 13,
-    itemGap: 10,
-    menuPadding: 6,
-    labelPaddingY: 6,
-    iconSize: 17,
-    indicatorBox: 17,
-    indicatorLeft: 11,
-  },
-} satisfies Record<
-  TextSize,
-  {
-    itemFontSize: number;
-    labelFontSize: number;
-    shortcutFontSize: number;
-    itemHeight: number;
-    itemPaddingX: number;
-    itemGap: number;
-    menuPadding: number;
-    labelPaddingY: number;
-    iconSize: number;
-    indicatorBox: number;
-    indicatorLeft: number;
-  }
->;
-
 function getMenuScaleVars(textSize: TextSize): React.CSSProperties {
-  const metrics = MENU_TYPOGRAPHY[textSize];
-
   return {
-    ["--dl-menu-font-size" as string]: `${metrics.itemFontSize}px`,
-    ["--dl-menu-label-font-size" as string]: `${metrics.labelFontSize}px`,
-    ["--dl-menu-shortcut-font-size" as string]: `${metrics.shortcutFontSize}px`,
-    ["--dl-menu-item-height" as string]: `${metrics.itemHeight}px`,
-    ["--dl-menu-item-padding-x" as string]: `${metrics.itemPaddingX}px`,
-    ["--dl-menu-item-gap" as string]: `${metrics.itemGap}px`,
-    ["--dl-menu-item-leading-padding" as string]: `${metrics.indicatorLeft + metrics.indicatorBox + 7}px`,
-    ["--dl-menu-menu-padding" as string]: `${metrics.menuPadding}px`,
-    ["--dl-menu-label-padding-y" as string]: `${metrics.labelPaddingY}px`,
-    ["--dl-menu-icon-size" as string]: `${metrics.iconSize}px`,
-    ["--dl-menu-indicator-size" as string]: `${metrics.indicatorBox}px`,
-    ["--dl-menu-indicator-left" as string]: `${metrics.indicatorLeft}px`,
+    ["--dl-menu-font-size" as string]: `${scaleTextMetric(12, textSize)}px`,
+    ["--dl-menu-label-font-size" as string]: `${scaleTextMetric(11, textSize)}px`,
+    ["--dl-menu-shortcut-font-size" as string]: `${scaleTextMetric(10, textSize)}px`,
+    ["--dl-menu-item-height" as string]: `${scaleTextMetric(32, textSize)}px`,
+    ["--dl-menu-item-padding-x" as string]: `${scaleTextMetric(10, textSize)}px`,
+    ["--dl-menu-item-gap" as string]: `${scaleTextMetric(8, textSize)}px`,
+    ["--dl-menu-item-leading-padding" as string]: `${scaleTextMetric(29, textSize)}px`,
+    ["--dl-menu-menu-padding" as string]: `${scaleTextMetric(4, textSize)}px`,
+    ["--dl-menu-label-padding-y" as string]: `${scaleTextMetric(4, textSize)}px`,
+    ["--dl-menu-icon-size" as string]: `${scaleTextMetric(14, textSize)}px`,
+    ["--dl-menu-indicator-size" as string]: `${scaleTextMetric(14, textSize)}px`,
+    ["--dl-menu-indicator-left" as string]: `${scaleTextMetric(8, textSize)}px`,
   };
 }
 

@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { C } from "@/components/designlab/theme";
 import { usePersistentState } from "@/hooks/usePersistentState";
-import { SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
+import { SCALE_MAP, getDesignLabTextSizeVars, type TextSize } from "@/components/designlab/TextSizeControl";
 
 /* ═══ NAV ITEMS ═══ */
 
@@ -50,6 +50,7 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
     <aside
       className="flex h-screen min-h-0 flex-col shrink-0 overflow-hidden"
       style={{
+        ...getDesignLabTextSizeVars(textSize),
         width: collapsed ? 48 : 220,
         transition: "width 200ms ease",
         borderRight: `1px solid ${C.borderLight}`,

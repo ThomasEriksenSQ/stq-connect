@@ -16,7 +16,7 @@ import {
   type FollowUpTaskRecord,
   type FollowUpViewModel,
 } from "@/lib/followUpViewModel";
-import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
+import { TextSizeControl, getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { C } from "@/components/designlab/theme";
 import {
@@ -375,7 +375,7 @@ export default function DesignLabOppfolginger() {
     >
       <DesignLabSidebar navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/oppfolginger" />
 
-      <main className="flex-1 flex min-w-0 flex-col overflow-hidden" style={{ zoom: SCALE_MAP[textSize], background: C.appBg }}>
+      <main className="flex-1 flex min-w-0 flex-col overflow-hidden" style={{ ...getDesignLabTextSizeStyle(textSize), background: C.appBg }}>
         <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
           <div className="flex items-baseline gap-2.5">
             <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Oppfølginger</h1>

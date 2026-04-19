@@ -5,7 +5,7 @@ import { Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
-import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
+import { TextSizeControl, getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { C } from "@/components/designlab/theme";
 import { DesignLabSearchInput, DesignLabStaticTag } from "@/components/designlab/controls";
 import {
@@ -75,7 +75,7 @@ export default function DesignLabStyleguide() {
     >
       <DesignLabSidebar navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/stilark" />
 
-      <main className="flex-1 min-w-0 overflow-y-auto" style={{ zoom: SCALE_MAP[textSize], background: C.appBg }}>
+      <main className="flex-1 min-w-0 overflow-y-auto" style={{ ...getDesignLabTextSizeStyle(textSize), background: C.appBg }}>
         <header
           className="flex items-center justify-between px-6"
           style={{ height: 40, borderBottom: `1px solid ${C.border}` }}

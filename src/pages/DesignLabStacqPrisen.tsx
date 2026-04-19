@@ -12,7 +12,7 @@ import {
   Tooltip as ReTooltip, ResponsiveContainer, ReferenceLine,
 } from "recharts";
 import { Input } from "@/components/ui/input";
-import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
+import { TextSizeControl, getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { C } from "@/components/designlab/theme";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
@@ -176,7 +176,7 @@ export default function DesignLabStacqPrisen() {
       <DesignLabSidebar navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/stacq-prisen" />
 
       {/* ═══ MAIN ═══ */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ zoom: SCALE_MAP[textSize], background: C.appBg }}>
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ ...getDesignLabTextSizeStyle(textSize), background: C.appBg }}>
         {/* Header */}
         <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
           <div className="flex items-baseline gap-2.5">

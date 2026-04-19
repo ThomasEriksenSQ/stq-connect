@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { usePersistentState } from "@/hooks/usePersistentState";
 
-import { SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
+import { SCALE_MAP, getDesignLabTextSizeVars, type TextSize } from "@/components/designlab/TextSizeControl";
 import {
   DesignLabFieldGrid,
   DesignLabFieldLabel,
@@ -99,6 +99,7 @@ export function useDesignLabModalScale(): ModalScale {
 
 function getDesignLabModalScaleVars(scale: ModalScale): CSSProperties {
   return {
+    ...getDesignLabTextSizeVars(scale.textSize),
     ["--dl-modal-row-gap" as string]: `${scale.rowGap}px`,
     ["--dl-modal-section-gap" as string]: `${scale.sectionGap}px`,
     ["--dl-modal-label-gap" as string]: `${scale.labelGap}px`,

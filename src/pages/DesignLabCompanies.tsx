@@ -17,7 +17,7 @@ import { C } from "@/components/designlab/theme";
 import { crmQueryKeys } from "@/lib/queryKeys";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { CommandPalette } from "@/components/designlab/CommandPalette";
-import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
+import { TextSizeControl, getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { BrregSearch, lookupByOrgNr } from "@/components/BrregSearch";
 import { toast } from "sonner";
@@ -552,7 +552,7 @@ export default function DesignLabCompanies() {
       <DesignLabSidebar navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/selskaper" />
 
       {/* ═══ MAIN ═══ */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ zoom: SCALE_MAP[textSize], background: C.appBg }}>
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ ...getDesignLabTextSizeStyle(textSize), background: C.appBg }}>
         {/* Header bar */}
         <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
           <div className="flex items-baseline gap-2.5">

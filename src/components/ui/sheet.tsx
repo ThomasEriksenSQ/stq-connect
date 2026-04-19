@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
 import * as React from "react";
 
-import { SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
+import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { cn } from "@/lib/utils";
 
@@ -65,7 +65,7 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
         <SheetPrimitive.Content
           ref={ref}
           className={cn(sheetVariants({ side }), className)}
-          style={side === "right" ? { zoom: SCALE_MAP[textSize], ...style } : style}
+          style={side === "right" ? { ...getDesignLabTextSizeStyle(textSize), ...style } : style}
           {...props}
         >
           {children}

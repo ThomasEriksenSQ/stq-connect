@@ -10,7 +10,7 @@ import { formatMonths, getInitials } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
-import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
+import { TextSizeControl, getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { C } from "@/components/designlab/theme";
 import { DesignLabSearchInput, DesignLabIconButton } from "@/components/designlab/controls";
 import {
@@ -347,7 +347,7 @@ export default function DesignLabKonsulenterAnsatte() {
     >
       <DesignLabSidebar navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/ansatte" />
 
-      <main className="flex-1 flex min-w-0 flex-col overflow-hidden" style={{ zoom: SCALE_MAP[textSize], background: C.appBg }}>
+      <main className="flex-1 flex min-w-0 flex-col overflow-hidden" style={{ ...getDesignLabTextSizeStyle(textSize), background: C.appBg }}>
         <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
           <div className="flex items-baseline gap-2.5">
             <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Ansatte</h1>

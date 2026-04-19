@@ -28,7 +28,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { ContactCardContent } from "@/components/ContactCardContent";
 import { RenderErrorBoundary } from "@/components/RenderErrorBoundary";
-import { TextSizeControl, SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
+import { TextSizeControl, getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { C } from "@/components/designlab/theme";
 import { CommandPalette } from "@/components/designlab/CommandPalette";
 import { usePersistentState } from "@/hooks/usePersistentState";
@@ -1889,7 +1889,7 @@ export default function DesignLabContacts() {
       <DesignLabSidebar navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/kontakter" />
 
       {/* ═══ MAIN ═══ */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ zoom: SCALE_MAP[textSize], background: C.appBg }}>
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ ...getDesignLabTextSizeStyle(textSize), background: C.appBg }}>
         {/* Header bar */}
         <header
           className="flex items-center justify-between px-6 shrink-0"

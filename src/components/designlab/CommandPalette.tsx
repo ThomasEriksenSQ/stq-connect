@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Search, Users, Building2 } from "lucide-react";
 
 import { C } from "@/components/designlab/theme";
-import { SCALE_MAP, type TextSize } from "@/components/designlab/TextSizeControl";
+import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES
@@ -247,7 +247,7 @@ export function CommandPalette({
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
-          zoom: SCALE_MAP[textSize],
+          ...getDesignLabTextSizeStyle(textSize),
         }}
         onKeyDown={handleKeyDown}
       >
