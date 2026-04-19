@@ -103,12 +103,12 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
           <div className="min-w-[900px]">
             {/* Header */}
             <div className="flex border-b border-border bg-background sticky top-0 z-20">
-              <div className="w-[190px] shrink-0 px-3 py-2 sticky left-0 z-30 bg-background" />
+              <div className="w-[190px] shrink-0 px-3 py-1 sticky left-0 z-30 bg-background" />
               {MONTHS_SHORT.map((m, i) => (
                 <div
                   key={m}
                   className={cn(
-                    "flex-1 min-w-[56px] text-center py-2 text-[0.6875rem] font-medium uppercase tracking-[0.06em]",
+                    "flex-1 min-w-[56px] text-center py-1 text-[0.6875rem] font-medium uppercase tracking-[0.06em]",
                     i === currentMonth
                       ? "text-primary font-bold"
                       : "text-muted-foreground"
@@ -129,8 +129,8 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
                 const ansattId = r.erAnsatt ? nameToAnsattId.get(r.fullName.trim().toLowerCase()) : undefined;
                 const portrait = ansattId ? portraitByAnsattId.get(ansattId) : undefined;
                 return (
-                  <div key={r.id} className="flex items-center hover:bg-muted/30 transition-colors">
-                    <div className="w-[190px] shrink-0 px-3 py-2.5 sticky left-0 z-10 bg-card flex items-center gap-2">
+                  <div key={r.id} className="flex items-center min-h-[38px] hover:bg-muted/30 transition-colors">
+                    <div className="w-[190px] shrink-0 px-3 py-1 sticky left-0 z-10 bg-card flex items-center gap-2">
                       {(() => {
                         if (r.erAnsatt && portrait) {
                           return <img src={portrait} alt={r.fullName} className="w-6 h-6 rounded-full object-cover border border-border flex-shrink-0" />;
@@ -156,7 +156,7 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
                       <div
                         key={i}
                         className={cn(
-                          "flex-1 min-w-[56px] flex items-center justify-center py-2.5",
+                          "flex-1 min-w-[56px] flex items-center justify-center py-1",
                           i === currentMonth && "bg-primary/[0.03]"
                         )}
                       >
