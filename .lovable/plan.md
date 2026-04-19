@@ -1,34 +1,80 @@
 
 
-## Risikovurdering
+## Vurdering
 
-Ja — dette er en **lav-risk plan**. Her er hvorfor:
+E-poster i "Aktiviteter" på kontaktkortet kollapser når brukeren prøver å markere tekst inne i selve e-postinnholdet. Dagens `EmailRowBody` wrapper hele raden (inkludert det utvidede e-postinnholdet) i en `role="button"` med toggle-onClick. `useClickWithoutSelection` hjelper for enkle drag-select tilfeller, men feiler ved:
 
-### Hva som gjør den trygg
+- **Trippelklikk** for å markere et avsnitt — registreres som klikk uten bevegelse, kollapser e-posten.
+- **Dobbeltklikk** for å markere ord — kan kollapse på første klikk avhengig av timing.
+- **`cursor: pointer`** på hele området — signaliserer "knapp", ikke "tekst", så brukeren tør ikke prøve å markere.
+- **Drag-select som starter og slutter nær samme posisjon** (f.eks. liten markering) — havner under terskelen og teller som klikk.
 
-1. **Ingen logikkendring** — alle eksisterende `onClick`-callbacks beholdes uendret. Hooken er en ren gatekeeper som bestemmer *når* klikket teller, ikke *hva* som skjer.
+Dette er en strukturell svakhet, ikke et terskelproblem. Riktig grep er å gjøre **kun toppen av e-posten klikkbar for toggle**, og la innholdsområdet være ren tekst.
 
-2. **`<button>` → `<span role="button" tabIndex={0}>`** er semantisk likeverdig for skjermlesere så lenge vi legger på `onKeyDown` for Enter/Space. Dette er et veletablert ARIA-mønster.
+## Designprinsipp (Gmail/Outlook-mønster)
 
-3. **Isolert scope** — kun 4 filer, og 3 av dem er presentasjonskomponenter uten datamutasjoner. Hooken er ny og brukes bare på de stedene vi eksplisitt kobler den inn.
+I etablerte e-postklienter er regelen at **selve e-postinnholdet aldri er klikkbart for å kollapse tråden**. Toggle skjer kun fra header-raden (emne + chevron). Dette er det forventede mønsteret — brukere prøver ikke å klikke i innholdet for å kollapse.
 
-4. **Ingen endring i mailto/tel-lenker, sletteknapper, lagre-knapper, eller skjema-submit** — vi rører kun visningstekst-wrappers.
+## Plan
 
-5. **Reversibel** — endringen er mekanisk og lett å rulle tilbake per komponent hvis noe oppfører seg uventet.
+### `src/components/ContactCardContent.tsx`
 
-### Hvor risiko finnes (lav, men reell)
+**1. Splitt `EmailRow` i to klikk-soner:**
 
-- **Aktivitetsrad og e-postrad** har bredere klikk-overflate. Hvis brukeren markerer tekst og slipper musen *utenfor* den opprinnelige raden, må vi sjekke selection-state korrekt slik at vi ikke ved et uhell *aldri* åpner edit/expand. Hooken håndterer dette ved å nullstille på `mousedown`.
-- **Tastaturbrukere** mister `<button>`s innebygde Enter/Space-håndtering. Mitigasjon: eksplisitt `onKeyDown` på alle konverterte elementer.
-- **Fokusring** på `<span role="button">` arves ikke automatisk fra `<button>`. Mitigasjon: behold eksisterende Tailwind-klasser (de fleste bruker uansett `focus-visible:ring`-pattern via globale stiler) og verifiser visuelt.
+- **Header-sone (klikkbar toggle):** emne + chevron + avsender→mottaker + dato/badge — beholder `EmailRowBody`-wrapping. Dette er det visuelle "fold-out"-elementet og det eneste som toggle på klikk.
+- **Innholds-sone (ren tekst):** `latest`-tekst, "Vis hele tråden"-knapp, og `rest`-tekst når utvidet — flyttes UT av `EmailRowBody`. Ingen `onClick`, ingen `role="button"`, ingen `cursor-pointer`. Kun ren tekst med standard tekstmarkør.
 
-### Hva som *ikke* berøres
+**2. Layout-justering:**
 
-- Ingen DB-kall, ingen mutations, ingen RLS, ingen edge functions.
-- Ingen V1/V2-tokens eller theme-filer.
-- Ingen andre kort (Oppdrag, Forespørsel, Ansatt) — kan migreres senere ved behov.
+Dagens flex-layout (`flex items-start gap-3`) med dato/badge på høyre side må bevares for header-raden. Det utvidede innholdet plasseres som en separat blokk *under* header-raden, ikke inne i `flex-1`-kolonnen. Dette gir samme visuelle resultat (innhold under emne/avsender) men frigjør tekstområdet fra klikk-soneren.
 
-### Konklusjon
+Strukturen blir:
+```
+<div className="relative group">
+  <Mail-icon spine />
+  <EmailRowBody onToggle={toggleExpanded}>
+    [emne + chevron]
+    [fra → til]
+    [preview hvis ikke utvidet]      ← preview kan også være i header-sone (kort, line-clamp-2)
+    [dato + E-post badge på høyre]
+  </EmailRowBody>
+  {expanded && (
+    <div className="mt-2 border-t border-border pt-2">
+      [latest tekst – ren <p>, ingen klikk]
+      [Vis hele tråden-knapp]
+      [rest hvis vist]
+    </div>
+  )}
+</div>
+```
 
-Lav risiko, høy verdi. Den eneste måten dette kan brekke noe på er hvis terskelen for "drag vs klikk" (4px) er feil kalibrert — i så fall kan vi justere til 6–8px uten arkitekturendring. Anbefaler å gå videre med planen som den står.
+**3. Cursor-fix på header-sonen:**
+
+Behold `cursor-pointer` på header-sonen (`EmailRowBody`) siden den faktisk ER en toggle. Innholdsområdet får default tekstmarkør (`cursor-text` implisitt).
+
+**4. Behold "Vis hele tråden"-knapp:**
+
+`DesignLabActionButton` med `e.stopPropagation()` er allerede der — flyttingen ut av `EmailRowBody` gjør stopPropagation overflødig, men beholder den for trygghet.
+
+**5. Tastatur-tilgjengelighet:**
+
+`EmailRowBody` har allerede `onKeyDown={activateOnEnterOrSpace}` og `tabIndex={0}` — uendret. Toggle via Enter/Space på header fungerer som før.
+
+## Hvorfor dette er lav-risk
+
+- **Ingen logikkendring:** `setExpanded`, `splitEmailThread`, `showThread` — alt uendret.
+- **Ingen DB/state-endring:** kun JSX-strukturell omorganisering.
+- **Visuelt identisk:** brukeren ser samme layout, men kan nå markere tekst i innholdet uten at det kollapser.
+- **Isolert til én komponent (`EmailRow`):** ingen påvirkning på andre rader, andre kort, eller selskapskortet (selskapskortet har ingen e-postaktiviteter på samme måte — verifisert ved at `EmailRow` kun finnes i `ContactCardContent`).
+
+## Filer som endres
+
+- `src/components/ContactCardContent.tsx` — kun `EmailRow`-komponenten (linje 2590–2666)
+
+## Utenfor scope
+
+- `EmailRowBody`-wrapper (gjenbrukes uendret for header-sonen)
+- `useClickWithoutSelection`-hooken (uendret — fortsatt riktig for header-toggle)
+- Selskapskortet, aktivitetsrader, oppfølginger
+- Andre sheets (Oppdrag, Forespørsel, Ansatt)
 
