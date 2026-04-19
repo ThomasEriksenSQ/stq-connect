@@ -14,7 +14,7 @@ import { computeOppdragStatus, parseOppdragDate } from "@/lib/oppdragForm";
 
 type Filter = "Alle" | "Aktiv" | "Oppstart" | "Inaktiv";
 const TIMER_PER_DAG = 7.5;
-const OPPDRAG_GRID_TEMPLATE = "minmax(0,1.3fr) minmax(0,1.2fr) minmax(0,1fr) 80px 90px 96px 72px 100px 90px";
+const OPPDRAG_GRID_TEMPLATE = "minmax(0,1.4fr) minmax(0,1.5fr) minmax(0,1.3fr) 104px 96px 96px 80px 96px 84px";
 
 interface KonsulenterOppdragProps {
   hidePageIntro?: boolean;
