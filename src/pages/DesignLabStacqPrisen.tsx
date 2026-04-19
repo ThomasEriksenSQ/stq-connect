@@ -330,7 +330,7 @@ export default function DesignLabStacqPrisen() {
                   <div
                     className="grid items-center"
                     style={{
-                      gridTemplateColumns: "minmax(0,2fr) minmax(0,1.5fr) 80px 80px 80px 100px 56px 80px",
+                      gridTemplateColumns: "minmax(0,1.6fr) minmax(0,1.4fr) 100px 88px 80px 112px 64px 84px",
                       minHeight: 38, paddingInline: 16,
                       background: C.surfaceAlt, fontWeight: 600,
                     }}
@@ -340,8 +340,8 @@ export default function DesignLabStacqPrisen() {
                       <span style={{ fontSize: 13, color: C.text }}>TOTAL</span>
                     </div>
                     <span /><span /><span /><span />
-                    <span style={{ fontSize: 13, color: C.accent }}>kr {formatKr(Math.round(stacqTotalPerTime + oppstartTotalPerTime))}/t</span>
-                    <span style={{ fontSize: 13, textAlign: "right", color: C.textMuted }}>{Math.round(totalPct)}%</span>
+                    <span style={{ fontSize: 13, color: C.accent, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>kr {formatKr(Math.round(stacqTotalPerTime + oppstartTotalPerTime))}/t</span>
+                    <span style={{ fontSize: 13, textAlign: "right", color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>{Math.round(totalPct)}%</span>
                     <span />
                   </div>
                 </div>
