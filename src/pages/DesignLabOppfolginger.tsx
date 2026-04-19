@@ -559,18 +559,6 @@ export default function DesignLabOppfolginger() {
               onChange={(value) => setViewFilter(value)}
             />
             <div className="flex items-center gap-3">
-              {(ownerFilter !== "Alle" || viewFilter !== "Alle") && (
-                <DesignLabGhostAction
-                  type="button"
-                  onClick={() => {
-                    setOwnerFilter("Alle");
-                    setViewFilter("Alle");
-                  }}
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Nullstill
-                </DesignLabGhostAction>
-              )}
               <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500, whiteSpace: "nowrap" }}>
                 {stats.mineCount} mine · {stats.overdueCount} forfalte · {stats.unassignedCount} uten eier
               </span>
