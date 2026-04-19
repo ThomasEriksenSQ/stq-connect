@@ -606,7 +606,7 @@ export default function DesignLabCompanies() {
                 <div
                   className="sticky top-0 z-10"
                   style={{
-                    background: C.appBg,
+                    background: C.surfaceAlt,
                     borderBottom: `1px solid ${C.border}`,
                   }}
                 >
