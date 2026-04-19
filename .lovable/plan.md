@@ -2,34 +2,36 @@
 
 ## Funn
 
-`KonsulenterOppdrag.tsx` har én tabell-grid (`OPPDRAG_GRID_TEMPLATE`) som rendres to ganger: i `embeddedSplit`-modus (linje ~398) og standalone-modus (linje ~585). Header-strengen `["Konsulent", "Kunde", "Type", "Utpris", "Margin", "Margin %", "Forny", "Status"]` finnes begge steder. `partner_navn` ligger allerede på rad-objektet fra `select("*")` etter forrige iterasjon.
+I `src/pages/KonsulenterOppdrag.tsx` rendres "Type"-kolonnen som en pille basert på `companyStatusMap[o.selskap_id]` (Sluttkunde/Partner/Potensiell/—). Det er feil — det er selskapets rolle, ikke oppdragets type. Riktig kilde er `o.deal_type` (`"DIR"` → "Direkte", `"VIA"` → "Via partner").
 
-Mobile cards (linje 295) er kompakte og vises kun under `md` — der utelater vi partner for å holde det rent (uendret).
+Feilen finnes på tre steder:
+- Mobile cards (linje ~298–304): `kundeType` settes fra `companyStatusMap`.
+- Embedded split-tabell (linje ~459–489): pille fra `companyStatusMap`.
+- Standalone-tabell (linje ~645–672): samme pille fra `companyStatusMap`.
+
+Header-rekkefølgen er allerede `… Sluttkunde, Via partner, Type, Utpris …`, så kolonnen Type er den fjerde — den skal vise oppdragets formidlingstype.
 
 ## Plan
 
-### 1. `src/pages/KonsulenterOppdrag.tsx`
+### `src/pages/KonsulenterOppdrag.tsx`
 
-**Grid-template** — utvid med én kolonne for partner rett etter Kunde:
+**1. Embedded split-tabell (linje ~459–489)** — erstatt hele `<div>{(() => { const cs = … })()}</div>`-blokken med en enkel pille basert på `o.deal_type`:
+- `o.deal_type === "VIA"` → "Via partner" (lys ravgul: `bg-amber-100 text-amber-700 border-amber-200`)
+- ellers (default `"DIR"`) → "Direkte" (lys grå-blå nøytral: `bg-slate-100 text-slate-700 border-slate-200`)
+
+Stil følger eksisterende pille-mønster: `inline-flex items-center rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold`.
+
+**2. Standalone-tabell (linje ~645–672)** — identisk endring som over.
+
+**3. Mobile cards (linje ~298–304)** — bytt `kundeType`-utregningen til:
 ```
-const OPPDRAG_GRID_TEMPLATE =
-  "minmax(0,1.3fr) minmax(0,1.2fr) minmax(0,1fr) 80px 90px 96px 72px 100px 90px";
+const kundeType = o.deal_type === "VIA" ? "Via partner" : "Direkte";
 ```
+Beholder samme visningssted i kortet (under konsulent/sluttkunde-meta).
 
-**Header-array** (begge steder) — sett inn `"Via partner"` etter `"Kunde"`:
-```
-["Konsulent", "Kunde", "Via partner", "Type", "Utpris", "Margin", "Margin %", "Forny", "Status"]
-```
-
-**Cell** (begge tabell-render-blokker, embedded + standalone) — ny celle rett etter Kunde-cellen:
-- Hvis `o.deal_type === "VIA"` og `o.partner_navn` finnes: vis navn som `text-[0.8125rem] text-muted-foreground truncate`.
-- Ellers: vis dempet `—` (`text-muted-foreground`).
-
-Ingen visning på mobile cards (kompakt visning forblir uendret).
-
-### 2. Utenfor scope
-- Ingen filter/gruppering på partner.
-- Ingen endring i `OppdragEditSheet` eller `oppdragForm`.
-- Ingen DB-endring (kolonnene ble lagt inn forrige iterasjon).
-- Ingen endring i V1-flater utenfor denne siden.
+### Utenfor scope
+- Ingen endring i header-rekkefølge eller grid-template (kolonnene er allerede riktige).
+- Ingen endring i "Sluttkunde"-kolonnen eller "Via partner"-kolonnen.
+- Ingen DB- eller `oppdragForm`-endring.
+- Ingen V1-endringer utenfor denne filen.
 
