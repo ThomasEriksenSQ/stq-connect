@@ -1,46 +1,28 @@
 
+
 ## Mål
-Bytte den lilla aksentfargen `#5E6AD2` til den blå `#2563EB` (samme blå som vises på `/design-lab/stilark`-knappene) — **kun på knapper**. Ikke endre fokus-ringer, resize-håndtak, prikker eller avhukingsbokser.
+Sett radhøyden i **Forespørsler-tabellen** lik den i **Kontakter-tabellen** når raden er "tom" (ingen eller én konsulent), men la flere konsulenter fortsatt utvide raden naturlig.
 
 ## Funn
-"Stilark"-knappen får sin blåfarge fra `DesignLabActionButton` (variant `primary`) i `src/components/designlab/controls.tsx`:
-- background `#2563EB`, hover `#1D4ED8`.
+- **Kontakter-rad** (`DesignLabContacts.tsx` linje 2273–2279): `items-center`, `minHeight: 38`, ingen vertikal padding (radens innhold er ett-linjet og har derfor en effektiv høyde på ca. 38 px).
+- **Forespørsler-rad** (`DesignLabForesporsler.tsx` linje 538–551): `items-start`, `minHeight: 52`, `paddingTop: 8`, `paddingBottom: 8` (= 16 px ekstra vertikalt). Når det ikke finnes konsulenter blir raden likevel ~52 px høy, klart høyere enn 38 px.
+- Konsulent-cellene inni raden bruker `minHeight: 28` per konsulent (linje 615, 659), så raden vokser automatisk når det legges til flere konsulenter — den logikken skal beholdes.
 
-Lilla knapper i CRMet finnes to steder:
+## Endring (én sted)
+**`src/pages/DesignLabForesporsler.tsx`** linje 543, 546, 547:
+- `minHeight: 52` → `minHeight: 38` (matcher Kontakter)
+- `paddingTop: 8` → `paddingTop: 4`
+- `paddingBottom: 8` → `paddingBottom: 4`
 
-**1. `src/components/design/DesignVersionToggle.tsx` (linje 24–28)**
-Den faste V1/V2-veksleknappen nederst til høyre:
-```
-bg-[#5E6AD2]  hover:bg-[#4F5AB8]  focus:ring-[#5E6AD2]
-```
+Reduserer ledig vertikalrom slik at en tom rad lander på ~38 px (samme som Kontakter), men siden hver konsulent-celle har `minHeight: 28` med `gap` mellom seg, vil rader med 2+ konsulenter automatisk vokse — uendret oppførsel der.
 
-**2. `src/index.css` linje 273–280**
-CSS-regel som overstyrer V1-primærknapper til lilla når de rendres inne i en `.dl-v8-theme`-container (gjelder "Logg samtale", "Logg møtereferat", "Ny kontakt"-knapper inne i V2-paneler/sheets):
-```css
-.dl-v8-theme button[class*="bg-primary"][class*="text-primary-foreground"]:not([role="checkbox"]) {
-  background-color: #5E6AD2;
-  ...
-}
-```
-I tillegg gjør linje 209–211 grønn "Logg samtale" om til primærfarge (`hsl(var(--primary))`), som så overstyres til lilla av regelen over.
-
-## Endringer
-
-**1. `src/components/design/DesignVersionToggle.tsx`**
-- `bg-[#5E6AD2]` → `bg-[#2563EB]`
-- `hover:bg-[#4F5AB8]` → `hover:bg-[#1D4ED8]`
-- `focus:ring-[#5E6AD2]` → `focus:ring-[#2563EB]`
-
-**2. `src/index.css` (linje 274–280)**
-- `background-color: #5E6AD2;` → `background-color: #2563EB;`
-- (Hover-tilstand legges til hvis ønsket — ellers beholdes nåværende oppførsel.)
-
-## Utenfor scope (forblir `#5E6AD2`)
-- Fokus-ringer på input-felter (`focus-visible:border-[#5E6AD2]`)
-- Resize-håndtak når aktiv (`data-[resize-handle-active]:bg-[#5E6AD2]`)
-- Avkrysningsboks-indikator i `ContactCardContent` (`data-[state=checked]:bg-[#5E6AD2]`) — ikke en knapp
-- Prikk-indikatorer (`C.dotInfo`), tag-tekstfarger, owner-badge tekst, theme tokens i `src/theme.ts`
-- `DesignLabPrimaryAction` — er allerede blå (`#2563EB`), ingen endring
+Den lille indre paddingen (4 px topp/bunn) beholdes for å unngå at tekst og chip-kanter "klemmes" mot radkantene; Kontakter slipper unna med 0 fordi celleinnholdet er enkle 13 px tekst-elementer, mens Forespørsler-raden inneholder chips (signal, type) som er litt høyere — 4 px gir samme visuelle høyde som Kontakter (≈38 px totalt) uten clipping.
 
 ## Effekt
-V1/V2-veksleren og alle V1-primærknapper som rendres inne i V2-paneler (Logg samtale, Logg møtereferat, Ny kontakt osv.) blir blå `#2563EB` — visuelt konsistent med stilark-knappene. Andre lilla aksenter (fokus, resize, checkbox, prikker) forblir uendret.
+Tomme/én-konsulent-rader på Forespørsler får samme høyde (~38 px) som Kontakter-tabellen. Rader med flere konsulenter utvides naturlig som før.
+
+## Utenfor scope
+- Ingen endring i kolonnedefinisjon, header-høyde eller skriftstørrelser.
+- Ingen endring i konsulent-cellens `minHeight: 28` (driver vekst ved flere konsulenter).
+- V1 `/foresporsler` uendret.
+
