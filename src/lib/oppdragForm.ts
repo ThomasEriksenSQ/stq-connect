@@ -92,12 +92,22 @@ export function computeOppdragStatus(input: {
   start_dato?: string | null;
   slutt_dato?: string | null;
 }): OppdragStatus {
-  if (input.status === "Inaktiv") return "Inaktiv";
   const today = startOfDay(new Date());
   const slutt = parseOppdragDate(input.slutt_dato);
-  if (slutt && slutt < today) return "Inaktiv";
   const start = parseOppdragDate(input.start_dato);
+
+  // Sluttdato passert → Inaktiv
+  if (slutt && slutt < today) return "Inaktiv";
+
+  // Startdato i fremtiden → Oppstart
   if (start && start > today) return "Oppstart";
+
+  // Har gyldig dato-grunnlag for å være aktivt
+  if (start || slutt) return "Aktiv";
+
+  // Ingen datoer satt — respekter eksisterende manuell Inaktiv
+  if (input.status === "Inaktiv") return "Inaktiv";
+
   return "Aktiv";
 }
 
