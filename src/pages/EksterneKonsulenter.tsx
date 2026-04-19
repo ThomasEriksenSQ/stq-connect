@@ -61,7 +61,7 @@ const SUGGESTED_TECH = [
   "Python", "SPI/I2C", "MCU", "Embedded Linux", "Sikkerhet",
 ];
 
-function getExternalAvailabilityMeta(availableFrom: string | null | undefined) {
+export function getExternalAvailabilityMeta(availableFrom: string | null | undefined) {
   if (!availableFrom) {
     return { isAvailable: false, statusKey: "utilgjengelig", label: "Ikke ledig" };
   }
@@ -461,7 +461,7 @@ export default function EksterneKonsulenter({
   );
 }
 
-function ExternalConsultantDetailCard({
+export function ExternalConsultantDetailCard({
   row,
   onEdit,
 }: {
@@ -620,7 +620,7 @@ const emptyForm: ConsultantForm = {
   kommentar: "",
 };
 
-function ConsultantModal({ open, onClose, editRow, userId }: {
+export function ConsultantModal({ open, onClose, editRow, userId }: {
   open: boolean;
   onClose: () => void;
   editRow: any | null;
@@ -1155,7 +1155,7 @@ interface ExternalCommandPaletteProps {
   onSelect: (id: string) => void;
 }
 
-function ExternalCommandPalette({ open, onClose, textSize, rows, onSelect }: ExternalCommandPaletteProps) {
+export function ExternalCommandPalette({ open, onClose, textSize, rows, onSelect }: ExternalCommandPaletteProps) {
   const [query, setQuery] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
