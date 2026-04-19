@@ -599,17 +599,25 @@ export default function DesignLabCompanies() {
             <ResizablePanel defaultSize={38} minSize={24} maxSize={60}>
               <div className="h-full overflow-y-auto" style={{ scrollbarColor: `${C.borderStrong} ${C.surfaceAlt}` }}>
                 <div
-                  className="grid items-center sticky top-0 z-10"
+                  className="sticky top-0 z-10"
+                  style={{
+                    background: C.surfaceAlt,
+                    borderBottom: `1px solid ${C.border}`,
+                  }}
+                >
+                <div
+                  className="grid items-center"
                   style={{
                     gridTemplateColumns: "minmax(220px,2.2fr) minmax(140px,1.2fr) minmax(180px,1.4fr) 132px",
-                    height: 32, borderBottom: `1px solid ${C.border}`,
-                    background: C.surfaceAlt, paddingLeft: 16, paddingRight: 16,
+                    height: 32,
+                    paddingLeft: 16, paddingRight: 16,
                   }}
                 >
                   <DesignLabColumnHeader label="Selskap" field="name" sort={sort} onSort={toggleSort} />
                   <DesignLabColumnHeader label="Type" field="type" sort={sort} onSort={toggleSort} />
                   <DesignLabColumnHeader label="Sted" field="city" sort={sort} onSort={toggleSort} />
                   <DesignLabColumnHeader label="Siste akt." field="last_activity" sort={sort} onSort={toggleSort} className="justify-end" />
+                </div>
                 </div>
                 {isLoading ? (
                   <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster selskaper…</div>

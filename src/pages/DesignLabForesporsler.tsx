@@ -550,12 +550,17 @@ function TableHeader({ sort, onSort }: { sort: { field: SortField; dir: SortDir 
 
   return (
     <div
-      className="grid items-center sticky top-0 z-10"
+      className="sticky top-0 z-10"
+      style={{
+        background: C.surfaceAlt,
+        borderBottom: `1px solid ${C.border}`,
+      }}
+    >
+    <div
+      className="grid items-center"
       style={{
         gridTemplateColumns: cols,
         height: 32,
-        borderBottom: `1px solid ${C.border}`,
-        background: C.surfaceAlt,
         paddingLeft: 16,
         paddingRight: 16,
       }}
@@ -568,6 +573,7 @@ function TableHeader({ sort, onSort }: { sort: { field: SortField; dir: SortDir 
       <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Konsulent</span>
       <DesignLabColumnHeader label="Status" field="sendt_count" sort={sort} onSort={onSort} />
       <DesignLabColumnHeader label="Mottatt" field="mottatt_dato" sort={sort} onSort={onSort} />
+    </div>
     </div>
   );
 }
