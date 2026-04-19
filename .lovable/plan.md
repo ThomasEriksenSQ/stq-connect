@@ -1,59 +1,50 @@
 
+
 ## Funn
 
-I `src/pages/DesignLabStacqPrisen.tsx` (linje 167–173) beregnes `workdayCount` slik:
+Bildet viser e-postraden nederst i venstremenyen i Design Lab — en pille med initialer (TH) + `thomas@stacq...` + collapse-knapp.
 
-```ts
-for (let d = 1; d <= dim; d++) {
-  const dow = new Date(y, m, d).getDay();
-  if (dow !== 0 && dow !== 6) wd++;
-}
-```
+I `src/components/designlab/DesignLabSidebar.tsx` (linje 139–150) rendres dette som en egen rad under "Innstillinger" og "Logg ut". Den viser:
+- Initialer-avatar (TH)
+- E-postadresse (truncated)
+- Collapse-toggle (⌘\)
 
-Den teller alle mandag–fredag, men trekker **ikke fra norske røde dager**. På topp-stat-kortet "STACQ Prisen / mnd" vises tallet som `${workdayCount} arbeidsdager · ${måned}`, og brukes også til å multiplisere månedsomsetningen (`monthlyTotal = stacqTotalPerTime * 7.5 * workdayCount`). Det betyr at både visningen og månedstotalen blir for høy i måneder med helligdager (f.eks. mai med 1. mai, 17. mai, Kr.h.farts, 2. pinsedag).
+## Vurdering
+
+E-posten er overflødig fordi:
+- Det er kun 2 brukere i systemet (Jon Richard og Thomas) — de vet hvem de er logget inn som
+- "Logg ut" rett over gir allerede kontotilknytning
+- Tar opp en hel rad nederst uten å gi reell verdi
+- Initialer-pillen duplikerer info
+
+Collapse-toggle (⌘\) må derimot beholdes — den er den eneste UI-måten å skjule sidebaren på.
 
 ## Plan
 
-Legg til en delt hjelpefunksjon for norske helligdager og bruk den til å trekke fra røde dager (mandag–fredag) i `workdayCount`-beregningen.
+Fjern hele e-post/avatar-raden i footer i `DesignLabSidebar.tsx`. Behold collapse-toggle ved å flytte den til en enkel rad nederst (samme som dagens `!user`-variant — høyrejustert toggle).
 
-### 1) Ny fil: `src/lib/norwegianHolidays.ts`
+### Endringer i `src/components/designlab/DesignLabSidebar.tsx`
 
-Eksporter to funksjoner:
+1. Fjern `user`-blokken (linje 139–150) som rendrer avatar + e-post + toggle.
+2. Fjern `!user`-blokken (linje 152–156) — blir overflødig.
+3. Erstatt med én enkel rad som alltid viser collapse-toggle høyrejustert når sidebaren er utvidet.
+4. Behold `collapsed`-blokken (linje 158–162) uendret — full-row toggle når sidebar er kollapset.
+5. Fjern `User`-import fra `@supabase/supabase-js` og `initials`-variabelen hvis ingen andre bruker dem (sjekk: `user`-prop blir fortsatt mottatt for fremtidig bruk, men kan også fjernes fra props hvis ren opprydding ønskes — anbefaler å beholde prop-signaturen for å unngå ringvirkninger på `DesignLabPageShell`).
 
-- `getNorwegianHolidays(year: number): Date[]` — returnerer alle norske offentlige fridager for året:
-  - Faste: 1. jan (Nyttårsdag), 1. mai (Off. høytidsdag), 17. mai (Grunnlovsdagen), 25. des (1. juledag), 26. des (2. juledag).
-  - Bevegelige (utledet fra påskedag via Anonymous Gregorian-algoritmen):
-    - Skjærtorsdag (påske − 3)
-    - Langfredag (påske − 2)
-    - 2. påskedag (påske + 1)
-    - Kristi himmelfartsdag (påske + 39)
-    - 1. pinsedag (påske + 49)
-    - 2. pinsedag (påske + 50)
-- `countNorwegianWorkdays(year: number, month: number): number` — returnerer antall mandag–fredag i måneden minus røde dager som faller på en hverdag.
+### Resultat
 
-### 2) Bruk funksjonen i `DesignLabStacqPrisen.tsx`
+Footer blir:
+```
+─────────────────
+⚙  Innstillinger
+↪  Logg ut
+                ⟨  ← collapse-toggle høyrejustert
+```
 
-- Erstatt den lokale løkken (linje 167–173) med:
-  ```ts
-  const workdayCount = countNorwegianWorkdays(now.getFullYear(), now.getMonth());
-  ```
-- `monthlyTotal` og kortets undertekst (`${workdayCount} arbeidsdager · …`) får automatisk korrekt verdi.
-
-### 3) Test: `src/test/norwegianHolidays.test.ts`
-
-Korte vitest-caser for å sikre korrekthet:
-- Påskedag 2025 = 20. april, 2026 = 5. april (verifiser bevegelige datoer).
-- Mai 2025: 22 hverdager − 4 røde (1. mai tor, 17. mai lør → ikke trekkes, Kr.h.farts 29. mai, 1. pinsedag fredag 2026? bekreft per år) → forventet verdi.
-- April 2026 inneholder skjærtorsdag, langfredag, 2. påskedag → trekkes fra.
-
-## Hvorfor trygt
-
-- Ren, isolert utvidelse i `src/lib/` + ett kall i én fil.
-- Ingen DB-endringer, ingen API-kall, ingen avhengigheter.
-- Påvirker kun visningen av "arbeidsdager" og månedstotal på STACQ Prisen — samme tall som allerede vises i dag, bare korrekt.
+Renere, mer i tråd med Linear-estetikken (kontrollert tetthet), og fjerner duplikat-info.
 
 ## Utenfor scope
 
-- Ingen brukervalgt periode/justering — alltid inneværende måned, som i dag.
-- Ingen halve dager (f.eks. onsdag før skjærtorsdag) — telles som hel arbeidsdag.
-- Ingen V1-side berøres.
+- Ingen endringer i `AppSidebar.tsx` (V1).
+- Ingen endring av `signOut`-flyt eller auth-logikk.
+
