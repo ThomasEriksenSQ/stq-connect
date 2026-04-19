@@ -2221,7 +2221,7 @@ export default function DesignLabContacts() {
                               </p>
                             </div>
                             <div className="min-w-0">
-                              <DesignLabHeatBadge temperature={lead.temperature ?? null} />
+                              <DesignLabHeatBadge temperature={heatLabel} />
                             </div>
                             <div className="text-right" style={{ fontSize: 11, color: C.textFaint }}>
                               {leadDate ? relativeDate(leadDate) : ""}
