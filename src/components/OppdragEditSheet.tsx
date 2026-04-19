@@ -28,7 +28,7 @@ import {
 const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
 const CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-[6px] border transition-colors cursor-pointer select-none font-medium";
 
-const STATUS_OPTIONS = ["Aktiv", "Oppstart", "Inaktiv"] as const;
+
 const TYPE_OPTIONS = [
   { value: "DIR", label: "Direkte" },
   { value: "VIA", label: "Via partner" },
