@@ -1,7 +1,8 @@
+import { useEffect } from "react";
 import { User } from "@supabase/supabase-js";
 import {
   Users, Building2, LayoutDashboard, Briefcase, Settings, LogOut,
-  UserPlus, Radar, TrendingUp, Globe, Clock, PanelLeft, PanelLeftOpen,
+  UserPlus, Radar, TrendingUp, Globe, Clock, PanelLeftClose, PanelLeftOpen,
   SwatchBook,
 } from "lucide-react";
 import { C } from "@/components/designlab/theme";
