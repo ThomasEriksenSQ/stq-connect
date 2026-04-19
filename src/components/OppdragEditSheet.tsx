@@ -376,6 +376,7 @@ export function OppdragEditSheet({
       setTilKonsulent(defaults.tilKonsulent);
       setFornyDato(defaults.fornyDato);
       setStartDato(defaults.startDato);
+      setSluttDato(defaults.sluttDato);
       setKommentar(defaults.kommentar);
       setSelskapId(defaults.selskapId);
       setSelskapNavn(defaults.selskapNavn);
