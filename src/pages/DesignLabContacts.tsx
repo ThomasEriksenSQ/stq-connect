@@ -1949,9 +1949,6 @@ export default function DesignLabContacts() {
                   <p style={{ fontSize: 12, fontWeight: 600, color: C.text }}>
                     Matcher for {selectedConsultant.navn}
                   </p>
-                  <p style={{ fontSize: 12, color: C.textFaint }}>
-                    {JAKT_CHIP_HELP_TEXT[jaktChip]}
-                  </p>
                 </div>
                 <DesignLabActionButton
                   variant="ghost"
