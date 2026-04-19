@@ -521,6 +521,11 @@ export default function DesignLabCompanies() {
         {/* City */}
         <span className="truncate" style={{ fontSize: 12, color: C.textMuted }}>{company.city || ""}</span>
 
+        {/* Contacts count */}
+        <span className="text-right tabular-nums" style={{ fontSize: 12, color: company.contactCount ? C.textMuted : C.textGhost }}>
+          {company.contactCount || 0}
+        </span>
+
         {/* Last activity */}
         <span className="text-right" style={{ fontSize: 12, color: C.textFaint }}>
           {daysSince !== null ? relTime(daysSince) : ""}
