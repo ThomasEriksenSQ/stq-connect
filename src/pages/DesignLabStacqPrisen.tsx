@@ -458,13 +458,16 @@ function TopStatCard({
 
 function TypeBadge({ dealType }: { dealType: string | null }) {
   const isVia = dealType === "VIA";
-  const label = isVia ? "Via partner" : "Direkte";
-  const bg = isVia ? C.warningBg : C.surfaceAlt;
-  const color = isVia ? C.warning : C.textMuted;
-  const borderColor = isVia ? "rgba(154,122,42,0.15)" : C.border;
+  if (isVia) {
+    return (
+      <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
+        Via partner
+      </span>
+    );
+  }
   return (
-    <span className="inline-flex items-center rounded" style={{ fontSize: 11, fontWeight: 500, paddingInline: 8, paddingBlock: 2, background: bg, color, border: `1px solid ${borderColor}` }}>
-      {label}
+    <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
+      Direkte
     </span>
   );
 }
