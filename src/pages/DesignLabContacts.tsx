@@ -372,7 +372,7 @@ export default function DesignLabContacts() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { signOut, user } = useAuth();
   const queryClient = useQueryClient();
-  const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
+  const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [search, setSearch] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("Alle");
   const [signalFilter, setSignalFilter] = useState("Alle");

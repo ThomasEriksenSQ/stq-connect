@@ -53,7 +53,7 @@ export default function DesignLabKonsulenterAnsatte() {
   const selectedId = id ? Number(id) : null;
   const queryClient = useQueryClient();
   const { signOut, user } = useAuth();
-  const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
+  const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("Aktiv");
   const [createOpen, setCreateOpen] = useState(false);

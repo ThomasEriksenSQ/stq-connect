@@ -134,7 +134,7 @@ export default function DesignLabForesporsler() {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
+  const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("aktive");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "mottatt_dato", dir: "desc" });

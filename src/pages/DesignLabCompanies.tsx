@@ -184,7 +184,7 @@ export default function DesignLabCompanies() {
   const { signOut, user } = useAuth();
   const queryClient = useQueryClient();
   const modalScale = useDesignLabModalScale();
-  const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
+  const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [search, setSearch] = useState("");
   const [cmdOpen, setCmdOpen] = useState(false);
   const [ownerFilter, setOwnerFilter] = useState("Alle");

@@ -126,7 +126,7 @@ export default function DesignLabOppfolginger() {
   const queryClient = useQueryClient();
   const { signOut, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
+  const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [search, setSearch] = useState("");
   const [viewFilter, setViewFilter] = useState<FollowUpViewFilter>("Alle");
   const [ownerFilter, setOwnerFilterState] = useState("Alle");

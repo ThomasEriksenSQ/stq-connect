@@ -56,7 +56,7 @@ function ExampleCard({ title, children }: { title: string; children: React.React
 export default function DesignLabStyleguide() {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
-  const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
+  const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [search, setSearch] = useState("");
   const [activeType, setActiveType] = useState("Kunde");
   const [activeOwner, setActiveOwner] = useState("Thomas Eriksen");
