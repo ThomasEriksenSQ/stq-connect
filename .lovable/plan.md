@@ -1,71 +1,51 @@
 
 
 ## Mål
-1. Stoppe at teknologi-chipsene flyter inn i Konsulent-kolonnen.
-2. Matche konsulent-radenes stil i Forespørsler med stilen i Ansatte-tabellen (samme avatar-størrelse 32px, samme tekstfarge/vekt).
+Migrere `/innstillinger` til V2-design ved å bruke ekte V2-komponenter (`DesignLabPageShell`, `DesignLabPrimaryAction`, `DesignLabSecondaryAction`, `DesignLabGhostAction`, `DesignLabTextField`, `DesignLabFieldLabel`, `Switch`, `Select`) — og kun når `isV2Active === true`. V1-rendering forblir 100% urørt.
 
-## Funn
+## Hovedgrep
 
-### Problem 1: Teknologier "krasjer" inn i Konsulent
-`src/pages/DesignLabForesporsler.tsx` linje 584–600:
-```tsx
-<div className="min-w-0 pr-4">
-  <div className="flex items-center gap-1.5 flex-nowrap">
-    {technologies.visible.map(...)}
-```
-- `flex-nowrap` + ingen `overflow:hidden` på cellen = chips renderes utenfor cellebredden uten å bli klippet.
-- `getVisibleTechnologies` (linje 71) bruker `charBudget = 24` som er for sjenerøst når kolonnen er smal (ca. 180–230px). Resultat: 2 chips med lange navn (f.eks. "Embedded systems" + "TMS570") sprenger kolonnen.
+### 1. `src/pages/Innstillinger.tsx` — versjonsbryter
+Helt øverst: `const { isV2Active } = useDesignVersion();`. Hvis V2 aktiv → render ny `<InnstillingerV2 />`. Ellers returnerer eksisterende V1-JSX uendret (ingen refaktorering, ingen klasseendring).
 
-### Problem 2: Konsulent-stil vs. Ansatte-stil
-Forespørsler (linje 615–643): avatar 22×22, tekst `fontSize: 12, color: C.textMuted`.
-Ansatte (linje 281–290): avatar `h-8 w-8` (32×32), tekst `fontSize: 13, fontWeight: 500, color: C.text`.
+### 2. Ny komponent: `InnstillingerV2` (i samme fil)
+Bruker `DesignLabPageShell` med:
+- `activePath="/innstillinger"` (sidebaren markerer ikke noe — det er ok, samme som ved navigasjon fra DesignLabSidebar)
+- `title="Innstillinger"`
+- `maxWidth={1180}` (samme som Stilark)
 
-## Endringer (én fil: `src/pages/DesignLabForesporsler.tsx`)
+Layout inni:
+- 3 seksjoner som "kort" basert på `ExampleCard`-mønsteret fra `DesignLabStyleguide` — hvit panel-bakgrunn, `borderColor: C.borderLight`, `borderRadius: 10`, `padding: 20`, lett skygge.
+- Seksjonstittel: 13px / 600 / `C.text` (V2-norm, ingen uppercase).
+- Beskrivelse: 12px / `C.textMuted`.
+- Knapper: `DesignLabPrimaryAction` (lagre / koble til), `DesignLabSecondaryAction` (test, send nå).
+- Statusindikator (Outlook tilkoblet/ikke): farget prikk + 13px tekst (V2-konvensjon i stedet for store ikon-bokser).
 
-### 1. Forhindre overflow i Teknologier-cellen
-Linje 584:
-```tsx
-<div className="min-w-0 pr-4" style={{ overflow: "hidden" }}>
-```
-Linje 585 — bytt fra `flex-nowrap` til wrap-tilltatt med skjult overflow:
-```tsx
-<div className="flex items-center gap-1.5 flex-nowrap" style={{ minWidth: 0, overflow: "hidden" }}>
-```
+### 3. Ny komponent: `VarslingsInnstillingerV2`
+Egen fil: `src/components/VarslingsInnstillingerV2.tsx`. Beholder all eksisterende logikk og state-håndtering (kopiert fra `VarslingsInnstillinger.tsx`), men erstatter presentasjon:
+- 3 paneler i et 1-kolonne stack (eller `xl:grid-cols-3` for tette skjermer — matche eksisterende oppsett).
+- Inputs → `DesignLabTextField`.
+- Labels → `DesignLabFieldLabel`.
+- Knapper → `DesignLabPrimaryAction` / `DesignLabSecondaryAction`.
+- E-postmottaker-rader: 13px tekst, fjern-knapp som `DesignLabGhostAction` med "×".
+- Switches: gjenbruk `Switch` fra `@/components/ui/switch` — uendret (fungerer på begge versjoner).
+- `Select` (terskel-dager): gjenbruk eksisterende, men style triggeren med samme høyde (32px) via `DesignLabTextField`-tokens.
 
-### 2. Stram inn `getVisibleTechnologies` charBudget
-Linje 79: `let charBudget = 24;` → `let charBudget = 18;`
-Gir bedre plass for lange tag-navn ("Embedded systems", "Embedded Linux") slik at kun 1 chip + "+N" vises når plassen er trang.
+### 4. V1-fil urørt
+`src/components/VarslingsInnstillinger.tsx` endres ikke. V1-grenen i `Innstillinger.tsx` beholder all eksisterende JSX, klasser, tokens.
 
-### 3. Match avatar + tekst-stil til Ansatte
-Linje 615–643 — oppdater radens avatar fra 22→32px og tekst fra 12/textMuted → 13/500/text:
-```tsx
-<div key={k.id} style={{ minHeight: 32, display: "flex", alignItems: "center", gap: 12 }}>
-  {portrait ? (
-    <img src={portrait} alt={navn}
-      className="h-8 w-8 rounded-full border object-cover"
-      style={{ borderColor: C.border, flexShrink: 0 }}
-    />
-  ) : (
-    <div className="flex h-8 w-8 items-center justify-center rounded-full"
-      style={{ background: C.accentBg, color: C.accent, fontSize: 11, fontWeight: 700, flexShrink: 0 }}
-    >
-      {getInitials(navn)}
-    </div>
-  )}
-  <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>
-    {navn}
-  </span>
-</div>
-```
-Status-celle (linje 656–678): hev `minHeight` fra 28 → 32 så pipeline-chipsen står sentrert i forhold til den nye, høyere konsulent-raden.
-
-## Effekt
-- Teknologi-chips holder seg innenfor sin egen kolonne (klippes med "+N" indikator når plassen er trang).
-- Konsulent-rader i Forespørsler får eksakt samme visuelle vekt som i Ansatte-tabellen (32px avatar, 13px medium-vekt navn i full tekstfarge).
-- Tomme rader (uten konsulenter) beholder ~38px høyde — konsulent-rader vokser nå til ~32px per konsulent (fra 28px), naturlig høyere ved flere konsulenter.
+## Filer som endres / opprettes
+- **Endret:** `src/pages/Innstillinger.tsx` — legg til `useDesignVersion`-bryter og ny `InnstillingerV2`-komponent. V1-grenen er bit-for-bit identisk med dagens fil.
+- **Ny:** `src/components/VarslingsInnstillingerV2.tsx` — V2-presentasjon, samme datalogikk som V1-versjonen.
 
 ## Utenfor scope
-- Ingen endring i kolonnedefinisjon eller header.
-- Ingen endring i V1 `/foresporsler`.
-- Ingen endring i `DesignLabReadonlyChip`-komponenten (kun parent-cellen håndteres).
+- Ingen endring i `VarslingsInnstillinger.tsx` (V1).
+- Ingen endring i `App.tsx`-routing (samme `/innstillinger`-rute for begge).
+- Ingen endring i `DesignLabSidebar` eller `AppLayout` (samme nav-knapper peker på `/innstillinger`).
+- Ingen endring i edge functions, databasekall eller toast-meldinger.
+- Ingen ny rute `/design-lab/innstillinger` (`DesignLabSidebar` peker allerede på `/innstillinger` — V2-bryteren håndterer rendering).
+
+## Effekt
+- V1-brukere ser nøyaktig samme innstillingsside som i dag.
+- V2-brukere (Thomas, Jon med V2 aktivert) får siden gjengitt med Linear-inspirert layout: 40px header med tittel, kompakte kort på `C.appBg`, 13px tekst, 32px knapper i accent-blå (`#5E6AD2` for primær — eller blå `#2563EB` ettersom `DesignLabPrimaryAction` allerede er blå), V2 sidebar til venstre. Alle handlinger (lagre, test, koble til Outlook, Mailchimp-synk) fungerer identisk.
 
