@@ -1,6 +1,8 @@
 import { Building2, Users, LogOut, FileText } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
+import stacqLogoFull from "@/assets/stacq-logo-full-black.png";
+import stacqLogoIcon from "@/assets/stacq-logo-icon-black.png";
 import {
   Sidebar,
   SidebarContent,
@@ -29,10 +31,12 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarContent>
         <SidebarGroup>
-          <div className="px-4 pt-6 pb-8">
-            <span className="text-[15px] font-bold tracking-tight text-sidebar-accent-foreground">
-              {collapsed ? "S" : "STACQ"}
-            </span>
+          <div className={`pt-6 pb-8 flex ${collapsed ? "justify-center px-2" : "px-4"}`}>
+            <img
+              src={collapsed ? stacqLogoIcon : stacqLogoFull}
+              alt="STACQ"
+              className={collapsed ? "h-[22px] w-[22px]" : "h-[20px] w-auto"}
+            />
           </div>
           <SidebarGroupContent>
             <SidebarMenu className="px-2 space-y-1">

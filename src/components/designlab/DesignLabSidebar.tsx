@@ -7,6 +7,8 @@ import {
 import { C } from "@/components/designlab/theme";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { SCALE_MAP, getDesignLabTextSizeVars, type TextSize } from "@/components/designlab/TextSizeControl";
+import stacqLogoFull from "@/assets/stacq-logo-full-black.png";
+import stacqLogoIcon from "@/assets/stacq-logo-icon-black.png";
 
 /* ═══ NAV ITEMS ═══ */
 
@@ -58,18 +60,23 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
       }}
     >
       {/* Logo */}
-      <div className="flex items-center gap-2 shrink-0" style={{ height: px(40), paddingLeft: collapsed ? px(13) : px(16) }}>
-        <div
-          className="flex items-center justify-center rounded shrink-0"
-          style={{ width: px(22), height: px(22), background: C.accent, color: C.onAccent, fontSize: px(11), fontWeight: 600 }}
-        >
-          S
-        </div>
-        {!collapsed && (
-          <span style={{ fontSize: px(14), fontWeight: 600, color: C.text, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>
-            STACQ
-          </span>
-        )}
+      <div
+        className="flex items-center shrink-0"
+        style={{
+          height: px(40),
+          paddingLeft: collapsed ? 0 : px(16),
+          justifyContent: collapsed ? "center" : "flex-start",
+        }}
+      >
+        <img
+          src={collapsed ? stacqLogoIcon : stacqLogoFull}
+          alt="STACQ"
+          style={{
+            height: collapsed ? px(22) : px(18),
+            width: collapsed ? px(22) : "auto",
+            display: "block",
+          }}
+        />
       </div>
 
       {/* Nav */}
