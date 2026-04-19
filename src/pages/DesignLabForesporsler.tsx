@@ -551,7 +551,7 @@ function ForespRow({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      background: C.accentSoft,
+                      background: C.accentBg,
                       color: C.accent,
                       fontSize: 10,
                       fontWeight: 700,

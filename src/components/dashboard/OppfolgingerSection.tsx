@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { isPast, isToday, startOfDay, addDays, addWeeks, addMonths, format, differenceInDays } from "date-fns";
-import { CATEGORIES, getEffectiveSignal, upsertTaskSignalDescription } from "@/lib/categoryUtils";
+import { CATEGORIES, SIGNAL_OPTIONS, getEffectiveSignal, upsertTaskSignalDescription } from "@/lib/categoryUtils";
 import { Check, Calendar as CalendarIcon, ChevronDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -566,7 +566,7 @@ function TaskRow({
 
   const absoluteText = dueDate ? format(dueDate, "dd.MM.yyyy") : null;
 
-  const signalCat = CATEGORIES.find((c) => c.label === signal);
+  const signalCat = SIGNAL_OPTIONS.find((c) => c.label === signal);
 
   const desc =
     task.description && !/^\[.+\]$/.test(task.description.trim())
@@ -674,7 +674,7 @@ function TaskRow({
             )}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-[200px]" onClick={(e) => e.stopPropagation()}>
-            {CATEGORIES.map((c) => (
+            {SIGNAL_OPTIONS.map((c) => (
               <DropdownMenuItem
                 key={c.label}
                 disabled={!task.contact_id}
