@@ -1,39 +1,46 @@
 
 ## Mål
-Redusere mellomrommet mellom toppmenyen ("Markedsradar"-tittelen i shell-headeren) og Radar-/Annonser-/AI-tabboksen, slik at den matcher tettheten på Aktive oppdrag og Ansatte-sidene.
+Bytte den lilla aksentfargen `#5E6AD2` til den blå `#2563EB` (samme blå som vises på `/design-lab/stilark`-knappene) — **kun på knapper**. Ikke endre fokus-ringer, resize-håndtak, prikker eller avhukingsbokser.
 
 ## Funn
-- `DesignLabPageShell` har samme topp-padding (`24px`) på alle tre sidene. Det er ikke kilden til forskjellen.
-- På **Aktive oppdrag** ligger "Nytt oppdrag"-knappen i shell-headerens `headerRight`. Innholdet starter rett etter shell-paddingen.
-- På **Markedsradar** rendres "Importer uke"-knappen i en egen rad inne i `Markedsradar.tsx` (`<div className="flex justify-end">`) over `<Tabs>`. Det legger til ca. 32px knappehøyde + 12px (`space-y-3`) gap **før** tab-listen vises.
-- Resultat: Radar-boksen ligger ~44px lavere enn på Aktive oppdrag/Ansatte.
+"Stilark"-knappen får sin blåfarge fra `DesignLabActionButton` (variant `primary`) i `src/components/designlab/controls.tsx`:
+- background `#2563EB`, hover `#1D4ED8`.
 
-## Løsning
-Flytt "Importer uke"-knappen fra `Markedsradar`-innholdet til `DesignLabMarkedsradar`-shellens `headerRight`, samme mønster som `DesignLabKonsulenterOppdrag`.
+Lilla knapper i CRMet finnes to steder:
 
-### Endringer
+**1. `src/components/design/DesignVersionToggle.tsx` (linje 24–28)**
+Den faste V1/V2-veksleknappen nederst til høyre:
+```
+bg-[#5E6AD2]  hover:bg-[#4F5AB8]  focus:ring-[#5E6AD2]
+```
 
-**1. `src/pages/Markedsradar.tsx`**
-- Eksponer en mekanisme for å åpne import-modalen utenfra (samme mønster som `createRequestId` i `KonsulenterOppdrag`).
-  - Legg til prop: `importRequestId?: number`.
-  - `useEffect` som setter `setImportOpen(true)` når `importRequestId > 0` endres.
-- Når `designLabMode === true`: ikke render den interne knapperaden (linje 167–173). Behold V1-headeren uendret for `/markedsradar`.
-- Endre rot-wrapperen fra `space-y-3` til ingen vertikal spacing (bare Tabs på toppnivå) når `designLabMode`, eller behold `space-y-3` siden den nå kun gjelder mellom Tabs og evt. ImportModal (modal har ingen layout-innvirkning, så det er trygt å beholde — men vi kan også sette `space-y-0` for å være eksplisitt).
+**2. `src/index.css` linje 273–280**
+CSS-regel som overstyrer V1-primærknapper til lilla når de rendres inne i en `.dl-v8-theme`-container (gjelder "Logg samtale", "Logg møtereferat", "Ny kontakt"-knapper inne i V2-paneler/sheets):
+```css
+.dl-v8-theme button[class*="bg-primary"][class*="text-primary-foreground"]:not([role="checkbox"]) {
+  background-color: #5E6AD2;
+  ...
+}
+```
+I tillegg gjør linje 209–211 grønn "Logg samtale" om til primærfarge (`hsl(var(--primary))`), som så overstyres til lilla av regelen over.
 
-**2. `src/pages/DesignLabMarkedsradar.tsx`**
-- Hold lokal state `importRequestId` (counter, samme mønster som `DesignLabKonsulenterOppdrag`).
-- Send `headerRight` til `DesignLabPageShell` med en `DesignLabPrimaryAction` (sekundærvariant via `outline`, eller behold den eksisterende `outline`-stilen — match det som brukes på Aktive oppdrag for visuell konsistens).
-  - Bruker `Download` ikon + "Importer uke".
-- Ved klikk: `setImportRequestId((n) => n + 1)`.
-- Send `importRequestId` videre til `<Markedsradar />`.
+## Endringer
 
-### Visuell konsistens
-Aktive oppdrag bruker `DesignLabPrimaryAction` (accent-fylt). Markedsradar har i dag en `outline`-knapp. Forslag: bruk `DesignLabPrimaryAction` for å matche stilen på Aktive oppdrag eksakt, slik at headerRight-knappene ser like ut på tvers av sidene.
+**1. `src/components/design/DesignVersionToggle.tsx`**
+- `bg-[#5E6AD2]` → `bg-[#2563EB]`
+- `hover:bg-[#4F5AB8]` → `hover:bg-[#1D4ED8]`
+- `focus:ring-[#5E6AD2]` → `focus:ring-[#2563EB]`
+
+**2. `src/index.css` (linje 274–280)**
+- `background-color: #5E6AD2;` → `background-color: #2563EB;`
+- (Hover-tilstand legges til hvis ønsket — ellers beholdes nåværende oppførsel.)
+
+## Utenfor scope (forblir `#5E6AD2`)
+- Fokus-ringer på input-felter (`focus-visible:border-[#5E6AD2]`)
+- Resize-håndtak når aktiv (`data-[resize-handle-active]:bg-[#5E6AD2]`)
+- Avkrysningsboks-indikator i `ContactCardContent` (`data-[state=checked]:bg-[#5E6AD2]`) — ikke en knapp
+- Prikk-indikatorer (`C.dotInfo`), tag-tekstfarger, owner-badge tekst, theme tokens i `src/theme.ts`
+- `DesignLabPrimaryAction` — er allerede blå (`#2563EB`), ingen endring
 
 ## Effekt
-Radar-boksen flyttes opp ca. 44px og lander på samme høyde som tabellene på Aktive oppdrag og Ansatte. Funksjonalitet (importflyt, modalåpning) er uendret.
-
-## Utenfor scope
-- Ingen endring i V1 `/markedsradar`-headeren eller layouten.
-- Ingen endring i tab-innhold, kort eller filtre.
-- Ingen endring i `DesignLabPageShell`-paddingen.
+V1/V2-veksleren og alle V1-primærknapper som rendres inne i V2-paneler (Logg samtale, Logg møtereferat, Ny kontakt osv.) blir blå `#2563EB` — visuelt konsistent med stilark-knappene. Andre lilla aksenter (fokus, resize, checkbox, prikker) forblir uendret.
