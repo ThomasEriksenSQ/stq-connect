@@ -98,6 +98,23 @@ export default function EksterneKonsulenter({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [cleanupOpen, setCleanupOpen] = useState(false);
   const [cleanupRunning, setCleanupRunning] = useState(false);
+  const [cmdOpen, setCmdOpen] = useState(false);
+  const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
+
+  useEffect(() => {
+    if (!embeddedSplit) return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCmdOpen(true);
+      }
+      if (e.key === "Escape" && !cmdOpen) {
+        setSelectedId(null);
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [embeddedSplit, cmdOpen]);
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["external-consultants"],
