@@ -50,7 +50,7 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
 
   return (
     <aside
-      className="flex h-screen min-h-0 flex-col shrink-0 overflow-hidden"
+      className="group flex h-screen min-h-0 flex-col shrink-0 overflow-hidden"
       style={{
         ...getDesignLabTextSizeVars(textSize),
         width: collapsed ? 48 : 220,
@@ -59,24 +59,56 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
         background: C.sidebarBg,
       }}
     >
-      {/* Logo */}
+      {/* Logo + collapse toggle */}
       <div
         className="flex items-center shrink-0"
         style={{
           height: px(40),
-          paddingLeft: collapsed ? 0 : px(16),
-          justifyContent: collapsed ? "center" : "flex-start",
+          paddingLeft: collapsed ? 0 : px(12),
+          paddingRight: collapsed ? 0 : px(8),
+          justifyContent: collapsed ? "center" : "space-between",
+          gap: px(8),
         }}
       >
-        <img
-          src={collapsed ? stacqLogoIcon : stacqLogoFull}
-          alt="STACQ"
+        {!collapsed && (
+          <img
+            src={stacqLogoFull}
+            alt="STACQ"
+            style={{ height: px(18), width: "auto", display: "block" }}
+          />
+        )}
+        {collapsed && (
+          <img
+            src={stacqLogoIcon}
+            alt="STACQ"
+            style={{ height: px(22), width: px(22), display: "block" }}
+          />
+        )}
+        <button
+          onClick={() => setCollapsed((p) => !p)}
+          title={collapsed ? "Utvid sidebar" : "Skjul sidebar"}
+          aria-label={collapsed ? "Utvid sidebar" : "Skjul sidebar"}
+          className={`flex items-center justify-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dl-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--dl-focus-offset)] ${collapsed ? "absolute left-1/2 -translate-x-1/2" : "opacity-0 group-hover:opacity-100"}`}
           style={{
-            height: collapsed ? px(22) : px(18),
-            width: collapsed ? px(22) : "auto",
-            display: "block",
+            ["--dl-focus-ring" as string]: C.borderFocus,
+            ["--dl-focus-offset" as string]: C.sidebarBg,
+            width: px(22),
+            height: px(22),
+            borderRadius: px(4),
+            color: C.textFaint,
+            background: "transparent",
+            flexShrink: 0,
+            top: collapsed ? px(44) : undefined,
+            position: collapsed ? "absolute" : "relative",
           }}
-        />
+          onMouseEnter={(e) => { e.currentTarget.style.background = C.hoverSubtle; e.currentTarget.style.color = C.text; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = C.textFaint; }}
+        >
+          {collapsed
+            ? <PanelLeftOpen style={{ width: px(14), height: px(14), strokeWidth: 1.5 }} />
+            : <PanelLeft style={{ width: px(14), height: px(14), strokeWidth: 1.5 }} />
+          }
+        </button>
       </div>
 
       {/* Nav */}
