@@ -5,7 +5,7 @@ import {
 } from "@/lib/categoryUtils";
 
 export type FollowUpVisualStatus = "triage" | "planned" | "in_progress" | "waiting" | "done";
-export type FollowUpPriority = "P1" | "P2" | "P3" | "P4" | null;
+export type FollowUpPriority = "P1" | "P2" | "P3" | "P4" | "P5" | null;
 
 export interface FollowUpActivityRecord {
   contact_id: string | null;
@@ -103,7 +103,7 @@ const SIGNAL_TO_PRIORITY: Record<string, FollowUpPriority> = {
   "Får fremtidig behov": "P2",
   "Får kanskje behov": "P3",
   "Ukjent om behov": "P4",
-  "Ikke aktuelt": "P4",
+  "Ikke aktuelt": "P5",
 };
 
 const TASK_PRIORITY_TO_PRIORITY: Record<string, FollowUpPriority> = {
@@ -117,6 +117,7 @@ const PRIORITY_RANK: Record<Exclude<FollowUpPriority, null>, number> = {
   P2: 2,
   P3: 3,
   P4: 4,
+  P5: 5,
 };
 
 function toFullName(firstName?: string | null, lastName?: string | null) {

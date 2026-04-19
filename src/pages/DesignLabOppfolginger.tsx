@@ -78,6 +78,12 @@ const PRIORITY_COLORS: Record<Exclude<FollowUpPriority, null>, { background: str
     border: `1px solid ${C.statusNeutralBorder}`,
     fontWeight: 500,
   },
+  P5: {
+    background: "#F1E9E9",
+    color: "#8C7A7A",
+    border: "1px solid #E5D8D8",
+    fontWeight: 500,
+  },
 };
 
 const EMPTY_FORM = {
