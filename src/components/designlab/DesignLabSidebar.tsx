@@ -43,7 +43,7 @@ interface DesignLabSidebarProps {
 export function DesignLabSidebar({ navigate, signOut, user, activePath }: DesignLabSidebarProps) {
   const [collapsed, setCollapsed] = usePersistentState("dl-sidebar-collapsed", false);
   const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
-  const initials = user?.email ? user.email.split("@")[0].slice(0, 2).toUpperCase() : "??";
+  
   const scale = SCALE_MAP[textSize];
   const px = (value: number) => Math.round(value * scale * 100) / 100;
 
