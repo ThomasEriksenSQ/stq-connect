@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { endOfWeek, format, isBefore, isToday, startOfDay } from "date-fns";
+import { addDays, endOfWeek, format, isBefore, isToday, startOfDay } from "date-fns";
 import { nb } from "date-fns/locale";
 import { CalendarIcon, Plus, X } from "lucide-react";
 
@@ -45,13 +45,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
-type FollowUpViewFilter = "Alle" | "Forfalt" | "Denne uka";
+type FollowUpViewFilter = "Alle" | "I dag" | "Denne uken" | "Neste 30 dager" | "Forfalt";
 
 const FOLLOW_UP_QUERY_KEY = ["design-lab-follow-ups"] as const;
 const FOLLOW_UP_ACTIVITY_QUERY_KEY = ["design-lab-follow-up-activities"] as const;
 const FOLLOW_UP_CONTACT_QUERY_KEY = ["design-lab-follow-up-modal-contacts"] as const;
 
-const VIEW_FILTERS = ["Alle", "Forfalt", "Denne uka"] as const satisfies readonly FollowUpViewFilter[];
+const VIEW_FILTERS = ["Alle", "I dag", "Denne uken", "Neste 30 dager", "Forfalt"] as const satisfies readonly FollowUpViewFilter[];
 
 const PRIORITY_COLORS: Record<Exclude<FollowUpPriority, null>, { background: string; color: string; border: string; fontWeight: number }> = {
   P1: {
@@ -254,16 +254,26 @@ export default function DesignLabOppfolginger() {
     const lowerSearch = search.trim().toLowerCase();
     const today = startOfDay(new Date());
     const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+    const in30Days = addDays(today, 30);
 
     return viewModels
       .filter((model) => {
         if (ownerFilter === "Uten eier" && model.ownerId) return false;
         if (ownerFilter !== "Alle" && ownerFilter !== "Uten eier" && model.ownerName !== ownerFilter) return false;
         if (viewFilter === "Forfalt" && !isOverdueDate(model.nextFollowUpAt)) return false;
-        if (viewFilter === "Denne uka") {
+        if (viewFilter === "I dag") {
+          if (!model.nextFollowUpAt) return false;
+          if (!isToday(new Date(model.nextFollowUpAt))) return false;
+        }
+        if (viewFilter === "Denne uken") {
           if (!model.nextFollowUpAt) return false;
           const date = new Date(model.nextFollowUpAt);
           if (date < today || date > weekEnd) return false;
+        }
+        if (viewFilter === "Neste 30 dager") {
+          if (!model.nextFollowUpAt) return false;
+          const date = new Date(model.nextFollowUpAt);
+          if (date < today || date > in30Days) return false;
         }
         if (!lowerSearch) return true;
 
