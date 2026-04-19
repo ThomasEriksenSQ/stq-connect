@@ -89,8 +89,7 @@ export default function StacqPrisen() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stacq_oppdrag")
-        .select("id, kandidat, er_ansatt, status, utpris, til_konsulent, til_konsulent_override, ekstra_kostnad, kunde, selskap_id, deal_type, start_dato, forny_dato, slutt_dato")
-        .neq("status", "Inaktiv");
+        .select("id, kandidat, er_ansatt, status, utpris, til_konsulent, til_konsulent_override, ekstra_kostnad, kunde, selskap_id, deal_type, start_dato, forny_dato, slutt_dato");
       if (error) throw error;
       return data || [];
     },
