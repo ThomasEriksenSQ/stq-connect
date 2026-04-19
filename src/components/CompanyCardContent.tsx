@@ -99,6 +99,7 @@ import { nb } from "date-fns/locale";
 import { relativeDate, fullDate } from "@/lib/relativeDate";
 import { cleanDescription } from "@/lib/cleanDescription";
 import InlineEdit from "@/components/InlineEdit";
+import { useClickWithoutSelection, activateOnEnterOrSpace } from "@/hooks/useClickWithoutSelection";
 import { lookupByOrgNr } from "@/components/BrregSearch";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -2050,18 +2051,16 @@ export function CompanyCardContent({
             </div>
           ) : companyNotes ? (
             editable ? (
-              <button
-                type="button"
-                onClick={() => {
+              <CompanyNotesEditTrigger
+                onEdit={() => {
                   setNotesDraft(companyNotes);
                   setEditingNotes(true);
                 }}
-                className="group relative block w-full text-left"
               >
                 <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap transition-colors group-hover:text-foreground/80">
                   {companyNotes}
                 </p>
-              </button>
+              </CompanyNotesEditTrigger>
             ) : (
               <div className="group relative">
                 <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">{companyNotes}</p>
@@ -2399,7 +2398,7 @@ function CompanyActivityRow({
             </div>
           </div>
         ) : (
-          <div onClick={handleRowClick} className={cn("flex items-start gap-3", editable && "cursor-pointer")}>
+          <CompanyActivityRowBody onActivate={handleRowClick} editable={editable}>
             <div className="flex-1 min-w-0">
               <span className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</span>
 
