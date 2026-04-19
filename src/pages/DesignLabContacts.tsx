@@ -2072,37 +2072,53 @@ export default function DesignLabContacts() {
               <div className="h-full overflow-y-auto" style={{ scrollbarColor: `${C.borderStrong} ${C.surfaceAlt}` }}>
                 {selectedConsultant ? (
                   <>
-                    <div
-                      className="grid items-center sticky top-0 z-10"
+                     <div
+                      className="sticky top-0 z-10"
                       style={{
-                        gridTemplateColumns: "minmax(180px,1.4fr) 120px 48px minmax(140px,1.4fr) minmax(140px,1.5fr) 132px 96px",
-                        height: 32,
-                        borderBottom: `1px solid ${C.border}`,
                         background: C.surfaceAlt,
-                        paddingLeft: 16,
-                        paddingRight: 16,
+                        borderBottom: `1px solid ${C.border}`,
                       }}
                     >
-                      <span style={{ fontSize: 11, fontWeight: 500, color: C.textMuted }}>Lead</span>
-                      <span style={{ fontSize: 11, fontWeight: 500, color: C.textMuted }}>Selskap</span>
-                      <span style={{ fontSize: 11, fontWeight: 500, color: C.textMuted }}>Kilde</span>
-                      <DesignLabFilterButton
-                        onClick={() => toggleHuntSort("match")}
-                        active={huntSort.field === "match"}
-                        style={{ fontSize: 11 }}
+                      <div
+                        className="grid items-center"
+                        style={{
+                          gridTemplateColumns: "minmax(180px,1.4fr) 120px 48px minmax(140px,1.4fr) minmax(140px,1.5fr) 132px 96px",
+                          height: 32,
+                          paddingLeft: 16,
+                          paddingRight: 16,
+                        }}
                       >
-                        Match <ArrowUpDown style={{ width: 12, height: 12 }} />
-                      </DesignLabFilterButton>
-                      <DesignLabFilterButton
-                        onClick={() => toggleHuntSort("varme")}
-                        active={huntSort.field === "varme"}
-                        style={{ fontSize: 11 }}
-                      >
-                        Varme <ArrowUpDown style={{ width: 12, height: 12 }} />
-                      </DesignLabFilterButton>
-                      <span className="text-right" style={{ fontSize: 11, fontWeight: 500, color: C.textMuted }}>
-                        Sist
-                      </span>
+                        <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Lead</span>
+                        <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Selskap</span>
+                        <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Kilde</span>
+                        <button
+                          onClick={() => toggleHuntSort("match")}
+                          className="flex items-center gap-0.5 transition-colors"
+                          style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}
+                        >
+                          Match
+                          {huntSort.field === "match"
+                            ? huntSort.dir === "asc"
+                              ? <ChevronUp style={{ width: 12, height: 12 }} />
+                              : <ChevronDown style={{ width: 12, height: 12 }} />
+                            : <ArrowUpDown style={{ width: 12, height: 12 }} />}
+                        </button>
+                        <button
+                          onClick={() => toggleHuntSort("varme")}
+                          className="flex items-center gap-0.5 transition-colors"
+                          style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}
+                        >
+                          Varme
+                          {huntSort.field === "varme"
+                            ? huntSort.dir === "asc"
+                              ? <ChevronUp style={{ width: 12, height: 12 }} />
+                              : <ChevronDown style={{ width: 12, height: 12 }} />
+                            : <ArrowUpDown style={{ width: 12, height: 12 }} />}
+                        </button>
+                        <span className="text-right" style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>
+                          Sist
+                        </span>
+                      </div>
                     </div>
                     {isLoading || isLoadingParity ? (
                       <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>
