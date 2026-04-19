@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { C } from "@/components/designlab/theme";
 import { usePersistentState } from "@/hooks/usePersistentState";
-import { SCALE_MAP, getDesignLabTextSizeVars, type TextSize } from "@/components/designlab/TextSizeControl";
+import { SCALE_MAP, getDesignLabTextSizeVars, TextSizeControlSidebar, type TextSize } from "@/components/designlab/TextSizeControl";
 import stacqLogoFull from "@/assets/stacq-logo-full-black.png";
 import stacqLogoIcon from "@/assets/stacq-logo-icon-black.png";
 
@@ -42,7 +42,7 @@ interface DesignLabSidebarProps {
 
 export function DesignLabSidebar({ navigate, signOut, user, activePath }: DesignLabSidebarProps) {
   const [collapsed, setCollapsed] = usePersistentState("dl-sidebar-collapsed", false);
-  const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
+  const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const initials = user?.email ? user.email.split("@")[0].slice(0, 2).toUpperCase() : "??";
   const scale = SCALE_MAP[textSize];
   const px = (value: number) => Math.round(value * scale * 100) / 100;
@@ -125,6 +125,11 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
         className="mt-auto shrink-0 space-y-0.5"
         style={{ borderTop: `1px solid ${C.border}`, padding: `${px(8)}px ${collapsed ? px(6) : px(12)}px` }}
       >
+        {!collapsed && (
+          <div style={{ paddingBottom: px(6) }}>
+            <TextSizeControlSidebar value={textSize} onChange={setTextSize} />
+          </div>
+        )}
         <FooterBtn icon={Settings} label="Innstillinger" onClick={() => navigate("/design-lab/innstillinger")} active={isActive("/design-lab/innstillinger")} collapsed={collapsed} scale={scale} />
         <FooterBtn icon={LogOut} label="Logg ut" onClick={signOut} muted collapsed={collapsed} scale={scale} />
 

@@ -18,7 +18,7 @@ import { C } from "@/components/designlab/theme";
 import { crmQueryKeys } from "@/lib/queryKeys";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { CommandPalette } from "@/components/designlab/CommandPalette";
-import { TextSizeControl, getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
+import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { BrregSearch, lookupByOrgNr } from "@/components/BrregSearch";
 import { toast } from "sonner";
@@ -572,7 +572,6 @@ export default function DesignLabCompanies() {
             <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {filtered.length}</span>
           </div>
           <div className="flex items-center gap-2">
-            <TextSizeControl value={textSize} onChange={setTextSize} />
             <DesignLabPrimaryAction onClick={() => setCreateOpen(true)}>
               + Nytt selskap
             </DesignLabPrimaryAction>

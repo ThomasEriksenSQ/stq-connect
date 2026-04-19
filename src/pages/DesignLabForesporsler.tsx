@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ForespørselSheet } from "@/components/ForespørselSheet";
 import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
 import { crmQueryKeys } from "@/lib/queryKeys";
-import { TextSizeControl, getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
+import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { C } from "@/components/designlab/theme";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
@@ -401,7 +401,6 @@ export default function DesignLabForesporsler() {
             <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500 }}>⌘K søk</span>
           </div>
           <div className="flex items-center gap-2">
-            <TextSizeControl value={textSize} onChange={setTextSize} />
             <DesignLabPrimaryAction onClick={() => setCreateOpen(true)}>
               + Ny forespørsel
             </DesignLabPrimaryAction>

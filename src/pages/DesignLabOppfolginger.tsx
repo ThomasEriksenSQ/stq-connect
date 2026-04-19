@@ -16,7 +16,7 @@ import {
   type FollowUpTaskRecord,
   type FollowUpViewModel,
 } from "@/lib/followUpViewModel";
-import { TextSizeControl, getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
+import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { C } from "@/components/designlab/theme";
 import {
@@ -445,7 +445,6 @@ export default function DesignLabOppfolginger() {
             <span style={{ fontSize: 12, color: C.textFaint, fontWeight: 500 }}>⌘K søk</span>
           </div>
           <div className="flex items-center ml-auto gap-2">
-            <TextSizeControl value={textSize} onChange={setTextSize} />
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
               <DialogTrigger asChild>
                 <DesignLabPrimaryAction>
