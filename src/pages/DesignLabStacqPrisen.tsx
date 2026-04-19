@@ -1,25 +1,22 @@
-import { useState, useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState } from "react";
 import { format, startOfDay } from "date-fns";
 import { nb } from "date-fns/locale";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { calcStacqPris } from "@/lib/stacqPris";
 import { countNorwegianWorkdays } from "@/lib/norwegianHolidays";
 import { getInitials } from "@/lib/utils";
-import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip as ReTooltip, ResponsiveContainer, ReferenceLine,
 } from "recharts";
-import { Input } from "@/components/ui/input";
 import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { C } from "@/components/designlab/theme";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { DesignLabColumnHeader } from "@/components/designlab/system";
-import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
 import { computeOppdragStatus as computeSharedOppdragStatus } from "@/lib/oppdragForm";
 
 /* Colors imported from @/components/designlab/theme */
@@ -83,10 +80,8 @@ function parseOppdragDate(value?: string | null): Date | null {
    ═══════════════════════════════════════════════════════════ */
 export default function DesignLabStacqPrisen() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { signOut, user } = useAuth();
   const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
-  const [editRow, setEditRow] = useState<any | null>(null);
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "stacq", dir: "desc" });
 
   const { data: rows = [], isLoading } = useQuery({
@@ -277,8 +272,9 @@ export default function DesignLabStacqPrisen() {
                     return (
                       <div
                         key={row.id}
-                        onClick={() => setEditRow(row)}
+                        onClick={() => navigate("/design-lab/aktive-oppdrag")}
                         className="grid items-center cursor-pointer"
+                        title="Rediger på Aktive oppdrag"
                         style={{
                           gridTemplateColumns: "minmax(0,1.6fr) minmax(0,1.4fr) 100px 88px 80px 112px 64px 84px",
                           minHeight: 38, paddingInline: 16,
@@ -397,12 +393,6 @@ export default function DesignLabStacqPrisen() {
         </div>
       </main>
 
-      {/* Edit modal */}
-      {editRow && (
-        <div className="dl-v8-theme">
-          <EditModal row={editRow} onClose={() => setEditRow(null)} queryClient={queryClient} />
-        </div>
-      )}
     </div>
   );
 }
