@@ -635,6 +635,7 @@ export default function DesignLabCompanies() {
                         companyId={selectedId}
                         editable
                         headerPaddingTop={12}
+                        showContactsDivider
                         defaultHidden={{
                           techDna: true,
                           notes: true,
