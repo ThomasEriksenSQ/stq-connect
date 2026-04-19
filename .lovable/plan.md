@@ -1,33 +1,61 @@
 
 
 ## Mål
-Redusere mellomrommet mellom toppheaderen ("Markedsradar") og "Radar"-boksen på `/design-lab/markedsradar`, slik at det matcher tettheten på `/design-lab/stacq-prisen` og `/design-lab/konsulenter/oppdrag`.
+Standardisere kolonneoverskriftene i alle V2 Design Lab-tabeller til samme "sannhet" som "Aktive oppdrag" og "Eksterne" (som per skjermbildet er fasit): **11px / font-weight 500 / UPPERCASE / letter-spacing 0.08em / farge `C.textMuted`**.
 
-## Årsak
-Markedsradar (V1-komponent) gjenbrukes i Design Lab via `DesignLabPageShell`. Når `hidePageIntro` er på, skjules selve `<h1>`, men:
-- Den ytre raden (`flex ... justify-between`) med Importer-knappen rendres fortsatt og tar plass.
-- Root-divet bruker `space-y-6` (24px) mellom rad og Tabs.
-- Tabs-komponenten har `mt-2` på `TabsContent` i tillegg.
+## Sannhet (referanse)
+Fra `KonsulenterOppdrag.tsx` (linje 403–409) og `EksterneKonsulenter.tsx` (linje 248):
+```
+text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground
+```
+= `fontSize: 11, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em", color: C.textMuted`
 
-Resultat: ~24px shell-padding + ~40-44px knapperad + 24px space-y + 8px tabs-mt → for stort gap.
+## Funn — avvik mot sannheten
+
+| Tabell | Komponent / fil | Nåværende stil | Avvik |
+|---|---|---|---|
+| Aktive oppdrag | `KonsulenterOppdrag.tsx` | 11/500/UPPER/0.08em | ✅ sannhet |
+| Eksterne | `EksterneKonsulenter.tsx` | 11/500/UPPER/0.08em | ✅ sannhet |
+| Ansatte | `DesignLabKonsulenterAnsatte.tsx` | 11/500/UPPER/**0.04em** | letter-spacing for tett |
+| Selskaper | `DesignLabCompanies.tsx` via `DesignLabColumnHeader` | 11/500/**ingen uppercase**/0.01em | mangler uppercase + spacing |
+| Kontakter | `DesignLabContacts.tsx` via `DesignLabColumnHeader` | 11/500/**ingen uppercase**/0.01em + "Finn" på `C.textFaint` | mangler uppercase + spacing |
+| Forespørsler | `DesignLabForesporsler.tsx` via `DesignLabColumnHeader` + spans (0.04em) | blandet | mangler uppercase, blandet spacing |
+| Stacq Prisen | `DesignLabStacqPrisen.tsx` via `DesignLabColumnHeader` + `thStyle` (0.04em) | blandet | mangler uppercase, blandet spacing |
+
+Brukeren sier også at Ansatte "ser ut til å være korrekt" — men målt mot Aktive oppdrag/Eksterne er den marginalt for tett (0.04em vs 0.08em). Jeg justerer Ansatte og alle de andre opp til 0.08em så alt matcher 100 %.
 
 ## Endringer
 
-**1. `src/pages/Markedsradar.tsx`**
-- Når `hidePageIntro` er på (Design Lab-modus), flytt "Importer uke"-knappen inn i `headerRight` via et nytt prop `headerActions?: ReactNode` — eller enklere: skjul hele topprad-containeren i Design Lab-modus og la knappen rendres som en liten outline-knapp ved siden av Tabs-listen i samme rad.
-- Reduser root-spacing i Design Lab-modus: bruk `space-y-3` istedenfor `space-y-6` når `designLabMode` er true.
+**1. `src/components/designlab/system/table.tsx` — `DesignLabColumnHeader`**
+Endre stil til sannheten:
+- `fontSize: 11`
+- `fontWeight: 500` (også når aktiv — drop 600)
+- `letterSpacing: "0.08em"`
+- `textTransform: "uppercase"`
+- `color: C.textMuted` (også når aktiv)
 
-**2. `src/pages/DesignLabMarkedsradar.tsx`**
-- Send "Importer uke"-knappen via `headerRight`-prop på `DesignLabPageShell`, slik StacqPrisen-mønsteret tilsier (knapp i header-bar, ikke i innholdet).
+Dette løfter Selskaper, Kontakter, Forespørsler og Stacq Prisen automatisk siden alle bruker denne komponenten.
+
+**2. `src/pages/DesignLabStacqPrisen.tsx`**
+Oppdater `thStyle` (linje 363–365):
+```ts
+const thStyle = { fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted };
+```
+
+**3. `src/pages/DesignLabForesporsler.tsx`** (linje 441–443)
+Endre de tre inline `<span>` for "Type", "Teknologier", "Konsulent" fra 0.04em til 0.08em + `textTransform: "uppercase"`.
+
+**4. `src/pages/DesignLabContacts.tsx`** (linje 2242)
+Endre "Finn"-spanet fra `color: C.textFaint` uten uppercase til samme stil som de andre overskriftene (11/500/UPPER/0.08em/`C.textMuted`).
+
+**5. `src/pages/DesignLabKonsulenterAnsatte.tsx`** (linje 401–408)
+Endre `letterSpacing: "0.04em"` → `"0.08em"`.
 
 ## Visuell effekt
-Før: header → 24px padding → 44px tom knapperad → 24px gap → Tabs → 8px → Radar-kort.
-Etter: header (med Importer-knapp til høyre) → 24px padding → Tabs → 8px → Radar-kort.
+Alle Design Lab-tabellene får samme overskriftsstil som "Aktive oppdrag" og "Eksterne" på skjermbildet: jevn UPPERCASE, 11px, lett demped grå, samme letter-spacing.
 
-Dette gir samme tetthet som StacqPrisen-siden uten å påvirke V1-ruten `/markedsradar`.
-
-## Tekniske noter
-- `designLabMode` finnes allerede som prop i `Markedsradar` — ingen ny API-overflate trengs der.
-- `DesignLabPageShell` støtter allerede `headerRight`.
-- V1-flaten `/markedsradar` får ingen endring siden `designLabMode` defaulter til `false`.
+## Utenfor scope
+- Ingen endring i radhøyder, kolonnebredder eller datacelle-styling.
+- V1-flatene (`/markedsradar`, `/kontakter`, `/selskaper` osv.) er allerede på sannheten der det gjelder; ingen endring der.
+- Ingen endring av sortering/funksjonalitet i `DesignLabColumnHeader`.
 
