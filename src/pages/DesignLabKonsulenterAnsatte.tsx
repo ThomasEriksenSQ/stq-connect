@@ -402,7 +402,7 @@ export default function DesignLabKonsulenterAnsatte() {
                       style={{
                         fontSize: 11,
                         fontWeight: 500,
-                        letterSpacing: "0.04em",
+                        letterSpacing: "0.08em",
                         color: C.textMuted,
                         textTransform: "uppercase",
                       }}

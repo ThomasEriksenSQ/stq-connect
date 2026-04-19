@@ -438,9 +438,9 @@ function TableHeader({ sort, onSort }: { sort: { field: SortField; dir: SortDir 
       <DesignLabColumnHeader label="Mottatt" field="mottatt_dato" sort={sort} onSort={onSort} />
       <DesignLabColumnHeader label="Selskap" field="selskap_navn" sort={sort} onSort={onSort} />
       <DesignLabColumnHeader label="Kontakt" field="kontakt" sort={sort} onSort={onSort} />
-      <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted }}>Type</span>
-      <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted }}>Teknologier</span>
-      <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted }}>Konsulent</span>
+      <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Type</span>
+      <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Teknologier</span>
+      <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Konsulent</span>
       <DesignLabColumnHeader label="Status" field="sendt_count" sort={sort} onSort={onSort} />
     </div>
   );

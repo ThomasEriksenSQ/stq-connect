@@ -361,7 +361,7 @@ export default function DesignLabStacqPrisen() {
    ═══════════════════════════════════════════════════════════ */
 
 const thStyle: React.CSSProperties = {
-  fontSize: 11, fontWeight: 500, letterSpacing: "0.04em", color: C.textMuted,
+  fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted,
 };
 
 function TopStatCard({
