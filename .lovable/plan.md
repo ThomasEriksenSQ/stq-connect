@@ -2,46 +2,58 @@
 
 ## Vurdering
 
-Nei — de er **ikke like**. Det er to ulike avvik:
+Ja — definitivt. "Oppfølginger · 1" bruker fortsatt **gammel V1-typografi** (uppercase, 11px, bold, tracking) mens vi nettopp har løftet "Aktiviteter" og "Kontakter" til V2-standard (13px / 500 / `#1A1C1F` + dempet teller). Det blir et tydelig stilbrudd i samme kort: én header skriker "LABEL", de to andre leser som rolige primær-innganger.
 
-### Funn
+Siden vi er på `/design-lab/selskaper` (V2-flate) skal alle tre kolonneheaderne følge samme V2-mønster.
 
-**Selskapsnavn i tabellen** (`DesignLabCompanies.tsx` linje ~511):
-- `fontSize: 13px`
-- `fontWeight: 500`
-- `color: #1A1C1F` (C.text)
-- font-family: Inter (arvet fra app-root)
+## Funn
 
-**"Kontakter" i selskapskortet** (`CompanyCardContent.tsx` linje 1119, etter siste endring):
-- `text-[13px]` ✅
-- `font-medium` (500) ✅
-- `text-[#1A1C1F]` ✅
-- font-family: Inter ✅
+`src/components/CompanyCardContent.tsx` linje 1015–1017:
+```tsx
+<h3 className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+  Oppfølginger · {tasks.length}
+</h3>
+```
 
-På papiret er de identiske. **Men** — i bildene ser "Kontakter" tydelig **tyngre/fetere** ut enn "1X Technologies AS". Hvorfor?
+Dette er V1-seksjonstittel (11px / bold / uppercase / tracking 0.08em / muted) — samme mønster som ble brukt før vi migrerte Aktiviteter og Kontakter.
 
-### Sannsynlig årsak
+Til sammenligning (nåværende V2-mønster, linje 1119 og 2162/2174):
+```tsx
+<h3 className="text-[13px] font-medium text-[#1A1C1F]">
+  Kontakter <span className="font-normal text-[#8C929C]">· {contacts.length}</span>
+</h3>
+```
 
-Brukeren er på `/design-lab/selskaper` med selskapskort åpent. Tekstskaleringen (`dl-text-size`-pillene i sidebaren) bruker CSS `zoom` på `<main>`-elementet. Hvis kortet og tabellen rendres innenfor samme `<main>` er skaleringen lik — men hvis selskapskortet er en `Sheet`/overlay som rendres utenfor `<main>` (via Radix portal til `<body>`), så får **ikke** kortet samme zoom som tabellen. Da kan tabellen være zoomet ned (f.eks. til "S" = 0.85) mens kortet rendres på 100%, og resultatet er at "Kontakter" leses som større/fetere selv om CSS-verdiene er identiske.
+## Plan
 
-Sekundær mulighet: `font-medium` i Tailwind = 500, men hvis tabellraden bruker inline `style={{ fontWeight: 500 }}` og kortet bruker Tailwind-klasse, er begge 500 — så vekt er ikke forskjellen. Det er **rendret pikselstørrelse** som skiller dem, og det peker på zoom/portal-mismatch.
+**Én endring i `src/components/CompanyCardContent.tsx` linje 1014–1018**:
 
-### Plan for verifikasjon (ingen kodeendringer ennå)
+```tsx
+<div className="flex items-center mb-3" style={{ minHeight: 32 }}>
+  <h3 className="text-[13px] font-medium text-[#1A1C1F]">
+    Oppfølginger <span className="font-normal text-[#8C929C]">· {tasks.length}</span>
+  </h3>
+</div>
+```
 
-1. **Bekreft hvor selskapskortet rendres**: les `DesignLabCompanies.tsx` rundt der `CompanyCardContent` mountes for å se om det er inni en `Sheet`/`Dialog` (portal til body) eller inline i `<main>`.
-2. **Bekreft hvor tekstskalering anvendes**: les `DesignLabPageShell.tsx` for å se hvilken DOM-node som får `zoom`/`fontSize`-skalering.
-3. **Konkluder**: 
-   - Hvis kortet er i portal → fix: anvend samme skalering på Sheet-content (eller flytt skalering til `<html>`/`<body>` så portaler arver).
-   - Hvis kortet er inline → typografien skal være pixel-identisk, og avviket er kun visuell illusjon (omkringliggende tekstmasse påvirker oppfattet vekt). Da er ingen endring nødvendig.
+Dette gir:
+- Samme typografi (13px / 500 / `#1A1C1F`) som Aktiviteter og Kontakter
+- Samme dempet teller-mønster (`#8C929C` / 400)
+- Samme `min-height: 32px` + `mb-3` så baseline-aligneringen er konsistent
+- `mb-2` → `mb-3` for å matche de andre headerne
 
-### Filer som leses
-- `src/pages/DesignLabCompanies.tsx` (mount-stedet for kortet)
-- `src/components/designlab/DesignLabPageShell.tsx` (zoom-anvendelse)
-- `src/components/designlab/TextSizeControl.tsx` (skalerings-target)
+## Bonus-vurdering (kan tas i samme runde)
 
-### Filer som potensielt endres (avhenger av funn)
-- `src/components/designlab/DesignLabPageShell.tsx` eller `TextSizeControl.tsx` — flytt zoom-target slik at portaler også skaleres.
+Selve oppfølgings-kortet ligger fortsatt i en V1-container: `bg-card border border-border rounded-lg shadow-card p-4` (linje 1013). Dette er kort-på-kort layout som V2 eksplisitt skal unngå ("kort-på-kort layout" står i feillisten).
 
-### Utenfor scope
-- Endring av selve typografiverdiene — de er allerede korrekt linjert (13px / 500 / #1A1C1F).
+**Anbefaling**: fjern også kort-wrapperen så Oppfølginger flyter som en seksjon på linje med Aktiviteter og Kontakter — bare header + liste, ingen ekstra ramme/skygge. Det gir tre konsistente kolonneseksjoner.
+
+Hvis du vil holde scope tett i denne runden, gjør vi kun typografi-fiksen og lar kort-wrapperen vente.
+
+## Filer som endres
+- `src/components/CompanyCardContent.tsx` — header-erstatning på linje 1014–1018 (+ valgfritt: fjern kort-wrapper på linje 1013).
+
+## Utenfor scope
+- Andre seksjoner (Notater, Teknisk DNA-headeren).
+- Selve oppfølgingsradenes innhold/layout.
 
