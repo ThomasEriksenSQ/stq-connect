@@ -60,6 +60,14 @@ import {
   DesignLabFormSheetHeader,
 } from "@/components/designlab/DesignLabEntitySheet";
 import {
+  AktivOppdragStyleSheet,
+  AktivOppdragLabel,
+  AktivOppdragChip,
+  AktivOppdragFooterRow,
+  AktivOppdragCancelButton,
+  AktivOppdragPrimaryButton,
+} from "@/components/designlab/AktivOppdragStyleSheet";
+import {
   Phone,
   Mail,
   Globe,
@@ -260,6 +268,8 @@ interface CompanyCardContentProps {
   headerPaddingTop?: number;
   defaultHidden?: DefaultHiddenConfig;
   showContactsDivider?: boolean;
+  /** When true, the "Ny kontakt" overlay uses the V1-style sheet that mirrors OppdragEditSheet. */
+  useV1CreateSheet?: boolean;
 }
 
 export function CompanyCardContent({
@@ -270,6 +280,7 @@ export function CompanyCardContent({
   headerPaddingTop,
   defaultHidden,
   showContactsDivider = false,
+  useV1CreateSheet = false,
 }: CompanyCardContentProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -1114,6 +1125,183 @@ export function CompanyCardContent({
               <Plus className="h-3.5 w-3.5" />
               Ny kontakt
             </DesignLabPrimaryAction>
+            {useV1CreateSheet ? (
+              <AktivOppdragStyleSheet
+                open={newContactOpen}
+                onOpenChange={(nextOpen) => {
+                  setNewContactOpen(nextOpen);
+                  if (!nextOpen) resetNewContactForm();
+                }}
+                title="Ny kontakt"
+                headerSlot={
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <AktivOppdragLabel required>Fornavn</AktivOppdragLabel>
+                      <Input
+                        value={contactForm.first_name}
+                        onChange={(e) => setContactForm({ ...contactForm, first_name: e.target.value })}
+                        required
+                        className="text-[0.875rem]"
+                      />
+                    </div>
+                    <div>
+                      <AktivOppdragLabel required>Etternavn</AktivOppdragLabel>
+                      <Input
+                        value={contactForm.last_name}
+                        onChange={(e) => setContactForm({ ...contactForm, last_name: e.target.value })}
+                        required
+                        className="text-[0.875rem]"
+                      />
+                    </div>
+                  </div>
+                }
+                footer={
+                  <AktivOppdragFooterRow>
+                    <AktivOppdragCancelButton
+                      onClick={() => {
+                        setNewContactOpen(false);
+                        resetNewContactForm();
+                      }}
+                    >
+                      Avbryt
+                    </AktivOppdragCancelButton>
+                    <AktivOppdragPrimaryButton
+                      type="submit"
+                      form="design-lab-create-contact-form"
+                      disabled={!contactForm.first_name.trim() || !contactForm.last_name.trim()}
+                    >
+                      Opprett kontakt
+                    </AktivOppdragPrimaryButton>
+                  </AktivOppdragFooterRow>
+                }
+              >
+                <form
+                  id="design-lab-create-contact-form"
+                  className="space-y-5"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const { error } = await supabase.from("contacts").insert({
+                      first_name: contactForm.first_name,
+                      last_name: contactForm.last_name,
+                      email: contactForm.email || null,
+                      phone: contactForm.phone || null,
+                      title: contactForm.title || null,
+                      linkedin: contactForm.linkedin || null,
+                      locations: contactForm.location ? [contactForm.location] : [],
+                      cv_email: sanitizeContactCvEmail(contactForm.email, contactForm.cv_email),
+                      call_list: contactForm.call_list,
+                      company_id: companyId,
+                      created_by: user?.id,
+                      owner_id: user?.id,
+                    });
+                    if (error) {
+                      toast.error("Kunne ikke opprette kontakt");
+                      return;
+                    }
+                    queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.contacts(companyId) });
+                    queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() });
+                    setNewContactOpen(false);
+                    resetNewContactForm();
+                    toast.success("Kontakt opprettet");
+                  }}
+                >
+                  <div>
+                    <AktivOppdragLabel>Stilling</AktivOppdragLabel>
+                    <Input
+                      value={contactForm.title}
+                      onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })}
+                      className="text-[0.875rem]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <AktivOppdragLabel>E-post</AktivOppdragLabel>
+                      <Input
+                        value={contactForm.email}
+                        onChange={(e) =>
+                          setContactForm({
+                            ...contactForm,
+                            email: e.target.value,
+                            cv_email: sanitizeContactCvEmail(e.target.value, contactForm.cv_email),
+                          })
+                        }
+                        type="email"
+                        className="text-[0.875rem]"
+                      />
+                    </div>
+                    <div>
+                      <AktivOppdragLabel>Telefon</AktivOppdragLabel>
+                      <Input
+                        value={contactForm.phone}
+                        onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                        className="text-[0.875rem]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <AktivOppdragLabel>LinkedIn</AktivOppdragLabel>
+                    <Input
+                      value={contactForm.linkedin}
+                      onChange={(e) => setContactForm({ ...contactForm, linkedin: e.target.value })}
+                      placeholder="https://linkedin.com/in/..."
+                      className="text-[0.875rem]"
+                    />
+                  </div>
+
+                  {(() => {
+                    const locs = companyLocations;
+                    if (locs.length === 0) return null;
+                    return (
+                      <div>
+                        <AktivOppdragLabel>Geografisk sted</AktivOppdragLabel>
+                        <div className="flex flex-wrap gap-1.5">
+                          {locs.map((loc) => (
+                            <AktivOppdragChip
+                              key={loc}
+                              onClick={() =>
+                                setContactForm({
+                                  ...contactForm,
+                                  location: loc === contactForm.location ? "" : loc,
+                                })
+                              }
+                              active={contactForm.location === loc}
+                            >
+                              {loc}
+                            </AktivOppdragChip>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <div>
+                    <AktivOppdragLabel>Egenskaper</AktivOppdragLabel>
+                    <div className="flex flex-wrap gap-1.5">
+                      <AktivOppdragChip
+                        onClick={() => {
+                          if (!contactForm.cv_email && !contactHasEmail(contactForm)) {
+                            toast.error(CONTACT_CV_EMAIL_REQUIRED_MESSAGE);
+                            return;
+                          }
+                          setContactForm({ ...contactForm, cv_email: !contactForm.cv_email });
+                        }}
+                        active={contactForm.cv_email}
+                      >
+                        CV-Epost
+                      </AktivOppdragChip>
+                      <AktivOppdragChip
+                        onClick={() => setContactForm({ ...contactForm, call_list: !contactForm.call_list })}
+                        active={contactForm.call_list}
+                      >
+                        Innkjøper
+                      </AktivOppdragChip>
+                    </div>
+                  </div>
+                </form>
+              </AktivOppdragStyleSheet>
+            ) : (
             <DesignLabFormSheet
               open={newContactOpen}
               onOpenChange={(nextOpen) => {
@@ -1291,6 +1479,7 @@ export function CompanyCardContent({
                 </DesignLabFormSheetFooter>
               </form>
             </DesignLabFormSheet>
+            )}
           </>
         )}
       </div>
