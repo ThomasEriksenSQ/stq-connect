@@ -258,6 +258,34 @@ function EmailRowBody({ onToggle, children }: { onToggle: () => void; children: 
   );
 }
 
+/** Wrapper for activity row body — opens edit on click but allows text selection. */
+function ActivityRowBody({
+  onActivate,
+  editable,
+  children,
+}: {
+  onActivate: () => void;
+  editable: boolean;
+  children: React.ReactNode;
+}) {
+  const handlers = useClickWithoutSelection<HTMLDivElement>(onActivate);
+  return (
+    <div
+      role={editable ? "button" : undefined}
+      tabIndex={editable ? 0 : undefined}
+      onMouseDown={editable ? handlers.onMouseDown : undefined}
+      onClick={editable ? handlers.onClick : undefined}
+      onKeyDown={editable ? activateOnEnterOrSpace(onActivate) : undefined}
+      className={cn(
+        "flex items-start gap-3 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-sm",
+        editable && "cursor-pointer",
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
 const DATE_CHIPS = [
   { label: "Følg opp på sikt", fn: (): Date | null => null },
   { label: "I dag", fn: () => new Date() },
