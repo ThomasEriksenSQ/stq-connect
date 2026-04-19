@@ -7,7 +7,7 @@ import { Briefcase, CalendarCheck, BarChart2, Plus } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { OppdragEditSheet } from "@/components/OppdragEditSheet";
-import { FornyelsesTimeline } from "@/components/FornyelsesTimeline";
+import { FornyelsesTimeline, buildMonthlySummary } from "@/components/FornyelsesTimeline";
 import { DesignLabStaticTag, DesignLabFilterButton, DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS, DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS, DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS } from "@/components/designlab/controls";
 import { DesignLabPrimaryAction } from "@/components/designlab/system";
 
@@ -273,7 +273,27 @@ export default function KonsulenterOppdrag({
           </div>
 
           {/* Renewal timeline */}
-          {!embeddedSplit && <FornyelsesTimeline enriched={enriched} />}
+          {!embeddedSplit && (
+            <>
+              <FornyelsesTimeline enriched={enriched} />
+              {(() => {
+                const summary = buildMonthlySummary(enriched);
+                if (summary.length === 0) return null;
+                return (
+                  <div className="px-3 py-2 border-t border-border bg-background mb-3">
+                    <p className="text-[0.75rem] text-muted-foreground">
+                      {summary.map((s, i) => (
+                        <span key={s.month}>
+                          {i > 0 && " · "}
+                          <span className="font-medium text-foreground">{s.month}:</span> {s.count} {s.count === 1 ? "fornyelse" : "fornyelser"}
+                        </span>
+                      ))}
+                    </p>
+                  </div>
+                );
+              })()}
+            </>
+          )}
 
           {/* Filter chips */}
           <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -391,8 +411,8 @@ export default function KonsulenterOppdrag({
 
           {embeddedSplit ? (
             <>
-              <div className="hidden md:block min-h-[860px]">
-                <ResizablePanelGroup direction="horizontal" className="h-full">
+              <div className="hidden md:block min-h-[860px] flex flex-col">
+                <ResizablePanelGroup direction="horizontal" className="flex-1">
                   <ResizablePanel defaultSize={46} minSize={28}>
                     <div className="h-full pr-2">
                       <div className="h-full border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
@@ -543,6 +563,22 @@ export default function KonsulenterOppdrag({
                     </div>
                   </ResizablePanel>
                 </ResizablePanelGroup>
+                {(() => {
+                  const summary = buildMonthlySummary(enriched);
+                  if (summary.length === 0) return null;
+                  return (
+                    <div className="px-4 py-2 border-t border-border bg-background mt-2 rounded-b-lg">
+                      <p className="text-[0.75rem] text-muted-foreground">
+                        {summary.map((s, i) => (
+                          <span key={s.month}>
+                            {i > 0 && " · "}
+                            <span className="font-medium text-foreground">{s.month}:</span> {s.count} {s.count === 1 ? "fornyelse" : "fornyelser"}
+                          </span>
+                        ))}
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
               <Sheet
                 open={editSheetOpen || createOpen}
