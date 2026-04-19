@@ -643,7 +643,14 @@ export default function DesignLabCompanies() {
                   </div>
                 </div>
               ) : (
-                <div className="h-full" style={{ borderLeft: `1px solid ${C.borderLight}`, background: C.appBg }} />
+                <div
+                  className="flex h-full items-center justify-center"
+                  style={{ borderLeft: `1px solid ${C.borderLight}`, background: C.appBg }}
+                >
+                  <p style={{ fontSize: 13, color: C.textFaint }}>
+                    Trykk ⌘K for å søke.
+                  </p>
+                </div>
               )}
             </ResizablePanel>
             <ResizableHandle
