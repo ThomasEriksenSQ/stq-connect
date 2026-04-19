@@ -129,8 +129,8 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
                 const ansattId = r.erAnsatt ? nameToAnsattId.get(r.fullName.trim().toLowerCase()) : undefined;
                 const portrait = ansattId ? portraitByAnsattId.get(ansattId) : undefined;
                 return (
-                  <div key={r.id} className="flex items-center hover:bg-muted/30 transition-colors">
-                    <div className="w-[190px] shrink-0 px-3 py-2.5 sticky left-0 z-10 bg-card flex items-center gap-2">
+                  <div key={r.id} className="flex items-center min-h-[38px] hover:bg-muted/30 transition-colors">
+                    <div className="w-[190px] shrink-0 px-3 py-1 sticky left-0 z-10 bg-card flex items-center gap-2">
                       {(() => {
                         if (r.erAnsatt && portrait) {
                           return <img src={portrait} alt={r.fullName} className="w-6 h-6 rounded-full object-cover border border-border flex-shrink-0" />;
