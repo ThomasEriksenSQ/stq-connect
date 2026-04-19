@@ -1009,8 +1009,6 @@ export function CompanyCardContent({
         );
       })()}
 
-      <div className="border-t border-border/50" />
-
       {tasks.length > 0 && (
         <div className="bg-card border border-border rounded-lg shadow-card p-4">
           <div className="flex items-center justify-between mb-2">
@@ -2003,6 +2001,8 @@ export function CompanyCardContent({
           )}
         </div>
       </div>
+
+      <div className="border-t border-border/50 mb-5" />
 
       {/* Notat */}
       {showNotes && (
