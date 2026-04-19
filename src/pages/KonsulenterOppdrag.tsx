@@ -15,7 +15,7 @@ import { C } from "@/theme";
 
 type Filter = "Alle" | "Aktiv" | "Oppstart" | "Inaktiv";
 const TIMER_PER_DAG = 7.5;
-const OPPDRAG_GRID_TEMPLATE = "minmax(0,1.4fr) minmax(0,1.5fr) minmax(0,1.3fr) 104px 96px 96px 80px 96px 84px";
+const OPPDRAG_GRID_TEMPLATE = "minmax(0,1.4fr) minmax(0,1.5fr) minmax(0,1.3fr) 104px 96px 96px 88px 80px 96px 84px";
 
 interface KonsulenterOppdragProps {
   hidePageIntro?: boolean;
@@ -411,7 +411,7 @@ export default function KonsulenterOppdrag({
                         className="grid gap-3 px-4 border-b border-border sticky top-0 z-10"
                         style={{ gridTemplateColumns: OPPDRAG_GRID_TEMPLATE, background: C.surfaceAlt, height: 32, alignItems: "center" }}
                       >
-                        {["Konsulent", "Sluttkunde", "Via partner", "Type", "Utpris", "Margin", "Margin %", "Forny", "Status"].map((h) => (
+                        {["Konsulent", "Sluttkunde", "Via partner", "Type", "Utpris", "Margin", "Ekstra", "Margin %", "Forny", "Status"].map((h) => (
                           <span
                             key={h}
                             className="whitespace-nowrap"
@@ -496,6 +496,15 @@ export default function KonsulenterOppdrag({
                               >
                                 kr {formatNOK(o.marginPerTime)}/t
                               </p>
+                            </div>
+                            <div>
+                              {Number(o.ekstra_kostnad) > 0 ? (
+                                <p className="text-[0.8125rem] text-muted-foreground">
+                                  kr {formatNOK(Number(o.ekstra_kostnad))}/t
+                                </p>
+                              ) : (
+                                <span className="text-[0.8125rem] text-muted-foreground">–</span>
+                              )}
                             </div>
                             <div>
                               <p className="text-[0.8125rem] text-muted-foreground">{o.marginPct.toFixed(1)}%</p>
@@ -583,7 +592,7 @@ export default function KonsulenterOppdrag({
                   className="grid gap-3 px-4 py-2.5 border-b border-border bg-background"
                   style={{ gridTemplateColumns: OPPDRAG_GRID_TEMPLATE }}
                 >
-                  {["Konsulent", "Sluttkunde", "Via partner", "Type", "Utpris", "Margin", "Margin %", "Forny", "Status"].map((h) => (
+                  {["Konsulent", "Sluttkunde", "Via partner", "Type", "Utpris", "Margin", "Ekstra", "Margin %", "Forny", "Status"].map((h) => (
                     <span
                       key={h}
                       className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground whitespace-nowrap"
@@ -662,6 +671,15 @@ export default function KonsulenterOppdrag({
                           >
                             kr {formatNOK(o.marginPerTime)}/t
                           </p>
+                        </div>
+                        <div>
+                          {Number(o.ekstra_kostnad) > 0 ? (
+                            <p className="text-[0.8125rem] text-muted-foreground">
+                              kr {formatNOK(Number(o.ekstra_kostnad))}/t
+                            </p>
+                          ) : (
+                            <span className="text-[0.8125rem] text-muted-foreground">–</span>
+                          )}
                         </div>
                         <div>
                           <p className="text-[0.8125rem] text-muted-foreground">{o.marginPct.toFixed(1)}%</p>
