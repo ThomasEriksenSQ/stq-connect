@@ -252,7 +252,7 @@ export default function DesignLabStacqPrisen() {
                   <div
                     className="grid items-center"
                     style={{
-                      gridTemplateColumns: "minmax(0,1.6fr) minmax(0,1.4fr) 100px 88px 80px 112px 64px 84px",
+                      gridTemplateColumns: "minmax(0,1.5fr) minmax(0,1.5fr) 96px 96px 88px 112px 72px 88px",
                       height: 34, paddingInline: 16, borderBottom: `1px solid ${C.border}`, background: C.surfaceAlt,
                     }}
                   >
@@ -275,7 +275,7 @@ export default function DesignLabStacqPrisen() {
                         key={row.id}
                         className="grid items-center"
                         style={{
-                          gridTemplateColumns: "minmax(0,1.6fr) minmax(0,1.4fr) 100px 88px 80px 112px 64px 84px",
+                          gridTemplateColumns: "minmax(0,1.5fr) minmax(0,1.5fr) 96px 96px 88px 112px 72px 88px",
                           minHeight: 38, paddingInline: 16,
                           borderBottom: `1px solid ${C.borderLight}`,
                         }}
