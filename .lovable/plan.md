@@ -2,65 +2,78 @@
 
 ## Funn
 
-I bildet ser jeg footer-området i Design Lab-sidebaren: tekststørrelse-velger (S/M/L/XL/XXL), "Innstillinger", "Logg ut", og helt nederst-til-høyre en liten **collapse-knapp** (PanelLeftClose-ikon) som flyter alene i en rad. Den ser løsrevet og uklar ut — brukeren vet ikke umiddelbart hva den gjør, og den bryter den ellers stramme Linear-estetikken.
-
-I `src/components/designlab/DesignLabSidebar.tsx` rendres den i dag i en egen `<div>` under "Logg ut" med `justify-end` (linje 124–128 for expanded modus). I collapsed modus rendres den som en full rad under footeren (linje 130–134).
-
-## Vurdering av alternativer
-
-| Alternativ | Vurdering |
-|---|---|
-| **A. Flytt til toppen ved logoen** | Linear, Notion, Height og Linear-klonene plasserer alle collapse-knappen ved siden av logoen øverst — ofte synlig kun on-hover. Dette er det mest etablerte mønsteret og frigjør footeren helt. |
-| **B. Behold i footer, men integrer som "stille" hover-action** | Vis kun on-hover, helt nede i hjørnet. Mindre oppdagbart, men ryddigere. |
-| **C. Fjern knappen helt — kun ⌘\ shortcut** | For minimalistisk; nye brukere finner den ikke. |
-| **D. Slå sammen med tekststørrelse-raden** | Blander to ulike kontroller (visning vs. layout) — semantisk rotete. |
-
-**Anbefaling: Alternativ A** — flytt collapse-toggle til logo-raden øverst. Dette er Linear-standarden, frigjør footeren, og gir naturlig oppdagbarhet (knappen sitter ved appens identitet, ikke som en rar fotnote).
+- Status beregnes allerede klient-side via `computeOppdragStatus` i `KonsulenterOppdrag.tsx` (linje 25–31): hvis `start_dato` er i fremtiden → `"Oppstart"`, ellers `"Aktiv"`, men `"Inaktiv"` overstyrer alt. Dette dekker delvis ønsket logikk, men:
+  - **`slutt_dato` ignoreres** — utløpte oppdrag forblir "Aktiv" til noen manuelt avslutter dem.
+  - Statusen er kun *vist* — feltet `status` i DB blir ikke oppdatert.
+- I `OppdragEditSheet.tsx` finnes feltet **Startdato**, men **ingen Sluttdato-felt**. `slutt_dato` settes kun via "Avslutt oppdrag" (`terminateOppdrag` → `slutt_dato = i dag`).
+- DB-kolonnen `slutt_dato` finnes allerede på `stacq_oppdrag`. Ingen migrering trengs.
+- `forny_dato` brukes kun til varsler/sortering — påvirker ikke status. Dette er allerede riktig og skal ikke endres.
 
 ## Plan
 
-### Endring i `src/components/designlab/DesignLabSidebar.tsx`
+### 1. Legg til Sluttdato-felt i `OppdragEditSheet.tsx`
+Plasseres rett under Startdato (linje 698–724). Samme `Popover + Calendar`-mønster som Startdato. Tom som standard.
 
-**1. Logo-raden (ca. linje 71–95)**
-- Endre logo-containeren fra `justify-content: flex-start/center` til en flex-rad med logo til venstre og collapse-toggle til høyre (kun i expanded modus).
-- I collapsed modus: logoen blir klikkbar/hover-bar og toggler ekspansjon (eller behold en mini-knapp under logoen).
-
-Layout expanded:
 ```
-[STACQ-logo ─────────────────── ⟨ ]
+STARTDATO        [📅  3. desember 2025      ]
+SLUTTDATO        [📅  Velg dato             ]   ← ny
 ```
 
-Layout collapsed:
+State: `const [sluttDato, setSluttDato] = useState<Date | undefined>()`. Hentes fra `row.slutt_dato` ved redigering.
+
+### 2. Persister `sluttDato`
+- Legg `sluttDato: Date | undefined` i `OppdragFormState` (`src/lib/oppdragForm.ts`).
+- I `buildOppdragWritePayload`: `slutt_dato: toIsoDate(value.sluttDato)`.
+- I `OppdragEditSheet` send `sluttDato` inn via `buildFormState`.
+
+### 3. Sentraliser `computeOppdragStatus` og utvid med `slutt_dato`-regel
+Flytt funksjonen fra `KonsulenterOppdrag.tsx` til `src/lib/oppdragForm.ts` (eller ny `src/lib/oppdragStatus.ts`) så den kan brukes både for klient-derivasjon og ved lagring.
+
+Ny logikk:
+```ts
+function computeOppdragStatus(o: { status?, start_dato?, slutt_dato? }): "Aktiv" | "Oppstart" | "Inaktiv" {
+  if (o.status === "Inaktiv") return "Inaktiv";
+  const today = startOfDay(new Date());
+  const slutt = parseOppdragDate(o.slutt_dato);
+  if (slutt && slutt < today) return "Inaktiv";       // sluttdato passert
+  const start = parseOppdragDate(o.start_dato);
+  if (start && start > today) return "Oppstart";       // startdato i fremtiden
+  return "Aktiv";                                       // startdato passert (eller ingen) + ikke utløpt
+}
 ```
-[ S ]
-[ ⟩ ]   ← liten toggle rett under logo, midtstilt
+
+Oppdater import-bruk i `KonsulenterOppdrag.tsx` (linje 25–31 erstattes av import).
+
+### 4. Auto-sett status ved lagring
+I `buildOppdragWritePayload` (`src/lib/oppdragForm.ts`): kjør `computeOppdragStatus` på det innsendte tidsspennet og overstyr `status`-feltet — **unntatt** når brukeren eksplisitt har valgt `"Inaktiv"` (det skal alltid respekteres som hard avslutning).
+
+```ts
+const derived = computeOppdragStatus({
+  status: value.status,
+  start_dato: toIsoDate(value.startDato),
+  slutt_dato: toIsoDate(value.sluttDato),
+});
+return { ...payload, status: derived };
 ```
 
-**2. Footer (ca. linje 119–137)**
-- Fjern collapse-toggle fra footer helt.
-- Footer reduseres til:
-  ```
-  ─────────────────
-  ⚙  Innstillinger
-  ↪  Logg ut
-  ```
-- Behold tekststørrelse-raden over footer-streken som i dag.
+Dette gir:
+- **Sluttdato passert** → status = `Inaktiv` (lagret i DB, ikke bare derivert).
+- **Startdato i fremtiden** → status = `Oppstart`.
+- **Startdato i dag/passert + ikke sluttet** → status = `Aktiv`.
+- **`Fornyes / utløper`** påvirker ingenting (uendret oppførsel).
 
-**3. Behold ⌘\ shortcut**
-Ingen endring i keyboard-handler — fungerer som før.
+### 5. Visuell konsistens i statuschips i editoren
+Status-chipsene i sheet (linje 569–587) viser fortsatt brukervalget. Vi lar brukeren kunne velge manuelt, men når sluttdato/startdato er satt vil lagring overskrive. Vurder å vise en liten hint-tekst under status-chipsene **kun når dato-regler vil overstyre** (f.eks. *"Status settes automatisk basert på datoer"*). Lavt oppmerksomhetsnivå (`text-[0.75rem] text-muted-foreground`).
 
-**4. Tooltip og a11y**
-Behold `title` og `aria-label` ("Skjul sidebar (⌘\\)" / "Utvid sidebar (⌘\\)").
-
-### Visuell finpuss
-- I expanded: collapse-knappen er `C.textGhost` som standard, blir `C.textMuted` on hover — ingen bakgrunn med mindre hover, da `C.hoverSubtle`. Holder den "stille" ved siden av logoen.
-- Størrelse: 14px ikon, 24×24px treffareal — samme som i dag.
-
-### Resultat
-Footeren blir ren og funksjonell (kun innstillinger + logout). Collapse-kontrollen lever der den hører hjemme — ved appens identitet — og følger Linear-konvensjonen brukere allerede kjenner.
+### 6. Test-utvidelse
+Utvid `src/test/oppdragForm.test.ts` med tre nye case:
+- Sluttdato i fortiden → payload.status = `"Inaktiv"`.
+- Startdato i fremtiden → payload.status = `"Oppstart"`.
+- Startdato i dag, ingen sluttdato → payload.status = `"Aktiv"`.
 
 ## Utenfor scope
-- Ingen endring i V1 (`AppSidebar.tsx`).
-- Ingen endring i ⌘\-shortcut eller `usePersistentState`.
-- Ingen endring i tekststørrelse-velgeren.
+- Ingen bakgrunnsjobb som rydder opp gamle oppdrag som har passert sluttdato uten å bli redigert — derivasjonen i listevisningen håndterer fortsatt visningen (via `computeOppdragStatus` som nå også sjekker `slutt_dato`). Ekte DB-status oppdateres først ved neste lagring av oppdraget.
+- Ingen endring i `forny_dato`-feltet eller "Løpende 30 dager"-checkboxen.
+- Ingen endring i "Avslutt oppdrag"-knappen — den fortsetter å sette `slutt_dato = i dag` + `status = "Inaktiv"` umiddelbart.
+- V1-flater (`StacqPrisen.tsx` m.fl.) får ingen funksjonsendringer utover at `computeOppdragStatus` nå er delt.
 
