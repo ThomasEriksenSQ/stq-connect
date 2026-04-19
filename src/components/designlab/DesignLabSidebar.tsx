@@ -18,7 +18,7 @@ const NAV_MAIN = [
   { label: "Selskaper", icon: Building2, href: "/design-lab/selskaper" },
   { label: "Kontakter", icon: Users, href: "/design-lab/kontakter" },
   { label: "Forespørsler", icon: Briefcase, href: "/design-lab/foresporsler" },
-  { label: "Stilark", icon: SwatchBook, href: "/design-lab/stilark" },
+  
   { label: "Oppfølginger", icon: Clock, href: "/design-lab/oppfolginger" },
 ];
 
