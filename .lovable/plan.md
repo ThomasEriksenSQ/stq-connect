@@ -1,47 +1,60 @@
 
 ## Mål
-1. Aktivere ⌘K-søk på `/design-lab/eksterne` (Eksterne) på samme måte som Kontakter og Selskaper.
-2. Erstatte teksten "Velg en ekstern konsulent for å vise profil." med "Trykk ⌘K for å søke." når ingen ekstern konsulent er valgt — kun i V2 (`embeddedSplit`).
+På `/design-lab/aktive-oppdrag`:
+1. Match radhøyde og header-høyde mellom venstre tabell og høyre tidslinje.
+2. Flytt månedsoppsummeringen (`Apr: 3 fornyelser …`) ut av tidslinje-kortet og under hele tabell-/tidslinje-arealet.
+3. Gjør den blå "aktiv måned"-bakgrunnen kontinuerlig nedover hele kolonnen (alle rader + tomme områder), ikke bare på rader med pille.
+4. Gi konsulent-kolonnen i tidslinjen en `KONSULENT`-header, og match font + avatar-stil 1:1 med venstre tabell.
 
 ## Funn
-- `DesignLabEksterneKonsulenter.tsx` er bare en tynn wrapper rundt `EksterneKonsulenter` med `embeddedSplit`-flagget.
-- `EksterneKonsulenter.tsx` brukes både i V1 (`/eksterne`) og V2 — derfor må `embeddedSplit` brukes som gate for V2-spesifikke endringer (⌘K + ny tekst).
-- V2 split ligger på linje 239–322. Empty-state på linje 312–317 viser dagens tekst.
-- `CommandPalette` (delt komponent) er bygget for kontakter + selskaper-kategorier. Den passer ikke for eksterne konsulenter direkte (den har ingen "Eksterne"-seksjon, og `onSelectContact`/`onSelectCompany`-API-et matcher ikke). Vi trenger en lokal palette for Eksterne.
+- Venstre tabell (`KonsulenterOppdrag.tsx`): header `py-2.5`, rad `min-h-[38px] py-1`, navn `text-[0.8125rem] font-medium`, avatar `w-6 h-6` med initialer `text-[0.625rem]`.
+- Tidslinje (`FornyelsesTimeline.tsx`): header `py-1` (lavere), rad `min-h-[38px]`, navn `text-[0.8125rem] font-semibold` (feil vekt), avatar-initialer `text-[0.5625rem]` (feil), første kolonne har ingen tittel.
+- Aktiv-måned-bakgrunn (`bg-primary/[0.03]`) settes per celle inni hver rad → vises kun der det er rader, ikke som én sammenhengende vertikal stripe.
+- Summary er inni `border-t` av tidslinje-kortet (`FornyelsesTimeline.tsx`).
 
 ## Plan
 
-### 1. Erstatt empty-state-tekst (V2 only)
-I `src/pages/EksterneKonsulenter.tsx` (linje 312–317), når `embeddedSplit === true`:
-- Bytt "Velg en ekstern konsulent for å vise profil." → "Trykk ⌘K for å søke."
-- Match Kontakter/Selskaper-stilen: `fontSize: 13, color: C.textFaint`, sentrert i `flex h-full items-center justify-center`.
-- Importer `C` fra `@/components/designlab/theme`.
-- V1-versjonen (ikke `embeddedSplit`) berøres ikke.
+### 1. `src/components/FornyelsesTimeline.tsx`
+- Header: bytt `py-1` → `py-2.5` for å matche venstre tabell.
+- Konsulent-kolonne (header): erstatt tom `w-[190px]`-div med samme uppercase-label som de andre månedene:
+  ```tsx
+  <div className="w-[190px] shrink-0 px-3 py-2.5 sticky left-0 z-30 bg-background text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+    Konsulent
+  </div>
+  ```
+- Rad: behold `min-h-[38px]`, men bytt navnet `font-semibold` → `font-medium` for å matche venstre.
+- Avatar-initialer: bytt `text-[0.5625rem]` → `text-[0.625rem]` (begge to steder: ansatt + ekstern).
+- Fjern hele `monthlySummary`-blokken fra bunnen av komponenten (vi flytter den ut). Returner `monthlySummary` som del av komponentens API ikke behov — vi flytter logikken til parent i stedet.
+- For den blå aktiv-måned-bakgrunnen: I stedet for å sette `bg-primary/[0.03]` på hver celle, legg til ett absolutt-posisjonert overlay som dekker hele aktiv-månedens kolonne fra top til bunn:
+  - Wrap `min-w-[900px]`-div med `relative`.
+  - Beregn aktiv måneds offset: konsulent-kolonne er 190px, hver måned er `flex-1 min-w-[56px]` (12 like store kolonner i resten). Bruk en CSS-grid eller absolutt overlay som matcher aktiv kolonne.
+  - Enklere løsning: behold `flex` for header og rader, og rendere et absolutt overlay `<div>` etter/før innhold med `style={{ left: 'calc(190px + (100% - 190px) * 3/12)', width: 'calc((100% - 190px) / 12)', top: 0, bottom: 0, background: 'rgba(94,106,210,0.05)', pointerEvents: 'none' }}` og fjern per-celle `bg-primary/[0.03]`.
+  - Behold den tynne `h-[2px] bg-primary` indikatoren under aktiv måneds header som i dag.
 
-### 2. Legg til ⌘K-palette for Eksterne
-I `EksterneKonsulenter.tsx` (kun aktiv når `embeddedSplit === true`):
-- Tilstand: `const [cmdOpen, setCmdOpen] = useState(false);` og `const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");` — samme nøkkel som resten av Design Lab.
-- Globalt keyboard-listener via `useEffect`: `Cmd/Ctrl + K` → `setCmdOpen(true)` (kun hvis `embeddedSplit`).
-- Render en lett, lokalt definert command-palette (etter mønster fra `CommandPalette.tsx`) med én seksjon "Eksterne konsulenter":
-  - Items bygges fra `filtered` (eller hele `data`-listen, ufiltrert, så ⌘K alltid søker bredt).
-  - Match query mot `navn`, `companies?.name`, og `teknologier`-array.
-  - Velg item → `setSelectedId(row.id)` + `setCmdOpen(false)`.
-  - Pil opp/ned + Enter + Esc, samme oppførsel som eksisterende palette.
-  - Wrap roten med `style={{ ...getDesignLabTextSizeStyle(textSize) }}` og portal via `createPortal` til `document.body`.
-  - Stil identisk med eksisterende palette (44px input-rad, 560px bred, 18vh top, samme farger og border).
+### 2. `src/pages/KonsulenterOppdrag.tsx` (kun `embeddedSplit`-grenen, ~linje 392–546)
+- Eksporter `monthlySummary`-data fra `FornyelsesTimeline` (eller dupliser beregningen i parent — enklere: dupliser, siden `enriched` er tilgjengelig i parent).
+- Wrap hele `<ResizablePanelGroup>` i et `<div>`. Etter gruppen, legg til en bunntekst som spenner over begge paneler:
+  ```tsx
+  <div className="px-4 py-2 border-t border-border bg-background mt-2 rounded-b-lg">
+    <p className="text-[0.75rem] text-muted-foreground">
+      {monthlySummary.map(...)}
+    </p>
+  </div>
+  ```
+- Fjern egen border-t-summary fra tidslinje-kortet (gjort i steg 1).
 
-Begrunnelse for lokal palette i stedet for å gjenbruke `CommandPalette`:
-- Gjenbruk ville krevd å utvide den delte komponenten med en tredje "eksterne"-seksjon, ny callback (`onSelectExternal`) og endring av types — bredere blast radius. En liten lokal palette på ~80 linjer holder endringen isolert til Eksterne-flaten.
+### 3. Ikke rør
+- V1-flate `/konsulenter/i-oppdrag` bruker samme komponenter, men `embeddedSplit=false`. Endringene i `FornyelsesTimeline` (header-padding, navnvekt, avatar-tekstr, overlay-tilnærming) påvirker også V1-tidslinjen — det er en kosmetisk forbedring som er konsistent og ufarlig. Summary-flytting gjøres kun i V2 (parent-grenen `embeddedSplit`); V1 beholder summary-en i bunnen av tidslinje-kortet (eller vi fjerner den der også for konsistens — anbefalt: fjern fra `FornyelsesTimeline` helt, og legg til samme bunnlinje i V1-kallet på linje 276 hvis nødvendig).
 
-### 3. Ikke rør V1
-- Alle endringer gates på `embeddedSplit`. V1-ruten `/eksterne` får verken nytt empty-state-språk eller ⌘K-binding.
+Beslutning: fjern summary fra `FornyelsesTimeline` helt, og legg den til i parent både for V1 (`!embeddedSplit`) og V2 — gir én kilde til sannhet.
 
 ## Effekt
-- På `/design-lab/eksterne`: ⌘K åpner søk over alle eksterne konsulenter (navn / selskap / teknologier). Valg fyller høyre panel.
-- Empty state matcher Kontakter og Selskaper visuelt og språkmessig.
-- V1 (`/eksterne`) er uberørt.
+- Header og rader er pixel-like høye på venstre og høyre side.
+- Konsulent-kolonnen får tittel "KONSULENT" i samme font/farge som "KUNDE" osv.
+- Navne-vekt og avatar-størrelser matcher venstre tabell eksakt.
+- Aktiv måned (april) får en sammenhengende, lys lavendel vertikal stripe gjennom hele tabellhøyden, inkl. tomme rader.
+- Månedsoppsummeringen ligger i en egen rad under hele split-en, visuelt knyttet til begge paneler.
 
 ## Utenfor scope
-- Endring av delt `CommandPalette`-komponent.
-- Andre Design Lab-flater (Forespørsler, Oppfølginger, Ansatte).
-- Endring av V1 Eksterne.
+- Endring av kolonnebredder, sortering, filterlogikk, eller fargelogikk for forny-pillene.
+- Endring av V1-flatens layout utover summary-flytting.
