@@ -631,7 +631,7 @@ export default function DesignLabOppfolginger() {
                         key={index}
                         className="animate-pulse"
                         style={{
-                          height: 52,
+                          height: 38,
                           borderBottom: `1px solid ${C.borderLight}`,
                           background: index % 2 === 0 ? "rgba(0,0,0,0.01)" : "transparent",
                         }}
@@ -652,8 +652,8 @@ export default function DesignLabOppfolginger() {
                         className="grid w-full items-center text-left transition-colors"
                         style={{
                           gridTemplateColumns: "minmax(0, 1fr) 180px 200px 140px 92px 70px",
-                          minHeight: 52,
-                          padding: "10px 24px",
+                          minHeight: 38,
+                          padding: "6px 24px",
                           borderBottom: `1px solid ${C.borderLight}`,
                           background: active ? C.selected : "transparent",
                         }}
