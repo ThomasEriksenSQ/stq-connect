@@ -107,7 +107,8 @@ export default function KonsulenterOppdrag({
         const computedStatus = computeOppdragStatus(o);
         const utpris = Number(o.utpris) || 0;
         const tilKons = Number(o.til_konsulent) || 0;
-        const marginPerTime = utpris - tilKons;
+        const ekstra = Number(o.ekstra_kostnad) || 0;
+        const marginPerTime = utpris - tilKons - ekstra;
         const margin = marginPerTime * TIMER_PER_DAG;
         const marginPct = utpris > 0 ? (marginPerTime / utpris) * 100 : 0;
         const daysUntilForny = o.lopende_30_dager
