@@ -19,6 +19,8 @@ export interface OppdragFormState {
   kommentar: string;
   selskapId: string | null;
   selskapNavn: string | null;
+  partnerSelskapId: string | null;
+  partnerSelskapNavn: string | null;
   isLopende: boolean;
 }
 
@@ -43,6 +45,8 @@ export const OPPDRAG_DEFAULTS: OppdragFormState = {
   kommentar: "",
   selskapId: null,
   selskapNavn: null,
+  partnerSelskapId: null,
+  partnerSelskapNavn: null,
   isLopende: false,
 };
 
@@ -158,6 +162,9 @@ export function buildOppdragWritePayload(
     slutt_dato: sluttIso,
     kunde: value.selskapNavn?.trim() || null,
     selskap_id: value.selskapId,
+    partner_selskap_id: value.dealType === "PARTNER" ? value.partnerSelskapId : null,
+    partner_navn:
+      value.dealType === "PARTNER" ? value.partnerSelskapNavn?.trim() || null : null,
     kommentar: value.kommentar.trim() || null,
   };
 }
