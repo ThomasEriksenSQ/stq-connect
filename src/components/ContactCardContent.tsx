@@ -202,18 +202,25 @@ function InlineField({
     );
   }
 
+  const startEdit = () => setEditing(true);
+  const clickHandlers = useClickWithoutSelection<HTMLSpanElement>(startEdit);
+
   return (
-    <button
-      onClick={() => setEditing(true)}
+    <span
+      role="button"
+      tabIndex={0}
+      onMouseDown={clickHandlers.onMouseDown}
+      onClick={clickHandlers.onClick}
+      onKeyDown={activateOnEnterOrSpace(startEdit)}
       className={cn(
-        "group inline-flex items-center gap-1 hover:text-foreground/60 transition-colors cursor-text",
+        "group inline-flex items-center gap-1 hover:text-foreground/60 transition-colors cursor-text focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-sm",
         !value && "text-muted-foreground/40 italic",
         className,
       )}
     >
       <span>{value || placeholder || "—"}</span>
       <Pencil className="h-2.5 w-2.5 opacity-0 group-hover:opacity-50 transition-opacity flex-shrink-0" />
-    </button>
+    </span>
   );
 }
 
@@ -1351,18 +1358,16 @@ export function ContactCardContent({
             </div>
           ) : contact.notes ? (
             canEditProfile ? (
-              <button
-                type="button"
-                onClick={() => {
+              <NotesEditTrigger
+                onEdit={() => {
                   setNotesDraft(contact.notes || "");
                   setEditingNotes(true);
                 }}
-                className="group relative block w-full text-left"
               >
                 <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap transition-colors group-hover:text-foreground/80">
                   {contact.notes}
                 </p>
-              </button>
+              </NotesEditTrigger>
             ) : (
               <div className="group relative">
                 <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">
@@ -2537,10 +2542,7 @@ function EmailRow({ email }: { email: any }) {
         <Mail className="h-3.5 w-3.5 text-primary" />
       </div>
 
-      <div
-        className="min-w-0 cursor-pointer"
-        onClick={() => setExpanded(!expanded)}
-      >
+      <EmailRowToggle expanded={expanded} onToggle={() => setExpanded(!expanded)}>
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
