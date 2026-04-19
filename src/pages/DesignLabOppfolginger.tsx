@@ -21,8 +21,8 @@ import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { C } from "@/components/designlab/theme";
 import {
   DesignLabIconButton,
-  DesignLabSearchInput,
 } from "@/components/designlab/controls";
+import { CommandPalette } from "@/components/designlab/CommandPalette";
 import {
   DesignLabFilterRow,
   DesignLabGhostAction,
