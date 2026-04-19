@@ -256,18 +256,18 @@ export default function DesignLabStacqPrisen() {
                   <div
                     className="grid items-center"
                     style={{
-                      gridTemplateColumns: "minmax(0,2fr) minmax(0,1.5fr) 80px 80px 80px 100px 56px 80px",
+                      gridTemplateColumns: "minmax(0,1.6fr) minmax(0,1.4fr) 100px 88px 80px 112px 64px 84px",
                       height: 34, paddingInline: 16, borderBottom: `1px solid ${C.border}`, background: C.surfaceAlt,
                     }}
                   >
                     <DesignLabColumnHeader label="Konsulent" field="kandidat" sort={sort} onSort={toggleSort} />
                     <DesignLabColumnHeader label="Kunde" field="kunde" sort={sort} onSort={toggleSort} />
                     <span style={thStyle}>Type</span>
-                    <DesignLabColumnHeader label="Utpris" field="utpris" sort={sort} onSort={toggleSort} />
-                    <span style={thStyle}>Ekstra</span>
-                    <DesignLabColumnHeader label="STACQ Pris" field="stacq" sort={sort} onSort={toggleSort} />
-                    <span style={{ ...thStyle, textAlign: "right" }}>%</span>
-                    <span style={{ ...thStyle, textAlign: "right" }}>Status</span>
+                    <DesignLabColumnHeader label="Utpris" field="utpris" sort={sort} onSort={toggleSort} className="justify-end" />
+                    <span style={{ ...thStyle, textAlign: "right", display: "block" }}>Ekstra</span>
+                    <DesignLabColumnHeader label="STACQ Pris" field="stacq" sort={sort} onSort={toggleSort} className="justify-end" />
+                    <span style={{ ...thStyle, textAlign: "right", display: "block" }}>%</span>
+                    <span style={{ ...thStyle, textAlign: "right", display: "block" }}>Status</span>
                   </div>
 
                   {sorted.map((row) => {
