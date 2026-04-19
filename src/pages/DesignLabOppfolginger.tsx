@@ -699,7 +699,10 @@ export default function DesignLabOppfolginger() {
               </div>
             </ResizablePanel>
 
-            <ResizableHandle withHandle />
+            <ResizableHandle
+              withHandle
+              className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
+            />
 
             <ResizablePanel defaultSize={62} minSize={34}>
               {selected ? (
