@@ -192,7 +192,7 @@ export function VarslingsInnstillingerV2() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="flex items-center justify-center py-20" style={{ gridColumn: "1 / -1" }}>
         <Loader2 className="h-5 w-5 animate-spin" style={{ color: C.textMuted }} />
       </div>
     );
