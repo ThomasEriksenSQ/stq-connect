@@ -540,11 +540,11 @@ function ForespRow({
       className="grid items-start cursor-pointer group"
       style={{
         gridTemplateColumns: cols,
-        minHeight: 52,
+        minHeight: 38,
         paddingLeft: 16,
         paddingRight: 16,
-        paddingTop: 8,
-        paddingBottom: 8,
+        paddingTop: 4,
+        paddingBottom: 4,
         borderBottom: `1px solid ${C.borderLight}`,
         background: isActive ? C.activeBg : undefined,
         transition: "background 80ms ease",
