@@ -1,7 +1,7 @@
 import { User } from "@supabase/supabase-js";
 import {
   Users, Building2, LayoutDashboard, Briefcase, Settings, LogOut,
-  UserPlus, Radar, TrendingUp, Globe, Clock, ChevronsLeft, ChevronsRight,
+  UserPlus, Radar, TrendingUp, Globe, Clock, PanelLeft, PanelLeftOpen,
   SwatchBook,
 } from "lucide-react";
 import { C } from "@/components/designlab/theme";
