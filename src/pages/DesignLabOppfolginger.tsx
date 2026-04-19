@@ -402,7 +402,7 @@ export default function DesignLabOppfolginger() {
               style={{ width: 220 }}
             />
           </div>
-          <div className="flex items-center ml-auto">
+          <div className="flex items-center ml-auto gap-2">
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
               <DialogTrigger asChild>
                 <DesignLabPrimaryAction>
@@ -544,9 +544,8 @@ export default function DesignLabOppfolginger() {
                   </DesignLabModalActions>
                 </DesignLabModalForm>
               </DesignLabModalContent>
-            </Dialog>
-            <TextSizeControl value={textSize} onChange={setTextSize} />
           </div>
+        </header>
         </header>
 
         <div className="shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
