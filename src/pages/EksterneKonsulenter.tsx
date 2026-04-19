@@ -520,7 +520,7 @@ export function ExternalConsultantDetailCard({
 
       <div className="grid gap-5 xl:grid-cols-2">
         <div className="space-y-2">
-          <h3 className="text-[13px] font-medium text-[#1A1C1F]">Kontakt</h3>
+          <h3 className="text-[13px] font-medium text-[#1A1C1F]">Tilgjengelig</h3>
           <div className="space-y-1.5" style={{ fontSize: 13, color: C.text }}>
             {row.epost ? (
               <div className="flex items-center gap-2">
