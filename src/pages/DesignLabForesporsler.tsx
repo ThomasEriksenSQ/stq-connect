@@ -373,7 +373,7 @@ export default function DesignLabForesporsler() {
           <DesignLabFilterRow
             label="TID"
             options={STATUS_CHIPS.map((option) => option.label)}
-            value={STATUS_CHIPS.find((option) => option.value === statusFilter)?.label ?? "Aktive"}
+            value={STATUS_CHIPS.find((option) => option.value === statusFilter)?.label ?? "Aktive (siste 45 dager)"}
             onChange={(value) => {
               const next = STATUS_CHIPS.find((option) => option.label === value);
               if (next) setStatusFilter(next.value);
