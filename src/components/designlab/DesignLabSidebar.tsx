@@ -136,20 +136,7 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
         <FooterBtn icon={Settings} label="Innstillinger" onClick={() => navigate("/design-lab/innstillinger")} active={isActive("/design-lab/innstillinger")} collapsed={collapsed} scale={scale} />
         <FooterBtn icon={LogOut} label="Logg ut" onClick={signOut} muted collapsed={collapsed} scale={scale} />
 
-        {user && !collapsed && (
-          <div className="flex items-center gap-2 px-2 pt-2 pb-1">
-            <div
-              className="flex items-center justify-center rounded-full shrink-0"
-              style={{ width: px(24), height: px(24), background: C.accentBg, color: C.accent, fontSize: px(10), fontWeight: 600 }}
-            >
-              {initials}
-            </div>
-            <span className="truncate flex-1 min-w-0" style={{ fontSize: px(12), color: C.textGhost }}>{user.email}</span>
-            <CollapseToggle collapsed={collapsed} onClick={() => setCollapsed((p) => !p)} scale={scale} />
-          </div>
-        )}
-
-        {!user && !collapsed && (
+        {!collapsed && (
           <div className="flex items-center justify-end px-2 pt-2 pb-1">
             <CollapseToggle collapsed={collapsed} onClick={() => setCollapsed((p) => !p)} scale={scale} />
           </div>
