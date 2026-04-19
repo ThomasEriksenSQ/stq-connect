@@ -1,66 +1,58 @@
 
 
+## Vurdering
+
+Ja — det er bedre design. Akkurat nå er det **brudd på visuell rytme** mellom selskapskortet og listen bak: når du lukker panelet ser du selskapsnavn i 13px / 500 / mørk (#1A1C1F), når du åpner det ser du «Kontakter · N» i 12px / 500 / dempet grå (#5C636E). Begge er primære "innganger" til innhold på samme nivå, men de leses med ulik vekt. I Linear/V8-systemet skal hierarki bygges på **én skala** (13px standard) der det som er handlekraftig innhold står i `C.text`, og kun ekte sekundærtekst dempes.
+
+Konsekvensen blir også at "Aktiviteter · N" må følge med — ellers får vi to kolonneheadere som leser ulikt mot hverandre, og det er nettopp det vi nettopp ryddet opp i (samme baseline-linje).
+
 ## Mål
-"Aktiviteter · N" (venstre kolonne) og "Kontakter · N" (høyre kolonne) skal stå på **nøyaktig samme horisontale linje** rett under den fulle streken, slik at to-kolonne-layouten leser som en ren, balansert struktur. Gjelder når det ikke finnes en Oppfølging-blokk eller Teknisk DNA over Aktiviteter — da er Aktiviteter første element i venstre kolonne og må linjeres med Kontakter-headeren til høyre.
+Løfte kolonneheaderne **Aktiviteter · N** og **Kontakter · N** i selskapskortet til samme typografi som selskapsnavn i tabellen, slik at de leses som "primære innganger" — ikke som dempede labels.
 
 ## Funn
-- Venstre kolonne (`companyDetailSections`, linje 792–1114):
-  - Teknisk DNA (valgfri) → Oppfølginger-kort (kun hvis `tasks.length > 0`) → `<div className="mt-5">` rundt `CompanyActivityTimeline`.
-  - Tidslinjens header er `<h3 className="text-[12px] font-medium text-[#5C636E] mb-3">Aktiviteter · N</h3>` (linje 2171).
-- Høyre kolonne (`relatedContactsContent`, linje 1116–):
-  - Wrapper `pt-4 md:pt-0` → header-rad `mb-2 flex items-center justify-between` med `<h3 className="text-[12px] font-medium text-[#5C636E]">Kontakter · N</h3>` + `Ny kontakt`-knappen (`DesignLabPrimaryAction`, ~28–32px høy).
-- I to-kolonne-visningen (linje 2095–2117) ligger venstre i `<div className="pr-5">` og høyre i `<div className="pl-4">`. Begge kolonner starter på samme topp.
-
-**Hvorfor de ikke linjerer i dag:**
-1. Venstre starter med `mt-5` (når Aktiviteter er første element rendres `mt-5` mot ingenting, men selve Aktiviteter-headeren har ingen høyde-utligning).
-2. Høyre header sitter i en `flex items-center justify-between`-rad der `Ny kontakt`-knappen tvinger rad-høyden opp til ~32px. Venstre header er bare tekst (~18px line-height) → baseline-forskjell på ca. 7–10px.
-3. `pt-4 md:pt-0` på høyre er nullstilt på desktop, men venstre har ingen tilsvarende reservert høyde.
+- Selskapsnavn i tabell (`DesignLabCompanies.tsx` linje 511):
+  `fontSize: 13, fontWeight: 500, color: C.text` (#1A1C1F)
+- Kontakter-header (`CompanyCardContent.tsx` linje 1119):
+  `text-[12px] font-medium text-[#5C636E]`
+- Aktiviteter-header (linjer 2162 og 2174): identisk med Kontakter.
+- Tellet «· N» er metadata, ikke del av tittelen.
 
 ## Designvalg
 
-**Tilnærming: standardiser begge kolonneheadre til en felles "kolonne-header-rad" med fast høyde 32px.**
+**Tittel-del**: 13px / vekt 500 / `C.text` (#1A1C1F) — match tabellen 1:1.
 
-- Begge headere får samme container: `flex items-center justify-between` med `min-height: 32px` og `mb-3`.
-- Venstre header (Aktiviteter) får en usynlig høyrejustert "spacer" når den er topp-element, slik at høyden matcher knappen i høyre.
-- Faktisk implementasjon: pakk `Aktiviteter · N`-headeren i en flex-rad med samme `min-height: 32px` som høyre. Da linjerer baseline automatisk.
-- For høyre: bytt `mb-2` til `mb-3` (matcher venstre) og sett eksplisitt `min-height: 32px` på header-raden så `Ny kontakt`-knappen ikke kan endre høyden.
+**Telle-del** («· N»): behold dempet for å bevare hierarki innenfor selve headeren — `C.textFaint` (#8C929C), vekt 400, samme 13px. Skiller signal (tittel) fra støy (antall) uten å bytte fontstørrelse — ren Linear-tilnærming.
 
-**Når det IKKE er tasks/Teknisk DNA over** (det vanlige tilfellet i skjermbildet): fjern `mt-5` på `<div>` rundt `CompanyActivityTimeline` slik at Aktiviteter-headeren starter helt på topp av venstre kolonne, og dermed på samme y-posisjon som Kontakter-headeren.
+**Hvorfor ikke gjøre hele headeren dempet i 13px?** Da mister vi vektkontrasten mot listeradene under (kontaktnavn / aktivitet-titler) som også er ~13px. Tittel i `C.text` + telle i `C.textFaint` gir to lesenivåer på én linje uten ny fontskala.
 
-**Når det ER en Oppfølging-blokk eller Teknisk DNA over:** behold den som naturlig flyt over Aktiviteter — da skal Aktiviteter ikke linjeres med Kontakter-headeren (det ville vært visuelt forvirrende). Kontakter står da alene på topp til høyre, og det er greit.
+**Hvorfor ikke 13px / 600?** 600 finnes i V2-skalaen, men reserveres til sidetitler (18–20px). 500 er standard for primær UI-tekst — og tabellen bruker 500. Konsistens vinner.
+
+**Min-height 32px og `mb-3` beholdes** — baseline-aligneringen vi nettopp etablerte må ikke brytes.
 
 ## Plan
 
-1. **`src/components/CompanyCardContent.tsx` linje ~1105:** Endre `<div className="mt-5">` rundt `CompanyActivityTimeline` til betinget margin: kun `mt-5` når `tasks.length > 0` ELLER Teknisk DNA er synlig. Når Aktiviteter er første element → ingen top-margin, så headeren starter på topp.
+1. **`src/components/CompanyCardContent.tsx` — Kontakter-header (linje 1119)**:
    ```tsx
-   <div className={cn((tasks.length > 0 || showTechDna) && "mt-5")}>
-     <CompanyActivityTimeline ... />
-   </div>
+   <h3 className="text-[13px] font-medium text-[#1A1C1F]">
+     Kontakter <span className="font-normal text-[#8C929C]">· {contacts.length}</span>
+   </h3>
    ```
 
-2. **`CompanyActivityTimeline` (linje 2169–2173):** Pakk `Aktiviteter · N`-headeren i en flex-rad med `min-height: 32px`, slik at høyden matcher Kontakter-headeren med knapp:
+2. **`src/components/CompanyCardContent.tsx` — Aktiviteter-header (linjer 2162 og 2174, begge grener)**:
    ```tsx
-   <div className="flex items-center mb-3" style={{ minHeight: 32 }}>
-     <h3 className="text-[12px] font-medium text-[#5C636E]">
-       Aktiviteter · {activities.length}
-     </h3>
-   </div>
+   <h3 className="text-[13px] font-medium text-[#1A1C1F]">
+     Aktiviteter <span className="font-normal text-[#8C929C]">· {activities.length}</span>
+   </h3>
    ```
-   Samme behandling i tomtilstand-grenen (linje 2158–2166).
+   Tilsvarende for tom-tilstanden (linje 2163: `· 0`).
 
-3. **`relatedContactsContent` (linje 1117–1119):** Sett eksplisitt `min-height: 32px` på header-raden og endre `mb-2` til `mb-3` slik at margin matcher venstre:
-   ```tsx
-   <div className="pt-4 md:pt-0">
-     <div className="mb-3 flex items-center justify-between gap-3" style={{ minHeight: 32 }}>
-       <h3 className="text-[12px] font-medium text-[#5C636E]">Kontakter · {contacts.length}</h3>
-       ...
-   ```
+3. **Ingen øvrige endringer**: spacing, min-height, knapper, og avstand til streken over forblir uendret.
 
 ## Filer som endres
-- `src/components/CompanyCardContent.tsx` — tre små justeringer: betinget `mt-5`, header-wrapper på Aktiviteter (to steder: tom og normal), `min-height` + `mb-3` på Kontakter-header.
+- `src/components/CompanyCardContent.tsx` — tre `<h3>`-erstatninger.
 
 ## Utenfor scope
-- Endring av selve knappen `Ny kontakt` eller dens stil.
-- Endring av layout når Oppfølging eller Teknisk DNA er synlig over Aktiviteter (de bevares som i dag).
-- Andre flater enn selskapskortet.
+- Andre seksjonsoverskrifter i selskapskortet (f.eks. «Notater», «Teknisk DNA», «Oppfølginger») — kan vurderes i en oppfølgende runde for full konsistens, men endres ikke nå for å holde scope tett.
+- Kontaktdetaljsiden eller andre flater.
+- Tabellradenes typografi (de er allerede fasit).
 
