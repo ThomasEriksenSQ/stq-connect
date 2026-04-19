@@ -348,6 +348,43 @@ export default function DesignLabForesporsler() {
     return () => document.removeEventListener("keydown", handler);
   }, [sorted, selectedRowId]);
 
+  // ── Command palette data ──
+  const paletteContacts = useMemo(() => {
+    const map = new Map<string, any>();
+    (rows as any[]).forEach((r) => {
+      const c = r.contacts;
+      if (!c?.id || map.has(c.id)) return;
+      map.set(c.id, {
+        id: c.id,
+        firstName: c.first_name || "",
+        lastName: c.last_name || "",
+        company: r.selskap_navn || "",
+        companyId: r.selskap_id || null,
+        email: c.email || "",
+        phone: c.phone || "",
+        signal: signalByContactId.get(c.id) || "",
+        daysSince: r.mottatt_dato ? getDaysAgo(r.mottatt_dato) : 0,
+      });
+    });
+    return Array.from(map.values());
+  }, [rows, signalByContactId]);
+
+  const paletteCompanies = useMemo(() => {
+    const counts = new Map<string, { id: string; name: string; contactCount: number }>();
+    (rows as any[]).forEach((r) => {
+      const name = r.selskap_navn || "";
+      if (!name) return;
+      const key = r.selskap_id || `name:${name.toLowerCase()}`;
+      const existing = counts.get(key);
+      if (existing) {
+        existing.contactCount += 1;
+      } else {
+        counts.set(key, { id: key, name, contactCount: 1 });
+      }
+    });
+    return Array.from(counts.values()).sort((a, b) => a.name.localeCompare(b.name, "nb"));
+  }, [rows]);
+
   /* ═══ RENDER ═══ */
   return (
     <div className="flex h-screen overflow-hidden select-none" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}>
