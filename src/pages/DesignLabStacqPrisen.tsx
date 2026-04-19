@@ -20,6 +20,7 @@ import { C } from "@/components/designlab/theme";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { DesignLabColumnHeader } from "@/components/designlab/system";
 import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
+import { computeOppdragStatus as computeSharedOppdragStatus } from "@/lib/oppdragForm";
 
 /* Colors imported from @/components/designlab/theme */
 
@@ -58,11 +59,11 @@ function stacqColorV8(timePris: number): string {
 }
 
 function computeOppdragStatus(r: any): string {
-  if (r.status === "Inaktiv") return "Inaktiv";
-  const today = startOfDay(new Date());
-  const startDate = parseOppdragDate(r.start_dato);
-  if (startDate && startDate > today) return "Oppstart";
-  return "Aktiv";
+  return computeSharedOppdragStatus({
+    status: r.status,
+    start_dato: r.start_dato,
+    slutt_dato: r.slutt_dato,
+  });
 }
 
 function parseOppdragDate(value?: string | null): Date | null {
@@ -93,8 +94,7 @@ export default function DesignLabStacqPrisen() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stacq_oppdrag")
-        .select("id, kandidat, er_ansatt, status, utpris, til_konsulent, til_konsulent_override, ekstra_kostnad, kunde, selskap_id, deal_type, start_dato, forny_dato, slutt_dato")
-        .neq("status", "Inaktiv");
+        .select("id, kandidat, er_ansatt, status, utpris, til_konsulent, til_konsulent_override, ekstra_kostnad, kunde, selskap_id, deal_type, start_dato, forny_dato, slutt_dato");
       if (error) throw error;
       return data || [];
     },
@@ -154,7 +154,7 @@ export default function DesignLabStacqPrisen() {
         er_ansatt: r.er_ansatt ?? false,
         ekstra_kostnad: r.ekstra_kostnad ?? null,
       }),
-    })),
+    })).filter((r) => r.status !== "Inaktiv"),
     [rows]
   );
 
