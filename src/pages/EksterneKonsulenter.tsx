@@ -416,6 +416,19 @@ export default function EksterneKonsulenter({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {embeddedSplit && (
+        <ExternalCommandPalette
+          open={cmdOpen}
+          onClose={() => setCmdOpen(false)}
+          textSize={textSize}
+          rows={rows}
+          onSelect={(id) => {
+            setSelectedId(id);
+            setCmdOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }
