@@ -2,26 +2,37 @@
 
 ## Vurdering
 
-Vi fjernet "Legg til alle"-snarveien da vi gjorde chips klikkbare individuelt — men når AI foreslår 4–5 tags og brukeren vil ha alle, blir 4–5 separate klikk unødvendig friksjon. Riktig løsning: behold individuell chip-klikking som primærmønster, men tilby "Oppdater alle" som sekundær snarvei foran "Ignorer". Brukeren får da begge ytterpunktene dekket.
+I "Ny oppfølging"-skjemaet inne i `ContactCardContent` kan brukeren i dag trykke "Lagre oppfølging" så lenge tittel og kategori er fylt ut — "Når?" (dato) er ikke validert. Dette skaper oppfølginger uten forfallsdato ved et uhell, noe som forurenser dashbordet.
+
+Regelen skal være: alle tre felter (tittel, kategori, når) må være satt før knappen er aktiv.
+
+Merk: "Følg opp på sikt" (someday) er en legitim variant der `due_date` er null. Hvis skjemaet har en eksplisitt "På sikt"-chip blant dato-valgene, teller den som gyldig "Når?"-valg. Hvis ikke, må bruker velge en konkret dato eller en preset-chip.
+
+## Funn jeg må gjøre først
+
+Lese `ContactCardContent.tsx` for å finne:
+- `activeForm`-grenen som rendrer "Ny oppfølging"-skjemaet
+- Nåværende `disabled`-betingelse på "Lagre oppfølging"-knappen
+- Hvilken state som holder "Når?"-valget (date chip eller custom date)
+- Om "På sikt" finnes som valg
 
 ## Plan
 
-### `src/components/AiSignalBanner.tsx`
+### `src/components/ContactCardContent.tsx`
 
-I action-raden (linje ~190–212), legg inn en "Oppdater alle"-knapp mellom "Oppdater signal" og "Ignorer". Vises bare når `remainingTechs.length > 0`.
+I "Ny oppfølging"-skjemaet:
+1. Identifiser state for valgt dato/dato-chip (sannsynligvis `selectedDate` + `customDate`, parallelt med `FollowUpModal`-mønsteret).
+2. Definer `hasWhen` = sant hvis en dato-chip er valgt ELLER custom-dato er satt ELLER "På sikt" er valgt (hvis den finnes).
+3. Oppdater `disabled`-prop på "Lagre oppfølging"-knappen til å kreve `title.trim() && category && hasWhen`.
+4. Behold visuell disabled-stil som allerede brukes for andre disabled-knapper i V2 (dempet bakgrunn, `cursor-not-allowed`).
 
-Onclick:
-- Kall `onAddTechnologies(remainingTechs)` med alle gjenværende tags i én batch
-- Oppdater `addedTechs`-settet med alle tags slik at chips forsvinner umiddelbart
-
-Stil matcher eksisterende sekundærknapper i banneret: `inline-flex items-center gap-1 text-[0.75rem] font-medium text-primary hover:text-primary/80 transition-colors` (samme som "Oppdater signal"). Ikon: `Plus` (h-3 w-3) for å signalisere bulk-tillegging.
-
-Rekkefølge i action-rad: `[Oppdater signal] [Oppdater alle] [Ignorer]`.
+Ingen endring i submit-handler, persist-logikk eller default-verdier — kun strammere validering.
 
 ## Filer som endres
-- `src/components/AiSignalBanner.tsx` — legg til "Oppdater alle"-knapp i action-raden, conditional på `remainingTechs.length > 0`.
+- `src/components/ContactCardContent.tsx`
 
 ## Utenfor scope
-- Endre individuell chip-interaksjon (beholdes).
-- Andre call sites/varianter av banneret.
+- `FollowUpModal` (separat komponent, har allerede egen validering)
+- Endring av default-dato per signal
+- Visuell omdesign av skjemaet
 
