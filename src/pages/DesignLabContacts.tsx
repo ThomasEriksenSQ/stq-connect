@@ -66,6 +66,7 @@ import {
 import {
   DesignLabColumnHeader,
   DesignLabFilterRow,
+  DesignLabHeatBadge,
   DesignLabMatchFilterChip,
   DesignLabPrimaryAction,
   DesignLabSignalBadge,
@@ -2220,20 +2221,7 @@ export default function DesignLabContacts() {
                               </p>
                             </div>
                             <div className="min-w-0">
-                              {heatLabel ? (
-                                <span
-                                  style={{
-                                    fontSize: 11,
-                                    fontWeight: 500,
-                                    color: heatColor,
-                                    textTransform: "capitalize",
-                                  }}
-                                >
-                                  {heatLabel}
-                                </span>
-                              ) : (
-                                <span style={{ fontSize: 11, color: C.textFaint }}>Ingen heat</span>
-                              )}
+                              <DesignLabHeatBadge temperature={heatLabel} />
                             </div>
                             <div className="text-right" style={{ fontSize: 11, color: C.textFaint }}>
                               {leadDate ? relativeDate(leadDate) : ""}
