@@ -295,13 +295,7 @@ export default function KonsulenterOppdrag({
           <div className="space-y-3 md:hidden">
             {filtered.map((o: any) => {
               const isInaktiv = o.status === "Inaktiv";
-              const kundeType = (() => {
-                const cs = o.selskap_id ? companyStatusMap[o.selskap_id] : null;
-                if (cs === "partner") return "Partner";
-                if (cs === "customer" || cs === "kunde") return "Sluttkunde";
-                if (cs === "prospect") return "Potensiell";
-                return "—";
-              })();
+              const kundeType = o.deal_type === "VIA" ? "Via partner" : "Direkte";
 
               return (
                 <button
@@ -457,35 +451,15 @@ export default function KonsulenterOppdrag({
                               {o.deal_type === "VIA" && o.partner_navn ? o.partner_navn : "—"}
                             </span>
                             <div>
-                              {(() => {
-                                const cs = o.selskap_id ? companyStatusMap[o.selskap_id] : null;
-                                if (cs === "partner") {
-                                  return (
-                                    <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-                                      Partner
-                                    </span>
-                                  );
-                                }
-                                if (cs === "customer" || cs === "kunde") {
-                                  return (
-                                    <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-                                      Sluttkunde
-                                    </span>
-                                  );
-                                }
-                                if (cs === "prospect") {
-                                  return (
-                                    <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-                                      Potensiell
-                                    </span>
-                                  );
-                                }
-                                return (
-                                  <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-500 border border-gray-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-                                    —
-                                  </span>
-                                );
-                              })()}
+                              {o.deal_type === "VIA" ? (
+                                <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
+                                  Via partner
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
+                                  Direkte
+                                </span>
+                              )}
                             </div>
                             <span className="text-[0.8125rem] font-medium text-foreground">
                               kr {formatNOK(Number(o.utpris) || 0)}/t
@@ -643,32 +617,15 @@ export default function KonsulenterOppdrag({
                           {o.deal_type === "VIA" && o.partner_navn ? o.partner_navn : "—"}
                         </span>
                         <div>
-                          {(() => {
-                            const cs = o.selskap_id ? companyStatusMap[o.selskap_id] : null;
-                            if (cs === "partner")
-                              return (
-                                <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-                                  Partner
-                                </span>
-                              );
-                            if (cs === "customer" || cs === "kunde")
-                              return (
-                                <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-                                  Sluttkunde
-                                </span>
-                              );
-                            if (cs === "prospect")
-                              return (
-                                <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-                                  Potensiell
-                                </span>
-                              );
-                            return (
-                              <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-500 border border-gray-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-                                —
-                              </span>
-                            );
-                          })()}
+                          {o.deal_type === "VIA" ? (
+                            <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
+                              Via partner
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
+                              Direkte
+                            </span>
+                          )}
                         </div>
                         <span className="text-[0.8125rem] font-medium text-foreground">
                           kr {formatNOK(Number(o.utpris) || 0)}/t
