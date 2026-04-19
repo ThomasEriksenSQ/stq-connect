@@ -2302,9 +2302,11 @@ function TaskRow({
     );
   }
 
+  const taskRowClickHandlers = useClickWithoutSelection<HTMLDivElement>(handleRowClick);
   return (
     <div
-      onClick={handleRowClick}
+      onMouseDown={taskRowClickHandlers.onMouseDown}
+      onClick={taskRowClickHandlers.onClick}
       className={cn(
         "flex items-start gap-2.5 py-2.5 px-1 rounded-md transition-all duration-200 group hover:bg-background/60",
         completing && "opacity-30 line-through scale-[0.98]",
