@@ -128,7 +128,12 @@ export default function DesignLabOppfolginger() {
   const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [search, setSearch] = useState("");
   const [viewFilter, setViewFilter] = useState<FollowUpViewFilter>("Alle");
-  const [ownerFilter, setOwnerFilter] = useState("Alle");
+  const [ownerFilter, setOwnerFilterState] = useState("Alle");
+  const ownerFilterTouched = useRef(false);
+  const setOwnerFilter = (value: string) => {
+    ownerFilterTouched.current = true;
+    setOwnerFilterState(value);
+  };
   const [selectedId, setSelectedId] = useState<string | null>(searchParams.get("task"));
   const [createOpen, setCreateOpen] = useState(false);
   const [contactSearch, setContactSearch] = useState("");

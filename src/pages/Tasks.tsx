@@ -32,7 +32,8 @@ const typeConfig: Record<string, { label: string; icon: typeof Phone; accent: st
 const Tasks = () => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [ownerFilter, setOwnerFilter] = useState("all");
+  const [ownerFilter, setOwnerFilter] = useState<string>("all");
+  const ownerFilterTouched = useRef(false);
   const [form, setForm] = useState({ title: "", description: "", priority: "medium", due_date: "", contact_id: "", company_id: "", email_notify: false });
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [pendingComplete, setPendingComplete] = useState<Set<string>>(new Set());
