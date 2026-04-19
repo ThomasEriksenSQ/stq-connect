@@ -42,7 +42,7 @@ import { createOppdrag, invalidateOppdragQueries } from "@/lib/oppdragPersistenc
 import { crmQueryKeys } from "@/lib/queryKeys";
 import { DesignLabReadonlyChip } from "@/components/designlab/system";
 
-const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
+const LABEL = "text-[12px] font-medium text-[#5C636E]";
 
 const PIPELINE_CONFIG: Record<string, { label: string; dot: string; badge: string; step: number | null }> = {
   sendt_cv:  { label: "Sendt CV", dot: "bg-amber-400", badge: "bg-[#FBF3E6] text-[#7D4E00] border-[#E8D0A0]", step: 1 },
