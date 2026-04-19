@@ -21,8 +21,8 @@ import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { C } from "@/components/designlab/theme";
 import {
   DesignLabIconButton,
-  DesignLabSearchInput,
 } from "@/components/designlab/controls";
+import { CommandPalette } from "@/components/designlab/CommandPalette";
 import {
   DesignLabFilterRow,
   DesignLabGhostAction,
@@ -141,6 +141,19 @@ export default function DesignLabOppfolginger() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [dueDateOpen, setDueDateOpen] = useState(false);
   const contactInputRef = useRef<HTMLInputElement | null>(null);
+  const [cmdOpen, setCmdOpen] = useState(false);
+
+  // ⌘K shortcut
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCmdOpen(true);
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: FOLLOW_UP_QUERY_KEY,
@@ -381,6 +394,42 @@ export default function DesignLabOppfolginger() {
     setContactSearch(`${contact.first_name} ${contact.last_name}`);
   };
 
+  // ── Command palette data ──
+  const paletteContacts = useMemo(() => {
+    const map = new Map<string, any>();
+    viewModels.forEach((vm) => {
+      if (!vm.contactId || map.has(vm.contactId)) return;
+      const [firstName, ...rest] = (vm.contactName || "").split(" ");
+      map.set(vm.contactId, {
+        id: vm.contactId,
+        firstName: firstName || "",
+        lastName: rest.join(" "),
+        company: vm.companyName || "",
+        companyId: vm.companyId,
+        email: vm.contactEmail || "",
+        phone: vm.contactPhone || "",
+        signal: vm.signal || "",
+        daysSince: 0,
+      });
+    });
+    return Array.from(map.values());
+  }, [viewModels]);
+
+  const paletteCompanies = useMemo(() => {
+    const counts = new Map<string, { id: string; name: string; contactCount: number }>();
+    viewModels.forEach((vm) => {
+      if (!vm.companyName) return;
+      const key = vm.companyId || `name:${vm.companyName.toLowerCase()}`;
+      const existing = counts.get(key);
+      if (existing) {
+        existing.contactCount += 1;
+      } else {
+        counts.set(key, { id: key, name: vm.companyName, contactCount: 1 });
+      }
+    });
+    return Array.from(counts.values()).sort((a, b) => a.name.localeCompare(b.name, "nb"));
+  }, [viewModels]);
+
   return (
     <div
       className="flex h-screen overflow-hidden select-none"
@@ -393,14 +442,6 @@ export default function DesignLabOppfolginger() {
           <div className="flex items-baseline gap-2.5">
             <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Oppfølginger</h1>
             <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {filtered.length}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <DesignLabSearchInput
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Søk oppfølginger…"
-              style={{ width: 220 }}
-            />
           </div>
           <div className="flex items-center ml-auto gap-2">
             <TextSizeControl value={textSize} onChange={setTextSize} />
@@ -706,6 +747,21 @@ export default function DesignLabOppfolginger() {
           </ResizablePanelGroup>
         </div>
       </main>
+
+      <CommandPalette
+        open={cmdOpen}
+        onClose={() => setCmdOpen(false)}
+        textSize={textSize}
+        contacts={paletteContacts}
+        companies={paletteCompanies}
+        selectedContact={null}
+        onSelectContact={(id) => {
+          const task = viewModels.find((vm) => vm.contactId === id);
+          if (task) setSelectedId(task.id);
+        }}
+        onFilterByCompany={(name) => setSearch(name)}
+        onResetSearch={search ? () => setSearch("") : undefined}
+      />
     </div>
   );
 }
