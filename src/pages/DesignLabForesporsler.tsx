@@ -550,12 +550,17 @@ function TableHeader({ sort, onSort }: { sort: { field: SortField; dir: SortDir 
 
   return (
     <div
-      className="grid items-center sticky top-0 z-10"
+      className="sticky top-0 z-10"
+      style={{
+        background: C.surfaceAlt,
+        borderBottom: `1px solid ${C.border}`,
+      }}
+    >
+    <div
+      className="grid items-center"
       style={{
         gridTemplateColumns: cols,
         height: 32,
-        borderBottom: `1px solid ${C.border}`,
-        background: C.surfaceAlt,
         paddingLeft: 16,
         paddingRight: 16,
       }}
