@@ -256,18 +256,18 @@ export default function DesignLabStacqPrisen() {
                   <div
                     className="grid items-center"
                     style={{
-                      gridTemplateColumns: "minmax(0,2fr) minmax(0,1.5fr) 80px 80px 80px 100px 56px 80px",
+                      gridTemplateColumns: "minmax(0,1.6fr) minmax(0,1.4fr) 100px 88px 80px 112px 64px 84px",
                       height: 34, paddingInline: 16, borderBottom: `1px solid ${C.border}`, background: C.surfaceAlt,
                     }}
                   >
                     <DesignLabColumnHeader label="Konsulent" field="kandidat" sort={sort} onSort={toggleSort} />
                     <DesignLabColumnHeader label="Kunde" field="kunde" sort={sort} onSort={toggleSort} />
                     <span style={thStyle}>Type</span>
-                    <DesignLabColumnHeader label="Utpris" field="utpris" sort={sort} onSort={toggleSort} />
-                    <span style={thStyle}>Ekstra</span>
-                    <DesignLabColumnHeader label="STACQ Pris" field="stacq" sort={sort} onSort={toggleSort} />
-                    <span style={{ ...thStyle, textAlign: "right" }}>%</span>
-                    <span style={{ ...thStyle, textAlign: "right" }}>Status</span>
+                    <DesignLabColumnHeader label="Utpris" field="utpris" sort={sort} onSort={toggleSort} className="justify-end" />
+                    <span style={{ ...thStyle, textAlign: "right", display: "block" }}>Ekstra</span>
+                    <DesignLabColumnHeader label="STACQ Pris" field="stacq" sort={sort} onSort={toggleSort} className="justify-end" />
+                    <span style={{ ...thStyle, textAlign: "right", display: "block" }}>%</span>
+                    <span style={{ ...thStyle, textAlign: "right", display: "block" }}>Status</span>
                   </div>
 
                   {sorted.map((row) => {
@@ -280,7 +280,7 @@ export default function DesignLabStacqPrisen() {
                         onClick={() => setEditRow(row)}
                         className="grid items-center cursor-pointer"
                         style={{
-                          gridTemplateColumns: "minmax(0,2fr) minmax(0,1.5fr) 80px 80px 80px 100px 56px 80px",
+                          gridTemplateColumns: "minmax(0,1.6fr) minmax(0,1.4fr) 100px 88px 80px 112px 64px 84px",
                           minHeight: 38, paddingInline: 16,
                           borderBottom: `1px solid ${C.borderLight}`,
                           transition: "background 50ms",
@@ -312,14 +312,14 @@ export default function DesignLabStacqPrisen() {
                         </div>
                         <span className="truncate" style={{ fontSize: 13, color: C.textMuted }}>{row.kunde || "–"}</span>
                         <span><TypeBadge dealType={row.deal_type} /></span>
-                        <span style={{ fontSize: 13, color: C.textMuted }}>{row.utpris ?? "–"}</span>
-                        <span style={{ fontSize: 13 }}>
+                        <span style={{ fontSize: 13, color: C.textMuted, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{row.utpris ?? "–"}</span>
+                        <span style={{ fontSize: 13, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
                           {(row.ekstra_kostnad ?? 0) > 0
                             ? <span style={{ color: C.danger }}>−{row.ekstra_kostnad}</span>
                             : <span style={{ color: C.textFaint }}>–</span>}
                         </span>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: priceColor }}>kr {formatKr(Math.round(row.stacqPris))}</span>
-                        <span style={{ fontSize: 13, textAlign: "right", color: priceColor }}>{Math.round(pct)}%</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: priceColor, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>kr {formatKr(Math.round(row.stacqPris))}</span>
+                        <span style={{ fontSize: 13, textAlign: "right", color: priceColor, fontVariantNumeric: "tabular-nums" }}>{Math.round(pct)}%</span>
                         <div className="flex justify-end">
                           <StatusBadge status={row.status} />
                         </div>
@@ -330,7 +330,7 @@ export default function DesignLabStacqPrisen() {
                   <div
                     className="grid items-center"
                     style={{
-                      gridTemplateColumns: "minmax(0,2fr) minmax(0,1.5fr) 80px 80px 80px 100px 56px 80px",
+                      gridTemplateColumns: "minmax(0,1.6fr) minmax(0,1.4fr) 100px 88px 80px 112px 64px 84px",
                       minHeight: 38, paddingInline: 16,
                       background: C.surfaceAlt, fontWeight: 600,
                     }}
@@ -340,8 +340,8 @@ export default function DesignLabStacqPrisen() {
                       <span style={{ fontSize: 13, color: C.text }}>TOTAL</span>
                     </div>
                     <span /><span /><span /><span />
-                    <span style={{ fontSize: 13, color: C.accent }}>kr {formatKr(Math.round(stacqTotalPerTime + oppstartTotalPerTime))}/t</span>
-                    <span style={{ fontSize: 13, textAlign: "right", color: C.textMuted }}>{Math.round(totalPct)}%</span>
+                    <span style={{ fontSize: 13, color: C.accent, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>kr {formatKr(Math.round(stacqTotalPerTime + oppstartTotalPerTime))}/t</span>
+                    <span style={{ fontSize: 13, textAlign: "right", color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>{Math.round(totalPct)}%</span>
                     <span />
                   </div>
                 </div>
