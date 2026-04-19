@@ -2622,31 +2622,7 @@ function EmailRow({ email }: { email: any }) {
               {fromLabel} → {toLabel}
             </p>
 
-            {expanded ? (
-              <div className="mt-2 border-t border-border pt-2">
-                <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70">
-                  {latest}
-                </p>
-                {rest && (
-                  <>
-                    <DesignLabActionButton
-                      variant="ghost"
-                      style={{ marginTop: 8, height: 32, fontSize: 12 }}
-                      onClick={(e) => { e.stopPropagation(); setShowThread(!showThread); }}
-                    >
-                      {showThread ? "Skjul tråd ▴" : "Vis hele tråden ▾"}
-                    </DesignLabActionButton>
-                    {showThread && (
-                      <div className="mt-2 bg-muted/30 rounded-lg p-3">
-                        <p className="text-[0.8125rem] leading-relaxed whitespace-pre-wrap text-muted-foreground">
-                          {rest}
-                        </p>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            ) : preview ? (
+            {!expanded && preview ? (
               <p className="text-[0.9375rem] text-foreground/70 line-clamp-2 mt-0.5">{preview}</p>
             ) : null}
           </div>
@@ -2661,6 +2637,32 @@ function EmailRow({ email }: { email: any }) {
           </div>
         </div>
       </EmailRowBody>
+
+      {expanded && (
+        <div className="mt-2 border-t border-border pt-2 cursor-text">
+          <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70">
+            {latest}
+          </p>
+          {rest && (
+            <>
+              <DesignLabActionButton
+                variant="ghost"
+                style={{ marginTop: 8, height: 32, fontSize: 12 }}
+                onClick={(e) => { e.stopPropagation(); setShowThread(!showThread); }}
+              >
+                {showThread ? "Skjul tråd ▴" : "Vis hele tråden ▾"}
+              </DesignLabActionButton>
+              {showThread && (
+                <div className="mt-2 bg-muted/30 rounded-lg p-3">
+                  <p className="text-[0.8125rem] leading-relaxed whitespace-pre-wrap text-muted-foreground">
+                    {rest}
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
