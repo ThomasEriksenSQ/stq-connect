@@ -28,7 +28,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { ContactCardContent } from "@/components/ContactCardContent";
 import { RenderErrorBoundary } from "@/components/RenderErrorBoundary";
-import { TextSizeControl, getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
+import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { C } from "@/components/designlab/theme";
 import { CommandPalette } from "@/components/designlab/CommandPalette";
 import { usePersistentState } from "@/hooks/usePersistentState";
@@ -372,7 +372,7 @@ export default function DesignLabContacts() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { signOut, user } = useAuth();
   const queryClient = useQueryClient();
-  const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
+  const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [search, setSearch] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("Alle");
   const [signalFilter, setSignalFilter] = useState("Alle");
@@ -1911,9 +1911,7 @@ export default function DesignLabContacts() {
               · {visibleResultCount}
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <TextSizeControl value={textSize} onChange={setTextSize} />
-          </div>
+          <div className="flex items-center gap-2" />
         </header>
 
         {/* Filters bar */}

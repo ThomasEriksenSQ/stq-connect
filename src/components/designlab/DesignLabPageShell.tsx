@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
-import { TextSizeControl, getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
+import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { C } from "@/components/designlab/theme";
 
 interface DesignLabPageShellProps {
@@ -30,7 +30,7 @@ export function DesignLabPageShell({
 }: DesignLabPageShellProps) {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
-  const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
+  const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
 
   return (
     <div
@@ -48,7 +48,6 @@ export function DesignLabPageShell({
             ) : null}
           </div>
           <div className="flex items-center gap-2">
-            <TextSizeControl value={textSize} onChange={setTextSize} />
             {headerRight}
           </div>
         </header>

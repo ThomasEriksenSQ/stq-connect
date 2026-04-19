@@ -10,7 +10,7 @@ import { formatMonths, getInitials } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
-import { TextSizeControl, getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
+import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { C } from "@/components/designlab/theme";
 import { DesignLabSearchInput, DesignLabIconButton } from "@/components/designlab/controls";
 import {
@@ -53,7 +53,7 @@ export default function DesignLabKonsulenterAnsatte() {
   const selectedId = id ? Number(id) : null;
   const queryClient = useQueryClient();
   const { signOut, user } = useAuth();
-  const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
+  const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("Aktiv");
   const [createOpen, setCreateOpen] = useState(false);
@@ -362,7 +362,6 @@ export default function DesignLabKonsulenterAnsatte() {
             <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {filtered.length}</span>
           </div>
           <div className="flex items-center gap-2">
-            <TextSizeControl value={textSize} onChange={setTextSize} />
             <DesignLabSearchInput
               value={search}
               onChange={(event) => setSearch(event.target.value)}

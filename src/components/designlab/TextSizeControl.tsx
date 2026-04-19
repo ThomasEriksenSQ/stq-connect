@@ -82,3 +82,48 @@ export function TextSizeControl({ value, onChange }: Props) {
     </div>
   );
 }
+
+/**
+ * Sidebar variant — kompakt, uten ikon, optimalisert for 220px sidebar-bredde.
+ * Label til venstre, pill-rad høyrejustert.
+ */
+export function TextSizeControlSidebar({ value, onChange }: Props) {
+  return (
+    <div
+      className="flex items-center justify-between"
+      style={{ paddingInline: 8, height: 28, gap: 8 }}
+    >
+      <span
+        style={{
+          fontSize: 11,
+          fontWeight: 500,
+          color: C.textFaint,
+          whiteSpace: "nowrap",
+        }}
+      >
+        Tekststørrelse
+      </span>
+      <div className="flex items-center gap-0.5">
+        {SIZES.map((s) => {
+          const active = s === value;
+          return (
+            <DesignLabFilterButton
+              key={s}
+              onClick={() => onChange(s)}
+              active={active}
+              title={`${s} · ${TEXT_SIZE_PRESETS[s].description} · ${Math.round(TEXT_SIZE_PRESETS[s].scale * 100)}%`}
+              style={{
+                minWidth: 22,
+                paddingInline: 4,
+                fontSize: 11,
+                transition: "all 120ms ease",
+              }}
+            >
+              {s}
+            </DesignLabFilterButton>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

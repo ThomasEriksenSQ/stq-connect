@@ -5,7 +5,7 @@ import { Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
-import { TextSizeControl, getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
+import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { C } from "@/components/designlab/theme";
 import { DesignLabSearchInput, DesignLabStaticTag } from "@/components/designlab/controls";
 import {
@@ -56,7 +56,7 @@ function ExampleCard({ title, children }: { title: string; children: React.React
 export default function DesignLabStyleguide() {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
-  const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
+  const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [search, setSearch] = useState("");
   const [activeType, setActiveType] = useState("Kunde");
   const [activeOwner, setActiveOwner] = useState("Thomas Eriksen");
@@ -85,7 +85,6 @@ export default function DesignLabStyleguide() {
             <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· V2 system</span>
           </div>
           <div className="flex items-center gap-2">
-            <TextSizeControl value={textSize} onChange={setTextSize} />
             <DesignLabSearchInput
               value={search}
               onChange={(event) => setSearch(event.target.value)}
