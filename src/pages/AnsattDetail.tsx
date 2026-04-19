@@ -731,8 +731,8 @@ function KompetanseCollapsible({ kompetanse }: { kompetanse: string[] }) {
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    // Check if content exceeds one line (~36px)
-    setNeedsTruncation(el.scrollHeight > 40);
+    // Check if content exceeds one line (~one chip row incl. border + descenders)
+    setNeedsTruncation(el.scrollHeight > 36);
   }, [kompetanse]);
 
   return (
@@ -740,7 +740,7 @@ function KompetanseCollapsible({ kompetanse }: { kompetanse: string[] }) {
       <span className="text-[0.6875rem] text-muted-foreground uppercase tracking-[0.08em] font-medium">Kompetanse</span>
       <div
         ref={containerRef}
-        className={cn("flex flex-wrap gap-1.5 mt-1.5 overflow-hidden transition-all", !expanded && "max-h-[26px]")}
+        className={cn("flex flex-wrap gap-1.5 mt-1.5 overflow-hidden transition-all", !expanded && "max-h-[34px]")}
       >
         {kompetanse.map((k: string) => (
           <DesignLabReadonlyChip key={k} active={false}>
