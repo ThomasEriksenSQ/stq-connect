@@ -1,51 +1,50 @@
 
 
 ## Mål
-Migrere `/innstillinger` til V2-design ved å bruke ekte V2-komponenter (`DesignLabPageShell`, `DesignLabPrimaryAction`, `DesignLabSecondaryAction`, `DesignLabGhostAction`, `DesignLabTextField`, `DesignLabFieldLabel`, `Switch`, `Select`) — og kun når `isV2Active === true`. V1-rendering forblir 100% urørt.
+Legg til en subtil vertikal skillestrek mellom selskapskortet (venstre) og Kontakter-listen (høyre) i selskapsdetaljen på `/design-lab/selskaper`. V1 (`/selskap/:id`) skal ikke endres.
 
-## Hovedgrep
+## Funn
+- `CompanyCardContent.tsx` linje 1888–1907 bruker `ResizablePanelGroup` med en `ResizableHandle` som er **transparent som standard** og kun viser farge på hover/active (`!bg-transparent ... hover:!bg-[#DDE0E7]`). Det er derfor ingen synlig skillelinje mellom kolonnene.
+- Komponenten er delt mellom V1 (`CompanyDetail.tsx`) og V2 (`DesignLabCompanies.tsx` linje 634).
+- V2-flaten bruker allerede props-mønsteret (`headerPaddingTop`, `defaultHidden`, `onNavigateToFullPage`) for å tilpasse seg uten å endre V1.
 
-### 1. `src/pages/Innstillinger.tsx` — versjonsbryter
-Helt øverst: `const { isV2Active } = useDesignVersion();`. Hvis V2 aktiv → render ny `<InnstillingerV2 />`. Ellers returnerer eksisterende V1-JSX uendret (ingen refaktorering, ingen klasseendring).
+## Endring
+**`src/components/CompanyCardContent.tsx`**
 
-### 2. Ny komponent: `InnstillingerV2` (i samme fil)
-Bruker `DesignLabPageShell` med:
-- `activePath="/innstillinger"` (sidebaren markerer ikke noe — det er ok, samme som ved navigasjon fra DesignLabSidebar)
-- `title="Innstillinger"`
-- `maxWidth={1180}` (samme som Stilark)
+1. Utvid `CompanyCardContentProps` med `showContactsDivider?: boolean` (default `false`).
+2. Destructure i komponenten.
+3. På `ResizableHandle` (linje 1893): når `showContactsDivider` er true, sett base-bakgrunn til `#E8EAEE` (`C.borderLight`) i stedet for `transparent`. Hover/active beholdes uendret.
 
-Layout inni:
-- 3 seksjoner som "kort" basert på `ExampleCard`-mønsteret fra `DesignLabStyleguide` — hvit panel-bakgrunn, `borderColor: C.borderLight`, `borderRadius: 10`, `padding: 20`, lett skygge.
-- Seksjonstittel: 13px / 600 / `C.text` (V2-norm, ingen uppercase).
-- Beskrivelse: 12px / `C.textMuted`.
-- Knapper: `DesignLabPrimaryAction` (lagre / koble til), `DesignLabSecondaryAction` (test, send nå).
-- Statusindikator (Outlook tilkoblet/ikke): farget prikk + 13px tekst (V2-konvensjon i stedet for store ikon-bokser).
+```tsx
+<ResizableHandle
+  className={cn(
+    "group !w-px after:hidden hover:!bg-[#DDE0E7] data-[resize-handle-active]:!bg-[#5E6AD2] transition-colors focus-visible:!ring-0 focus-visible:!ring-offset-0",
+    showContactsDivider ? "!bg-[#E8EAEE]" : "!bg-transparent",
+  )}
+>
+```
 
-### 3. Ny komponent: `VarslingsInnstillingerV2`
-Egen fil: `src/components/VarslingsInnstillingerV2.tsx`. Beholder all eksisterende logikk og state-håndtering (kopiert fra `VarslingsInnstillinger.tsx`), men erstatter presentasjon:
-- 3 paneler i et 1-kolonne stack (eller `xl:grid-cols-3` for tette skjermer — matche eksisterende oppsett).
-- Inputs → `DesignLabTextField`.
-- Labels → `DesignLabFieldLabel`.
-- Knapper → `DesignLabPrimaryAction` / `DesignLabSecondaryAction`.
-- E-postmottaker-rader: 13px tekst, fjern-knapp som `DesignLabGhostAction` med "×".
-- Switches: gjenbruk `Switch` fra `@/components/ui/switch` — uendret (fungerer på begge versjoner).
-- `Select` (terskel-dager): gjenbruk eksisterende, men style triggeren med samme høyde (32px) via `DesignLabTextField`-tokens.
+(Bytt også `!w-1` → `!w-px` når divider er aktiv, slik at linjen blir presis 1px — gripeflaten utvides via Radix sin interne hit-area.)
 
-### 4. V1-fil urørt
-`src/components/VarslingsInnstillinger.tsx` endres ikke. V1-grenen i `Innstillinger.tsx` beholder all eksisterende JSX, klasser, tokens.
-
-## Filer som endres / opprettes
-- **Endret:** `src/pages/Innstillinger.tsx` — legg til `useDesignVersion`-bryter og ny `InnstillingerV2`-komponent. V1-grenen er bit-for-bit identisk med dagens fil.
-- **Ny:** `src/components/VarslingsInnstillingerV2.tsx` — V2-presentasjon, samme datalogikk som V1-versjonen.
-
-## Utenfor scope
-- Ingen endring i `VarslingsInnstillinger.tsx` (V1).
-- Ingen endring i `App.tsx`-routing (samme `/innstillinger`-rute for begge).
-- Ingen endring i `DesignLabSidebar` eller `AppLayout` (samme nav-knapper peker på `/innstillinger`).
-- Ingen endring i edge functions, databasekall eller toast-meldinger.
-- Ingen ny rute `/design-lab/innstillinger` (`DesignLabSidebar` peker allerede på `/innstillinger` — V2-bryteren håndterer rendering).
+**`src/pages/DesignLabCompanies.tsx`** linje 634
+Send `showContactsDivider` til `CompanyCardContent`:
+```tsx
+<CompanyCardContent
+  companyId={selectedId}
+  editable
+  headerPaddingTop={12}
+  showContactsDivider
+  defaultHidden={{ techDna: true, notes: true }}
+  onNavigateToFullPage={...}
+/>
+```
 
 ## Effekt
-- V1-brukere ser nøyaktig samme innstillingsside som i dag.
-- V2-brukere (Thomas, Jon med V2 aktivert) får siden gjengitt med Linear-inspirert layout: 40px header med tittel, kompakte kort på `C.appBg`, 13px tekst, 32px knapper i accent-blå (`#5E6AD2` for primær — eller blå `#2563EB` ettersom `DesignLabPrimaryAction` allerede er blå), V2 sidebar til venstre. Alle handlinger (lagre, test, koble til Outlook, Mailchimp-synk) fungerer identisk.
+- V2 (`/design-lab/selskaper`): tynn `#E8EAEE` vertikal linje vises permanent mellom selskapsseksjonen og Kontakter-kolonnen, akkurat som i referansebildet. Hover/drag fungerer som før.
+- V1 (`/selskap/:id`): uendret — ingen `showContactsDivider`-prop sendes, så fallback `transparent` brukes.
+
+## Utenfor scope
+- Ingen endring i V1 `CompanyDetail.tsx`.
+- Ingen endring i resizable-bredder eller layout.
+- Ingen endring i hover/active-styles på handle.
 
