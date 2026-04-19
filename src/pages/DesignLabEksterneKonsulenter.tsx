@@ -14,7 +14,6 @@ import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab
 import { C } from "@/components/designlab/theme";
 import {
   DesignLabIconButton,
-  DesignLabSearchInput,
   DesignLabStaticTag,
   DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS,
 } from "@/components/designlab/controls";
@@ -63,7 +62,6 @@ export default function DesignLabEksterneKonsulenter() {
   const { user, signOut } = useAuth();
   const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
 
-  const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("Alle");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -108,17 +106,8 @@ export default function DesignLabEksterneKonsulenter() {
     } else if (statusFilter === "Ikke ledig") {
       items = items.filter((r) => !getExternalAvailabilityMeta(r.tilgjengelig_fra).isAvailable);
     }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      items = items.filter((r) => {
-        const name = r.navn || "";
-        const company = r.companies?.name || r.selskap_tekst || "";
-        const tech = (r.teknologier || []).join(" ");
-        return [name, company, tech].join(" ").toLowerCase().includes(q);
-      });
-    }
     return items;
-  }, [rows, typeFilter, statusFilter, search]);
+  }, [rows, typeFilter, statusFilter]);
 
   const selectedRow = useMemo(() => (rows as any[]).find((row) => row.id === selectedId) ?? null, [rows, selectedId]);
 
@@ -232,12 +221,6 @@ export default function DesignLabEksterneKonsulenter() {
             <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {filtered.length}</span>
           </div>
           <div className="flex items-center gap-2">
-            <DesignLabSearchInput
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Søk navn, selskap, teknologi…"
-              style={{ width: 220 }}
-            />
             <DesignLabSecondaryAction onClick={() => navigate("/stacq/importer-cver")}>
               <Upload className="h-3.5 w-3.5" />
               Importer CVer
