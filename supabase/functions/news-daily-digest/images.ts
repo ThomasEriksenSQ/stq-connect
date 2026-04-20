@@ -130,11 +130,17 @@ interface MirrorOptions {
   companyName: string;
 }
 
-export async function resolveAndMirrorImage(opts: MirrorOptions): Promise<ResolvedImage> {
+export interface ResolvedImageWithMeta extends ResolvedImage {
+  ogTitle: string | null;
+  ogDescription: string | null;
+}
+
+export async function resolveAndMirrorImage(opts: MirrorOptions): Promise<ResolvedImageWithMeta> {
   const { supabase, itemId, date, pageUrl, companyWebsite, companyName } = opts;
 
-  // Plan A: OG-image fra artikkel
-  let imgUrl = await extractOgImage(pageUrl);
+  // Plan A: hent OG-meta (image + title + description) fra artikkel i ÉN HTTP-runde
+  const meta = await extractPageMeta(pageUrl);
+  let imgUrl = meta.ogImage;
   let source: ImageSource = "og";
 
   let downloaded = imgUrl ? await downloadImage(imgUrl) : null;
@@ -142,9 +148,9 @@ export async function resolveAndMirrorImage(opts: MirrorOptions): Promise<Resolv
   // Plan B: OG / favicon fra selskapets nettside
   if (!downloaded && companyWebsite) {
     const siteUrl = companyWebsite.startsWith("http") ? companyWebsite : `https://${companyWebsite}`;
-    imgUrl = await extractOgImage(siteUrl);
-    if (imgUrl) {
-      downloaded = await downloadImage(imgUrl);
+    const siteMeta = await extractPageMeta(siteUrl);
+    if (siteMeta.ogImage) {
+      downloaded = await downloadImage(siteMeta.ogImage);
       source = "company_logo";
     }
   }
@@ -168,9 +174,9 @@ export async function resolveAndMirrorImage(opts: MirrorOptions): Promise<Resolv
 
   if (error) {
     console.error(`[images] upload failed for ${path}:`, error.message);
-    return { url: null, source: "placeholder" };
+    return { url: null, source: "placeholder", ogTitle: meta.ogTitle, ogDescription: meta.ogDescription };
   }
 
   const { data: pub } = supabase.storage.from("news-images").getPublicUrl(path);
-  return { url: pub.publicUrl, source };
+  return { url: pub.publicUrl, source, ogTitle: meta.ogTitle, ogDescription: meta.ogDescription };
 }
