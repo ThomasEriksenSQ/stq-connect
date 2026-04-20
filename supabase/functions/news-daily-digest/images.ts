@@ -28,26 +28,63 @@ async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Respon
   }
 }
 
-export async function extractOgImage(pageUrl: string): Promise<string | null> {
+function decodeHtmlEntities(s: string): string {
+  return s
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)));
+}
+
+export interface PageMeta {
+  ogImage: string | null;
+  ogTitle: string | null;
+  ogDescription: string | null;
+}
+
+export async function extractPageMeta(pageUrl: string): Promise<PageMeta> {
   try {
     const res = await fetchWithTimeout(pageUrl);
-    if (!res.ok) return null;
-    const html = await res.text();
-    const match =
-      html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
+    if (!res.ok) return { ogImage: null, ogTitle: null, ogDescription: null };
+    const html = (await res.text()).slice(0, 200_000); // første 200KB holder for <head>
+
+    const imgMatch =
+      html.match(/<meta[^>]+property=["']og:image(?::secure_url)?["'][^>]+content=["']([^"']+)["']/i) ||
       html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i) ||
       html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i);
-    if (!match) return null;
-    let url = match[1];
-    if (url.startsWith("//")) url = `https:${url}`;
-    if (url.startsWith("/")) {
-      const base = new URL(pageUrl);
-      url = `${base.origin}${url}`;
+    let imgUrl = imgMatch ? imgMatch[1] : null;
+    if (imgUrl) {
+      if (imgUrl.startsWith("//")) imgUrl = `https:${imgUrl}`;
+      if (imgUrl.startsWith("/")) {
+        const base = new URL(pageUrl);
+        imgUrl = `${base.origin}${imgUrl}`;
+      }
     }
-    return url;
+
+    const titleMatch =
+      html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i) ||
+      html.match(/<meta[^>]+name=["']twitter:title["'][^>]+content=["']([^"']+)["']/i) ||
+      html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    const ogTitle = titleMatch ? decodeHtmlEntities(titleMatch[1].trim()) : null;
+
+    const descMatch =
+      html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i) ||
+      html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i) ||
+      html.match(/<meta[^>]+name=["']twitter:description["'][^>]+content=["']([^"']+)["']/i);
+    const ogDescription = descMatch ? decodeHtmlEntities(descMatch[1].trim()) : null;
+
+    return { ogImage: imgUrl, ogTitle, ogDescription };
   } catch {
-    return null;
+    return { ogImage: null, ogTitle: null, ogDescription: null };
   }
+}
+
+// Bevart for bakoverkompatibilitet
+export async function extractOgImage(pageUrl: string): Promise<string | null> {
+  return (await extractPageMeta(pageUrl)).ogImage;
 }
 
 export function placeholderSvg(label: string): { bytes: Uint8Array; ext: string; contentType: string } {
@@ -93,11 +130,17 @@ interface MirrorOptions {
   companyName: string;
 }
 
-export async function resolveAndMirrorImage(opts: MirrorOptions): Promise<ResolvedImage> {
+export interface ResolvedImageWithMeta extends ResolvedImage {
+  ogTitle: string | null;
+  ogDescription: string | null;
+}
+
+export async function resolveAndMirrorImage(opts: MirrorOptions): Promise<ResolvedImageWithMeta> {
   const { supabase, itemId, date, pageUrl, companyWebsite, companyName } = opts;
 
-  // Plan A: OG-image fra artikkel
-  let imgUrl = await extractOgImage(pageUrl);
+  // Plan A: hent OG-meta (image + title + description) fra artikkel i ÉN HTTP-runde
+  const meta = await extractPageMeta(pageUrl);
+  let imgUrl = meta.ogImage;
   let source: ImageSource = "og";
 
   let downloaded = imgUrl ? await downloadImage(imgUrl) : null;
@@ -105,9 +148,9 @@ export async function resolveAndMirrorImage(opts: MirrorOptions): Promise<Resolv
   // Plan B: OG / favicon fra selskapets nettside
   if (!downloaded && companyWebsite) {
     const siteUrl = companyWebsite.startsWith("http") ? companyWebsite : `https://${companyWebsite}`;
-    imgUrl = await extractOgImage(siteUrl);
-    if (imgUrl) {
-      downloaded = await downloadImage(imgUrl);
+    const siteMeta = await extractPageMeta(siteUrl);
+    if (siteMeta.ogImage) {
+      downloaded = await downloadImage(siteMeta.ogImage);
       source = "company_logo";
     }
   }
@@ -131,9 +174,9 @@ export async function resolveAndMirrorImage(opts: MirrorOptions): Promise<Resolv
 
   if (error) {
     console.error(`[images] upload failed for ${path}:`, error.message);
-    return { url: null, source: "placeholder" };
+    return { url: null, source: "placeholder", ogTitle: meta.ogTitle, ogDescription: meta.ogDescription };
   }
 
   const { data: pub } = supabase.storage.from("news-images").getPublicUrl(path);
-  return { url: pub.publicUrl, source };
+  return { url: pub.publicUrl, source, ogTitle: meta.ogTitle, ogDescription: meta.ogDescription };
 }

@@ -135,36 +135,61 @@ const NOISE_PATHS = /\/(forum|user|profile|tag|category|search|tema)\//i;
 
 // Side-titler som indikerer index/oversiktssider, ikke faktiske artikler
 const INDEX_TITLE_PATTERNS = [
-  /^(om|about|kontakt|contact|nyheter|news|pressemeldinger|press|investor|kontrakter|career|karriere|home|forside)\b/i,
-  /^[\w\s&]+\|\s*\1$/i, // mønster "X | X" (f.eks. "Aker Solutions | Aker Solutions")
+  /^(om|about|kontakt|contact|nyheter|news|pressemeldinger|press|investor|kontrakter|career|karriere|home|forside|selskapsinformasjon|company info|navigating)\b/i,
+  /^[\w\s&]+\|\s*\1$/i, // "X | X"
 ];
+
+// Spesifikke fragmenter som ALLTID indikerer ikke-artikkel
+const HARD_INDEX_FRAGMENTS = /\b(is parked|regnskapstall|virksomhetsopplysninger|company info|selskapsinformasjon|forsiden -)\b/i;
 
 function isIndexTitle(title: string): boolean {
   const t = title.trim();
-  // PDF-er er nesten alltid rapporter, ikke ferske nyheter
   if (/^\[?pdf\]?/i.test(t)) return true;
-  // Ren "Selskap | Selskap"-duplisering
+  if (HARD_INDEX_FRAGMENTS.test(t)) return true;
   const parts = t.split(/\s*[|–-]\s*/).map((p) => p.trim().toLowerCase());
   if (parts.length === 2 && parts[0] === parts[1]) return true;
-  // Korte oversikts-titler ("Kontrakter - Ocean24.no", "Pressemeldinger | Veidekke")
   if (t.length < 60 && INDEX_TITLE_PATTERNS.some((re) => re.test(t))) return true;
   return false;
+}
+
+function normalizeForCompare(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[()|\-–—.,!?:;'"`]/g, " ")
+    .replace(/\b(as|asa|ab|ag|gmbh|ltd|llc|inc|group|holding|holdings|the|norway|norge|no)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export function passesQuality(item: RawItem, score: number): boolean {
   if (!item.title || item.title.length < 10) return false;
   if (isIndexTitle(item.title)) return false;
+  // Tittel ≈ selskapsnavn → ren company-side, ikke artikkel
+  const nt = normalizeForCompare(item.title);
+  const nc = normalizeForCompare(item.primary_company_name);
+  if (nc.length >= 3) {
+    if (nt === nc) return false;
+    // Tittel ⊆ selskap (eller motsatt) med få ekstra ord → forside/oversikt
+    const longer = nt.length >= nc.length ? nt : nc;
+    const shorter = nt.length >= nc.length ? nc : nt;
+    const extraAfter = longer.startsWith(shorter + " ") ? longer.slice(shorter.length + 1).split(" ").length : 99;
+    const extraBefore = longer.endsWith(" " + shorter) ? longer.slice(0, -shorter.length - 1).split(" ").length : 99;
+    if (extraAfter <= 4 || extraBefore <= 4) return false;
+    // Sjekk også første-ord overlapp: hvis tittelens første 2 ord = selskapets første 2 ord OG tittelen er <30 tegn → forside
+    const tFirst2 = nt.split(" ").slice(0, 2).join(" ");
+    const cFirst2 = nc.split(" ").slice(0, 2).join(" ");
+    if (tFirst2.length >= 5 && tFirst2 === cFirst2 && nt.length < 30) return false;
+  }
   if (item.ingress && item.ingress.trim().length > 0 && item.ingress.trim().length < 20) return false;
   try {
     const u = new URL(item.url);
     if (NOISE_DOMAINS.test(u.hostname)) return false;
     if (NOISE_PATHS.test(u.pathname)) return false;
-    // PDF-URL-er er som regel rapporter, ikke nyheter
     if (/\.pdf(\?|$)/i.test(u.pathname)) return false;
   } catch {
     return false;
   }
-  return score > -10; // sikkerhetsventil mot ekstreme negative scores
+  return score > -10;
 }
 
 // Eksakt navn/alias-match i tittel eller ingress
