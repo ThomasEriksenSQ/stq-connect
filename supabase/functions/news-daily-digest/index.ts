@@ -16,10 +16,12 @@ import {
 } from "./scoring.ts";
 import { resolveAndMirrorImage } from "./images.ts";
 
-const HARD_CAP_BATCHES = 30;
-const BATCH_SIZE = 10;
+const HARD_CAP_BATCHES = 16;
+const BATCH_SIZE = 20;
+const PARALLEL_BATCHES = 3;
 const MIN_ITEMS_FOR_OK = 6;
 const TARGET_AFTER_PASS_1 = 12;
+const FETCH_CHUNK = 200; // Supabase .in() URL-lengde-grense
 
 interface CompanyRow {
   id: string;
@@ -221,41 +223,56 @@ Deno.serve(async (req: Request) => {
       baseWeight.set(c.id, baseWeightFor(eff));
     }
 
-    // 2. Hent kontakter + siste aktivitet → heat tier per selskap
+    // 2. Hent kontakter + siste aktivitet → heat tier per selskap (chunket for å unngå URL-grenser)
     const companyIds = companyList.map((c) => c.id);
-    const { data: contacts } = await supabase
-      .from("contacts")
-      .select("id, company_id, ikke_aktuell_kontakt")
-      .in("company_id", companyIds);
+    const allContacts: Array<{ id: string; company_id: string | null; ikke_aktuell_kontakt: boolean | null }> = [];
+    for (let i = 0; i < companyIds.length; i += FETCH_CHUNK) {
+      const chunk = companyIds.slice(i, i + FETCH_CHUNK);
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("id, company_id, ikke_aktuell_kontakt")
+        .in("company_id", chunk);
+      if (error) console.error(`[contacts chunk ${i}] error:`, error.message);
+      if (data) allContacts.push(...data);
+    }
+    console.log(`[contacts] companies=${companyIds.length} contacts_fetched=${allContacts.length}`);
 
-    const contactIds = (contacts ?? []).map((c) => c.id);
-    const { data: activities } = await supabase
-      .from("activities")
-      .select("contact_id, description, created_at")
-      .in("contact_id", contactIds)
-      .order("created_at", { ascending: false })
-      .limit(2000);
+    const contactIds = allContacts.map((c) => c.id);
+    const allActivities: ActivityRow[] = [];
+    for (let i = 0; i < contactIds.length; i += FETCH_CHUNK) {
+      const chunk = contactIds.slice(i, i + FETCH_CHUNK);
+      const { data, error } = await supabase
+        .from("activities")
+        .select("contact_id, description, created_at")
+        .in("contact_id", chunk)
+        .order("created_at", { ascending: false });
+      if (error) console.error(`[activities chunk ${i}] error:`, error.message);
+      if (data) allActivities.push(...(data as ActivityRow[]));
+    }
+    console.log(`[activities] contacts=${contactIds.length} activities_fetched=${allActivities.length}`);
 
     // Per kontakt: nyeste aktivitet → signal + alder
     const latestByContact = new Map<string, ActivityRow>();
-    for (const a of (activities ?? []) as ActivityRow[]) {
+    for (const a of allActivities) {
       if (!a.contact_id) continue;
       if (!latestByContact.has(a.contact_id)) latestByContact.set(a.contact_id, a);
     }
 
     const now = Date.now();
-    const contactSignals = (contacts ?? []).map((c) => {
-      const latest = latestByContact.get(c.id);
-      const days = latest
-        ? Math.floor((now - new Date(latest.created_at).getTime()) / 86_400_000)
-        : 999;
-      return {
-        company_id: c.company_id ?? "",
-        signal: extractSignal(latest?.description ?? null),
-        days_since_last_activity: days,
-        ikke_aktuell: !!c.ikke_aktuell_kontakt,
-      };
-    });
+    const contactSignals = allContacts
+      .filter((c) => c.company_id)
+      .map((c) => {
+        const latest = latestByContact.get(c.id);
+        const days = latest
+          ? Math.floor((now - new Date(latest.created_at).getTime()) / 86_400_000)
+          : 999;
+        return {
+          company_id: c.company_id as string,
+          signal: extractSignal(latest?.description ?? null),
+          days_since_last_activity: days,
+          ikke_aktuell: !!c.ikke_aktuell_kontakt,
+        };
+      });
     const heatTier = aggregateHeatTiers(contactSignals);
 
     const heatTierDistribution: Record<string, number> = { "1": 0, "2": 0, "3": 0, "4": 0 };
@@ -268,42 +285,65 @@ Deno.serve(async (req: Request) => {
       return ta - tb;
     });
 
-    // 4. Pass 1 — siste 24t
+    // 4. Pass 1 — siste 24t (parallell i grupper)
     let batchesUsed = 0;
     const allRaw: RawItem[] = [];
-    for (let i = 0; i < sortedCompanies.length && batchesUsed < HARD_CAP_BATCHES; i += BATCH_SIZE) {
-      const batch = sortedCompanies.slice(i, i + BATCH_SIZE);
-      const items = await callPerplexity(PERPLEXITY_API_KEY, batch, "day");
-      allRaw.push(...items);
-      batchesUsed++;
+    let perplexityHits = 0;
+    async function runPass(recency: "day" | "week", label: string) {
+      for (let i = 0; i < sortedCompanies.length && batchesUsed < HARD_CAP_BATCHES; i += BATCH_SIZE * PARALLEL_BATCHES) {
+        const slots: Promise<RawItem[]>[] = [];
+        for (let j = 0; j < PARALLEL_BATCHES && batchesUsed < HARD_CAP_BATCHES; j++) {
+          const start = i + j * BATCH_SIZE;
+          if (start >= sortedCompanies.length) break;
+          const batch = sortedCompanies.slice(start, start + BATCH_SIZE);
+          slots.push(callPerplexity(PERPLEXITY_API_KEY, batch, recency));
+          batchesUsed++;
+        }
+        const results = await Promise.all(slots);
+        for (const items of results) {
+          perplexityHits += items.length;
+          allRaw.push(...items);
+        }
+      }
+      console.log(`[${label} done] batches=${batchesUsed} hits=${perplexityHits} raw=${allRaw.length}`);
     }
+    await runPass("day", "pass1");
 
     const ctx: ScoringContext = { baseWeight, heatTier };
+    // Bygg aliaser: fullt navn + første ord (hvis ≥4 tegn og ikke generisk)
+    const GENERIC_FIRST_WORDS = new Set(["the", "norsk", "norske", "nordic", "norway", "norge", "scandinavian"]);
     const aliasByCompany = new Map<string, string[]>();
-    for (const c of companyList) aliasByCompany.set(c.id, [c.name]);
+    for (const c of companyList) {
+      const aliases = [c.name];
+      const firstWord = c.name.split(/\s+/)[0]?.replace(/[^\p{L}0-9]/gu, "") ?? "";
+      if (firstWord.length >= 4 && !GENERIC_FIRST_WORDS.has(firstWord.toLowerCase())) {
+        aliases.push(firstWord);
+      }
+      aliasByCompany.set(c.id, aliases);
+    }
 
     function scoreFiltered(raw: RawItem[]) {
       const merged = dedupAndMerge(raw);
+      const afterMerge = merged.length;
       const filtered = merged.filter((it) => {
         const aliases = aliasByCompany.get(it.primary_company_id) ?? [];
         return matchesCompanyName(it, aliases);
       });
+      const afterNameMatch = filtered.length;
       const scored = filtered.map((item) => ({ item, score: scoreItem(item, ctx) }));
-      return scored.filter((s) => passesQuality(s.item, s.score));
+      const final = scored.filter((s) => passesQuality(s.item, s.score));
+      console.log(`[scoreFiltered] raw=${raw.length} merged=${afterMerge} name_match=${afterNameMatch} quality_pass=${final.length}`);
+      return final;
     }
 
     let scored = scoreFiltered(allRaw);
 
-    // 5. Pass 2 — utvid til siste uke hvis < 12
+    // 5. Pass 2 — utvid til siste uke hvis < target
     let fallbackUsed = false;
     if (scored.length < TARGET_AFTER_PASS_1 && batchesUsed < HARD_CAP_BATCHES) {
       fallbackUsed = true;
-      for (let i = 0; i < sortedCompanies.length && batchesUsed < HARD_CAP_BATCHES; i += BATCH_SIZE) {
-        const batch = sortedCompanies.slice(i, i + BATCH_SIZE);
-        const items = await callPerplexity(PERPLEXITY_API_KEY, batch, "week");
-        allRaw.push(...items);
-        batchesUsed++;
-      }
+      console.log(`[pass2 start] scored=${scored.length} < target=${TARGET_AFTER_PASS_1}, expanding to week`);
+      await runPass("week", "pass2");
       scored = scoreFiltered(allRaw);
     }
 
