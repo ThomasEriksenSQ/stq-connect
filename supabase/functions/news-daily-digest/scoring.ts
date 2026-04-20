@@ -169,10 +169,16 @@ export function passesQuality(item: RawItem, score: number): boolean {
   const nc = normalizeForCompare(item.primary_company_name);
   if (nc.length >= 3) {
     if (nt === nc) return false;
-    // Tittel = selskapsnavn + max 4 ord ekstra → mest sannsynlig forside/oversikt
-    const extraAfter = nt.startsWith(nc + " ") ? nt.slice(nc.length + 1).split(" ").length : 99;
-    const extraBefore = nt.endsWith(" " + nc) ? nt.slice(0, -nc.length - 1).split(" ").length : 99;
+    // Tittel ⊆ selskap (eller motsatt) med få ekstra ord → forside/oversikt
+    const longer = nt.length >= nc.length ? nt : nc;
+    const shorter = nt.length >= nc.length ? nc : nt;
+    const extraAfter = longer.startsWith(shorter + " ") ? longer.slice(shorter.length + 1).split(" ").length : 99;
+    const extraBefore = longer.endsWith(" " + shorter) ? longer.slice(0, -shorter.length - 1).split(" ").length : 99;
     if (extraAfter <= 4 || extraBefore <= 4) return false;
+    // Sjekk også første-ord overlapp: hvis tittelens første 2 ord = selskapets første 2 ord OG tittelen er <30 tegn → forside
+    const tFirst2 = nt.split(" ").slice(0, 2).join(" ");
+    const cFirst2 = nc.split(" ").slice(0, 2).join(" ");
+    if (tFirst2.length >= 5 && tFirst2 === cFirst2 && nt.length < 30) return false;
   }
   if (item.ingress && item.ingress.trim().length > 0 && item.ingress.trim().length < 20) return false;
   try {
