@@ -463,7 +463,7 @@ Deno.serve(async (req: Request) => {
       if (batchesUsed < HARD_CAP_BATCHES) {
         await runPass(coldCompanies, "week", PASS2_MAX_AGE_HOURS, "pass2-cold-7d");
       }
-      scored = scoreFiltered(allRaw);
+      scored = await scoreFiltered(allRaw);
     }
 
     // 6. Lagre alltid det vi har — UI bestemmer presentasjon. Ingen "empty"-grense.
