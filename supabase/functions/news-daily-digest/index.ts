@@ -222,41 +222,56 @@ Deno.serve(async (req: Request) => {
       baseWeight.set(c.id, baseWeightFor(eff));
     }
 
-    // 2. Hent kontakter + siste aktivitet → heat tier per selskap
+    // 2. Hent kontakter + siste aktivitet → heat tier per selskap (chunket for å unngå URL-grenser)
     const companyIds = companyList.map((c) => c.id);
-    const { data: contacts } = await supabase
-      .from("contacts")
-      .select("id, company_id, ikke_aktuell_kontakt")
-      .in("company_id", companyIds);
+    const allContacts: Array<{ id: string; company_id: string | null; ikke_aktuell_kontakt: boolean | null }> = [];
+    for (let i = 0; i < companyIds.length; i += FETCH_CHUNK) {
+      const chunk = companyIds.slice(i, i + FETCH_CHUNK);
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("id, company_id, ikke_aktuell_kontakt")
+        .in("company_id", chunk);
+      if (error) console.error(`[contacts chunk ${i}] error:`, error.message);
+      if (data) allContacts.push(...data);
+    }
+    console.log(`[contacts] companies=${companyIds.length} contacts_fetched=${allContacts.length}`);
 
-    const contactIds = (contacts ?? []).map((c) => c.id);
-    const { data: activities } = await supabase
-      .from("activities")
-      .select("contact_id, description, created_at")
-      .in("contact_id", contactIds)
-      .order("created_at", { ascending: false })
-      .limit(2000);
+    const contactIds = allContacts.map((c) => c.id);
+    const allActivities: ActivityRow[] = [];
+    for (let i = 0; i < contactIds.length; i += FETCH_CHUNK) {
+      const chunk = contactIds.slice(i, i + FETCH_CHUNK);
+      const { data, error } = await supabase
+        .from("activities")
+        .select("contact_id, description, created_at")
+        .in("contact_id", chunk)
+        .order("created_at", { ascending: false });
+      if (error) console.error(`[activities chunk ${i}] error:`, error.message);
+      if (data) allActivities.push(...(data as ActivityRow[]));
+    }
+    console.log(`[activities] contacts=${contactIds.length} activities_fetched=${allActivities.length}`);
 
     // Per kontakt: nyeste aktivitet → signal + alder
     const latestByContact = new Map<string, ActivityRow>();
-    for (const a of (activities ?? []) as ActivityRow[]) {
+    for (const a of allActivities) {
       if (!a.contact_id) continue;
       if (!latestByContact.has(a.contact_id)) latestByContact.set(a.contact_id, a);
     }
 
     const now = Date.now();
-    const contactSignals = (contacts ?? []).map((c) => {
-      const latest = latestByContact.get(c.id);
-      const days = latest
-        ? Math.floor((now - new Date(latest.created_at).getTime()) / 86_400_000)
-        : 999;
-      return {
-        company_id: c.company_id ?? "",
-        signal: extractSignal(latest?.description ?? null),
-        days_since_last_activity: days,
-        ikke_aktuell: !!c.ikke_aktuell_kontakt,
-      };
-    });
+    const contactSignals = allContacts
+      .filter((c) => c.company_id)
+      .map((c) => {
+        const latest = latestByContact.get(c.id);
+        const days = latest
+          ? Math.floor((now - new Date(latest.created_at).getTime()) / 86_400_000)
+          : 999;
+        return {
+          company_id: c.company_id as string,
+          signal: extractSignal(latest?.description ?? null),
+          days_since_last_activity: days,
+          ikke_aktuell: !!c.ikke_aktuell_kontakt,
+        };
+      });
     const heatTier = aggregateHeatTiers(contactSignals);
 
     const heatTierDistribution: Record<string, number> = { "1": 0, "2": 0, "3": 0, "4": 0 };
