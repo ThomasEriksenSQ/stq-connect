@@ -878,34 +878,39 @@ ${JSON.stringify(context)}`;
           {nyeForesporsler.length === 0 ? (
             <EmptyText>Ingen nye forespørsler siste 7 dager.</EmptyText>
           ) : (
-            <div style={{ paddingBottom: 8 }}>
+            <>
+              <ColHeader
+                cols={COLS_FORESP}
+                labels={["Mottatt", "Selskap", "Teknologier", "Sted", ""]}
+              />
               {nyeForesporsler.map((f, idx) => {
                 const ago = formatDistanceToNowStrict(new Date(f.mottatt_dato), { locale: nb });
                 const focusedRow = isFocused({ kind: "foresporsel", idx });
                 return (
-                  <Row
+                  <TableRow
                     key={`fr-${f.id}`}
+                    cols={COLS_FORESP}
                     focused={focusedRow}
                     onMouseEnter={() => setFocused({ kind: "foresporsel", idx })}
                     onClick={() => navigate("/design-lab/foresporsler")}
                   >
-                    <span style={{ fontSize: 11, color: C.textFaint, width: 60, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
+                    <span style={{ fontSize: 11, color: C.textFaint, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
                       {ago.replace(/\s/, "\u00A0")}
                     </span>
-                    <span style={{ fontSize: 13, color: C.text, fontWeight: 500, width: 200, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 13, color: C.text, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {f.selskap_navn}
                     </span>
-                    <span style={{ fontSize: 12, color: C.textMuted, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 12, color: C.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {(f.teknologier || []).slice(0, 5).join(" · ") || "—"}
                     </span>
-                    <span style={{ fontSize: 11, color: C.textFaint, width: 110, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 11, color: C.textFaint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {f.sted || ""}
                     </span>
                     <ArrowRight size={12} className="opacity-0 group-hover:opacity-100" style={{ color: C.textFaint }} />
-                  </Row>
+                  </TableRow>
                 );
               })}
-            </div>
+            </>
           )}
         </Section>
 
