@@ -163,6 +163,26 @@ function EmptyText({ children }: { children: React.ReactNode }) {
   );
 }
 
+function Kbd({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd
+      style={{
+        fontFamily: "inherit",
+        fontSize: 10,
+        padding: "1px 5px",
+        margin: "0 1px",
+        background: C.surfaceAlt,
+        color: C.textMuted,
+        border: `1px solid ${C.borderLight}`,
+        borderRadius: 3,
+        verticalAlign: "baseline",
+      }}
+    >
+      {children}
+    </kbd>
+  );
+}
+
 function Skeleton({ rows = 3 }: { rows?: number }) {
   return (
     <div style={{ padding: "8px 24px 12px" }}>
