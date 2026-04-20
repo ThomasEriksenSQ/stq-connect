@@ -163,6 +163,11 @@ Hvis du ikke finner noen saker, returner items: [].`;
       if (items.length > 0) {
         console.log(`[perplexity] sample=${JSON.stringify(items[0]).slice(0, 250)}`);
       }
+      // Hvis Perplexity ikke returnerte noen citations, er items typisk fabrikkerte. Avvis batchen.
+      if (citations.length === 0 && items.length > 0) {
+        console.log(`[perplexity] dropped entire batch — 0 citations but ${items.length} items (likely hallucinated)`);
+        return [];
+      }
 
       // Bygg fuzzy match: lowercase + uten suffikser (AS, ASA, AB)
       const norm = (s: string) => s.toLowerCase().replace(/\b(as|asa|ab|sa|inc|ltd|gmbh|group|holding|holdings)\b/g, "").replace(/[^a-z0-9æøå ]/g, "").replace(/\s+/g, " ").trim();
