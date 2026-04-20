@@ -163,6 +163,26 @@ function EmptyText({ children }: { children: React.ReactNode }) {
   );
 }
 
+function Kbd({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd
+      style={{
+        fontFamily: "inherit",
+        fontSize: 10,
+        padding: "1px 5px",
+        margin: "0 1px",
+        background: C.surfaceAlt,
+        color: C.textMuted,
+        border: `1px solid ${C.borderLight}`,
+        borderRadius: 3,
+        verticalAlign: "baseline",
+      }}
+    >
+      {children}
+    </kbd>
+  );
+}
+
 function Skeleton({ rows = 3 }: { rows?: number }) {
   return (
     <div style={{ padding: "8px 24px 12px" }}>
@@ -190,6 +210,42 @@ export default function DesignLabHome() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const searchRef = useRef<HTMLInputElement>(null);
+
+  /* ──────── Brukerprofil for hilsen ──────── */
+  const { data: profile } = useQuery<{ full_name: string | null } | null>({
+    queryKey: ["dl-home-profile", user?.id || ""],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user,
+    staleTime: 60 * 60 * 1000,
+  });
+
+  const firstName = useMemo(() => {
+    const full = profile?.full_name?.trim();
+    if (!full) return "";
+    return full.split(" ")[0];
+  }, [profile]);
+
+  const greeting = useMemo(() => {
+    const h = new Date().getHours();
+    if (h < 5) return "God natt";
+    if (h < 10) return "God morgen";
+    if (h < 17) return "God dag";
+    if (h < 22) return "God kveld";
+    return "God natt";
+  }, []);
+
+  const todayLabel = useMemo(
+    () => format(new Date(), "EEEE d. MMMM", { locale: nb }),
+    [],
+  );
 
   /* ──────── Pipeline ──────── */
   const { data: pulse } = useQuery<PipelinePulse>({
@@ -391,11 +447,19 @@ Norsk bokmål. Maks 80 ord. Ikke pad svaret. Bruk "konsulent".
 KONTEKST:
 ${JSON.stringify(context)}`;
 
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      if (!token) {
+        setAiAnswer("Du må være logget inn for å spørre agenten.");
+        setAiLoading(false);
+        return;
+      }
+
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           system: systemPrompt,
@@ -519,6 +583,39 @@ ${JSON.stringify(context)}`;
       contentStyle={{ padding: "0" }}
     >
       <div style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif" }}>
+        {/* VELKOMST */}
+        <Section>
+          <div style={{ padding: "22px 24px 18px" }}>
+            <div
+              style={{
+                fontSize: 20,
+                fontWeight: 600,
+                color: C.text,
+                letterSpacing: "-0.01em",
+                lineHeight: 1.25,
+              }}
+            >
+              {greeting}
+              {firstName ? `, ${firstName}` : ""}.
+            </div>
+            <div
+              style={{
+                marginTop: 6,
+                fontSize: 13,
+                color: C.textMuted,
+                lineHeight: 1.5,
+                maxWidth: 760,
+              }}
+            >
+              {todayLabel.charAt(0).toUpperCase() + todayLabel.slice(1)}. Her er
+              dagens morgenkø — det viktigste fra innboksen, ledige konsulenter
+              som venter på sitt neste oppdrag, ferske forespørsler og dine
+              hotteste leads. Bla med <Kbd>↑</Kbd> <Kbd>↓</Kbd>, åpne med{" "}
+              <Kbd>Enter</Kbd>, søk med <Kbd>⌘K</Kbd>.
+            </div>
+          </div>
+        </Section>
+
         {/* PIPELINE */}
         <Section>
           <div className="flex items-center" style={{ padding: "16px 24px", gap: 28, flexWrap: "wrap" }}>
