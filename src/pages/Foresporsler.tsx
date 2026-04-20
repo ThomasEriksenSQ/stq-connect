@@ -33,6 +33,7 @@ import { mergeTechnologyTags } from "@/lib/technologyTags";
 import { format, differenceInDays, parseISO, startOfDay } from "date-fns";
 import { nb } from "date-fns/locale";
 import { crmQueryKeys } from "@/lib/queryKeys";
+import { upsertTaskSignalDescription } from "@/lib/categoryUtils";
 import { useSearchParams } from "react-router-dom";
 import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
 
