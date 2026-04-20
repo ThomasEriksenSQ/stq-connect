@@ -201,7 +201,10 @@ serve(async (req) => {
           subject: msg.subject || "(ingen emne)",
           from: msg.from?.emailAddress?.address || "",
           from_name: msg.from?.emailAddress?.name || "",
-          to: (msg.toRecipients || []).map((r: any) => r.emailAddress?.address || "").join(", "),
+          to: [
+            ...(msg.toRecipients || []).map((r: any) => r.emailAddress?.address || ""),
+            ...(msg.ccRecipients || []).map((r: any) => r.emailAddress?.address ? `cc: ${r.emailAddress.address}` : ""),
+          ].filter(Boolean).join(", "),
           date: msg.receivedDateTime,
           preview: msg.bodyPreview || "",
           body_text: msg.body?.contentType === "html" ? stripHtml(msg.body.content || "") : (msg.body?.content || ""),
