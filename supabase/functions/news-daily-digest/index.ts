@@ -195,8 +195,7 @@ Hvis du ikke finner noen saker, returner items: [].`;
         const title = String(it.title ?? "");
         if (!rawUrl || !title) continue;
 
-        // Anti-hallusinering: URL må finnes i Perplexitys citations.
-        // Hvis ikke, prøv å finne en citation som inneholder samme host.
+        // Anti-hallusinering: URL må finnes i citations ELLER være på en kjent tier 1-2 kilde
         const normalizedUrl = rawUrl.replace(/\/$/, "");
         let finalUrl: string | null = null;
         if (citationSet.has(normalizedUrl)) {
@@ -211,7 +210,13 @@ Hvis du ikke finner noen saker, returner items: [].`;
                 return false;
               }
             });
-            if (match) finalUrl = match;
+            if (match) {
+              finalUrl = match;
+            } else {
+              // Ingen citation-match: aksepter likevel hvis URL er på kjent tier 1-2 kilde
+              const tier = tierForUrl(rawUrl);
+              if (tier <= 2) finalUrl = rawUrl;
+            }
           } catch { /* invalid url */ }
         }
         if (!finalUrl) {
