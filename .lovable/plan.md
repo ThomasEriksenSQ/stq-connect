@@ -1,57 +1,53 @@
 
 
-## Plan: Balanser kolonnene i matches-tabellen
+## Plan: Skill mellom ansettelses-start og oppdragstilgjengelighet
 
 ### Diagnose
 
-På `/design-lab/kontakter` med en konsulent valgt brukes dette gridet både i header (linje 2085) og rader (linje 2158):
+I `src/pages/DesignLabKonsulenterAnsatte.tsx`:
 
+- `getStatus` (linje 128–133) markerer en ansatt som **"Kommende"** hvis enten `start_dato` ELLER `tilgjengelig_fra` ligger frem i tid.
+- `getUpcomingDate` (linje 135) returnerer `tilgjengelig_fra` først, så `start_dato`.
+- Start-kolonnen (linje 312–324) viser `Starter {upcomingDate}` når status er "Kommende".
+
+Resultatet for Tom Erik: han startet i 2006, men har `tilgjengelig_fra = 2026-04-24` (fordi han er i oppdrag som slutter da). Systemet feilklassifiserer ham som "Kommende ansatt" og viser "Starter 24.04" i Start-kolonnen — selv om han er en aktiv ansatt med 19 års fartstid.
+
+Dette skjer i `DesignLabKonsulenterAnsatte.tsx`. V1-versjonen (`KonsulenterAnsatte.tsx` linje 100–104) har riktig logikk — kun `start_dato` styrer "Kommende".
+
+### Endring
+
+Fil: `src/pages/DesignLabKonsulenterAnsatte.tsx`
+
+**1. `getStatus` (linje 128–133)** — fjern `tilgjengelig_fra`-grenen:
+```ts
+const getStatus = (row: any) => {
+  if (row.status === "SLUTTET") return "Sluttet";
+  if (row.start_dato && isAfter(new Date(row.start_dato), today)) return "Kommende";
+  return "Aktiv";
+};
 ```
-minmax(220px,2fr) minmax(140px,1.2fr) minmax(120px,1fr) 110px 110px 96px
+
+**2. `getUpcomingDate` (linje 135)** — bruk kun `start_dato` for "Kommende"-chip i Start-kolonnen, eller fjern funksjonen helt og forenkle render. Behold den hvis den brukes andre steder (sjekkes), ellers inline:
+```ts
+// Start-kolonnen blir:
+{status === "Kommende" && row.start_dato ? (
+  <DesignLabReadonlyChip active activeColors={UPCOMING_CHIP_COLORS}>
+    Starter {format(new Date(row.start_dato), "dd.MM")}
+  </DesignLabReadonlyChip>
+) : (
+  row.start_dato ? format(new Date(row.start_dato), "dd.MM.yyyy") : "–"
+)}
 ```
 
-På 4245px viewport får panelet ca 1530px bredde. Da fordeles det slik:
-- **Lead** ~520px (alt for bredt — navn som "Tom Erik Lundesgaard" fyller ca 180px, resten blir tomt)
-- **Selskap** ~310px (mer enn nødvendig)
-- **Kilde** ~260px (mer enn nødvendig)
-- **Match / Varme** 110/110px (for trange — "Match 8/10" + farget prikk + "Høy evidens" presses)
-- **Sist** 96px helt til høyre
+### Konsekvens
 
-Resultatet i skjermbildet: store hull etter Lead-navnet, mens Match-/Varme-overskriftene og pillene står klemt mot venstre i kolonnene sine — visuelt ubalansert.
-
-### Endring (kun gridTemplateColumns, to steder i `src/pages/DesignLabContacts.tsx`)
-
-Bytt til en mer balansert fordeling som følger V2 ultrawide-regelen (metadata = fast bredde, tekst-kolonner = fleksibel):
-
-```
-minmax(220px,1.6fr) minmax(140px,1fr) minmax(140px,1fr) 140px 120px 110px
-```
-
-Hva endringen gjør:
-
-| Kolonne | Før | Etter | Hvorfor |
-|---|---|---|---|
-| Lead | 2fr | 1.6fr | Mindre dødplass etter navn |
-| Selskap | 1.2fr | 1fr | Likestilles med Kilde |
-| Kilde | 1fr | 1fr | Uendret andel, men min økt til 140px så "Finn · S…" ikke trunkeres unødvendig |
-| Match | 110px | 140px | Plass til "● Match 8/10" + "Høy evidens" uten klem |
-| Varme | 110px | 120px | "Mulig"/"Lovende" får luft |
-| Sist | 96px | 110px | "19 mnd siden" får plass uten å skrumpe |
-
-Totalt fast pluss min: 220+140+140+140+120+110 = 870px min. Resten (ca 660px på 4245px-skjerm) deles likt mellom Lead (1.6fr) og Selskap+Kilde (1fr+1fr) → Lead ~330px ekstra, Selskap/Kilde ~165px hver. Det gir et harmonisk forhold der ingen kolonne er overdimensjonert.
-
-### Filer som endres
-
-- `src/pages/DesignLabContacts.tsx`
-  - linje 2085 (header grid)
-  - linje 2158 (rad grid)
-
-Begge må holdes identiske ellers blir headere og data ikke linjert.
+- Tom Erik vises nå som "Aktiv" med `01.??.2006` i Start-kolonnen og "19 år" i Ansettelse — korrekt.
+- Kun reelt nye ansatte (med fremtidig `start_dato`) markeres som "Kommende" og får "Starter dd.MM"-chippen.
+- `tilgjengelig_fra` brukes ingen steder i denne tabellen lenger — det er en oppdrags-egenskap, ikke en ansettelses-egenskap.
 
 ### Ikke endret
 
-- Headerstil (font, casing, sortering) — uendret fra forrige iterasjon
-- Radhøyde 48px — uendret
-- Tekstinnhold og truncate-regler — uendret
-- Kontakt-tabellens grid (linje 2258/2290) — uendret
+- V1 `KonsulenterAnsatte.tsx` — har allerede riktig logikk.
+- Filtre, sortering, øvrige kolonner.
+- "Tilgjengelig for oppdrag"-baren på andre sider som faktisk bruker `tilgjengelig_fra` til riktig formål.
 
