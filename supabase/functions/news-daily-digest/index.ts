@@ -428,13 +428,36 @@ Deno.serve(async (req: Request) => {
     const itemsOut: NewsItemOut[] = [];
     const companyById = new Map(companyList.map((c) => [c.id, c]));
 
+    // Heuristikk: "svak" tittel = ticker, domene-suffiks, for kort, eller bare selskapsnavn
+    function isWeakTitle(title: string, companyName: string): boolean {
+      const t = title.trim();
+      if (t.length < 25) return true;
+      if (/\([A-Z]{2,6}\)/.test(t)) return true; // (NORBT), (EQNR)
+      if (/\s[-|–—]\s[A-ZÆØÅa-zæøå0-9.]{2,20}$/.test(t) && t.length < 60) return true; // " - Nordnet"
+      const escaped = companyName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const bareName = new RegExp(`^${escaped}\\s*[-|–—]?\\s*\\w{0,20}$`, "i");
+      if (bareName.test(t)) return true;
+      return false;
+    }
+
+    function pickBetterTitle(perplexityTitle: string, ogTitle: string | null, companyName: string): string {
+      if (!ogTitle) return perplexityTitle;
+      const og = ogTitle.trim();
+      if (isWeakTitle(og, companyName)) return perplexityTitle;
+      if (isWeakTitle(perplexityTitle, companyName) && og.length >= 25) {
+        console.log(`[title-upgrade] "${perplexityTitle}" → "${og}"`);
+        return og;
+      }
+      return perplexityTitle;
+    }
+
     async function buildItem(
       entry: { item: RawItem; score: number },
       variant: "lead" | "feature" | "brief",
     ): Promise<NewsItemOut> {
       const id = `${variant}-${crypto.randomUUID().slice(0, 8)}`;
       const company = companyById.get(entry.item.primary_company_id);
-      // Hent bilde for alle varianter (også briefs får liten thumbnail)
+      // Hent bilde + OG-meta i samme HTTP-runde for alle varianter
       const image = await resolveAndMirrorImage({
         supabase,
         itemId: id,
@@ -444,6 +467,17 @@ Deno.serve(async (req: Request) => {
         companyName: entry.item.primary_company_name,
       });
 
+      // Oppgrader tittel hvis Perplexity ga svak versjon
+      const finalTitle = pickBetterTitle(entry.item.title, image.ogTitle, entry.item.primary_company_name);
+
+      // Bruk OG-description som ingress hvis Perplexity-snippet manglet
+      let ingress = entry.item.ingress;
+      if (variant !== "brief" && !ingress && image.ogDescription && image.ogDescription.length >= 30) {
+        ingress = image.ogDescription.length > 280
+          ? image.ogDescription.slice(0, 280).replace(/\s+\S*$/, "") + "…"
+          : image.ogDescription;
+      }
+
       return {
         id,
         variant,
@@ -451,13 +485,13 @@ Deno.serve(async (req: Request) => {
         primary_company_name: entry.item.primary_company_name,
         also_matched_company_ids: entry.item.also_matched_company_ids,
         also_matched_company_names: entry.item.also_matched_company_names,
-        title: entry.item.title,
-        ingress: variant === "brief" ? null : entry.item.ingress,
+        title: finalTitle,
+        ingress: variant === "brief" ? null : ingress,
         url: entry.item.url,
         source: entry.item.source,
         source_tier: entry.item.source_tier,
         published_at: entry.item.published_at,
-        image,
+        image: { url: image.url, source: image.source },
         score: entry.score,
       };
     }
