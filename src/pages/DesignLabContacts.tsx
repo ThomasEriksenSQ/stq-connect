@@ -2214,10 +2214,74 @@ export default function DesignLabContacts() {
                                     : lead.preferredContactName || ""}
                               </p>
                             </div>
-                            <div className="min-w-0">
-                              <p className="truncate" style={{ fontSize: 11, color: C.textFaint }}>
-                                {lead.matchTags.slice(0, 3).join(", ")}
-                              </p>
+                            <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
+                              {isContactMatchLead(lead) ? (
+                                <div className="flex items-center gap-1.5">
+                                  <DesignLabFilterButton
+                                    type="button"
+                                    active={Boolean(lead.cvEmail)}
+                                    activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                                    inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                                    inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+                                    disabled={!lead.email}
+                                    title={
+                                      lead.email
+                                        ? lead.cvEmail
+                                          ? "CV-Epost aktiv"
+                                          : "Aktiver CV-Epost"
+                                        : CONTACT_CV_EMAIL_REQUIRED_MESSAGE
+                                    }
+                                    onClick={() => {
+                                      if (lead.cvEmail && (lead.mailchimpStatus === "unsubscribed" || lead.mailchimpStatus === "cleaned")) {
+                                        toast.info("Kontakten har avmeldt seg via Mailchimp og kan ikke re-abonneres.");
+                                        return;
+                                      }
+                                      handleToggle(
+                                        {
+                                          id: lead.id,
+                                          email: lead.email,
+                                          cvEmail: lead.cvEmail,
+                                          callList: lead.callList,
+                                          mailchimpStatus: lead.mailchimpStatus,
+                                        },
+                                        "cv_email",
+                                        !lead.cvEmail,
+                                      );
+                                    }}
+                                  >
+                                    {lead.cvEmail && (lead.mailchimpStatus === "unsubscribed" || lead.mailchimpStatus === "cleaned")
+                                      ? "CV ✗"
+                                      : "CV"}
+                                  </DesignLabFilterButton>
+                                  <DesignLabFilterButton
+                                    type="button"
+                                    active={Boolean(lead.callList)}
+                                    activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                                    inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                                    inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+                                    title={lead.callList ? "Innkjøper aktiv" : "Aktiver innkjøper"}
+                                    onClick={() =>
+                                      handleToggle(
+                                        {
+                                          id: lead.id,
+                                          email: lead.email,
+                                          cvEmail: lead.cvEmail,
+                                          callList: lead.callList,
+                                          mailchimpStatus: lead.mailchimpStatus,
+                                        },
+                                        "call_list",
+                                        !lead.callList,
+                                      )
+                                    }
+                                  >
+                                    Innkjøper
+                                  </DesignLabFilterButton>
+                                </div>
+                              ) : (
+                                <p className="truncate" style={{ fontSize: 11, color: C.textFaint }}>
+                                  {lead.matchTags.slice(0, 3).join(", ")}
+                                </p>
+                              )}
                             </div>
                             <div className="text-right" style={{ fontSize: 11, color: C.textFaint }}>
                               {leadDate ? relativeDate(leadDate) : ""}
