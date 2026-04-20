@@ -639,6 +639,21 @@ export default function DesignLabNews() {
       )}
 
       <style>{`
+        .news-lead {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+        .news-lead-media { width: 100%; }
+        @media (min-width: 760px) {
+          .news-lead {
+            flex-direction: row;
+            align-items: center;
+            gap: 32px;
+          }
+          .news-lead-media { width: 520px; }
+          .news-lead-text { flex: 1; }
+        }
         .news-feature-grid { --news-cols: 1; }
         @media (min-width: 640px) {
           .news-feature-grid { --news-cols: 2; }
