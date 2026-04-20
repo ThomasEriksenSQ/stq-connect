@@ -129,9 +129,21 @@ export function dedupAndMerge(items: RawItem[]): RawItem[] {
   return [...byUrl.values()];
 }
 
+// Hard-block: åpenbar støy (link-farms, content-mills, brukerprofiler/forum)
+const NOISE_DOMAINS = /(whothoughtofit|tumblr|wordpress\.com|substack|medium\.com|blogspot)/i;
+const NOISE_PATHS = /\/(forum|user|profile|tag|category|search|tema)\//i;
+
 export function passesQuality(item: RawItem, score: number): boolean {
   if (score < 0.4) return false;
   if (!item.title || item.title.length < 10) return false;
+  if (!item.ingress || item.ingress.trim().length < 30) return false;
+  try {
+    const u = new URL(item.url);
+    if (NOISE_DOMAINS.test(u.hostname)) return false;
+    if (NOISE_PATHS.test(u.pathname)) return false;
+  } catch {
+    return false;
+  }
   return true;
 }
 
