@@ -1,43 +1,50 @@
 
 
-## Endring i `src/pages/DesignLabForesporsler.tsx`
+## Problem
+E-posten fra Thomas Eriksen (i dag kl. 13:33) til Kjell Ole Ingebo, med Håkon Gjøne i **Kopi (CC)**, dukker ikke opp på Håkons kontaktkort. Microsoft Graph sin `$search="to:..."` matcher kun `toRecipients`, ikke `ccRecipients` eller `bccRecipients`. Dermed mister vi alle e-poster der kontakten kun er CC-ed.
 
-### Problem
-Konsulent-navn (f.eks. "Tom Erik Lundesgaard") flyter ut av Konsulent-kolonnen og overlapper Status-kolonnen. Eksisterende `truncate`-klasse på navn-span (linje 701) får ikke effekt fordi:
-- ytre kolonne-wrapper (linje 666) mangler `min-w-0` / `overflow: hidden`
-- indre rad-wrapper (linje 679) mangler `min-w-0` og navne-spanen har ingen `flex: 1` / `minWidth: 0` for å begrense bredden
+## Fiks i `supabase/functions/outlook-mail/index.ts`
 
-I CSS grid + flexbox må alle nivåer i kjeden ha `min-width: 0` for at `text-overflow: ellipsis` skal virke.
+### Endring
+Erstatt de to nåværende `$search`-kallene (`from:` og `to:`) med tre parallelle kall som dekker alle posisjoner kontakten kan ha:
 
-### Fiks (3 små justeringer i samme blokk, linje 666–704)
+1. `$search="from:hakon.gjone@..."` — avsender
+2. `$search="to:hakon.gjone@..."` — direkte mottaker
+3. `$search="cc:hakon.gjone@..."` — i kopi
 
-1. **Ytre kolonnewrapper** (linje 666) — legg til `min-w-0` og `overflow: hidden`:
-```tsx
-<div className="flex flex-col items-start gap-2 pr-8 min-w-0" style={{ paddingTop: 2, overflow: "hidden" }}>
+Microsoft Graph KQL støtter `cc:` (og `bcc:`) som søkeoperatorer på samme måte som `to:`. Resultatet samles i samme `messages`-array, dedupliseres på `msg.id` (allerede implementert via `seenIds`), og slippes gjennom samme sortering/dedupe-pipeline.
+
+### Konkret diff (linje 159–181)
+```ts
+const fromUrl = `${GRAPH_BASE}/me/messages?$search="${encodeURIComponent(`from:${emailAddr}`)}"&$top=${top}&$select=...`;
+const toUrl   = `${GRAPH_BASE}/me/messages?$search="${encodeURIComponent(`to:${emailAddr}`)}"&$top=${top}&$select=...`;
+const ccUrl   = `${GRAPH_BASE}/me/messages?$search="${encodeURIComponent(`cc:${emailAddr}`)}"&$top=${top}&$select=...`;
+
+const [fromRes, toRes, ccRes] = await Promise.all([
+  fetch(fromUrl, { headers: { Authorization: `Bearer ${accessToken}` } }),
+  fetch(toUrl,   { headers: { Authorization: `Bearer ${accessToken}` } }),
+  fetch(ccUrl,   { headers: { Authorization: `Bearer ${accessToken}` } }),
+]);
+
+// Push results from all three responses (med samme error-logging som før)
 ```
 
-2. **Indre per-konsulent rad** (linje 679) — gjør den til full bredde med `min-w-0`:
-```tsx
-<div key={k.id} style={{ minHeight: 32, display: "flex", alignItems: "center", gap: 12, width: "100%", minWidth: 0 }}>
+I tillegg utvides mappingen i `messages`-loopen slik at `to`-feltet inkluderer både `toRecipients` og `ccRecipients` (prefiksert) i visningen, slik at brukeren forstår at vedkommende var CC-et:
+```ts
+to: [
+  ...(msg.toRecipients || []).map(r => r.emailAddress?.address),
+  ...(msg.ccRecipients || []).map(r => `cc: ${r.emailAddress?.address}`),
+].filter(Boolean).join(", "),
 ```
+Og legger til `ccRecipients` i `$select`-listen i alle tre URL-ene.
 
-3. **Navne-span** (linje 701) — la den fylle gjenværende bredde og trunkere:
-```tsx
-<span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text, lineHeight: 1.2, flex: "1 1 auto", minWidth: 0 }}>
-  {navn}
-</span>
-```
-
-Avataren har allerede `flexShrink: 0`, så ikon beholder full størrelse mens navnet får ellipsis.
-
-### Resultat
-- "Tom Erik Lundesgaard" vises som "Tom Erik Lundes…" når kolonnen er smal, og fullt navn når plass tillater det.
-- Status-kolonnen overlapper ikke lenger med navnet.
-- Ingen endring i radhøyde, avatar-størrelse, eller layout for andre kolonner.
-- Tooltip-fri (kan legges til som senere forbedring om ønsket — ikke i scope nå).
+### Etter deploy
+- Den manglende e-posten fra 13:33 vises i Håkons aktivitetstidslinje innen 5 min (queryen har `staleTime: 5 * 60 * 1000`) — eller umiddelbart ved hard refresh.
+- Også historiske CC-e-poster dukker opp.
+- Ingen UI-endringer i `ContactCardContent.tsx` — den eksisterende `normalizeOutlookMailItems`-pipen håndterer den utvidede `to`-strengen uendret.
 
 ### Ikke endret
-- Grid-template-kolonner (`cols`), filter-rad, header.
-- Standard Foresporsler-side (V1).
-- Logikk for henting/visning av konsulenter.
+- Auth, token-refresh, admin-sjekk, dedupe-logikk — uendret.
+- BCC inkluderes ikke (ingen brukstilfelle, og `bcc:` returnerer kun for innloggede konto sine sendte e-poster uansett).
+- V1-kontaktsiden bruker samme `outlook-mail`-funksjon, så fiksen gjelder begge versjoner.
 
