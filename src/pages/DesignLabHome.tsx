@@ -806,7 +806,11 @@ ${JSON.stringify(context)}`;
           ) : matches.length === 0 ? (
             <EmptyText>Ingen leads matchet (henter forslag …).</EmptyText>
           ) : (
-            <div style={{ paddingBottom: 8 }}>
+            <>
+              <ColHeader
+                cols={COLS_MATCH}
+                labels={["Konsulent", "Ledig", "Kompetanse", "", "Beste lead", "Match", "Signal", ""]}
+              />
               {matches.map((m, idx) => {
                 const consultant = availableConsultants.find((c) => c.id === m.consultant_id);
                 if (!consultant) return null;
@@ -817,55 +821,51 @@ ${JSON.stringify(context)}`;
                   : "—";
 
                 return (
-                  <Row
+                  <TableRow
                     key={`match-${idx}`}
+                    cols={COLS_MATCH}
                     focused={focusedRow}
                     onMouseEnter={() => setFocused({ kind: "match", idx })}
                     onClick={() => {
                       if (lead) navigate(`/design-lab/kontakter/${lead.contactId}`);
                     }}
                   >
-                    <span style={{ fontSize: 13, color: C.text, fontWeight: 500, width: 150, flexShrink: 0 }}>
+                    <span style={{ fontSize: 13, color: C.text, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {consultant.navn}
                     </span>
-                    <span style={{ fontSize: 11, color: C.textMuted, width: 78, flexShrink: 0 }}>
-                      ledig {dateLabel}
+                    <span style={{ fontSize: 11, color: C.textMuted, whiteSpace: "nowrap" }}>
+                      {dateLabel}
                     </span>
-                    <span style={{ fontSize: 11, color: C.textFaint, width: 130, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 11, color: C.textFaint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {(consultant.kompetanse || []).slice(0, 3).join(" · ") || "—"}
                     </span>
-                    <ArrowRight size={11} style={{ color: C.textGhost, flexShrink: 0 }} />
+                    <ArrowRight size={11} style={{ color: C.textGhost }} />
                     {lead ? (
-                      <>
-                        <span style={{ fontSize: 13, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {lead.contactName} <span style={{ color: C.textFaint }}>· {lead.companyName}</span>
-                        </span>
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 600,
-                            color: m.score >= 80 ? C.success : m.score >= 60 ? C.warning : C.textMuted,
-                            flexShrink: 0,
-                          }}
-                        >
-                          {m.score}%
-                        </span>
-                        <DesignLabSignalBadge signal={lead.signal} size="sm" />
-                      </>
+                      <span style={{ fontSize: 13, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {lead.contactName} <span style={{ color: C.textFaint }}>· {lead.companyName}</span>
+                      </span>
                     ) : (
-                      <span style={{ fontSize: 12, color: C.textFaint, flex: 1 }}>
+                      <span style={{ fontSize: 12, color: C.textFaint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {m.reasoning || "Ingen passende lead nå."}
                       </span>
                     )}
-                  </Row>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: m.score >= 80 ? C.success : m.score >= 60 ? C.warning : C.textMuted,
+                      }}
+                    >
+                      {m.score}%
+                    </span>
+                    <span>
+                      {lead?.signal ? <DesignLabSignalBadge signal={lead.signal} size="sm" /> : null}
+                    </span>
+                    <ArrowRight size={12} className="opacity-0 group-hover:opacity-100" style={{ color: C.textFaint }} />
+                  </TableRow>
                 );
               })}
-              {matches.some((m) => m.reasoning) ? (
-                <div style={{ padding: "4px 24px 8px", fontSize: 11, color: C.textFaint, fontStyle: "italic" }}>
-                  {matches.find((m) => m.best_contact_id)?.reasoning}
-                </div>
-              ) : null}
-            </div>
+            </>
           )}
         </Section>
 
