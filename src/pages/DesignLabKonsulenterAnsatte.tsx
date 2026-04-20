@@ -299,17 +299,13 @@ export default function DesignLabKonsulenterAnsatte() {
         </div>
 
         <div style={{ fontSize: 13, color: C.textMuted }}>
-          {(() => {
-            const upcomingDate = getUpcomingDate(row);
-            if (status === "Kommende" && upcomingDate) {
-              return (
-                <DesignLabReadonlyChip active={true} activeColors={UPCOMING_CHIP_COLORS}>
-                  Starter {format(upcomingDate, "dd.MM")}
-                </DesignLabReadonlyChip>
-              );
-            }
-            return row.start_dato ? format(new Date(row.start_dato), "dd.MM.yyyy") : "–";
-          })()}
+          {status === "Kommende" && row.start_dato ? (
+            <DesignLabReadonlyChip active={true} activeColors={UPCOMING_CHIP_COLORS}>
+              Starter {format(new Date(row.start_dato), "dd.MM")}
+            </DesignLabReadonlyChip>
+          ) : (
+            row.start_dato ? format(new Date(row.start_dato), "dd.MM.yyyy") : "–"
+          )}
         </div>
 
         <div style={{ fontSize: 13, color: C.textMuted }}>
