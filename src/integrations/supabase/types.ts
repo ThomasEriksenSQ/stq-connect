@@ -934,6 +934,42 @@ export type Database = {
         }
         Relationships: []
       }
+      news_daily: {
+        Row: {
+          company_count: number
+          date: string
+          generated_at: string
+          id: string
+          is_current: boolean
+          payload: Json
+          source_count: number
+          status: string
+          warnings: Json
+        }
+        Insert: {
+          company_count?: number
+          date: string
+          generated_at?: string
+          id?: string
+          is_current?: boolean
+          payload: Json
+          source_count?: number
+          status?: string
+          warnings?: Json
+        }
+        Update: {
+          company_count?: number
+          date?: string
+          generated_at?: string
+          id?: string
+          is_current?: boolean
+          payload?: Json
+          source_count?: number
+          status?: string
+          warnings?: Json
+        }
+        Relationships: []
+      }
       outlook_tokens: {
         Row: {
           access_token: string
