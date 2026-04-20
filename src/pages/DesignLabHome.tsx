@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Inbox, Mail, Phone, RefreshCw, Send, Sparkles, X } from "lucide-react";
+import { ArrowRight, RefreshCw, Sparkles, X } from "lucide-react";
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { nb } from "date-fns/locale";
 
