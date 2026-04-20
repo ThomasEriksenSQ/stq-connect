@@ -925,34 +925,41 @@ ${JSON.stringify(context)}`;
           ) : top10.length === 0 ? (
             <EmptyText>Ingen leads tilgjengelig akkurat nå.</EmptyText>
           ) : (
-            <div style={{ paddingBottom: 8 }}>
+            <>
+              <ColHeader
+                cols={COLS_LEADS}
+                labels={["Varme", "Kontakt", "Selskap", "Begrunnelse", "Signal", ""]}
+              />
               {top10.map((lead, idx) => {
                 const focusedRow = isFocused({ kind: "lead", idx });
                 return (
-                  <Row
+                  <TableRow
                     key={`lead-${lead.contactId}`}
+                    cols={COLS_LEADS}
                     focused={focusedRow}
                     onMouseEnter={() => setFocused({ kind: "lead", idx })}
                     onClick={() => navigate(`/design-lab/kontakter/${lead.contactId}`)}
                   >
-                    <span style={{ width: 72, flexShrink: 0 }}>
+                    <span>
                       <DesignLabHeatBadge temperature={lead.heat.temperature} />
                     </span>
-                    <span style={{ fontSize: 13, color: C.text, fontWeight: 500, width: 180, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 13, color: C.text, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {lead.contactName}
                     </span>
-                    <span style={{ fontSize: 12, color: C.textMuted, width: 200, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 12, color: C.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {lead.companyName}
                     </span>
-                    <span style={{ fontSize: 12, color: C.textFaint, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 12, color: C.textFaint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {lead.reasonLine}
                     </span>
-                    {lead.signal ? <DesignLabSignalBadge signal={lead.signal} size="sm" /> : null}
-                    <ArrowRight size={12} className="opacity-0 group-hover:opacity-100" style={{ color: C.textFaint, flexShrink: 0 }} />
-                  </Row>
+                    <span>
+                      {lead.signal ? <DesignLabSignalBadge signal={lead.signal} size="sm" /> : null}
+                    </span>
+                    <ArrowRight size={12} className="opacity-0 group-hover:opacity-100" style={{ color: C.textFaint }} />
+                  </TableRow>
                 );
               })}
-            </div>
+            </>
           )}
         </Section>
 
