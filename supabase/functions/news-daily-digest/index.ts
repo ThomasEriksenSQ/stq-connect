@@ -77,24 +77,25 @@ async function callPerplexity(
   recencyFilter: "day" | "week",
 ): Promise<RawItem[]> {
   const list = companies
-    .map((c) => `- ${c.name}${c.website ? ` (${c.website})` : ""}${c.org_number ? ` [org ${c.org_number}]` : ""}`)
+    .map((c) => `- ${c.name}${c.website ? ` (${c.website})` : ""}`)
     .join("\n");
 
-  const prompt = `Finn nylige norske nyhetsartikler (siste ${recencyFilter === "day" ? "24 timer" : "uke"}) om disse selskapene. Returner KUN saker som eksplisitt nevner selskapet ved navn, fra norske nyhetskilder (e24.no, dn.no, finansavisen.no, tu.no, digi.no, nrk.no, aftenposten.no, kapital.no, hegnar.no, shifter.no).
+  const timeWindow = recencyFilter === "day" ? "siste 7 dager" : "siste 30 dager";
+  const prompt = `Søk i norske nyhetskilder etter saker fra ${timeWindow} som omtaler ett eller flere av disse selskapene:
 
-Selskaper:
 ${list}
 
-For hver sak, oppgi: company_name (eksakt fra listen), title, ingress (1-2 setninger på norsk), url (full URL), published_at (ISO 8601).`;
+Returner ALLE relevante saker du finner. Det er bedre å returnere en sak du er litt usikker på, enn å returnere ingenting. For hver sak: company_name (skriv selskapsnavnet eksakt slik det står i listen over), title (artikkeltittel), ingress (1-2 setninger på norsk), url (full lenke til artikkelen), published_at (ISO 8601 dato).
+
+Hvis du ikke finner noen saker, returner items: [].`;
 
   const body = {
     model: "sonar",
     messages: [
-      { role: "system", content: "Du er en presis nyhets-aggregator for B2B-salgsteam. Returner kun verifiserbare saker fra norske kilder." },
+      { role: "system", content: "Du er en nyhets-aggregator for et norsk B2B-salgsteam. Returner verifiserbare saker fra norske medier som e24, DN, Finansavisen, TU, Digi, NRK, Aftenposten, Kapital, Hegnar, Shifter." },
       { role: "user", content: prompt },
     ],
-    search_recency_filter: recencyFilter,
-    search_domain_filter: ["e24.no", "dn.no", "finansavisen.no", "tu.no", "digi.no", "nrk.no", "aftenposten.no", "kapital.no", "hegnar.no", "shifter.no"],
+    search_recency_filter: recencyFilter === "day" ? "week" : "month",
     response_format: {
       type: "json_schema",
       json_schema: {
