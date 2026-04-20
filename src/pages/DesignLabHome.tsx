@@ -563,6 +563,39 @@ ${JSON.stringify(context)}`;
       contentStyle={{ padding: "0" }}
     >
       <div style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif" }}>
+        {/* VELKOMST */}
+        <Section>
+          <div style={{ padding: "22px 24px 18px" }}>
+            <div
+              style={{
+                fontSize: 20,
+                fontWeight: 600,
+                color: C.text,
+                letterSpacing: "-0.01em",
+                lineHeight: 1.25,
+              }}
+            >
+              {greeting}
+              {firstName ? `, ${firstName}` : ""}.
+            </div>
+            <div
+              style={{
+                marginTop: 6,
+                fontSize: 13,
+                color: C.textMuted,
+                lineHeight: 1.5,
+                maxWidth: 760,
+              }}
+            >
+              {todayLabel.charAt(0).toUpperCase() + todayLabel.slice(1)}. Her er
+              dagens morgenkø — det viktigste fra innboksen, ledige konsulenter
+              som venter på sitt neste oppdrag, ferske forespørsler og dine
+              hotteste leads. Bla med <Kbd>↑</Kbd> <Kbd>↓</Kbd>, åpne med{" "}
+              <Kbd>Enter</Kbd>, søk med <Kbd>⌘K</Kbd>.
+            </div>
+          </div>
+        </Section>
+
         {/* PIPELINE */}
         <Section>
           <div className="flex items-center" style={{ padding: "16px 24px", gap: 28, flexWrap: "wrap" }}>
