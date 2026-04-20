@@ -19,7 +19,7 @@ import { resolveAndMirrorImage } from "./images.ts";
 const HARD_CAP_BATCHES = 24;
 const BATCH_SIZE = 8;
 const PARALLEL_BATCHES = 4;
-const MIN_ITEMS_FOR_OK = 6;
+const MIN_ITEMS_FOR_OK = 3;
 const TARGET_AFTER_PASS_1 = 12;
 const FETCH_CHUNK = 200; // Supabase .in() URL-lengde-grense
 
