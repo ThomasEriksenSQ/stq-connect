@@ -134,9 +134,8 @@ const NOISE_DOMAINS = /(whothoughtofit|tumblr|wordpress\.com|substack|medium\.co
 const NOISE_PATHS = /\/(forum|user|profile|tag|category|search|tema)\//i;
 
 export function passesQuality(item: RawItem, score: number): boolean {
-  if (score < 0.3) return false;
+  // Ingen score-terskel — la scoring rangere, ikke filtrere bort
   if (!item.title || item.title.length < 10) return false;
-  // Tillat manglende ingress; ingress er kun krav til Lead/Feature-varianter (settes ved presentasjon)
   if (item.ingress && item.ingress.trim().length > 0 && item.ingress.trim().length < 20) return false;
   try {
     const u = new URL(item.url);
@@ -145,7 +144,8 @@ export function passesQuality(item: RawItem, score: number): boolean {
   } catch {
     return false;
   }
-  return true;
+  // Score brukes til ranking, ikke avvisning. Returnerer alltid true her hvis vi kom så langt.
+  return score > -10; // sikkerhetsventil for ekstreme negative scores
 }
 
 // Eksakt navn/alias-match i tittel eller ingress
