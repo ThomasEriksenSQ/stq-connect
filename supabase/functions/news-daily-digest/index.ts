@@ -488,7 +488,8 @@ Deno.serve(async (req: Request) => {
     console.log(JSON.stringify({
       run_id: runId,
       status: "ok",
-      batches_called: batchesUsed,
+      companies_queried: companiesQueried,
+      total_perplexity_hits: totalHits,
       items_returned: itemsOut.length,
       fallback_used: fallbackUsed,
       heat_tier_distribution: heatTierDistribution,
