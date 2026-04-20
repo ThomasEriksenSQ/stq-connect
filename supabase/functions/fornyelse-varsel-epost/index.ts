@@ -14,10 +14,6 @@ function formatDateNorwegian(dateStr: string): string {
   return `${dd}.${mm}.${yyyy}`;
 }
 
-function todayNorwegian(): string {
-  return formatDateNorwegian(new Date().toISOString());
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -55,28 +51,69 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2. Get oppdrag
+    // 2. Date setup
     const today = new Date();
+    const todayISO = today.toISOString().split("T")[0];
     const threshold = new Date();
     threshold.setDate(today.getDate() + settings.terskel_dager);
+    const thresholdISO = threshold.toISOString().split("T")[0];
 
+    // 3. Get oppdrag — datodrevet filter, ikke status-felt
     const { data: oppdrag } = await supabase
       .from("stacq_oppdrag")
-      .select("id, kandidat, kunde, forny_dato, status, lopende_30_dager")
-      .neq("status", "Inaktiv")
+      .select("id, kandidat, kunde, forny_dato, status, lopende_30_dager, slutt_dato, ansatt_id")
       .not("forny_dato", "is", null)
-      .lte("forny_dato", threshold.toISOString().split("T")[0])
+      .lte("forny_dato", thresholdISO)
+      .or(`slutt_dato.is.null,slutt_dato.gte.${todayISO}`)
       .order("forny_dato");
 
-    if (!oppdrag || oppdrag.length === 0) {
-      return new Response(JSON.stringify({ message: "Ingen fornyelser innen terskel" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // 4. Get aktive ansatte
+    const { data: ansatte } = await supabase
+      .from("stacq_ansatte")
+      .select("id, navn, status, slutt_dato, tilgjengelig_fra")
+      .or(`slutt_dato.is.null,slutt_dato.gte.${todayISO}`)
+      .order("navn");
+
+    // 5. Get alle pågående oppdrag for å finne hvem som er uten oppdrag
+    const { data: paagaaendeOppdrag } = await supabase
+      .from("stacq_oppdrag")
+      .select("ansatt_id, kunde, slutt_dato")
+      .or(`slutt_dato.is.null,slutt_dato.gte.${todayISO}`);
+
+    const ansatteMedOppdrag = new Set(
+      (paagaaendeOppdrag || [])
+        .map((o) => o.ansatt_id)
+        .filter((v): v is number => v !== null && v !== undefined)
+    );
+
+    // 6. Hent siste avsluttet oppdrag per ansatt for kontekst
+    const { data: alleOppdrag } = await supabase
+      .from("stacq_oppdrag")
+      .select("ansatt_id, kunde, slutt_dato")
+      .not("ansatt_id", "is", null)
+      .not("slutt_dato", "is", null)
+      .lt("slutt_dato", todayISO)
+      .order("slutt_dato", { ascending: false });
+
+    const sisteKundePerAnsatt = new Map<number, string>();
+    for (const o of alleOppdrag || []) {
+      if (o.ansatt_id && !sisteKundePerAnsatt.has(o.ansatt_id) && o.kunde) {
+        sisteKundePerAnsatt.set(o.ansatt_id, o.kunde);
+      }
     }
 
-    // 3. Segment
-    const enriched = oppdrag.map((o) => {
+    const ekskluderteStatuser = new Set(["SLUTTET", "AVSLUTTET", "Sluttet", "Avsluttet"]);
+    const utenOppdrag = (ansatte || [])
+      .filter((a) => !ansatteMedOppdrag.has(a.id))
+      .filter((a) => !a.status || !ekskluderteStatuser.has(a.status))
+      .map((a) => ({
+        navn: a.navn,
+        tilgjengelig_fra: a.tilgjengelig_fra,
+        siste_kunde: sisteKundePerAnsatt.get(a.id) || null,
+      }));
+
+    // 7. Segment fornyelser
+    const enriched = (oppdrag || []).map((o) => {
       const days = Math.ceil(
         (new Date(o.forny_dato!).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
       );
@@ -87,19 +124,25 @@ Deno.serve(async (req) => {
     const snart = enriched.filter((o) => o.daysUntilForny > 7 && o.daysUntilForny <= 30);
     const planlegg = enriched.filter((o) => o.daysUntilForny > 30);
 
-    // 4. Subject
-    const subject = 'Kontraktfornyelser';
+    if (enriched.length === 0 && utenOppdrag.length === 0) {
+      return new Response(JSON.stringify({ message: "Ingen fornyelser eller konsulenter uten oppdrag" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    // 5. Build HTML
+    // 8. Subject + dato
+    const subject = 'Kontraktfornyelser';
     const datoNorsk = today.toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' });
 
+    // 9. Bygg HTML
     function oppdragRad(o: typeof enriched[0], badgeBg: string, badgeColor: string) {
       const fornyDato = new Date(o.forny_dato!).toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric' });
       return `
         <div style="padding:14px 0;border-top:1px solid #f5f5f5;display:flex;align-items:center;justify-content:space-between">
           <div>
             <p style="font-size:15px;font-weight:600;color:#0a0a0a;margin:0 0 2px">${o.kandidat}</p>
-            <p style="font-size:13px;color:#888888;margin:0">${o.kunde} · Forny: ${fornyDato}</p>
+            <p style="font-size:13px;color:#888888;margin:0">${o.kunde ?? '—'} · Forny: ${fornyDato}</p>
           </div>
           <span style="display:inline-block;background:${badgeBg};color:${badgeColor};font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;white-space:nowrap;margin-left:16px">${o.lopende_30_dager ? 'Løpende 30 dager' : `Om ${o.daysUntilForny} dager`}</span>
         </div>`;
@@ -110,10 +153,39 @@ Deno.serve(async (req) => {
       return `
         <div style="padding:24px 40px 0">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-            
             <span style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#64748b">${tittel}</span>
           </div>
           ${oppdragListe.map(o => oppdragRad(o, badgeBg, farge)).join('')}
+        </div>`;
+    }
+
+    function utenOppdragRad(a: typeof utenOppdrag[0]) {
+      let tilgjengeligTekst = 'Tilgjengelig nå';
+      if (a.tilgjengelig_fra) {
+        const tilgjDato = new Date(a.tilgjengelig_fra);
+        if (tilgjDato > today) {
+          tilgjengeligTekst = `Fra ${tilgjDato.toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+        }
+      }
+      const sisteKundeTekst = a.siste_kunde ? `Sist hos ${a.siste_kunde}` : 'Ingen tidligere oppdrag';
+      return `
+        <div style="padding:14px 0;border-top:1px solid #f5f5f5;display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <p style="font-size:15px;font-weight:600;color:#0a0a0a;margin:0 0 2px">${a.navn}</p>
+            <p style="font-size:13px;color:#888888;margin:0">${sisteKundeTekst}</p>
+          </div>
+          <span style="display:inline-block;background:#F1F5F9;color:#64748B;font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;white-space:nowrap;margin-left:16px">${tilgjengeligTekst}</span>
+        </div>`;
+    }
+
+    function utenOppdragSeksjon() {
+      if (utenOppdrag.length === 0) return '';
+      return `
+        <div style="padding:24px 40px 0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+            <span style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#64748b">Konsulenter uten oppdrag</span>
+          </div>
+          ${utenOppdrag.map(utenOppdragRad).join('')}
         </div>`;
     }
 
@@ -144,7 +216,6 @@ Deno.serve(async (req) => {
   <div style="padding:28px 40px 20px">
     <p style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2563eb;margin:0 0 8px">Ukentlig rapport</p>
     <h1 style="font-size:24px;font-weight:700;color:#0f172a;margin:0 0 4px;letter-spacing:-0.3px">Kontraktfornyelser</h1>
-    
   </div>
 
   <!-- Stats -->
@@ -165,6 +236,11 @@ Deno.serve(async (req) => {
           <div style="font-size:28px;font-weight:700;color:#2563eb;letter-spacing:-0.5px">${planlegg.length}</div>
           <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#94a3b8;margin-top:4px">Planlegg</div>
         </td>
+        <td style="width:1px;background:#e2e8f0;padding:0"></td>
+        <td style="text-align:center;padding:16px 0">
+          <div style="font-size:28px;font-weight:700;color:#64748B;letter-spacing:-0.5px">${utenOppdrag.length}</div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#94a3b8;margin-top:4px">Uten oppdrag</div>
+        </td>
       </tr>
     </table>
   </div>
@@ -172,6 +248,7 @@ Deno.serve(async (req) => {
   ${seksjon('Kritisk — under 7 dager', '#DC2626', '#FEF2F2', kritisk)}
   ${seksjon('Snart — under 30 dager', '#D97706', '#FFFBEB', snart)}
   ${seksjon('Planlegg — under 90 dager', '#CA8A04', '#FEFCE8', planlegg)}
+  ${utenOppdragSeksjon()}
 
   <!-- CTA -->
   <div style="padding:32px 40px">
@@ -194,7 +271,7 @@ Deno.serve(async (req) => {
 </body>
 </html>`;
 
-    // 6. Send via Resend
+    // 10. Send via Resend
     const recipients = isTest ? ["thomas@stacq.no"] : (settings.epost_mottakere as string[]);
 
     const resendRes = await fetch("https://api.resend.com/emails", {
@@ -220,7 +297,12 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, sent_to: recipients, oppdrag_count: enriched.length }),
+      JSON.stringify({
+        success: true,
+        sent_to: recipients,
+        oppdrag_count: enriched.length,
+        uten_oppdrag_count: utenOppdrag.length,
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
