@@ -2189,6 +2189,8 @@ function TaskRow({
     setEditing(false);
   };
 
+  const taskRowClickHandlers = useClickWithoutSelection<HTMLDivElement>(handleRowClick);
+
   if (editing) {
     return (
       <div className="py-2.5 px-1 space-y-2 animate-in fade-in duration-150">
@@ -2329,8 +2331,6 @@ function TaskRow({
       </div>
     );
   }
-
-  const taskRowClickHandlers = useClickWithoutSelection<HTMLDivElement>(handleRowClick);
   return (
     <div
       onMouseDown={taskRowClickHandlers.onMouseDown}
