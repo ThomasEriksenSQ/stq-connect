@@ -442,11 +442,36 @@ export function NyForesporselModal({ open, onClose }: { open: boolean; onClose: 
       created_by: user?.id,
     });
 
+    // 3. Sync open tasks for this contact to "Behov nå" so getEffectiveSignal reflects the new request
+    const { data: openTasks } = await supabase
+      .from("tasks")
+      .select("id, description, due_date")
+      .eq("contact_id", kontaktId)
+      .neq("status", "done");
+
+    if (openTasks && openTasks.length > 0) {
+      const nowIso = new Date().toISOString();
+      await Promise.all(
+        openTasks.map((task) => {
+          const nextDescription = upsertTaskSignalDescription(
+            task.description,
+            "Behov nå",
+            !task.due_date,
+          );
+          return supabase
+            .from("tasks")
+            .update({ description: nextDescription, updated_at: nowIso })
+            .eq("id", task.id);
+        }),
+      );
+    }
 
     setSubmitting(false);
     const contactDisplayName = kontakt || "kontakten";
     toast.success(`Forespørsel opprettet · 🔥 Behov nå satt på ${contactDisplayName}`);
     queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.list() });
+    queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    queryClient.invalidateQueries({ queryKey: ["contacts"] });
     onClose();
   };
 
