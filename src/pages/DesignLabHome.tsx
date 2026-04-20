@@ -10,19 +10,13 @@ import { C } from "@/components/designlab/theme";
 import {
   DesignLabHeatBadge,
   DesignLabSignalBadge,
-  DesignLabSecondaryAction,
-  DesignLabGhostAction,
   DesignLabPrimaryAction,
-  DesignLabReadonlyChip,
-  DesignLabStaticTag,
 } from "@/components/designlab/system";
 import { DesignLabSearchInput } from "@/components/designlab/controls";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { differenceInDays } from "date-fns";
 import { hasConsultantAvailability } from "@/lib/contactHunt";
 import { loadHomeQueueData, getTop10Leads, type HomeQueueLead } from "@/lib/homeQueueModel";
-import { mergeTechnologyTags } from "@/lib/technologyTags";
 
 /* ─── Types ─── */
 
