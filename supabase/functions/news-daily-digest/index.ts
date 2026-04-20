@@ -326,17 +326,22 @@ Deno.serve(async (req: Request) => {
       return ta - tb;
     });
 
-    // 4. Pass 1 — siste 24t (parallell i grupper)
+    // Pass 1 prioriterer Tier 1-3 (varme) — Tier 4 spares til evt. fallback
+    const warmCompanies = sortedCompanies.filter((c) => (heatTier.get(c.id) ?? 4) <= 3);
+    const coldCompanies = sortedCompanies.filter((c) => (heatTier.get(c.id) ?? 4) === 4);
+    console.log(`[heat split] warm(T1-3)=${warmCompanies.length} cold(T4)=${coldCompanies.length}`);
+
+    // 4. Pass 1 — siste 7 dager på varme selskaper (parallell)
     let batchesUsed = 0;
     const allRaw: RawItem[] = [];
     let perplexityHits = 0;
-    async function runPass(recency: "day" | "week", label: string) {
-      for (let i = 0; i < sortedCompanies.length && batchesUsed < HARD_CAP_BATCHES; i += BATCH_SIZE * PARALLEL_BATCHES) {
+    async function runPass(pool: CompanyRow[], recency: "day" | "week", label: string) {
+      for (let i = 0; i < pool.length && batchesUsed < HARD_CAP_BATCHES; i += BATCH_SIZE * PARALLEL_BATCHES) {
         const slots: Promise<RawItem[]>[] = [];
         for (let j = 0; j < PARALLEL_BATCHES && batchesUsed < HARD_CAP_BATCHES; j++) {
           const start = i + j * BATCH_SIZE;
-          if (start >= sortedCompanies.length) break;
-          const batch = sortedCompanies.slice(start, start + BATCH_SIZE);
+          if (start >= pool.length) break;
+          const batch = pool.slice(start, start + BATCH_SIZE);
           slots.push(callPerplexity(PERPLEXITY_API_KEY, batch, recency));
           batchesUsed++;
         }
@@ -348,7 +353,7 @@ Deno.serve(async (req: Request) => {
       }
       console.log(`[${label} done] batches=${batchesUsed} hits=${perplexityHits} raw=${allRaw.length}`);
     }
-    await runPass("day", "pass1");
+    await runPass(warmCompanies, "day", "pass1-warm");
 
     const ctx: ScoringContext = { baseWeight, heatTier };
     // Bygg aliaser: fullt navn + første ord (hvis ≥4 tegn og ikke generisk)
