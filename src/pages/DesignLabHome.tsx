@@ -736,27 +736,33 @@ ${JSON.stringify(context)}`;
           ) : !inbox || inbox.insights.length === 0 ? (
             <EmptyText>Ingen handlingsverdige e-poster funnet.</EmptyText>
           ) : (
-            <div style={{ paddingBottom: 8 }}>
+            <>
+              <ColHeader
+                cols={COLS_INBOX}
+                labels={["", "Type · Alder", "Oppsummering", "Kontakt", ""]}
+              />
               {inbox.insights.map((ins, idx) => {
                 const focusedRow = isFocused({ kind: "inbox", idx });
+                const dotColor =
+                  ins.type === "unanswered" ? C.danger : ins.type === "buried" ? C.warning : C.info;
                 return (
-                  <Row
+                  <TableRow
                     key={`inbox-${idx}`}
+                    cols={COLS_INBOX}
                     focused={focusedRow}
                     onMouseEnter={() => setFocused({ kind: "inbox", idx })}
                     onClick={() => {
                       if (ins.web_link) window.open(ins.web_link, "_blank");
                     }}
                   >
-                    <Dot color={ins.type === "unanswered" ? C.danger : ins.type === "buried" ? C.warning : C.info} />
-                    <span style={{ fontSize: 11, color: C.textFaint, width: 92, flexShrink: 0 }}>
+                    <Dot color={dotColor} />
+                    <span style={{ fontSize: 11, color: C.textFaint, whiteSpace: "nowrap" }}>
                       {INSIGHT_TYPE_LABEL[ins.type]} · {ins.age_days}d
                     </span>
                     <span
                       style={{
                         fontSize: 13,
                         color: C.text,
-                        flex: 1,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
@@ -764,16 +770,22 @@ ${JSON.stringify(context)}`;
                     >
                       {ins.summary}
                     </span>
-                    {ins.contact_email ? (
-                      <span style={{ fontSize: 11, color: C.textFaint, flexShrink: 0 }}>
-                        {ins.contact_email}
-                      </span>
-                    ) : null}
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color: C.textFaint,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {ins.contact_email || ""}
+                    </span>
                     <ArrowRight size={12} className="opacity-0 group-hover:opacity-100" style={{ color: C.textFaint }} />
-                  </Row>
+                  </TableRow>
                 );
               })}
-            </div>
+            </>
           )}
         </Section>
 
