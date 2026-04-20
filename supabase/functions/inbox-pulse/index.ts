@@ -23,12 +23,69 @@ interface Insight {
   contact_email: string | null;
   age_days: number;
   web_link: string | null;
+  company_id: string | null;
+  company_name: string | null;
+  company_status: "prospect" | "customer" | null;
+}
+
+interface PulseStats {
+  scanned_total: number;
+  scanned_relevant: number;
+  filtered_out: number;
 }
 
 interface PulseResponse {
   insights: Insight[];
   scanned_count: number;
+  stats: PulseStats;
   generated_at: string;
+}
+
+interface CompanyDomainEntry {
+  company_id: string;
+  company_name: string;
+  company_status: "prospect" | "customer";
+}
+
+const GENERIC_EMAIL_DOMAINS = new Set([
+  "gmail.com",
+  "hotmail.com",
+  "hotmail.no",
+  "outlook.com",
+  "yahoo.com",
+  "icloud.com",
+  "live.com",
+  "live.no",
+  "me.com",
+  "protonmail.com",
+]);
+
+function extractDomain(input: string | null | undefined): string | null {
+  if (!input) return null;
+  const raw = String(input).trim().toLowerCase();
+  if (!raw) return null;
+  let host = raw;
+  // Strip protocol
+  host = host.replace(/^https?:\/\//, "");
+  // If it's an email, take the part after @
+  if (host.includes("@")) {
+    host = host.split("@")[1] || "";
+  }
+  // Strip path, query, port
+  host = host.split("/")[0].split("?")[0].split("#")[0].split(":")[0];
+  // Strip www.
+  host = host.replace(/^www\./, "");
+  if (!host || !host.includes(".")) return null;
+  if (GENERIC_EMAIL_DOMAINS.has(host)) return null;
+  return host;
+}
+
+function normalizeFromAddress(addr: string | null | undefined): { email: string; domain: string | null } {
+  const email = String(addr || "").trim().toLowerCase();
+  if (!email) return { email: "", domain: null };
+  // Strip +tag from local part
+  const cleaned = email.replace(/\+[^@]*(?=@)/, "");
+  return { email: cleaned, domain: extractDomain(cleaned) };
 }
 
 const cache = new Map<string, { data: PulseResponse; expires: number }>();
@@ -156,6 +213,7 @@ serve(async (req) => {
       const empty: PulseResponse = {
         insights: [],
         scanned_count: 0,
+        stats: { scanned_total: 0, scanned_relevant: 0, filtered_out: 0 },
         generated_at: new Date().toISOString(),
       };
       cache.set(userId, { data: empty, expires: Date.now() + CACHE_TTL_MS });
@@ -175,11 +233,67 @@ serve(async (req) => {
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
     );
 
-    // Komprimer for AI
-    const compactEmails = dedupedEmails.slice(0, 80).map((m) => ({
+    // ─── SELSKAPSFILTER: behold kun e-post fra "prospect" eller "customer" ───
+    const { data: relevantCompanies } = await supabase
+      .from("companies")
+      .select("id, name, status, website, email, ikke_relevant")
+      .in("status", ["prospect", "customer"]);
+
+    const domainToCompany = new Map<string, CompanyDomainEntry>();
+    for (const co of relevantCompanies || []) {
+      if (co.ikke_relevant === true) continue;
+      if (co.status !== "prospect" && co.status !== "customer") continue;
+      const entry: CompanyDomainEntry = {
+        company_id: co.id,
+        company_name: co.name,
+        company_status: co.status,
+      };
+      const websiteDomain = extractDomain(co.website);
+      if (websiteDomain && !domainToCompany.has(websiteDomain)) {
+        domainToCompany.set(websiteDomain, entry);
+      }
+      const emailDomain = extractDomain(co.email);
+      if (emailDomain && !domainToCompany.has(emailDomain)) {
+        domainToCompany.set(emailDomain, entry);
+      }
+    }
+
+    // Annoter hver e-post med selskap (hvis relevant)
+    const scannedTotal = dedupedEmails.length;
+    const annotatedEmails = dedupedEmails
+      .map((m: any) => {
+        const { email, domain } = normalizeFromAddress(m.from);
+        const company = domain ? domainToCompany.get(domain) : undefined;
+        return { ...m, from: email, from_domain: domain, company };
+      })
+      .filter((m: any) => !!m.company);
+
+    const scannedRelevant = annotatedEmails.length;
+
+    if (annotatedEmails.length === 0) {
+      const emptyRelevant: PulseResponse = {
+        insights: [],
+        scanned_count: scannedTotal,
+        stats: {
+          scanned_total: scannedTotal,
+          scanned_relevant: 0,
+          filtered_out: scannedTotal,
+        },
+        generated_at: new Date().toISOString(),
+      };
+      cache.set(userId, { data: emptyRelevant, expires: Date.now() + CACHE_TTL_MS });
+      return new Response(JSON.stringify(emptyRelevant), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Komprimer for AI (kun relevante e-poster)
+    const compactEmails = annotatedEmails.slice(0, 80).map((m: any) => ({
       id: m.id,
       subj: m.subject.slice(0, 100),
       from: m.from,
+      selskap: m.company?.company_name || "",
+      selskap_status: m.company?.company_status || "",
       date: m.date?.slice(0, 10),
       age: Math.round((Date.now() - new Date(m.date).getTime()) / (1000 * 60 * 60 * 24)),
       prev: m.preview.slice(0, 150),
@@ -187,11 +301,12 @@ serve(async (req) => {
     }));
 
     const systemPrompt = `Du er erfaren salgssjef i STACQ (norsk IT-konsulentbyrå, embedded/firmware/C/C++).
-Du har lest ${compactEmails.length} e-poster fra siste 14 dager.
+Du har lest ${compactEmails.length} e-poster fra siste 14 dager — ALLE er fra selskaper som er "Potensiell kunde" (prospect) eller "Kunde" (customer).
+Feltet "selskap_status" angir hvilken kategori avsenders selskap har.
 
 Identifiser MAKS 5 e-poster som krever handling NÅ. Prioriter:
-- Ubesvarte kundetråder med konkrete behov
-- E-poster fra kjente bedriftskontakter (ikke automatiske systemmail/markedsføring)
+- Kunde-e-poster (selskap_status = "customer") over prospect
+- Ubesvarte tråder med konkrete behov
 - Eldre tråder som "har blitt liggende" (over 7 dager uten svar)
 - Konkrete forespørsler om konsulent, CV, oppdrag, fornyelse
 
@@ -231,7 +346,12 @@ Norsk bokmål. Bruk "konsulent". Ikke ta med markedsføringsmail, nyhetsbrev, au
       console.error("AI error", aiResp.status, t);
       const fallback: PulseResponse = {
         insights: [],
-        scanned_count: dedupedEmails.length,
+        scanned_count: scannedTotal,
+        stats: {
+          scanned_total: scannedTotal,
+          scanned_relevant: scannedRelevant,
+          filtered_out: scannedTotal - scannedRelevant,
+        },
         generated_at: new Date().toISOString(),
       };
       return new Response(JSON.stringify(fallback), {
@@ -249,7 +369,8 @@ Norsk bokmål. Bruk "konsulent". Ikke ta med markedsføringsmail, nyhetsbrev, au
       const obj = JSON.parse(text);
       if (Array.isArray(obj.insights)) {
         insights = obj.insights.slice(0, 5).map((i: any) => {
-          const matched = dedupedEmails.find((m) => m.id === i.email_id);
+          const matched = annotatedEmails.find((m: any) => m.id === i.email_id);
+          const company = matched?.company as CompanyDomainEntry | undefined;
           return {
             summary: String(i.summary || "").slice(0, 200),
             type: ["unanswered", "buried", "follow_up"].includes(i.type) ? i.type : "follow_up",
@@ -257,6 +378,9 @@ Norsk bokmål. Bruk "konsulent". Ikke ta med markedsføringsmail, nyhetsbrev, au
             contact_email: i.contact_email || matched?.from || null,
             age_days: typeof i.age_days === "number" ? i.age_days : matched?.age || 0,
             web_link: matched?.web_link || null,
+            company_id: company?.company_id || null,
+            company_name: company?.company_name || null,
+            company_status: company?.company_status || null,
           };
         });
       }
@@ -266,7 +390,12 @@ Norsk bokmål. Bruk "konsulent". Ikke ta med markedsføringsmail, nyhetsbrev, au
 
     const result: PulseResponse = {
       insights,
-      scanned_count: dedupedEmails.length,
+      scanned_count: scannedTotal,
+      stats: {
+        scanned_total: scannedTotal,
+        scanned_relevant: scannedRelevant,
+        filtered_out: scannedTotal - scannedRelevant,
+      },
       generated_at: new Date().toISOString(),
     };
     cache.set(userId, { data: result, expires: Date.now() + CACHE_TTL_MS });

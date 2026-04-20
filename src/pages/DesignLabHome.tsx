@@ -34,12 +34,28 @@ interface InboxInsight {
   contact_email: string | null;
   age_days: number;
   web_link: string | null;
+  company_id: string | null;
+  company_name: string | null;
+  company_status: "prospect" | "customer" | null;
+}
+
+interface InboxPulseStats {
+  scanned_total: number;
+  scanned_relevant: number;
+  filtered_out: number;
 }
 
 interface InboxPulseResponse {
   insights: InboxInsight[];
   scanned_count: number;
+  stats?: InboxPulseStats;
   generated_at: string;
+}
+
+interface ConsultantLeadMatch {
+  contact_id: string | null;
+  score: number;
+  reasoning: string;
 }
 
 interface ConsultantMatch {
@@ -47,6 +63,15 @@ interface ConsultantMatch {
   best_contact_id: string | null;
   score: number;
   reasoning: string;
+  top_leads?: ConsultantLeadMatch[];
+}
+
+interface Renewal {
+  id: number;
+  kandidat: string;
+  kunde: string | null;
+  forny_dato: string;
+  selskap_id: string | null;
 }
 
 interface ForesporselRow {
@@ -446,6 +471,24 @@ export default function DesignLabHome() {
 
   const matches = matchData?.matches || [];
 
+  /* ──────── Fornyelser neste 7 dager (til «Dagens 3») ──────── */
+  const { data: upcomingRenewals = [] } = useQuery<Renewal[]>({
+    queryKey: ["dl-home-renewals-7d"],
+    queryFn: async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const in7d = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+      const { data } = await supabase
+        .from("stacq_oppdrag")
+        .select("id, kandidat, kunde, forny_dato, selskap_id")
+        .gte("forny_dato", today)
+        .lte("forny_dato", in7d)
+        .order("forny_dato", { ascending: true })
+        .limit(5);
+      return (data as Renewal[]) || [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   /* ──────── Nye forespørsler (7d) ──────── */
   const { data: nyeForesporsler = [] } = useQuery<ForesporselRow[]>({
     queryKey: ["dl-home-foresp-7d"],
@@ -630,10 +673,131 @@ ${JSON.stringify(context)}`;
   };
 
   /* Column templates — same family of widths as DesignLabContacts */
-  const COLS_INBOX = "12px 110px minmax(280px,1fr) 200px 16px";
+  const COLS_INBOX = "12px 110px minmax(260px,1fr) 150px 16px";
   const COLS_MATCH = "minmax(160px,1.2fr) 96px minmax(140px,1fr) 16px minmax(200px,1.5fr) 60px 110px 16px";
   const COLS_FORESP = "80px minmax(200px,1.4fr) minmax(220px,1.6fr) 140px 16px";
   const COLS_LEADS = "84px minmax(180px,1.4fr) minmax(180px,1.4fr) minmax(220px,2fr) 110px 16px";
+  const COLS_DAGENS = "28px 110px minmax(260px,1fr) 140px 16px";
+
+  /* ──────── Dagens 3: deterministisk topp-panel ──────── */
+  type DagensType = "lead" | "inbox" | "renewal";
+  interface DagensItem {
+    type: DagensType;
+    label: string;
+    title: string;
+    subtitle: string;
+    onOpen: () => void;
+    tone?: "hot" | "customer" | "renewal";
+  }
+
+  const dagens3: DagensItem[] = useMemo(() => {
+    const items: DagensItem[] = [];
+
+    // 1) Sterkeste lead med tilgjengelig konsulent
+    const bestMatchPair = (() => {
+      if (matches.length === 0 || availableConsultants.length === 0) return null;
+      let best: {
+        consultant: AvailableConsultant;
+        lead: HomeQueueLead;
+        score: number;
+      } | null = null;
+      for (const m of matches) {
+        const lead = findLead(m.best_contact_id);
+        const consultant = availableConsultants.find((c) => c.id === m.consultant_id);
+        if (!lead || !consultant) continue;
+        const overlap = (consultant.kompetanse || []).filter((t) =>
+          (lead.technologies || []).some((lt) => lt.toLowerCase() === t.toLowerCase()),
+        ).length;
+        const composite = lead.heat.score + overlap * 5 + m.score * 0.2;
+        if (!best || composite > best.score) {
+          best = { consultant, lead, score: composite };
+        }
+      }
+      return best;
+    })();
+
+    if (bestMatchPair) {
+      items.push({
+        type: "lead",
+        label: "Lead",
+        title: `${bestMatchPair.lead.contactName} · ${bestMatchPair.lead.companyName}`,
+        subtitle: `Match mot ${bestMatchPair.consultant.navn} — ${bestMatchPair.lead.signal || "signal ukjent"}`,
+        onOpen: () => navigate(`/design-lab/kontakter/${bestMatchPair!.lead.contactId}`),
+        tone: "hot",
+      });
+    }
+
+    // 2) Mest kritiske kunde-e-post
+    const customerInsights = (inbox?.insights || []).filter(
+      (i) => i.company_status === "customer" || i.company_status === "prospect",
+    );
+    const critical = [...customerInsights].sort((a, b) => {
+      // prioriter unanswered, så eldst først
+      const typeRank = (t: InboxInsight["type"]) => (t === "unanswered" ? 0 : t === "buried" ? 1 : 2);
+      const tA = typeRank(a.type);
+      const tB = typeRank(b.type);
+      if (tA !== tB) return tA - tB;
+      return b.age_days - a.age_days;
+    })[0];
+
+    if (critical) {
+      items.push({
+        type: "inbox",
+        label: "E-post",
+        title: critical.summary,
+        subtitle: `${critical.company_name || critical.contact_email || "ukjent"} · ${critical.age_days}d · ${
+          INSIGHT_TYPE_LABEL[critical.type]
+        }`,
+        onOpen: () => {
+          if (critical.web_link) window.open(critical.web_link, "_blank");
+        },
+        tone: "customer",
+      });
+    }
+
+    // 3) Nærmeste fornyelse
+    const nextRenewal = upcomingRenewals[0];
+    if (nextRenewal) {
+      const daysLeft = Math.max(
+        0,
+        Math.ceil((new Date(nextRenewal.forny_dato).getTime() - Date.now()) / 86400000),
+      );
+      items.push({
+        type: "renewal",
+        label: "Fornyelse",
+        title: `${nextRenewal.kandidat}${nextRenewal.kunde ? ` · ${nextRenewal.kunde}` : ""}`,
+        subtitle: `Fornyelse om ${daysLeft}d (${format(new Date(nextRenewal.forny_dato), "d. MMM", { locale: nb })})`,
+        onOpen: () => navigate("/design-lab/aktive-oppdrag"),
+        tone: "renewal",
+      });
+    }
+
+    return items;
+  }, [matches, availableConsultants, queue, inbox, upcomingRenewals, navigate]);
+
+  /* Tastatur 1/2/3 → åpne Dagens-rad */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const isInput =
+        document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA";
+      if (isInput || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "1" && dagens3[0]) {
+        e.preventDefault();
+        dagens3[0].onOpen();
+      } else if (e.key === "2" && dagens3[1]) {
+        e.preventDefault();
+        dagens3[1].onOpen();
+      } else if (e.key === "3" && dagens3[2]) {
+        e.preventDefault();
+        dagens3[2].onOpen();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [dagens3]);
+
+  /* Expand-state for konsulent-match (viser topp-3 leads) */
+  const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
 
   return (
     <DesignLabPageShell
@@ -672,9 +836,96 @@ ${JSON.stringify(context)}`;
               dagens morgenkø — det viktigste fra innboksen, ledige konsulenter
               som venter på sitt neste oppdrag, ferske forespørsler og dine
               hotteste leads. Bla med <Kbd>↑</Kbd> <Kbd>↓</Kbd>, åpne med{" "}
-              <Kbd>Enter</Kbd>, søk med <Kbd>⌘K</Kbd>.
+              <Kbd>Enter</Kbd>, <Kbd>1</Kbd> <Kbd>2</Kbd> <Kbd>3</Kbd> for
+              dagens tre, søk med <Kbd>⌘K</Kbd>.
             </div>
           </div>
+        </Section>
+
+        {/* DAGENS 3 */}
+        <Section>
+          <SectionHeader
+            title="Dagens 3"
+            meta={
+              dagens3.length === 0
+                ? "Samler data …"
+                : `${dagens3.length} sak${dagens3.length === 1 ? "" : "er"} som trenger deg nå`
+            }
+          />
+          {dagens3.length === 0 ? (
+            <EmptyText>Ingen prioriterte saker akkurat nå — 🎉</EmptyText>
+          ) : (
+            <>
+              <ColHeader
+                cols={COLS_DAGENS}
+                labels={["", "Type", "Hva", "Kontekst", ""]}
+              />
+              {dagens3.map((item, idx) => {
+                const toneColor =
+                  item.tone === "hot"
+                    ? C.danger
+                    : item.tone === "customer"
+                      ? C.success
+                      : item.tone === "renewal"
+                        ? C.accent
+                        : C.textMuted;
+                return (
+                  <TableRow
+                    key={`dagens-${idx}`}
+                    cols={COLS_DAGENS}
+                    onClick={item.onOpen}
+                    accentColor={toneColor}
+                  >
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: C.textFaint,
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      {idx + 1}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        letterSpacing: "0.04em",
+                        textTransform: "uppercase",
+                        color: toneColor,
+                      }}
+                    >
+                      {item.label}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 13,
+                        color: C.text,
+                        fontWeight: 500,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {item.title}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color: C.textMuted,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {item.subtitle}
+                    </span>
+                    <Kbd>{idx + 1}</Kbd>
+                  </TableRow>
+                );
+              })}
+            </>
+          )}
         </Section>
 
         {/* PIPELINE */}
@@ -711,7 +962,9 @@ ${JSON.stringify(context)}`;
               inboxLoading
                 ? "AI leser …"
                 : inbox
-                  ? `AI har lest ${inbox.scanned_count} e-poster siste 14 dager`
+                  ? inbox.stats
+                    ? `${inbox.stats.scanned_relevant} av ${inbox.stats.scanned_total} e-post fra Kunder/Potensielle kunder (14d)`
+                    : `AI har lest ${inbox.scanned_count} e-poster siste 14 dager`
                   : "Ikke koblet til Outlook"
             }
             right={
@@ -739,7 +992,7 @@ ${JSON.stringify(context)}`;
             <>
               <ColHeader
                 cols={COLS_INBOX}
-                labels={["", "Type · Alder", "Oppsummering", "Kontakt", ""]}
+                labels={["", "Type · Alder", "Oppsummering", "Selskap", ""]}
               />
               {inbox.insights.map((ins, idx) => {
                 const focusedRow = isFocused({ kind: "inbox", idx });
@@ -771,15 +1024,44 @@ ${JSON.stringify(context)}`;
                       {ins.summary}
                     </span>
                     <span
+                      className="flex items-center gap-1.5"
                       style={{
                         fontSize: 11,
-                        color: C.textFaint,
+                        color: C.textMuted,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
                       }}
+                      title={ins.contact_email || ""}
                     >
-                      {ins.contact_email || ""}
+                      {ins.company_status ? (
+                        <span
+                          style={{
+                            fontSize: 9,
+                            fontWeight: 600,
+                            letterSpacing: "0.04em",
+                            textTransform: "uppercase",
+                            padding: "1px 5px",
+                            borderRadius: 3,
+                            flexShrink: 0,
+                            background:
+                              ins.company_status === "customer" ? C.successBg : C.infoBg,
+                            color:
+                              ins.company_status === "customer" ? C.success : C.info,
+                          }}
+                        >
+                          {ins.company_status === "customer" ? "Kunde" : "Prospect"}
+                        </span>
+                      ) : null}
+                      <span
+                        style={{
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {ins.company_name || ins.contact_email || ""}
+                      </span>
                     </span>
                     <ArrowRight size={12} className="opacity-0 group-hover:opacity-100" style={{ color: C.textFaint }} />
                   </TableRow>
@@ -809,7 +1091,7 @@ ${JSON.stringify(context)}`;
             <>
               <ColHeader
                 cols={COLS_MATCH}
-                labels={["Konsulent", "Ledig", "Kompetanse", "", "Beste lead", "Match", "Signal", ""]}
+                labels={["Konsulent", "Klar fra", "Kompetanse", "", "Beste lead", "Match", "Signal", ""]}
               />
               {matches.map((m, idx) => {
                 const consultant = availableConsultants.find((c) => c.id === m.consultant_id);
@@ -819,50 +1101,139 @@ ${JSON.stringify(context)}`;
                 const dateLabel = consultant.tilgjengelig_fra
                   ? format(new Date(consultant.tilgjengelig_fra), "d. MMM", { locale: nb })
                   : "—";
+                const extraLeads = (m.top_leads || []).slice(1, 3);
+                const isExpanded = expandedMatch === idx;
 
                 return (
-                  <TableRow
-                    key={`match-${idx}`}
-                    cols={COLS_MATCH}
-                    focused={focusedRow}
-                    onMouseEnter={() => setFocused({ kind: "match", idx })}
-                    onClick={() => {
-                      if (lead) navigate(`/design-lab/kontakter/${lead.contactId}`);
-                    }}
-                  >
-                    <span style={{ fontSize: 13, color: C.text, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {consultant.navn}
-                    </span>
-                    <span style={{ fontSize: 11, color: C.textMuted, whiteSpace: "nowrap" }}>
-                      {dateLabel}
-                    </span>
-                    <span style={{ fontSize: 11, color: C.textFaint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {(consultant.kompetanse || []).slice(0, 3).join(" · ") || "—"}
-                    </span>
-                    <ArrowRight size={11} style={{ color: C.textGhost }} />
-                    {lead ? (
-                      <span style={{ fontSize: 13, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {lead.contactName} <span style={{ color: C.textFaint }}>· {lead.companyName}</span>
-                      </span>
-                    ) : (
-                      <span style={{ fontSize: 12, color: C.textFaint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {m.reasoning || "Ingen passende lead nå."}
-                      </span>
-                    )}
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 600,
-                        color: m.score >= 80 ? C.success : m.score >= 60 ? C.warning : C.textMuted,
+                  <div key={`match-${idx}`}>
+                    <TableRow
+                      cols={COLS_MATCH}
+                      focused={focusedRow}
+                      onMouseEnter={() => setFocused({ kind: "match", idx })}
+                      onClick={() => {
+                        if (lead) navigate(`/design-lab/kontakter/${lead.contactId}`);
                       }}
                     >
-                      {m.score}%
-                    </span>
-                    <span>
-                      {lead?.signal ? <DesignLabSignalBadge signal={lead.signal} size="sm" /> : null}
-                    </span>
-                    <ArrowRight size={12} className="opacity-0 group-hover:opacity-100" style={{ color: C.textFaint }} />
-                  </TableRow>
+                      <span style={{ fontSize: 13, color: C.text, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {consultant.navn}
+                      </span>
+                      <span style={{ fontSize: 11, color: C.textMuted, whiteSpace: "nowrap" }} title="Bruker tilgjengelig_fra (ikke sluttdato)">
+                        {dateLabel}
+                      </span>
+                      <span style={{ fontSize: 11, color: C.textFaint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {(consultant.kompetanse || []).slice(0, 3).join(" · ") || "—"}
+                      </span>
+                      <ArrowRight size={11} style={{ color: C.textGhost }} />
+                      {lead ? (
+                        <span
+                          className="flex items-center gap-1.5"
+                          style={{ fontSize: 13, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                        >
+                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {lead.contactName} <span style={{ color: C.textFaint }}>· {lead.companyName}</span>
+                          </span>
+                          {extraLeads.length > 0 ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedMatch(isExpanded ? null : idx);
+                              }}
+                              title={`Se ${extraLeads.length} flere forslag`}
+                              style={{
+                                flexShrink: 0,
+                                fontSize: 10,
+                                fontWeight: 600,
+                                padding: "1px 5px",
+                                borderRadius: 3,
+                                border: `1px solid ${C.borderLight}`,
+                                background: isExpanded ? C.accentBg : C.surfaceAlt,
+                                color: isExpanded ? C.accent : C.textMuted,
+                                cursor: "pointer",
+                              }}
+                            >
+                              +{extraLeads.length}
+                            </button>
+                          ) : null}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 12, color: C.textFaint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {m.reasoning || "Ingen passende lead nå."}
+                        </span>
+                      )}
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: m.score >= 80 ? C.success : m.score >= 60 ? C.warning : C.textMuted,
+                        }}
+                      >
+                        {m.score}%
+                      </span>
+                      <span>
+                        {lead?.signal ? <DesignLabSignalBadge signal={lead.signal} size="sm" /> : null}
+                      </span>
+                      <ArrowRight size={12} className="opacity-0 group-hover:opacity-100" style={{ color: C.textFaint }} />
+                    </TableRow>
+                    {isExpanded && extraLeads.length > 0 ? (
+                      <div style={{ background: C.surfaceAlt, borderBottom: `1px solid ${C.borderLight}` }}>
+                        {extraLeads.map((lm, i) => {
+                          const subLead = findLead(lm.contact_id);
+                          return (
+                            <div
+                              key={`match-${idx}-sub-${i}`}
+                              onClick={() => {
+                                if (subLead) navigate(`/design-lab/kontakter/${subLead.contactId}`);
+                              }}
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns: COLS_MATCH,
+                                alignItems: "center",
+                                minHeight: 32,
+                                paddingLeft: 24,
+                                paddingRight: 24,
+                                gap: 12,
+                                fontSize: 12,
+                                color: C.textMuted,
+                                cursor: subLead ? "pointer" : "default",
+                              }}
+                            >
+                              <span />
+                              <span style={{ fontSize: 10, color: C.textFaint, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                                Alt. {i + 2}
+                              </span>
+                              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {lm.reasoning}
+                              </span>
+                              <ArrowRight size={11} style={{ color: C.textGhost }} />
+                              <span style={{ color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {subLead
+                                  ? (
+                                    <>
+                                      {subLead.contactName}{" "}
+                                      <span style={{ color: C.textFaint }}>· {subLead.companyName}</span>
+                                    </>
+                                  )
+                                  : "—"}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  color: lm.score >= 80 ? C.success : lm.score >= 60 ? C.warning : C.textMuted,
+                                }}
+                              >
+                                {lm.score}%
+                              </span>
+                              <span>
+                                {subLead?.signal ? <DesignLabSignalBadge signal={subLead.signal} size="sm" /> : null}
+                              </span>
+                              <span />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
                 );
               })}
             </>
