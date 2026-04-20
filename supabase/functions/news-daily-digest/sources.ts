@@ -81,7 +81,9 @@ export function sourceForUrl(url: string): string {
 // Soft trust-filter: aksepter alt unntatt åpenbar støy (link-farms, blogs, content-mills).
 // Vi stoler på name-match + scoring + URL-validering for å fjerne resten.
 // Returnerer false bare for åpenbart dårlige domener.
-const NOISE_HOSTS = /(whothoughtofit|tumblr|blogspot|wordpress\.com|substack\.com|medium\.com|reddit\.com|facebook\.com|twitter\.com|x\.com|pinterest|quora\.com)/i;
+// Inkluderer aggregatorer (Nordnet, Inderes, Investorprat), aksjeplattformer (Euronext),
+// register-oppslag (Brreg) og lignende ikke-redaksjonelle kilder.
+const NOISE_HOSTS = /(whothoughtofit|tumblr|blogspot|wordpress\.com|substack\.com|medium\.com|reddit\.com|facebook\.com|twitter\.com|x\.com|pinterest|quora\.com|nordnet\.|inderes\.|investorprat\.|mainsights\.|nordic9\.com|virksomhet\.brreg\.no|euronext\.com|trener\.ai|kommunikasjon\.ntb\.no)/i;
 
 export function isTrustedSource(url: string, _companyHost: string | null): boolean {
   try {
