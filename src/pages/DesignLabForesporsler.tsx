@@ -663,7 +663,7 @@ function ForespRow({
         </div>
       </div>
       {/* Konsulent */}
-      <div className="flex flex-col items-start gap-2 pr-8" style={{ paddingTop: 2 }}>
+      <div className="flex flex-col items-start gap-2 pr-8 min-w-0" style={{ paddingTop: 2, overflow: "hidden" }}>
         {sendt.length === 0 ? (
           <div style={{ minHeight: 28, display: "flex", alignItems: "center" }}>
             <span style={{ fontSize: 12, color: C.textGhost }}>—</span>
@@ -676,7 +676,7 @@ function ForespRow({
                 ? portraitByAnsattId.get(k.stacq_ansatte.id) || null
                 : null;
             return (
-              <div key={k.id} style={{ minHeight: 32, display: "flex", alignItems: "center", gap: 12 }}>
+              <div key={k.id} style={{ minHeight: 32, display: "flex", alignItems: "center", gap: 12, width: "100%", minWidth: 0 }}>
                 {portrait ? (
                   <img
                     src={portrait}
@@ -698,7 +698,7 @@ function ForespRow({
                     {getInitials(navn)}
                   </div>
                 )}
-                <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text, lineHeight: 1.2 }}>
+                <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text, lineHeight: 1.2, flex: "1 1 auto", minWidth: 0 }}>
                   {navn}
                 </span>
               </div>
