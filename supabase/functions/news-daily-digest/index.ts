@@ -142,6 +142,8 @@ Hvis du ikke finner noen saker, returner items: [].`;
       }
       const data = await res.json();
       const content = data.choices?.[0]?.message?.content;
+      const citations: string[] = Array.isArray(data.citations) ? data.citations.map((c: unknown) => String(c)) : [];
+      const citationSet = new Set(citations.map((c) => c.replace(/\/$/, "")));
       if (!content) {
         console.log(`[perplexity] no content. keys=${Object.keys(data).join(",")} choices=${data.choices?.length ?? 0}`);
         return [];
@@ -154,7 +156,7 @@ Hvis du ikke finner noen saker, returner items: [].`;
         return [];
       }
       const items = (parsed.items ?? []) as Array<Record<string, unknown>>;
-      console.log(`[perplexity] returned items=${items.length} for batch_size=${companies.length} recency=${recencyFilter}`);
+      console.log(`[perplexity] returned items=${items.length} citations=${citations.length} for batch_size=${companies.length} recency=${recencyFilter}`);
       if (items.length > 0) {
         console.log(`[perplexity] sample=${JSON.stringify(items[0]).slice(0, 250)}`);
       }
@@ -166,15 +168,14 @@ Hvis du ikke finner noen saker, returner items: [].`;
 
       const out: RawItem[] = [];
       let unmatched = 0;
+      let droppedHallucinated = 0;
       for (const it of items) {
         const rawName = String(it.company_name ?? "");
         let company = companies.find((c) => c.name.toLowerCase() === rawName.toLowerCase());
         if (!company) {
-          // Fuzzy: norm match
           company = companyByNorm.get(norm(rawName));
         }
         if (!company) {
-          // Fuzzy: containment
           const nName = norm(rawName);
           if (nName.length >= 3) {
             company = companies.find((c) => {
@@ -187,15 +188,40 @@ Hvis du ikke finner noen saker, returner items: [].`;
           unmatched++;
           continue;
         }
-        const url = String(it.url ?? "");
+        const rawUrl = String(it.url ?? "").trim();
         const title = String(it.title ?? "");
-        if (!url || !title) continue;
+        if (!rawUrl || !title) continue;
+
+        // Anti-hallusinering: URL må finnes i Perplexitys citations.
+        // Hvis ikke, prøv å finne en citation som inneholder samme host.
+        const normalizedUrl = rawUrl.replace(/\/$/, "");
+        let finalUrl: string | null = null;
+        if (citationSet.has(normalizedUrl)) {
+          finalUrl = rawUrl;
+        } else {
+          try {
+            const host = new URL(rawUrl).hostname.replace(/^www\./, "");
+            const match = citations.find((c) => {
+              try {
+                return new URL(c).hostname.replace(/^www\./, "") === host;
+              } catch {
+                return false;
+              }
+            });
+            if (match) finalUrl = match;
+          } catch { /* invalid url */ }
+        }
+        if (!finalUrl) {
+          droppedHallucinated++;
+          continue;
+        }
+
         out.push({
-          url,
+          url: finalUrl,
           title,
           ingress: it.ingress ? String(it.ingress) : null,
-          source: sourceForUrl(url),
-          source_tier: tierForUrl(url),
+          source: sourceForUrl(finalUrl),
+          source_tier: tierForUrl(finalUrl),
           published_at: it.published_at ? String(it.published_at) : new Date().toISOString(),
           primary_company_id: company.id,
           primary_company_name: company.name,
@@ -205,6 +231,7 @@ Hvis du ikke finner noen saker, returner items: [].`;
         });
       }
       if (unmatched > 0) console.log(`[perplexity] unmatched_company_names=${unmatched}/${items.length}`);
+      if (droppedHallucinated > 0) console.log(`[perplexity] dropped_hallucinated_urls=${droppedHallucinated}/${items.length}`);
       return out;
     } catch (err) {
       lastError = err;
