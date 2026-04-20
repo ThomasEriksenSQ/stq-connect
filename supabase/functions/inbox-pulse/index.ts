@@ -121,10 +121,13 @@ serve(async (req) => {
     for (const row of tokenRows) {
       try {
         const accessToken = await refreshTokenIfNeeded(supabase, row);
-        const url =
-          `${GRAPH_BASE}/me/messages?$top=100&$orderby=receivedDateTime desc` +
-          `&$filter=receivedDateTime ge ${since}` +
-          `&$select=id,subject,from,receivedDateTime,bodyPreview,isRead,webLink,conversationId`;
+        const params = new URLSearchParams({
+          "$top": "100",
+          "$orderby": "receivedDateTime desc",
+          "$filter": `receivedDateTime ge ${since}`,
+          "$select": "id,subject,from,receivedDateTime,bodyPreview,isRead,webLink,conversationId",
+        });
+        const url = `${GRAPH_BASE}/me/messages?${params.toString()}`;
         const resp = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
         if (!resp.ok) {
           console.error("graph error", row.user_id, await resp.text());
