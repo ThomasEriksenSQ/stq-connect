@@ -1,149 +1,129 @@
 
 
-## Hjem (`/design-lab/home`) — "Salgsmorgen" v2
+## Hjem v3.1 — utvider Morgenkø med fire nye datakilder
 
-Iterativ gjennomgang med fire ekspertroller. Jeg viser kort hver runde, så enstemmig sluttplan.
+Bygger videre på den godkjente v3-planen. Tar inn fire nye krav som *anrikning* av eksisterende seksjoner — ikke nye widgets.
 
----
+### Nye krav og hvor de havner
 
-### Runde 1 — Førsteinntrykk
+| Krav | Hvor i layoutet | Hvordan |
+|---|---|---|
+| Skann brukerens Outlook-innboks (også eldre) | Nytt øverste panel **"Innboks-puls (AI)"** | Ny edge function `inbox-pulse` skanner siste 14d innboks (alle e-poster, ikke filtrert på kontakt). AI lager én oppsummering med 3–5 oppdagelser merket "ny", "lå begravd" eller "tråd-oppfølging" |
+| AI matcher tilgjengelige konsulenter mot beste leads | Ny seksjon **"Tilgjengelige konsulenter → beste lead"** rett under innboks | Klient henter `stacq_ansatte` med `tilgjengelig_fra`, AI matcher mot topp-leads med teknologi-match + signal |
+| Nye forespørsler siste uka | Ny rad **"Nye forespørsler (7d)"** | Direkte query mot `foresporsler` der `mottatt_dato >= now()-7d`, kompakt liste |
+| Topp 10 hotteste leads | Erstatter **"Resten av køen"** fra v3 | `getHeatResult` over alle eide kontakter, sortert etter `score`, vis topp 10 (ikke topp 3 fokus + 11 — bare én klar liste på 10) |
 
-**CRM-ekspert (Maria):** "Brief + Dagsplan + 3 kolonner = riktig anatomi. Men 'Hett akkurat nå' og 'Nye signaler' overlapper — en kontakt med nytt 'Behov nå'-signal *er* hett. Slå sammen."
-
-**AI-ekspert (David):** "AI-briefen er for generell. 'Gjør X fordi Y' uten kvantifisert *konfidens* og *kilde* blir tarot. Hver anbefaling må vise hvilke datapunkter den hviler på."
-
-**Nytteverdi (Siri):** "Hva *gjør* brukeren her? Hvis svaret er 'leser' har vi tapt. Hver linje må ha én primærhandling i ett tastetrykk. `J` = ring, `M` = e-post, `F` = følg opp."
-
-**Designer (Ola):** "Tre kolonner under brief = visuell støy. Linear gjør én ting per skjermkvadrant. Skjær."
-
-**Konsensus runde 1:** For mange seksjoner. Slå sammen heat+signaler. AI må vise kilder. Tastatursnarveier per rad.
-
----
-
-### Runde 2 — Hva forsvinner
-
-**Maria:** "Markedsradar-widget hører ikke hjemme på Hjem — den lever på sin egen flate. Erstatt med noe ingen annen flate gir: *en samlet 'pipeline-puls'* — hvor mye penger er i spill akkurat nå, hvor mange forespørsler glipper hvis vi ikke handler, hvor mange konsulenter går av oppdrag innen 30d."
-
-**David:** "Enig. Markedsradar-AI skal *mate* briefen, ikke vises som widget. Brief sier 'C++-volum +23% — Kongsberg Maritime poster 4 stillinger, du har 3 matchende konsulenter.' Det er nytteverdi."
-
-**Siri:** "Spør-agent-feltet nederst er bra, men placeholder må være ekte spørsmål, ikke smaksprøver. Roter mellom 3 reelle spørsmål basert på dagens data."
-
-**Ola:** "Header-stripen 'Siden i går: 4 nye…' — gjør tellerne til *handlinger*, ikke statistikk. Klikk = filtrert kø, ikke filtrert liste."
-
----
-
-### Runde 3 — Sluttkonsensus
-
-Alle fire signerer på følgende anatomi:
+### Revidert anatomi
 
 ```text
-┌─────────────────────────────────────────────────────────────────────┐
-│ God morgen, Jon Richard      man. 20. apr. · uke 17       ⌘K søk  │
-├─────────────────────────────────────────────────────────────────────┤
-│ Pipeline nå:  4 forespørsler aktive · 12 konsulenter ledige om 30d │
-│              · 2 fornyelser denne uka · 1 vunnet i går             │
-├─────────────────────────────────────────────────────────────────────┤
-│ ┌─ Dagens 3 trekk (AI) ──────────────────────┐ ┌─ Din dag ───────┐│
-│ │                                            │ │ 09:00 Møte: …   ││
-│ │ 1 ▸ Ring Håkon Gjøne (Kongsberg)           │ │ 10:30 Ring: …   ││
-│ │     Hvorfor: CC-ed på annonse i går        │ │ 13:00 Demo: …   ││
-│ │     +3 lignende C++-treff i markedet       │ │ ───────────────  ││
-│ │     [J] ring  [M] e-post  [F] flytt        │ │ Forfalt (2)     ││
-│ │                                            │ │ • Sensio-merge ✓││
-│ │ 2 ▸ Send CV til Equinor                    │ │ • Aker BP …     ││
-│ │     Hvorfor: signal Behov nå (3d gammelt)  │ │                  ││
-│ │     Match: Lars 94%, Mona 87%              │ │                  ││
-│ │     [V] vis CV  [S] send  [F] flytt        │ │                  ││
-│ │                                            │ │                  ││
-│ │ 3 ▸ Følg opp DNV — fornyelse om 14d        │ │                  ││
-│ │     Hvorfor: ingen kontakt på 21d          │ │                  ││
-│ │     [J] ring  [M] e-post  [F] flytt        │ │                  ││
-│ │                                            │ │                  ││
-│ │              Tenk høyt 🎯  [Start dagen]    │ │                  ││
-│ └────────────────────────────────────────────┘ └─────────────────┘│
-├─────────────────────────────────────────────────────────────────────┤
-│ Nye signaler i går (4)                                              │
-│ Equinor    Ukjent → Behov nå        2t  Thomas    [→ kort]         │
-│ DNV        Ukjent → Får fremtidig   5t  Jon       [→ kort]         │
-│ TietoEvry  Mulig → Behov nå         9t  Thomas    [→ kort]         │
-│ Telenor    Får fremtidig → Behov   14t  Jon       [→ kort]         │
-├─────────────────────────────────────────────────────────────────────┤
-│  Spør agenten: "Hvem trenger C++ akkurat nå?"          ⌘K  [→]    │
-└─────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│ Hjem · Morgenkø                                              ⌘K  │
+├──────────────────────────────────────────────────────────────────────┤
+│ Pipeline                                                              │
+│   4 forespørsler (45d)  ·  3 konsulenter ledige (30d)                │
+│   2 fornyelser (7d)     ·  1 vunnet i går                            │
+├──────────────────────────────────────────────────────────────────────┤
+│ Innboks-puls — AI har lest 47 e-poster siste 14 dager        ↻      │
+│  • Equinor svarte på CV-pitch (3d gammel) — du har ikke svart       │
+│    [→ åpne tråd]                                                     │
+│  • DNV-Henrik nevnte "Q3-budsjett" i e-post 9d siden (begravd)      │
+│    [→ åpne tråd]                                                     │
+│  • TietoEvry takket for møtet — ingen oppfølging logget             │
+│    [→ åpne tråd]                                                     │
+├──────────────────────────────────────────────────────────────────────┤
+│ Tilgjengelige konsulenter — AI foreslår beste lead nå                │
+│  Lars Hansen   ledig 15. mai   C++/Yocto                             │
+│    → Kongsberg Maritime (Håkon Gjøne) · 92% match · Behov nå        │
+│    [→ kontakt]  [Vis CV]  [Skriv pitch]                             │
+│  Mona Berg     ledig 1. juni   Embedded Linux/Rust                   │
+│    → Equinor (Kjell Ingebo) · 87% match · Får fremtidig             │
+│    [→ kontakt]  [Vis CV]  [Skriv pitch]                             │
+│  Tor Olsen     ledig 12. juni  FPGA/VHDL                             │
+│    → DNV (Henrik Sand) · 78% match · Mulig                          │
+│    [→ kontakt]  [Vis CV]  [Skriv pitch]                             │
+├──────────────────────────────────────────────────────────────────────┤
+│ Nye forespørsler (7d) · 5                                            │
+│  i går   Aker Solutions    Embedded Linux, Yocto      Trondheim  →   │
+│  2d      DNV               C++, Qt                    Høvik      →   │
+│  3d      Kongsberg Mar.    FPGA, VHDL                 Kongsberg  →   │
+│  5d      Equinor           Python, sikkerhet          Stavanger  →   │
+│  6d      TietoEvry         C, MCU                     Oslo       →   │
+├──────────────────────────────────────────────────────────────────────┤
+│ Topp 10 hotteste leads                                                │
+│  ●● Hett   Håkon Gjøne     Kongsberg Maritime   2 forespørsler  →   │
+│  ●● Hett   Kjell Ingebo    Equinor              CC i går        →   │
+│  ●  Lov    Henrik Sand     DNV                  21d uten kontakt →   │
+│  ●  Lov    Tor Olsen       TietoEvry            annonserer C++  →   │
+│  ●  Lov    Ida Lien        Equinor              tidl. forespørsel →  │
+│  ○  Mulig  Anne Berg       Aker BP              ...             →   │
+│  ... (4 til, kompakte 30px-rader)                                     │
+├──────────────────────────────────────────────────────────────────────┤
+│ Spør agenten:  "Hvem trenger C++ akkurat nå?"          ⌘K  [→]      │
+│ (svar streames inn rett under feltet — ingen navigering)              │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-### Endringer fra v1
+### Hva forsvinner fra v3
 
-| v1 | v2 |
-|---|---|
-| Tellere "siden i går" som tekst | Pipeline-puls som handlinger |
-| 3 kompakte kolonner | 1 fokusert "Nye signaler"-rad |
-| Markedsradar-widget | AI fletter markedssignaler inn i briefen |
-| AI sier "gjør X fordi Y" | AI viser kvantifisert kilde + match-prosent |
-| Klikk → kort | Tastatursnarveier per anbefaling (J/M/F/V/S) |
-| Statisk placeholder i søk | Roterer mellom 3 ekte spørsmål basert på dagens data |
-| Hilsen + tellere på én linje | Hilsen-rad + dedikert pipeline-puls-rad |
+- **"Dagens 3 trekk"** — erstattet av Innboks-puls + Konsulent→Lead + Topp 10. AI-anbefalingene var for vage; de tre nye seksjonene er konkret nytteverdi.
+- **`home-focus-brief` edge function** — opprettes ikke. Erstattes av `inbox-pulse` og `consultant-lead-match`.
+- **"Hva har endret seg siden du var her sist"** — droppes. Innboks-puls dekker behovet bedre.
 
-### Seksjonene (endelig)
+### Nye edge functions
 
-**1. Hilsen (32px)** — "God morgen, Jon Richard · man. 20. apr. 2026 · uke 17". `⌘K`-hint helt høyre.
+**`supabase/functions/inbox-pulse/index.ts`**
+- Henter siste 14 dager fra brukerens Outlook (alle e-poster, ikke filtrert på kontakt). Bruker samme token-flyt som `outlook-mail`, men kaller `${GRAPH_BASE}/me/messages?$top=200&$orderby=receivedDateTime desc&$filter=receivedDateTime ge {iso}` per innlogget admin-konto.
+- Sender komprimert e-postliste (subject, from, dato, preview) til Lovable AI Gateway (`google/gemini-2.5-flash`).
+- Systemprompt: *"Du er salgssjef i STACQ. Identifiser maks 5 e-poster som er handlingsverdige NÅ. Prioriter: ubesvarte kundetråder, e-poster med konkrete behov nevnt, e-poster fra kjente kontakter som ligger ubesvart. Returner JSON `{insights: [{summary, type: 'unanswered'|'buried'|'follow_up', email_id, contact_email, age_days}]}`. Norsk bokmål."*
+- Cache 30 min per bruker (in-memory).
+- `email_id` brukes i UI for "→ åpne tråd"-lenke som åpner relatert kontakt (slå opp via e-postadresse) eller faller tilbake til Outlook-web URL.
 
-**2. Pipeline-puls (40px, klikkbare segmenter)** — Fire metrikker separert med "·": aktive forespørsler, konsulenter ledige innen 30d, fornyelser denne uka, vunnet i går. Hvert tall = lenke til filtrert visning på riktig flate.
+**`supabase/functions/consultant-lead-match/index.ts`**
+- Klient sender liste over `{consultant_id, navn, kompetanse[], tilgjengelig_fra}` for ledige konsulenter (≤60d) + topp 30 leads (`{contact_id, navn, selskap, signal, teknologier[], heat_score}`).
+- AI matcher hver konsulent mot beste lead basert på teknologi-overlapp + signal-styrke + recency.
+- Returnerer `{matches: [{consultant_id, best_contact_id, score, reasoning}]}`.
+- Cache 30 min per bruker.
 
-**3. Dagens 3 trekk (venstre 64%)** — AI-generert via ny `daily-brief`-edge function. Hver anbefaling: nummer, handling, *Hvorfor*-rad med kvantifiserte kilder, action-row med tastatursnarveier (J=ring, M=e-post, V=vis CV, S=send, F=flytt til neste dag). `Start dagen`-knapp åpner trekk #1 i Salgsagent-modus.
+### Direkte queries (ingen AI)
 
-**4. Din dag (høyre 36%)** — Outlook-kalender + dagens forfalte oppfølginger. Klokkeslett · tittel · kontakt. Maks 5, "+ N flere" → /oppfolginger. Forfalt-blokk under, rød prikk.
+**Nye forespørsler (7d):** `foresporsler` where `mottatt_dato >= now()-7d AND owner_id = current_user OR null` ordered desc, limit 5–10. Felter: dato, selskap (join), teknologier, sted.
 
-**5. Nye signaler (24t, full bredde)** — Tabellrad: kontakt · signal-overgang (`Ukjent → Behov nå` med pil) · tid siden · eier · `[→ kort]`-knapp. Maks 5, ingen overskriftsstøy. Erstatter både "Hett akkurat nå" og "Nye signaler" fra v1.
+**Topp 10 hotteste leads:** Henter alle kontakter eid av brukeren med relasjoner (activities, tasks, foresporsler, company_tech_profile) — *gjenbruker samme query-mønster som Salgsagenten* via en utvunnet `loadHomeQueueData(userId)` i ny `src/lib/homeQueueModel.ts`. Kjør `getHeatResult` per kontakt, sorter på `score`, ta topp 10.
 
-**6. Spør agenten (40px, full bredde)** — Inputfelt med roterende ekte placeholder generert ved sideload (basert på dagens data). `⌘K` fokuserer.
+**Tilgjengelige konsulenter:** `stacq_ansatte` where `tilgjengelig_fra is not null AND tilgjengelig_fra <= now()+60d AND status in ('AKTIV/SIGNERT','Ledig')`. Filter med `hasConsultantAvailability` (gjenbruk fra `contactHunt.ts`).
 
-### Designprinsipper (V2-tokens, alle fire enige)
+### Designkontrakt (uendret fra v3)
 
-- Hver seksjon adskilles med 1px `C.borderLight` — ingen kort-på-kort.
-- Bakgrunn: `C.appBg` overalt; ingen fargede flater unntatt prikker for status.
-- Typografi: 13px standard, 18px kun på hilsen, 11px på meta. Inter 400/500/600.
-- Ingen ikoner i overskrifter. Prikker (4px) for signal/status.
-- Tastatursnarveier vises som små `kbd`-stiler `[J]` i `C.surfaceAlt` med `C.textMuted`.
-- Lasting: 28px skeleton-rader, ikke spinner. AI-brief har eget "Tenker…"-skjelett og blokkerer ikke resten.
-- Mobil: ikke prioritert (intern brukstid sitter ved skjerm). Layout krymper til én kolonne under 900px uten optimalisering.
+- Kun komponenter fra `src/components/designlab/system/*` og `controls.tsx` + `DesignLabPageShell`.
+- Bakgrunn `C.appBg` overalt. Seksjoner skilles med `1px solid C.borderLight` — ingen kort-på-kort.
+- Radhøyde 30px. 13px standard tekst, 11px meta.
+- Status-prikker fra `HEAT_COLORS` / `SIGNAL_COLORS`.
+- Ingen accent-bg på rad-handlinger; accent kun hvis vi har en hovedhandling per seksjon (vi har det ikke nå).
 
-### Teknisk
+### Tastaturmodell
 
-**Ny side:** `src/pages/DesignLabHome.tsx`
-- `DesignLabPageShell` med `activePath="/design-lab/home"`, `title="Hjem"`, `maxWidth={1280}`.
-- Ren V2 — `C` fra `src/theme.ts`. Ingen nye tokens.
+- `⌘K` — fokuser søkefeltet
+- `↑` / `↓` — bytt mellom rader på tvers av seksjoner (innboks, konsulent-match, forespørsler, topp 10)
+- `Enter` — åpne målet for valgt rad
+- `Esc` — lukk inline AI-svar
 
-**Rute:** `src/App.tsx` under `/design-lab`-treet:
-```tsx
-<Route path="home" element={<Suspense fallback={<LazyFallback />}><DesignLabHome /></Suspense>} />
-```
-Bevisst utelatt fra `DesignLabSidebar` — bare nåbar via direkte URL.
+### Filer som endres / opprettes
 
-**Ny edge function:** `supabase/functions/daily-brief/index.ts`
-- Henter siste 24t fra `crm_activities`, `crm_tasks`, `crm_contacts.signal_changed_at`, `foresporsler`, `outlook_messages_cache`, `markedsradar_snapshots` (ukesdiff), pluss top 10 fra `getHeatResult`.
-- Komprimert JSON → Lovable AI Gateway `google/gemini-2.5-flash`.
-- Systemprompt: *"Du er erfaren salgssjef i STACQ. Returner JSON `{actions: [{title, why_facts: string[], action_keys: ['J'|'M'|'V'|'S'|'F'], target_url}], placeholder_questions: string[]}`. Maks 3 actions. Hver `why_facts` skal inneholde 1–3 kvantifiserte fakta. Norsk bokmål."*
-- Cachet 30 min per bruker (in-memory + React Query `staleTime`).
-- Returnerer også 3 roterende placeholder-spørsmål til "Spør agenten".
+**Endres:**
+- `src/pages/DesignLabHome.tsx` — full omskriving etter v3.1-anatomi.
+- `src/components/AIChatPanel.tsx` — eksporterer `buildSystemPrompt` og `loadCrmContext` (uendret fra v3).
 
-**Tastatur-handler:** Lokal `useEffect` på siden lytter på `J/M/V/S/F` når en anbefaling er fokusert (piltaster opp/ned for å bytte). `⌘K` fokuserer søk.
+**Opprettes:**
+- `src/lib/aiChatContext.ts` — utvunnet kontekst-bygger (delt mellom `AIChatPanel` og Hjem).
+- `src/lib/homeQueueModel.ts` — beregner topp-10 via `getHeatResult`.
+- `supabase/functions/inbox-pulse/index.ts` — innboks-skann + AI-oppsummering.
+- `supabase/functions/consultant-lead-match/index.ts` — AI-matching av ledige konsulenter mot leads.
 
-**Pipeline-puls-data:** Parallelle queries:
-- `foresporsler` count where `status='active'` AND `mottatt_at > now() - 45d`
-- `stacq_ansatte` count where `tilgjengelig_fra <= now() + 30d`
-- `stacq_oppdrag` count where renewal due 0–7d
-- `foresporsler` count where `status='won'` AND `updated_at > yesterday 00:00`
-
-**Eksisterende byggeklosser:**
-- `getHeatResult`, `HEAT_COLORS`, `SIGNAL_COLORS` fra `src/theme.ts`.
-- `outlook-calendar` for Din dag.
-- `chat`-edge function for "Spør agenten".
-- `getEffectiveSignal` for signal-overganger.
-
-**Tilstand `lastSeenAt`:** localStorage per bruker, oppdateres ved `unload`. Brukes til "Nye signaler i går"-vinduet.
+**Slettes:**
+- `supabase/functions/daily-brief/index.ts` (fra forrige iterasjon).
 
 ### Hva som er bevisst utelatt
 
-- Ingen grafer. Ingen "Velkommen"-banner. Ingen markedsradar-widget. Ingen duplisering av Salgsagent-kø. Ingen mobiloptimalisering. Ingen oppgave-opprettelse fra Hjem (bruk Salgsagent eller Oppfølginger).
+- Outlook-kalender, "Din dag", roterende placeholders i søk, statiske grafer, markedsradar-widget, mobiloptimalisering, oppgaveopprettelse fra Hjem.
+- Brief-stil "gjør X fordi Y" — erstattet av faktiske AI-funn (innboks) og deterministisk match (konsulent→lead).
 
