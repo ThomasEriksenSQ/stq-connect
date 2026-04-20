@@ -169,8 +169,10 @@ export function passesQuality(item: RawItem, score: number): boolean {
   const nc = normalizeForCompare(item.primary_company_name);
   if (nc.length >= 3) {
     if (nt === nc) return false;
-    if (nt.startsWith(nc + " ") && nt.length < nc.length + 15) return false;
-    if (nt.endsWith(" " + nc) && nt.length < nc.length + 15) return false;
+    // Tittel = selskapsnavn + max 4 ord ekstra → mest sannsynlig forside/oversikt
+    const extraAfter = nt.startsWith(nc + " ") ? nt.slice(nc.length + 1).split(" ").length : 99;
+    const extraBefore = nt.endsWith(" " + nc) ? nt.slice(0, -nc.length - 1).split(" ").length : 99;
+    if (extraAfter <= 4 || extraBefore <= 4) return false;
   }
   if (item.ingress && item.ingress.trim().length > 0 && item.ingress.trim().length < 20) return false;
   try {
