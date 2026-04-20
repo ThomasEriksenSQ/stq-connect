@@ -1,4 +1,6 @@
 import type { CSSProperties } from "react";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { DesignLabPageShell } from "@/components/designlab/DesignLabPageShell";
 import {
@@ -6,6 +8,7 @@ import {
   DesignLabSectionHeader,
 } from "@/components/designlab/system";
 import { C } from "@/components/designlab/theme";
+import { supabase } from "@/integrations/supabase/client";
 import {
   newsRelative,
   withUtm,
@@ -17,10 +20,14 @@ import {
 
 /* ────────────────────── HEADER-META ────────────────────── */
 
-const TODAY_LABEL = (() => {
-  // Statisk for å unngå at design endres på rerender. Mock-fase.
-  return "tirsdag 21. apr. 2026 · uke 17";
-})();
+function formatTodayLabel(): string {
+  const d = new Date();
+  const days = ["søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag"];
+  const months = ["jan.", "feb.", "mar.", "apr.", "mai", "jun.", "jul.", "aug.", "sep.", "okt.", "nov.", "des."];
+  const onejan = new Date(d.getFullYear(), 0, 1);
+  const week = Math.ceil(((d.getTime() - onejan.getTime()) / 86400000 + onejan.getDay() + 1) / 7);
+  return `${days[d.getDay()]} ${d.getDate()}. ${months[d.getMonth()]} ${d.getFullYear()} · uke ${week}`;
+}
 
 /* ────────────────────── MOCK DATA ─────────────────────────
    1 lead + 6 features + 5 briefs.
