@@ -399,52 +399,19 @@ Deno.serve(async (req: Request) => {
 
     let scored = scoreFiltered(allRaw);
 
-    // 5. Pass 2 — utvid til 30 dager + ta inn cold companies hvis budsjett er igjen
+    // 5. Pass 2 — utvid til 7 dager + ta inn cold companies hvis budsjett er igjen
     let fallbackUsed = false;
     if (scored.length < TARGET_AFTER_PASS_1 && batchesUsed < HARD_CAP_BATCHES) {
       fallbackUsed = true;
-      console.log(`[pass2 start] scored=${scored.length} < target=${TARGET_AFTER_PASS_1}, expanding to month + cold pool`);
-      // Først: kjør warm igjen med bredere tidsvindu
-      await runPass(warmCompanies, "week", "pass2-warm-month");
-      // Så: prøv kalde selskaper med bredere tidsvindu
+      console.log(`[pass2 start] scored=${scored.length} < target=${TARGET_AFTER_PASS_1}, expanding to 7d + cold pool`);
+      await runPass(warmCompanies, "week", PASS2_MAX_AGE_HOURS, "pass2-warm-7d");
       if (batchesUsed < HARD_CAP_BATCHES) {
-        await runPass(coldCompanies, "week", "pass2-cold-month");
+        await runPass(coldCompanies, "week", PASS2_MAX_AGE_HOURS, "pass2-cold-7d");
       }
       scored = scoreFiltered(allRaw);
     }
 
-    // 6. Empty?
-    if (scored.length < MIN_ITEMS_FOR_OK) {
-      await supabase
-        .from("news_daily")
-        .update({ is_current: false })
-        .eq("date", today)
-        .eq("is_current", true);
-
-      await supabase.from("news_daily").insert({
-        date: today,
-        payload: { items: [], generated_at: new Date().toISOString(), generation_version: "v1" },
-        status: "empty",
-        source_count: 0,
-        company_count: companyList.length,
-        warnings: [{ msg: "Ikke nok kvalifiserte saker", count: scored.length }],
-      });
-
-      console.log(JSON.stringify({
-        run_id: runId,
-        status: "empty",
-        batches_called: batchesUsed,
-        items_returned: scored.length,
-        fallback_used: fallbackUsed,
-        heat_tier_distribution: heatTierDistribution,
-        elapsed_ms: Date.now() - startedAt,
-      }));
-
-      return new Response(JSON.stringify({ status: "empty", items: 0 }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // 6. Lagre alltid det vi har — UI bestemmer presentasjon. Ingen "empty"-grense.
 
     // 7. Pick + bilder
     const picked = pickItems(scored);
