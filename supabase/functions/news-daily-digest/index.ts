@@ -82,12 +82,12 @@ async function callPerplexity(
     .map((c) => `- ${c.name}${c.website ? ` (${c.website})` : ""}`)
     .join("\n");
 
-  const timeWindow = recencyFilter === "day" ? "siste 48 timer" : "siste 7 dager";
+  const timeWindow = recencyFilter === "day" ? "siste 7 dager" : "siste 30 dager";
   const prompt = `Søk i norske nyhetskilder etter saker fra ${timeWindow} som omtaler ett eller flere av disse selskapene:
 
 ${list}
 
-Returner ALLE relevante saker du finner. Det er bedre å returnere en sak du er litt usikker på, enn å returnere ingenting. For hver sak: company_name (skriv selskapsnavnet eksakt slik det står i listen over), title (artikkeltittel), ingress (1-2 setninger på norsk), url (full lenke til artikkelen), published_at (ISO 8601 dato).
+Returner ALLE relevante saker du finner — gjerne flere per selskap hvis de finnes. Det er bedre å returnere en sak du er litt usikker på, enn å returnere ingenting. Prioriter ferske saker. For hver sak: company_name (skriv selskapsnavnet eksakt slik det står i listen over), title (artikkeltittel), ingress (1-2 setninger på norsk, minst 30 tegn), url (full lenke til artikkelen), published_at (ISO 8601 dato — KUN reelle datoer fra siste 30 dager).
 
 Hvis du ikke finner noen saker, returner items: [].`;
 
