@@ -97,7 +97,7 @@ Hvis du ikke finner noen saker, returner items: [].`;
       { role: "system", content: "Du er en nyhets-aggregator for et norsk B2B-salgsteam. Returner verifiserbare saker fra norske medier som e24, DN, Finansavisen, TU, Digi, NRK, Aftenposten, Kapital, Hegnar, Shifter." },
       { role: "user", content: prompt },
     ],
-    search_recency_filter: recencyFilter === "day" ? "day" : "week",
+    search_recency_filter: recencyFilter === "day" ? "week" : "month",
     response_format: {
       type: "json_schema",
       json_schema: {
