@@ -114,8 +114,8 @@ async function searchCompany(
   maxAgeDays: number,
 ): Promise<RawItem[]> {
   const name = cleanCompanyName(company.name);
-  // To korte søk slått sammen i én query — dekker både rene navnesøk og kontekst.
-  const query = `"${name}" Norge nyhet kontrakt avtale lansering vekst`;
+  // Sterkere artikkel-signaler: dato, "melder", "leverer" — dropper "kontrakt" som lokker investor-sider
+  const query = `"${name}" Norge nyhet melder leverer signerer lanserer ansetter vekst -aksje -kurs -ticker`;
   const body = {
     query,
     max_results: SEARCH_RESULTS_PER_QUERY,
