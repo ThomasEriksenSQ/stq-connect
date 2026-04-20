@@ -298,7 +298,7 @@ function BriefRow({ item }: { item: NewsBrief }) {
   );
 }
 
-function EmptyState() {
+function EmptyState({ message, hint }: { message?: string; hint?: string }) {
   return (
     <div
       style={{
@@ -308,25 +308,104 @@ function EmptyState() {
       }}
     >
       <p style={{ fontSize: 16, fontWeight: 600, color: C.text, margin: 0 }}>
-        Ingen store nyheter i porteføljen i dag.
+        {message ?? "Ingen store nyheter i porteføljen i dag."}
       </p>
       <p style={{ fontSize: 13, fontWeight: 400, margin: "8px 0 0" }}>
-        Kom tilbake i morgen.
+        {hint ?? "Kom tilbake i morgen."}
       </p>
     </div>
   );
 }
 
+function LoadingSkeleton() {
+  const block = (h: number, w: string | number = "100%"): CSSProperties => ({
+    height: h,
+    width: w,
+    background: C.overlay,
+    borderRadius: 4,
+  });
+  return (
+    <div>
+      <div style={{ ...block(20, 320), marginBottom: 12 }} />
+      <div style={{ ...block(14, 200), marginBottom: 48 }} />
+      <div style={{ display: "flex", gap: 32, marginBottom: 56, flexWrap: "wrap" }}>
+        <div style={{ ...block(293, 520) }} />
+        <div style={{ flex: 1, minWidth: 240 }}>
+          <div style={{ ...block(14, 100), marginBottom: 12 }} />
+          <div style={{ ...block(28, "90%"), marginBottom: 12 }} />
+          <div style={{ ...block(14, "100%"), marginBottom: 6 }} />
+          <div style={{ ...block(14, "80%") }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface NewsDailyRow {
+  status: "ok" | "empty" | "error";
+  payload: { items: NewsItem[] };
+  source_count: number;
+}
+
+async function fetchNewsDaily(): Promise<NewsDailyRow | null> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("news_daily")
+    .select("status, payload, source_count")
+    .eq("date", today)
+    .eq("is_current", true)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as unknown as NewsDailyRow) ?? null;
+}
+
 /* ────────────────────── SIDE ────────────────────── */
 
 export default function DesignLabNews() {
-  const items = MOCK_ITEMS;
+  const todayLabel = formatTodayLabel();
+  const [triggered, setTriggered] = useState(false);
+
+  const query = useQuery({
+    queryKey: ["news-daily", new Date().toISOString().slice(0, 10)],
+    queryFn: fetchNewsDaily,
+    staleTime: 5 * 60_000,
+  });
+
+  // On-demand trigger hvis ingen rad finnes for dagen
+  useEffect(() => {
+    if (query.isLoading || query.isError || triggered) return;
+    if (query.data === null) {
+      setTriggered(true);
+      void supabase.functions
+        .invoke("news-daily-digest", { body: { trigger: "on-demand" } })
+        .then(() => query.refetch());
+    }
+  }, [query, triggered]);
+
+  if (query.isLoading || (query.data === null && triggered)) {
+    return (
+      <DesignLabPageShell activePath="/design-lab/news" title="STACQ Daily" maxWidth={1100}>
+        <LoadingSkeleton />
+      </DesignLabPageShell>
+    );
+  }
+
+  if (query.isError) {
+    return (
+      <DesignLabPageShell activePath="/design-lab/news" title="STACQ Daily" maxWidth={1100}>
+        <EmptyState message="Kunne ikke hente nyheter" hint="Prøv å laste siden på nytt." />
+      </DesignLabPageShell>
+    );
+  }
+
+  const row = query.data;
+  const items: NewsItem[] = row?.payload?.items ?? [];
   const lead = items.find((i): i is NewsLead => i.variant === "lead") ?? null;
   const features = items.filter((i): i is NewsFeature => i.variant === "feature");
   const briefs = items.filter((i): i is NewsBrief => i.variant === "brief");
   const total = items.length;
 
-  const isEmpty = !lead || features.length + briefs.length === 0;
+  const isEmpty = !row || row.status === "empty" || (!lead && features.length + briefs.length === 0);
 
   return (
     <DesignLabPageShell
@@ -355,9 +434,10 @@ export default function DesignLabNews() {
             margin: "8px 0 0",
           }}
         >
-          {TODAY_LABEL} · {total} saker
+          {todayLabel} · {total} {total === 1 ? "sak" : "saker"}
         </p>
       </header>
+
 
       {isEmpty ? (
         <EmptyState />
