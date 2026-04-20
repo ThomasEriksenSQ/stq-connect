@@ -206,18 +206,18 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    // 1. Hent selskaper
+    // 1. Hent selskaper (DB-statuser: prospect, customer, partner, churned)
     const { data: companies, error: cErr } = await supabase
       .from("companies")
       .select("id, name, website, org_number, status")
-      .in("status", ["Potensiell kunde", "Kunde", "active"]);
+      .in("status", ["prospect", "customer"]);
     if (cErr) throw cErr;
     const companyList = (companies ?? []) as CompanyRow[];
 
-    // Map status (CRM bruker 'active' som default — behandle som "Potensiell kunde")
+    // Map status: customer = "Kunde" (vekt 1.2), prospect = "Potensiell kunde" (vekt 0.6)
     const baseWeight = new Map<string, number>();
     for (const c of companyList) {
-      const eff = c.status === "Kunde" ? "Kunde" : "Potensiell kunde";
+      const eff = c.status === "customer" ? "Kunde" : "Potensiell kunde";
       baseWeight.set(c.id, baseWeightFor(eff));
     }
 
