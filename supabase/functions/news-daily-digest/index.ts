@@ -250,9 +250,19 @@ function pickItems(scored: Array<{ item: RawItem; score: number }>): {
   briefs: Array<{ item: RawItem; score: number }>;
 } {
   const sorted = [...scored].sort((a, b) => b.score - a.score);
-  const lead = sorted[0] ?? null;
-  const features = sorted.slice(1, 7);
-  const briefs = sorted.slice(7, 12);
+  // Dedupliser per selskap: maks MAX_PER_COMPANY saker per primary_company_id
+  const perCompany = new Map<string, number>();
+  const balanced: Array<{ item: RawItem; score: number }> = [];
+  for (const s of sorted) {
+    const cnt = perCompany.get(s.item.primary_company_id) ?? 0;
+    if (cnt >= MAX_PER_COMPANY) continue;
+    perCompany.set(s.item.primary_company_id, cnt + 1);
+    balanced.push(s);
+    if (balanced.length >= TARGET_ITEMS) break;
+  }
+  const lead = balanced[0] ?? null;
+  const features = balanced.slice(1, 5); // 4 features
+  const briefs = balanced.slice(5, TARGET_ITEMS); // resten som briefs (opptil 10)
   return { lead, features, briefs };
 }
 
