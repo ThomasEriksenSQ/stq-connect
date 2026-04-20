@@ -53,6 +53,22 @@ export function tierFactor(tier: 1 | 2 | 3): number {
   return 0.55;
 }
 
+// Soft domain filter: kjente domener får boost, ukjente får liten penalty.
+// Tier 1-2 = trygt redaksjonelt; Tier 3 = nøytralt; ukjent (default tier 3) får negativt bidrag.
+export function domainTrustFactor(url: string, knownTier: 1 | 2 | 3): number {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    // Kjent domene fra SOURCE_TIERS gir host !== "" og knownTier reflekterer kvalitet
+    if (knownTier === 1) return 0.20;
+    if (knownTier === 2) return 0.10;
+    // Tier 3 fallback: ukjent eller lavkvalitet — sjekk om host er åpenbart støy
+    if (/(blog|substack|medium\.com|wordpress|whothoughtofit|tumblr)/i.test(host)) return -0.30;
+    return -0.10;
+  } catch {
+    return -0.20;
+  }
+}
+
 export function baseWeightFor(status: string | null): number {
   if (status === "Kunde") return 1.2;
   if (status === "Potensiell kunde") return 0.6;
@@ -79,7 +95,8 @@ export function scoreItem(item: RawItem, ctx: ScoringContext, now = new Date()):
   const recency = recencyFactor(item.published_at, now);
   const tFactor = tierFactor(item.source_tier);
   const tieBreak = keywordTiebreaker(`${item.title} ${item.ingress ?? ""}`);
-  return (base + heat) * recency * tFactor + tieBreak;
+  const domainAdj = domainTrustFactor(item.url, item.source_tier);
+  return (base + heat) * recency * tFactor + tieBreak + domainAdj;
 }
 
 export function dedupAndMerge(items: RawItem[]): RawItem[] {
