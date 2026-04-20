@@ -83,7 +83,7 @@ export function sourceForUrl(url: string): string {
 // Returnerer false bare for åpenbart dårlige domener.
 // Inkluderer aggregatorer (Nordnet, Inderes, Investorprat), aksjeplattformer (Euronext),
 // register-oppslag (Brreg) og lignende ikke-redaksjonelle kilder.
-const NOISE_HOSTS = /(whothoughtofit|tumblr|blogspot|wordpress\.com|substack\.com|medium\.com|reddit\.com|facebook\.com|twitter\.com|x\.com|pinterest|quora\.com|nordnet\.|inderes\.|investorprat\.|mainsights\.|nordic9\.com|virksomhet\.brreg\.no|euronext\.com|trener\.ai|kommunikasjon\.ntb\.no)/i;
+const NOISE_HOSTS = /(whothoughtofit|tumblr|blogspot|wordpress\.com|substack\.com|medium\.com|reddit\.com|facebook\.com|twitter\.com|x\.com|pinterest|quora\.com|nordnet\.|inderes\.|investorprat\.|mainsights\.|nordic9\.com|virksomhet\.brreg\.no|euronext\.com|trener\.ai)/i;
 
 export function isTrustedSource(url: string, _companyHost: string | null): boolean {
   try {
