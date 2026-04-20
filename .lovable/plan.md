@@ -1,53 +1,36 @@
 
 
-## Plan: Skill mellom ansettelses-start og oppdragstilgjengelighet
-
-### Diagnose
-
-I `src/pages/DesignLabKonsulenterAnsatte.tsx`:
-
-- `getStatus` (linje 128–133) markerer en ansatt som **"Kommende"** hvis enten `start_dato` ELLER `tilgjengelig_fra` ligger frem i tid.
-- `getUpcomingDate` (linje 135) returnerer `tilgjengelig_fra` først, så `start_dato`.
-- Start-kolonnen (linje 312–324) viser `Starter {upcomingDate}` når status er "Kommende".
-
-Resultatet for Tom Erik: han startet i 2006, men har `tilgjengelig_fra = 2026-04-24` (fordi han er i oppdrag som slutter da). Systemet feilklassifiserer ham som "Kommende ansatt" og viser "Starter 24.04" i Start-kolonnen — selv om han er en aktiv ansatt med 19 års fartstid.
-
-Dette skjer i `DesignLabKonsulenterAnsatte.tsx`. V1-versjonen (`KonsulenterAnsatte.tsx` linje 100–104) har riktig logikk — kun `start_dato` styrer "Kommende".
+## Plan: Omstrukturer matcher-tabellen på Design Lab Kontakter
 
 ### Endring
+Fil: `src/pages/DesignLabContacts.tsx` (linje ~2073–2226 — matcher-tabellen som vises når en konsulent er valgt i "Tilgjengelig for oppdrag").
 
-Fil: `src/pages/DesignLabKonsulenterAnsatte.tsx`
+### Ny kolonnerekkefølge
+| # | Kolonne | Bredde | Innhold |
+|---|---------|--------|---------|
+| 1 | Navn | minmax(200px,1.5fr) | `lead.name` (ingen sekundærlinje med tittel) |
+| 2 | Match | 120px | Prikk + `Match X/10` + confidence-label |
+| 3 | Varme | 96px | `<DesignLabHeatBadge>` |
+| 4 | Selskap | minmax(160px,1.2fr) | `lead.companyName` / fallback per type |
+| 5 | Stilling | minmax(160px,1.2fr) | `lead.title` (kontakt) / `contactTitle` (forespørsel) / `preferredContactName` (selskap) |
+| 6 | Tags | minmax(140px,1fr) | `lead.matchTags.slice(0, 3).join(", ")` |
+| 7 | Siste akt | 96px (right) | `relativeDate(leadDate)` |
 
-**1. `getStatus` (linje 128–133)** — fjern `tilgjengelig_fra`-grenen:
-```ts
-const getStatus = (row: any) => {
-  if (row.status === "SLUTTET") return "Sluttet";
-  if (row.start_dato && isAfter(new Date(row.start_dato), today)) return "Kommende";
-  return "Aktiv";
-};
+### Detaljer
+- Fjern "Kilde"-kolonnen helt (`lead.matchSources` og linjen med `getMatchSourceLabel`).
+- Flytt tags fra under Kilde til egen Tags-kolonne.
+- Flytt stilling/sekundærtekst (tidligere under Navn) til egen Stilling-kolonne — fjern den fra Navn-cellen.
+- Behold sortering på Match og Varme via `toggleHuntSort` — andre kolonner forblir usorterbare (ingen sort-handler eksisterer for dem i dag).
+- Behold heat-stripen til venstre (`boxShadow: inset 3px 0 0 ${heatColor}`) og signal-pillene "Selskap"/"Forespørsel" ved siden av navnet.
+- Oppdater både header-grid (linje 2081–2119) og rad-grid (linje 2154–2226) med samme `gridTemplateColumns`.
+
+### Ny gridTemplateColumns
 ```
-
-**2. `getUpcomingDate` (linje 135)** — bruk kun `start_dato` for "Kommende"-chip i Start-kolonnen, eller fjern funksjonen helt og forenkle render. Behold den hvis den brukes andre steder (sjekkes), ellers inline:
-```ts
-// Start-kolonnen blir:
-{status === "Kommende" && row.start_dato ? (
-  <DesignLabReadonlyChip active activeColors={UPCOMING_CHIP_COLORS}>
-    Starter {format(new Date(row.start_dato), "dd.MM")}
-  </DesignLabReadonlyChip>
-) : (
-  row.start_dato ? format(new Date(row.start_dato), "dd.MM.yyyy") : "–"
-)}
+"minmax(200px,1.5fr) 120px 96px minmax(160px,1.2fr) minmax(160px,1.2fr) minmax(140px,1fr) 96px"
 ```
-
-### Konsekvens
-
-- Tom Erik vises nå som "Aktiv" med `01.??.2006` i Start-kolonnen og "19 år" i Ansettelse — korrekt.
-- Kun reelt nye ansatte (med fremtidig `start_dato`) markeres som "Kommende" og får "Starter dd.MM"-chippen.
-- `tilgjengelig_fra` brukes ingen steder i denne tabellen lenger — det er en oppdrags-egenskap, ikke en ansettelses-egenskap.
 
 ### Ikke endret
-
-- V1 `KonsulenterAnsatte.tsx` — har allerede riktig logikk.
-- Filtre, sortering, øvrige kolonner.
-- "Tilgjengelig for oppdrag"-baren på andre sider som faktisk bruker `tilgjengelig_fra` til riktig formål.
+- Logikk for matching, sortering, valg, `handleMatchLeadSelect`.
+- Standard kontakt-tabellen (når ingen konsulent er valgt).
+- "Tilgjengelig for oppdrag"-baren og filterraden over.
 
