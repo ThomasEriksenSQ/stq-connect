@@ -73,7 +73,7 @@ const INSIGHT_TYPE_LABEL: Record<InboxInsight["type"], string> = {
   follow_up: "Oppfølging",
 };
 
-/* ─── Section primitive ─── */
+/* ─── Section primitives (table-style, à la DesignLabContacts) ─── */
 
 function Section({ children }: { children: React.ReactNode }) {
   return <div style={{ borderBottom: `1px solid ${C.borderLight}` }}>{children}</div>;
@@ -91,7 +91,7 @@ function SectionHeader({
   return (
     <div
       className="flex items-center justify-between"
-      style={{ padding: "14px 24px 8px" }}
+      style={{ padding: "16px 16px 6px" }}
     >
       <div className="flex items-baseline gap-2">
         <span style={{ fontSize: 12, fontWeight: 600, color: C.text, letterSpacing: "0.01em" }}>
@@ -106,6 +106,52 @@ function SectionHeader({
   );
 }
 
+function ColHeader({
+  cols,
+  labels,
+}: {
+  cols: string;
+  labels: (string | { label: string; align?: "left" | "right" })[];
+}) {
+  return (
+    <div
+      className="sticky top-0 z-10"
+      style={{ background: C.surfaceAlt, borderBottom: `1px solid ${C.border}` }}
+    >
+      <div
+        className="grid items-center"
+        style={{
+          gridTemplateColumns: cols,
+          height: 32,
+          paddingLeft: 16,
+          paddingRight: 16,
+          gap: 12,
+        }}
+      >
+        {labels.map((l, i) => {
+          const label = typeof l === "string" ? l : l.label;
+          const align = typeof l === "string" ? "left" : l.align ?? "left";
+          return (
+            <span
+              key={i}
+              className={align === "right" ? "text-right" : ""}
+              style={{
+                fontSize: 11,
+                fontWeight: 500,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: C.textMuted,
+              }}
+            >
+              {label}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function Dot({ color }: { color: string }) {
   return (
     <span
@@ -114,16 +160,20 @@ function Dot({ color }: { color: string }) {
   );
 }
 
-function Row({
+function TableRow({
+  cols,
   children,
   onClick,
   focused,
   onMouseEnter,
+  accentColor,
 }: {
+  cols: string;
   children: React.ReactNode;
   onClick?: () => void;
   focused?: boolean;
   onMouseEnter?: () => void;
+  accentColor?: string;
 }) {
   return (
     <div
@@ -137,13 +187,17 @@ function Row({
           onClick();
         }
       }}
-      className="group flex items-center gap-3 transition-colors"
+      className="group grid items-center transition-colors"
       style={{
-        minHeight: 30,
-        padding: "0 24px",
+        gridTemplateColumns: cols,
+        minHeight: 36,
+        paddingLeft: 16,
+        paddingRight: 16,
+        gap: 12,
         cursor: onClick ? "pointer" : "default",
         background: focused ? C.hoverBg : "transparent",
-        borderLeft: focused ? `2px solid ${C.accent}` : "2px solid transparent",
+        borderBottom: `1px solid ${C.borderLight}`,
+        boxShadow: accentColor ? `inset 3px 0 0 ${accentColor}` : undefined,
       }}
       onMouseLeave={(e) => {
         if (!focused) (e.currentTarget as HTMLDivElement).style.background = "transparent";
@@ -159,7 +213,7 @@ function Row({
 
 function EmptyText({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ padding: "12px 24px 16px", fontSize: 12, color: C.textFaint }}>{children}</div>
+    <div style={{ padding: "16px", fontSize: 13, color: C.textFaint }}>{children}</div>
   );
 }
 
