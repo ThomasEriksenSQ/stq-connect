@@ -16,10 +16,10 @@ import {
 } from "./scoring.ts";
 import { resolveAndMirrorImage } from "./images.ts";
 
-const HARD_CAP_BATCHES = 16;
-const BATCH_SIZE = 20;
-const PARALLEL_BATCHES = 3;
-const MIN_ITEMS_FOR_OK = 6;
+const HARD_CAP_BATCHES = 24;
+const BATCH_SIZE = 8;
+const PARALLEL_BATCHES = 4;
+const MIN_ITEMS_FOR_OK = 3;
 const TARGET_AFTER_PASS_1 = 12;
 const FETCH_CHUNK = 200; // Supabase .in() URL-lengde-grense
 
@@ -77,24 +77,25 @@ async function callPerplexity(
   recencyFilter: "day" | "week",
 ): Promise<RawItem[]> {
   const list = companies
-    .map((c) => `- ${c.name}${c.website ? ` (${c.website})` : ""}${c.org_number ? ` [org ${c.org_number}]` : ""}`)
+    .map((c) => `- ${c.name}${c.website ? ` (${c.website})` : ""}`)
     .join("\n");
 
-  const prompt = `Finn nylige norske nyhetsartikler (siste ${recencyFilter === "day" ? "24 timer" : "uke"}) om disse selskapene. Returner KUN saker som eksplisitt nevner selskapet ved navn, fra norske nyhetskilder (e24.no, dn.no, finansavisen.no, tu.no, digi.no, nrk.no, aftenposten.no, kapital.no, hegnar.no, shifter.no).
+  const timeWindow = recencyFilter === "day" ? "siste 7 dager" : "siste 30 dager";
+  const prompt = `Søk i norske nyhetskilder etter saker fra ${timeWindow} som omtaler ett eller flere av disse selskapene:
 
-Selskaper:
 ${list}
 
-For hver sak, oppgi: company_name (eksakt fra listen), title, ingress (1-2 setninger på norsk), url (full URL), published_at (ISO 8601).`;
+Returner ALLE relevante saker du finner. Det er bedre å returnere en sak du er litt usikker på, enn å returnere ingenting. For hver sak: company_name (skriv selskapsnavnet eksakt slik det står i listen over), title (artikkeltittel), ingress (1-2 setninger på norsk), url (full lenke til artikkelen), published_at (ISO 8601 dato).
+
+Hvis du ikke finner noen saker, returner items: [].`;
 
   const body = {
     model: "sonar",
     messages: [
-      { role: "system", content: "Du er en presis nyhets-aggregator for B2B-salgsteam. Returner kun verifiserbare saker fra norske kilder." },
+      { role: "system", content: "Du er en nyhets-aggregator for et norsk B2B-salgsteam. Returner verifiserbare saker fra norske medier som e24, DN, Finansavisen, TU, Digi, NRK, Aftenposten, Kapital, Hegnar, Shifter." },
       { role: "user", content: prompt },
     ],
-    search_recency_filter: recencyFilter,
-    search_domain_filter: ["e24.no", "dn.no", "finansavisen.no", "tu.no", "digi.no", "nrk.no", "aftenposten.no", "kapital.no", "hegnar.no", "shifter.no"],
+    search_recency_filter: recencyFilter === "day" ? "week" : "month",
     response_format: {
       type: "json_schema",
       json_schema: {
@@ -140,22 +141,61 @@ For hver sak, oppgi: company_name (eksakt fra listen), title, ingress (1-2 setni
       }
       const data = await res.json();
       const content = data.choices?.[0]?.message?.content;
-      if (!content) return [];
-      const parsed = JSON.parse(content);
-      const items = parsed.items ?? [];
+      if (!content) {
+        console.log(`[perplexity] no content. keys=${Object.keys(data).join(",")} choices=${data.choices?.length ?? 0}`);
+        return [];
+      }
+      let parsed: { items?: unknown[] } = {};
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+        console.log(`[perplexity] JSON parse failed. content_sample=${content.slice(0, 300)}`);
+        return [];
+      }
+      const items = (parsed.items ?? []) as Array<Record<string, unknown>>;
+      console.log(`[perplexity] returned items=${items.length} for batch_size=${companies.length} recency=${recencyFilter}`);
+      if (items.length > 0) {
+        console.log(`[perplexity] sample=${JSON.stringify(items[0]).slice(0, 250)}`);
+      }
+
+      // Bygg fuzzy match: lowercase + uten suffikser (AS, ASA, AB)
+      const norm = (s: string) => s.toLowerCase().replace(/\b(as|asa|ab|sa|inc|ltd|gmbh|group|holding|holdings)\b/g, "").replace(/[^a-z0-9æøå ]/g, "").replace(/\s+/g, " ").trim();
+      const companyByNorm = new Map<string, CompanyRow>();
+      for (const c of companies) companyByNorm.set(norm(c.name), c);
 
       const out: RawItem[] = [];
+      let unmatched = 0;
       for (const it of items) {
-        const company = companies.find((c) => c.name.toLowerCase() === String(it.company_name ?? "").toLowerCase());
-        if (!company) continue;
-        if (!it.url || !it.title) continue;
+        const rawName = String(it.company_name ?? "");
+        let company = companies.find((c) => c.name.toLowerCase() === rawName.toLowerCase());
+        if (!company) {
+          // Fuzzy: norm match
+          company = companyByNorm.get(norm(rawName));
+        }
+        if (!company) {
+          // Fuzzy: containment
+          const nName = norm(rawName);
+          if (nName.length >= 3) {
+            company = companies.find((c) => {
+              const nc = norm(c.name);
+              return nc.includes(nName) || nName.includes(nc);
+            });
+          }
+        }
+        if (!company) {
+          unmatched++;
+          continue;
+        }
+        const url = String(it.url ?? "");
+        const title = String(it.title ?? "");
+        if (!url || !title) continue;
         out.push({
-          url: it.url,
-          title: it.title,
-          ingress: it.ingress ?? null,
-          source: sourceForUrl(it.url),
-          source_tier: tierForUrl(it.url),
-          published_at: it.published_at ?? new Date().toISOString(),
+          url,
+          title,
+          ingress: it.ingress ? String(it.ingress) : null,
+          source: sourceForUrl(url),
+          source_tier: tierForUrl(url),
+          published_at: it.published_at ? String(it.published_at) : new Date().toISOString(),
           primary_company_id: company.id,
           primary_company_name: company.name,
           also_matched_company_ids: [],
@@ -163,6 +203,7 @@ For hver sak, oppgi: company_name (eksakt fra listen), title, ingress (1-2 setni
           image_url: null,
         });
       }
+      if (unmatched > 0) console.log(`[perplexity] unmatched_company_names=${unmatched}/${items.length}`);
       return out;
     } catch (err) {
       lastError = err;
@@ -285,17 +326,22 @@ Deno.serve(async (req: Request) => {
       return ta - tb;
     });
 
-    // 4. Pass 1 — siste 24t (parallell i grupper)
+    // Pass 1 prioriterer Tier 1-3 (varme) — Tier 4 spares til evt. fallback
+    const warmCompanies = sortedCompanies.filter((c) => (heatTier.get(c.id) ?? 4) <= 3);
+    const coldCompanies = sortedCompanies.filter((c) => (heatTier.get(c.id) ?? 4) === 4);
+    console.log(`[heat split] warm(T1-3)=${warmCompanies.length} cold(T4)=${coldCompanies.length}`);
+
+    // 4. Pass 1 — siste 7 dager på varme selskaper (parallell)
     let batchesUsed = 0;
     const allRaw: RawItem[] = [];
     let perplexityHits = 0;
-    async function runPass(recency: "day" | "week", label: string) {
-      for (let i = 0; i < sortedCompanies.length && batchesUsed < HARD_CAP_BATCHES; i += BATCH_SIZE * PARALLEL_BATCHES) {
+    async function runPass(pool: CompanyRow[], recency: "day" | "week", label: string) {
+      for (let i = 0; i < pool.length && batchesUsed < HARD_CAP_BATCHES; i += BATCH_SIZE * PARALLEL_BATCHES) {
         const slots: Promise<RawItem[]>[] = [];
         for (let j = 0; j < PARALLEL_BATCHES && batchesUsed < HARD_CAP_BATCHES; j++) {
           const start = i + j * BATCH_SIZE;
-          if (start >= sortedCompanies.length) break;
-          const batch = sortedCompanies.slice(start, start + BATCH_SIZE);
+          if (start >= pool.length) break;
+          const batch = pool.slice(start, start + BATCH_SIZE);
           slots.push(callPerplexity(PERPLEXITY_API_KEY, batch, recency));
           batchesUsed++;
         }
@@ -307,7 +353,7 @@ Deno.serve(async (req: Request) => {
       }
       console.log(`[${label} done] batches=${batchesUsed} hits=${perplexityHits} raw=${allRaw.length}`);
     }
-    await runPass("day", "pass1");
+    await runPass(warmCompanies, "day", "pass1-warm");
 
     const ctx: ScoringContext = { baseWeight, heatTier };
     // Bygg aliaser: fullt navn + første ord (hvis ≥4 tegn og ikke generisk)
@@ -338,12 +384,17 @@ Deno.serve(async (req: Request) => {
 
     let scored = scoreFiltered(allRaw);
 
-    // 5. Pass 2 — utvid til siste uke hvis < target
+    // 5. Pass 2 — utvid til 30 dager + ta inn cold companies hvis budsjett er igjen
     let fallbackUsed = false;
     if (scored.length < TARGET_AFTER_PASS_1 && batchesUsed < HARD_CAP_BATCHES) {
       fallbackUsed = true;
-      console.log(`[pass2 start] scored=${scored.length} < target=${TARGET_AFTER_PASS_1}, expanding to week`);
-      await runPass("week", "pass2");
+      console.log(`[pass2 start] scored=${scored.length} < target=${TARGET_AFTER_PASS_1}, expanding to month + cold pool`);
+      // Først: kjør warm igjen med bredere tidsvindu
+      await runPass(warmCompanies, "week", "pass2-warm-month");
+      // Så: prøv kalde selskaper med bredere tidsvindu
+      if (batchesUsed < HARD_CAP_BATCHES) {
+        await runPass(coldCompanies, "week", "pass2-cold-month");
+      }
       scored = scoreFiltered(allRaw);
     }
 

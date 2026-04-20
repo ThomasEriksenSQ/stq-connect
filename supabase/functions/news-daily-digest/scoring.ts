@@ -119,11 +119,14 @@ export function passesQuality(item: RawItem, score: number): boolean {
 }
 
 // Eksakt navn/alias-match i tittel eller ingress
+// Krev word-boundary match (ikke substring) for å unngå "Hornet" → "ved hornet"
 export function matchesCompanyName(item: RawItem, aliases: string[]): boolean {
-  const haystack = `${item.title} ${item.ingress ?? ""}`.toLowerCase();
+  const haystack = `${item.title} ${item.ingress ?? ""}`;
   return aliases.some((a) => {
-    const trimmed = a.trim().toLowerCase();
+    const trimmed = a.trim();
     if (trimmed.length < 3) return false;
-    return haystack.includes(trimmed);
+    const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`(^|[^\\p{L}0-9])${escaped}([^\\p{L}0-9]|$)`, "iu");
+    return re.test(haystack);
   });
 }
