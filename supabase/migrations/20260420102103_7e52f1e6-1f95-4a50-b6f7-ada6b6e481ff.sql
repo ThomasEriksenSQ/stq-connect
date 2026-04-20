@@ -1,0 +1,1 @@
+UPDATE public.stacq_oppdrag SET status = 'Aktiv' WHERE id = 11 AND slutt_dato >= CURRENT_DATE;
