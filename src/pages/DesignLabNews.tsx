@@ -369,12 +369,13 @@ function MetaRow({ item, withReadMore = true }: { item: NewsItem; withReadMore?:
 
 function LeadStory({ item }: { item: NewsLead }) {
   return (
-    <article style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <article className="news-lead">
       <a
         href={trackedHref(item.url)}
         target="_blank"
         rel="noopener noreferrer"
-        style={{ display: "block", textDecoration: "none" }}
+        className="news-lead-media"
+        style={{ display: "block", textDecoration: "none", flexShrink: 0 }}
       >
         <DesignLabMediaFrame
           src={ensureImage(item)}
@@ -382,7 +383,7 @@ function LeadStory({ item }: { item: NewsLead }) {
           ratio="16:9"
         />
       </a>
-      <div>
+      <div className="news-lead-text" style={{ minWidth: 0 }}>
         <Kicker item={item} />
         <h3
           style={{
