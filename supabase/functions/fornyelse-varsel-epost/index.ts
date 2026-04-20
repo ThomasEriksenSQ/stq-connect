@@ -120,9 +120,9 @@ Deno.serve(async (req) => {
       return { ...o, daysUntilForny: days };
     });
 
-    const kritisk = enriched.filter((o) => o.daysUntilForny <= 7);
-    const snart = enriched.filter((o) => o.daysUntilForny > 7 && o.daysUntilForny <= 30);
-    const planlegg = enriched.filter((o) => o.daysUntilForny > 30);
+    const kritisk = enriched.filter((o) => !o.lopende_30_dager && o.daysUntilForny <= 7);
+    const snart = enriched.filter((o) => !o.lopende_30_dager && o.daysUntilForny > 7 && o.daysUntilForny <= 30);
+    const planlegg = enriched.filter((o) => o.lopende_30_dager || o.daysUntilForny > 30);
 
     if (enriched.length === 0 && utenOppdrag.length === 0) {
       return new Response(JSON.stringify({ message: "Ingen fornyelser eller konsulenter uten oppdrag" }), {
