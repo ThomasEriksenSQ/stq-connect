@@ -154,14 +154,17 @@ serve(async (req) => {
     try {
       const accessToken = await refreshTokenIfNeeded(supabase, tokenRow);
 
-      // Use $search for both directions — $filter on from/emailAddress/address
+      // Use $search for from/to/cc — $filter on from/emailAddress/address
       // causes InefficientFilter when combined with $orderby
-      const fromUrl = `${GRAPH_BASE}/me/messages?$search="${encodeURIComponent(`from:${emailAddr}`)}"&$top=${top}&$select=id,subject,from,toRecipients,receivedDateTime,bodyPreview,body,isRead`;
-      const toUrl = `${GRAPH_BASE}/me/messages?$search="${encodeURIComponent(`to:${emailAddr}`)}"&$top=${top}&$select=id,subject,from,toRecipients,receivedDateTime,bodyPreview,body,isRead`;
+      const select = "id,subject,from,toRecipients,ccRecipients,receivedDateTime,bodyPreview,body,isRead";
+      const fromUrl = `${GRAPH_BASE}/me/messages?$search="${encodeURIComponent(`from:${emailAddr}`)}"&$top=${top}&$select=${select}`;
+      const toUrl = `${GRAPH_BASE}/me/messages?$search="${encodeURIComponent(`to:${emailAddr}`)}"&$top=${top}&$select=${select}`;
+      const ccUrl = `${GRAPH_BASE}/me/messages?$search="${encodeURIComponent(`cc:${emailAddr}`)}"&$top=${top}&$select=${select}`;
 
-      const [fromRes, toRes] = await Promise.all([
+      const [fromRes, toRes, ccRes] = await Promise.all([
         fetch(fromUrl, { headers: { Authorization: `Bearer ${accessToken}` } }),
         fetch(toUrl, { headers: { Authorization: `Bearer ${accessToken}` } }),
+        fetch(ccUrl, { headers: { Authorization: `Bearer ${accessToken}` } }),
       ]);
 
       const messages: any[] = [];
@@ -170,7 +173,7 @@ serve(async (req) => {
         const d = await fromRes.json();
         messages.push(...(d.value || []));
       } else {
-        console.error(`Graph from-filter error for ${tokenRow.user_id}:`, await fromRes.text());
+        console.error(`Graph from-search error for ${tokenRow.user_id}:`, await fromRes.text());
       }
 
       if (toRes.ok) {
@@ -178,6 +181,13 @@ serve(async (req) => {
         messages.push(...(d.value || []));
       } else {
         console.error(`Graph to-search error for ${tokenRow.user_id}:`, await toRes.text());
+      }
+
+      if (ccRes.ok) {
+        const d = await ccRes.json();
+        messages.push(...(d.value || []));
+      } else {
+        console.error(`Graph cc-search error for ${tokenRow.user_id}:`, await ccRes.text());
       }
 
       // Deduplicate within this account by message id
