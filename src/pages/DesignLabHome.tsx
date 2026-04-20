@@ -91,7 +91,7 @@ function SectionHeader({
   return (
     <div
       className="flex items-center justify-between"
-      style={{ padding: "16px 16px 6px" }}
+      style={{ padding: "16px 24px 6px" }}
     >
       <div className="flex items-baseline gap-2">
         <span style={{ fontSize: 12, fontWeight: 600, color: C.text, letterSpacing: "0.01em" }}>
@@ -123,8 +123,8 @@ function ColHeader({
         style={{
           gridTemplateColumns: cols,
           height: 32,
-          paddingLeft: 16,
-          paddingRight: 16,
+          paddingLeft: 24,
+          paddingRight: 24,
           gap: 12,
         }}
       >
@@ -191,8 +191,8 @@ function TableRow({
       style={{
         gridTemplateColumns: cols,
         minHeight: 36,
-        paddingLeft: 16,
-        paddingRight: 16,
+        paddingLeft: 24,
+        paddingRight: 24,
         gap: 12,
         cursor: onClick ? "pointer" : "default",
         background: focused ? C.hoverBg : "transparent",
