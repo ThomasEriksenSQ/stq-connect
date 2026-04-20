@@ -338,22 +338,12 @@ Deno.serve(async (req: Request) => {
 
     let scored = scoreFiltered(allRaw);
 
-    // 5. Pass 2 — utvid til siste uke hvis < 12
+    // 5. Pass 2 — utvid til siste uke hvis < target
     let fallbackUsed = false;
     if (scored.length < TARGET_AFTER_PASS_1 && batchesUsed < HARD_CAP_BATCHES) {
       fallbackUsed = true;
       console.log(`[pass2 start] scored=${scored.length} < target=${TARGET_AFTER_PASS_1}, expanding to week`);
-      for (let i = 0; i < sortedCompanies.length && batchesUsed < HARD_CAP_BATCHES; i += BATCH_SIZE) {
-        const batch = sortedCompanies.slice(i, i + BATCH_SIZE);
-        const items = await callPerplexity(PERPLEXITY_API_KEY, batch, "week");
-        perplexityHits += items.length;
-        allRaw.push(...items);
-        batchesUsed++;
-        if (items.length > 0) {
-          console.log(`[batch ${batchesUsed} week] ${items.length} items`);
-        }
-      }
-      console.log(`[pass2 done] total_perplexity_hits=${perplexityHits} raw=${allRaw.length}`);
+      await runPass("week", "pass2");
       scored = scoreFiltered(allRaw);
     }
 
