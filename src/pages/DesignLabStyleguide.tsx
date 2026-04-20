@@ -15,6 +15,7 @@ import {
   DesignLabFilterRow,
   DesignLabGhostAction,
   DesignLabInlineTextAction,
+  DesignLabMediaFrame,
   DesignLabModalActions,
   DesignLabModalChipGroup,
   DesignLabModalContent,
@@ -27,6 +28,7 @@ import {
   DesignLabPrimaryAction,
   DesignLabReadonlyChip,
   DesignLabSecondaryAction,
+  DesignLabSectionHeader,
   DesignLabSignalBadge,
   DesignLabStatusBadge,
   DesignLabTextField,
@@ -240,6 +242,34 @@ export default function DesignLabStyleguide() {
                 </DesignLabModalActions>
               </DesignLabModalForm>
             </DesignLabModalPreviewSurface>
+          </ExampleCard>
+
+          <ExampleCard title="Seksjonsheader">
+            <div className="space-y-6">
+              <DesignLabSectionHeader title="Mer fra porteføljen" meta="6 saker" />
+              <DesignLabSectionHeader
+                title="Korte notiser"
+                meta="5 saker"
+                right={<DesignLabInlineTextAction>Se alt</DesignLabInlineTextAction>}
+              />
+            </div>
+          </ExampleCard>
+
+          <ExampleCard title="Mediaramme">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <p style={{ fontSize: 11, fontWeight: 500, color: C.textMuted, marginBottom: 8 }}>16:9</p>
+                <DesignLabMediaFrame ratio="16:9" fallback="Bilde mangler" />
+              </div>
+              <div>
+                <p style={{ fontSize: 11, fontWeight: 500, color: C.textMuted, marginBottom: 8 }}>4:3</p>
+                <DesignLabMediaFrame ratio="4:3" fallback="Bilde mangler" />
+              </div>
+              <div>
+                <p style={{ fontSize: 11, fontWeight: 500, color: C.textMuted, marginBottom: 8 }}>1:1</p>
+                <DesignLabMediaFrame ratio="1:1" fallback="Bilde mangler" />
+              </div>
+            </div>
           </ExampleCard>
         </div>
       </main>

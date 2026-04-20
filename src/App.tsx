@@ -54,6 +54,7 @@ const DesignLabInnstillinger = lazy(() =>
   import("./pages/Innstillinger").then((m) => ({ default: m.InnstillingerV2 }))
 );
 const DesignLabHome = lazy(() => import("./pages/DesignLabHome"));
+const DesignLabNews = lazy(() => import("./pages/DesignLabNews"));
 
 const queryClient = new QueryClient();
 
@@ -334,6 +335,14 @@ function AppRouter() {
             element={
               <Suspense fallback={<LazyFallback />}>
                 <DesignLabHome />
+              </Suspense>
+            }
+          />
+          <Route
+            path="news"
+            element={
+              <Suspense fallback={<LazyFallback />}>
+                <DesignLabNews />
               </Suspense>
             }
           />
