@@ -73,7 +73,7 @@ const INSIGHT_TYPE_LABEL: Record<InboxInsight["type"], string> = {
   follow_up: "Oppfølging",
 };
 
-/* ─── Section primitive ─── */
+/* ─── Section primitives (table-style, à la DesignLabContacts) ─── */
 
 function Section({ children }: { children: React.ReactNode }) {
   return <div style={{ borderBottom: `1px solid ${C.borderLight}` }}>{children}</div>;
@@ -91,7 +91,7 @@ function SectionHeader({
   return (
     <div
       className="flex items-center justify-between"
-      style={{ padding: "14px 24px 8px" }}
+      style={{ padding: "16px 16px 6px" }}
     >
       <div className="flex items-baseline gap-2">
         <span style={{ fontSize: 12, fontWeight: 600, color: C.text, letterSpacing: "0.01em" }}>
@@ -106,6 +106,52 @@ function SectionHeader({
   );
 }
 
+function ColHeader({
+  cols,
+  labels,
+}: {
+  cols: string;
+  labels: (string | { label: string; align?: "left" | "right" })[];
+}) {
+  return (
+    <div
+      className="sticky top-0 z-10"
+      style={{ background: C.surfaceAlt, borderBottom: `1px solid ${C.border}` }}
+    >
+      <div
+        className="grid items-center"
+        style={{
+          gridTemplateColumns: cols,
+          height: 32,
+          paddingLeft: 16,
+          paddingRight: 16,
+          gap: 12,
+        }}
+      >
+        {labels.map((l, i) => {
+          const label = typeof l === "string" ? l : l.label;
+          const align = typeof l === "string" ? "left" : l.align ?? "left";
+          return (
+            <span
+              key={i}
+              className={align === "right" ? "text-right" : ""}
+              style={{
+                fontSize: 11,
+                fontWeight: 500,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: C.textMuted,
+              }}
+            >
+              {label}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function Dot({ color }: { color: string }) {
   return (
     <span
@@ -114,16 +160,20 @@ function Dot({ color }: { color: string }) {
   );
 }
 
-function Row({
+function TableRow({
+  cols,
   children,
   onClick,
   focused,
   onMouseEnter,
+  accentColor,
 }: {
+  cols: string;
   children: React.ReactNode;
   onClick?: () => void;
   focused?: boolean;
   onMouseEnter?: () => void;
+  accentColor?: string;
 }) {
   return (
     <div
@@ -137,13 +187,17 @@ function Row({
           onClick();
         }
       }}
-      className="group flex items-center gap-3 transition-colors"
+      className="group grid items-center transition-colors"
       style={{
-        minHeight: 30,
-        padding: "0 24px",
+        gridTemplateColumns: cols,
+        minHeight: 36,
+        paddingLeft: 16,
+        paddingRight: 16,
+        gap: 12,
         cursor: onClick ? "pointer" : "default",
         background: focused ? C.hoverBg : "transparent",
-        borderLeft: focused ? `2px solid ${C.accent}` : "2px solid transparent",
+        borderBottom: `1px solid ${C.borderLight}`,
+        boxShadow: accentColor ? `inset 3px 0 0 ${accentColor}` : undefined,
       }}
       onMouseLeave={(e) => {
         if (!focused) (e.currentTarget as HTMLDivElement).style.background = "transparent";
@@ -159,7 +213,7 @@ function Row({
 
 function EmptyText({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ padding: "12px 24px 16px", fontSize: 12, color: C.textFaint }}>{children}</div>
+    <div style={{ padding: "16px", fontSize: 13, color: C.textFaint }}>{children}</div>
   );
 }
 
@@ -575,12 +629,19 @@ ${JSON.stringify(context)}`;
     return queue.find((l) => l.contactId === contactId);
   };
 
+  /* Column templates — same family of widths as DesignLabContacts */
+  const COLS_INBOX = "12px 110px minmax(280px,1fr) 200px 16px";
+  const COLS_MATCH = "minmax(160px,1.2fr) 96px minmax(140px,1fr) 16px minmax(200px,1.5fr) 60px 110px 16px";
+  const COLS_FORESP = "80px minmax(200px,1.4fr) minmax(220px,1.6fr) 140px 16px";
+  const COLS_LEADS = "84px minmax(180px,1.4fr) minmax(180px,1.4fr) minmax(220px,2fr) 110px 16px";
+
   return (
     <DesignLabPageShell
       activePath="/design-lab/home"
       title="Hjem · Morgenkø"
-      maxWidth={1180}
+      maxWidth={null}
       contentStyle={{ padding: "0" }}
+      contentClassName=""
     >
       <div style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif" }}>
         {/* VELKOMST */}
@@ -675,27 +736,33 @@ ${JSON.stringify(context)}`;
           ) : !inbox || inbox.insights.length === 0 ? (
             <EmptyText>Ingen handlingsverdige e-poster funnet.</EmptyText>
           ) : (
-            <div style={{ paddingBottom: 8 }}>
+            <>
+              <ColHeader
+                cols={COLS_INBOX}
+                labels={["", "Type · Alder", "Oppsummering", "Kontakt", ""]}
+              />
               {inbox.insights.map((ins, idx) => {
                 const focusedRow = isFocused({ kind: "inbox", idx });
+                const dotColor =
+                  ins.type === "unanswered" ? C.danger : ins.type === "buried" ? C.warning : C.info;
                 return (
-                  <Row
+                  <TableRow
                     key={`inbox-${idx}`}
+                    cols={COLS_INBOX}
                     focused={focusedRow}
                     onMouseEnter={() => setFocused({ kind: "inbox", idx })}
                     onClick={() => {
                       if (ins.web_link) window.open(ins.web_link, "_blank");
                     }}
                   >
-                    <Dot color={ins.type === "unanswered" ? C.danger : ins.type === "buried" ? C.warning : C.info} />
-                    <span style={{ fontSize: 11, color: C.textFaint, width: 92, flexShrink: 0 }}>
+                    <Dot color={dotColor} />
+                    <span style={{ fontSize: 11, color: C.textFaint, whiteSpace: "nowrap" }}>
                       {INSIGHT_TYPE_LABEL[ins.type]} · {ins.age_days}d
                     </span>
                     <span
                       style={{
                         fontSize: 13,
                         color: C.text,
-                        flex: 1,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
@@ -703,16 +770,22 @@ ${JSON.stringify(context)}`;
                     >
                       {ins.summary}
                     </span>
-                    {ins.contact_email ? (
-                      <span style={{ fontSize: 11, color: C.textFaint, flexShrink: 0 }}>
-                        {ins.contact_email}
-                      </span>
-                    ) : null}
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color: C.textFaint,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {ins.contact_email || ""}
+                    </span>
                     <ArrowRight size={12} className="opacity-0 group-hover:opacity-100" style={{ color: C.textFaint }} />
-                  </Row>
+                  </TableRow>
                 );
               })}
-            </div>
+            </>
           )}
         </Section>
 
@@ -733,7 +806,11 @@ ${JSON.stringify(context)}`;
           ) : matches.length === 0 ? (
             <EmptyText>Ingen leads matchet (henter forslag …).</EmptyText>
           ) : (
-            <div style={{ paddingBottom: 8 }}>
+            <>
+              <ColHeader
+                cols={COLS_MATCH}
+                labels={["Konsulent", "Ledig", "Kompetanse", "", "Beste lead", "Match", "Signal", ""]}
+              />
               {matches.map((m, idx) => {
                 const consultant = availableConsultants.find((c) => c.id === m.consultant_id);
                 if (!consultant) return null;
@@ -744,55 +821,51 @@ ${JSON.stringify(context)}`;
                   : "—";
 
                 return (
-                  <Row
+                  <TableRow
                     key={`match-${idx}`}
+                    cols={COLS_MATCH}
                     focused={focusedRow}
                     onMouseEnter={() => setFocused({ kind: "match", idx })}
                     onClick={() => {
                       if (lead) navigate(`/design-lab/kontakter/${lead.contactId}`);
                     }}
                   >
-                    <span style={{ fontSize: 13, color: C.text, fontWeight: 500, width: 150, flexShrink: 0 }}>
+                    <span style={{ fontSize: 13, color: C.text, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {consultant.navn}
                     </span>
-                    <span style={{ fontSize: 11, color: C.textMuted, width: 78, flexShrink: 0 }}>
-                      ledig {dateLabel}
+                    <span style={{ fontSize: 11, color: C.textMuted, whiteSpace: "nowrap" }}>
+                      {dateLabel}
                     </span>
-                    <span style={{ fontSize: 11, color: C.textFaint, width: 130, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 11, color: C.textFaint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {(consultant.kompetanse || []).slice(0, 3).join(" · ") || "—"}
                     </span>
-                    <ArrowRight size={11} style={{ color: C.textGhost, flexShrink: 0 }} />
+                    <ArrowRight size={11} style={{ color: C.textGhost }} />
                     {lead ? (
-                      <>
-                        <span style={{ fontSize: 13, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {lead.contactName} <span style={{ color: C.textFaint }}>· {lead.companyName}</span>
-                        </span>
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 600,
-                            color: m.score >= 80 ? C.success : m.score >= 60 ? C.warning : C.textMuted,
-                            flexShrink: 0,
-                          }}
-                        >
-                          {m.score}%
-                        </span>
-                        <DesignLabSignalBadge signal={lead.signal} size="sm" />
-                      </>
+                      <span style={{ fontSize: 13, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {lead.contactName} <span style={{ color: C.textFaint }}>· {lead.companyName}</span>
+                      </span>
                     ) : (
-                      <span style={{ fontSize: 12, color: C.textFaint, flex: 1 }}>
+                      <span style={{ fontSize: 12, color: C.textFaint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {m.reasoning || "Ingen passende lead nå."}
                       </span>
                     )}
-                  </Row>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: m.score >= 80 ? C.success : m.score >= 60 ? C.warning : C.textMuted,
+                      }}
+                    >
+                      {m.score}%
+                    </span>
+                    <span>
+                      {lead?.signal ? <DesignLabSignalBadge signal={lead.signal} size="sm" /> : null}
+                    </span>
+                    <ArrowRight size={12} className="opacity-0 group-hover:opacity-100" style={{ color: C.textFaint }} />
+                  </TableRow>
                 );
               })}
-              {matches.some((m) => m.reasoning) ? (
-                <div style={{ padding: "4px 24px 8px", fontSize: 11, color: C.textFaint, fontStyle: "italic" }}>
-                  {matches.find((m) => m.best_contact_id)?.reasoning}
-                </div>
-              ) : null}
-            </div>
+            </>
           )}
         </Section>
 
@@ -805,34 +878,39 @@ ${JSON.stringify(context)}`;
           {nyeForesporsler.length === 0 ? (
             <EmptyText>Ingen nye forespørsler siste 7 dager.</EmptyText>
           ) : (
-            <div style={{ paddingBottom: 8 }}>
+            <>
+              <ColHeader
+                cols={COLS_FORESP}
+                labels={["Mottatt", "Selskap", "Teknologier", "Sted", ""]}
+              />
               {nyeForesporsler.map((f, idx) => {
                 const ago = formatDistanceToNowStrict(new Date(f.mottatt_dato), { locale: nb });
                 const focusedRow = isFocused({ kind: "foresporsel", idx });
                 return (
-                  <Row
+                  <TableRow
                     key={`fr-${f.id}`}
+                    cols={COLS_FORESP}
                     focused={focusedRow}
                     onMouseEnter={() => setFocused({ kind: "foresporsel", idx })}
                     onClick={() => navigate("/design-lab/foresporsler")}
                   >
-                    <span style={{ fontSize: 11, color: C.textFaint, width: 60, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
+                    <span style={{ fontSize: 11, color: C.textFaint, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
                       {ago.replace(/\s/, "\u00A0")}
                     </span>
-                    <span style={{ fontSize: 13, color: C.text, fontWeight: 500, width: 200, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 13, color: C.text, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {f.selskap_navn}
                     </span>
-                    <span style={{ fontSize: 12, color: C.textMuted, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 12, color: C.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {(f.teknologier || []).slice(0, 5).join(" · ") || "—"}
                     </span>
-                    <span style={{ fontSize: 11, color: C.textFaint, width: 110, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 11, color: C.textFaint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {f.sted || ""}
                     </span>
                     <ArrowRight size={12} className="opacity-0 group-hover:opacity-100" style={{ color: C.textFaint }} />
-                  </Row>
+                  </TableRow>
                 );
               })}
-            </div>
+            </>
           )}
         </Section>
 
@@ -847,34 +925,41 @@ ${JSON.stringify(context)}`;
           ) : top10.length === 0 ? (
             <EmptyText>Ingen leads tilgjengelig akkurat nå.</EmptyText>
           ) : (
-            <div style={{ paddingBottom: 8 }}>
+            <>
+              <ColHeader
+                cols={COLS_LEADS}
+                labels={["Varme", "Kontakt", "Selskap", "Begrunnelse", "Signal", ""]}
+              />
               {top10.map((lead, idx) => {
                 const focusedRow = isFocused({ kind: "lead", idx });
                 return (
-                  <Row
+                  <TableRow
                     key={`lead-${lead.contactId}`}
+                    cols={COLS_LEADS}
                     focused={focusedRow}
                     onMouseEnter={() => setFocused({ kind: "lead", idx })}
                     onClick={() => navigate(`/design-lab/kontakter/${lead.contactId}`)}
                   >
-                    <span style={{ width: 72, flexShrink: 0 }}>
+                    <span>
                       <DesignLabHeatBadge temperature={lead.heat.temperature} />
                     </span>
-                    <span style={{ fontSize: 13, color: C.text, fontWeight: 500, width: 180, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 13, color: C.text, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {lead.contactName}
                     </span>
-                    <span style={{ fontSize: 12, color: C.textMuted, width: 200, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 12, color: C.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {lead.companyName}
                     </span>
-                    <span style={{ fontSize: 12, color: C.textFaint, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 12, color: C.textFaint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {lead.reasonLine}
                     </span>
-                    {lead.signal ? <DesignLabSignalBadge signal={lead.signal} size="sm" /> : null}
-                    <ArrowRight size={12} className="opacity-0 group-hover:opacity-100" style={{ color: C.textFaint, flexShrink: 0 }} />
-                  </Row>
+                    <span>
+                      {lead.signal ? <DesignLabSignalBadge signal={lead.signal} size="sm" /> : null}
+                    </span>
+                    <ArrowRight size={12} className="opacity-0 group-hover:opacity-100" style={{ color: C.textFaint }} />
+                  </TableRow>
                 );
               })}
-            </div>
+            </>
           )}
         </Section>
 
