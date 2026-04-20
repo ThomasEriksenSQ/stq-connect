@@ -451,17 +451,15 @@ Deno.serve(async (req: Request) => {
     ): Promise<NewsItemOut> {
       const id = `${variant}-${crypto.randomUUID().slice(0, 8)}`;
       const company = companyById.get(entry.item.primary_company_id);
-      const includeImage = variant !== "brief";
-      const image = includeImage
-        ? await resolveAndMirrorImage({
-            supabase,
-            itemId: id,
-            date: today,
-            pageUrl: entry.item.url,
-            companyWebsite: company?.website ?? null,
-            companyName: entry.item.primary_company_name,
-          })
-        : { url: null, source: "placeholder" as const };
+      // Hent bilde for alle varianter (også briefs får liten thumbnail)
+      const image = await resolveAndMirrorImage({
+        supabase,
+        itemId: id,
+        date: today,
+        pageUrl: entry.item.url,
+        companyWebsite: company?.website ?? null,
+        companyName: entry.item.primary_company_name,
+      });
 
       return {
         id,
