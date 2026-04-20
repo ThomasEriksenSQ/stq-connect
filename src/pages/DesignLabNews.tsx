@@ -46,26 +46,68 @@ function hoursAgo(h: number): string {
   return new Date(NOW.getTime() - h * 3_600_000).toISOString();
 }
 
+// Lead: mindre "Potensiell kunde" med Tier 1 (Hett) kontakt.
+// score = (0.6 base + 2.0 heat) × recency × tier + keyword
+//       = 2.6 × 0.95 × 0.8 + 0.10 ≈ 2.07 — slår store selskaper uten varme.
 const MOCK_LEAD: NewsLead = {
-  id: "lead-kongsberg-defence",
+  id: "lead-defensico",
   variant: "lead",
-  primary_company_id: "c-kongsberg-defence",
-  primary_company_name: "Kongsberg Defence",
-  also_matched_company_ids: ["c-nammo", "c-kongsberg-geo"],
-  also_matched_company_names: ["Nammo", "Kongsberg Geospatial"],
-  title: "Kongsberg Defence vinner forsvarskontrakt verdt 2,4 milliarder",
+  primary_company_id: "c-defensico",
+  primary_company_name: "Defensico",
+  also_matched_company_ids: ["c-kongsberg-defence"],
+  also_matched_company_names: ["Kongsberg Defence"],
+  title: "Defensico utvider radaravdelingen med tjue nye ingeniører",
   ingress:
-    "Kontrakten omfatter levering av missilkomponenter til NATO-landet Tyskland over fem år, og kan utvides med opsjoner verdt ytterligere 800 millioner kroner.",
-  url: "https://e24.no/boers-og-finans/i/example-kongsberg",
-  source: "e24.no",
-  source_tier: 1,
-  published_at: hoursAgo(2),
+    "Vekstplanen er en respons på økte forsvarsbevilgninger og rekordmange åpne anbud på sensorelektronikk — selskapet sikter mot å doble omsetningen innen 2028.",
+  url: "https://www.finansavisen.no/example/defensico",
+  source: "finansavisen.no",
+  source_tier: 2,
+  published_at: hoursAgo(3),
   image: { url: null, source: "placeholder" },
-  score: 4.8,
+  score: 2.07,
 };
 
+// Features: blanding av varme prospekter og store kunder.
+// Rekkefølgen reflekterer kombinert score (heat_boost + base × recency × tier).
 const MOCK_FEATURES: NewsFeature[] = [
   {
+    // Stort presse-selskap, men Hett kontakt → høy score
+    id: "feat-kongsberg-defence-1",
+    variant: "feature",
+    primary_company_id: "c-kongsberg-defence",
+    primary_company_name: "Kongsberg Defence",
+    also_matched_company_ids: ["c-nammo"],
+    also_matched_company_names: ["Nammo"],
+    title: "Kongsberg Defence vinner forsvarskontrakt verdt 2,4 milliarder",
+    ingress:
+      "Kontrakten omfatter levering av missilkomponenter til NATO-landet Tyskland over fem år, og kan utvides med opsjoner verdt ytterligere 800 millioner kroner.",
+    url: "https://e24.no/boers-og-finans/i/example-kongsberg",
+    source: "e24.no",
+    source_tier: 1,
+    published_at: hoursAgo(2),
+    image: { url: null, source: "placeholder" },
+    score: 1.95,
+  },
+  {
+    // Mindre Potensiell kunde, Tier 2 (Lovende) kontakt
+    id: "feat-nordic-semi-1",
+    variant: "feature",
+    primary_company_id: "c-nordic-semiconductor",
+    primary_company_name: "Nordic Semiconductor",
+    also_matched_company_ids: [],
+    also_matched_company_names: [],
+    title: "Nordic Semiconductor lanserer ny generasjon Bluetooth-brikke",
+    ingress:
+      "nRF54-serien lover halvret strømforbruk og innebygd Matter-støtte for konsumentelektronikk og industri.",
+    url: "https://www.tu.no/example/nordic-semi",
+    source: "tu.no",
+    source_tier: 2,
+    published_at: hoursAgo(7),
+    image: { url: null, source: "placeholder" },
+    score: 1.42,
+  },
+  {
+    // Kunde med Tier 2-kontakt
     id: "feat-akerbp-1",
     variant: "feature",
     primary_company_id: "c-aker-bp",
@@ -80,9 +122,28 @@ const MOCK_FEATURES: NewsFeature[] = [
     source_tier: 1,
     published_at: hoursAgo(5),
     image: { url: null, source: "placeholder" },
-    score: 3.9,
+    score: 1.38,
   },
   {
+    // Potensiell kunde, Tier 3 (Følges opp)
+    id: "feat-defensico-2",
+    variant: "feature",
+    primary_company_id: "c-kongsberg-geo",
+    primary_company_name: "Kongsberg Geospatial",
+    also_matched_company_ids: [],
+    also_matched_company_names: [],
+    title: "Kongsberg Geospatial signerer NATO-rammeavtale om luftromsovervåking",
+    ingress:
+      "Avtalen åpner for leveranser av sanntidsovervåking til samtlige allianseland over en femårsperiode.",
+    url: "https://e24.no/example/kongsberg-geo",
+    source: "e24.no",
+    source_tier: 1,
+    published_at: hoursAgo(9),
+    image: { url: null, source: "placeholder" },
+    score: 1.05,
+  },
+  {
+    // Kunde uten varme kontakter — havner lavt selv om tier 1
     id: "feat-equinor-1",
     variant: "feature",
     primary_company_id: "c-equinor",
@@ -97,43 +158,10 @@ const MOCK_FEATURES: NewsFeature[] = [
     source_tier: 2,
     published_at: hoursAgo(8),
     image: { url: null, source: "placeholder" },
-    score: 3.4,
+    score: 0.78,
   },
   {
-    id: "feat-defensico-1",
-    variant: "feature",
-    primary_company_id: "c-defensico",
-    primary_company_name: "Defensico",
-    also_matched_company_ids: [],
-    also_matched_company_names: [],
-    title: "Defensico utvider radaravdelingen med tjue nye ingeniører",
-    ingress:
-      "Vekstplanen er en respons på økte forsvarsbevilgninger og rekordmange åpne anbud på sensorelektronikk.",
-    url: "https://www.finansavisen.no/example/defensico",
-    source: "finansavisen.no",
-    source_tier: 2,
-    published_at: hoursAgo(11),
-    image: { url: null, source: "placeholder" },
-    score: 3.1,
-  },
-  {
-    id: "feat-nordic-semi-1",
-    variant: "feature",
-    primary_company_id: "c-nordic-semiconductor",
-    primary_company_name: "Nordic Semiconductor",
-    also_matched_company_ids: [],
-    also_matched_company_names: [],
-    title: "Nordic Semiconductor lanserer ny generasjon Bluetooth-brikke",
-    ingress:
-      "nRF54-serien lover halvert strømforbruk og innebygd Matter-støtte for konsumentelektronikk og industri.",
-    url: "https://www.tu.no/example/nordic-semi",
-    source: "tu.no",
-    source_tier: 2,
-    published_at: hoursAgo(14),
-    image: { url: null, source: "placeholder" },
-    score: 2.9,
-  },
-  {
+    // Kunde uten varme kontakter
     id: "feat-telenor-1",
     variant: "feature",
     primary_company_id: "c-telenor",
@@ -148,24 +176,7 @@ const MOCK_FEATURES: NewsFeature[] = [
     source_tier: 1,
     published_at: hoursAgo(17),
     image: { url: null, source: "placeholder" },
-    score: 2.7,
-  },
-  {
-    id: "feat-yara-1",
-    variant: "feature",
-    primary_company_id: "c-yara",
-    primary_company_name: "Yara",
-    also_matched_company_ids: [],
-    also_matched_company_names: [],
-    title: "Yara investerer 1,2 mrd i grønn ammoniakk på Herøya",
-    ingress:
-      "Investeringen er Yaras største enkeltsatsing på dekarbonisering og kobles til strømavtaler med vannkraft.",
-    url: "https://e24.no/example/yara",
-    source: "e24.no",
-    source_tier: 1,
-    published_at: hoursAgo(20),
-    image: { url: null, source: "placeholder" },
-    score: 2.5,
+    score: 0.72,
   },
 ];
 
