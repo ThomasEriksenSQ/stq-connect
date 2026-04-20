@@ -410,6 +410,32 @@ Deno.serve(async (req: Request) => {
       aliasByCompany.set(c.id, aliases);
     }
 
+    // Verifiser at URL-er faktisk eksisterer (filtrer hallusinasjoner)
+    async function urlExists(url: string): Promise<boolean> {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 4000);
+      try {
+        // GET (ikke HEAD) — mange norske medier blokkerer HEAD
+        const res = await fetch(url, {
+          method: "GET",
+          redirect: "follow",
+          signal: ctrl.signal,
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; STACQ-Daily/1.0)" },
+        });
+        return res.ok && res.status < 400;
+      } catch {
+        return false;
+      } finally {
+        clearTimeout(t);
+      }
+    }
+    async function filterLiveUrls(items: RawItem[]): Promise<RawItem[]> {
+      const checks = await Promise.all(items.map((it) => urlExists(it.url)));
+      const live = items.filter((_, i) => checks[i]);
+      console.log(`[urlValidation] checked=${items.length} live=${live.length} dead=${items.length - live.length}`);
+      return live;
+    }
+
     function scoreFiltered(raw: RawItem[]) {
       const merged = dedupAndMerge(raw);
       const afterMerge = merged.length;
