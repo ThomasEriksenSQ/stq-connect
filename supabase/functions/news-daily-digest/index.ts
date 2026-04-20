@@ -163,9 +163,10 @@ Hvis du ikke finner noen saker, returner items: [].`;
       if (items.length > 0) {
         console.log(`[perplexity] sample=${JSON.stringify(items[0]).slice(0, 250)}`);
       }
-      // Hvis Perplexity ikke returnerte noen citations, er items typisk fabrikkerte. Avvis batchen.
-      if (citations.length === 0 && items.length > 0) {
-        console.log(`[perplexity] dropped entire batch — 0 citations but ${items.length} items (likely hallucinated)`);
+      // Hard hallusinerings-filter: hvis Perplexity returnerer mange items uten en eneste citation,
+      // er det nesten alltid fabrikkert. Tillat små batches (≤3) videre til URL-validering.
+      if (citations.length === 0 && items.length > 3) {
+        console.log(`[perplexity] dropped batch — 0 citations but ${items.length} items (likely hallucinated)`);
         return [];
       }
 
