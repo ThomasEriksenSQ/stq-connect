@@ -16,12 +16,13 @@ import {
 } from "./scoring.ts";
 import { resolveAndMirrorImage } from "./images.ts";
 
-const HARD_CAP_BATCHES = 24;
+const HARD_CAP_BATCHES = 32;
 const BATCH_SIZE = 8;
 const PARALLEL_BATCHES = 4;
-const PASS1_MAX_AGE_HOURS = 48; // Pass 1: kun siste 48 timer
-const PASS2_MAX_AGE_HOURS = 24 * 7; // Pass 2: maks 7 dager
-const TARGET_AFTER_PASS_1 = 12;
+const PASS1_MAX_AGE_HOURS = 24 * 7; // Pass 1: siste 7 dager (varme selskaper)
+const PASS2_MAX_AGE_HOURS = 24 * 30; // Pass 2: opp til 30 dager (fyll opp)
+const TARGET_ITEMS = 15;
+const MAX_PER_COMPANY = 2; // unngå at ett selskap dominerer feeden
 const FETCH_CHUNK = 200; // Supabase .in() URL-lengde-grense
 
 interface CompanyRow {
@@ -77,26 +78,28 @@ async function callPerplexity(
   companies: CompanyRow[],
   recencyFilter: "day" | "week",
 ): Promise<RawItem[]> {
+  // Strip formelle suffiks når vi ber Perplexity søke — øker treffraten dramatisk
+  const cleanName = (n: string) => n.replace(/\s+(AS|ASA|AB|SA|GMBH|LTD|LLC|INC|GROUP|HOLDING|HOLDINGS)\b/gi, "").replace(/\s+/g, " ").trim();
   const list = companies
-    .map((c) => `- ${c.name}${c.website ? ` (${c.website})` : ""}`)
+    .map((c) => `- ${cleanName(c.name)}${c.website ? ` (${c.website})` : ""}`)
     .join("\n");
 
-  const timeWindow = recencyFilter === "day" ? "siste 48 timer" : "siste 7 dager";
+  const timeWindow = recencyFilter === "day" ? "siste 7 dager" : "siste 30 dager";
   const prompt = `Søk i norske nyhetskilder etter saker fra ${timeWindow} som omtaler ett eller flere av disse selskapene:
 
 ${list}
 
-Returner ALLE relevante saker du finner. Det er bedre å returnere en sak du er litt usikker på, enn å returnere ingenting. For hver sak: company_name (skriv selskapsnavnet eksakt slik det står i listen over), title (artikkeltittel), ingress (1-2 setninger på norsk), url (full lenke til artikkelen), published_at (ISO 8601 dato).
+Returner ALLE relevante saker du finner — gjerne flere per selskap hvis de finnes. Det er bedre å returnere en sak du er litt usikker på, enn å returnere ingenting. Prioriter ferske saker. For hver sak: company_name (skriv selskapsnavnet eksakt slik det står i listen over), title (artikkeltittel), ingress (1-2 setninger på norsk, minst 30 tegn), url (full lenke til artikkelen), published_at (ISO 8601 dato — KUN reelle datoer fra siste 30 dager).
 
 Hvis du ikke finner noen saker, returner items: [].`;
 
   const body = {
     model: "sonar",
     messages: [
-      { role: "system", content: "Du er en nyhets-aggregator for et norsk B2B-salgsteam. Returner verifiserbare saker fra norske medier som e24, DN, Finansavisen, TU, Digi, NRK, Aftenposten, Kapital, Hegnar, Shifter." },
+      { role: "system", content: "Du er en nyhets-aggregator for et norsk B2B-salgsteam. Returner KUN saker du faktisk har funnet via søk og som har en citation. Ikke fabrikker URL-er. Bruk norske medier som e24, DN, Finansavisen, TU, Digi, NRK, Aftenposten, Kapital, Hegnar, Shifter." },
       { role: "user", content: prompt },
     ],
-    search_recency_filter: recencyFilter === "day" ? "day" : "week",
+    search_recency_filter: recencyFilter === "day" ? "week" : "month",
     response_format: {
       type: "json_schema",
       json_schema: {
@@ -160,6 +163,12 @@ Hvis du ikke finner noen saker, returner items: [].`;
       if (items.length > 0) {
         console.log(`[perplexity] sample=${JSON.stringify(items[0]).slice(0, 250)}`);
       }
+      // Hard hallusinerings-filter: hvis Perplexity returnerer mange items uten en eneste citation,
+      // er det nesten alltid fabrikkert. Tillat små batches (≤3) videre til URL-validering.
+      if (citations.length === 0 && items.length > 3) {
+        console.log(`[perplexity] dropped batch — 0 citations but ${items.length} items (likely hallucinated)`);
+        return [];
+      }
 
       // Bygg fuzzy match: lowercase + uten suffikser (AS, ASA, AB)
       const norm = (s: string) => s.toLowerCase().replace(/\b(as|asa|ab|sa|inc|ltd|gmbh|group|holding|holdings)\b/g, "").replace(/[^a-z0-9æøå ]/g, "").replace(/\s+/g, " ").trim();
@@ -192,8 +201,7 @@ Hvis du ikke finner noen saker, returner items: [].`;
         const title = String(it.title ?? "");
         if (!rawUrl || !title) continue;
 
-        // Anti-hallusinering: URL må finnes i Perplexitys citations.
-        // Hvis ikke, prøv å finne en citation som inneholder samme host.
+        // Anti-hallusinering: URL må finnes i citations (eksakt eller via host)
         const normalizedUrl = rawUrl.replace(/\/$/, "");
         let finalUrl: string | null = null;
         if (citationSet.has(normalizedUrl)) {
@@ -249,9 +257,19 @@ function pickItems(scored: Array<{ item: RawItem; score: number }>): {
   briefs: Array<{ item: RawItem; score: number }>;
 } {
   const sorted = [...scored].sort((a, b) => b.score - a.score);
-  const lead = sorted[0] ?? null;
-  const features = sorted.slice(1, 7);
-  const briefs = sorted.slice(7, 12);
+  // Dedupliser per selskap: maks MAX_PER_COMPANY saker per primary_company_id
+  const perCompany = new Map<string, number>();
+  const balanced: Array<{ item: RawItem; score: number }> = [];
+  for (const s of sorted) {
+    const cnt = perCompany.get(s.item.primary_company_id) ?? 0;
+    if (cnt >= MAX_PER_COMPANY) continue;
+    perCompany.set(s.item.primary_company_id, cnt + 1);
+    balanced.push(s);
+    if (balanced.length >= TARGET_ITEMS) break;
+  }
+  const lead = balanced[0] ?? null;
+  const features = balanced.slice(1, 5); // 4 features
+  const briefs = balanced.slice(5, TARGET_ITEMS); // resten som briefs (opptil 10)
   return { lead, features, briefs };
 }
 
@@ -380,22 +398,23 @@ Deno.serve(async (req: Request) => {
           slots.push(callPerplexity(PERPLEXITY_API_KEY, batch, recency));
           batchesUsed++;
         }
-        const results = await Promise.all(slots);
-        for (const items of results) {
-          perplexityHits += items.length;
-          for (const it of items) {
-            const ts = new Date(it.published_at).getTime();
-            if (Number.isFinite(ts) && ts < cutoff) {
-              droppedAge++;
-              continue;
-            }
-            allRaw.push(it);
+      const results = await Promise.all(slots);
+      for (const items of results) {
+        perplexityHits += items.length;
+        for (const it of items) {
+          const ts = new Date(it.published_at).getTime();
+          // Krev gyldig dato innenfor cutoff (ikke "981d siden"-saker)
+          if (!Number.isFinite(ts) || ts < cutoff || ts > Date.now() + 86_400_000) {
+            droppedAge++;
+            continue;
           }
+          allRaw.push(it);
         }
       }
-      console.log(`[${label} done] batches=${batchesUsed} hits=${perplexityHits} kept=${allRaw.length} dropped_too_old=${droppedAge}`);
     }
-    await runPass(warmCompanies, "day", PASS1_MAX_AGE_HOURS, "pass1-warm-48h");
+    console.log(`[${label} done] batches=${batchesUsed} hits=${perplexityHits} kept=${allRaw.length} dropped_too_old_or_invalid=${droppedAge}`);
+  }
+  await runPass(warmCompanies, "day", PASS1_MAX_AGE_HOURS, "pass1-warm-7d");
 
     const ctx: ScoringContext = { baseWeight, heatTier };
     // Bygg aliaser: fullt navn + første ord (hvis ≥4 tegn og ikke generisk)
@@ -454,14 +473,14 @@ Deno.serve(async (req: Request) => {
 
     let scored = await scoreFiltered(allRaw);
 
-    // 5. Pass 2 — utvid til 7 dager + ta inn cold companies hvis budsjett er igjen
+    // 5. Pass 2 — utvid til 30 dager + ta inn cold companies for å nå TARGET
     let fallbackUsed = false;
-    if (scored.length < TARGET_AFTER_PASS_1 && batchesUsed < HARD_CAP_BATCHES) {
+    if (scored.length < TARGET_ITEMS && batchesUsed < HARD_CAP_BATCHES) {
       fallbackUsed = true;
-      console.log(`[pass2 start] scored=${scored.length} < target=${TARGET_AFTER_PASS_1}, expanding to 7d + cold pool`);
-      await runPass(warmCompanies, "week", PASS2_MAX_AGE_HOURS, "pass2-warm-7d");
+      console.log(`[pass2 start] scored=${scored.length} < target=${TARGET_ITEMS}, expanding to 30d + cold pool`);
+      await runPass(warmCompanies, "week", PASS2_MAX_AGE_HOURS, "pass2-warm-30d");
       if (batchesUsed < HARD_CAP_BATCHES) {
-        await runPass(coldCompanies, "week", PASS2_MAX_AGE_HOURS, "pass2-cold-7d");
+        await runPass(coldCompanies, "week", PASS2_MAX_AGE_HOURS, "pass2-cold-30d");
       }
       scored = await scoreFiltered(allRaw);
     }
