@@ -436,7 +436,7 @@ Deno.serve(async (req: Request) => {
       return live;
     }
 
-    function scoreFiltered(raw: RawItem[]) {
+    async function scoreFiltered(raw: RawItem[]) {
       const merged = dedupAndMerge(raw);
       const afterMerge = merged.length;
       const filtered = merged.filter((it) => {
@@ -444,13 +444,15 @@ Deno.serve(async (req: Request) => {
         return matchesCompanyName(it, aliases);
       });
       const afterNameMatch = filtered.length;
-      const scored = filtered.map((item) => ({ item, score: scoreItem(item, ctx) }));
+      // Verifiser at URL-er svarer (filtrer hallusinerte/døde lenker)
+      const live = await filterLiveUrls(filtered);
+      const scored = live.map((item) => ({ item, score: scoreItem(item, ctx) }));
       const final = scored.filter((s) => passesQuality(s.item, s.score));
-      console.log(`[scoreFiltered] raw=${raw.length} merged=${afterMerge} name_match=${afterNameMatch} quality_pass=${final.length}`);
+      console.log(`[scoreFiltered] raw=${raw.length} merged=${afterMerge} name_match=${afterNameMatch} live=${live.length} quality_pass=${final.length}`);
       return final;
     }
 
-    let scored = scoreFiltered(allRaw);
+    let scored = await scoreFiltered(allRaw);
 
     // 5. Pass 2 — utvid til 7 dager + ta inn cold companies hvis budsjett er igjen
     let fallbackUsed = false;
