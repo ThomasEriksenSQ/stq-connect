@@ -629,12 +629,19 @@ ${JSON.stringify(context)}`;
     return queue.find((l) => l.contactId === contactId);
   };
 
+  /* Column templates — same family of widths as DesignLabContacts */
+  const COLS_INBOX = "12px 110px minmax(280px,1fr) 200px 16px";
+  const COLS_MATCH = "minmax(160px,1.2fr) 96px minmax(140px,1fr) 16px minmax(200px,1.5fr) 60px 110px 16px";
+  const COLS_FORESP = "80px minmax(200px,1.4fr) minmax(220px,1.6fr) 140px 16px";
+  const COLS_LEADS = "84px minmax(180px,1.4fr) minmax(180px,1.4fr) minmax(220px,2fr) 110px 16px";
+
   return (
     <DesignLabPageShell
       activePath="/design-lab/home"
       title="Hjem · Morgenkø"
-      maxWidth={1180}
+      maxWidth={null}
       contentStyle={{ padding: "0" }}
+      contentClassName=""
     >
       <div style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif" }}>
         {/* VELKOMST */}
