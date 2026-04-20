@@ -185,14 +185,16 @@ For hver sak, oppgi: company_name (eksakt fra listen), title, ingress (1-2 setni
           unmatched++;
           continue;
         }
-        if (!it.url || !it.title) continue;
+        const url = String(it.url ?? "");
+        const title = String(it.title ?? "");
+        if (!url || !title) continue;
         out.push({
-          url: it.url,
-          title: it.title,
-          ingress: it.ingress ?? null,
-          source: sourceForUrl(it.url),
-          source_tier: tierForUrl(it.url),
-          published_at: it.published_at ?? new Date().toISOString(),
+          url,
+          title,
+          ingress: it.ingress ? String(it.ingress) : null,
+          source: sourceForUrl(url),
+          source_tier: tierForUrl(url),
+          published_at: it.published_at ? String(it.published_at) : new Date().toISOString(),
           primary_company_id: company.id,
           primary_company_name: company.name,
           also_matched_company_ids: [],
@@ -200,6 +202,7 @@ For hver sak, oppgi: company_name (eksakt fra listen), title, ingress (1-2 setni
           image_url: null,
         });
       }
+      if (unmatched > 0) console.log(`[perplexity] unmatched_company_names=${unmatched}/${items.length}`);
       return out;
     } catch (err) {
       lastError = err;
