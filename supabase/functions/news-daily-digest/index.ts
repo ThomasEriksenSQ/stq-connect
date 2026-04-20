@@ -3,7 +3,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "../_shared/cors.ts";
-import { sourceForUrl, tierForUrl } from "./sources.ts";
+import { hostFromUrl, isTrustedSource, sourceForUrl, tierForUrl } from "./sources.ts";
 import { aggregateHeatTiers, type Tier } from "./heat.ts";
 import {
   baseWeightFor,
@@ -16,11 +16,12 @@ import {
 } from "./scoring.ts";
 import { resolveAndMirrorImage } from "./images.ts";
 
-const HARD_CAP_BATCHES = 32;
-const BATCH_SIZE = 8;
-const PARALLEL_BATCHES = 4;
-const PASS1_MAX_AGE_HOURS = 24 * 7; // Pass 1: siste 7 dager (varme selskaper)
-const PASS2_MAX_AGE_HOURS = 24 * 30; // Pass 2: opp til 30 dager (fyll opp)
+// Search-API-baserte konstanter — én query per selskap, høy parallellisering.
+const SEARCH_PARALLEL = 6; // antall samtidige /search-kall
+const SEARCH_RESULTS_PER_QUERY = 6; // hvor mange treff vi henter per selskap
+const PASS1_MAX_AGE_DAYS = 14; // varme selskaper: siste 14 dager
+const PASS2_MAX_AGE_DAYS = 30; // alle selskaper: siste 30 dager
+const HARD_CAP_COMPANIES = 400; // sikkerhetstak — vi behandler aldri flere enn dette per kjøring
 const TARGET_ITEMS = 15;
 const MAX_PER_COMPANY = 2; // unngå at ett selskap dominerer feeden
 const FETCH_CHUNK = 200; // Supabase .in() URL-lengde-grense
