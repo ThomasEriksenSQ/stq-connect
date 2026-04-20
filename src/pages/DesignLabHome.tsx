@@ -391,11 +391,19 @@ Norsk bokmål. Maks 80 ord. Ikke pad svaret. Bruk "konsulent".
 KONTEKST:
 ${JSON.stringify(context)}`;
 
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      if (!token) {
+        setAiAnswer("Du må være logget inn for å spørre agenten.");
+        setAiLoading(false);
+        return;
+      }
+
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           system: systemPrompt,
