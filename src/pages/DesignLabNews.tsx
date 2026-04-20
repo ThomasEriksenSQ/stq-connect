@@ -88,11 +88,13 @@ const MOCK_FEATURES: NewsFeature[] = [
     source: "e24.no",
     source_tier: 1,
     published_at: hoursAgo(2),
-    image: { url: null, source: "placeholder" },
+    image: {
+      url: "https://images.unsplash.com/photo-1565043666747-69f6646db940?w=900&q=70&auto=format&fit=crop",
+      source: "og",
+    },
     score: 1.95,
   },
   {
-    // Mindre Potensiell kunde, Tier 2 (Lovende) kontakt
     id: "feat-nordic-semi-1",
     variant: "feature",
     primary_company_id: "c-nordic-semiconductor",
@@ -106,11 +108,13 @@ const MOCK_FEATURES: NewsFeature[] = [
     source: "tu.no",
     source_tier: 2,
     published_at: hoursAgo(7),
-    image: { url: null, source: "placeholder" },
+    image: {
+      url: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=900&q=70&auto=format&fit=crop",
+      source: "og",
+    },
     score: 1.42,
   },
   {
-    // Kunde med Tier 2-kontakt
     id: "feat-akerbp-1",
     variant: "feature",
     primary_company_id: "c-aker-bp",
@@ -124,11 +128,13 @@ const MOCK_FEATURES: NewsFeature[] = [
     source: "dn.no",
     source_tier: 1,
     published_at: hoursAgo(5),
-    image: { url: null, source: "placeholder" },
+    image: {
+      url: "https://images.unsplash.com/photo-1605000797499-95a51c5269ae?w=900&q=70&auto=format&fit=crop",
+      source: "og",
+    },
     score: 1.38,
   },
   {
-    // Potensiell kunde, Tier 3 (Følges opp)
     id: "feat-defensico-2",
     variant: "feature",
     primary_company_id: "c-kongsberg-geo",
@@ -142,11 +148,13 @@ const MOCK_FEATURES: NewsFeature[] = [
     source: "e24.no",
     source_tier: 1,
     published_at: hoursAgo(9),
-    image: { url: null, source: "placeholder" },
+    image: {
+      url: "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=900&q=70&auto=format&fit=crop",
+      source: "og",
+    },
     score: 1.05,
   },
   {
-    // Kunde uten varme kontakter — havner lavt selv om tier 1
     id: "feat-equinor-1",
     variant: "feature",
     primary_company_id: "c-equinor",
@@ -160,11 +168,13 @@ const MOCK_FEATURES: NewsFeature[] = [
     source: "tu.no",
     source_tier: 2,
     published_at: hoursAgo(8),
-    image: { url: null, source: "placeholder" },
+    image: {
+      url: "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=900&q=70&auto=format&fit=crop",
+      source: "og",
+    },
     score: 0.78,
   },
   {
-    // Kunde uten varme kontakter
     id: "feat-telenor-1",
     variant: "feature",
     primary_company_id: "c-telenor",
@@ -178,7 +188,10 @@ const MOCK_FEATURES: NewsFeature[] = [
     source: "dn.no",
     source_tier: 1,
     published_at: hoursAgo(17),
-    image: { url: null, source: "placeholder" },
+    image: {
+      url: "https://images.unsplash.com/photo-1473800447596-01729482b8eb?w=900&q=70&auto=format&fit=crop",
+      source: "og",
+    },
     score: 0.72,
   },
 ];
