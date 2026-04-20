@@ -643,7 +643,7 @@ ${JSON.stringify(context)}`;
       contentStyle={{ padding: "0" }}
       contentClassName=""
     >
-      <div style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif" }}>
+      <div style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", width: "38%", minWidth: 720 }}>
         {/* VELKOMST */}
         <Section>
           <div style={{ padding: "22px 24px 18px" }}>
