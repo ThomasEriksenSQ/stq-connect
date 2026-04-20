@@ -133,18 +133,38 @@ export function dedupAndMerge(items: RawItem[]): RawItem[] {
 const NOISE_DOMAINS = /(whothoughtofit|tumblr|wordpress\.com|substack|medium\.com|blogspot)/i;
 const NOISE_PATHS = /\/(forum|user|profile|tag|category|search|tema)\//i;
 
+// Side-titler som indikerer index/oversiktssider, ikke faktiske artikler
+const INDEX_TITLE_PATTERNS = [
+  /^(om|about|kontakt|contact|nyheter|news|pressemeldinger|press|investor|kontrakter|career|karriere|home|forside)\b/i,
+  /^[\w\s&]+\|\s*\1$/i, // mønster "X | X" (f.eks. "Aker Solutions | Aker Solutions")
+];
+
+function isIndexTitle(title: string): boolean {
+  const t = title.trim();
+  // PDF-er er nesten alltid rapporter, ikke ferske nyheter
+  if (/^\[?pdf\]?/i.test(t)) return true;
+  // Ren "Selskap | Selskap"-duplisering
+  const parts = t.split(/\s*[|–-]\s*/).map((p) => p.trim().toLowerCase());
+  if (parts.length === 2 && parts[0] === parts[1]) return true;
+  // Korte oversikts-titler ("Kontrakter - Ocean24.no", "Pressemeldinger | Veidekke")
+  if (t.length < 60 && INDEX_TITLE_PATTERNS.some((re) => re.test(t))) return true;
+  return false;
+}
+
 export function passesQuality(item: RawItem, score: number): boolean {
-  if (score < 0.4) return false;
   if (!item.title || item.title.length < 10) return false;
-  if (!item.ingress || item.ingress.trim().length < 30) return false;
+  if (isIndexTitle(item.title)) return false;
+  if (item.ingress && item.ingress.trim().length > 0 && item.ingress.trim().length < 20) return false;
   try {
     const u = new URL(item.url);
     if (NOISE_DOMAINS.test(u.hostname)) return false;
     if (NOISE_PATHS.test(u.pathname)) return false;
+    // PDF-URL-er er som regel rapporter, ikke nyheter
+    if (/\.pdf(\?|$)/i.test(u.pathname)) return false;
   } catch {
     return false;
   }
-  return true;
+  return score > -10; // sikkerhetsventil mot ekstreme negative scores
 }
 
 // Eksakt navn/alias-match i tittel eller ingress

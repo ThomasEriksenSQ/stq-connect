@@ -3,7 +3,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "../_shared/cors.ts";
-import { sourceForUrl, tierForUrl } from "./sources.ts";
+import { hostFromUrl, isTrustedSource, sourceForUrl, tierForUrl } from "./sources.ts";
 import { aggregateHeatTiers, type Tier } from "./heat.ts";
 import {
   baseWeightFor,
@@ -16,11 +16,12 @@ import {
 } from "./scoring.ts";
 import { resolveAndMirrorImage } from "./images.ts";
 
-const HARD_CAP_BATCHES = 32;
-const BATCH_SIZE = 8;
-const PARALLEL_BATCHES = 4;
-const PASS1_MAX_AGE_HOURS = 24 * 7; // Pass 1: siste 7 dager (varme selskaper)
-const PASS2_MAX_AGE_HOURS = 24 * 30; // Pass 2: opp til 30 dager (fyll opp)
+// Search-API-baserte konstanter — én query per selskap, høy parallellisering.
+const SEARCH_PARALLEL = 10; // antall samtidige /search-kall
+const SEARCH_RESULTS_PER_QUERY = 5; // hvor mange treff vi henter per selskap
+const PASS1_MAX_AGE_DAYS = 14; // varme selskaper: siste 14 dager
+const PASS2_MAX_AGE_DAYS = 30; // alle selskaper: siste 30 dager
+const HARD_CAP_COMPANIES = 200; // sikkerhetstak per kjøring
 const TARGET_ITEMS = 15;
 const MAX_PER_COMPANY = 2; // unngå at ett selskap dominerer feeden
 const FETCH_CHUNK = 200; // Supabase .in() URL-lengde-grense
@@ -73,65 +74,58 @@ function extractSignal(description: string | null): string | null {
   return null;
 }
 
-async function callPerplexity(
+// Strip formelle suffiks når vi søker — øker treffraten dramatisk
+function cleanCompanyName(n: string): string {
+  return n
+    .replace(/\s+(AS|ASA|AB|SA|GMBH|LTD|LLC|INC|GROUP|HOLDING|HOLDINGS)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+interface SearchResult {
+  url: string;
+  title: string;
+  snippet: string | null;
+  date: string | null; // YYYY-MM-DD
+  last_updated?: string | null;
+}
+
+// Trekker ut en kort ingress (1-2 setninger) fra Perplexity-snippet.
+function snippetToIngress(snippet: string | null): string | null {
+  if (!snippet) return null;
+  // Fjern markdown-headere, listprefiks og linjeskift-støy
+  const cleaned = snippet
+    .replace(/^#+\s*/gm, "")
+    .replace(/\n{2,}/g, " · ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (cleaned.length < 30) return null;
+  // Trim til ~280 tegn ved nærmeste setningsslutt
+  if (cleaned.length <= 280) return cleaned;
+  const cut = cleaned.slice(0, 280);
+  const lastDot = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
+  return (lastDot > 120 ? cut.slice(0, lastDot + 1) : cut + "…").trim();
+}
+
+// Kall Perplexity Search API for ett selskap. Returnerer rå treff med ekte URL-er.
+async function searchCompany(
   apiKey: string,
-  companies: CompanyRow[],
-  recencyFilter: "day" | "week",
+  company: CompanyRow,
+  maxAgeDays: number,
 ): Promise<RawItem[]> {
-  // Strip formelle suffiks når vi ber Perplexity søke — øker treffraten dramatisk
-  const cleanName = (n: string) => n.replace(/\s+(AS|ASA|AB|SA|GMBH|LTD|LLC|INC|GROUP|HOLDING|HOLDINGS)\b/gi, "").replace(/\s+/g, " ").trim();
-  const list = companies
-    .map((c) => `- ${cleanName(c.name)}${c.website ? ` (${c.website})` : ""}`)
-    .join("\n");
-
-  const timeWindow = recencyFilter === "day" ? "siste 7 dager" : "siste 30 dager";
-  const prompt = `Søk i norske nyhetskilder etter saker fra ${timeWindow} som omtaler ett eller flere av disse selskapene:
-
-${list}
-
-Returner ALLE relevante saker du finner — gjerne flere per selskap hvis de finnes. Det er bedre å returnere en sak du er litt usikker på, enn å returnere ingenting. Prioriter ferske saker. For hver sak: company_name (skriv selskapsnavnet eksakt slik det står i listen over), title (artikkeltittel), ingress (1-2 setninger på norsk, minst 30 tegn), url (full lenke til artikkelen), published_at (ISO 8601 dato — KUN reelle datoer fra siste 30 dager).
-
-Hvis du ikke finner noen saker, returner items: [].`;
-
+  const name = cleanCompanyName(company.name);
+  // To korte søk slått sammen i én query — dekker både rene navnesøk og kontekst.
+  const query = `"${name}" Norge nyhet kontrakt avtale lansering vekst`;
   const body = {
-    model: "sonar",
-    messages: [
-      { role: "system", content: "Du er en nyhets-aggregator for et norsk B2B-salgsteam. Returner KUN saker du faktisk har funnet via søk og som har en citation. Ikke fabrikker URL-er. Bruk norske medier som e24, DN, Finansavisen, TU, Digi, NRK, Aftenposten, Kapital, Hegnar, Shifter." },
-      { role: "user", content: prompt },
-    ],
-    search_recency_filter: recencyFilter === "day" ? "week" : "month",
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "news_items",
-        schema: {
-          type: "object",
-          properties: {
-            items: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  company_name: { type: "string" },
-                  title: { type: "string" },
-                  ingress: { type: "string" },
-                  url: { type: "string" },
-                  published_at: { type: "string" },
-                },
-                required: ["company_name", "title", "url", "published_at"],
-              },
-            },
-          },
-          required: ["items"],
-        },
-      },
-    },
+    query,
+    max_results: SEARCH_RESULTS_PER_QUERY,
+    max_tokens_per_page: 256,
   };
 
   let lastError: unknown = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const res = await fetch("https://api.perplexity.ai/chat/completions", {
+      const res = await fetch("https://api.perplexity.ai/search", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -141,96 +135,51 @@ Hvis du ikke finner noen saker, returner items: [].`;
       });
       if (!res.ok) {
         const txt = await res.text();
-        throw new Error(`Perplexity ${res.status}: ${txt.slice(0, 200)}`);
+        throw new Error(`Perplexity Search ${res.status}: ${txt.slice(0, 200)}`);
       }
       const data = await res.json();
-      const content = data.choices?.[0]?.message?.content;
-      const citations: string[] = Array.isArray(data.citations) ? data.citations.map((c: unknown) => String(c)) : [];
-      const citationSet = new Set(citations.map((c) => c.replace(/\/$/, "")));
-      if (!content) {
-        console.log(`[perplexity] no content. keys=${Object.keys(data).join(",")} choices=${data.choices?.length ?? 0}`);
-        return [];
-      }
-      let parsed: { items?: unknown[] } = {};
-      try {
-        parsed = JSON.parse(content);
-      } catch {
-        console.log(`[perplexity] JSON parse failed. content_sample=${content.slice(0, 300)}`);
-        return [];
-      }
-      const items = (parsed.items ?? []) as Array<Record<string, unknown>>;
-      console.log(`[perplexity] returned items=${items.length} citations=${citations.length} for batch_size=${companies.length} recency=${recencyFilter}`);
-      if (items.length > 0) {
-        console.log(`[perplexity] sample=${JSON.stringify(items[0]).slice(0, 250)}`);
-      }
-      // Hard hallusinerings-filter: hvis Perplexity returnerer mange items uten en eneste citation,
-      // er det nesten alltid fabrikkert. Tillat små batches (≤3) videre til URL-validering.
-      if (citations.length === 0 && items.length > 3) {
-        console.log(`[perplexity] dropped batch — 0 citations but ${items.length} items (likely hallucinated)`);
-        return [];
-      }
-
-      // Bygg fuzzy match: lowercase + uten suffikser (AS, ASA, AB)
-      const norm = (s: string) => s.toLowerCase().replace(/\b(as|asa|ab|sa|inc|ltd|gmbh|group|holding|holdings)\b/g, "").replace(/[^a-z0-9æøå ]/g, "").replace(/\s+/g, " ").trim();
-      const companyByNorm = new Map<string, CompanyRow>();
-      for (const c of companies) companyByNorm.set(norm(c.name), c);
+      const results = (data.results ?? []) as SearchResult[];
+      const companyHost = hostFromUrl(company.website);
+      const cutoffMs = Date.now() - maxAgeDays * 86_400_000;
 
       const out: RawItem[] = [];
-      let unmatched = 0;
-      let droppedHallucinated = 0;
-      for (const it of items) {
-        const rawName = String(it.company_name ?? "");
-        let company = companies.find((c) => c.name.toLowerCase() === rawName.toLowerCase());
-        if (!company) {
-          company = companyByNorm.get(norm(rawName));
-        }
-        if (!company) {
-          const nName = norm(rawName);
-          if (nName.length >= 3) {
-            company = companies.find((c) => {
-              const nc = norm(c.name);
-              return nc.includes(nName) || nName.includes(nc);
-            });
-          }
-        }
-        if (!company) {
-          unmatched++;
-          continue;
-        }
-        const rawUrl = String(it.url ?? "").trim();
-        const title = String(it.title ?? "");
+      let droppedNoDate = 0;
+      let droppedTooOld = 0;
+      let droppedUntrusted = 0;
+      for (const r of results) {
+        const rawUrl = r.url?.trim();
+        const title = r.title?.trim();
         if (!rawUrl || !title) continue;
 
-        // Anti-hallusinering: URL må finnes i citations (eksakt eller via host)
-        const normalizedUrl = rawUrl.replace(/\/$/, "");
-        let finalUrl: string | null = null;
-        if (citationSet.has(normalizedUrl)) {
-          finalUrl = rawUrl;
-        } else {
-          try {
-            const host = new URL(rawUrl).hostname.replace(/^www\./, "");
-            const match = citations.find((c) => {
-              try {
-                return new URL(c).hostname.replace(/^www\./, "") === host;
-              } catch {
-                return false;
-              }
-            });
-            if (match) finalUrl = match;
-          } catch { /* invalid url */ }
+        // Tillat kun redaksjonelle/offisielle domener + selskapets eget domene
+        if (!isTrustedSource(rawUrl, companyHost)) {
+          droppedUntrusted++;
+          continue;
         }
-        if (!finalUrl) {
-          droppedHallucinated++;
+
+        // Krev ekte dato innenfor cutoff
+        const dateStr = r.date ?? r.last_updated ?? null;
+        if (!dateStr) {
+          droppedNoDate++;
+          continue;
+        }
+        const ts = Date.parse(dateStr);
+        if (!Number.isFinite(ts)) {
+          droppedNoDate++;
+          continue;
+        }
+        if (ts < cutoffMs || ts > Date.now() + 86_400_000) {
+          droppedTooOld++;
           continue;
         }
 
         out.push({
-          url: finalUrl,
+          url: rawUrl,
           title,
-          ingress: it.ingress ? String(it.ingress) : null,
-          source: sourceForUrl(finalUrl),
-          source_tier: tierForUrl(finalUrl),
-          published_at: it.published_at ? String(it.published_at) : new Date().toISOString(),
+          ingress: snippetToIngress(r.snippet),
+          source: sourceForUrl(rawUrl),
+          source_tier: tierForUrl(rawUrl),
+          published_at: new Date(ts).toISOString(),
           primary_company_id: company.id,
           primary_company_name: company.name,
           also_matched_company_ids: [],
@@ -238,16 +187,18 @@ Hvis du ikke finner noen saker, returner items: [].`;
           image_url: null,
         });
       }
-      if (unmatched > 0) console.log(`[perplexity] unmatched_company_names=${unmatched}/${items.length}`);
-      if (droppedHallucinated > 0) console.log(`[perplexity] dropped_hallucinated_urls=${droppedHallucinated}/${items.length}`);
+      if (droppedNoDate || droppedTooOld || droppedUntrusted) {
+        console.log(`[search ${name}] kept=${out.length}/${results.length} no_date=${droppedNoDate} too_old=${droppedTooOld} untrusted=${droppedUntrusted}`);
+      } else if (out.length > 0) {
+        console.log(`[search ${name}] kept=${out.length}/${results.length}`);
+      }
       return out;
     } catch (err) {
       lastError = err;
-      const wait = attempt === 0 ? 1000 : 4000;
-      await new Promise((r) => setTimeout(r, wait));
+      await new Promise((r) => setTimeout(r, attempt === 0 ? 500 : 2000));
     }
   }
-  console.error("[perplexity] batch failed after retries:", lastError);
+  console.error(`[search ${name}] failed after retries:`, lastError);
   return [];
 }
 
@@ -372,69 +323,56 @@ Deno.serve(async (req: Request) => {
       return ta - tb;
     });
 
-    // Pass 1 prioriterer Tier 1-3 (varme) — Tier 4 spares til evt. fallback
+    // Pass 1 prioriterer Tier 1-3 (varme) — Tier 4 (kalde) tas i Pass 2 hvis vi mangler items
     const warmCompanies = sortedCompanies.filter((c) => (heatTier.get(c.id) ?? 4) <= 3);
     const coldCompanies = sortedCompanies.filter((c) => (heatTier.get(c.id) ?? 4) === 4);
     console.log(`[heat split] warm(T1-3)=${warmCompanies.length} cold(T4)=${coldCompanies.length}`);
 
-    // 4. Pass 1 — siste 48 timer på varme selskaper (parallell)
-    let batchesUsed = 0;
+    // 4. Søk via Perplexity Search API — én query per selskap, parallellisert
     const allRaw: RawItem[] = [];
-    let perplexityHits = 0;
-    async function runPass(
-      pool: CompanyRow[],
-      recency: "day" | "week",
-      maxAgeHours: number,
-      label: string,
-    ) {
-      const cutoff = Date.now() - maxAgeHours * 3_600_000;
-      let droppedAge = 0;
-      for (let i = 0; i < pool.length && batchesUsed < HARD_CAP_BATCHES; i += BATCH_SIZE * PARALLEL_BATCHES) {
-        const slots: Promise<RawItem[]>[] = [];
-        for (let j = 0; j < PARALLEL_BATCHES && batchesUsed < HARD_CAP_BATCHES; j++) {
-          const start = i + j * BATCH_SIZE;
-          if (start >= pool.length) break;
-          const batch = pool.slice(start, start + BATCH_SIZE);
-          slots.push(callPerplexity(PERPLEXITY_API_KEY, batch, recency));
-          batchesUsed++;
+    let companiesQueried = 0;
+    let totalHits = 0;
+
+    async function runSearch(pool: CompanyRow[], maxAgeDays: number, label: string) {
+      const startCount = allRaw.length;
+      const capped = pool.slice(0, HARD_CAP_COMPANIES - companiesQueried);
+      for (let i = 0; i < capped.length; i += SEARCH_PARALLEL) {
+        const slice = capped.slice(i, i + SEARCH_PARALLEL);
+        const results = await Promise.all(
+          slice.map((c) => searchCompany(PERPLEXITY_API_KEY, c, maxAgeDays)),
+        );
+        for (const items of results) {
+          totalHits += items.length;
+          for (const it of items) allRaw.push(it);
         }
-      const results = await Promise.all(slots);
-      for (const items of results) {
-        perplexityHits += items.length;
-        for (const it of items) {
-          const ts = new Date(it.published_at).getTime();
-          // Krev gyldig dato innenfor cutoff (ikke "981d siden"-saker)
-          if (!Number.isFinite(ts) || ts < cutoff || ts > Date.now() + 86_400_000) {
-            droppedAge++;
-            continue;
-          }
-          allRaw.push(it);
-        }
+        companiesQueried += slice.length;
       }
+      console.log(`[${label} done] companies=${capped.length} hits=${totalHits} kept_in_pool=${allRaw.length - startCount}`);
     }
-    console.log(`[${label} done] batches=${batchesUsed} hits=${perplexityHits} kept=${allRaw.length} dropped_too_old_or_invalid=${droppedAge}`);
-  }
-  await runPass(warmCompanies, "day", PASS1_MAX_AGE_HOURS, "pass1-warm-7d");
+
+    // Pass 1: varme selskaper, siste 14 dager
+    await runSearch(warmCompanies, PASS1_MAX_AGE_DAYS, `pass1-warm-${PASS1_MAX_AGE_DAYS}d`);
 
     const ctx: ScoringContext = { baseWeight, heatTier };
-    // Bygg aliaser: fullt navn + første ord (hvis ≥4 tegn og ikke generisk)
+    // Bygg aliaser: fullt navn + uten suffiks + første ord (hvis ≥4 tegn og ikke generisk)
     const GENERIC_FIRST_WORDS = new Set(["the", "norsk", "norske", "nordic", "norway", "norge", "scandinavian"]);
     const aliasByCompany = new Map<string, string[]>();
     for (const c of companyList) {
       const aliases = [c.name];
-      const firstWord = c.name.split(/\s+/)[0]?.replace(/[^\p{L}0-9]/gu, "") ?? "";
+      const cleaned = cleanCompanyName(c.name);
+      if (cleaned !== c.name) aliases.push(cleaned);
+      const firstWord = cleaned.split(/\s+/)[0]?.replace(/[^\p{L}0-9]/gu, "") ?? "";
       if (firstWord.length >= 4 && !GENERIC_FIRST_WORDS.has(firstWord.toLowerCase())) {
         aliases.push(firstWord);
       }
       aliasByCompany.set(c.id, aliases);
     }
 
-    // Verifiser at URL-er faktisk eksisterer (filtrer hallusinasjoner)
+    // Verifiser at URL-er faktisk eksisterer (filtrer døde lenker)
     async function urlExists(url: string): Promise<boolean> {
       const ctrl = new AbortController();
       const t = setTimeout(() => ctrl.abort(), 4000);
       try {
-        // GET (ikke HEAD) — mange norske medier blokkerer HEAD
         const res = await fetch(url, {
           method: "GET",
           redirect: "follow",
@@ -458,12 +396,13 @@ Deno.serve(async (req: Request) => {
     async function scoreFiltered(raw: RawItem[]) {
       const merged = dedupAndMerge(raw);
       const afterMerge = merged.length;
+      // Name-match: titel/ingress må inneholde selskapsnavn (eller alias) som ord.
+      // Dette eliminerer treff hvor selskapet bare er nevnt i en sidebar.
       const filtered = merged.filter((it) => {
         const aliases = aliasByCompany.get(it.primary_company_id) ?? [];
         return matchesCompanyName(it, aliases);
       });
       const afterNameMatch = filtered.length;
-      // Verifiser at URL-er svarer (filtrer hallusinerte/døde lenker)
       const live = await filterLiveUrls(filtered);
       const scored = live.map((item) => ({ item, score: scoreItem(item, ctx) }));
       const final = scored.filter((s) => passesQuality(s.item, s.score));
@@ -473,15 +412,12 @@ Deno.serve(async (req: Request) => {
 
     let scored = await scoreFiltered(allRaw);
 
-    // 5. Pass 2 — utvid til 30 dager + ta inn cold companies for å nå TARGET
+    // 5. Pass 2 — ta inn kalde selskaper med 30-dagers vindu hvis vi mangler items
     let fallbackUsed = false;
-    if (scored.length < TARGET_ITEMS && batchesUsed < HARD_CAP_BATCHES) {
+    if (scored.length < TARGET_ITEMS && companiesQueried < HARD_CAP_COMPANIES) {
       fallbackUsed = true;
-      console.log(`[pass2 start] scored=${scored.length} < target=${TARGET_ITEMS}, expanding to 30d + cold pool`);
-      await runPass(warmCompanies, "week", PASS2_MAX_AGE_HOURS, "pass2-warm-30d");
-      if (batchesUsed < HARD_CAP_BATCHES) {
-        await runPass(coldCompanies, "week", PASS2_MAX_AGE_HOURS, "pass2-cold-30d");
-      }
+      console.log(`[pass2 start] scored=${scored.length} < target=${TARGET_ITEMS}, adding cold pool 30d`);
+      await runSearch(coldCompanies, PASS2_MAX_AGE_DAYS, `pass2-cold-${PASS2_MAX_AGE_DAYS}d`);
       scored = await scoreFiltered(allRaw);
     }
 
@@ -552,7 +488,8 @@ Deno.serve(async (req: Request) => {
     console.log(JSON.stringify({
       run_id: runId,
       status: "ok",
-      batches_called: batchesUsed,
+      companies_queried: companiesQueried,
+      total_perplexity_hits: totalHits,
       items_returned: itemsOut.length,
       fallback_used: fallbackUsed,
       heat_tier_distribution: heatTierDistribution,
