@@ -253,43 +253,60 @@ function BriefRow({ item }: { item: NewsBrief }) {
       rel="noopener noreferrer"
       style={{
         display: "grid",
-        gridTemplateColumns: "1fr auto",
-        gap: 16,
-        alignItems: "baseline",
+        gridTemplateColumns: "56px 1fr auto",
+        gap: 14,
+        alignItems: "center",
         padding: "12px 0",
         borderBottom: `1px solid ${C.borderLight}`,
         textDecoration: "none",
         color: "inherit",
       }}
     >
+      <div
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: 4,
+          overflow: "hidden",
+          background: C.overlay,
+          flexShrink: 0,
+        }}
+      >
+        <img
+          src={ensureImage(item)}
+          alt=""
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        />
+      </div>
       <div style={{ minWidth: 0 }}>
-        <span
+        <div
           style={{
             fontSize: 11,
             fontWeight: 600,
             color: C.accent,
-            marginRight: 8,
+            marginBottom: 4,
           }}
         >
           {item.primary_company_name}
-        </span>
-        <span
+        </div>
+        <div
           style={{
             fontSize: 13,
             fontWeight: 500,
             color: C.text,
-            ...clampStyle(1),
-            display: "inline",
+            ...clampStyle(2),
           }}
         >
           {item.title}
-        </span>
+        </div>
       </div>
       <span
         style={{
           fontSize: 11,
           color: C.textFaint,
           whiteSpace: "nowrap",
+          alignSelf: "flex-start",
+          paddingTop: 2,
         }}
       >
         {item.source} · {newsRelative(item.published_at, NOW)}

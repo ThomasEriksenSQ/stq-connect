@@ -19,7 +19,8 @@ import { resolveAndMirrorImage } from "./images.ts";
 const HARD_CAP_BATCHES = 24;
 const BATCH_SIZE = 8;
 const PARALLEL_BATCHES = 4;
-const MIN_ITEMS_FOR_OK = 3;
+const PASS1_MAX_AGE_HOURS = 48; // Pass 1: kun siste 48 timer
+const PASS2_MAX_AGE_HOURS = 24 * 7; // Pass 2: maks 7 dager
 const TARGET_AFTER_PASS_1 = 12;
 const FETCH_CHUNK = 200; // Supabase .in() URL-lengde-grense
 
@@ -80,7 +81,7 @@ async function callPerplexity(
     .map((c) => `- ${c.name}${c.website ? ` (${c.website})` : ""}`)
     .join("\n");
 
-  const timeWindow = recencyFilter === "day" ? "siste 7 dager" : "siste 30 dager";
+  const timeWindow = recencyFilter === "day" ? "siste 48 timer" : "siste 7 dager";
   const prompt = `Søk i norske nyhetskilder etter saker fra ${timeWindow} som omtaler ett eller flere av disse selskapene:
 
 ${list}
@@ -95,7 +96,7 @@ Hvis du ikke finner noen saker, returner items: [].`;
       { role: "system", content: "Du er en nyhets-aggregator for et norsk B2B-salgsteam. Returner verifiserbare saker fra norske medier som e24, DN, Finansavisen, TU, Digi, NRK, Aftenposten, Kapital, Hegnar, Shifter." },
       { role: "user", content: prompt },
     ],
-    search_recency_filter: recencyFilter === "day" ? "week" : "month",
+    search_recency_filter: recencyFilter === "day" ? "day" : "week",
     response_format: {
       type: "json_schema",
       json_schema: {
@@ -141,6 +142,8 @@ Hvis du ikke finner noen saker, returner items: [].`;
       }
       const data = await res.json();
       const content = data.choices?.[0]?.message?.content;
+      const citations: string[] = Array.isArray(data.citations) ? data.citations.map((c: unknown) => String(c)) : [];
+      const citationSet = new Set(citations.map((c) => c.replace(/\/$/, "")));
       if (!content) {
         console.log(`[perplexity] no content. keys=${Object.keys(data).join(",")} choices=${data.choices?.length ?? 0}`);
         return [];
@@ -153,7 +156,7 @@ Hvis du ikke finner noen saker, returner items: [].`;
         return [];
       }
       const items = (parsed.items ?? []) as Array<Record<string, unknown>>;
-      console.log(`[perplexity] returned items=${items.length} for batch_size=${companies.length} recency=${recencyFilter}`);
+      console.log(`[perplexity] returned items=${items.length} citations=${citations.length} for batch_size=${companies.length} recency=${recencyFilter}`);
       if (items.length > 0) {
         console.log(`[perplexity] sample=${JSON.stringify(items[0]).slice(0, 250)}`);
       }
@@ -165,15 +168,14 @@ Hvis du ikke finner noen saker, returner items: [].`;
 
       const out: RawItem[] = [];
       let unmatched = 0;
+      let droppedHallucinated = 0;
       for (const it of items) {
         const rawName = String(it.company_name ?? "");
         let company = companies.find((c) => c.name.toLowerCase() === rawName.toLowerCase());
         if (!company) {
-          // Fuzzy: norm match
           company = companyByNorm.get(norm(rawName));
         }
         if (!company) {
-          // Fuzzy: containment
           const nName = norm(rawName);
           if (nName.length >= 3) {
             company = companies.find((c) => {
@@ -186,15 +188,40 @@ Hvis du ikke finner noen saker, returner items: [].`;
           unmatched++;
           continue;
         }
-        const url = String(it.url ?? "");
+        const rawUrl = String(it.url ?? "").trim();
         const title = String(it.title ?? "");
-        if (!url || !title) continue;
+        if (!rawUrl || !title) continue;
+
+        // Anti-hallusinering: URL må finnes i Perplexitys citations.
+        // Hvis ikke, prøv å finne en citation som inneholder samme host.
+        const normalizedUrl = rawUrl.replace(/\/$/, "");
+        let finalUrl: string | null = null;
+        if (citationSet.has(normalizedUrl)) {
+          finalUrl = rawUrl;
+        } else {
+          try {
+            const host = new URL(rawUrl).hostname.replace(/^www\./, "");
+            const match = citations.find((c) => {
+              try {
+                return new URL(c).hostname.replace(/^www\./, "") === host;
+              } catch {
+                return false;
+              }
+            });
+            if (match) finalUrl = match;
+          } catch { /* invalid url */ }
+        }
+        if (!finalUrl) {
+          droppedHallucinated++;
+          continue;
+        }
+
         out.push({
-          url,
+          url: finalUrl,
           title,
           ingress: it.ingress ? String(it.ingress) : null,
-          source: sourceForUrl(url),
-          source_tier: tierForUrl(url),
+          source: sourceForUrl(finalUrl),
+          source_tier: tierForUrl(finalUrl),
           published_at: it.published_at ? String(it.published_at) : new Date().toISOString(),
           primary_company_id: company.id,
           primary_company_name: company.name,
@@ -204,6 +231,7 @@ Hvis du ikke finner noen saker, returner items: [].`;
         });
       }
       if (unmatched > 0) console.log(`[perplexity] unmatched_company_names=${unmatched}/${items.length}`);
+      if (droppedHallucinated > 0) console.log(`[perplexity] dropped_hallucinated_urls=${droppedHallucinated}/${items.length}`);
       return out;
     } catch (err) {
       lastError = err;
@@ -331,11 +359,18 @@ Deno.serve(async (req: Request) => {
     const coldCompanies = sortedCompanies.filter((c) => (heatTier.get(c.id) ?? 4) === 4);
     console.log(`[heat split] warm(T1-3)=${warmCompanies.length} cold(T4)=${coldCompanies.length}`);
 
-    // 4. Pass 1 — siste 7 dager på varme selskaper (parallell)
+    // 4. Pass 1 — siste 48 timer på varme selskaper (parallell)
     let batchesUsed = 0;
     const allRaw: RawItem[] = [];
     let perplexityHits = 0;
-    async function runPass(pool: CompanyRow[], recency: "day" | "week", label: string) {
+    async function runPass(
+      pool: CompanyRow[],
+      recency: "day" | "week",
+      maxAgeHours: number,
+      label: string,
+    ) {
+      const cutoff = Date.now() - maxAgeHours * 3_600_000;
+      let droppedAge = 0;
       for (let i = 0; i < pool.length && batchesUsed < HARD_CAP_BATCHES; i += BATCH_SIZE * PARALLEL_BATCHES) {
         const slots: Promise<RawItem[]>[] = [];
         for (let j = 0; j < PARALLEL_BATCHES && batchesUsed < HARD_CAP_BATCHES; j++) {
@@ -348,12 +383,19 @@ Deno.serve(async (req: Request) => {
         const results = await Promise.all(slots);
         for (const items of results) {
           perplexityHits += items.length;
-          allRaw.push(...items);
+          for (const it of items) {
+            const ts = new Date(it.published_at).getTime();
+            if (Number.isFinite(ts) && ts < cutoff) {
+              droppedAge++;
+              continue;
+            }
+            allRaw.push(it);
+          }
         }
       }
-      console.log(`[${label} done] batches=${batchesUsed} hits=${perplexityHits} raw=${allRaw.length}`);
+      console.log(`[${label} done] batches=${batchesUsed} hits=${perplexityHits} kept=${allRaw.length} dropped_too_old=${droppedAge}`);
     }
-    await runPass(warmCompanies, "day", "pass1-warm");
+    await runPass(warmCompanies, "day", PASS1_MAX_AGE_HOURS, "pass1-warm-48h");
 
     const ctx: ScoringContext = { baseWeight, heatTier };
     // Bygg aliaser: fullt navn + første ord (hvis ≥4 tegn og ikke generisk)
@@ -368,7 +410,33 @@ Deno.serve(async (req: Request) => {
       aliasByCompany.set(c.id, aliases);
     }
 
-    function scoreFiltered(raw: RawItem[]) {
+    // Verifiser at URL-er faktisk eksisterer (filtrer hallusinasjoner)
+    async function urlExists(url: string): Promise<boolean> {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 4000);
+      try {
+        // GET (ikke HEAD) — mange norske medier blokkerer HEAD
+        const res = await fetch(url, {
+          method: "GET",
+          redirect: "follow",
+          signal: ctrl.signal,
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; STACQ-Daily/1.0)" },
+        });
+        return res.ok && res.status < 400;
+      } catch {
+        return false;
+      } finally {
+        clearTimeout(t);
+      }
+    }
+    async function filterLiveUrls(items: RawItem[]): Promise<RawItem[]> {
+      const checks = await Promise.all(items.map((it) => urlExists(it.url)));
+      const live = items.filter((_, i) => checks[i]);
+      console.log(`[urlValidation] checked=${items.length} live=${live.length} dead=${items.length - live.length}`);
+      return live;
+    }
+
+    async function scoreFiltered(raw: RawItem[]) {
       const merged = dedupAndMerge(raw);
       const afterMerge = merged.length;
       const filtered = merged.filter((it) => {
@@ -376,60 +444,29 @@ Deno.serve(async (req: Request) => {
         return matchesCompanyName(it, aliases);
       });
       const afterNameMatch = filtered.length;
-      const scored = filtered.map((item) => ({ item, score: scoreItem(item, ctx) }));
+      // Verifiser at URL-er svarer (filtrer hallusinerte/døde lenker)
+      const live = await filterLiveUrls(filtered);
+      const scored = live.map((item) => ({ item, score: scoreItem(item, ctx) }));
       const final = scored.filter((s) => passesQuality(s.item, s.score));
-      console.log(`[scoreFiltered] raw=${raw.length} merged=${afterMerge} name_match=${afterNameMatch} quality_pass=${final.length}`);
+      console.log(`[scoreFiltered] raw=${raw.length} merged=${afterMerge} name_match=${afterNameMatch} live=${live.length} quality_pass=${final.length}`);
       return final;
     }
 
-    let scored = scoreFiltered(allRaw);
+    let scored = await scoreFiltered(allRaw);
 
-    // 5. Pass 2 — utvid til 30 dager + ta inn cold companies hvis budsjett er igjen
+    // 5. Pass 2 — utvid til 7 dager + ta inn cold companies hvis budsjett er igjen
     let fallbackUsed = false;
     if (scored.length < TARGET_AFTER_PASS_1 && batchesUsed < HARD_CAP_BATCHES) {
       fallbackUsed = true;
-      console.log(`[pass2 start] scored=${scored.length} < target=${TARGET_AFTER_PASS_1}, expanding to month + cold pool`);
-      // Først: kjør warm igjen med bredere tidsvindu
-      await runPass(warmCompanies, "week", "pass2-warm-month");
-      // Så: prøv kalde selskaper med bredere tidsvindu
+      console.log(`[pass2 start] scored=${scored.length} < target=${TARGET_AFTER_PASS_1}, expanding to 7d + cold pool`);
+      await runPass(warmCompanies, "week", PASS2_MAX_AGE_HOURS, "pass2-warm-7d");
       if (batchesUsed < HARD_CAP_BATCHES) {
-        await runPass(coldCompanies, "week", "pass2-cold-month");
+        await runPass(coldCompanies, "week", PASS2_MAX_AGE_HOURS, "pass2-cold-7d");
       }
-      scored = scoreFiltered(allRaw);
+      scored = await scoreFiltered(allRaw);
     }
 
-    // 6. Empty?
-    if (scored.length < MIN_ITEMS_FOR_OK) {
-      await supabase
-        .from("news_daily")
-        .update({ is_current: false })
-        .eq("date", today)
-        .eq("is_current", true);
-
-      await supabase.from("news_daily").insert({
-        date: today,
-        payload: { items: [], generated_at: new Date().toISOString(), generation_version: "v1" },
-        status: "empty",
-        source_count: 0,
-        company_count: companyList.length,
-        warnings: [{ msg: "Ikke nok kvalifiserte saker", count: scored.length }],
-      });
-
-      console.log(JSON.stringify({
-        run_id: runId,
-        status: "empty",
-        batches_called: batchesUsed,
-        items_returned: scored.length,
-        fallback_used: fallbackUsed,
-        heat_tier_distribution: heatTierDistribution,
-        elapsed_ms: Date.now() - startedAt,
-      }));
-
-      return new Response(JSON.stringify({ status: "empty", items: 0 }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // 6. Lagre alltid det vi har — UI bestemmer presentasjon. Ingen "empty"-grense.
 
     // 7. Pick + bilder
     const picked = pickItems(scored);
@@ -442,17 +479,15 @@ Deno.serve(async (req: Request) => {
     ): Promise<NewsItemOut> {
       const id = `${variant}-${crypto.randomUUID().slice(0, 8)}`;
       const company = companyById.get(entry.item.primary_company_id);
-      const includeImage = variant !== "brief";
-      const image = includeImage
-        ? await resolveAndMirrorImage({
-            supabase,
-            itemId: id,
-            date: today,
-            pageUrl: entry.item.url,
-            companyWebsite: company?.website ?? null,
-            companyName: entry.item.primary_company_name,
-          })
-        : { url: null, source: "placeholder" as const };
+      // Hent bilde for alle varianter (også briefs får liten thumbnail)
+      const image = await resolveAndMirrorImage({
+        supabase,
+        itemId: id,
+        date: today,
+        pageUrl: entry.item.url,
+        companyWebsite: company?.website ?? null,
+        companyName: entry.item.primary_company_name,
+      });
 
       return {
         id,
