@@ -63,7 +63,10 @@ const MOCK_LEAD: NewsLead = {
   source: "finansavisen.no",
   source_tier: 2,
   published_at: hoursAgo(3),
-  image: { url: null, source: "placeholder" },
+  image: {
+    url: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&q=70&auto=format&fit=crop",
+    source: "og",
+  },
   score: 2.07,
 };
 
