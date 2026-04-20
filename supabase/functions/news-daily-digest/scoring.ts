@@ -135,18 +135,19 @@ const NOISE_PATHS = /\/(forum|user|profile|tag|category|search|tema)\//i;
 
 // Side-titler som indikerer index/oversiktssider, ikke faktiske artikler
 const INDEX_TITLE_PATTERNS = [
-  /^(om|about|kontakt|contact|nyheter|news|pressemeldinger|press|investor|kontrakter|career|karriere|home|forside)\b/i,
-  /^[\w\s&]+\|\s*\1$/i, // mønster "X | X" (f.eks. "Aker Solutions | Aker Solutions")
+  /^(om|about|kontakt|contact|nyheter|news|pressemeldinger|press|investor|kontrakter|career|karriere|home|forside|selskapsinformasjon|company info|navigating)\b/i,
+  /^[\w\s&]+\|\s*\1$/i, // "X | X"
 ];
+
+// Spesifikke fragmenter som ALLTID indikerer ikke-artikkel
+const HARD_INDEX_FRAGMENTS = /\b(is parked|regnskapstall|virksomhetsopplysninger|company info|selskapsinformasjon|forsiden -)\b/i;
 
 function isIndexTitle(title: string): boolean {
   const t = title.trim();
-  // PDF-er er nesten alltid rapporter, ikke ferske nyheter
   if (/^\[?pdf\]?/i.test(t)) return true;
-  // Ren "Selskap | Selskap"-duplisering
+  if (HARD_INDEX_FRAGMENTS.test(t)) return true;
   const parts = t.split(/\s*[|–-]\s*/).map((p) => p.trim().toLowerCase());
   if (parts.length === 2 && parts[0] === parts[1]) return true;
-  // Korte oversikts-titler ("Kontrakter - Ocean24.no", "Pressemeldinger | Veidekke")
   if (t.length < 60 && INDEX_TITLE_PATTERNS.some((re) => re.test(t))) return true;
   return false;
 }
