@@ -391,22 +391,23 @@ Deno.serve(async (req: Request) => {
           slots.push(callPerplexity(PERPLEXITY_API_KEY, batch, recency));
           batchesUsed++;
         }
-        const results = await Promise.all(slots);
-        for (const items of results) {
-          perplexityHits += items.length;
-          for (const it of items) {
-            const ts = new Date(it.published_at).getTime();
-            if (Number.isFinite(ts) && ts < cutoff) {
-              droppedAge++;
-              continue;
-            }
-            allRaw.push(it);
+      const results = await Promise.all(slots);
+      for (const items of results) {
+        perplexityHits += items.length;
+        for (const it of items) {
+          const ts = new Date(it.published_at).getTime();
+          // Krev gyldig dato innenfor cutoff (ikke "981d siden"-saker)
+          if (!Number.isFinite(ts) || ts < cutoff || ts > Date.now() + 86_400_000) {
+            droppedAge++;
+            continue;
           }
+          allRaw.push(it);
         }
       }
-      console.log(`[${label} done] batches=${batchesUsed} hits=${perplexityHits} kept=${allRaw.length} dropped_too_old=${droppedAge}`);
     }
-    await runPass(warmCompanies, "day", PASS1_MAX_AGE_HOURS, "pass1-warm-48h");
+    console.log(`[${label} done] batches=${batchesUsed} hits=${perplexityHits} kept=${allRaw.length} dropped_too_old_or_invalid=${droppedAge}`);
+  }
+  await runPass(warmCompanies, "day", PASS1_MAX_AGE_HOURS, "pass1-warm-7d");
 
     const ctx: ScoringContext = { baseWeight, heatTier };
     // Bygg aliaser: fullt navn + første ord (hvis ≥4 tegn og ikke generisk)
