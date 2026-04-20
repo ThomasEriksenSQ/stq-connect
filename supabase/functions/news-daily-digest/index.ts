@@ -271,25 +271,44 @@ Deno.serve(async (req: Request) => {
     // 4. Pass 1 — siste 24t
     let batchesUsed = 0;
     const allRaw: RawItem[] = [];
+    let perplexityHits = 0;
     for (let i = 0; i < sortedCompanies.length && batchesUsed < HARD_CAP_BATCHES; i += BATCH_SIZE) {
       const batch = sortedCompanies.slice(i, i + BATCH_SIZE);
       const items = await callPerplexity(PERPLEXITY_API_KEY, batch, "day");
+      perplexityHits += items.length;
       allRaw.push(...items);
       batchesUsed++;
+      if (items.length > 0) {
+        console.log(`[batch ${batchesUsed} day] ${items.length} items from companies: ${batch.slice(0,3).map(c=>c.name).join(", ")}...`);
+      }
     }
+    console.log(`[pass1 done] batches=${batchesUsed} perplexity_hits=${perplexityHits} raw=${allRaw.length}`);
 
     const ctx: ScoringContext = { baseWeight, heatTier };
+    // Bygg aliaser: fullt navn + første ord (hvis ≥4 tegn og ikke generisk)
+    const GENERIC_FIRST_WORDS = new Set(["the", "norsk", "norske", "nordic", "norway", "norge", "scandinavian"]);
     const aliasByCompany = new Map<string, string[]>();
-    for (const c of companyList) aliasByCompany.set(c.id, [c.name]);
+    for (const c of companyList) {
+      const aliases = [c.name];
+      const firstWord = c.name.split(/\s+/)[0]?.replace(/[^\p{L}0-9]/gu, "") ?? "";
+      if (firstWord.length >= 4 && !GENERIC_FIRST_WORDS.has(firstWord.toLowerCase())) {
+        aliases.push(firstWord);
+      }
+      aliasByCompany.set(c.id, aliases);
+    }
 
     function scoreFiltered(raw: RawItem[]) {
       const merged = dedupAndMerge(raw);
+      const afterMerge = merged.length;
       const filtered = merged.filter((it) => {
         const aliases = aliasByCompany.get(it.primary_company_id) ?? [];
         return matchesCompanyName(it, aliases);
       });
+      const afterNameMatch = filtered.length;
       const scored = filtered.map((item) => ({ item, score: scoreItem(item, ctx) }));
-      return scored.filter((s) => passesQuality(s.item, s.score));
+      const final = scored.filter((s) => passesQuality(s.item, s.score));
+      console.log(`[scoreFiltered] raw=${raw.length} merged=${afterMerge} name_match=${afterNameMatch} quality_pass=${final.length}`);
+      return final;
     }
 
     let scored = scoreFiltered(allRaw);
@@ -298,12 +317,18 @@ Deno.serve(async (req: Request) => {
     let fallbackUsed = false;
     if (scored.length < TARGET_AFTER_PASS_1 && batchesUsed < HARD_CAP_BATCHES) {
       fallbackUsed = true;
+      console.log(`[pass2 start] scored=${scored.length} < target=${TARGET_AFTER_PASS_1}, expanding to week`);
       for (let i = 0; i < sortedCompanies.length && batchesUsed < HARD_CAP_BATCHES; i += BATCH_SIZE) {
         const batch = sortedCompanies.slice(i, i + BATCH_SIZE);
         const items = await callPerplexity(PERPLEXITY_API_KEY, batch, "week");
+        perplexityHits += items.length;
         allRaw.push(...items);
         batchesUsed++;
+        if (items.length > 0) {
+          console.log(`[batch ${batchesUsed} week] ${items.length} items`);
+        }
       }
+      console.log(`[pass2 done] total_perplexity_hits=${perplexityHits} raw=${allRaw.length}`);
       scored = scoreFiltered(allRaw);
     }
 
