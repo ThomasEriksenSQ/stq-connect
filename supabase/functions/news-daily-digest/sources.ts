@@ -78,23 +78,20 @@ export function sourceForUrl(url: string): string {
   }
 }
 
-// True hvis URL kommer fra et redaksjonelt eller offisielt domene vi stoler på,
-// ELLER fra selskapets eget domene (companyHost). Brukes for å filtrere bort
-// støy som blogspot, medium, substack, link-farms.
-export function isTrustedSource(url: string, companyHost: string | null): boolean {
+// Soft trust-filter: aksepter alt unntatt åpenbar støy (link-farms, blogs, content-mills).
+// Vi stoler på name-match + scoring + URL-validering for å fjerne resten.
+// Returnerer false bare for åpenbart dårlige domener.
+const NOISE_HOSTS = /(whothoughtofit|tumblr|blogspot|wordpress\.com|substack\.com|medium\.com|reddit\.com|facebook\.com|twitter\.com|x\.com|pinterest|quora\.com)/i;
+
+export function isTrustedSource(url: string, _companyHost: string | null): boolean {
   try {
     const host = new URL(url).hostname.replace(/^www\./, "");
-    if (companyHost && (host === companyHost || host.endsWith(`.${companyHost}`))) return true;
-    for (const domain of SOURCE_DOMAINS) {
-      if (host === domain || host.endsWith(`.${domain}`)) return true;
-    }
-    for (const domain of TRUSTED_EXTRA) {
-      if (host === domain || host.endsWith(`.${domain}`)) return true;
-    }
+    if (NOISE_HOSTS.test(host)) return false;
+    // Aksepter alt annet — scoring og name-match tar resten
+    return true;
   } catch {
     return false;
   }
-  return false;
 }
 
 export function hostFromUrl(url: string | null): string | null {
