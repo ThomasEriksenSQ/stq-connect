@@ -1,30 +1,30 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Search } from "lucide-react";
-import { format } from "date-fns";
+import { ArrowRight, Inbox, Mail, Phone, RefreshCw, Send, Sparkles, X } from "lucide-react";
+import { format, formatDistanceToNowStrict } from "date-fns";
 import { nb } from "date-fns/locale";
 
 import { DesignLabPageShell } from "@/components/designlab/DesignLabPageShell";
-import { C, SIGNAL_COLORS } from "@/theme";
+import { C } from "@/components/designlab/theme";
+import {
+  DesignLabHeatBadge,
+  DesignLabSignalBadge,
+  DesignLabSecondaryAction,
+  DesignLabGhostAction,
+  DesignLabPrimaryAction,
+  DesignLabReadonlyChip,
+  DesignLabStaticTag,
+} from "@/components/designlab/system";
+import { DesignLabSearchInput } from "@/components/designlab/controls";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { getEffectiveSignal } from "@/lib/categoryUtils";
+import { differenceInDays } from "date-fns";
+import { hasConsultantAvailability } from "@/lib/contactHunt";
+import { loadHomeQueueData, getTop10Leads, type HomeQueueLead } from "@/lib/homeQueueModel";
+import { mergeTechnologyTags } from "@/lib/technologyTags";
 
-interface BriefAction {
-  title: string;
-  why_facts: string[];
-  action_keys: Array<"J" | "M" | "V" | "S" | "F">;
-  target_url: string | null;
-  contact_name?: string | null;
-  company_name?: string | null;
-}
-
-interface BriefResponse {
-  actions: BriefAction[];
-  placeholder_questions: string[];
-  generated_at: string;
-}
+/* ─── Types ─── */
 
 interface PipelinePulse {
   aktive_foresporsler: number;
@@ -33,68 +33,184 @@ interface PipelinePulse {
   vunnet_i_gar: number;
 }
 
-interface SignalChange {
-  contact_id: string;
-  contact_name: string;
-  company_name: string | null;
-  from_signal: string;
-  to_signal: string;
-  changed_at: string;
-  owner_name: string | null;
+interface InboxInsight {
+  summary: string;
+  type: "unanswered" | "buried" | "follow_up";
+  email_id: string | null;
+  contact_email: string | null;
+  age_days: number;
+  web_link: string | null;
 }
 
-const ACTION_KEY_LABEL: Record<string, string> = {
-  J: "ring",
-  M: "e-post",
-  V: "vis CV",
-  S: "send CV",
-  F: "flytt",
+interface InboxPulseResponse {
+  insights: InboxInsight[];
+  scanned_count: number;
+  generated_at: string;
+}
+
+interface ConsultantMatch {
+  consultant_id: number;
+  best_contact_id: string | null;
+  score: number;
+  reasoning: string;
+}
+
+interface ForesporselRow {
+  id: number;
+  selskap_navn: string;
+  mottatt_dato: string;
+  sted: string | null;
+  teknologier: string[] | null;
+  status: string | null;
+}
+
+interface AvailableConsultant {
+  id: number;
+  navn: string;
+  kompetanse: string[];
+  tilgjengelig_fra: string | null;
+}
+
+const FALLBACK_PLACEHOLDER = "Hvem trenger C++ akkurat nå?";
+
+const INSIGHT_TYPE_LABEL: Record<InboxInsight["type"], string> = {
+  unanswered: "Ubesvart",
+  buried: "Ligger begravd",
+  follow_up: "Oppfølging",
 };
 
-const FALLBACK_PLACEHOLDERS = [
-  "Hvem bør jeg ringe i dag?",
-  "Hvilke konsulenter er ledige?",
-  "Hva skjedde i markedet i går?",
-];
+/* ─── Section primitive ─── */
 
-function formatRelative(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const hours = Math.floor(diffMs / (1000 * 60 * 60));
-  if (hours < 1) return "nå";
-  if (hours < 24) return `${hours}t`;
-  const days = Math.floor(hours / 24);
-  return `${days}d`;
+function Section({ children }: { children: React.ReactNode }) {
+  return <div style={{ borderBottom: `1px solid ${C.borderLight}` }}>{children}</div>;
 }
+
+function SectionHeader({
+  title,
+  meta,
+  right,
+}: {
+  title: string;
+  meta?: string;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div
+      className="flex items-center justify-between"
+      style={{ padding: "14px 24px 8px" }}
+    >
+      <div className="flex items-baseline gap-2">
+        <span style={{ fontSize: 12, fontWeight: 600, color: C.text, letterSpacing: "0.01em" }}>
+          {title}
+        </span>
+        {meta ? (
+          <span style={{ fontSize: 11, color: C.textFaint }}>{meta}</span>
+        ) : null}
+      </div>
+      {right}
+    </div>
+  );
+}
+
+function Dot({ color }: { color: string }) {
+  return (
+    <span
+      style={{ width: 6, height: 6, borderRadius: 999, background: color, display: "inline-block", flexShrink: 0 }}
+    />
+  );
+}
+
+function Row({
+  children,
+  onClick,
+  focused,
+  onMouseEnter,
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  focused?: boolean;
+  onMouseEnter?: () => void;
+}) {
+  return (
+    <div
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      onKeyDown={(e) => {
+        if (onClick && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className="group flex items-center gap-3 transition-colors"
+      style={{
+        minHeight: 30,
+        padding: "0 24px",
+        cursor: onClick ? "pointer" : "default",
+        background: focused ? C.hoverBg : "transparent",
+        borderLeft: focused ? `2px solid ${C.accent}` : "2px solid transparent",
+      }}
+      onMouseLeave={(e) => {
+        if (!focused) (e.currentTarget as HTMLDivElement).style.background = "transparent";
+      }}
+      onMouseOver={(e) => {
+        if (!focused) (e.currentTarget as HTMLDivElement).style.background = C.hoverBg;
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function EmptyText({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ padding: "12px 24px 16px", fontSize: 12, color: C.textFaint }}>{children}</div>
+  );
+}
+
+function Skeleton({ rows = 3 }: { rows?: number }) {
+  return (
+    <div style={{ padding: "8px 24px 12px" }}>
+      {Array.from({ length: rows }).map((_, i) => (
+        <div
+          key={i}
+          style={{
+            height: 16,
+            margin: "8px 0",
+            background: C.surfaceAlt,
+            borderRadius: 4,
+            opacity: 0.6,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   MAIN PAGE
+   ═══════════════════════════════════════════════ */
 
 export default function DesignLabHome() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const searchRef = useRef<HTMLInputElement>(null);
-  const [focusedActionIdx, setFocusedActionIdx] = useState(0);
 
-  // ──────── Pipeline-puls ────────
+  /* ──────── Pipeline ──────── */
   const { data: pulse } = useQuery<PipelinePulse>({
     queryKey: ["dl-home-pulse"],
     queryFn: async () => {
       const now = new Date();
-      const in30d = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .slice(0, 10);
-      const in7d = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .slice(0, 10);
+      const in30d = new Date(now.getTime() + 30 * 86400000).toISOString().slice(0, 10);
+      const in7d = new Date(now.getTime() + 7 * 86400000).toISOString().slice(0, 10);
       const todayStart = new Date(now);
       todayStart.setHours(0, 0, 0, 0);
-      const yesterdayStart = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
-      const since45d = new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .slice(0, 10);
+      const yesterdayStart = new Date(todayStart.getTime() - 86400000);
+      const since45d = new Date(now.getTime() - 45 * 86400000).toISOString().slice(0, 10);
 
       const [foresRes, ansatteRes, oppdragRes, vunnetRes] = await Promise.all([
-        supabase
-          .from("foresporsler")
-          .select("id", { count: "exact", head: true })
-          .gte("mottatt_dato", since45d),
+        supabase.from("foresporsler").select("id", { count: "exact", head: true }).gte("mottatt_dato", since45d),
         supabase
           .from("stacq_ansatte")
           .select("id", { count: "exact", head: true })
@@ -122,223 +238,312 @@ export default function DesignLabHome() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // ──────── Daily brief (AI) ────────
-  const { data: brief, isLoading: briefLoading } = useQuery<BriefResponse>({
-    queryKey: ["dl-home-brief"],
+  /* ──────── Innboks-puls (AI) ──────── */
+  const {
+    data: inbox,
+    isLoading: inboxLoading,
+    refetch: refetchInbox,
+    isFetching: inboxFetching,
+  } = useQuery<InboxPulseResponse>({
+    queryKey: ["dl-home-inbox-pulse"],
     queryFn: async () => {
       const { data: sess } = await supabase.auth.getSession();
       const token = sess.session?.access_token;
       if (!token) throw new Error("no session");
-      const resp = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/daily-brief`,
-        { method: "POST", headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (!resp.ok) throw new Error("brief failed");
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/inbox-pulse`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!resp.ok) throw new Error("inbox-pulse failed");
       return resp.json();
     },
     staleTime: 30 * 60 * 1000,
-    retry: 1,
+    retry: 0,
   });
 
-  // ──────── Din dag (oppfølginger forfalt + i dag) ────────
-  const { data: dagensTasks = [] } = useQuery({
-    queryKey: ["dl-home-tasks"],
+  /* ──────── Tilgjengelige konsulenter ──────── */
+  const { data: availableConsultants = [] } = useQuery<AvailableConsultant[]>({
+    queryKey: ["dl-home-available-consultants"],
     queryFn: async () => {
-      const todayEnd = new Date();
-      todayEnd.setHours(23, 59, 59, 999);
+      const in60d = new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
       const { data } = await supabase
-        .from("tasks")
-        .select("id, title, due_date, status, contact_id, company_id")
-        .neq("status", "done")
-        .lte("due_date", todayEnd.toISOString())
-        .order("due_date", { ascending: true })
-        .limit(10);
-      return data || [];
-    },
-    staleTime: 2 * 60 * 1000,
-  });
-
-  // ──────── Nye signaler siste 24t ────────
-  const { data: signalChanges = [] } = useQuery<SignalChange[]>({
-    queryKey: ["dl-home-signals"],
-    queryFn: async () => {
-      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { data: acts } = await supabase
-        .from("activities")
-        .select("contact_id, subject, description, created_at")
-        .not("contact_id", "is", null)
-        .gte("created_at", since)
-        .order("created_at", { ascending: false })
-        .limit(50);
-
-      if (!acts || acts.length === 0) return [];
-
-      const contactIds = Array.from(new Set(acts.map((a) => a.contact_id).filter(Boolean)));
-      if (contactIds.length === 0) return [];
-
-      const [contactsRes, allActsRes, allTasksRes] = await Promise.all([
-        supabase
-          .from("contacts")
-          .select("id, first_name, last_name, owner_id, company_id, companies(name), profiles:owner_id(full_name)")
-          .in("id", contactIds),
-        supabase
-          .from("activities")
-          .select("contact_id, subject, description, created_at")
-          .in("contact_id", contactIds)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("tasks")
-          .select("contact_id, title, description, created_at, due_date")
-          .in("contact_id", contactIds)
-          .order("created_at", { ascending: false }),
-      ]);
-
-      const contacts = contactsRes.data || [];
-      const allActs = allActsRes.data || [];
-      const allTasks = allTasksRes.data || [];
-
-      const changes: SignalChange[] = [];
-      for (const c of contacts) {
-        const cActs = allActs
-          .filter((a) => a.contact_id === c.id)
-          .map((a) => ({ created_at: a.created_at, subject: a.subject, description: a.description }));
-        const cTasks = allTasks
-          .filter((t) => t.contact_id === c.id)
-          .map((t) => ({
-            created_at: t.created_at,
-            title: t.title,
-            description: t.description,
-            due_date: t.due_date,
-          }));
-
-        // Current signal (alle data)
-        const current = getEffectiveSignal(cActs, cTasks);
-        // Forrige signal (uten siste 24t)
-        const prevActs = cActs.filter(
-          (a) => new Date(a.created_at).getTime() < Date.now() - 24 * 60 * 60 * 1000
-        );
-        const prevTasks = cTasks.filter(
-          (t) => t.created_at && new Date(t.created_at).getTime() < Date.now() - 24 * 60 * 60 * 1000
-        );
-        const prev = getEffectiveSignal(prevActs, prevTasks);
-
-        if (current !== prev) {
-          const lastChangeAct = cActs.find(
-            (a) => new Date(a.created_at).getTime() >= Date.now() - 24 * 60 * 60 * 1000
-          );
-          changes.push({
-            contact_id: c.id,
-            contact_name: `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Ukjent",
-            company_name: (c as any).companies?.name || null,
-            from_signal: prev || "Ukjent om behov",
-            to_signal: current || "Ukjent om behov",
-            changed_at: lastChangeAct?.created_at || new Date().toISOString(),
-            owner_name: (c as any).profiles?.full_name || null,
-          });
-        }
-      }
-
-      return changes
-        .sort((a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime())
+        .from("stacq_ansatte")
+        .select("id, navn, kompetanse, tilgjengelig_fra, status")
+        .lte("tilgjengelig_fra", in60d)
+        .not("tilgjengelig_fra", "is", null)
+        .in("status", ["AKTIV/SIGNERT", "Ledig"]);
+      return (data || [])
+        .filter((c: any) => hasConsultantAvailability(c.tilgjengelig_fra))
+        .map((c: any) => ({
+          id: c.id,
+          navn: c.navn,
+          kompetanse: c.kompetanse || [],
+          tilgjengelig_fra: c.tilgjengelig_fra,
+        }))
         .slice(0, 5);
     },
     staleTime: 5 * 60 * 1000,
   });
 
-  // ──────── Tastatur: ⌘K, piltaster, J/M/V/S/F ────────
+  /* ──────── Topp 10 hotteste leads ──────── */
+  const { data: queue = [], isLoading: queueLoading } = useQuery<HomeQueueLead[]>({
+    queryKey: ["dl-home-queue", user?.id || ""],
+    queryFn: () => loadHomeQueueData(user?.id || null),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!user,
+  });
+
+  const top10 = useMemo(() => getTop10Leads(queue), [queue]);
+
+  /* ──────── AI-match konsulent → lead ──────── */
+  const {
+    data: matchData,
+    isLoading: matchLoading,
+  } = useQuery<{ matches: ConsultantMatch[] }>({
+    queryKey: [
+      "dl-home-cl-match",
+      availableConsultants.map((c) => c.id).join(","),
+      top10.map((l) => l.contactId).slice(0, 10).join(","),
+    ],
+    queryFn: async () => {
+      if (availableConsultants.length === 0 || top10.length === 0) return { matches: [] };
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      if (!token) throw new Error("no session");
+      const resp = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/consultant-lead-match`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            consultants: availableConsultants.map((c) => ({
+              consultant_id: c.id,
+              navn: c.navn,
+              kompetanse: c.kompetanse,
+              tilgjengelig_fra: c.tilgjengelig_fra,
+            })),
+            leads: top10.map((l) => ({
+              contact_id: l.contactId,
+              navn: l.contactName,
+              selskap: l.companyName,
+              signal: l.signal,
+              teknologier: l.technologies,
+              heat_score: l.heat.score,
+            })),
+          }),
+        },
+      );
+      if (!resp.ok) return { matches: [] };
+      return resp.json();
+    },
+    staleTime: 30 * 60 * 1000,
+    enabled: availableConsultants.length > 0 && top10.length > 0,
+  });
+
+  const matches = matchData?.matches || [];
+
+  /* ──────── Nye forespørsler (7d) ──────── */
+  const { data: nyeForesporsler = [] } = useQuery<ForesporselRow[]>({
+    queryKey: ["dl-home-foresp-7d"],
+    queryFn: async () => {
+      const since = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+      const { data } = await supabase
+        .from("foresporsler")
+        .select("id, selskap_navn, mottatt_dato, sted, teknologier, status")
+        .gte("mottatt_dato", since)
+        .order("mottatt_dato", { ascending: false })
+        .limit(8);
+      return data || [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  /* ──────── Inline AI-søk ──────── */
+  const [searchQuery, setSearchQuery] = useState("");
+  const [aiAnswer, setAiAnswer] = useState<string>("");
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const askAgent = async () => {
+    const q = searchQuery.trim();
+    if (!q || aiLoading) return;
+    setAiLoading(true);
+    setAiAnswer("");
+    try {
+      // Bygg lett kontekst fra topp-leads og forespørsler — vi har dem allerede
+      const context = {
+        top_leads: top10.slice(0, 10).map((l) => ({
+          navn: l.contactName,
+          selskap: l.companyName,
+          signal: l.signal,
+          tek: l.technologies,
+        })),
+        nye_foresporsler: nyeForesporsler.map((f) => ({
+          selskap: f.selskap_navn,
+          tek: f.teknologier || [],
+          sted: f.sted,
+          dato: f.mottatt_dato,
+        })),
+        ledige_konsulenter: availableConsultants.map((c) => ({
+          navn: c.navn,
+          tek: c.kompetanse,
+          ledig: c.tilgjengelig_fra,
+        })),
+      };
+
+      const systemPrompt = `Du er salgsassistent for STACQ (norsk IT-konsulentbyrå, embedded/firmware/C/C++).
+Bruk konteksten under til å svare presist. Nevn konkrete navn/selskap/teknologier fra dataene.
+Norsk bokmål. Maks 80 ord. Ikke pad svaret. Bruk "konsulent".
+
+KONTEKST:
+${JSON.stringify(context)}`;
+
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          system: systemPrompt,
+          messages: [{ role: "user", content: q }],
+        }),
+      });
+      const data = await resp.json();
+      setAiAnswer(data.text || data.error || "Ingen svar.");
+    } catch {
+      setAiAnswer("Beklager, noe gikk galt.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  /* ──────── Fokus-rad og tastatur ──────── */
+  type FocusRow =
+    | { kind: "inbox"; idx: number }
+    | { kind: "match"; idx: number }
+    | { kind: "foresporsel"; idx: number }
+    | { kind: "lead"; idx: number };
+
+  const [focused, setFocused] = useState<FocusRow | null>(null);
+
+  const orderedRows: FocusRow[] = useMemo(() => {
+    const rows: FocusRow[] = [];
+    inbox?.insights.forEach((_, i) => rows.push({ kind: "inbox", idx: i }));
+    matches.forEach((_, i) => rows.push({ kind: "match", idx: i }));
+    nyeForesporsler.forEach((_, i) => rows.push({ kind: "foresporsel", idx: i }));
+    top10.forEach((_, i) => rows.push({ kind: "lead", idx: i }));
+    return rows;
+  }, [inbox, matches, nyeForesporsler, top10]);
+
+  const isFocused = (row: FocusRow) =>
+    focused?.kind === row.kind && focused.idx === row.idx;
+
+  const openFocused = () => {
+    if (!focused) return;
+    if (focused.kind === "inbox") {
+      const link = inbox?.insights[focused.idx]?.web_link;
+      if (link) window.open(link, "_blank");
+    } else if (focused.kind === "match") {
+      const m = matches[focused.idx];
+      if (m?.best_contact_id) navigate(`/design-lab/kontakter/${m.best_contact_id}`);
+    } else if (focused.kind === "foresporsel") {
+      navigate("/design-lab/foresporsler");
+    } else if (focused.kind === "lead") {
+      const l = top10[focused.idx];
+      if (l) navigate(`/design-lab/kontakter/${l.contactId}`);
+    }
+  };
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const isInput =
-        document.activeElement?.tagName === "INPUT" ||
-        document.activeElement?.tagName === "TEXTAREA";
+        document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA";
 
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         searchRef.current?.focus();
         return;
       }
-
+      if (e.key === "Escape") {
+        if (aiAnswer) {
+          setAiAnswer("");
+          return;
+        }
+      }
       if (isInput) return;
 
-      const actions = brief?.actions || [];
-      if (actions.length === 0) return;
+      if (orderedRows.length === 0) return;
+
+      const currentIdx = focused
+        ? orderedRows.findIndex((r) => r.kind === focused.kind && r.idx === focused.idx)
+        : -1;
 
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setFocusedActionIdx((i) => Math.min(i + 1, actions.length - 1));
+        const next = Math.min(currentIdx + 1, orderedRows.length - 1);
+        setFocused(orderedRows[Math.max(0, next)]);
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setFocusedActionIdx((i) => Math.max(i - 1, 0));
-      } else if (["j", "m", "v", "s", "f"].includes(e.key.toLowerCase())) {
-        const action = actions[focusedActionIdx];
-        if (action?.target_url) navigate(action.target_url);
+        const next = Math.max(currentIdx - 1, 0);
+        setFocused(orderedRows[next]);
+      } else if (e.key === "Enter") {
+        if (focused) {
+          e.preventDefault();
+          openFocused();
+        }
+      } else if (e.key.toLowerCase() === "j" && focused) {
+        // Ring — naviger til kontakt
+        if (focused.kind === "lead") {
+          const l = top10[focused.idx];
+          if (l) navigate(`/design-lab/kontakter/${l.contactId}`);
+        }
+      } else if (e.key.toLowerCase() === "m" && focused) {
+        if (focused.kind === "lead") {
+          const l = top10[focused.idx];
+          if (l) navigate(`/design-lab/kontakter/${l.contactId}`);
+        } else if (focused.kind === "inbox") {
+          const link = inbox?.insights[focused.idx]?.web_link;
+          if (link) window.open(link, "_blank");
+        }
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [brief, focusedActionIdx, navigate]);
+  }, [focused, orderedRows, top10, inbox, matches, navigate, aiAnswer]);
 
-  // ──────── Hilsen ────────
-  const greeting = useMemo(() => {
-    const fullName =
-      (user?.user_metadata?.full_name as string | undefined) ||
-      user?.email?.split("@")[0] ||
-      "der";
-    const firstName = fullName.split(" ")[0];
-    const dateStr = format(new Date(), "EEE d. MMM yyyy", { locale: nb });
-    const week = format(new Date(), "I", { locale: nb });
-    return { firstName, dateStr, week };
-  }, [user]);
-
-  const placeholderQuestion =
-    brief?.placeholder_questions?.[0] || FALLBACK_PLACEHOLDERS[0];
+  /* ──────── Helper: lookup contact for match ──────── */
+  const findLead = (contactId: string | null): HomeQueueLead | undefined => {
+    if (!contactId) return undefined;
+    return queue.find((l) => l.contactId === contactId);
+  };
 
   return (
     <DesignLabPageShell
       activePath="/design-lab/home"
-      title="Hjem"
-      maxWidth={1280}
+      title="Hjem · Morgenkø"
+      maxWidth={1180}
       contentStyle={{ padding: "0" }}
     >
       <div style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif" }}>
-        {/* Hilsen */}
+        {/* PIPELINE */}
         <Section>
-          <div className="flex items-baseline justify-between" style={{ padding: "20px 24px" }}>
-            <div className="flex items-baseline gap-3">
-              <h2 style={{ fontSize: 18, fontWeight: 600, color: C.text }}>
-                God morgen, {greeting.firstName}
-              </h2>
-              <span style={{ fontSize: 13, color: C.textMuted }}>
-                {greeting.dateStr} · uke {greeting.week}
-              </span>
-            </div>
-            <KbdHint label="⌘K søk" />
-          </div>
-        </Section>
-
-        {/* Pipeline-puls */}
-        <Section>
-          <div className="flex items-center gap-1" style={{ padding: "12px 24px", flexWrap: "wrap" }}>
-            <span style={{ fontSize: 13, color: C.textMuted, marginRight: 8 }}>Pipeline nå:</span>
-            <PulseSegment
+          <div className="flex items-center" style={{ padding: "16px 24px", gap: 28, flexWrap: "wrap" }}>
+            <PulseStat
               value={pulse?.aktive_foresporsler ?? "—"}
-              label="forespørsler aktive"
+              label="forespørsler aktive (45d)"
               onClick={() => navigate("/design-lab/foresporsler")}
             />
-            <Sep />
-            <PulseSegment
+            <PulseStat
               value={pulse?.konsulenter_ledige_30d ?? "—"}
-              label="konsulenter ledige om 30d"
+              label="konsulenter ledige (30d)"
               onClick={() => navigate("/design-lab/ansatte")}
             />
-            <Sep />
-            <PulseSegment
+            <PulseStat
               value={pulse?.fornyelser_uka ?? "—"}
               label="fornyelser denne uka"
               onClick={() => navigate("/design-lab/aktive-oppdrag")}
             />
-            <Sep />
-            <PulseSegment
+            <PulseStat
               value={pulse?.vunnet_i_gar ?? "—"}
               label="vunnet i går"
               onClick={() => navigate("/design-lab/foresporsler")}
@@ -346,499 +551,359 @@ export default function DesignLabHome() {
           </div>
         </Section>
 
-        {/* Brief + Din dag */}
+        {/* INNBOKS-PULS */}
         <Section>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "minmax(0, 64fr) minmax(0, 36fr)",
-              gap: 0,
-            }}
-          >
-            {/* Dagens 3 trekk */}
-            <div style={{ padding: "20px 24px", borderRight: `1px solid ${C.borderLight}` }}>
-              <SectionLabel>Dagens 3 trekk</SectionLabel>
-              {briefLoading ? (
-                <BriefSkeleton />
-              ) : brief?.actions && brief.actions.length > 0 ? (
-                <div className="flex flex-col" style={{ gap: 16, marginTop: 12 }}>
-                  {brief.actions.map((action, idx) => (
-                    <ActionRow
-                      key={idx}
-                      idx={idx + 1}
-                      action={action}
-                      focused={focusedActionIdx === idx}
-                      onFocus={() => setFocusedActionIdx(idx)}
-                      onActivate={() => action.target_url && navigate(action.target_url)}
-                    />
-                  ))}
-                  <div className="flex items-center justify-end" style={{ marginTop: 4 }}>
-                    <button
-                      onClick={() => {
-                        const first = brief.actions[0];
-                        if (first?.target_url) navigate(first.target_url);
-                      }}
+          <SectionHeader
+            title="Innboks-puls"
+            meta={
+              inboxLoading
+                ? "AI leser …"
+                : inbox
+                  ? `AI har lest ${inbox.scanned_count} e-poster siste 14 dager`
+                  : "Ikke koblet til Outlook"
+            }
+            right={
+              <button
+                onClick={() => refetchInbox()}
+                disabled={inboxFetching}
+                title="Last på nytt"
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: C.textFaint,
+                  padding: 4,
+                }}
+              >
+                <RefreshCw size={12} className={inboxFetching ? "animate-spin" : ""} />
+              </button>
+            }
+          />
+          {inboxLoading ? (
+            <Skeleton rows={3} />
+          ) : !inbox || inbox.insights.length === 0 ? (
+            <EmptyText>Ingen handlingsverdige e-poster funnet.</EmptyText>
+          ) : (
+            <div style={{ paddingBottom: 8 }}>
+              {inbox.insights.map((ins, idx) => {
+                const focusedRow = isFocused({ kind: "inbox", idx });
+                return (
+                  <Row
+                    key={`inbox-${idx}`}
+                    focused={focusedRow}
+                    onMouseEnter={() => setFocused({ kind: "inbox", idx })}
+                    onClick={() => {
+                      if (ins.web_link) window.open(ins.web_link, "_blank");
+                    }}
+                  >
+                    <Dot color={ins.type === "unanswered" ? C.danger : ins.type === "buried" ? C.warning : C.info} />
+                    <span style={{ fontSize: 11, color: C.textFaint, width: 92, flexShrink: 0 }}>
+                      {INSIGHT_TYPE_LABEL[ins.type]} · {ins.age_days}d
+                    </span>
+                    <span
                       style={{
                         fontSize: 13,
-                        fontWeight: 500,
-                        color: C.onAccent,
-                        background: C.accent,
-                        padding: "6px 14px",
-                        borderRadius: 5,
-                        border: "none",
-                        cursor: "pointer",
+                        color: C.text,
+                        flex: 1,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
                       }}
                     >
-                      Start dagen
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: C.textFaint,
-                    padding: "24px 0",
-                    textAlign: "center",
-                  }}
-                >
-                  Ingen anbefalinger akkurat nå.
-                </div>
-              )}
+                      {ins.summary}
+                    </span>
+                    {ins.contact_email ? (
+                      <span style={{ fontSize: 11, color: C.textFaint, flexShrink: 0 }}>
+                        {ins.contact_email}
+                      </span>
+                    ) : null}
+                    <ArrowRight size={12} className="opacity-0 group-hover:opacity-100" style={{ color: C.textFaint }} />
+                  </Row>
+                );
+              })}
             </div>
+          )}
+        </Section>
 
-            {/* Din dag */}
-            <div style={{ padding: "20px 24px" }}>
-              <SectionLabel>Din dag</SectionLabel>
-              {dagensTasks.length === 0 ? (
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: C.textFaint,
-                    padding: "24px 0",
-                    textAlign: "center",
-                  }}
-                >
-                  Ingen oppfølginger i dag.
-                </div>
-              ) : (
-                <div className="flex flex-col" style={{ marginTop: 12 }}>
-                  {dagensTasks.slice(0, 5).map((t: any) => {
-                    const overdue =
-                      t.due_date &&
-                      new Date(t.due_date).getTime() < Date.now() - 24 * 60 * 60 * 1000;
-                    const time = t.due_date
-                      ? format(new Date(t.due_date), "HH:mm")
-                      : "—";
-                    return (
-                      <button
-                        key={t.id}
-                        onClick={() => navigate("/design-lab/oppfolginger")}
-                        className="flex items-center gap-3 text-left"
-                        style={{
-                          padding: "6px 0",
-                          background: "transparent",
-                          border: "none",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <Dot color={overdue ? C.danger : C.textGhost} />
+        {/* KONSULENT → LEAD */}
+        <Section>
+          <SectionHeader
+            title="Tilgjengelige konsulenter — AI foreslår beste lead"
+            meta={
+              availableConsultants.length === 0
+                ? "Ingen ledige konsulenter neste 60d"
+                : `${availableConsultants.length} ledig${availableConsultants.length === 1 ? "" : "e"}`
+            }
+          />
+          {matchLoading ? (
+            <Skeleton rows={3} />
+          ) : availableConsultants.length === 0 ? (
+            <EmptyText>Ingen konsulenter ledige innen 60 dager.</EmptyText>
+          ) : matches.length === 0 ? (
+            <EmptyText>Ingen leads matchet (henter forslag …).</EmptyText>
+          ) : (
+            <div style={{ paddingBottom: 8 }}>
+              {matches.map((m, idx) => {
+                const consultant = availableConsultants.find((c) => c.id === m.consultant_id);
+                if (!consultant) return null;
+                const lead = findLead(m.best_contact_id);
+                const focusedRow = isFocused({ kind: "match", idx });
+                const dateLabel = consultant.tilgjengelig_fra
+                  ? format(new Date(consultant.tilgjengelig_fra), "d. MMM", { locale: nb })
+                  : "—";
+
+                return (
+                  <Row
+                    key={`match-${idx}`}
+                    focused={focusedRow}
+                    onMouseEnter={() => setFocused({ kind: "match", idx })}
+                    onClick={() => {
+                      if (lead) navigate(`/design-lab/kontakter/${lead.contactId}`);
+                    }}
+                  >
+                    <span style={{ fontSize: 13, color: C.text, fontWeight: 500, width: 150, flexShrink: 0 }}>
+                      {consultant.navn}
+                    </span>
+                    <span style={{ fontSize: 11, color: C.textMuted, width: 78, flexShrink: 0 }}>
+                      ledig {dateLabel}
+                    </span>
+                    <span style={{ fontSize: 11, color: C.textFaint, width: 130, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {(consultant.kompetanse || []).slice(0, 3).join(" · ") || "—"}
+                    </span>
+                    <ArrowRight size={11} style={{ color: C.textGhost, flexShrink: 0 }} />
+                    {lead ? (
+                      <>
+                        <span style={{ fontSize: 13, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {lead.contactName} <span style={{ color: C.textFaint }}>· {lead.companyName}</span>
+                        </span>
                         <span
                           style={{
                             fontSize: 11,
-                            color: C.textMuted,
-                            fontVariantNumeric: "tabular-nums",
-                            width: 38,
+                            fontWeight: 600,
+                            color: m.score >= 80 ? C.success : m.score >= 60 ? C.warning : C.textMuted,
+                            flexShrink: 0,
                           }}
                         >
-                          {time}
+                          {m.score}%
                         </span>
-                        <span
-                          style={{
-                            fontSize: 13,
-                            color: C.text,
-                            flex: 1,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {t.title}
-                        </span>
-                      </button>
-                    );
-                  })}
-                  {dagensTasks.length > 5 ? (
-                    <button
-                      onClick={() => navigate("/design-lab/oppfolginger")}
-                      style={{
-                        fontSize: 12,
-                        color: C.textMuted,
-                        background: "transparent",
-                        border: "none",
-                        textAlign: "left",
-                        padding: "6px 0",
-                        cursor: "pointer",
-                      }}
-                    >
-                      + {dagensTasks.length - 5} flere
-                    </button>
-                  ) : null}
+                        <DesignLabSignalBadge signal={lead.signal} size="sm" />
+                      </>
+                    ) : (
+                      <span style={{ fontSize: 12, color: C.textFaint, flex: 1 }}>
+                        {m.reasoning || "Ingen passende lead nå."}
+                      </span>
+                    )}
+                  </Row>
+                );
+              })}
+              {matches.some((m) => m.reasoning) ? (
+                <div style={{ padding: "4px 24px 8px", fontSize: 11, color: C.textFaint, fontStyle: "italic" }}>
+                  {matches.find((m) => m.best_contact_id)?.reasoning}
                 </div>
-              )}
+              ) : null}
             </div>
-          </div>
+          )}
         </Section>
 
-        {/* Nye signaler */}
+        {/* NYE FORESPØRSLER (7d) */}
         <Section>
-          <div style={{ padding: "16px 24px" }}>
-            <div className="flex items-baseline gap-2" style={{ marginBottom: 8 }}>
-              <SectionLabel>Nye signaler i går</SectionLabel>
-              <span style={{ fontSize: 11, color: C.textFaint }}>
-                ({signalChanges.length})
+          <SectionHeader
+            title="Nye forespørsler (7 dager)"
+            meta={`${nyeForesporsler.length}`}
+          />
+          {nyeForesporsler.length === 0 ? (
+            <EmptyText>Ingen nye forespørsler siste 7 dager.</EmptyText>
+          ) : (
+            <div style={{ paddingBottom: 8 }}>
+              {nyeForesporsler.map((f, idx) => {
+                const ago = formatDistanceToNowStrict(new Date(f.mottatt_dato), { locale: nb });
+                const focusedRow = isFocused({ kind: "foresporsel", idx });
+                return (
+                  <Row
+                    key={`fr-${f.id}`}
+                    focused={focusedRow}
+                    onMouseEnter={() => setFocused({ kind: "foresporsel", idx })}
+                    onClick={() => navigate("/design-lab/foresporsler")}
+                  >
+                    <span style={{ fontSize: 11, color: C.textFaint, width: 60, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
+                      {ago.replace(/\s/, "\u00A0")}
+                    </span>
+                    <span style={{ fontSize: 13, color: C.text, fontWeight: 500, width: 200, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {f.selskap_navn}
+                    </span>
+                    <span style={{ fontSize: 12, color: C.textMuted, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {(f.teknologier || []).slice(0, 5).join(" · ") || "—"}
+                    </span>
+                    <span style={{ fontSize: 11, color: C.textFaint, width: 110, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {f.sted || ""}
+                    </span>
+                    <ArrowRight size={12} className="opacity-0 group-hover:opacity-100" style={{ color: C.textFaint }} />
+                  </Row>
+                );
+              })}
+            </div>
+          )}
+        </Section>
+
+        {/* TOPP 10 LEADS */}
+        <Section>
+          <SectionHeader
+            title="Topp 10 hotteste leads"
+            meta={queueLoading ? "Beregner …" : `${top10.length} av ${queue.length}`}
+          />
+          {queueLoading ? (
+            <Skeleton rows={6} />
+          ) : top10.length === 0 ? (
+            <EmptyText>Ingen leads tilgjengelig akkurat nå.</EmptyText>
+          ) : (
+            <div style={{ paddingBottom: 8 }}>
+              {top10.map((lead, idx) => {
+                const focusedRow = isFocused({ kind: "lead", idx });
+                return (
+                  <Row
+                    key={`lead-${lead.contactId}`}
+                    focused={focusedRow}
+                    onMouseEnter={() => setFocused({ kind: "lead", idx })}
+                    onClick={() => navigate(`/design-lab/kontakter/${lead.contactId}`)}
+                  >
+                    <span style={{ width: 72, flexShrink: 0 }}>
+                      <DesignLabHeatBadge temperature={lead.heat.temperature} />
+                    </span>
+                    <span style={{ fontSize: 13, color: C.text, fontWeight: 500, width: 180, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {lead.contactName}
+                    </span>
+                    <span style={{ fontSize: 12, color: C.textMuted, width: 200, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {lead.companyName}
+                    </span>
+                    <span style={{ fontSize: 12, color: C.textFaint, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {lead.reasonLine}
+                    </span>
+                    {lead.signal ? <DesignLabSignalBadge signal={lead.signal} size="sm" /> : null}
+                    <ArrowRight size={12} className="opacity-0 group-hover:opacity-100" style={{ color: C.textFaint, flexShrink: 0 }} />
+                  </Row>
+                );
+              })}
+            </div>
+          )}
+        </Section>
+
+        {/* SPØR AGENTEN */}
+        <Section>
+          <div style={{ padding: "16px 24px 20px" }}>
+            <div className="flex items-center gap-2" style={{ marginBottom: 8 }}>
+              <Sparkles size={12} style={{ color: C.accent }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>Spør agenten</span>
+              <span style={{ fontSize: 11, color: C.textFaint, marginLeft: "auto" }}>
+                <kbd
+                  style={{
+                    fontFamily: "inherit",
+                    fontSize: 10,
+                    padding: "1px 5px",
+                    background: C.surfaceAlt,
+                    color: C.textMuted,
+                    border: `1px solid ${C.borderLight}`,
+                    borderRadius: 3,
+                  }}
+                >
+                  ⌘K
+                </kbd>
               </span>
             </div>
-            {signalChanges.length === 0 ? (
+            <div className="flex items-center gap-2">
+              <DesignLabSearchInput
+                ref={searchRef}
+                placeholder={FALLBACK_PLACEHOLDER}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") askAgent();
+                }}
+                style={{ flex: 1 } as React.CSSProperties}
+              />
+              <DesignLabPrimaryAction
+                onClick={askAgent}
+                disabled={aiLoading || !searchQuery.trim()}
+              >
+                {aiLoading ? "…" : "Spør"}
+              </DesignLabPrimaryAction>
+            </div>
+            {aiAnswer ? (
               <div
                 style={{
+                  marginTop: 12,
+                  padding: "12px 14px",
+                  background: C.surfaceAlt,
+                  borderRadius: 6,
                   fontSize: 13,
-                  color: C.textFaint,
-                  padding: "16px 0",
+                  color: C.text,
+                  lineHeight: 1.55,
+                  whiteSpace: "pre-wrap",
+                  position: "relative",
                 }}
               >
-                Ingen signalendringer siste 24 timer.
+                <button
+                  onClick={() => setAiAnswer("")}
+                  style={{
+                    position: "absolute",
+                    top: 8,
+                    right: 8,
+                    background: "transparent",
+                    border: "none",
+                    color: C.textFaint,
+                    cursor: "pointer",
+                    padding: 2,
+                  }}
+                  title="Lukk (Esc)"
+                >
+                  <X size={12} />
+                </button>
+                {aiAnswer}
               </div>
-            ) : (
-              <div className="flex flex-col">
-                {signalChanges.map((sc) => {
-                  const fromColor = (SIGNAL_COLORS as any)[sc.from_signal] || SIGNAL_COLORS["Ukjent om behov"];
-                  const toColor = (SIGNAL_COLORS as any)[sc.to_signal] || SIGNAL_COLORS["Ukjent om behov"];
-                  return (
-                    <button
-                      key={sc.contact_id}
-                      onClick={() => navigate(`/design-lab/kontakter/${sc.contact_id}`)}
-                      className="grid items-center text-left"
-                      style={{
-                        gridTemplateColumns: "minmax(160px, 1fr) minmax(280px, 2fr) 60px 100px 80px",
-                        gap: 12,
-                        padding: "8px 0",
-                        background: "transparent",
-                        border: "none",
-                        borderTop: `1px solid ${C.borderLight}`,
-                        cursor: "pointer",
-                      }}
-                    >
-                      <div className="flex flex-col" style={{ minWidth: 0 }}>
-                        <span style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>
-                          {sc.contact_name}
-                        </span>
-                        {sc.company_name ? (
-                          <span style={{ fontSize: 11, color: C.textMuted }}>
-                            {sc.company_name}
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="flex items-center gap-2" style={{ fontSize: 12 }}>
-                        <span style={{ color: fromColor.color }}>{sc.from_signal}</span>
-                        <ArrowRight size={11} color={C.textGhost} />
-                        <span
-                          style={{
-                            color: toColor.color,
-                            background: toColor.bg,
-                            padding: "1px 7px",
-                            borderRadius: 4,
-                            fontWeight: 500,
-                          }}
-                        >
-                          {sc.to_signal}
-                        </span>
-                      </div>
-                      <span style={{ fontSize: 12, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>
-                        {formatRelative(sc.changed_at)}
-                      </span>
-                      <span style={{ fontSize: 12, color: C.textMuted }}>
-                        {sc.owner_name?.split(" ")[0] || "—"}
-                      </span>
-                      <ArrowRight size={13} color={C.textGhost} style={{ justifySelf: "end" }} />
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            ) : null}
           </div>
         </Section>
-
-        {/* Spør agenten */}
-        <div style={{ padding: "16px 24px 32px" }}>
-          <div
-            className="flex items-center gap-2"
-            style={{
-              background: C.surface,
-              border: `1px solid ${C.border}`,
-              borderRadius: 6,
-              padding: "8px 12px",
-            }}
-          >
-            <Search size={14} color={C.textMuted} />
-            <input
-              ref={searchRef}
-              placeholder={placeholderQuestion}
-              style={{
-                flex: 1,
-                background: "transparent",
-                border: "none",
-                outline: "none",
-                fontSize: 13,
-                color: C.text,
-                fontFamily: "inherit",
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && e.currentTarget.value.trim()) {
-                  // Routes to chat panel via navigate state — fallback til Salgsagent
-                  navigate("/design-lab/salgsagent");
-                }
-              }}
-            />
-            <KbdHint label="⌘K" />
-            <button
-              style={{
-                background: "transparent",
-                border: "none",
-                color: C.textMuted,
-                cursor: "pointer",
-                padding: 2,
-              }}
-              onClick={() => navigate("/design-lab/salgsagent")}
-            >
-              <ArrowRight size={14} />
-            </button>
-          </div>
-        </div>
       </div>
     </DesignLabPageShell>
   );
 }
 
-/* ─── Subkomponenter ─── */
+/* ─── Pulse stat ─── */
 
-function Section({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ borderBottom: `1px solid ${C.borderLight}` }}>{children}</div>
-  );
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        fontSize: 11,
-        fontWeight: 500,
-        color: C.textMuted,
-        textTransform: "none",
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function Sep() {
-  return <span style={{ color: C.textGhost, margin: "0 4px", fontSize: 13 }}>·</span>;
-}
-
-function PulseSegment({
+function PulseStat({
   value,
   label,
   onClick,
 }: {
   value: number | string;
   label: string;
-  onClick: () => void;
+  onClick?: () => void;
 }) {
   return (
     <button
       onClick={onClick}
+      className="flex items-baseline gap-1.5 transition-colors"
       style={{
         background: "transparent",
         border: "none",
-        cursor: "pointer",
-        padding: "4px 6px",
-        borderRadius: 4,
-        fontSize: 13,
-        color: C.text,
-        display: "inline-flex",
-        alignItems: "baseline",
-        gap: 5,
+        cursor: onClick ? "pointer" : "default",
+        padding: 0,
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = C.hoverBg)}
-      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+      onMouseEnter={(e) => ((e.currentTarget.querySelector(".v") as HTMLElement).style.color = C.accent)}
+      onMouseLeave={(e) => ((e.currentTarget.querySelector(".v") as HTMLElement).style.color = C.text)}
     >
-      <span style={{ fontWeight: 600, color: C.text, fontVariantNumeric: "tabular-nums" }}>
+      <span
+        className="v"
+        style={{
+          fontSize: 18,
+          fontWeight: 600,
+          color: C.text,
+          fontVariantNumeric: "tabular-nums",
+          transition: "color 120ms",
+        }}
+      >
         {value}
       </span>
-      <span style={{ color: C.textMuted, fontWeight: 400 }}>{label}</span>
+      <span style={{ fontSize: 12, color: C.textMuted }}>{label}</span>
     </button>
-  );
-}
-
-function ActionRow({
-  idx,
-  action,
-  focused,
-  onFocus,
-  onActivate,
-}: {
-  idx: number;
-  action: BriefAction;
-  focused: boolean;
-  onFocus: () => void;
-  onActivate: () => void;
-}) {
-  return (
-    <div
-      onMouseEnter={onFocus}
-      onClick={onActivate}
-      style={{
-        padding: "12px 14px",
-        borderRadius: 6,
-        cursor: "pointer",
-        background: focused ? C.hoverBg : "transparent",
-        border: `1px solid ${focused ? C.border : "transparent"}`,
-        transition: "background 0.1s",
-      }}
-    >
-      <div className="flex items-baseline gap-3" style={{ marginBottom: 6 }}>
-        <span
-          style={{
-            fontSize: 11,
-            color: C.textMuted,
-            fontWeight: 600,
-            fontVariantNumeric: "tabular-nums",
-            minWidth: 14,
-          }}
-        >
-          {idx}
-        </span>
-        <span style={{ fontSize: 13, fontWeight: 500, color: C.text, flex: 1 }}>
-          {action.title}
-        </span>
-      </div>
-      {action.why_facts && action.why_facts.length > 0 ? (
-        <div style={{ paddingLeft: 26, marginBottom: 8 }}>
-          {action.why_facts.map((fact, i) => (
-            <div
-              key={i}
-              style={{
-                fontSize: 12,
-                color: C.textMuted,
-                lineHeight: 1.5,
-              }}
-            >
-              {fact}
-            </div>
-          ))}
-        </div>
-      ) : null}
-      <div className="flex items-center gap-2" style={{ paddingLeft: 26 }}>
-        {action.action_keys?.map((k) => (
-          <span key={k} className="inline-flex items-center gap-1" style={{ fontSize: 11 }}>
-            <Kbd>{k}</Kbd>
-            <span style={{ color: C.textMuted }}>{ACTION_KEY_LABEL[k]}</span>
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function BriefSkeleton() {
-  return (
-    <div className="flex flex-col" style={{ gap: 12, marginTop: 12 }}>
-      {[0, 1, 2].map((i) => (
-        <div key={i} style={{ padding: "12px 14px" }}>
-          <div
-            style={{
-              height: 14,
-              background: C.surfaceAlt,
-              borderRadius: 3,
-              width: "60%",
-              marginBottom: 8,
-            }}
-          />
-          <div
-            style={{
-              height: 11,
-              background: C.surfaceAlt,
-              borderRadius: 3,
-              width: "85%",
-              marginBottom: 4,
-              marginLeft: 26,
-            }}
-          />
-          <div
-            style={{
-              height: 11,
-              background: C.surfaceAlt,
-              borderRadius: 3,
-              width: "45%",
-              marginLeft: 26,
-            }}
-          />
-        </div>
-      ))}
-      <div style={{ fontSize: 11, color: C.textFaint, paddingLeft: 14 }}>Tenker…</div>
-    </div>
-  );
-}
-
-function Kbd({ children }: { children: React.ReactNode }) {
-  return (
-    <span
-      style={{
-        background: C.surfaceAlt,
-        color: C.textMuted,
-        padding: "1px 5px",
-        borderRadius: 3,
-        fontSize: 10,
-        fontWeight: 500,
-        border: `1px solid ${C.borderLight}`,
-        fontFamily: "ui-monospace, SFMono-Regular, monospace",
-      }}
-    >
-      {children}
-    </span>
-  );
-}
-
-function KbdHint({ label }: { label: string }) {
-  return (
-    <span
-      style={{
-        fontSize: 11,
-        color: C.textMuted,
-        background: C.surfaceAlt,
-        padding: "2px 7px",
-        borderRadius: 3,
-        border: `1px solid ${C.borderLight}`,
-        fontFamily: "ui-monospace, SFMono-Regular, monospace",
-      }}
-    >
-      {label}
-    </span>
-  );
-}
-
-function Dot({ color }: { color: string }) {
-  return (
-    <span
-      style={{
-        width: 4,
-        height: 4,
-        borderRadius: "50%",
-        background: color,
-        flexShrink: 0,
-      }}
-    />
   );
 }
