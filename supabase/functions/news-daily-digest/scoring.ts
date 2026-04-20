@@ -152,20 +152,36 @@ function isIndexTitle(title: string): boolean {
   return false;
 }
 
+function normalizeForCompare(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[()|\-–—.,!?:;'"`]/g, " ")
+    .replace(/\b(as|asa|ab|ag|gmbh|ltd|llc|inc|group|holding|holdings|the|norway|norge|no)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function passesQuality(item: RawItem, score: number): boolean {
   if (!item.title || item.title.length < 10) return false;
   if (isIndexTitle(item.title)) return false;
+  // Tittel ≈ selskapsnavn → ren company-side, ikke artikkel
+  const nt = normalizeForCompare(item.title);
+  const nc = normalizeForCompare(item.primary_company_name);
+  if (nc.length >= 3) {
+    if (nt === nc) return false;
+    if (nt.startsWith(nc + " ") && nt.length < nc.length + 15) return false;
+    if (nt.endsWith(" " + nc) && nt.length < nc.length + 15) return false;
+  }
   if (item.ingress && item.ingress.trim().length > 0 && item.ingress.trim().length < 20) return false;
   try {
     const u = new URL(item.url);
     if (NOISE_DOMAINS.test(u.hostname)) return false;
     if (NOISE_PATHS.test(u.pathname)) return false;
-    // PDF-URL-er er som regel rapporter, ikke nyheter
     if (/\.pdf(\?|$)/i.test(u.pathname)) return false;
   } catch {
     return false;
   }
-  return score > -10; // sikkerhetsventil mot ekstreme negative scores
+  return score > -10;
 }
 
 // Eksakt navn/alias-match i tittel eller ingress
