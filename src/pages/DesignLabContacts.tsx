@@ -2192,9 +2192,6 @@ export default function DesignLabContacts() {
                                 />
                                 Match {lead.matchScore10}/10
                               </p>
-                              <p className="truncate" style={{ fontSize: 10, color: confidence.tone }}>
-                                {confidence.label}
-                              </p>
                             </div>
                             <div className="min-w-0">
                               <DesignLabHeatBadge temperature={heatLabel} />
