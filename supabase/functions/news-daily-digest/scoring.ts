@@ -134,9 +134,10 @@ const NOISE_DOMAINS = /(whothoughtofit|tumblr|wordpress\.com|substack|medium\.co
 const NOISE_PATHS = /\/(forum|user|profile|tag|category|search|tema)\//i;
 
 export function passesQuality(item: RawItem, score: number): boolean {
-  if (score < 0.4) return false;
+  if (score < 0.3) return false;
   if (!item.title || item.title.length < 10) return false;
-  if (!item.ingress || item.ingress.trim().length < 30) return false;
+  // Tillat manglende ingress; ingress er kun krav til Lead/Feature-varianter (settes ved presentasjon)
+  if (item.ingress && item.ingress.trim().length > 0 && item.ingress.trim().length < 20) return false;
   try {
     const u = new URL(item.url);
     if (NOISE_DOMAINS.test(u.hostname)) return false;
