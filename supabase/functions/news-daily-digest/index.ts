@@ -285,21 +285,29 @@ Deno.serve(async (req: Request) => {
       return ta - tb;
     });
 
-    // 4. Pass 1 — siste 24t
+    // 4. Pass 1 — siste 24t (parallell i grupper)
     let batchesUsed = 0;
     const allRaw: RawItem[] = [];
     let perplexityHits = 0;
-    for (let i = 0; i < sortedCompanies.length && batchesUsed < HARD_CAP_BATCHES; i += BATCH_SIZE) {
-      const batch = sortedCompanies.slice(i, i + BATCH_SIZE);
-      const items = await callPerplexity(PERPLEXITY_API_KEY, batch, "day");
-      perplexityHits += items.length;
-      allRaw.push(...items);
-      batchesUsed++;
-      if (items.length > 0) {
-        console.log(`[batch ${batchesUsed} day] ${items.length} items from companies: ${batch.slice(0,3).map(c=>c.name).join(", ")}...`);
+    async function runPass(recency: "day" | "week", label: string) {
+      for (let i = 0; i < sortedCompanies.length && batchesUsed < HARD_CAP_BATCHES; i += BATCH_SIZE * PARALLEL_BATCHES) {
+        const slots: Promise<RawItem[]>[] = [];
+        for (let j = 0; j < PARALLEL_BATCHES && batchesUsed < HARD_CAP_BATCHES; j++) {
+          const start = i + j * BATCH_SIZE;
+          if (start >= sortedCompanies.length) break;
+          const batch = sortedCompanies.slice(start, start + BATCH_SIZE);
+          slots.push(callPerplexity(PERPLEXITY_API_KEY, batch, recency));
+          batchesUsed++;
+        }
+        const results = await Promise.all(slots);
+        for (const items of results) {
+          perplexityHits += items.length;
+          allRaw.push(...items);
+        }
       }
+      console.log(`[${label} done] batches=${batchesUsed} hits=${perplexityHits} raw=${allRaw.length}`);
     }
-    console.log(`[pass1 done] batches=${batchesUsed} perplexity_hits=${perplexityHits} raw=${allRaw.length}`);
+    await runPass("day", "pass1");
 
     const ctx: ScoringContext = { baseWeight, heatTier };
     // Bygg aliaser: fullt navn + første ord (hvis ≥4 tegn og ikke generisk)
