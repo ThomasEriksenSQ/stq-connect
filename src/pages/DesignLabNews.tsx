@@ -46,22 +46,25 @@ function hoursAgo(h: number): string {
   return new Date(NOW.getTime() - h * 3_600_000).toISOString();
 }
 
+// Lead: mindre "Potensiell kunde" med Tier 1 (Hett) kontakt.
+// score = (0.6 base + 2.0 heat) × recency × tier + keyword
+//       = 2.6 × 0.95 × 0.8 + 0.10 ≈ 2.07 — slår store selskaper uten varme.
 const MOCK_LEAD: NewsLead = {
-  id: "lead-kongsberg-defence",
+  id: "lead-defensico",
   variant: "lead",
-  primary_company_id: "c-kongsberg-defence",
-  primary_company_name: "Kongsberg Defence",
-  also_matched_company_ids: ["c-nammo", "c-kongsberg-geo"],
-  also_matched_company_names: ["Nammo", "Kongsberg Geospatial"],
-  title: "Kongsberg Defence vinner forsvarskontrakt verdt 2,4 milliarder",
+  primary_company_id: "c-defensico",
+  primary_company_name: "Defensico",
+  also_matched_company_ids: ["c-kongsberg-defence"],
+  also_matched_company_names: ["Kongsberg Defence"],
+  title: "Defensico utvider radaravdelingen med tjue nye ingeniører",
   ingress:
-    "Kontrakten omfatter levering av missilkomponenter til NATO-landet Tyskland over fem år, og kan utvides med opsjoner verdt ytterligere 800 millioner kroner.",
-  url: "https://e24.no/boers-og-finans/i/example-kongsberg",
-  source: "e24.no",
-  source_tier: 1,
-  published_at: hoursAgo(2),
+    "Vekstplanen er en respons på økte forsvarsbevilgninger og rekordmange åpne anbud på sensorelektronikk — selskapet sikter mot å doble omsetningen innen 2028.",
+  url: "https://www.finansavisen.no/example/defensico",
+  source: "finansavisen.no",
+  source_tier: 2,
+  published_at: hoursAgo(3),
   image: { url: null, source: "placeholder" },
-  score: 4.8,
+  score: 2.07,
 };
 
 const MOCK_FEATURES: NewsFeature[] = [
