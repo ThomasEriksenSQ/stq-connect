@@ -332,11 +332,18 @@ Deno.serve(async (req: Request) => {
     const coldCompanies = sortedCompanies.filter((c) => (heatTier.get(c.id) ?? 4) === 4);
     console.log(`[heat split] warm(T1-3)=${warmCompanies.length} cold(T4)=${coldCompanies.length}`);
 
-    // 4. Pass 1 — siste 7 dager på varme selskaper (parallell)
+    // 4. Pass 1 — siste 48 timer på varme selskaper (parallell)
     let batchesUsed = 0;
     const allRaw: RawItem[] = [];
     let perplexityHits = 0;
-    async function runPass(pool: CompanyRow[], recency: "day" | "week", label: string) {
+    async function runPass(
+      pool: CompanyRow[],
+      recency: "day" | "week",
+      maxAgeHours: number,
+      label: string,
+    ) {
+      const cutoff = Date.now() - maxAgeHours * 3_600_000;
+      let droppedAge = 0;
       for (let i = 0; i < pool.length && batchesUsed < HARD_CAP_BATCHES; i += BATCH_SIZE * PARALLEL_BATCHES) {
         const slots: Promise<RawItem[]>[] = [];
         for (let j = 0; j < PARALLEL_BATCHES && batchesUsed < HARD_CAP_BATCHES; j++) {
@@ -349,12 +356,19 @@ Deno.serve(async (req: Request) => {
         const results = await Promise.all(slots);
         for (const items of results) {
           perplexityHits += items.length;
-          allRaw.push(...items);
+          for (const it of items) {
+            const ts = new Date(it.published_at).getTime();
+            if (Number.isFinite(ts) && ts < cutoff) {
+              droppedAge++;
+              continue;
+            }
+            allRaw.push(it);
+          }
         }
       }
-      console.log(`[${label} done] batches=${batchesUsed} hits=${perplexityHits} raw=${allRaw.length}`);
+      console.log(`[${label} done] batches=${batchesUsed} hits=${perplexityHits} kept=${allRaw.length} dropped_too_old=${droppedAge}`);
     }
-    await runPass(warmCompanies, "day", "pass1-warm");
+    await runPass(warmCompanies, "day", PASS1_MAX_AGE_HOURS, "pass1-warm-48h");
 
     const ctx: ScoringContext = { baseWeight, heatTier };
     // Bygg aliaser: fullt navn + første ord (hvis ≥4 tegn og ikke generisk)
