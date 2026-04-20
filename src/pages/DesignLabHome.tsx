@@ -914,55 +914,6 @@ ${JSON.stringify(context)}`;
           )}
         </Section>
 
-        {/* TOPP 10 LEADS */}
-        <Section>
-          <SectionHeader
-            title="Topp 10 hotteste leads"
-            meta={queueLoading ? "Beregner …" : `${top10.length} av ${queue.length}`}
-          />
-          {queueLoading ? (
-            <Skeleton rows={6} />
-          ) : top10.length === 0 ? (
-            <EmptyText>Ingen leads tilgjengelig akkurat nå.</EmptyText>
-          ) : (
-            <>
-              <ColHeader
-                cols={COLS_LEADS}
-                labels={["Varme", "Kontakt", "Selskap", "Begrunnelse", "Signal", ""]}
-              />
-              {top10.map((lead, idx) => {
-                const focusedRow = isFocused({ kind: "lead", idx });
-                return (
-                  <TableRow
-                    key={`lead-${lead.contactId}`}
-                    cols={COLS_LEADS}
-                    focused={focusedRow}
-                    onMouseEnter={() => setFocused({ kind: "lead", idx })}
-                    onClick={() => navigate(`/design-lab/kontakter/${lead.contactId}`)}
-                  >
-                    <span>
-                      <DesignLabHeatBadge temperature={lead.heat.temperature} />
-                    </span>
-                    <span style={{ fontSize: 13, color: C.text, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {lead.contactName}
-                    </span>
-                    <span style={{ fontSize: 12, color: C.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {lead.companyName}
-                    </span>
-                    <span style={{ fontSize: 12, color: C.textFaint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {lead.reasonLine}
-                    </span>
-                    <span>
-                      {lead.signal ? <DesignLabSignalBadge signal={lead.signal} size="sm" /> : null}
-                    </span>
-                    <ArrowRight size={12} className="opacity-0 group-hover:opacity-100" style={{ color: C.textFaint }} />
-                  </TableRow>
-                );
-              })}
-            </>
-          )}
-        </Section>
-
         {/* SPØR AGENTEN */}
         <Section>
           <div style={{ padding: "16px 24px 20px" }}>
