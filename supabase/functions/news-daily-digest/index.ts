@@ -323,69 +323,56 @@ Deno.serve(async (req: Request) => {
       return ta - tb;
     });
 
-    // Pass 1 prioriterer Tier 1-3 (varme) — Tier 4 spares til evt. fallback
+    // Pass 1 prioriterer Tier 1-3 (varme) — Tier 4 (kalde) tas i Pass 2 hvis vi mangler items
     const warmCompanies = sortedCompanies.filter((c) => (heatTier.get(c.id) ?? 4) <= 3);
     const coldCompanies = sortedCompanies.filter((c) => (heatTier.get(c.id) ?? 4) === 4);
     console.log(`[heat split] warm(T1-3)=${warmCompanies.length} cold(T4)=${coldCompanies.length}`);
 
-    // 4. Pass 1 — siste 48 timer på varme selskaper (parallell)
-    let batchesUsed = 0;
+    // 4. Søk via Perplexity Search API — én query per selskap, parallellisert
     const allRaw: RawItem[] = [];
-    let perplexityHits = 0;
-    async function runPass(
-      pool: CompanyRow[],
-      recency: "day" | "week",
-      maxAgeHours: number,
-      label: string,
-    ) {
-      const cutoff = Date.now() - maxAgeHours * 3_600_000;
-      let droppedAge = 0;
-      for (let i = 0; i < pool.length && batchesUsed < HARD_CAP_BATCHES; i += BATCH_SIZE * PARALLEL_BATCHES) {
-        const slots: Promise<RawItem[]>[] = [];
-        for (let j = 0; j < PARALLEL_BATCHES && batchesUsed < HARD_CAP_BATCHES; j++) {
-          const start = i + j * BATCH_SIZE;
-          if (start >= pool.length) break;
-          const batch = pool.slice(start, start + BATCH_SIZE);
-          slots.push(callPerplexity(PERPLEXITY_API_KEY, batch, recency));
-          batchesUsed++;
+    let companiesQueried = 0;
+    let totalHits = 0;
+
+    async function runSearch(pool: CompanyRow[], maxAgeDays: number, label: string) {
+      const startCount = allRaw.length;
+      const capped = pool.slice(0, HARD_CAP_COMPANIES - companiesQueried);
+      for (let i = 0; i < capped.length; i += SEARCH_PARALLEL) {
+        const slice = capped.slice(i, i + SEARCH_PARALLEL);
+        const results = await Promise.all(
+          slice.map((c) => searchCompany(PERPLEXITY_API_KEY, c, maxAgeDays)),
+        );
+        for (const items of results) {
+          totalHits += items.length;
+          for (const it of items) allRaw.push(it);
         }
-      const results = await Promise.all(slots);
-      for (const items of results) {
-        perplexityHits += items.length;
-        for (const it of items) {
-          const ts = new Date(it.published_at).getTime();
-          // Krev gyldig dato innenfor cutoff (ikke "981d siden"-saker)
-          if (!Number.isFinite(ts) || ts < cutoff || ts > Date.now() + 86_400_000) {
-            droppedAge++;
-            continue;
-          }
-          allRaw.push(it);
-        }
+        companiesQueried += slice.length;
       }
+      console.log(`[${label} done] companies=${capped.length} hits=${totalHits} kept_in_pool=${allRaw.length - startCount}`);
     }
-    console.log(`[${label} done] batches=${batchesUsed} hits=${perplexityHits} kept=${allRaw.length} dropped_too_old_or_invalid=${droppedAge}`);
-  }
-  await runPass(warmCompanies, "day", PASS1_MAX_AGE_HOURS, "pass1-warm-7d");
+
+    // Pass 1: varme selskaper, siste 14 dager
+    await runSearch(warmCompanies, PASS1_MAX_AGE_DAYS, `pass1-warm-${PASS1_MAX_AGE_DAYS}d`);
 
     const ctx: ScoringContext = { baseWeight, heatTier };
-    // Bygg aliaser: fullt navn + første ord (hvis ≥4 tegn og ikke generisk)
+    // Bygg aliaser: fullt navn + uten suffiks + første ord (hvis ≥4 tegn og ikke generisk)
     const GENERIC_FIRST_WORDS = new Set(["the", "norsk", "norske", "nordic", "norway", "norge", "scandinavian"]);
     const aliasByCompany = new Map<string, string[]>();
     for (const c of companyList) {
       const aliases = [c.name];
-      const firstWord = c.name.split(/\s+/)[0]?.replace(/[^\p{L}0-9]/gu, "") ?? "";
+      const cleaned = cleanCompanyName(c.name);
+      if (cleaned !== c.name) aliases.push(cleaned);
+      const firstWord = cleaned.split(/\s+/)[0]?.replace(/[^\p{L}0-9]/gu, "") ?? "";
       if (firstWord.length >= 4 && !GENERIC_FIRST_WORDS.has(firstWord.toLowerCase())) {
         aliases.push(firstWord);
       }
       aliasByCompany.set(c.id, aliases);
     }
 
-    // Verifiser at URL-er faktisk eksisterer (filtrer hallusinasjoner)
+    // Verifiser at URL-er faktisk eksisterer (filtrer døde lenker)
     async function urlExists(url: string): Promise<boolean> {
       const ctrl = new AbortController();
       const t = setTimeout(() => ctrl.abort(), 4000);
       try {
-        // GET (ikke HEAD) — mange norske medier blokkerer HEAD
         const res = await fetch(url, {
           method: "GET",
           redirect: "follow",
@@ -409,12 +396,13 @@ Deno.serve(async (req: Request) => {
     async function scoreFiltered(raw: RawItem[]) {
       const merged = dedupAndMerge(raw);
       const afterMerge = merged.length;
+      // Name-match: titel/ingress må inneholde selskapsnavn (eller alias) som ord.
+      // Dette eliminerer treff hvor selskapet bare er nevnt i en sidebar.
       const filtered = merged.filter((it) => {
         const aliases = aliasByCompany.get(it.primary_company_id) ?? [];
         return matchesCompanyName(it, aliases);
       });
       const afterNameMatch = filtered.length;
-      // Verifiser at URL-er svarer (filtrer hallusinerte/døde lenker)
       const live = await filterLiveUrls(filtered);
       const scored = live.map((item) => ({ item, score: scoreItem(item, ctx) }));
       const final = scored.filter((s) => passesQuality(s.item, s.score));
@@ -424,15 +412,12 @@ Deno.serve(async (req: Request) => {
 
     let scored = await scoreFiltered(allRaw);
 
-    // 5. Pass 2 — utvid til 30 dager + ta inn cold companies for å nå TARGET
+    // 5. Pass 2 — ta inn kalde selskaper med 30-dagers vindu hvis vi mangler items
     let fallbackUsed = false;
-    if (scored.length < TARGET_ITEMS && batchesUsed < HARD_CAP_BATCHES) {
+    if (scored.length < TARGET_ITEMS && companiesQueried < HARD_CAP_COMPANIES) {
       fallbackUsed = true;
-      console.log(`[pass2 start] scored=${scored.length} < target=${TARGET_ITEMS}, expanding to 30d + cold pool`);
-      await runPass(warmCompanies, "week", PASS2_MAX_AGE_HOURS, "pass2-warm-30d");
-      if (batchesUsed < HARD_CAP_BATCHES) {
-        await runPass(coldCompanies, "week", PASS2_MAX_AGE_HOURS, "pass2-cold-30d");
-      }
+      console.log(`[pass2 start] scored=${scored.length} < target=${TARGET_ITEMS}, adding cold pool 30d`);
+      await runSearch(coldCompanies, PASS2_MAX_AGE_DAYS, `pass2-cold-${PASS2_MAX_AGE_DAYS}d`);
       scored = await scoreFiltered(allRaw);
     }
 
