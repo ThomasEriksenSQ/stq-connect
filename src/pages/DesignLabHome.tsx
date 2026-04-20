@@ -191,6 +191,42 @@ export default function DesignLabHome() {
   const { user } = useAuth();
   const searchRef = useRef<HTMLInputElement>(null);
 
+  /* ──────── Brukerprofil for hilsen ──────── */
+  const { data: profile } = useQuery<{ full_name: string | null } | null>({
+    queryKey: ["dl-home-profile", user?.id || ""],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user,
+    staleTime: 60 * 60 * 1000,
+  });
+
+  const firstName = useMemo(() => {
+    const full = profile?.full_name?.trim();
+    if (!full) return "";
+    return full.split(" ")[0];
+  }, [profile]);
+
+  const greeting = useMemo(() => {
+    const h = new Date().getHours();
+    if (h < 5) return "God natt";
+    if (h < 10) return "God morgen";
+    if (h < 17) return "God dag";
+    if (h < 22) return "God kveld";
+    return "God natt";
+  }, []);
+
+  const todayLabel = useMemo(
+    () => format(new Date(), "EEEE d. MMMM", { locale: nb }),
+    [],
+  );
+
   /* ──────── Pipeline ──────── */
   const { data: pulse } = useQuery<PipelinePulse>({
     queryKey: ["dl-home-pulse"],
