@@ -384,12 +384,17 @@ Deno.serve(async (req: Request) => {
 
     let scored = scoreFiltered(allRaw);
 
-    // 5. Pass 2 — utvid til siste uke hvis < target
+    // 5. Pass 2 — utvid til 30 dager + ta inn cold companies hvis budsjett er igjen
     let fallbackUsed = false;
     if (scored.length < TARGET_AFTER_PASS_1 && batchesUsed < HARD_CAP_BATCHES) {
       fallbackUsed = true;
-      console.log(`[pass2 start] scored=${scored.length} < target=${TARGET_AFTER_PASS_1}, expanding to week`);
-      await runPass("week", "pass2");
+      console.log(`[pass2 start] scored=${scored.length} < target=${TARGET_AFTER_PASS_1}, expanding to month + cold pool`);
+      // Først: kjør warm igjen med bredere tidsvindu
+      await runPass(warmCompanies, "week", "pass2-warm-month");
+      // Så: prøv kalde selskaper med bredere tidsvindu
+      if (batchesUsed < HARD_CAP_BATCHES) {
+        await runPass(coldCompanies, "week", "pass2-cold-month");
+      }
       scored = scoreFiltered(allRaw);
     }
 
