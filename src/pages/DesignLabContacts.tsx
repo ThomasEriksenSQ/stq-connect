@@ -2080,15 +2080,14 @@ export default function DesignLabContacts() {
                       <div
                         className="grid items-center"
                         style={{
-                          gridTemplateColumns: "minmax(220px,1.6fr) minmax(140px,1fr) minmax(140px,1fr) 140px 120px 110px",
+                          gridTemplateColumns: "minmax(200px,1.5fr) 120px 96px minmax(160px,1.2fr) minmax(160px,1.2fr) minmax(140px,1fr) 96px",
                           height: 32,
                           paddingLeft: 16,
                           paddingRight: 16,
+                          gap: 12,
                         }}
                       >
-                        <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Lead</span>
-                        <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Selskap</span>
-                        <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Kilde</span>
+                        <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Navn</span>
                         <button
                           onClick={() => toggleHuntSort("match")}
                           className="flex items-center gap-0.5 transition-colors"
@@ -2113,8 +2112,11 @@ export default function DesignLabContacts() {
                               : <ChevronDown style={{ width: 12, height: 12 }} />
                             : <ArrowUpDown style={{ width: 12, height: 12 }} />}
                         </button>
+                        <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Selskap</span>
+                        <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Stilling</span>
+                        <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Tags</span>
                         <span className="text-right" style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>
-                          Sist
+                          Siste akt
                         </span>
                       </div>
                     </div>
@@ -2153,10 +2155,11 @@ export default function DesignLabContacts() {
                             onClick={() => handleMatchLeadSelect(lead)}
                             className="grid items-center cursor-pointer"
                             style={{
-                              gridTemplateColumns: "minmax(220px,1.6fr) minmax(140px,1fr) minmax(140px,1fr) 140px 120px 110px",
+                              gridTemplateColumns: "minmax(200px,1.5fr) 120px 96px minmax(160px,1.2fr) minmax(160px,1.2fr) minmax(140px,1fr) 96px",
                               minHeight: 48,
                               paddingLeft: 16,
                               paddingRight: 16,
+                              gap: 12,
                               borderBottom: `1px solid ${C.borderLight}`,
                               background: isActive ? C.activeBg : "transparent",
                               boxShadow: `inset 3px 0 0 ${heatColor}`,
@@ -2180,30 +2183,6 @@ export default function DesignLabContacts() {
                                   <span style={{ fontSize: 10, color: C.textFaint, flexShrink: 0 }}>Forespørsel</span>
                                 )}
                               </div>
-                              <p className="truncate" style={{ fontSize: 11, color: C.textMuted }}>
-                                {isContactMatchLead(lead)
-                                  ? lead.title || lead.summary
-                                  : isRequestMatchLead(lead)
-                                    ? lead.contactName || lead.summary
-                                    : lead.preferredContactName || lead.summary}
-                              </p>
-                            </div>
-                            <div className="min-w-0">
-                              <p className="truncate" style={{ fontSize: 12, color: C.textMuted }}>
-                                {isContactMatchLead(lead)
-                                  ? lead.companyName
-                                  : isRequestMatchLead(lead)
-                                    ? lead.contactTitle || lead.companyName
-                                    : lead.status || lead.companyName}
-                              </p>
-                            </div>
-                            <div className="min-w-0">
-                              <p className="truncate" style={{ fontSize: 11, color: C.textMuted }}>
-                                {lead.matchSources.map(getMatchSourceLabel).join(" · ")}
-                              </p>
-                              <p className="truncate" style={{ fontSize: 11, color: C.textFaint }}>
-                                {lead.matchTags.slice(0, 3).join(", ")}
-                              </p>
                             </div>
                             <div className="min-w-0">
                               <p style={{ fontSize: 12, fontWeight: 600, color: C.text, display: "flex", alignItems: "center", gap: 6 }}>
@@ -2219,6 +2198,29 @@ export default function DesignLabContacts() {
                             </div>
                             <div className="min-w-0">
                               <DesignLabHeatBadge temperature={heatLabel} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate" style={{ fontSize: 12, color: C.textMuted }}>
+                                {isContactMatchLead(lead)
+                                  ? lead.companyName
+                                  : isRequestMatchLead(lead)
+                                    ? lead.companyName
+                                    : lead.companyName}
+                              </p>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate" style={{ fontSize: 12, color: C.textMuted }}>
+                                {isContactMatchLead(lead)
+                                  ? lead.title || ""
+                                  : isRequestMatchLead(lead)
+                                    ? lead.contactTitle || ""
+                                    : lead.preferredContactName || ""}
+                              </p>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate" style={{ fontSize: 11, color: C.textFaint }}>
+                                {lead.matchTags.slice(0, 3).join(", ")}
+                              </p>
                             </div>
                             <div className="text-right" style={{ fontSize: 11, color: C.textFaint }}>
                               {leadDate ? relativeDate(leadDate) : ""}
