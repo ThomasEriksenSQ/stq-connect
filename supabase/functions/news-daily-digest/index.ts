@@ -78,8 +78,10 @@ async function callPerplexity(
   companies: CompanyRow[],
   recencyFilter: "day" | "week",
 ): Promise<RawItem[]> {
+  // Strip formelle suffiks når vi ber Perplexity søke — øker treffraten dramatisk
+  const cleanName = (n: string) => n.replace(/\s+(AS|ASA|AB|SA|GMBH|LTD|LLC|INC|GROUP|HOLDING|HOLDINGS)\b/gi, "").replace(/\s+/g, " ").trim();
   const list = companies
-    .map((c) => `- ${c.name}${c.website ? ` (${c.website})` : ""}`)
+    .map((c) => `- ${cleanName(c.name)}${c.website ? ` (${c.website})` : ""}`)
     .join("\n");
 
   const timeWindow = recencyFilter === "day" ? "siste 7 dager" : "siste 30 dager";
