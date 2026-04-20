@@ -81,7 +81,7 @@ async function callPerplexity(
     .map((c) => `- ${c.name}${c.website ? ` (${c.website})` : ""}`)
     .join("\n");
 
-  const timeWindow = recencyFilter === "day" ? "siste 7 dager" : "siste 30 dager";
+  const timeWindow = recencyFilter === "day" ? "siste 48 timer" : "siste 7 dager";
   const prompt = `Søk i norske nyhetskilder etter saker fra ${timeWindow} som omtaler ett eller flere av disse selskapene:
 
 ${list}
@@ -96,7 +96,7 @@ Hvis du ikke finner noen saker, returner items: [].`;
       { role: "system", content: "Du er en nyhets-aggregator for et norsk B2B-salgsteam. Returner verifiserbare saker fra norske medier som e24, DN, Finansavisen, TU, Digi, NRK, Aftenposten, Kapital, Hegnar, Shifter." },
       { role: "user", content: prompt },
     ],
-    search_recency_filter: recencyFilter === "day" ? "week" : "month",
+    search_recency_filter: recencyFilter === "day" ? "day" : "week",
     response_format: {
       type: "json_schema",
       json_schema: {
