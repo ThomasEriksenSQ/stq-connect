@@ -16,12 +16,13 @@ import {
 } from "./scoring.ts";
 import { resolveAndMirrorImage } from "./images.ts";
 
-const HARD_CAP_BATCHES = 24;
+const HARD_CAP_BATCHES = 32;
 const BATCH_SIZE = 8;
 const PARALLEL_BATCHES = 4;
-const PASS1_MAX_AGE_HOURS = 48; // Pass 1: kun siste 48 timer
-const PASS2_MAX_AGE_HOURS = 24 * 7; // Pass 2: maks 7 dager
-const TARGET_AFTER_PASS_1 = 12;
+const PASS1_MAX_AGE_HOURS = 24 * 7; // Pass 1: siste 7 dager (varme selskaper)
+const PASS2_MAX_AGE_HOURS = 24 * 30; // Pass 2: opp til 30 dager (fyll opp)
+const TARGET_ITEMS = 15;
+const MAX_PER_COMPANY = 2; // unngå at ett selskap dominerer feeden
 const FETCH_CHUNK = 200; // Supabase .in() URL-lengde-grense
 
 interface CompanyRow {
