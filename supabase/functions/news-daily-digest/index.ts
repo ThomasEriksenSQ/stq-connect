@@ -140,14 +140,51 @@ For hver sak, oppgi: company_name (eksakt fra listen), title, ingress (1-2 setni
       }
       const data = await res.json();
       const content = data.choices?.[0]?.message?.content;
-      if (!content) return [];
-      const parsed = JSON.parse(content);
-      const items = parsed.items ?? [];
+      if (!content) {
+        console.log(`[perplexity] no content. keys=${Object.keys(data).join(",")} choices=${data.choices?.length ?? 0}`);
+        return [];
+      }
+      let parsed: { items?: unknown[] } = {};
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+        console.log(`[perplexity] JSON parse failed. content_sample=${content.slice(0, 300)}`);
+        return [];
+      }
+      const items = (parsed.items ?? []) as Array<Record<string, unknown>>;
+      console.log(`[perplexity] returned items=${items.length} for batch_size=${companies.length} recency=${recencyFilter}`);
+      if (items.length > 0) {
+        console.log(`[perplexity] sample=${JSON.stringify(items[0]).slice(0, 250)}`);
+      }
+
+      // Bygg fuzzy match: lowercase + uten suffikser (AS, ASA, AB)
+      const norm = (s: string) => s.toLowerCase().replace(/\b(as|asa|ab|sa|inc|ltd|gmbh|group|holding|holdings)\b/g, "").replace(/[^a-z0-9æøå ]/g, "").replace(/\s+/g, " ").trim();
+      const companyByNorm = new Map<string, CompanyRow>();
+      for (const c of companies) companyByNorm.set(norm(c.name), c);
 
       const out: RawItem[] = [];
+      let unmatched = 0;
       for (const it of items) {
-        const company = companies.find((c) => c.name.toLowerCase() === String(it.company_name ?? "").toLowerCase());
-        if (!company) continue;
+        const rawName = String(it.company_name ?? "");
+        let company = companies.find((c) => c.name.toLowerCase() === rawName.toLowerCase());
+        if (!company) {
+          // Fuzzy: norm match
+          company = companyByNorm.get(norm(rawName));
+        }
+        if (!company) {
+          // Fuzzy: containment
+          const nName = norm(rawName);
+          if (nName.length >= 3) {
+            company = companies.find((c) => {
+              const nc = norm(c.name);
+              return nc.includes(nName) || nName.includes(nc);
+            });
+          }
+        }
+        if (!company) {
+          unmatched++;
+          continue;
+        }
         if (!it.url || !it.title) continue;
         out.push({
           url: it.url,
