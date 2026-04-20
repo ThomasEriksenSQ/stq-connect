@@ -94,7 +94,7 @@ Returner ALLE relevante saker du finner — gjerne flere per selskap hvis de fin
 Hvis du ikke finner noen saker, returner items: [].`;
 
   const body = {
-    model: "sonar-pro",
+    model: "sonar",
     messages: [
       { role: "system", content: "Du er en nyhets-aggregator for et norsk B2B-salgsteam. Returner KUN saker du faktisk har funnet via søk og som har en citation. Ikke fabrikker URL-er. Bruk norske medier som e24, DN, Finansavisen, TU, Digi, NRK, Aftenposten, Kapital, Hegnar, Shifter." },
       { role: "user", content: prompt },
