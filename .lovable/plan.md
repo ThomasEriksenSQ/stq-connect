@@ -1,50 +1,129 @@
 
 
-## Synkroniser åpne oppfølginger til "Behov nå" når forespørsel opprettes
+## Ny `/design-lab/home` — én kolonne, reell verdi, ingen gjetting
 
-### Problemet
+Hjemmesiden bygges helt på nytt. Én vertikal kolonne, maks 720px, sentrert. Ingen "Fokus i dag" (vill gjetting), ingen "Vunnet denne måneden". Kun seksjoner med reell, verifiserbar verdi basert på data vi faktisk har eller kan hente.
 
-Når en ny forespørsel legges inn (`src/pages/Foresporsler.tsx`), legger systemet til en aktivitet med signal "Behov nå" på kontakten. Det fungerer for visning av aktivitetshistorikk, men `getEffectiveSignal` (i `src/lib/categoryUtils.ts`) prioriterer **åpne oppfølginger over aktiviteter**. Resultat: hvis kontakten har en åpen oppfølging merket "Får kanskje behov", fortsetter det å være det effektive signalet — selv etter at forespørselen er registrert.
+### Designkonsept: "Morgenbriefen"
 
-### Løsning
+En kortfattet, redaksjonell oppsummering brukeren leser på 30 sekunder. Hver seksjon svarer på ett spørsmål med konkret informasjonsverdi. Én kolonne, luftig, typografidrevet.
 
-Når en forespørsel opprettes, oppdater alle **åpne** (`status ≠ 'done'`) oppfølginger for kontakten slik at signalet i `description` blir "Behov nå". Eksisterende fritekst i oppfølgingen bevares; kun signal-prefikset `[…]` byttes ut. `[someday]`-markøren bevares også.
+### Layout — én kolonne, maks 720px
 
-### Endring
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  HERO                                                       │
+│  God morgen, Jon Richard.        ← 26px / 600               │
+│  tirsdag 21. apr. 2026 · uke 17  ← 12px / faint             │
+└─────────────────────────────────────────────────────────────┘
+   (56px luft)
 
-**Fil:** `src/pages/Foresporsler.tsx` (kun `handleSubmit`, rett etter at "Behov nå"-aktiviteten er satt inn ~linje 442).
+┌─────────────────────────────────────────────────────────────┐
+│  UKEN SÅ LANGT                                              │
+│  Kort prosatekst, 2–3 setninger.                            │
+│  "Forespørslene har økt 18% mot forrige uke.                │
+│   Tre nye selskaper meldte interesse.                       │
+│   Equinor har vært stille i 14 dager."                      │
+└─────────────────────────────────────────────────────────────┘
+   (40px luft, hårfin divider)
 
-Pseudoflyt:
-1. Hent alle åpne oppfølginger for `kontaktId`:
-   ```ts
-   supabase
-     .from("tasks")
-     .select("id, description, due_date")
-     .eq("contact_id", kontaktId)
-     .neq("status", "done");
-   ```
-2. For hver oppgave, kjør `upsertTaskSignalDescription(task.description, "Behov nå", !task.due_date)` — dette gjenbruker eksakt samme funksjon som Salgsagenten/ContactCard bruker, så `[someday]` og fritekst bevares korrekt.
-3. Skriv tilbake `description` + `updated_at` per oppgave (parallelt med `Promise.all`).
-4. Invalider relevante query-keys så Salgsagent/Oppfølginger/Hjem oppdateres umiddelbart:
-   - `crmQueryKeys.foresporsler.list()` (allerede gjort)
-   - `["tasks"]` og `["contacts"]` (samme mønster som `BulkSignalModal`)
+┌─────────────────────────────────────────────────────────────┐
+│  UOPPDAGET I INNBOKSEN                                      │
+│  Skannet 142 e-poster · siste 14 dager                      │
+│                                                             │
+│  Tre rader, én linje hver:                                  │
+│   • Marius Solheim · Kongsberg Defence                      │
+│     "...vurderer å hente inn ekstern kapasitet..."          │
+│     5d siden · ubesvart                                     │
+│                                                             │
+│   • Anne Lien · Aker BP                                     │
+│     "...trenger noen med IEC 61508-erfaring..."             │
+│     2d siden · ulest                                         │
+│                                                             │
+│   • Lars Mo · Defensico                                     │
+│     "...kan vi ta en prat neste uke?"                         │
+│     8d siden · ble liggende                                   │
+│                                                             │
+│  Liten accent-prikk på linjer som krever handling.            │
+└─────────────────────────────────────────────────────────────┘
+   (40px luft, hårfin divider)
 
-### Hvorfor denne modellen
+┌─────────────────────────────────────────────────────────────┐
+│  MARKEDET DENNE UKEN                                        │
+│  Basert på 47 nye Finn-utlysninger                          │
+│                                                             │
+│  Trender (3 linjer):                                          │
+│   +18%   C++-utlysninger                    ↗ 12 totalt     │
+│   +3     nye selskaper med embedded-behov                     │
+│   −22%   FPGA-aktivitet                     ↘ stille uke      │
+│                                                             │
+│  Nye selskaper på radaren:                                  │
+│   Defensico · Nordic Semiconductor · Kongsberg Geo          │
+└─────────────────────────────────────────────────────────────┘
+   (40px luft, hårfin divider)
 
-- Vi tukler ikke med `getEffectiveSignal`-prioriteringen (åpne tasks > aktiviteter beholdes — det er korrekt logikk i alle andre flater).
-- Vi gjenbruker `upsertTaskSignalDescription`, så vi følger samme regler som inline-redigering i Salgsagenten — ingen ny duplikatlogikk.
-- Lukkede oppfølginger (`status = 'done'`) røres ikke — de tilhører historikken.
-- Kontakter som ikke har noen åpne oppfølginger får ingen ekstra task opprettet. Aktiviteten "Behov nå" alene er da nok til at `getEffectiveSignal` faller tilbake til den.
+┌─────────────────────────────────────────────────────────────┐
+│  KONSULENTER SOM TRENGER PLASSERING                           │
+│  4 personer tilgjengelig                                      │
+│                                                             │
+│  Ola Nordmann                                               │
+│  C++ · Embedded Linux · Yocto                 fra 1. mai      │
+│                                                             │
+│  Kari Hansen                                                │
+│  Rust · BLE · sanntid                         fra 15. mai     │
+│                                                             │
+│  Erik Solheim                                               │
+│  FPGA · Verilog · VHDL                        fra 20. mai     │
+│                                                             │
+│  + 1 til                                                    │
+│                                                             │
+│  ─────────────────────────────────────────────────────────  │
+│  Ola og Kari matcher Defensico-behovet fra innboksen.       │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+   (80px bunnluft)
+```
 
-### Bevisst utelatt
+### Designprinsipper
 
-- Ingen ny edge function. Ingen schema-endring. Ingen endring i `categoryUtils`/`heatScore`.
-- Ingen oppdatering av lukkede tasks eller historiske aktiviteter.
-- Ingen endring i `ImportForesporslerModal` (bulk-import har ikke `kontakt_id` per rad i dag — det er en separat diskusjon hvis ønsket senere).
+- **Én kolonne, maks 720px.** Ingen sideoppdeling. Lesbart som en avis.
+- **Hårfine `borderLight`-dividere** mellom seksjoner, 40px vertikal luft.
+- **Typografi:** 26/600 hero, 12/600 seksjonstittel (normal case), 14/400 brødtekst, 12/400 muted meta.
+- **Accent (`C.accent`) brukes kun som 6px prikk** på linjer som krever handling — aldri som flate eller knapp.
+- **Tall får visuell vekt** i Markedet-seksjonen (16/500), men aldri hero-størrelse.
+- **Ingen kort, ingen skygger, ingen badges, ingen ikoner** annet enn evt. en diskret `↗ ↘` glyf for trendretning.
+- **Tomme felt utelates** — ingen "Ingen data"-meldinger.
+
+### Innholdsbeslutninger (mockdata)
+
+- Hilsen henter fornavn fra hardkodet `"Jon Richard"` — ingen profilkall.
+- Uken så langt: én hardkodet streng (2–3 setninger).
+- Innboks: 3 hardkodet rader med avsender, selskap, snippet, alder, status.
+- Markedet: 3 trendlinjer + 3 nye selskapsnavn.
+- Konsulenter: 4–5 hardkodet rader (navn, tags, tilgjengelig-fra) + én matchhint-linje.
+
+### Teknisk
+
+- **Fil:** `src/pages/DesignLabHome.tsx` — skrives på nytt, beholder `<DesignLabPageShell activePath="/design-lab/home" title="Hjem">` med `maxWidth={720}`.
+- Alle gamle imports (`useQuery`, `supabase`, `homeQueueModel`, søk, agent-kall) fjernes.
+- Ingen nye komponenter i `system/` — lokale `function`-helpers (Hero, WeekSummary, InboxFinds, MarketSection, BenchSection) i samme fil.
+- Kun `C.*`-tokens fra `src/theme.ts`. Inter, vekter 400/500/600.
+- Ingen Supabase-kall, ingen edge functions — rendres umiddelbart fra mock.
+
+### Hva som IKKE er med
+
+- Ingen "Fokus i dag" / prioriterte handlinger (vill gjetting).
+- Ingen "Vunnet denne måneden" / pengetall.
+- Ingen to-kolonners oppsett.
+- Ingen pulse-rad med 4 store tall.
+- Ingen "Spør agenten", ingen "Topp 10".
+- Ingen sitatlinje.
 
 ### Verifisering etter implementering
 
-1. Åpne en kontakt med åpen oppfølging "Får kanskje behov".
-2. Opprett ny forespørsel på samme kontakt via `/design-lab/foresporsler`.
-3. Bekreft at oppfølgingen nå viser signal "Behov nå" på Salgsagent, Hjem (Topp 10) og kontakt-kortet — uten at fritekst eller forfallsdato endres.
+1. Åpne `/design-lab/home` — én smal sentrert kolonne, fire stablede seksjoner under hilsen.
+2. Sjekk at brødteksten i "Uken så langt" leses naturlig som prosa.
+3. Bekreft at "Uoppdaget i innboksen", "Markedet" og "Konsulenter som trenger plassering" hver svarer på ett konkret nyttighetsspørsmål.
+4. Sammenlign med `/design-lab/kontakter`: samme tokens og typografifamilie, men hjemmesiden er roligere og smalere.
+5. Resize til 1280px og 5000px — kolonnen sentreres og holder 720px.
 
