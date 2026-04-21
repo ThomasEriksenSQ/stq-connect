@@ -1888,6 +1888,8 @@ export default function DesignLabContacts() {
 
   const hasVisibleResults = selectedConsultant ? visibleMatchLeads.length > 0 : sorted.length > 0;
   const visibleResultCount = selectedConsultant ? visibleMatchLeads.length : filteredContacts.length;
+  const isGeographicMatchFilter = Boolean(selectedConsultant && jaktChip === "geografi");
+  const matchColumnLabel = isGeographicMatchFilter ? "GEO MATCH" : "Match";
 
   const handleToggle = useCallback(
     (contact: {
@@ -2135,7 +2137,7 @@ export default function DesignLabContacts() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <DesignLabControlLabel>MATCH</DesignLabControlLabel>
+                    <DesignLabControlLabel>{isGeographicMatchFilter ? "GEO MATCH" : "MATCH"}</DesignLabControlLabel>
                     {JAKT_CHIPS.map((chip) => (
                       <DesignLabMatchFilterChip
                         key={chip.value}
@@ -2245,7 +2247,7 @@ export default function DesignLabContacts() {
                           className="flex items-center gap-0.5 transition-colors"
                           style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}
                         >
-                          Match
+                          {matchColumnLabel}
                           {huntSort.field === "match"
                             ? huntSort.dir === "asc"
                               ? <ChevronUp style={{ width: 12, height: 12 }} />
@@ -2300,7 +2302,7 @@ export default function DesignLabContacts() {
                           : isRequestMatchLead(lead) && lead.temperature
                             ? lead.temperature
                             : null;
-                        const scoreLabel = lead.matchSources.includes("geografi") ? "Nærhet" : "Match";
+                        const scoreLabel = lead.matchSources.includes("geografi") ? "GEO MATCH" : "Match";
 
                         return (
                           <div
