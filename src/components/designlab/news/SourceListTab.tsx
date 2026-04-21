@@ -33,6 +33,11 @@ const SOURCE_STATUS_OPTIONS = [
 
 type SourceStatus = (typeof SOURCE_STATUS_OPTIONS)[number]["value"];
 
+async function updateCompanyStatus(companyId: string, status: SourceStatus): Promise<void> {
+  const { error } = await supabase.from("companies").update({ status }).eq("id", companyId);
+  if (error) throw error;
+}
+
 interface ContactsFullData {
   contacts: Array<{
     id: string;
@@ -246,27 +251,30 @@ export function SourceListTab() {
     staleTime: 5 * 60_000,
   });
 
+  const updateCachedStatus = (companyId: string, status: SourceStatus) => {
+    queryClient.setQueryData<ContactsFullData>(SOURCE_QUERY_KEY, (old) =>
+      old
+        ? {
+            ...old,
+            contacts: old.contacts.map((contact) =>
+              contact.companies?.id === companyId
+                ? { ...contact, companies: { ...contact.companies, status } }
+                : contact,
+            ),
+          }
+        : old,
+    );
+  };
+
   const statusMutation = useMutation({
-    mutationFn: async ({ companyId, status }: { companyId: string; status: SourceStatus }) => {
-      const { error } = await supabase.from("companies").update({ status }).eq("id", companyId);
-      if (error) throw error;
+    mutationFn: async ({ companyId, status }: { companyId: string; status: SourceStatus; previousStatus: SourceStatus; companyName: string }) => {
+      await updateCompanyStatus(companyId, status);
     },
     onMutate: async ({ companyId, status }) => {
       await queryClient.cancelQueries({ queryKey: SOURCE_QUERY_KEY });
       const previous = queryClient.getQueryData<ContactsFullData>(SOURCE_QUERY_KEY);
 
-      queryClient.setQueryData<ContactsFullData>(SOURCE_QUERY_KEY, (old) =>
-        old
-          ? {
-              ...old,
-              contacts: old.contacts.map((contact) =>
-                contact.companies?.id === companyId
-                  ? { ...contact, companies: { ...contact.companies, status } }
-                  : contact,
-              ),
-            }
-          : old,
-      );
+      updateCachedStatus(companyId, status);
 
       return { previous };
     },
@@ -274,8 +282,24 @@ export function SourceListTab() {
       if (context?.previous) queryClient.setQueryData(SOURCE_QUERY_KEY, context.previous);
       toast.error("Kunne ikke oppdatere selskapsstatus");
     },
-    onSuccess: () => {
-      toast.success("Selskapsstatus oppdatert");
+    onSuccess: (_data, { companyId, companyName, previousStatus, status }) => {
+      toast(`${companyName} er satt til ${getStatusLabel(status)}`, {
+        duration: 10000,
+        action: {
+          label: "Angre",
+          onClick: async () => {
+            try {
+              await updateCompanyStatus(companyId, previousStatus);
+              updateCachedStatus(companyId, previousStatus);
+              queryClient.invalidateQueries({ queryKey: SOURCE_QUERY_KEY });
+              queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
+              toast.success(`${companyName} er satt tilbake til ${getStatusLabel(previousStatus)}`);
+            } catch {
+              toast.error("Kunne ikke angre statusendringen");
+            }
+          },
+        },
+      });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: SOURCE_QUERY_KEY });
@@ -354,7 +378,14 @@ export function SourceListTab() {
               key={row.companyId}
               row={row}
               statusPending={statusMutation.isPending && statusMutation.variables?.companyId === row.companyId}
-              onStatusChange={(status) => statusMutation.mutate({ companyId: row.companyId, status })}
+              onStatusChange={(status) =>
+                statusMutation.mutate({
+                  companyId: row.companyId,
+                  companyName: row.name,
+                  previousStatus: normalizeStatus(row.status),
+                  status,
+                })
+              }
             />
           ))}
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 20 }}>
