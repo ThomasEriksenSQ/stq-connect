@@ -417,7 +417,7 @@ export default function DesignLabNews() {
   return (
     <DesignLabPageShell
       activePath="/design-lab/news"
-      title="STACQ Nyheter"
+      title=""
       maxWidth={1100}
       contentClassName="dl-news-content"
     >
@@ -452,7 +452,6 @@ export default function DesignLabNews() {
         style={{
           display: "flex",
           gap: 24,
-          borderBottom: `1px solid ${C.borderLight}`,
           marginBottom: 32,
         }}
       >
