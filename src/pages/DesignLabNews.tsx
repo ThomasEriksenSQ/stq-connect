@@ -418,11 +418,11 @@ export default function DesignLabNews() {
   const row = query.data;
   const items: NewsItem[] = row?.payload?.items ?? [];
   const lead = items.find((i): i is NewsLead => i.variant === "lead") ?? null;
-  const features = items.filter((i): i is NewsFeature => i.variant === "feature");
-  const briefs = items.filter((i): i is NewsBrief => i.variant === "brief");
+  // Alle ikke-lead-saker rendres som features (bilde + tittel + ingress)
+  const features = items.filter((i) => i.variant !== "lead") as NewsFeature[];
   const total = items.length;
 
-  const isEmpty = !row || row.status === "empty" || (!lead && features.length + briefs.length === 0);
+  const isEmpty = !row || row.status === "empty" || (!lead && features.length === 0);
 
   return (
     <DesignLabPageShell
@@ -463,9 +463,9 @@ export default function DesignLabNews() {
           {/* Hovedoppslag */}
           <section style={{ marginBottom: 56 }}>{lead ? <LeadStory item={lead} /> : null}</section>
 
-          {/* Features */}
+          {/* Features (alle øvrige saker) */}
           {features.length > 0 ? (
-            <section style={{ marginBottom: 56 }}>
+            <section style={{ marginBottom: 64 }}>
               <DesignLabSectionHeader
                 title="Mer fra porteføljen"
                 meta={`${features.length} saker`}
@@ -480,23 +480,7 @@ export default function DesignLabNews() {
                 className="news-feature-grid"
               >
                 {features.map((item) => (
-                  <FeatureCard key={item.id} item={item} />
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          {/* Briefs */}
-          {briefs.length > 0 ? (
-            <section style={{ marginBottom: 64 }}>
-              <DesignLabSectionHeader
-                title="Korte notiser"
-                meta={`${briefs.length} saker`}
-                style={{ marginBottom: 8 }}
-              />
-              <div>
-                {briefs.map((item) => (
-                  <BriefRow key={item.id} item={item} />
+                  <FeatureCard key={item.id} item={item as NewsFeature} />
                 ))}
               </div>
             </section>
