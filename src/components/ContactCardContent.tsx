@@ -252,7 +252,7 @@ function EmailRowBody({ onToggle, children }: { onToggle: () => void; children: 
       onMouseDown={handlers.onMouseDown}
       onClick={handlers.onClick}
       onKeyDown={activateOnEnterOrSpace(onToggle)}
-      className="min-w-0 cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-sm"
+      className="min-w-0 cursor-pointer select-text focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-sm"
     >
       {children}
     </div>
@@ -2636,7 +2636,7 @@ function EmailRow({ email }: { email: any }) {
       </EmailRowBody>
 
       {expanded && (
-        <div className="mt-2 border-t border-border pt-2 cursor-text">
+        <div className="mt-2 border-t border-border pt-2 cursor-text select-text">
           <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70">
             {latest}
           </p>
@@ -2650,7 +2650,7 @@ function EmailRow({ email }: { email: any }) {
                 {showThread ? "Skjul tråd ▴" : "Vis hele tråden ▾"}
               </DesignLabActionButton>
               {showThread && (
-                <div className="mt-2 bg-muted/30 rounded-lg p-3">
+                <div className="mt-2 bg-muted/30 rounded-lg p-3 select-text">
                   <p className="text-[0.8125rem] leading-relaxed whitespace-pre-wrap text-muted-foreground">
                     {rest}
                   </p>
