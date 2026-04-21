@@ -43,10 +43,10 @@ function placeholderImage(label: string): string {
   const safe = label.replace(/[<>&]/g, "");
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675">
-  <rect width="1200" height="675" fill="${C.appBg}"/>
-  <rect x="0.5" y="0.5" width="1199" height="674" fill="none" stroke="${C.borderLight}"/>
-  <text x="600" y="345" text-anchor="middle" font-family="Inter, sans-serif" font-size="42" font-weight="600" fill="${C.text}">${safe}</text>
-  <text x="600" y="395" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="500" fill="${C.textFaint}" letter-spacing="2">STACQ DAILY</text>
+  <rect width="1200" height="675" fill="#FCFCFD"/>
+  <rect x="0.5" y="0.5" width="1199" height="674" fill="none" stroke="#E8EAEE"/>
+  <text x="600" y="345" text-anchor="middle" font-family="Inter, sans-serif" font-size="42" font-weight="600" fill="#1A1C1F">${safe}</text>
+  <text x="600" y="395" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="500" fill="#8C929C" letter-spacing="2">STACQ DAILY</text>
 </svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }

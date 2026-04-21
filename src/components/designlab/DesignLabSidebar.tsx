@@ -1,15 +1,19 @@
 import { useEffect } from "react";
+import { useTheme } from "next-themes";
 import { User } from "@supabase/supabase-js";
 import {
   Users, Building2, LayoutDashboard, Briefcase, Settings, LogOut,
   UserPlus, Radar, TrendingUp, Globe, Clock, PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
 import { C } from "@/components/designlab/theme";
+import { ThemeModeButton, ThemeModeControl } from "@/components/ThemeModeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { SCALE_MAP, getDesignLabTextSizeVars, TextSizeControlSidebar, type TextSize } from "@/components/designlab/TextSizeControl";
 import { getNavItemFromPath, type CrmNavItem, useCrmNavigation } from "@/lib/crmNavigation";
 import stacqLogoFull from "@/assets/stacq-logo-full-black.png";
 import stacqLogoIcon from "@/assets/stacq-logo-icon-black.png";
+import stacqLogoFullWhite from "@/assets/stacq-logo-full-white.png";
+import stacqLogoIconWhite from "@/assets/stacq-logo-icon-white.png";
 
 /* ═══ NAV ITEMS ═══ */
 
@@ -42,10 +46,13 @@ interface DesignLabSidebarProps {
 export function DesignLabSidebar({ navigate, signOut, user, activePath }: DesignLabSidebarProps) {
   const [collapsed, setCollapsed] = usePersistentState("dl-sidebar-collapsed", false);
   const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
+  const { resolvedTheme } = useTheme();
   const { getHomePath, getNavPath } = useCrmNavigation();
   const scale = SCALE_MAP[textSize];
   const px = (value: number) => Math.round(value * scale * 100) / 100;
   const activeItem = getNavItemFromPath(activePath);
+  const logoFull = resolvedTheme === "dark" ? stacqLogoFullWhite : stacqLogoFull;
+  const logoIcon = resolvedTheme === "dark" ? stacqLogoIconWhite : stacqLogoIcon;
 
   const isActive = (item: CrmNavItem) => item === activeItem;
 
@@ -99,7 +106,7 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
             }}
           >
             <img
-              src={stacqLogoFull}
+              src={logoFull}
               alt="STACQ"
               style={{ height: px(18), width: "auto", display: "block" }}
             />
@@ -126,7 +133,7 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
             }}
           >
             <img
-              src={stacqLogoIcon}
+              src={logoIcon}
               alt="STACQ"
               style={{ height: px(24), width: px(24), display: "block" }}
             />
@@ -160,8 +167,9 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
 
       {/* Tekststørrelse — over footer-streken, gruppert med nav */}
       {!collapsed && (
-        <div className="shrink-0" style={{ paddingInline: px(10), paddingBottom: px(10) }}>
+        <div className="shrink-0 space-y-2" style={{ paddingInline: px(10), paddingBottom: px(10) }}>
           <TextSizeControlSidebar value={textSize} onChange={setTextSize} />
+          <ThemeModeControl scale={scale} />
         </div>
       )}
 
@@ -170,6 +178,11 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
         className="mt-auto shrink-0 space-y-0.5"
         style={{ borderTop: `1px solid ${C.border}`, padding: `${px(8)}px ${collapsed ? px(6) : px(12)}px` }}
       >
+        {collapsed && (
+          <div style={{ display: "flex", justifyContent: "center", paddingBottom: px(4) }}>
+            <ThemeModeButton scale={scale} />
+          </div>
+        )}
         <FooterBtn icon={Settings} label="Innstillinger" onClick={() => navigate(getNavPath("settings"))} active={isActive("settings")} collapsed={collapsed} scale={scale} />
         <FooterBtn icon={LogOut} label="Logg ut" onClick={signOut} muted collapsed={collapsed} scale={scale} />
       </div>

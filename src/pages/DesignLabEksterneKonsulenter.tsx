@@ -47,13 +47,13 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const TYPE_TAG_COLORS: Record<string, { background: string; color: string; border: string; fontWeight: number }> = {
-  freelance: { background: "#E8ECF5", color: "#1A1C1F", border: "1px solid #C5CBE8", fontWeight: 600 },
-  partner: { background: "#F7F8FA", color: "#5C636E", border: "1px solid #DDE0E7", fontWeight: 500 },
+  freelance: { background: C.filterActiveBg, color: C.text, border: `1px solid ${C.filterActiveBorder}`, fontWeight: 600 },
+  partner: { background: C.surfaceAlt, color: C.textMuted, border: `1px solid ${C.borderDefault}`, fontWeight: 500 },
 };
 
 const STATUS_TAG_COLORS: Record<string, { background: string; color: string; border: string; fontWeight: number }> = {
-  ledig: { background: "#E8ECF5", color: "#1A1C1F", border: "1px solid #C5CBE8", fontWeight: 600 },
-  utilgjengelig: { background: "#F7F8FA", color: "#8C929C", border: "1px solid #E3E6EB", fontWeight: 500 },
+  ledig: { background: C.filterActiveBg, color: C.text, border: `1px solid ${C.filterActiveBorder}`, fontWeight: 600 },
+  utilgjengelig: { background: C.surfaceAlt, color: C.textFaint, border: `1px solid ${C.borderDefault}`, fontWeight: 500 },
 };
 
 export default function DesignLabEksterneKonsulenter() {

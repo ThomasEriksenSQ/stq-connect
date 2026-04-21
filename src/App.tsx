@@ -579,7 +579,7 @@ function AppRouter() {
 }
 
 const App = () => (
-  <ThemeProvider attribute="class" defaultTheme="system" enableSystem={true}>
+  <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="stacq-crm-theme" disableTransitionOnChange>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <DesignVersionProvider>

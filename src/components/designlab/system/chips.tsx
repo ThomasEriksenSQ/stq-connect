@@ -65,14 +65,14 @@ export function DesignLabReadonlyChip({
 }) {
   const inactiveStyles = {
     background: "transparent",
-    color: "#5C636E",
-    border: "1px solid #DDE0E7",
+    color: C.textSecondary,
+    border: `1px solid ${C.borderDefault}`,
     fontWeight: 500,
   };
   const resolvedActiveStyles = activeColors ?? {
-    background: "#E8ECF5",
-    color: "#1A1C1F",
-    border: "1px solid #C5CBE8",
+    background: C.filterActiveBg,
+    color: C.textPrimary,
+    border: `1px solid ${C.filterActiveBorder}`,
     fontWeight: 600,
   };
   const styles = active ? resolvedActiveStyles : inactiveStyles;

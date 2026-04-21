@@ -17,6 +17,7 @@ import {
   DesignLabInlineActions,
   DesignLabInlineTextAction,
 } from "./actions";
+import { C } from "@/components/designlab/theme";
 
 export type ModalScale = {
   textSize: TextSize;
@@ -170,7 +171,7 @@ export function getDesignLabModalInlineActionStyle(scale: ModalScale): CSSProper
     fontFamily: "inherit",
     fontWeight: 500,
     background: "transparent",
-    color: "#5C636E",
+    color: C.textMuted,
     transition: "background-color 120ms cubic-bezier(0.16, 1, 0.3, 1)",
   };
 }
@@ -195,11 +196,14 @@ function DesignLabModalSurface({
 
   return (
     <div
-      className="w-[calc(100vw-2rem)] gap-0 rounded-[10px] border border-[#E8EAEE] bg-white p-0 shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
+      className="w-[calc(100vw-2rem)] gap-0 rounded-[10px] border p-0"
       style={{
         width: `min(calc(100vw - 2rem), ${scale.width}px)`,
         maxWidth: "100%",
         fontFamily: "inherit",
+        background: C.surface,
+        borderColor: C.borderLight,
+        boxShadow: C.shadowMd,
         ...getDesignLabModalScaleVars(scale),
       }}
     >
@@ -212,11 +216,11 @@ function DesignLabModalSurface({
         }}
       >
         {useDialogTitle ? (
-          <DialogTitle className="font-semibold text-[#1A1C1F]" style={titleStyle}>
+          <DialogTitle className="font-semibold" style={{ ...titleStyle, color: C.text }}>
             {title}
           </DialogTitle>
         ) : (
-          <h2 className="font-semibold text-[#1A1C1F]" style={titleStyle}>
+          <h2 className="font-semibold" style={{ ...titleStyle, color: C.text }}>
             {title}
           </h2>
         )}
@@ -248,7 +252,7 @@ export function DesignLabModalContent({
             <DesignLabGhostAction
               type="button"
               style={{ width: "var(--dl-modal-close-size)", minWidth: "var(--dl-modal-close-size)", paddingInline: 0 }}
-              className="text-[#5C636E] hover:bg-[#F0F2F6] hover:text-[#1A1C1F] focus-visible:ring-0 focus-visible:ring-offset-0"
+              className="focus-visible:ring-0 focus-visible:ring-offset-0"
             >
               <X className="h-4 w-4" />
               <span className="sr-only">Lukk</span>
@@ -276,7 +280,7 @@ export function DesignLabModalPreviewSurface({
         <DesignLabGhostAction
           type="button"
           style={{ width: "var(--dl-modal-close-size)", minWidth: "var(--dl-modal-close-size)", paddingInline: 0 }}
-          className="pointer-events-none text-[#5C636E]"
+          className="pointer-events-none"
         >
           <X className="h-4 w-4" />
           <span className="sr-only">Lukk</span>

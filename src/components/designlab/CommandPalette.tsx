@@ -240,10 +240,10 @@ export function CommandPalette({
           transform: "translateX(-50%)",
           width: 560,
           maxHeight: 420,
-          background: "#FFFFFF",
-          border: "1px solid #E2E4E9",
+          background: C.surface,
+          border: `1px solid ${C.border}`,
           borderRadius: 10,
-          boxShadow: "0 0 0 1px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.10), 0 24px 48px rgba(0,0,0,0.06)",
+          boxShadow: C.shadowLg,
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
@@ -252,8 +252,8 @@ export function CommandPalette({
         onKeyDown={handleKeyDown}
       >
         {/* Search input */}
-        <div style={{ position: "relative", height: 44, borderBottom: "1px solid #EAECEF", borderRadius: "10px 10px 0 0" }}>
-          <Search style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", width: 15, height: 15, color: "#B0B7C3" }} />
+        <div style={{ position: "relative", height: 44, borderBottom: `1px solid ${C.borderLight}`, borderRadius: "10px 10px 0 0" }}>
+          <Search style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", width: 15, height: 15, color: C.textGhost }} />
           <input
             ref={inputRef}
             value={query}
@@ -267,7 +267,7 @@ export function CommandPalette({
               background: "transparent",
               fontSize: 13,
               fontWeight: 400,
-              color: "#1A1C1F",
+              color: C.text,
               fontFamily: "inherit",
               padding: "0 14px 0 40px",
             }}
@@ -277,8 +277,8 @@ export function CommandPalette({
         {/* Results */}
         <div ref={listRef} style={{ flex: 1, overflowY: "auto", padding: "4px 0 0" }}>
           {selectedContact || selectedCompany ? (
-            <div style={{ padding: "6px 12px 8px", borderBottom: `1px solid ${C.borderLight}`, background: "#FCFCFD" }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "#8C929C", paddingBottom: 4 }}>
+            <div style={{ padding: "6px 12px 8px", borderBottom: `1px solid ${C.borderLight}`, background: C.appBg }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: C.textFaint, paddingBottom: 4 }}>
                 Valgt
               </div>
               {selectedContact ? (
@@ -293,13 +293,13 @@ export function CommandPalette({
             </div>
           ) : null}
           {displaySections.length === 0 ? (
-            <div style={{ padding: "24px 16px", fontSize: 13, color: "#8C929C" }}>
+            <div style={{ padding: "24px 16px", fontSize: 13, color: C.textFaint }}>
               Ingen resultater for «{query}»
             </div>
           ) : (
             displaySections.map((section) => (
               <div key={section.label}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "#8C929C", padding: "8px 12px 4px", letterSpacing: 0 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: C.textFaint, padding: "8px 12px 4px", letterSpacing: 0 }}>
                   {section.label}
                 </div>
                 {section.items.map((item) => {
@@ -321,16 +321,16 @@ export function CommandPalette({
                         gap: 8,
                         fontSize: 13,
                         fontWeight: 400,
-                        color: "#1A1C1F",
+                        color: C.text,
                         cursor: "pointer",
-                        background: isActive ? "#F3F5F9" : "#FFFFFF",
+                        background: isActive ? C.hoverBg : C.surface,
                         transition: "background 120ms ease, color 120ms ease",
                       }}
                     >
-                      <Icon style={{ width: 14, height: 14, color: isActive ? "#8C929C" : "#C1C7D0", flexShrink: 0 }} />
+                      <Icon style={{ width: 14, height: 14, color: isActive ? C.textFaint : C.textGhost, flexShrink: 0 }} />
                       <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
                       {item.meta && (
-                        <span style={{ fontSize: 11, color: isActive ? "#6B7280" : "#8C929C", marginLeft: "auto", flexShrink: 0 }}>
+                        <span style={{ fontSize: 11, color: isActive ? C.textMuted : C.textFaint, marginLeft: "auto", flexShrink: 0 }}>
                           {item.meta}
                         </span>
                       )}

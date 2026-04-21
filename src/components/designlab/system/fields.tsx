@@ -3,13 +3,14 @@ import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from "react";
 
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { C } from "@/components/designlab/theme";
 
 export function getDesignLabFieldLabelStyle(): CSSProperties {
   return {
     fontSize: "var(--dl-modal-font-size, inherit)",
     fontFamily: "inherit",
     fontWeight: 500,
-    color: "#8C929C",
+    color: C.textFaint,
     lineHeight: 1.2,
   };
 }
@@ -18,15 +19,15 @@ export function getDesignLabTextFieldStyle(): CSSProperties {
   return {
     height: "var(--dl-modal-control-height, 32px)",
     borderRadius: 6,
-    borderColor: "#DDE0E7",
-    background: "#FFFFFF",
+    borderColor: C.borderDefault,
+    background: C.surface,
     boxShadow: "inset 0 1px 0 rgba(0,0,0,0.02)",
     paddingInline: 10,
     paddingBlock: 0,
     fontSize: "var(--dl-modal-font-size, 13px)",
     fontFamily: "inherit",
     lineHeight: 1.2,
-    color: "#1A1C1F",
+    color: C.text,
   };
 }
 
@@ -86,13 +87,13 @@ export function DesignLabSectionLabel({
         fontWeight: 600,
         letterSpacing: "0.08em",
         textTransform: "uppercase",
-        color: "#8C929C",
+        color: C.textFaint,
         lineHeight: 1.2,
         ...style,
       }}
     >
       {children}
-      {required ? <span style={{ color: "#E5484D", marginLeft: 3 }}>*</span> : null}
+      {required ? <span style={{ color: C.danger, marginLeft: 3 }}>*</span> : null}
     </span>
   );
 }
@@ -104,7 +105,7 @@ export const DesignLabTextField = forwardRef<HTMLInputElement, ComponentPropsWit
         {...props}
         ref={ref}
         className={cn(
-          "placeholder:text-[#8C929C] focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#5E6AD2] focus-visible:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]",
+          "placeholder:text-[var(--dl-text-faint)] focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[var(--dl-border-focus)] focus-visible:shadow-[0_0_0_2px_var(--dl-accent-bg)]",
           className,
         )}
         style={{ ...getDesignLabTextFieldStyle(), ...style }}

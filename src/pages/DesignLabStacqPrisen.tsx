@@ -461,9 +461,9 @@ function TypeBadge({ dealType }: { dealType: string | null }) {
 function StatusBadge({ status }: { status: string }) {
   const colors =
     status === "Aktiv"
-      ? { background: "#EAF7EF", color: "#197A52", border: "1px solid rgba(25,122,82,0.16)", fontWeight: 600 }
+      ? { background: C.successBg, color: C.success, border: `1px solid ${C.statusNeutralBorder}`, fontWeight: 600 }
       : status === "Oppstart"
-        ? { background: "#F6EFE2", color: "#9A7A2A", border: "1px solid rgba(154,122,42,0.16)", fontWeight: 600 }
-        : { background: "#F7F8FA", color: "#8C929C", border: "1px solid #E3E6EB", fontWeight: 500 };
+        ? { background: C.warningBg, color: C.warning, border: `1px solid ${C.statusNeutralBorder}`, fontWeight: 600 }
+        : { background: C.surfaceAlt, color: C.textFaint, border: `1px solid ${C.borderDefault}`, fontWeight: 500 };
   return <DesignLabStaticTag colors={colors}>{status}</DesignLabStaticTag>;
 }

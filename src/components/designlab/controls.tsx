@@ -29,20 +29,20 @@ type StaticTagColors = {
 
 export const DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS = {
   background: "transparent",
-  color: "#5C636E",
-  border: "1px solid #DDE0E7",
+  color: C.textSecondary,
+  border: `1px solid ${C.borderDefault}`,
   fontWeight: 500,
 } satisfies FilterActiveColors;
 
 export const DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS = {
-  background: "#E8ECF5",
-  color: "#1A1C1F",
-  border: "1px solid #C5CBE8",
+  background: C.filterActiveBg,
+  color: C.textPrimary,
+  border: `1px solid ${C.filterActiveBorder}`,
   fontWeight: 600,
 } satisfies FilterActiveColors;
 
 export const DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS = {
-  background: "#F0F2F6",
+  background: C.hoverSubtle,
 } satisfies FilterHoverColors;
 
 export function DesignLabStaticTag({
@@ -200,10 +200,10 @@ export const DesignLabActionButton = forwardRef<HTMLButtonElement, ButtonHTMLAtt
 }, ref) {
   const variantMap: Record<ActionVariant, { background: string; border: string; color: string; hoverBackground: string }> = {
     primary: {
-      background: "#2563EB",
+      background: C.accent,
       border: "1px solid transparent",
-      color: "#FFFFFF",
-      hoverBackground: "#1D4ED8",
+      color: C.onAccent,
+      hoverBackground: C.accentHover,
     },
     secondary: {
       background: "transparent",
@@ -215,14 +215,14 @@ export const DesignLabActionButton = forwardRef<HTMLButtonElement, ButtonHTMLAtt
       background: "transparent",
       border: "1px solid transparent",
       color: C.textSecondary,
-      hoverBackground: "#F0F2F6",
+      hoverBackground: C.hoverSubtle,
     },
   };
 
   const config = variantMap[variant];
-  const disabledBackground = variant === "primary" ? "rgba(37,99,235,0.12)" : "transparent";
+  const disabledBackground = variant === "primary" ? C.accentMuted : "transparent";
   const disabledBorder = variant === "secondary" ? `1px solid ${C.borderDefault}` : "1px solid transparent";
-  const disabledColor = variant === "primary" ? "#2563EB" : C.textGhost;
+  const disabledColor = variant === "primary" ? C.accent : C.textGhost;
 
   return (
     <button

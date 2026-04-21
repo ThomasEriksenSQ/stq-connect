@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Sheet, SheetClose, SheetContent } from "@/components/ui/sheet";
 import { useDesignLabModalScale } from "@/components/designlab/system/modal";
 import { DesignLabIconButton } from "@/components/designlab/controls";
+import { C } from "@/components/designlab/theme";
 
 interface DesignLabEntitySheetProps {
   open: boolean;
@@ -92,7 +93,7 @@ export function DesignLabFormSheet({
         className="w-full p-0 dl-v8-theme"
         style={{ maxWidth: `min(100vw, ${maxWidth}px)`, ...scaleVars }}
       >
-        <div className="flex h-full flex-col bg-white">{children}</div>
+        <div className="flex h-full flex-col" style={{ background: C.surface }}>{children}</div>
       </SheetContent>
     </Sheet>
   );
@@ -101,8 +102,9 @@ export function DesignLabFormSheet({
 export function DesignLabFormSheetHeader({ title }: { title: string }) {
   return (
     <div
-      className="shrink-0 flex items-center justify-between border-b border-[#E8EAEE]"
+      className="shrink-0 flex items-center justify-between border-b"
       style={{
+        borderColor: C.borderLight,
         paddingLeft: "var(--dl-modal-header-padding-x, 24px)",
         paddingRight: "var(--dl-modal-header-padding-x, 24px)",
         paddingTop: "var(--dl-modal-header-padding-bottom, 16px)",
@@ -110,8 +112,9 @@ export function DesignLabFormSheetHeader({ title }: { title: string }) {
       }}
     >
       <h2
-        className="font-semibold text-[#1A1C1F]"
+        className="font-semibold"
         style={{
+          color: C.text,
           fontSize: `calc(var(--dl-modal-font-size, 13px) * 1.45)`,
           lineHeight: 1.2,
           letterSpacing: "-0.005em",
@@ -157,8 +160,10 @@ export function DesignLabFormSheetFooter({
 }) {
   return (
     <div
-      className="shrink-0 flex items-center justify-between border-t border-[#E8EAEE] bg-white"
+      className="shrink-0 flex items-center justify-between border-t"
       style={{
+        background: C.surface,
+        borderColor: C.borderLight,
         paddingLeft: "var(--dl-modal-body-padding-x, 24px)",
         paddingRight: "var(--dl-modal-body-padding-x, 24px)",
         paddingTop: "var(--dl-modal-header-padding-bottom, 16px)",

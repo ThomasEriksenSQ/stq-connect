@@ -501,8 +501,8 @@ export default function DesignLabOppfolginger() {
                       />
                       {contactSearch && !form.contactId && filteredContacts.length > 0 ? (
                         <div
-                          className="absolute left-0 right-0 z-50 mt-1 overflow-hidden rounded-[8px] border bg-white shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
-                          style={{ borderColor: C.border }}
+                          className="absolute left-0 right-0 z-50 mt-1 overflow-hidden rounded-[8px] border"
+                          style={{ borderColor: C.border, background: C.surface, boxShadow: C.shadowMd }}
                         >
                           {filteredContacts.map((contact: any) => (
                             <button
@@ -541,7 +541,7 @@ export default function DesignLabOppfolginger() {
                               width: "100%",
                               height: 32,
                               fontSize: 13,
-                              background: "#FFFFFF",
+                              background: C.surface,
                               color: form.dueDate ? C.text : C.textFaint,
                               border: `1px solid ${C.border}`,
                             }),
