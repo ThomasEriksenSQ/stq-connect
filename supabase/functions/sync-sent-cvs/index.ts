@@ -256,6 +256,7 @@ serve(async (req) => {
   const bearerToken = authHeader.replace(/^Bearer\s+/i, "").trim();
   const jwtPayload = bearerToken ? parseJwtPayload(bearerToken) : null;
   const jwtRole = typeof jwtPayload?.role === "string" ? jwtPayload.role : null;
+  let isAdminRequest = false;
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -278,6 +279,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    isAdminRequest = true;
   } else if (jwtRole === "anon") {
     if (body.trigger !== "cron") {
       return new Response(JSON.stringify({ error: "Cron trigger required" }), {
@@ -292,11 +294,12 @@ serve(async (req) => {
     });
   }
 
-  const lookbackDays = Math.min(Math.max(body.lookbackDays || DEFAULT_INITIAL_LOOKBACK_DAYS, 1), 365);
-  const maxMessagesPerMailbox = Math.min(
-    Math.max(body.maxMessagesPerMailbox || DEFAULT_MAX_MESSAGES_PER_MAILBOX, 20),
-    1000,
-  );
+  const lookbackDays = isAdminRequest
+    ? Math.min(Math.max(body.lookbackDays || DEFAULT_INITIAL_LOOKBACK_DAYS, 1), 365)
+    : DEFAULT_INITIAL_LOOKBACK_DAYS;
+  const maxMessagesPerMailbox = isAdminRequest
+    ? Math.min(Math.max(body.maxMessagesPerMailbox || DEFAULT_MAX_MESSAGES_PER_MAILBOX, 20), 1000)
+    : DEFAULT_MAX_MESSAGES_PER_MAILBOX;
   const runStartedAt = new Date().toISOString();
 
   try {
