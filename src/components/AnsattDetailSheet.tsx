@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { normalizeTechnologyTags } from "@/lib/technologyTags";
 import { getConsultantMatchScoreColor } from "@/lib/consultantMatches";
+import { buildEmployeeGeoText } from "@/lib/geographicMatch";
 
 const SUPABASE_URL = "https://kbvzpcebfopqqrvmbiap.supabase.co";
 
@@ -47,6 +48,16 @@ const STATUS_OPTIONS = [
   { value: "SLUTTET", label: "Sluttet" },
 ];
 
+function isMissingEmployeeAddressColumnError(error: unknown) {
+  const message = String((error as { message?: string } | null)?.message || error || "").toLowerCase();
+  return (
+    message.includes("adresse") ||
+    message.includes("postnummer") ||
+    message.includes("poststed") ||
+    message.includes("column")
+  );
+}
+
 export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoRunMatch }: AnsattDetailSheetProps) {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -75,6 +86,9 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
     navn: "",
     epost: "",
     tlf: "",
+    adresse: "",
+    postnummer: "",
+    poststed: "",
     geografi: "",
     status: "AKTIV/SIGNERT",
     start_dato: "",
@@ -95,6 +109,9 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
         navn: "",
         epost: "",
         tlf: "",
+        adresse: "",
+        postnummer: "",
+        poststed: "",
         geografi: "",
         status: "AKTIV/SIGNERT",
         start_dato: "",
@@ -111,6 +128,9 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
         navn: ansatt.navn || "",
         epost: ansatt.epost || "",
         tlf: ansatt.tlf || "",
+        adresse: ansatt.adresse || "",
+        postnummer: ansatt.postnummer || "",
+        poststed: ansatt.poststed || "",
         geografi: ansatt.geografi || "",
         status: ansatt.status || "AKTIV/SIGNERT",
         start_dato: ansatt.start_dato || "",
@@ -248,11 +268,16 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
   const handleSave = async () => {
     if (!form.navn.trim()) return;
     setSaving(true);
+    const normalizedPostnummer = form.postnummer.replace(/\D/g, "").slice(0, 4);
+    const geografiFallback = buildEmployeeGeoText(normalizedPostnummer, form.poststed, form.geografi);
     const payload: any = {
       navn: form.navn.trim(),
       epost: form.epost.trim() || null,
       tlf: form.tlf.trim() || null,
-      geografi: form.geografi.trim() || null,
+      adresse: form.adresse.trim() || null,
+      postnummer: normalizedPostnummer || null,
+      poststed: form.poststed.trim() || null,
+      geografi: geografiFallback,
       status: form.status,
       start_dato: form.start_dato || null,
       slutt_dato: form.slutt_dato || null,
@@ -270,6 +295,19 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
     } else {
       ({ error } = await supabase.from("stacq_ansatte").update(payload).eq("id", ansatt.id));
     }
+
+    if (error && isMissingEmployeeAddressColumnError(error)) {
+      const legacyPayload = { ...payload };
+      delete legacyPayload.adresse;
+      delete legacyPayload.postnummer;
+      delete legacyPayload.poststed;
+      if (isCreate) {
+        ({ error } = await supabase.from("stacq_ansatte").insert(legacyPayload));
+      } else {
+        ({ error } = await supabase.from("stacq_ansatte").update(legacyPayload).eq("id", ansatt.id));
+      }
+    }
+
     setSaving(false);
     if (error) {
       toast.error("Kunne ikke lagre");
@@ -277,6 +315,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
     }
     toast.success(isCreate ? "Ansatt lagt til" : "Profil oppdatert");
     queryClient.invalidateQueries({ queryKey: ["stacq-ansatte"] });
+    queryClient.invalidateQueries({ queryKey: ["dl-available-consultants-v9"] });
     queryClient.invalidateQueries({ queryKey: ["ansatt-detail", ansatt?.id] });
     if (isCreate || openInEditMode) {
       onClose();
@@ -354,7 +393,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
             navn: ansatt.navn,
             teknologier: ansatt.kompetanse || [],
             erfaring_aar: ansatt.erfaring_aar || null,
-            geografi: ansatt.geografi || null,
+            geografi: buildEmployeeGeoText(ansatt.postnummer, ansatt.poststed, ansatt.geografi),
             tilgjengelig_fra: ansatt.tilgjengelig_fra || null,
           },
           kontakter: berikede,
@@ -373,6 +412,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
   };
 
   const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
+  const publicGeoText = buildEmployeeGeoText(ansatt?.postnummer, ansatt?.poststed, ansatt?.geografi);
 
   return (
     <Sheet
@@ -486,13 +526,54 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                   />
                 </div>
                 <div>
-                  <label className={LABEL}>By / geografi</label>
+                  <label className={LABEL}>Geografi / region</label>
                   <Input
                     value={form.geografi}
                     onChange={(e) => set("geografi", e.target.value)}
-                    placeholder="Oslo"
+                    placeholder="Fallback, f.eks. Oslo eller Trøndelag"
                     className="mt-1 text-[0.875rem]"
                   />
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border bg-muted/20 p-3">
+                <div className="mb-3">
+                  <label className={LABEL}>Adresse for geografisk match</label>
+                  <p className="mt-1 text-[0.75rem] text-muted-foreground">
+                    Brukes til MATCH-filteret “Geografisk nærmest”. Privatadresse vises ikke i matchlisten.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 gap-3">
+                  <div>
+                    <label className={LABEL}>Adresse</label>
+                    <Input
+                      value={form.adresse}
+                      onChange={(e) => set("adresse", e.target.value)}
+                      placeholder="Gateadresse"
+                      className="mt-1 text-[0.875rem]"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-[120px_1fr] gap-3">
+                    <div>
+                      <label className={LABEL}>Postnummer</label>
+                      <Input
+                        value={form.postnummer}
+                        onChange={(e) => set("postnummer", e.target.value.replace(/\D/g, "").slice(0, 4))}
+                        placeholder="7030"
+                        inputMode="numeric"
+                        className="mt-1 text-[0.875rem]"
+                      />
+                    </div>
+                    <div>
+                      <label className={LABEL}>Poststed</label>
+                      <Input
+                        value={form.poststed}
+                        onChange={(e) => set("poststed", e.target.value)}
+                        placeholder="Trondheim"
+                        className="mt-1 text-[0.875rem]"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -658,6 +739,13 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                 </div>
               )}
 
+              {publicGeoText && (
+                <div className="mt-2 flex items-center gap-2 text-[0.8125rem]">
+                  <span className="text-muted-foreground">Geografi:</span>
+                  <span className="font-medium text-foreground">{publicGeoText}</span>
+                </div>
+              )}
+
               {ansatt?.cv_profil_hentet && (
                 <p className="mt-2 text-[0.75rem] text-muted-foreground">
                   Kompetansefeltet styres av CV-editoren. Endringer gjøres i CV-en og synkroniseres hit automatisk.
@@ -703,7 +791,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                       navn: ansatt?.navn || "",
                       teknologier: ansatt?.kompetanse || [],
                       cv_tekst: ansatt?.bio || null,
-                      geografi: ansatt?.geografi || null,
+                      geografi: buildEmployeeGeoText(ansatt?.postnummer, ansatt?.poststed, ansatt?.geografi),
                       ansatt_id: ansatt?.id,
                       forny_dato: ansatt?.forny_dato || null,
                       erfaring_aar: ansatt?.erfaring_aar || null,

@@ -47,6 +47,12 @@ import {
 } from "@/lib/contactMatchScore";
 import { getConsultantMatchScoreColor } from "@/lib/consultantMatches";
 import {
+  getGeoCandidates,
+  rankGeoMatch,
+  type GeoMatchInput,
+  type GeoMatchResult,
+} from "@/lib/geographicMatch";
+import {
   MATCH_OWNER_FILTER_NONE,
   buildMatchLeadOwnerCandidate,
   getMatchLeadOwnerLabel,
@@ -100,6 +106,9 @@ type OwnerPreview = { id: string; full_name: string } | null;
 type CompanyPreview = {
   id: string;
   name: string;
+  address: string | null;
+  city: string | null;
+  zip_code: string | null;
   status: string | null;
   ikke_relevant: boolean | null;
   owner_id: string | null;
@@ -178,6 +187,10 @@ type HuntConsultant = {
   status: string | null;
   tilgjengelig_fra: string | null;
   kompetanse: string[] | null;
+  geografi: string | null;
+  adresse: string | null;
+  postnummer: string | null;
+  poststed: string | null;
 };
 
 type MatchLeadBase = {
@@ -194,6 +207,7 @@ type MatchLeadBase = {
   sourceDates: string[];
   chipUrgency: number;
   summary: string;
+  geoMatch?: GeoMatchResult | null;
   ownerId: string | null;
   ownerName: string | null;
   ownerSource: MatchLeadOwnerSource;
@@ -242,6 +256,7 @@ const JAKT_CHIPS: Array<{ value: HuntChipValue; label: string }> = [
   { value: "innkjoper", label: "Innkjøper" },
   { value: "kunder", label: "Kunder" },
   { value: "cold_call", label: "Cold call" },
+  { value: "geografi", label: "Geografisk nærmest" },
 ];
 
 const JAKT_CHIP_HELP_TEXT: Record<HuntChipValue, string> = {
@@ -252,6 +267,7 @@ const JAKT_CHIP_HELP_TEXT: Record<HuntChipValue, string> = {
   innkjoper: "Innkjøpere med teknisk match.",
   kunder: "Eksisterende kunder med teknisk match.",
   cold_call: "Kalde leads med teknisk match og lite nylig aktivitet.",
+  geografi: "Alle selskapene i kontaktlisten, sortert etter nærmeste sted mot konsulentens adresse/poststed.",
 };
 
 const CONFIDENCE_CONFIG: Record<ConfidenceBand, { label: string; tone: string }> = {
@@ -269,6 +285,20 @@ const DL_QUERY_KEYS = {
   techProfiles: ["dl-tech-profiles-v9"] as const,
   consultants: ["dl-available-consultants-v9"] as const,
 } as const;
+
+const AVAILABLE_CONSULTANT_SELECT =
+  "id, navn, status, tilgjengelig_fra, kompetanse, geografi, adresse, postnummer, poststed";
+const AVAILABLE_CONSULTANT_LEGACY_SELECT = "id, navn, status, tilgjengelig_fra, kompetanse, geografi";
+
+function isMissingEmployeeAddressColumnError(error: unknown) {
+  const message = String((error as { message?: string } | null)?.message || error || "").toLowerCase();
+  return (
+    message.includes("adresse") ||
+    message.includes("postnummer") ||
+    message.includes("poststed") ||
+    message.includes("column")
+  );
+}
 
 /* Colors, signal colors, and heat colors imported from @/components/designlab/theme */
 
@@ -320,6 +350,8 @@ function getMatchSourceLabel(source: HuntChipValue): string {
       return "Kunde";
     case "cold_call":
       return "Cold call";
+    case "geografi":
+      return "Geografi";
     case "alle":
     default:
       return "Match";
@@ -478,7 +510,7 @@ export default function DesignLabContacts() {
       const { data, error } = await supabase
         .from("contacts")
         .select(
-          "id, first_name, last_name, title, email, phone, cv_email, call_list, ikke_aktuell_kontakt, teknologier, company_id, location, linkedin, department, notes, locations, mailchimp_status, owner_id, companies(id, name, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), profiles!contacts_owner_id_fkey(id, full_name)",
+          "id, first_name, last_name, title, email, phone, cv_email, call_list, ikke_aktuell_kontakt, teknologier, company_id, location, linkedin, department, notes, locations, mailchimp_status, owner_id, companies(id, name, address, city, zip_code, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), profiles!contacts_owner_id_fkey(id, full_name)",
         )
         .order("updated_at", { ascending: false })
         .limit(2000);
@@ -557,7 +589,7 @@ export default function DesignLabContacts() {
       const { data, error } = await supabase
         .from("foresporsler")
         .select(
-          "id, selskap_id, kontakt_id, selskap_navn, sted, mottatt_dato, frist_dato, status, teknologier, companies!foresporsler_selskap_id_fkey(id, name, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title)",
+          "id, selskap_id, kontakt_id, selskap_navn, sted, mottatt_dato, frist_dato, status, teknologier, companies!foresporsler_selskap_id_fkey(id, name, address, city, zip_code, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title)",
         )
         .not("selskap_id", "is", null)
         .order("mottatt_dato", { ascending: false })
@@ -609,7 +641,7 @@ export default function DesignLabContacts() {
       const { data, error } = await supabase
         .from("company_tech_profile")
         .select(
-          "company_id, sist_fra_finn, teknologier, companies!company_tech_profile_company_id_fkey(id, name, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name))",
+          "company_id, sist_fra_finn, teknologier, companies!company_tech_profile_company_id_fkey(id, name, address, city, zip_code, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name))",
         )
         .not("company_id", "is", null)
         .limit(5000);
@@ -654,10 +686,24 @@ export default function DesignLabContacts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stacq_ansatte")
-        .select("id, navn, status, tilgjengelig_fra, kompetanse")
+        .select(AVAILABLE_CONSULTANT_SELECT)
         .in("status", ["AKTIV/SIGNERT", "Ledig"])
         .not("tilgjengelig_fra", "is", null);
-      if (error) throw error;
+      if (error) {
+        if (!isMissingEmployeeAddressColumnError(error)) throw error;
+        const fallback = await supabase
+          .from("stacq_ansatte")
+          .select(AVAILABLE_CONSULTANT_LEGACY_SELECT)
+          .in("status", ["AKTIV/SIGNERT", "Ledig"])
+          .not("tilgjengelig_fra", "is", null);
+        if (fallback.error) throw fallback.error;
+        return (fallback.data || []).map((consultant) => ({
+          ...consultant,
+          adresse: null,
+          postnummer: null,
+          poststed: null,
+        }));
+      }
       return data || [];
     },
     staleTime: 5 * 60 * 1000,
@@ -677,7 +723,7 @@ export default function DesignLabContacts() {
       const { data, error } = await supabase
         .from("contacts")
         .select(
-          "*, companies(id, name, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), profiles!contacts_owner_id_fkey(id, full_name)",
+          "*, companies(id, name, address, city, zip_code, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), profiles!contacts_owner_id_fkey(id, full_name)",
         )
         .order("updated_at", { ascending: false })
         .limit(2000);
@@ -700,14 +746,14 @@ export default function DesignLabContacts() {
         supabase
           .from("company_tech_profile")
           .select(
-            "company_id, sist_fra_finn, teknologier, companies!company_tech_profile_company_id_fkey(id, name, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name))",
+            "company_id, sist_fra_finn, teknologier, companies!company_tech_profile_company_id_fkey(id, name, address, city, zip_code, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name))",
           )
           .not("company_id", "is", null)
           .limit(5000),
         supabase
           .from("foresporsler")
           .select(
-            "id, selskap_id, kontakt_id, selskap_navn, sted, mottatt_dato, frist_dato, status, teknologier, companies!foresporsler_selskap_id_fkey(id, name, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title)",
+            "id, selskap_id, kontakt_id, selskap_navn, sted, mottatt_dato, frist_dato, status, teknologier, companies!foresporsler_selskap_id_fkey(id, name, address, city, zip_code, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title)",
           )
           .order("mottatt_dato", { ascending: false })
           .limit(5000),
@@ -1062,6 +1108,10 @@ export default function DesignLabContacts() {
           contact.company.toLowerCase().includes(searchTerm) ||
           contact.title.toLowerCase().includes(searchTerm) ||
           contact.email.toLowerCase().includes(searchTerm) ||
+          contact.location.toLowerCase().includes(searchTerm) ||
+          contact.locations.join(" ").toLowerCase().includes(searchTerm) ||
+          (contact.companyPreview?.city || "").toLowerCase().includes(searchTerm) ||
+          (contact.companyPreview?.zip_code || "").toLowerCase().includes(searchTerm) ||
           technologyTags.join(" ").toLowerCase().includes(searchTerm)
         );
       }),
@@ -1103,8 +1153,25 @@ export default function DesignLabContacts() {
       };
     }
 
+    const isGeographicMode = jaktChip === "geografi";
+    const consultantGeoInput: GeoMatchInput = {
+      address: selectedConsultant.adresse,
+      postalCode: selectedConsultant.postnummer,
+      city: selectedConsultant.poststed,
+      geography: selectedConsultant.geografi,
+    };
+    const consultantGeoCandidates = getGeoCandidates(consultantGeoInput);
+
+    if (isGeographicMode && consultantGeoCandidates.length === 0) {
+      return {
+        allLeads: [] as MatchLead[],
+        leads: [] as MatchLead[],
+        emptyState: `${selectedConsultant.navn} mangler adresse, postnummer eller poststed. Legg inn dette på ansattprofilen for å sortere geografisk nærmest.`,
+      };
+    }
+
     const consultantTags = mergeTechnologyTags(selectedConsultant.kompetanse || []);
-    if (consultantTags.length === 0) {
+    if (!isGeographicMode && consultantTags.length === 0) {
       return {
         allLeads: [] as MatchLead[],
         leads: [] as MatchLead[],
@@ -1119,7 +1186,9 @@ export default function DesignLabContacts() {
       "innkjoper",
       "kunder",
       "cold_call",
+      "geografi",
     ];
+    const defaultChipPoolKeys = chipPoolKeys.filter((chip) => chip !== "geografi");
     const contactPools = Object.fromEntries(
       chipPoolKeys.map((chip) => [chip, new Map<string, ContactMatchLead>()]),
     ) as Record<Exclude<HuntChipValue, "alle">, Map<string, ContactMatchLead>>;
@@ -1196,6 +1265,27 @@ export default function DesignLabContacts() {
         getCompanyOwnerCandidate(company),
         getContactOwnerCandidate(fallbackContact, "fallback_contact"),
       );
+
+    const getCompanyGeoInputs = (company: CompanyPreview | null, companyContacts: NormalizedContact[]): GeoMatchInput[] => {
+      const inputs: GeoMatchInput[] = [];
+      if (company) {
+        inputs.push({
+          address: company.address,
+          postalCode: company.zip_code,
+          city: company.city,
+        });
+      }
+
+      companyContacts.forEach((contact) => {
+        inputs.push({
+          city: contact.companyPreview?.city || null,
+          location: contact.location,
+          locations: contact.locations,
+        });
+      });
+
+      return inputs;
+    };
 
     const getBestCompanyContact = (companyId: string, sourceTags?: string[]) => {
       const candidates = searchableContactsByCompanyId.get(companyId) || [];
@@ -1341,6 +1431,50 @@ export default function DesignLabContacts() {
         ownerId: existing.ownerId || nextLead.ownerId,
         ownerName: existing.ownerName || nextLead.ownerName,
         ownerSource: existing.ownerId || existing.ownerName ? existing.ownerSource : nextLead.ownerSource,
+      });
+    };
+
+    const addGeoCompanyLead = (
+      companyId: string,
+      company: CompanyPreview | null,
+      companyContacts: NormalizedContact[],
+    ) => {
+      const companyName = company?.name || companyContacts[0]?.company || "Ukjent selskap";
+      if (company?.ikke_relevant) return;
+
+      const bestContact = getBestCompanyContact(companyId);
+      const geoMatch = rankGeoMatch(consultantGeoInput, getCompanyGeoInputs(company, companyContacts));
+      const companyProfile = companyTechById.get(companyId);
+      const companyTechnologyTags = companyProfile?.companyTechnologyTags || companyContacts[0]?.companyTechnologyTags || [];
+      const preferredContact = bestContact || companyContacts[0] || null;
+      const owner = resolveLeadOwner({ company, fallbackContact: preferredContact });
+      const geoMatchBand = getMatchBand(geoMatch.score10);
+
+      companyPools.geografi.set(companyId, {
+        leadKey: `company:${companyId}:geografi`,
+        leadType: "company",
+        companyId,
+        companyName,
+        name: companyName,
+        status: company?.status || null,
+        companyTechnologyTags,
+        matchScore10: Math.max(1, geoMatch.score10),
+        matchBand: geoMatchBand,
+        confidenceScore: geoMatch.score / 10000,
+        confidenceBand: geoMatch.confidenceBand as ConfidenceBand,
+        matchSources: ["geografi"],
+        matchTags: [geoMatch.label, geoMatch.detail].filter(Boolean),
+        sourceDates: [],
+        chipUrgency: geoMatch.score,
+        summary: geoMatch.label,
+        geoMatch,
+        preferredContactName: preferredContact
+          ? `${preferredContact.firstName} ${preferredContact.lastName}`.trim()
+          : null,
+        preferredContactTitle: preferredContact?.title || null,
+        ownerId: owner.ownerId,
+        ownerName: owner.ownerName,
+        ownerSource: owner.ownerSource,
       });
     };
 
@@ -1491,6 +1625,14 @@ export default function DesignLabContacts() {
       );
     });
 
+    if (isGeographicMode) {
+      searchableContactsByCompanyId.forEach((companyContacts, companyId) => {
+        const companyProfile = companyTechById.get(companyId);
+        const company = companyContacts[0]?.companyPreview || companyProfile?.company || null;
+        addGeoCompanyLead(companyId, company, companyContacts);
+      });
+    }
+
     const mergeContactPools = (chips: Array<Exclude<HuntChipValue, "alle">>) => {
       const merged = new Map<string, ContactMatchLead>();
       chips.forEach((chip) => {
@@ -1558,9 +1700,9 @@ export default function DesignLabContacts() {
     const mergeRequestPools = () => [...requestPools.foresporsler.values()].filter((lead) => lead.matchScore10 >= 4);
 
     const contactResults =
-      jaktChip === "alle" ? mergeContactPools(chipPoolKeys) : [...contactPools[jaktChip as Exclude<HuntChipValue, "alle">].values()];
+      jaktChip === "alle" ? mergeContactPools(defaultChipPoolKeys) : [...contactPools[jaktChip as Exclude<HuntChipValue, "alle">].values()];
     const companyResults =
-      jaktChip === "alle" ? mergeCompanyPools(chipPoolKeys) : [...companyPools[jaktChip as Exclude<HuntChipValue, "alle">].values()];
+      jaktChip === "alle" ? mergeCompanyPools(defaultChipPoolKeys) : [...companyPools[jaktChip as Exclude<HuntChipValue, "alle">].values()];
     const requestResults =
       jaktChip === "alle"
         ? mergeRequestPools()
@@ -1608,6 +1750,9 @@ export default function DesignLabContacts() {
             break;
           case "cold_call":
             emptyState = `Ingen cold call-treff matcher ${selectedConsultantFirstName} sin tekniske profil akkurat nå.`;
+            break;
+          case "geografi":
+            emptyState = `Ingen selskaper i kontaktlisten har sted som kan rangeres mot ${selectedConsultantFirstName} akkurat nå.`;
             break;
           case "alle":
           default:
@@ -2150,6 +2295,7 @@ export default function DesignLabContacts() {
                           : isRequestMatchLead(lead) && lead.temperature
                             ? lead.temperature
                             : null;
+                        const scoreLabel = lead.matchSources.includes("geografi") ? "Nærhet" : "Match";
 
                         return (
                           <div
@@ -2192,7 +2338,7 @@ export default function DesignLabContacts() {
                                   className={getConsultantMatchScoreColor(lead.matchScore10)}
                                   style={{ width: 8, height: 8, borderRadius: 999, display: "inline-block" }}
                                 />
-                                Match {lead.matchScore10}/10
+                                {scoreLabel} {lead.matchScore10}/10
                               </p>
                             </div>
                             <div className="min-w-0">

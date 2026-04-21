@@ -188,6 +188,7 @@ const JAKT_CHIP_HELP_TEXT: Record<HuntChipValue, string> = {
   innkjoper: "Innkjøpere med teknisk match.",
   kunder: "Eksisterende kunder med teknisk match.",
   cold_call: "Kalde leads med teknisk match og lite nylig aktivitet.",
+  geografi: "Alle selskapene i kontaktlisten, sortert etter nærmeste sted mot konsulentens adresse/poststed.",
 };
 
 function getMatchSourceLabel(source: HuntChipValue): string {
@@ -204,6 +205,8 @@ function getMatchSourceLabel(source: HuntChipValue): string {
       return "Kunde";
     case "cold_call":
       return "Cold call";
+    case "geografi":
+      return "Geografi";
     case "alle":
     default:
       return "Match";

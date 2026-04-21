@@ -1113,6 +1113,7 @@ export type Database = {
       }
       stacq_ansatte: {
         Row: {
+          adresse: string | null
           ansatt_id: number | null
           bilde_url: string | null
           bio: string | null
@@ -1128,6 +1129,8 @@ export type Database = {
           linkedin: string | null
           navn: string
           oppdrag_slutt: string | null
+          postnummer: string | null
+          poststed: string | null
           slutt_dato: string | null
           start_dato: string | null
           status: string | null
@@ -1137,6 +1140,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          adresse?: string | null
           ansatt_id?: number | null
           bilde_url?: string | null
           bio?: string | null
@@ -1152,6 +1156,8 @@ export type Database = {
           linkedin?: string | null
           navn: string
           oppdrag_slutt?: string | null
+          postnummer?: string | null
+          poststed?: string | null
           slutt_dato?: string | null
           start_dato?: string | null
           status?: string | null
@@ -1161,6 +1167,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          adresse?: string | null
           ansatt_id?: number | null
           bilde_url?: string | null
           bio?: string | null
@@ -1176,6 +1183,8 @@ export type Database = {
           linkedin?: string | null
           navn?: string
           oppdrag_slutt?: string | null
+          postnummer?: string | null
+          poststed?: string | null
           slutt_dato?: string | null
           start_dato?: string | null
           status?: string | null

@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatMonths, getInitials } from "@/lib/utils";
+import { buildEmployeeGeoText } from "@/lib/geographicMatch";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
@@ -181,6 +182,9 @@ export default function DesignLabKonsulenterAnsatte() {
         row.epost,
         row.tlf,
         row.geografi,
+        row.adresse,
+        row.postnummer,
+        row.poststed,
       ]
         .filter(Boolean)
         .join(" ")
@@ -293,7 +297,7 @@ export default function DesignLabKonsulenterAnsatte() {
         </div>
 
         <div className="truncate" style={{ fontSize: 13, color: C.textMuted }}>
-          {row.geografi || "–"}
+          {buildEmployeeGeoText(row.postnummer, row.poststed, row.geografi) || "–"}
         </div>
 
         <div style={{ fontSize: 13, color: C.textMuted }}>

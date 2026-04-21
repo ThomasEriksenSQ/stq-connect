@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
 import { useCrmNavigation } from "@/lib/crmNavigation";
+import { buildEmployeeGeoText } from "@/lib/geographicMatch";
 import {
   DesignLabPrimaryAction,
   DesignLabSecondaryAction,
@@ -259,6 +260,8 @@ const AnsattDetail = ({
     : ansatt.start_dato && new Date(ansatt.start_dato) > today ? "Kommende" : "Aktiv";
 
   const portrait = cvDoc?.portrait_url || ansatt.bilde_url;
+  const publicGeoText = buildEmployeeGeoText((ansatt as any).postnummer, (ansatt as any).poststed, ansatt.geografi);
+  const addressText = [((ansatt as any).adresse || "").trim(), publicGeoText].filter(Boolean).join(", ") || "–";
   const durationMonths = ansatt.start_dato
     ? differenceInMonths(ansatt.slutt_dato ? new Date(ansatt.slutt_dato) : today, new Date(ansatt.start_dato))
     : null;
@@ -341,7 +344,7 @@ const AnsattDetail = ({
             <InfoRow icon={User} label="Ansatt i" value={durationMonths != null ? formatMonths(durationMonths) : "–"} />
 
             {/* Kolonne 3 */}
-            <InfoRow icon={MapPin} label="Geografi" value={ansatt.geografi || "–"} />
+            <InfoRow icon={MapPin} label="Adresse/geografi" value={addressText} />
             <InfoRow
               icon={Calendar}
               label="Fødselsdato"

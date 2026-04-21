@@ -10,12 +10,17 @@ export type HuntChipValue =
   | "siste_aktivitet"
   | "innkjoper"
   | "kunder"
-  | "cold_call";
+  | "cold_call"
+  | "geografi";
 
 export interface HuntConsultantLike {
   navn: string;
   kompetanse?: string[] | null;
   tilgjengelig_fra?: string | null;
+  geografi?: string | null;
+  adresse?: string | null;
+  postnummer?: string | null;
+  poststed?: string | null;
 }
 
 export interface HuntContactLike {
