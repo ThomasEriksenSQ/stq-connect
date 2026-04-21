@@ -10,6 +10,8 @@ import {
   isActiveRequest,
   isColdCallCandidate,
   isCustomerCompany,
+  isProspectCompany,
+  isProspectOrCustomerCompany,
   sortHuntConsultants,
 } from "@/lib/contactHunt";
 
@@ -117,5 +119,10 @@ describe("contactHunt", () => {
     expect(isCustomerCompany("customer")).toBe(true);
     expect(isCustomerCompany("kunde")).toBe(true);
     expect(isCustomerCompany("prospect")).toBe(false);
+    expect(isProspectCompany("prospect")).toBe(true);
+    expect(isProspectCompany("Potensiell kunde")).toBe(true);
+    expect(isProspectOrCustomerCompany("prospect")).toBe(true);
+    expect(isProspectOrCustomerCompany("customer")).toBe(true);
+    expect(isProspectOrCustomerCompany("partner")).toBe(false);
   });
 });

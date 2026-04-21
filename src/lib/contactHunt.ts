@@ -154,3 +154,12 @@ export function isCustomerCompany(status?: string | null): boolean {
   const normalized = String(status || "").toLowerCase();
   return normalized === "customer" || normalized === "kunde";
 }
+
+export function isProspectCompany(status?: string | null): boolean {
+  const normalized = String(status || "").toLowerCase();
+  return normalized === "prospect" || normalized === "potensiell kunde" || normalized === "potensiell";
+}
+
+export function isProspectOrCustomerCompany(status?: string | null): boolean {
+  return isProspectCompany(status) || isCustomerCompany(status);
+}

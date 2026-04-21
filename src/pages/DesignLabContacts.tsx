@@ -22,6 +22,7 @@ import {
   isActiveRequest,
   isColdCallCandidate,
   isCustomerCompany,
+  isProspectOrCustomerCompany,
   sortHuntConsultants,
   type HuntChipValue,
 } from "@/lib/contactHunt";
@@ -1441,6 +1442,8 @@ export default function DesignLabContacts() {
     ) => {
       const companyName = company?.name || companyContacts[0]?.company || "Ukjent selskap";
       if (company?.ikke_relevant) return;
+      const companyStatus = company?.status || companyContacts[0]?.companyStatus || null;
+      if (!isProspectOrCustomerCompany(companyStatus)) return;
 
       const bestContact = getBestCompanyContact(companyId);
       const geoMatch = rankGeoMatch(consultantGeoInput, getCompanyGeoInputs(company, companyContacts));
@@ -1456,7 +1459,7 @@ export default function DesignLabContacts() {
         companyId,
         companyName,
         name: companyName,
-        status: company?.status || null,
+        status: companyStatus,
         companyTechnologyTags,
         matchScore10: Math.max(1, geoMatch.score10),
         matchBand: geoMatchBand,
@@ -1752,7 +1755,7 @@ export default function DesignLabContacts() {
             emptyState = `Ingen cold call-treff matcher ${selectedConsultantFirstName} sin tekniske profil akkurat nå.`;
             break;
           case "geografi":
-            emptyState = `Ingen selskaper i kontaktlisten har sted som kan rangeres mot ${selectedConsultantFirstName} akkurat nå.`;
+            emptyState = `Ingen potensielle kunder eller kunder i kontaktlisten har sted som kan rangeres mot ${selectedConsultantFirstName} akkurat nå.`;
             break;
           case "alle":
           default:
