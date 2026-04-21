@@ -434,6 +434,7 @@ export default function DesignLabNews() {
       title="STACQ Nyheter"
       maxWidth={1100}
       contentClassName="dl-news-content"
+      hideHeader
     >
       {/* Masthead */}
       <header style={{ marginBottom: 24 }}>

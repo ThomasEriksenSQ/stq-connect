@@ -16,6 +16,7 @@ interface DesignLabPageShellProps {
   headerRight?: ReactNode;
   contentStyle?: CSSProperties;
   contentClassName?: string;
+  hideHeader?: boolean;
 }
 
 export function DesignLabPageShell({
@@ -27,6 +28,7 @@ export function DesignLabPageShell({
   headerRight,
   contentStyle,
   contentClassName,
+  hideHeader = false,
 }: DesignLabPageShellProps) {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
@@ -40,17 +42,19 @@ export function DesignLabPageShell({
       <DesignLabSidebar navigate={navigate} signOut={signOut} user={user} activePath={activePath} />
 
       <main className="flex-1 flex min-w-0 flex-col overflow-hidden" style={{ ...getDesignLabTextSizeStyle(textSize), background: C.appBg }}>
-        <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
-          <div className="flex items-baseline gap-2.5">
-            <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{title}</h1>
-            {typeof count === "number" ? (
-              <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {count}</span>
-            ) : null}
-          </div>
-          <div className="flex items-center gap-2">
-            {headerRight}
-          </div>
-        </header>
+        {hideHeader ? null : (
+          <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
+            <div className="flex items-baseline gap-2.5">
+              <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{title}</h1>
+              {typeof count === "number" ? (
+                <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {count}</span>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-2">
+              {headerRight}
+            </div>
+          </header>
+        )}
 
         <div className="flex-1 overflow-y-auto" style={{ padding: "24px 24px 48px", ...contentStyle }}>
           <div
