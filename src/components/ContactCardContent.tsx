@@ -9,7 +9,7 @@ import {
   DesignLabIconButton,
 } from "@/components/designlab/controls";
 import { AiSignalBanner } from "@/components/AiSignalBanner";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useConsultantCache } from "@/hooks/useConsultantCache";
@@ -95,6 +95,7 @@ import { mergeTechnologyTags } from "@/lib/technologyTags";
 import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/queryKeys";
 import { coerceDisplayText, normalizeOutlookMailItems } from "@/lib/outlookMail";
 import { useClickWithoutSelection, activateOnEnterOrSpace } from "@/hooks/useClickWithoutSelection";
+import { useCrmNavigation } from "@/lib/crmNavigation";
 /* ── Helpers for storing/retrieving category in description ── */
 
 /**
@@ -323,10 +324,7 @@ export function ContactCardContent({
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const location = useLocation();
-  const inDesignLab = location.pathname.startsWith("/design-lab");
-  const getCompanyHref = (companyId: string) =>
-    inDesignLab ? `/design-lab/selskaper?company=${companyId}` : `/selskaper/${companyId}`;
+  const { getCompanyPath, useModernRoutes } = useCrmNavigation();
   const { interne: cachedInterne, eksterne: cachedEksterne } = useConsultantCache();
 
   // Form states
@@ -771,7 +769,7 @@ export function ContactCardContent({
     setProfileEditMode(startInProfileEditMode);
   }, [contactId, startInProfileEditMode]);
 
-  const useProfileEditSheet = inDesignLab && editable && enableProfileEditMode && !startInProfileEditMode;
+  const useProfileEditSheet = useModernRoutes && editable && enableProfileEditMode && !startInProfileEditMode;
   const openProfileEditor = () => {
     if (useProfileEditSheet) {
       setEditSheetOpen(true);
@@ -1012,7 +1010,7 @@ export function ContactCardContent({
             <span className="group/co inline-flex items-center gap-1">
               <button
                 className="text-primary font-medium hover:underline"
-                onClick={() => (onOpenCompany ? onOpenCompany(companyId) : navigate(getCompanyHref(companyId)))}
+                onClick={() => (onOpenCompany ? onOpenCompany(companyId) : navigate(getCompanyPath(companyId)))}
               >
                 {companyName}
               </button>

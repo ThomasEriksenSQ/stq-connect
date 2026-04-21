@@ -2,13 +2,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
-import { lazy, Suspense } from "react";
-import { DesignVersionProvider } from "@/context/DesignVersionContext";
+import { lazy, Suspense, type ReactElement } from "react";
+import { DesignVersionProvider, useDesignVersion } from "@/context/DesignVersionContext";
 import { DesignVersionToggle } from "@/components/design/DesignVersionToggle";
+import { getModernCompanyPath, getModernContactPath, type CrmRouteAlias } from "@/lib/crmNavigation";
 import Login from "./pages/Login";
 import CVMaker from "./pages/CVMaker";
 import Dashboard from "./pages/Dashboard";
@@ -58,7 +59,7 @@ const DesignLabNews = lazy(() => import("./pages/DesignLabNews"));
 
 const queryClient = new QueryClient();
 
-function ProtectedRoutes() {
+function ProtectedAppLayout() {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -72,6 +73,23 @@ function ProtectedRoutes() {
   if (!user) return <Navigate to="/login" replace />;
 
   return <AppLayout />;
+}
+
+function ProtectedCrmLayout() {
+  const { user, loading } = useAuth();
+  const { isV2Active } = useDesignVersion();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">Laster...</p>
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+
+  return isV2Active ? <Outlet /> : <AppLayout />;
 }
 
 function ProtectedMinimal() {
@@ -92,15 +110,267 @@ const LazyFallback = () => (
   <p className="text-muted-foreground text-center py-12">Laster...</p>
 );
 
+function VersionedRoute({ v1, v2 }: { v1: ReactElement; v2: ReactElement }) {
+  const { isV2Active } = useDesignVersion();
+  return isV2Active ? v2 : v1;
+}
+
+function ModernContactDetailRedirect() {
+  return <NavigateToModernDetail type="contact" alias="root" />;
+}
+
+function ModernCompanyDetailRedirect() {
+  return <NavigateToModernDetail type="company" alias="root" />;
+}
+
+function DesignLabCompanyDetailRedirect() {
+  return <NavigateToModernDetail type="company" alias="design-lab" />;
+}
+
+function NavigateToModernDetail({
+  type,
+  alias,
+}: {
+  type: "contact" | "company";
+  alias: CrmRouteAlias;
+}) {
+  const { user, loading } = useAuth();
+  const { id } = useParams<{ id: string }>();
+
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!id) {
+    return (
+      <Navigate
+        to={alias === "design-lab" ? (type === "contact" ? "/design-lab/kontakter" : "/design-lab/selskaper") : (type === "contact" ? "/kontakter" : "/selskaper")}
+        replace
+      />
+    );
+  }
+
+  return (
+    <Navigate
+      to={type === "contact" ? getModernContactPath(id, alias) : getModernCompanyPath(id, alias)}
+      replace
+    />
+  );
+}
+
 function AppRouter() {
   return (
     <>
       <Routes>
         <Route path="/login" element={<AuthRoute />} />
         <Route path="/cv/:token" element={<CvEditor />} />
-        <Route path="/" element={<ProtectedRoutes />}>
-          <Route index element={<Dashboard />} />
-          <Route path="selskaper" element={<Companies />} />
+        <Route path="/" element={<ProtectedCrmLayout />}>
+          <Route
+            index
+            element={
+              <VersionedRoute
+                v1={<Dashboard />}
+                v2={
+                  <Suspense fallback={<LazyFallback />}>
+                    <DesignLabDashboard />
+                  </Suspense>
+                }
+              />
+            }
+          />
+          <Route
+            path="selskaper"
+            element={
+              <VersionedRoute
+                v1={<Companies />}
+                v2={
+                  <Suspense fallback={<LazyFallback />}>
+                    <DesignLabCompanies />
+                  </Suspense>
+                }
+              />
+            }
+          />
+          <Route
+            path="selskaper/:id"
+            element={
+              <VersionedRoute
+                v1={<CompanyDetail />}
+                v2={<ModernCompanyDetailRedirect />}
+              />
+            }
+          />
+          <Route
+            path="kontakter"
+            element={
+              <VersionedRoute
+                v1={<Contacts />}
+                v2={
+                  <Suspense fallback={<LazyFallback />}>
+                    <DesignLabContacts />
+                  </Suspense>
+                }
+              />
+            }
+          />
+          <Route
+            path="kontakter/:id"
+            element={
+              <VersionedRoute
+                v1={<ContactDetail />}
+                v2={<ModernContactDetailRedirect />}
+              />
+            }
+          />
+          <Route
+            path="oppfolginger"
+            element={
+              <VersionedRoute
+                v1={<Tasks />}
+                v2={
+                  <Suspense fallback={<LazyFallback />}>
+                    <DesignLabOppfolginger />
+                  </Suspense>
+                }
+              />
+            }
+          />
+          <Route
+            path="foresporsler"
+            element={
+              <VersionedRoute
+                v1={<Foresporsler />}
+                v2={
+                  <Suspense fallback={<LazyFallback />}>
+                    <DesignLabForesporsler />
+                  </Suspense>
+                }
+              />
+            }
+          />
+          <Route
+            path="nettside-ai"
+            element={
+              <VersionedRoute
+                v1={<NettsideAI />}
+                v2={
+                  <Suspense fallback={<LazyFallback />}>
+                    <DesignLabNettsideAI />
+                  </Suspense>
+                }
+              />
+            }
+          />
+          <Route
+            path="stacq/prisen"
+            element={
+              <VersionedRoute
+                v1={
+                  <Suspense fallback={<LazyFallback />}>
+                    <StacqPrisen />
+                  </Suspense>
+                }
+                v2={
+                  <Suspense fallback={<LazyFallback />}>
+                    <DesignLabStacqPrisen />
+                  </Suspense>
+                }
+              />
+            }
+          />
+          <Route
+            path="markedsradar"
+            element={
+              <VersionedRoute
+                v1={
+                  <Suspense fallback={<LazyFallback />}>
+                    <Markedsradar />
+                  </Suspense>
+                }
+                v2={
+                  <Suspense fallback={<LazyFallback />}>
+                    <DesignLabMarkedsradar />
+                  </Suspense>
+                }
+              />
+            }
+          />
+          <Route
+            path="innstillinger"
+            element={
+              <Suspense fallback={<LazyFallback />}>
+                <Innstillinger />
+              </Suspense>
+            }
+          />
+          <Route
+            path="konsulenter/ansatte/:id"
+            element={
+              <VersionedRoute
+                v1={
+                  <Suspense fallback={<LazyFallback />}>
+                    <AnsattDetail />
+                  </Suspense>
+                }
+                v2={
+                  <Suspense fallback={<LazyFallback />}>
+                    <DesignLabKonsulenterAnsatte />
+                  </Suspense>
+                }
+              />
+            }
+          />
+          <Route
+            path="konsulenter/ansatte"
+            element={
+              <VersionedRoute
+                v1={
+                  <Suspense fallback={<LazyFallback />}>
+                    <KonsulenterAnsatte />
+                  </Suspense>
+                }
+                v2={
+                  <Suspense fallback={<LazyFallback />}>
+                    <DesignLabKonsulenterAnsatte />
+                  </Suspense>
+                }
+              />
+            }
+          />
+          <Route
+            path="konsulenter/i-oppdrag"
+            element={
+              <VersionedRoute
+                v1={
+                  <Suspense fallback={<LazyFallback />}>
+                    <KonsulenterOppdrag />
+                  </Suspense>
+                }
+                v2={
+                  <Suspense fallback={<LazyFallback />}>
+                    <DesignLabKonsulenterOppdrag />
+                  </Suspense>
+                }
+              />
+            }
+          />
+          <Route
+            path="konsulenter/eksterne"
+            element={
+              <VersionedRoute
+                v1={
+                  <Suspense fallback={<LazyFallback />}>
+                    <EksterneKonsulenter />
+                  </Suspense>
+                }
+                v2={
+                  <Suspense fallback={<LazyFallback />}>
+                    <DesignLabEksterneKonsulenter />
+                  </Suspense>
+                }
+              />
+            }
+          />
+        </Route>
+        <Route path="/" element={<ProtectedAppLayout />}>
           <Route
             path="selskaper/kart"
             element={
@@ -109,14 +379,7 @@ function AppRouter() {
               </Suspense>
             }
           />
-          <Route path="selskaper/:id" element={<CompanyDetail />} />
-          <Route path="kontakter" element={<Contacts />} />
-          <Route path="kontakter/:id" element={<ContactDetail />} />
-          <Route path="oppfolginger" element={<Tasks />} />
-          <Route path="foresporsler" element={<Foresporsler />} />
-          <Route path="nettside-ai" element={<NettsideAI />} />
           <Route path="cv-maker" element={<CVMaker />} />
-          
           <Route path="import" element={<Import />} />
           <Route path="admin/brreg-sync" element={<AdminBrregSync />} />
           <Route
@@ -124,46 +387,6 @@ function AppRouter() {
             element={
               <Suspense fallback={<LazyFallback />}>
                 <CvAdmin />
-              </Suspense>
-            }
-          />
-          <Route
-            path="konsulenter/ansatte/:id"
-            element={
-              <Suspense fallback={<LazyFallback />}>
-                <AnsattDetail />
-              </Suspense>
-            }
-          />
-          <Route
-            path="konsulenter/ansatte"
-            element={
-              <Suspense fallback={<LazyFallback />}>
-                <KonsulenterAnsatte />
-              </Suspense>
-            }
-          />
-          <Route
-            path="konsulenter/i-oppdrag"
-            element={
-              <Suspense fallback={<LazyFallback />}>
-                <KonsulenterOppdrag />
-              </Suspense>
-            }
-          />
-          <Route
-            path="konsulenter/eksterne"
-            element={
-              <Suspense fallback={<LazyFallback />}>
-                <EksterneKonsulenter />
-              </Suspense>
-            }
-          />
-          <Route
-            path="stacq/prisen"
-            element={
-              <Suspense fallback={<LazyFallback />}>
-                <StacqPrisen />
               </Suspense>
             }
           />
@@ -188,22 +411,6 @@ function AppRouter() {
             element={
               <Suspense fallback={<LazyFallback />}>
                 <Soknad />
-              </Suspense>
-            }
-          />
-          <Route
-            path="markedsradar"
-            element={
-              <Suspense fallback={<LazyFallback />}>
-                <Markedsradar />
-              </Suspense>
-            }
-          />
-          <Route
-            path="innstillinger"
-            element={
-              <Suspense fallback={<LazyFallback />}>
-                <Innstillinger />
               </Suspense>
             }
           />
@@ -233,6 +440,10 @@ function AppRouter() {
                 <DesignLabContactDetail />
               </Suspense>
             }
+          />
+          <Route
+            path="selskaper/:id"
+            element={<DesignLabCompanyDetailRedirect />}
           />
           <Route
             path="foresporsler"

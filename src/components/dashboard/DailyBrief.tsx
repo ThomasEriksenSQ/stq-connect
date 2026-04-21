@@ -10,7 +10,7 @@ import { getEffectiveSignal, getSignalBadgeStyle, upsertTaskSignalDescription } 
 import { CONTACT_CV_EMAIL_REQUIRED_MESSAGE, contactHasEmail } from "@/lib/contactCvEligibility";
 import { getHeatResult, TEMP_CONFIG } from "@/lib/heatScore";
 import { ChevronLeft, ChevronRight, Radio, Loader2, ChevronDown, X } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Dialog } from "@/components/ui/dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -31,6 +31,7 @@ import {
 } from "@/components/designlab/system";
 import { toast } from "sonner";
 import { C } from "@/theme";
+import { useCrmNavigation } from "@/lib/crmNavigation";
 
 const DATE_CHIPS = [
   { label: "1 uke", fn: () => addWeeks(new Date(), 1) },
@@ -183,7 +184,7 @@ interface DailyBriefProps {
 const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
+  const { getContactPath, getCompanyPath } = useCrmNavigation();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<"kort" | "liste">("kort");
   const [ownerFilter, setOwnerFilter] = useState(user?.id || "alle");
@@ -223,15 +224,8 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
     () => `daily-brief-treated:${user?.id || "anonymous"}:${ownerFilter}:${todayKey}`,
     [ownerFilter, todayKey, user?.id],
   );
-  const inDesignLab = location.pathname.startsWith("/design-lab");
-  const getContactHref = useCallback(
-    (contactId: string) => (inDesignLab ? `/design-lab/kontakter?contact=${contactId}` : `/kontakter/${contactId}`),
-    [inDesignLab],
-  );
-  const getCompanyHref = useCallback(
-    (companyId: string) => (inDesignLab ? `/design-lab/selskaper?company=${companyId}` : `/selskaper/${companyId}`),
-    [inDesignLab],
-  );
+  const getContactHref = useCallback((contactId: string) => getContactPath(contactId), [getContactPath]);
+  const getCompanyHref = useCallback((companyId: string) => getCompanyPath(companyId), [getCompanyPath]);
 
   const { data: allProfiles = [] } = useQuery({
     queryKey: crmQueryKeys.profiles.all(),

@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
 import AnsattDetail from "./AnsattDetail";
+import { useCrmNavigation } from "@/lib/crmNavigation";
 
 type Filter = "Alle" | "Aktiv" | "Kommende" | "Sluttet";
 
@@ -49,6 +50,7 @@ const UPCOMING_CHIP_COLORS = {
 
 export default function DesignLabKonsulenterAnsatte() {
   const navigate = useNavigate();
+  const { getEmployeePath, getNavPath } = useCrmNavigation();
   const { id } = useParams<{ id?: string }>();
   const selectedId = id ? Number(id) : null;
   const queryClient = useQueryClient();
@@ -259,7 +261,7 @@ export default function DesignLabKonsulenterAnsatte() {
       <button
         key={row.id}
         type="button"
-        onClick={() => navigate(`/design-lab/ansatte/${row.id}`)}
+        onClick={() => navigate(getEmployeePath(row.id))}
         className="grid w-full items-center text-left transition-colors"
         style={{
           gridTemplateColumns: GRID_TEMPLATE,
@@ -429,7 +431,7 @@ export default function DesignLabKonsulenterAnsatte() {
               {selectedId ? (
                 <div className="flex h-full flex-col" style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}` }}>
                   <div className="shrink-0 flex items-center justify-end px-4" style={{ height: 32 }}>
-                    <DesignLabIconButton onClick={() => navigate("/design-lab/ansatte")}>
+                    <DesignLabIconButton onClick={() => navigate(getNavPath("employees"))}>
                       <X style={{ width: 16, height: 16 }} />
                     </DesignLabIconButton>
                   </div>

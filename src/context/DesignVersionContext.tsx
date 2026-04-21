@@ -8,6 +8,7 @@ export type DesignVersion = "v1" | "v2";
 const STORAGE_KEY = "designVersion";
 const ENABLE_V2 = new Set(["thomas@stacq.no", "jon@stacq.no"]);
 const V2_ENABLED = true;
+const DEFAULT_VERSION: DesignVersion = "v2";
 
 interface DesignVersionContextValue {
   version: DesignVersion;
@@ -21,12 +22,12 @@ const DesignVersionContext = createContext<DesignVersionContextValue | null>(nul
 
 export function DesignVersionProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [storedVersion, setStoredVersion] = usePersistentState<DesignVersion>(STORAGE_KEY, "v1");
+  const [storedVersion, setStoredVersion] = usePersistentState<DesignVersion>(STORAGE_KEY, DEFAULT_VERSION);
 
   const version: DesignVersion = storedVersion === "v2" ? "v2" : "v1";
   const email = user?.email?.toLowerCase() ?? "";
   const canUseToggle = V2_ENABLED && ENABLE_V2.has(email);
-  const effectiveVersion: DesignVersion = canUseToggle ? version : "v1";
+  const effectiveVersion: DesignVersion = canUseToggle ? version : DEFAULT_VERSION;
 
   useEffect(() => {
     document.documentElement.dataset.design = effectiveVersion;

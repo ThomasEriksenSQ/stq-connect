@@ -48,6 +48,7 @@ import {
   type RadarCompany,
   type RadarCompanyRef,
 } from "@/lib/markedsradar";
+import { useCrmNavigation } from "@/lib/crmNavigation";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -95,14 +96,6 @@ function trendTone(delta: number) {
 
 function techColor(index: number) {
   return CHART_COLORS[index % CHART_COLORS.length];
-}
-
-function companyRoute(company: CompanyRef | null, designLabMode = false) {
-  return company ? (designLabMode ? `/design-lab/selskaper?company=${company.id}` : `/selskaper/${company.id}`) : null;
-}
-
-function createCompanyRoute(name: string, designLabMode = false) {
-  return `${designLabMode ? "/design-lab/selskaper" : "/selskaper"}?ny=${encodeURIComponent(name)}`;
 }
 
 interface MarkedsradarProps {
@@ -217,13 +210,14 @@ function RadarTab({
   navigate: ReturnType<typeof useNavigate>;
   designLabMode?: boolean;
 }) {
+  const { getCompanyPath, getCreateCompanyPath } = useCrmNavigation();
   const [crmFilter, setCrmFilter] = useState<"alle" | "crm" | "ikke_crm">("alle");
   const [techFilter, setTechFilter] = useState<string>("alle");
   const openCompany = useCallback(
     (company: CompanyRef | null, fallbackName: string) => {
-      navigate(company ? companyRoute(company, designLabMode)! : createCompanyRoute(fallbackName, designLabMode));
+      navigate(company ? getCompanyPath(company.id) : getCreateCompanyPath(fallbackName));
     },
-    [designLabMode, navigate],
+    [getCompanyPath, getCreateCompanyPath, navigate],
   );
 
   const filteredCompanies = useMemo(() => {
@@ -610,7 +604,7 @@ function RadarTab({
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => navigate(createCompanyRoute(company.name, designLabMode))}
+                    onClick={() => navigate(getCreateCompanyPath(company.name))}
                     className="gap-1.5 shrink-0"
                   >
                     <Plus className="h-3.5 w-3.5" />
@@ -638,6 +632,7 @@ function PriorityCompanyCard({
   navigate: ReturnType<typeof useNavigate>;
   designLabMode?: boolean;
 }) {
+  const { getCompanyPath, getCreateCompanyPath } = useCrmNavigation();
   const bestContact = company.contacts[0];
   const actionText =
     company.primaryAction === "create_company"
@@ -652,7 +647,7 @@ function PriorityCompanyCard({
         <div className="space-y-3 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => navigate(company.company ? companyRoute(company.company, designLabMode)! : createCompanyRoute(company.name, designLabMode))}
+              onClick={() => navigate(company.company ? getCompanyPath(company.company.id) : getCreateCompanyPath(company.name))}
               className="text-[1rem] font-semibold text-foreground hover:text-primary text-left"
             >
               {company.name}
@@ -706,7 +701,7 @@ function PriorityCompanyCard({
         <div className="flex flex-wrap gap-2 shrink-0">
           <Button
             variant={company.primaryAction === "create_company" ? "default" : "outline"}
-            onClick={() => navigate(company.company ? companyRoute(company.company, designLabMode)! : createCompanyRoute(company.name, designLabMode))}
+            onClick={() => navigate(company.company ? getCompanyPath(company.company.id) : getCreateCompanyPath(company.name))}
           >
             {actionText}
           </Button>
@@ -759,6 +754,7 @@ function AnnonserTab({
   navigate: ReturnType<typeof useNavigate>;
   designLabMode?: boolean;
 }) {
+  const { getCompanyPath, getCreateCompanyPath } = useCrmNavigation();
   const [search, setSearch] = useState("");
   const [weekFilter, setWeekFilter] = useState<string>("alle");
   const [techFilters, setTechFilters] = useState<string[]>([]);
@@ -767,9 +763,9 @@ function AnnonserTab({
   const PER_PAGE = 25;
   const openCompany = useCallback(
     (company: CompanyRef | null, fallbackName: string) => {
-      navigate(company ? companyRoute(company, designLabMode)! : createCompanyRoute(fallbackName, designLabMode));
+      navigate(company ? getCompanyPath(company.id) : getCreateCompanyPath(fallbackName));
     },
-    [designLabMode, navigate],
+    [getCompanyPath, getCreateCompanyPath, navigate],
   );
 
   const allWeeks = useMemo(() => {
@@ -1107,6 +1103,7 @@ function AIAnalyseTab({
   findCompany: (name: string | null) => CompanyRef | null;
   designLabMode?: boolean;
 }) {
+  const { getCompanyPath, getCreateCompanyPath } = useCrmNavigation();
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
@@ -1114,9 +1111,9 @@ function AIAnalyseTab({
   const navigate = useNavigate();
   const openCompany = useCallback(
     (company: CompanyRef | null, fallbackName: string) => {
-      navigate(company ? companyRoute(company, designLabMode)! : createCompanyRoute(fallbackName, designLabMode));
+      navigate(company ? getCompanyPath(company.id) : getCreateCompanyPath(fallbackName));
     },
-    [designLabMode, navigate],
+    [getCompanyPath, getCreateCompanyPath, navigate],
   );
 
   const generateAnalysis = async () => {

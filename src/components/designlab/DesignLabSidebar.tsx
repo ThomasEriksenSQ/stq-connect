@@ -3,32 +3,31 @@ import { User } from "@supabase/supabase-js";
 import {
   Users, Building2, LayoutDashboard, Briefcase, Settings, LogOut,
   UserPlus, Radar, TrendingUp, Globe, Clock, PanelLeftClose, PanelLeftOpen,
-  SwatchBook,
 } from "lucide-react";
 import { C } from "@/components/designlab/theme";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { SCALE_MAP, getDesignLabTextSizeVars, TextSizeControlSidebar, type TextSize } from "@/components/designlab/TextSizeControl";
+import { getNavItemFromPath, type CrmNavItem, useCrmNavigation } from "@/lib/crmNavigation";
 import stacqLogoFull from "@/assets/stacq-logo-full-black.png";
 import stacqLogoIcon from "@/assets/stacq-logo-icon-black.png";
 
 /* ═══ NAV ITEMS ═══ */
 
 const NAV_MAIN = [
-  { label: "Salgsagent", icon: LayoutDashboard, href: "/design-lab/salgsagent" },
-  { label: "Selskaper", icon: Building2, href: "/design-lab/selskaper" },
-  { label: "Kontakter", icon: Users, href: "/design-lab/kontakter" },
-  { label: "Forespørsler", icon: Briefcase, href: "/design-lab/foresporsler" },
-  
-  { label: "Oppfølginger", icon: Clock, href: "/design-lab/oppfolginger" },
+  { label: "Salgsagent", icon: LayoutDashboard, key: "dashboard" },
+  { label: "Selskaper", icon: Building2, key: "companies" },
+  { label: "Kontakter", icon: Users, key: "contacts" },
+  { label: "Forespørsler", icon: Briefcase, key: "requests" },
+  { label: "Oppfølginger", icon: Clock, key: "followUps" },
 ];
 
 const NAV_STACQ = [
-  { label: "STACQ Prisen", icon: TrendingUp, href: "/design-lab/stacq-prisen" },
-  { label: "Markedsradar", icon: Radar, href: "/design-lab/markedsradar" },
-  { label: "Aktive oppdrag", icon: Briefcase, href: "/design-lab/aktive-oppdrag" },
-  { label: "Ansatte", icon: Users, href: "/design-lab/ansatte" },
-  { label: "Eksterne", icon: UserPlus, href: "/design-lab/eksterne" },
-  { label: "stacq.no", icon: Globe, href: "/design-lab/nettside-ai" },
+  { label: "STACQ Prisen", icon: TrendingUp, key: "stacqPrisen" },
+  { label: "Markedsradar", icon: Radar, key: "markedsradar" },
+  { label: "Aktive oppdrag", icon: Briefcase, key: "activeAssignments" },
+  { label: "Ansatte", icon: Users, key: "employees" },
+  { label: "Eksterne", icon: UserPlus, key: "externalConsultants" },
+  { label: "stacq.no", icon: Globe, key: "websiteAi" },
 ];
 
 /* ═══ PROPS ═══ */
@@ -43,11 +42,12 @@ interface DesignLabSidebarProps {
 export function DesignLabSidebar({ navigate, signOut, user, activePath }: DesignLabSidebarProps) {
   const [collapsed, setCollapsed] = usePersistentState("dl-sidebar-collapsed", false);
   const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
-  
+  const { getNavPath } = useCrmNavigation();
   const scale = SCALE_MAP[textSize];
   const px = (value: number) => Math.round(value * scale * 100) / 100;
+  const activeItem = getNavItemFromPath(activePath);
 
-  const isActive = (href: string) => href === activePath;
+  const isActive = (item: CrmNavItem) => item === activeItem;
 
   // Cmd/Ctrl + \ shortcut to toggle sidebar
   useEffect(() => {
@@ -116,7 +116,7 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
               CRM
             </p>
           )}
-          <NavGroup items={NAV_MAIN} navigate={navigate} isActive={isActive} collapsed={collapsed} scale={scale} />
+          <NavGroup items={NAV_MAIN} navigate={navigate} getNavPath={getNavPath} isActive={isActive} collapsed={collapsed} scale={scale} />
         </div>
         <div>
           {!collapsed && (
@@ -124,7 +124,7 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
               STACQ
             </p>
           )}
-          <NavGroup items={NAV_STACQ} navigate={navigate} isActive={isActive} collapsed={collapsed} scale={scale} />
+          <NavGroup items={NAV_STACQ} navigate={navigate} getNavPath={getNavPath} isActive={isActive} collapsed={collapsed} scale={scale} />
         </div>
       </nav>
 
@@ -140,8 +140,7 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
         className="mt-auto shrink-0 space-y-0.5"
         style={{ borderTop: `1px solid ${C.border}`, padding: `${px(8)}px ${collapsed ? px(6) : px(12)}px` }}
       >
-
-        <FooterBtn icon={Settings} label="Innstillinger" onClick={() => navigate("/design-lab/innstillinger")} active={isActive("/design-lab/innstillinger")} collapsed={collapsed} scale={scale} />
+        <FooterBtn icon={Settings} label="Innstillinger" onClick={() => navigate(getNavPath("settings"))} active={isActive("settings")} collapsed={collapsed} scale={scale} />
         <FooterBtn icon={LogOut} label="Logg ut" onClick={signOut} muted collapsed={collapsed} scale={scale} />
       </div>
     </aside>
@@ -192,13 +191,15 @@ function CollapseToggle({
 function NavGroup({
   items,
   navigate,
+  getNavPath,
   isActive,
   collapsed,
   scale,
 }: {
   items: typeof NAV_MAIN;
   navigate: (p: string) => void;
-  isActive: (href: string) => boolean;
+  getNavPath: (item: CrmNavItem) => string;
+  isActive: (item: CrmNavItem) => boolean;
   collapsed: boolean;
   scale: number;
 }) {
@@ -206,11 +207,11 @@ function NavGroup({
   return (
     <div className="space-y-px">
       {items.map((item) => {
-        const active = isActive(item.href);
+        const active = isActive(item.key);
         return (
           <button
             key={item.label}
-            onClick={() => navigate(item.href)}
+            onClick={() => navigate(getNavPath(item.key))}
             title={collapsed ? item.label : undefined}
             className="flex items-center w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dl-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--dl-focus-offset)]"
             style={{

@@ -36,6 +36,7 @@ import { getHeatResult, getTaskStatus, getActivityStatus, type HeatResult } from
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { CONTACT_CV_EMAIL_REQUIRED_MESSAGE, contactHasEmail } from "@/lib/contactCvEligibility";
 import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/queryKeys";
+import { useCrmNavigation } from "@/lib/crmNavigation";
 import { relativeDate } from "@/lib/relativeDate";
 import { mergeTechnologyTags } from "@/lib/technologyTags";
 import {
@@ -370,6 +371,7 @@ function getMatchLeadDate(lead: MatchLead): string | null {
 
 export default function DesignLabContacts() {
   const navigate = useNavigate();
+  const { getCompanyPath, getContactPath, getRequestPath } = useCrmNavigation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { signOut, user } = useAuth();
   const queryClient = useQueryClient();
@@ -1841,10 +1843,10 @@ export default function DesignLabContacts() {
   }, []);
 
   const getMatchLeadHref = useCallback((lead: MatchLead) => {
-    if (isContactMatchLead(lead)) return `/design-lab/kontakter?contact=${lead.id}`;
-    if (isRequestMatchLead(lead)) return `/foresporsler?id=${lead.requestId}`;
-    return `/design-lab/selskaper?company=${lead.companyId}`;
-  }, []);
+    if (isContactMatchLead(lead)) return getContactPath(lead.id);
+    if (isRequestMatchLead(lead)) return getRequestPath(lead.requestId);
+    return getCompanyPath(lead.companyId);
+  }, [getCompanyPath, getContactPath, getRequestPath]);
 
   const handleMatchLeadSelect = useCallback(
     (lead: MatchLead) => {

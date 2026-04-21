@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { DescriptionText } from "@/components/DescriptionText";
 import { MergeCompanyDialog } from "@/components/company/MergeCompanyDialog";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useConsultantCache } from "@/hooks/useConsultantCache";
@@ -125,6 +125,7 @@ import {
 } from "@/lib/categoryUtils";
 import { coerceDisplayText } from "@/lib/outlookMail";
 import { C, SIGNAL_COLORS } from "@/theme";
+import { useCrmNavigation } from "@/lib/crmNavigation";
 
 /** Wrapper for company notes — opens edit on click but allows text selection. */
 function CompanyNotesEditTrigger({ onEdit, children }: { onEdit: () => void; children: React.ReactNode }) {
@@ -329,12 +330,7 @@ export function CompanyCardContent({
   useV1CreateSheet = false,
 }: CompanyCardContentProps) {
   const navigate = useNavigate();
-  const location = useLocation();
-  const inDesignLab = location.pathname.startsWith("/design-lab");
-  const getContactHref = (contactId: string) =>
-    inDesignLab ? `/design-lab/kontakter?contact=${contactId}` : `/kontakter/${contactId}`;
-  const getCompanyHref = (targetCompanyId: string) =>
-    inDesignLab ? `/design-lab/selskaper?company=${targetCompanyId}` : `/selskaper/${targetCompanyId}`;
+  const { getContactPath, getCompanyPath } = useCrmNavigation();
   const queryClient = useQueryClient();
   const { interne: cachedInterne, eksterne: cachedEksterne } = useConsultantCache();
   const [editingNotes, setEditingNotes] = useState(false);
@@ -1080,7 +1076,7 @@ export function CompanyCardContent({
                   key={task.id}
                   className="flex items-start gap-2.5 py-2.5 px-1 rounded-md transition-all duration-200 group hover:bg-background/60 cursor-pointer"
                   onClick={() => {
-                    if (task.contact_id) navigate(getContactHref(task.contact_id));
+                    if (task.contact_id) navigate(getContactPath(task.contact_id));
                   }}
                 >
                   <div onClick={(e) => e.stopPropagation()}>
@@ -1094,7 +1090,7 @@ export function CompanyCardContent({
                     <div className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</div>
                     {contactName && (
                       <a
-                        href={task.contact_id ? getContactHref(task.contact_id) : undefined}
+                        href={task.contact_id ? getContactPath(task.contact_id) : undefined}
                         onClick={(e) => e.stopPropagation()}
                         className="text-[0.8125rem] font-semibold text-blue-600 hover:underline block mt-0.5"
                       >
@@ -1552,7 +1548,7 @@ export function CompanyCardContent({
                     onOpenContact(c.id);
                     return;
                   }
-                  navigate(getContactHref(c.id));
+                  navigate(getContactPath(c.id));
                 }}
               >
                 <div className="flex items-start gap-2">
@@ -1938,7 +1934,7 @@ export function CompanyCardContent({
                 setEditCompanyOpen(false);
                 setMergeCompanyDialogOpen(false);
                 queryClient.invalidateQueries();
-                navigate(getCompanyHref(targetCompanyId));
+                navigate(getCompanyPath(targetCompanyId));
               }}
             />
             {editable && (
@@ -2268,17 +2264,13 @@ function CompanyActivityRow({
   navigate: (path: string) => void;
 }) {
   const queryClient = useQueryClient();
-  const location = useLocation();
-  const inDesignLab = location.pathname.startsWith("/design-lab");
+  const { getContactPath } = useCrmNavigation();
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editDate, setEditDate] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const getActivityContactHref = (contactId: string) =>
-    inDesignLab ? `/design-lab/kontakter?contact=${contactId}` : `/kontakter/${contactId}`;
-
   const {
     title: displayTitle,
     category: displayCategory,
@@ -2449,7 +2441,7 @@ function CompanyActivityRow({
 
               {contactName && (
                 <a
-                  href={activity.contact_id ? getActivityContactHref(activity.contact_id) : undefined}
+                  href={activity.contact_id ? getContactPath(activity.contact_id) : undefined}
                   onClick={(e) => e.stopPropagation()}
                   className="text-[0.8125rem] font-semibold text-blue-600 hover:underline block mt-0.5"
                 >

@@ -22,6 +22,7 @@ import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { BrregSearch, lookupByOrgNr } from "@/components/BrregSearch";
 import { toast } from "sonner";
+import { useCrmNavigation } from "@/lib/crmNavigation";
 import {
   DesignLabEntitySheet,
 } from "@/components/designlab/DesignLabEntitySheet";
@@ -180,6 +181,7 @@ function OrgNrInput({
 
 export default function DesignLabCompanies() {
   const navigate = useNavigate();
+  const { getCompanyPath } = useCrmNavigation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { signOut, user } = useAuth();
   const queryClient = useQueryClient();
@@ -665,7 +667,7 @@ export default function DesignLabCompanies() {
                           techDna: true,
                           notes: true,
                         }}
-                        onNavigateToFullPage={() => navigate(`/design-lab/selskaper?company=${selectedId}`)}
+                        onNavigateToFullPage={() => navigate(getCompanyPath(selectedId))}
                       />
                     </RenderErrorBoundary>
                   </div>

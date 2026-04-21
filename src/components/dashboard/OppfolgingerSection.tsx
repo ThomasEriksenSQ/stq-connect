@@ -7,7 +7,7 @@ import { CATEGORIES, SIGNAL_OPTIONS, getEffectiveSignal, upsertTaskSignalDescrip
 import { Check, Calendar as CalendarIcon, ChevronDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import FollowUpModal from "./FollowUpModal";
+import { useCrmNavigation } from "@/lib/crmNavigation";
 
 const CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-[6px] border transition-colors cursor-pointer font-medium";
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
@@ -534,15 +535,11 @@ function TaskRow({
   onPostpone,
 }: TaskRowProps) {
   const navigate = useNavigate();
-  const location = useLocation();
+  const { getContactPath } = useCrmNavigation();
   const contact = task.contacts as any;
   const contactName = contact?.first_name ? `${contact.first_name} ${contact.last_name}` : null;
   const contactId = contact?.id || null;
-  const contactHref = contactId
-    ? location.pathname.startsWith("/design-lab")
-      ? `/design-lab/kontakter?contact=${contactId}`
-      : `/kontakter/${contactId}`
-    : null;
+  const contactHref = contactId ? getContactPath(contactId) : null;
   const companyName = contact?.companies?.name || null;
   const ownerProfile = profiles.find((p) => p.id === task.assigned_to);
   const ownerName = ownerProfile?.full_name || "";

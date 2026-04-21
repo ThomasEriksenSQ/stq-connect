@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { X, Pencil, Trash2, Sparkles, Loader2, ChevronDown, Plus, Target, Phone, Mail, MapPin } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +38,7 @@ import {
 } from "@/lib/consultantMatches";
 import { mergeTechnologyTags } from "@/lib/technologyTags";
 import { createOppdragFormState } from "@/lib/oppdragForm";
+import { useCrmNavigation } from "@/lib/crmNavigation";
 import { createOppdrag, invalidateOppdragQueries } from "@/lib/oppdragPersistence";
 import { crmQueryKeys } from "@/lib/queryKeys";
 import { DesignLabReadonlyChip } from "@/components/designlab/system";
@@ -187,7 +188,7 @@ export function ForespørselSheet({
   onRequestEdit?: () => void;
 }) {
   const navigate = useNavigate();
-  const location = useLocation();
+  const { getCompanyPath } = useCrmNavigation();
   const queryClient = useQueryClient();
   const { interne: cachedInterne, eksterne: cachedEksterne } = useConsultantCache();
   const [editMode, setEditMode] = useState(false);
@@ -600,11 +601,7 @@ export function ForespørselSheet({
   const contactTitle = row.contacts?.title || null;
   const contactEmail = row.contacts?.email || null;
   const contactPhone = row.contacts?.phone || null;
-  const companyHref = row.selskap_id
-    ? (location.pathname.startsWith("/design-lab")
-        ? `/design-lab/selskaper?company=${row.selskap_id}`
-        : `/selskaper?company=${row.selskap_id}`)
-    : null;
+  const companyHref = row.selskap_id ? getCompanyPath(row.selskap_id) : null;
   const alreadyLinkedIds = new Set([
     ...linkedKonsulenter.filter((k: any) => k.konsulent_type === "intern").map((k: any) => k.ansatt_id),
     ...linkedKonsulenter.filter((k: any) => k.konsulent_type === "ekstern").map((k: any) => k.ekstern_id),

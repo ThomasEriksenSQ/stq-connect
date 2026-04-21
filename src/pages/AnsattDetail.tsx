@@ -20,6 +20,7 @@ import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
+import { useCrmNavigation } from "@/lib/crmNavigation";
 import {
   DesignLabPrimaryAction,
   DesignLabSecondaryAction,
@@ -45,6 +46,7 @@ const AnsattDetail = ({
 }: AnsattDetailProps = {}) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { getNavPath } = useCrmNavigation();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [editingNote, setEditingNote] = useState(false);
@@ -57,7 +59,7 @@ const AnsattDetail = ({
   const [editSheetOpen, setEditSheetOpen] = useState(false);
 
   const ansattId = ansattIdOverride ?? Number(id);
-  const foresporslerPath = designLabMode ? "/design-lab/foresporsler" : "/foresporsler";
+  const foresporslerPath = designLabMode ? getNavPath("requests") : "/foresporsler";
 
   const { data: ansatt, isLoading } = useQuery({
     queryKey: ["ansatt-detail", ansattId],
