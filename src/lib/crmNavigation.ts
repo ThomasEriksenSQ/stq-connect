@@ -19,7 +19,7 @@ export type CrmNavItem =
   | "settings";
 
 const ROOT_NAV_PATHS: Record<CrmNavItem, string> = {
-  dashboard: "/",
+  dashboard: "/salgsagent",
   companies: "/selskaper",
   contacts: "/kontakter",
   requests: "/foresporsler",
@@ -60,6 +60,10 @@ export function getCrmRouteAlias(pathname: string): CrmRouteAlias {
 
 export function getModernNavPath(item: CrmNavItem, alias: CrmRouteAlias = "root") {
   return alias === "design-lab" ? DESIGN_LAB_NAV_PATHS[item] : ROOT_NAV_PATHS[item];
+}
+
+export function getModernHomePath(alias: CrmRouteAlias = "root") {
+  return alias === "design-lab" ? "/design-lab/news" : "/";
 }
 
 export function getModernContactPath(contactId: string, alias: CrmRouteAlias = "root") {
@@ -117,6 +121,7 @@ export function useCrmNavigation() {
   return {
     routeAlias,
     useModernRoutes,
+    getHomePath: () => getModernHomePath(routeAlias),
     getNavPath: (item: CrmNavItem) => getModernNavPath(item, routeAlias),
     getContactPath: (contactId: string) =>
       useModernRoutes

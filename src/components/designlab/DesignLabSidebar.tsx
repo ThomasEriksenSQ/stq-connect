@@ -42,7 +42,7 @@ interface DesignLabSidebarProps {
 export function DesignLabSidebar({ navigate, signOut, user, activePath }: DesignLabSidebarProps) {
   const [collapsed, setCollapsed] = usePersistentState("dl-sidebar-collapsed", false);
   const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
-  const { getNavPath } = useCrmNavigation();
+  const { getHomePath, getNavPath } = useCrmNavigation();
   const scale = SCALE_MAP[textSize];
   const px = (value: number) => Math.round(value * scale * 100) / 100;
   const activeItem = getNavItemFromPath(activePath);
@@ -84,11 +84,26 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
             gap: px(8),
           }}
         >
-          <img
-            src={stacqLogoFull}
-            alt="STACQ"
-            style={{ height: px(18), width: "auto", display: "block" }}
-          />
+          <button
+            type="button"
+            onClick={() => navigate(getHomePath())}
+            aria-label="Gå til STACQ Nyheter"
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dl-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--dl-focus-offset)]"
+            style={{
+              ["--dl-focus-ring" as string]: C.borderFocus,
+              ["--dl-focus-offset" as string]: C.sidebarBg,
+              border: "none",
+              background: "transparent",
+              padding: 0,
+              cursor: "pointer",
+            }}
+          >
+            <img
+              src={stacqLogoFull}
+              alt="STACQ"
+              style={{ height: px(18), width: "auto", display: "block" }}
+            />
+          </button>
           <CollapseToggle collapsed={collapsed} onClick={() => setCollapsed((p) => !p)} scale={scale} />
         </div>
       ) : (
@@ -96,11 +111,26 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
           className="flex flex-col items-center shrink-0"
           style={{ paddingTop: px(8), paddingBottom: px(4), gap: px(4) }}
         >
-          <img
-            src={stacqLogoIcon}
-            alt="STACQ"
-            style={{ height: px(24), width: px(24), display: "block" }}
-          />
+          <button
+            type="button"
+            onClick={() => navigate(getHomePath())}
+            aria-label="Gå til STACQ Nyheter"
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dl-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--dl-focus-offset)]"
+            style={{
+              ["--dl-focus-ring" as string]: C.borderFocus,
+              ["--dl-focus-offset" as string]: C.sidebarBg,
+              border: "none",
+              background: "transparent",
+              padding: 0,
+              cursor: "pointer",
+            }}
+          >
+            <img
+              src={stacqLogoIcon}
+              alt="STACQ"
+              style={{ height: px(24), width: px(24), display: "block" }}
+            />
+          </button>
           <CollapseToggle collapsed={collapsed} onClick={() => setCollapsed((p) => !p)} scale={scale} />
         </div>
       )}

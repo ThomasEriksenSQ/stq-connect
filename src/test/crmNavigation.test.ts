@@ -7,6 +7,7 @@ import {
   getModernCompanyCreatePath,
   getModernCompanyPath,
   getModernContactPath,
+  getModernHomePath,
   getModernNavPath,
   getModernRequestPath,
   getNavItemFromPath,
@@ -14,7 +15,8 @@ import {
 
 describe("crmNavigation", () => {
   it("builds root modern paths for primary entities", () => {
-    expect(getModernNavPath("dashboard")).toBe("/");
+    expect(getModernHomePath()).toBe("/");
+    expect(getModernNavPath("dashboard")).toBe("/salgsagent");
     expect(getModernContactPath("contact-1")).toBe("/kontakter?contact=contact-1");
     expect(getModernCompanyPath("company-1")).toBe("/selskaper?company=company-1");
     expect(getModernRequestPath(42)).toBe("/foresporsler?id=42");
@@ -22,6 +24,7 @@ describe("crmNavigation", () => {
   });
 
   it("builds design-lab alias paths", () => {
+    expect(getModernHomePath("design-lab")).toBe("/design-lab/news");
     expect(getModernNavPath("dashboard", "design-lab")).toBe("/design-lab/salgsagent");
     expect(getModernContactPath("contact-1", "design-lab")).toBe("/design-lab/kontakter?contact=contact-1");
     expect(getModernCompanyPath("company-1", "design-lab")).toBe("/design-lab/selskaper?company=company-1");
@@ -37,7 +40,9 @@ describe("crmNavigation", () => {
     expect(getCrmRouteAlias("/design-lab/kontakter")).toBe("design-lab");
     expect(getCrmRouteAlias("/kontakter")).toBe("root");
     expect(getNavItemFromPath("/design-lab/oppfolginger")).toBe("followUps");
+    expect(getNavItemFromPath("/salgsagent")).toBe("dashboard");
     expect(getNavItemFromPath("/konsulenter/ansatte")).toBe("employees");
+    expect(getNavItemFromPath("/")).toBeNull();
     expect(getNavItemFromPath("/ukjent")).toBeNull();
   });
 });

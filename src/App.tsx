@@ -170,6 +170,19 @@ function AppRouter() {
                 v1={<Dashboard />}
                 v2={
                   <Suspense fallback={<LazyFallback />}>
+                    <DesignLabNews />
+                  </Suspense>
+                }
+              />
+            }
+          />
+          <Route
+            path="salgsagent"
+            element={
+              <VersionedRoute
+                v1={<Dashboard />}
+                v2={
+                  <Suspense fallback={<LazyFallback />}>
                     <DesignLabDashboard />
                   </Suspense>
                 }
@@ -416,7 +429,7 @@ function AppRouter() {
           />
         </Route>
         <Route path="/design-lab" element={<ProtectedMinimal />}>
-          <Route index element={<Navigate to="salgsagent" replace />} />
+          <Route index element={<Navigate to="news" replace />} />
           <Route
             path="salgsagent"
             element={
