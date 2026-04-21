@@ -417,34 +417,11 @@ export default function DesignLabNews() {
   return (
     <DesignLabPageShell
       activePath="/design-lab/news"
-      title="STACQ Nyheter"
+      title=""
       maxWidth={1100}
       contentClassName="dl-news-content"
     >
-      {/* Masthead */}
-      <header style={{ marginBottom: 24 }}>
-        <h1
-          style={{
-            fontSize: 28,
-            fontWeight: 600,
-            color: C.text,
-            margin: 0,
-            letterSpacing: -0.2,
-          }}
-        >
-          STACQ Nyheter
-        </h1>
-        <p
-          style={{
-            fontSize: 12,
-            fontWeight: 400,
-            color: C.textFaint,
-            margin: "8px 0 0",
-          }}
-        >
-          {todayLabel} · {total} {total === 1 ? "sak" : "saker"}
-        </p>
-      </header>
+      {/* Masthead fjernet — tabs står som toppen av innholdet */}
 
       {/* Tab-bar */}
       <div
@@ -452,7 +429,6 @@ export default function DesignLabNews() {
         style={{
           display: "flex",
           gap: 24,
-          borderBottom: `1px solid ${C.borderLight}`,
           marginBottom: 32,
         }}
       >
