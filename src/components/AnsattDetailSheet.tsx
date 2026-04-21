@@ -512,28 +512,17 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
 
               {/* ── PROFIL ── */}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className={LABEL}>Konsulent siden (årstall)</label>
-                  <Input
-                    type="number"
-                    value={form.erfaring_aar}
-                    onChange={(e) => set("erfaring_aar", e.target.value)}
-                    placeholder="2018"
-                    min={1990}
-                    max={new Date().getFullYear()}
-                    className="mt-1 text-[0.875rem]"
-                  />
-                </div>
-                <div>
-                  <label className={LABEL}>Geografi / region</label>
-                  <Input
-                    value={form.geografi}
-                    onChange={(e) => set("geografi", e.target.value)}
-                    placeholder="Fallback, f.eks. Oslo eller Trøndelag"
-                    className="mt-1 text-[0.875rem]"
-                  />
-                </div>
+              <div>
+                <label className={LABEL}>Konsulent siden (årstall)</label>
+                <Input
+                  type="number"
+                  value={form.erfaring_aar}
+                  onChange={(e) => set("erfaring_aar", e.target.value)}
+                  placeholder="2018"
+                  min={1990}
+                  max={new Date().getFullYear()}
+                  className="mt-1 text-[0.875rem]"
+                />
               </div>
 
               <div className="rounded-lg border border-border bg-muted/20 p-3">
