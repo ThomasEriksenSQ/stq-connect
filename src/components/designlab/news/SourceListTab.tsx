@@ -297,10 +297,71 @@ export function SourceListTab() {
           Ingen selskaper med status Potensiell kunde eller Kunde.
         </div>
       ) : (
-        ranked.map((row) => <SourceRow key={row.companyId} row={row} />)
+        <>
+          {ranked.map((row) => <SourceRow key={row.companyId} row={row} />)}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 20 }}>
+            <button
+              type="button"
+              onClick={() => downloadCsv(ranked)}
+              style={{
+                fontSize: 12,
+                fontWeight: 500,
+                color: C.text,
+                background: C.surface,
+                border: `1px solid ${C.border}`,
+                borderRadius: 5,
+                padding: "7px 12px",
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = C.hoverBg;
+                e.currentTarget.style.borderColor = C.borderStrong;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = C.surface;
+                e.currentTarget.style.borderColor = C.border;
+              }}
+            >
+              Last ned som CSV ↓
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
+}
+
+function csvEscape(value: string | null | undefined): string {
+  const v = value ?? "";
+  if (/[",\n;]/.test(v)) return `"${v.replace(/"/g, '""')}"`;
+  return v;
+}
+
+function downloadCsv(rows: RankedSourceCompany[]): void {
+  const header = ["Rangering", "Selskap", "Org.nr", "Nettsted", "LinkedIn"];
+  const lines = [header.map(csvEscape).join(",")];
+  for (const r of rows) {
+    lines.push(
+      [
+        String(r.rank),
+        csvEscape(r.name),
+        csvEscape(formatOrgNumber(r.orgNumber) ?? ""),
+        csvEscape(r.website ?? ""),
+        csvEscape(r.linkedin ?? ""),
+      ].join(","),
+    );
+  }
+  const csv = "\uFEFF" + lines.join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const today = new Date().toISOString().slice(0, 10);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `stacq-kildeliste-${today}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function SourceRow({ row }: { row: RankedSourceCompany }) {
