@@ -15,6 +15,8 @@ describe("cv project section title", () => {
   it("falls back to the default projects heading when empty", () => {
     expect(getProjectsSectionTitle("")).toBe(DEFAULT_PROJECTS_SECTION_TITLE);
     expect(getProjectsSectionTitle(undefined)).toBe(DEFAULT_PROJECTS_SECTION_TITLE);
+    expect(getProjectsSectionTitle("", "en")).toBe("Projects");
+    expect(getProjectsSectionTitle(undefined, "en")).toBe("Projects");
   });
 
   it("keeps a custom projects heading", () => {

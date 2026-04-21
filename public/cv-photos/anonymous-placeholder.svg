@@ -1,0 +1,50 @@
+<svg width="200" height="240" viewBox="0 0 200 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <line id="slash" x1="0" y1="14" x2="12" y2="0" stroke="#959AA1" stroke-width="3.2" stroke-linecap="round" />
+  </defs>
+  <g opacity="0.92" transform="translate(-1 -9)">
+    <g transform="translate(67 70)">
+      <use href="#slash" x="0" />
+      <use href="#slash" x="14" />
+      <use href="#slash" x="28" />
+      <use href="#slash" x="42" />
+      <use href="#slash" x="56" />
+    </g>
+    <g transform="translate(53 96)">
+      <use href="#slash" x="0" />
+      <use href="#slash" x="14" />
+      <use href="#slash" x="28" />
+      <use href="#slash" x="42" />
+      <use href="#slash" x="56" />
+      <use href="#slash" x="70" />
+      <use href="#slash" x="84" />
+    </g>
+    <g transform="translate(39 122)">
+      <use href="#slash" x="0" />
+      <use href="#slash" x="14" />
+      <use href="#slash" x="28" />
+      <use href="#slash" x="42" />
+      <use href="#slash" x="56" />
+      <use href="#slash" x="70" />
+      <use href="#slash" x="84" />
+      <use href="#slash" x="98" />
+      <use href="#slash" x="112" />
+    </g>
+    <g transform="translate(53 148)">
+      <use href="#slash" x="0" />
+      <use href="#slash" x="14" />
+      <use href="#slash" x="28" />
+      <use href="#slash" x="42" />
+      <use href="#slash" x="56" />
+      <use href="#slash" x="70" />
+      <use href="#slash" x="84" />
+    </g>
+    <g transform="translate(67 174)">
+      <use href="#slash" x="0" />
+      <use href="#slash" x="14" />
+      <use href="#slash" x="28" />
+      <use href="#slash" x="42" />
+      <use href="#slash" x="56" />
+    </g>
+  </g>
+</svg>

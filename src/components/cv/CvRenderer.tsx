@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { getProjectsSectionTitle } from "@/lib/cvProjectsTitle";
+import { getCvCopy, getProjectMonthLabel, getProjectMonthOptions, type CvLanguageCode } from "@/lib/cvLanguage";
 
 // ═══════════════════════════════════════
 // Types
@@ -286,22 +287,7 @@ function measureOuterHeight(element: HTMLElement | null) {
   return element.getBoundingClientRect().height + parseFloat(computed.marginTop) + parseFloat(computed.marginBottom);
 }
 
-export const PROJECT_MONTH_OPTIONS = [
-  { value: 1, label: "jan." },
-  { value: 2, label: "feb." },
-  { value: 3, label: "mar." },
-  { value: 4, label: "apr." },
-  { value: 5, label: "mai" },
-  { value: 6, label: "jun." },
-  { value: 7, label: "jul." },
-  { value: 8, label: "aug." },
-  { value: 9, label: "sep." },
-  { value: 10, label: "okt." },
-  { value: 11, label: "nov." },
-  { value: 12, label: "des." },
-] as const;
-
-const PROJECT_MONTH_LABELS = new Map(PROJECT_MONTH_OPTIONS.map((entry) => [entry.value, entry.label]));
+export const PROJECT_MONTH_OPTIONS = getProjectMonthOptions("nb");
 
 type MonthNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 
@@ -315,29 +301,35 @@ function normalizeProjectYear(value: number | null | undefined) {
   return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : null;
 }
 
-function formatProjectMonthYear(month: number | null | undefined, year: number | null | undefined) {
+function formatProjectMonthYear(
+  month: number | null | undefined,
+  year: number | null | undefined,
+  languageCode: CvLanguageCode = "nb",
+) {
   const safeMonth = normalizeProjectMonth(month);
   const safeYear = normalizeProjectYear(year);
   if (!safeMonth || !safeYear) return "";
-  const monthLabel = PROJECT_MONTH_LABELS.get(safeMonth);
+  const monthLabel = getProjectMonthLabel(safeMonth, languageCode);
   return monthLabel ? `${monthLabel} ${safeYear}` : "";
 }
 
 export function formatProjectPeriod(
   project: Pick<ProjectEntry, "period" | "startMonth" | "startYear" | "endMonth" | "endYear" | "isCurrent">,
+  languageCode: CvLanguageCode = "nb",
 ) {
-  const startLabel = formatProjectMonthYear(project.startMonth, project.startYear);
-  const endLabel = formatProjectMonthYear(project.endMonth, project.endYear);
+  const startLabel = formatProjectMonthYear(project.startMonth, project.startYear, languageCode);
+  const endLabel = formatProjectMonthYear(project.endMonth, project.endYear, languageCode);
   const fallback = (project.period || "").trim();
+  const copy = getCvCopy(languageCode);
 
   if (!startLabel) return fallback;
-  if (project.isCurrent) return `${startLabel} - nåværende`;
+  if (project.isCurrent) return `${startLabel} - ${copy.currentProjectPeriod}`;
   if (endLabel) return `${startLabel} - ${endLabel}`;
   return startLabel;
 }
 
-function getProjectKey(project: ProjectEntry) {
-  const formattedPeriod = formatProjectPeriod(project);
+function getProjectKey(project: ProjectEntry, languageCode: CvLanguageCode = "nb") {
+  const formattedPeriod = formatProjectPeriod(project, languageCode);
   return [
     project.company,
     project.subtitle,
@@ -364,10 +356,10 @@ function splitParagraphForFlow(text: string, targetChars = 220) {
   return [trimmed];
 }
 
-function buildProjectFragments(project: ProjectEntry): ProjectFragment[] {
+function buildProjectFragments(project: ProjectEntry, languageCode: CvLanguageCode = "nb"): ProjectFragment[] {
   const fragments: ProjectFragment[] = [];
-  const projectKey = getProjectKey(project);
-  const formattedPeriod = formatProjectPeriod(project);
+  const projectKey = getProjectKey(project, languageCode);
+  const formattedPeriod = formatProjectPeriod(project, languageCode);
   const baseMeta = {
     projectKey,
     company: project.company,
@@ -827,6 +819,8 @@ function Sidebar({
 }
 
 function EmptySidebar({ imageUrl, portraitPosition }: { imageUrl?: string; portraitPosition?: string }) {
+  const isAnonymousPlaceholder = Boolean(imageUrl?.includes("anonymous-placeholder"));
+
   return (
     <div style={{ background: "#000", position: "relative" }}>
       <div
@@ -840,7 +834,7 @@ function EmptySidebar({ imageUrl, portraitPosition }: { imageUrl?: string; portr
         }}
       />
       <Portrait
-        topMm={CV_LAYOUT.hero.continuationPortraitTopMm}
+        topMm={isAnonymousPlaceholder ? CV_LAYOUT.hero.firstPagePortraitTopMm : CV_LAYOUT.hero.continuationPortraitTopMm}
         imageUrl={imageUrl}
         portraitPosition={portraitPosition}
       />
@@ -867,6 +861,8 @@ function Portrait({
   imageUrl?: string;
   portraitPosition?: string;
 }) {
+  const isAnonymousPlaceholder = Boolean(imageUrl?.includes("anonymous-placeholder"));
+
   return (
     <div
       style={{
@@ -887,8 +883,10 @@ function Portrait({
           style={{
             width: "100%",
             height: "100%",
-            objectFit: "cover",
-            objectPosition: portraitPosition || "50% 50%",
+            boxSizing: "border-box",
+            padding: isAnonymousPlaceholder ? "3.4mm 2.6mm" : undefined,
+            objectFit: isAnonymousPlaceholder ? "contain" : "cover",
+            objectPosition: isAnonymousPlaceholder ? "center center" : portraitPosition || "50% 50%",
             display: "block",
           }}
         />
@@ -972,10 +970,12 @@ function ProjectBlockHeader({
   );
 }
 
-function TechnologiesLine({ technologies }: { technologies: string }) {
+function TechnologiesLine({ technologies, languageCode = "nb" }: { technologies: string; languageCode?: CvLanguageCode }) {
+  const copy = getCvCopy(languageCode);
+
   return (
     <p style={{ margin: "1.2mm 0 0 0", lineHeight: 1.42, color: "#1f1f1f" }}>
-      <strong>Teknologier:</strong> {technologies}
+      <strong>{copy.technologies}:</strong> {technologies}
     </p>
   );
 }
@@ -989,11 +989,13 @@ export function ProjectBlock({
   paragraphs,
   technologies,
   spacingAfterMm = PROJECT_BLOCK_MARGIN_BOTTOM_MM,
+  languageCode = "nb",
 }: Omit<ProjectEntry, "paragraphs" | "technologies"> & {
   paragraphs: ProjectParagraphChunk[];
   technologies?: string;
   showHeader?: boolean;
   spacingAfterMm?: number;
+  languageCode?: CvLanguageCode;
 }) {
   const reconstructedParagraphs = reconstructParagraphs(paragraphs);
 
@@ -1005,7 +1007,7 @@ export function ProjectBlock({
           {paragraph}
         </p>
       ))}
-      {technologies ? <TechnologiesLine technologies={technologies} /> : null}
+      {technologies ? <TechnologiesLine technologies={technologies} languageCode={languageCode} /> : null}
     </div>
   );
 }
@@ -1130,10 +1132,20 @@ function AdditionalSectionBlock({
   );
 }
 
-function EducationSection({ education, marginTop = "6mm" }: { education: TimelineEntry[]; marginTop?: string }) {
+function EducationSection({
+  education,
+  marginTop = "6mm",
+  languageCode = "nb",
+}: {
+  education: TimelineEntry[];
+  marginTop?: string;
+  languageCode?: CvLanguageCode;
+}) {
+  const copy = getCvCopy(languageCode);
+
   return (
     <>
-      <SectionTitle marginTop={marginTop}>Utdannelse</SectionTitle>
+      <SectionTitle marginTop={marginTop}>{copy.education}</SectionTitle>
       {education.map((entry, i) => (
         <TimelineRow
           key={i}
@@ -1150,13 +1162,17 @@ function EducationSection({ education, marginTop = "6mm" }: { education: Timelin
 function WorkExperienceSection({
   workExperience,
   marginTop = "6mm",
+  languageCode = "nb",
 }: {
   workExperience: TimelineEntry[];
   marginTop?: string;
+  languageCode?: CvLanguageCode;
 }) {
+  const copy = getCvCopy(languageCode);
+
   return (
     <>
-      <SectionTitle marginTop={marginTop}>Arbeidserfaring</SectionTitle>
+      <SectionTitle marginTop={marginTop}>{copy.workExperience}</SectionTitle>
       {workExperience.map((entry, i) => (
         <TimelineRow key={i} period={entry.period} primary={entry.primary} marginBottom="2.6mm" />
       ))}
@@ -1185,6 +1201,7 @@ function ContinuationPage({
   doc,
   imageUrl,
   portraitPosition,
+  languageCode = "nb",
 }: {
   showProjectsTitle: boolean;
   projectsSectionTitle: string;
@@ -1194,6 +1211,7 @@ function ContinuationPage({
   doc: CVDocument;
   imageUrl?: string;
   portraitPosition?: string;
+  languageCode?: CvLanguageCode;
 }) {
   const mergedProjects = mergeProjectFragmentsForPage(pageProjects);
   const mergedAdditionalSections = mergeAdditionalSectionFragmentsForPage(pageAdditionalSections);
@@ -1207,7 +1225,7 @@ function ContinuationPage({
             <>
               {showProjectsTitle ? <SectionTitle marginTop="0">{projectsSectionTitle}</SectionTitle> : null}
               {mergedProjects.map((project) => (
-                <ProjectBlock key={project.key} {...project} />
+                <ProjectBlock key={project.key} {...project} languageCode={languageCode} />
               ))}
             </>
           )}
@@ -1229,8 +1247,15 @@ function ContinuationPage({
             const hasPreviousContent = mergedProjects.length > 0 || mergedAdditionalSections.length > 0 || index > 0;
             const mt = hasPreviousContent ? "6mm" : "0";
             if (section === "education")
-              return <EducationSection key={section} education={doc.education} marginTop={mt} />;
-            return <WorkExperienceSection key={section} workExperience={doc.workExperience} marginTop={mt} />;
+              return <EducationSection key={section} education={doc.education} marginTop={mt} languageCode={languageCode} />;
+            return (
+              <WorkExperienceSection
+                key={section}
+                workExperience={doc.workExperience}
+                marginTop={mt}
+                languageCode={languageCode}
+              />
+            );
           })}
         </div>
       </div>
@@ -1246,9 +1271,10 @@ interface CvRendererProps {
   doc: CVDocument;
   imageUrl?: string;
   scale?: number;
+  languageCode?: CvLanguageCode;
 }
 
-export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps) {
+export function CvRendererPreview({ doc, imageUrl, scale = 1, languageCode = "nb" }: CvRendererProps) {
   const [firstPageFlowBlocks, setFirstPageFlowBlocks] = useState<FlowBlock[]>([]);
   const [continuationPages, setContinuationPages] = useState<ContinuationPageModel[]>([]);
   const firstPageCapacityRef = useRef<HTMLDivElement | null>(null);
@@ -1279,12 +1305,18 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
     })),
   ];
 
-  const projectFragments = useMemo(() => doc.projects.map((project) => buildProjectFragments(project)), [doc.projects]);
+  const projectFragments = useMemo(
+    () => doc.projects.map((project) => buildProjectFragments(project, languageCode)),
+    [doc.projects, languageCode],
+  );
   const additionalSectionFragments = useMemo(
     () => doc.additionalSections.map((section) => buildAdditionalSectionFragments(section)),
     [doc.additionalSections],
   );
-  const projectsSectionTitle = useMemo(() => getProjectsSectionTitle(doc.projectsTitle), [doc.projectsTitle]);
+  const projectsSectionTitle = useMemo(
+    () => getProjectsSectionTitle(doc.projectsTitle, languageCode),
+    [doc.projectsTitle, languageCode],
+  );
   const additionalSectionMeasureTitle = useMemo(() => {
     const titles = doc.additionalSections
       .map((section) => section.title.trim())
@@ -1434,7 +1466,7 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
                 projectFragmentMeasureRefs.current[fragment.key] = el;
               }}
             >
-              <ProjectBlock {...fragment} />
+              <ProjectBlock {...fragment} languageCode={languageCode} />
             </div>
           ))}
           <div ref={additionalSectionTitleTopMeasureRef} style={{ display: "flow-root" }}>
@@ -1461,16 +1493,16 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
             </div>
           ))}
           <div ref={educationTopMeasureRef} style={{ display: "flow-root" }}>
-            <EducationSection education={education} marginTop="0" />
+            <EducationSection education={education} marginTop="0" languageCode={languageCode} />
           </div>
           <div ref={educationAfterMeasureRef} style={{ display: "flow-root" }}>
-            <EducationSection education={education} marginTop="6mm" />
+            <EducationSection education={education} marginTop="6mm" languageCode={languageCode} />
           </div>
           <div ref={workTopMeasureRef} style={{ display: "flow-root" }}>
-            <WorkExperienceSection workExperience={workExperience} marginTop="0" />
+            <WorkExperienceSection workExperience={workExperience} marginTop="0" languageCode={languageCode} />
           </div>
           <div ref={workAfterMeasureRef} style={{ display: "flow-root" }}>
-            <WorkExperienceSection workExperience={workExperience} marginTop="6mm" />
+            <WorkExperienceSection workExperience={workExperience} marginTop="6mm" languageCode={languageCode} />
           </div>
         </div>
       </div>
@@ -1608,6 +1640,7 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
               doc={doc}
               imageUrl={imageUrl}
               portraitPosition={doc.hero.portrait_position}
+              languageCode={languageCode}
             />
           ))}
         </div>
@@ -1620,7 +1653,7 @@ export function CvRendererPreview({ doc, imageUrl, scale = 1 }: CvRendererProps)
 // Print dialog helper
 // ═══════════════════════════════════════
 
-export async function openCvPrintDialog(documentTitle?: string) {
+export async function openCvPrintDialog(documentTitle?: string, documentLanguage: CvLanguageCode = "nb") {
   const sourceRoot = document.querySelector(".cv-print-root") as HTMLElement | null;
   if (!sourceRoot) return;
 
@@ -1653,7 +1686,7 @@ export async function openCvPrintDialog(documentTitle?: string) {
 
   printDocument.open();
   printDocument.write(`<!doctype html>
-<html lang="no">
+<html lang="${documentLanguage}">
   <head>
     <meta charset="utf-8" />
     <title>${documentTitle || CV_PRINT.documentTitle}</title>

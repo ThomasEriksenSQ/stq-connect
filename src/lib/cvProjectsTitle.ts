@@ -1,4 +1,6 @@
-export const DEFAULT_PROJECTS_SECTION_TITLE = "Prosjekter";
+import { getCvCopy, type CvLanguageCode } from "@/lib/cvLanguage";
+
+export const DEFAULT_PROJECTS_SECTION_TITLE = getCvCopy("nb").projectsDefaultTitle;
 const LEGACY_CV_DOCUMENT_TITLE = "CV";
 
 export function normalizeProjectsSectionTitle(value?: string | null) {
@@ -7,6 +9,10 @@ export function normalizeProjectsSectionTitle(value?: string | null) {
   return trimmed;
 }
 
-export function getProjectsSectionTitle(value?: string | null) {
-  return normalizeProjectsSectionTitle(value) || DEFAULT_PROJECTS_SECTION_TITLE;
+export function getDefaultProjectsSectionTitle(languageCode: CvLanguageCode = "nb") {
+  return getCvCopy(languageCode).projectsDefaultTitle;
+}
+
+export function getProjectsSectionTitle(value?: string | null, languageCode: CvLanguageCode = "nb") {
+  return normalizeProjectsSectionTitle(value) || getDefaultProjectsSectionTitle(languageCode);
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
@@ -17,25 +17,47 @@ import {
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database, Json } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CvEditorPanel } from "@/components/cv/CvEditorPanel";
 import { openCvPrintDialog, type CVDocument } from "@/components/cv/CvRenderer";
-import { normalizeProjectsSectionTitle } from "@/lib/cvProjectsTitle";
+import { cvDocumentToSnapshot, hasCvDocumentContent, snapshotToCvDocument } from "@/lib/cvDocument";
 import { extractCvPdfSegments } from "@/lib/cvPdfExtract";
 import { issueAndCopyCvShareLink } from "@/lib/cvAccess";
+import { getCvCopy, getCvLanguageLabel, type CvLanguageCode } from "@/lib/cvLanguage";
+import {
+  ANONYMIZED_EN_CV_VARIANT,
+  ANONYMIZED_NB_CV_VARIANT,
+  ORIGINAL_EN_CV_VARIANT,
+  ORIGINAL_NB_CV_VARIANT,
+  applyCvVariantInvariants,
+  createAnonymizedCvDocument,
+  getCvVariantSource,
+  getCvVariantStorageKey,
+  isRootCvVariant,
+  type CvVariantIdentity,
+} from "@/lib/cvVariants";
 import { toast } from "sonner";
 
 const DEFAULT_CONTACT = {
-  title: "Kontaktperson",
   name: "Jon Richard Nygaard",
   phone: "932 87 267",
   email: "jr@stacq.no",
 };
 
+const ANONYMIZED_CV_PLACEHOLDER_URL = "/cv-photos/anonymous-placeholder.svg";
+
 const EMPTY_CV: CVDocument = {
-  hero: { name: "", title: "", contact: DEFAULT_CONTACT },
+  hero: {
+    name: "",
+    title: "",
+    contact: {
+      ...DEFAULT_CONTACT,
+      title: getCvCopy("nb").contactPerson,
+    },
+  },
   sidebarSections: [
     { heading: "PERSONALIA", items: [] },
     { heading: "NØKKELPUNKTER", items: [] },
@@ -54,6 +76,60 @@ type CvVersionMeta = {
   created_at: string | null;
   source: string | null;
 };
+
+type CvVersionRow = Database["public"]["Tables"]["cv_versions"]["Row"];
+type CvVariantRow = Database["public"]["Tables"]["cv_document_variants"]["Row"];
+type VariantBusyMode = "creating" | "syncing" | "regenerating";
+
+type LoadedCvVariant = {
+  id: string;
+  languageCode: CvLanguageCode;
+  isAnonymized: boolean;
+  cvData: CVDocument;
+  updatedAt: string | null;
+  sourceOriginalUpdatedAt: string | null;
+};
+
+type VariantBusyState = {
+  key: string;
+  mode: VariantBusyMode;
+};
+
+function isDefaultContactTitle(value?: string | null) {
+  const normalized = value?.trim().toLocaleLowerCase() || "";
+  if (!normalized) return false;
+
+  return (
+    normalized === getCvCopy("nb").contactPerson.toLocaleLowerCase() ||
+    normalized === getCvCopy("en").contactPerson.toLocaleLowerCase()
+  );
+}
+
+function getDefaultContact(languageCode: CvLanguageCode = "nb", currentContact?: CVDocument["hero"]["contact"]) {
+  return {
+    title:
+      currentContact?.title?.trim() && !isDefaultContactTitle(currentContact.title)
+        ? currentContact.title
+        : getCvCopy(languageCode).contactPerson,
+    name: currentContact?.name || DEFAULT_CONTACT.name,
+    phone: currentContact?.phone || DEFAULT_CONTACT.phone,
+    email: currentContact?.email || DEFAULT_CONTACT.email,
+  };
+}
+
+function getErrorMessage(error: unknown, fallback = "Ukjent feil") {
+  if (error instanceof Error && error.message.trim()) return error.message;
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof (error as { message?: unknown }).message === "string" &&
+    (error as { message: string }).message.trim()
+  ) {
+    return (error as { message: string }).message;
+  }
+  return fallback;
+}
 
 function formatUpdatedAt(value?: string | null) {
   if (!value) return "Ikke registrert ennå";
@@ -80,56 +156,81 @@ async function syncCompetenceFromCv(ansattId: number) {
   if (data?.error) throw new Error(data.error);
 }
 
-function dbRowToCvDoc(row: any): CVDocument {
-  return {
-    hero: {
-      name: row.hero_name || "",
-      title: row.hero_title || "",
-      contact: DEFAULT_CONTACT,
-      portrait_url: row.portrait_url || undefined,
-      portrait_position: row.portrait_position || "50% 50%",
-    },
-    sidebarSections: row.sidebar_sections || [],
-    introParagraphs: row.intro_paragraphs || [],
-    competenceGroups: row.competence_groups || [],
-    projectsTitle: normalizeProjectsSectionTitle(row.title),
-    projects: row.projects || [],
-    additionalSections: row.additional_sections || [],
-    education: row.education || [],
-    workExperience: row.work_experience || [],
-  };
-}
-
-function cvDocToDbRow(doc: CVDocument) {
-  return {
-    hero_name: doc.hero.name,
-    hero_title: doc.hero.title,
-    portrait_url: doc.hero.portrait_url || null,
-    portrait_position: doc.hero.portrait_position || "50% 50%",
-    intro_paragraphs: doc.introParagraphs,
-    competence_groups: doc.competenceGroups,
-    title: normalizeProjectsSectionTitle(doc.projectsTitle) || null,
-    projects: doc.projects,
-    additional_sections: doc.additionalSections,
-    education: doc.education,
-    work_experience: doc.workExperience,
-    sidebar_sections: doc.sidebarSections,
-    updated_at: new Date().toISOString(),
-  };
-}
-
-function hasCvDocumentContent(doc: CVDocument) {
-  return Boolean(
-    doc.hero.name.trim() ||
-      doc.hero.title.trim() ||
-      doc.sidebarSections.some((section) => section.heading.trim() || section.items.some((item) => item.trim())) ||
-      doc.introParagraphs.some((paragraph) => paragraph.trim()) ||
-      doc.competenceGroups.some((group) => group.label.trim() || group.content.trim()) ||
-      doc.projects.length ||
-      doc.additionalSections.length ||
-      doc.education.length ||
-      doc.workExperience.length,
+function toLoadedVariant(row: CvVariantRow, fallbackContact: CVDocument["hero"]["contact"]): LoadedCvVariant {
+  const languageCode = row.language_code as CvVariantIdentity["languageCode"];
+  const variant = {
+    languageCode,
+    isAnonymized: row.is_anonymized,
+  } satisfies CvVariantIdentity;
+  const cvData = snapshotToCvDocument(
+    row.snapshot as Record<string, unknown>,
+    getDefaultContact(languageCode, fallbackContact),
   );
+
+  return {
+    id: row.id,
+    languageCode,
+    isAnonymized: row.is_anonymized,
+    cvData: applyCvVariantInvariants(cvData, variant),
+    updatedAt: row.updated_at || null,
+    sourceOriginalUpdatedAt: row.source_original_updated_at || null,
+  };
+}
+
+function indexVariants(rows: CvVariantRow[], fallbackContact: CVDocument["hero"]["contact"]) {
+  return rows.reduce<Record<string, LoadedCvVariant>>((accumulator, row) => {
+    const key = getCvVariantStorageKey({
+      languageCode: row.language_code as CvVariantIdentity["languageCode"],
+      isAnonymized: row.is_anonymized,
+    });
+    accumulator[key] = toLoadedVariant(row, fallbackContact);
+    return accumulator;
+  }, {});
+}
+
+function isOlderDate(left?: string | null, right?: string | null) {
+  if (!left || !right) return false;
+  const leftTime = new Date(left).getTime();
+  const rightTime = new Date(right).getTime();
+  if (Number.isNaN(leftTime) || Number.isNaN(rightTime)) return false;
+  return leftTime < rightTime;
+}
+
+function getVariantDisplayLabel(variant: CvVariantIdentity) {
+  if (variant.languageCode === "nb") {
+    return variant.isAnonymized ? getCvCopy("nb").anonymizedLabel : getCvCopy("nb").originalLabel;
+  }
+
+  const stateLabel = variant.isAnonymized ? getCvCopy("en").anonymizedLabel : getCvCopy("en").originalLabel;
+  return `${getCvLanguageLabel("en")} ${stateLabel.toLocaleLowerCase("en-US")}`;
+}
+
+function getVariantCreateMessage(variant: CvVariantIdentity) {
+  if (variant.languageCode === "nb" && variant.isAnonymized) return "Anonymisert CV opprettet fra originalen.";
+  if (variant.languageCode === "en" && variant.isAnonymized) return "Engelsk anonymisert CV opprettet fra norsk kilde.";
+  return "Engelsk CV opprettet fra originalen.";
+}
+
+function getVariantSyncMessage(variant: CvVariantIdentity) {
+  if (variant.languageCode === "nb" && variant.isAnonymized) return "Anonymisert CV ble oppdatert fra siste original.";
+  if (variant.languageCode === "en" && variant.isAnonymized) {
+    return "Engelsk anonymisert CV ble oppdatert fra siste norske kilde.";
+  }
+  return "Engelsk CV ble oppdatert fra siste original.";
+}
+
+function getVariantRegenerateButtonLabel(variant: CvVariantIdentity) {
+  if (variant.languageCode === "nb" && variant.isAnonymized) return "Regenerer anonymisert";
+  if (variant.languageCode === "en" && variant.isAnonymized) return "Oversett anonymisert på nytt";
+  return "Oversett på nytt";
+}
+
+function getVariantHeading(variant: CvVariantIdentity) {
+  if (variant.languageCode === "en") {
+    return variant.isAnonymized ? "English anonymized CV" : "English CV";
+  }
+
+  return variant.isAnonymized ? "Anonymisert CV" : "CV";
 }
 
 export default function CvAdmin() {
@@ -137,17 +238,93 @@ export default function CvAdmin() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
-  const [cvData, setCvData] = useState<CVDocument | null>(null);
+  const [originalCvData, setOriginalCvData] = useState<CVDocument | null>(null);
   const [cvId, setCvId] = useState<string | null>(null);
   const [ansattName, setAnsattName] = useState("");
   const [imageUrl, setImageUrl] = useState<string | undefined>();
+  const [originalUpdatedAt, setOriginalUpdatedAt] = useState<string | null>(null);
   const [lastAdminUpdatedAt, setLastAdminUpdatedAt] = useState<string | null>(null);
   const [lastAnsattUpdatedAt, setLastAnsattUpdatedAt] = useState<string | null>(null);
+  const [activeVariant, setActiveVariant] = useState<CvVariantIdentity>(ORIGINAL_NB_CV_VARIANT);
+  const [variantDocuments, setVariantDocuments] = useState<Record<string, LoadedCvVariant>>({});
   const [versionsOpen, setVersionsOpen] = useState(false);
-  const [versions, setVersions] = useState<any[]>([]);
+  const [versions, setVersions] = useState<CvVersionRow[]>([]);
   const [cvUploadParsing, setCvUploadParsing] = useState(false);
+  const [variantBusy, setVariantBusy] = useState<VariantBusyState | null>(null);
   const cvUploadRef = useRef<HTMLInputElement>(null);
   const [fullscreen, setFullscreen] = useState(true);
+
+  const baseContact = useMemo(
+    () => getDefaultContact("nb", originalCvData?.hero.contact),
+    [originalCvData?.hero.contact],
+  );
+  const activeVariantKey = getCvVariantStorageKey(activeVariant);
+  const activeIsRootVariant = isRootCvVariant(activeVariant);
+  const activeLoadedVariant = activeIsRootVariant ? null : variantDocuments[activeVariantKey];
+  const activeCvData = activeIsRootVariant ? originalCvData : activeLoadedVariant?.cvData ?? null;
+  const activePreviewImageUrl = activeVariant.isAnonymized ? ANONYMIZED_CV_PLACEHOLDER_URL : imageUrl;
+
+  const getStoredVariant = useCallback(
+    (variant: CvVariantIdentity) => variantDocuments[getCvVariantStorageKey(variant)],
+    [variantDocuments],
+  );
+
+  const getVariantUpdatedAt = useCallback(
+    (variant: CvVariantIdentity) => {
+      if (isRootCvVariant(variant)) return originalUpdatedAt;
+      return getStoredVariant(variant)?.updatedAt ?? null;
+    },
+    [getStoredVariant, originalUpdatedAt],
+  );
+
+  const isVariantStale = useCallback(
+    (variant: CvVariantIdentity, visited = new Set<string>()) => {
+      if (isRootCvVariant(variant)) return false;
+
+      const variantKey = getCvVariantStorageKey(variant);
+      if (visited.has(variantKey)) return false;
+
+      const existing = getStoredVariant(variant);
+      if (!existing) return true;
+
+      const sourceVariant = getCvVariantSource(variant);
+      if (!sourceVariant) return false;
+
+      const nextVisited = new Set(visited);
+      nextVisited.add(variantKey);
+
+      if (!isRootCvVariant(sourceVariant) && isVariantStale(sourceVariant, nextVisited)) {
+        return true;
+      }
+
+      const sourceUpdatedAt = getVariantUpdatedAt(sourceVariant);
+      return isOlderDate(existing.sourceOriginalUpdatedAt, sourceUpdatedAt);
+    },
+    [getStoredVariant, getVariantUpdatedAt],
+  );
+
+  const staleDerivedVariants = useMemo(
+    () =>
+      [ANONYMIZED_NB_CV_VARIANT, ORIGINAL_EN_CV_VARIANT, ANONYMIZED_EN_CV_VARIANT].filter((variant) =>
+        Boolean(getStoredVariant(variant)) && isVariantStale(variant),
+      ),
+    [getStoredVariant, isVariantStale],
+  );
+
+  const updateVariantInState = useCallback((row: CvVariantRow) => {
+    const key = getCvVariantStorageKey({
+      languageCode: row.language_code as CvVariantIdentity["languageCode"],
+      isAnonymized: row.is_anonymized,
+    });
+    const loadedVariant = toLoadedVariant(row, baseContact);
+
+    setVariantDocuments((current) => ({
+      ...current,
+      [key]: loadedVariant,
+    }));
+
+    return loadedVariant;
+  }, [baseContact]);
 
   const handleShareLink = useCallback(async () => {
     const id = Number(ansattId);
@@ -155,20 +332,21 @@ export default function CvAdmin() {
 
     try {
       const { pin, valid_days } = await issueAndCopyCvShareLink(supabase, id);
-      toast.success(`Link og PIN kopiert for ${valid_days} dager. PIN: ${pin} — del med ${cvData?.hero.name || "konsulenten"}`, {
+      toast.success(`Link og PIN kopiert for ${valid_days} dager. PIN: ${pin} — del med ${ansattName || "konsulenten"}`, {
         duration: 10000,
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Ukjent feil";
       toast.error("Kunne ikke generere link: " + message);
     }
-  }, [ansattId, cvData?.hero.name]);
+  }, [ansattId, ansattName]);
 
   const loadVersionDates = useCallback(async (currentCvId: string) => {
     const { data, error } = await supabase
       .from("cv_versions")
       .select("created_at, source")
       .eq("cv_id", currentCvId)
+      .is("variant_id", null)
       .order("created_at", { ascending: false });
 
     if (error) return;
@@ -205,7 +383,7 @@ export default function CvAdmin() {
       if (!cvRow) {
         const newDocument = {
           ansatt_id: parsedAnsattId,
-          ...cvDocToDbRow({
+          ...cvDocumentToSnapshot({
             ...EMPTY_CV,
             hero: {
               ...EMPTY_CV.hero,
@@ -221,8 +399,16 @@ export default function CvAdmin() {
 
       if (cancelled || !cvRow) return;
 
+      const originalDocument = snapshotToCvDocument(cvRow, getDefaultContact("nb"));
       setCvId(cvRow.id);
-      setCvData(dbRowToCvDoc(cvRow));
+      setOriginalCvData(originalDocument);
+      setOriginalUpdatedAt(cvRow.updated_at || null);
+
+      const { data: variantRows } = await supabase.from("cv_document_variants").select("*").eq("cv_id", cvRow.id);
+      if (!cancelled) {
+        setVariantDocuments(indexVariants((variantRows || []) as CvVariantRow[], originalDocument.hero.contact));
+      }
+
       void loadVersionDates(cvRow.id);
     };
 
@@ -235,12 +421,13 @@ export default function CvAdmin() {
 
   useEffect(() => {
     if (!ansattName) return;
-    const title = `CV - ${ansattName} - STACQ`;
+    const prefix = getVariantHeading(activeVariant);
+    const title = `${prefix} - ${ansattName} - STACQ`;
     document.title = title;
     return () => {
       document.title = "STACQ Hot & Fast";
     };
-  }, [ansattName]);
+  }, [activeVariant, ansattName]);
 
   const runCompetenceSync = useCallback(async () => {
     const numericAnsattId = Number(ansattId);
@@ -254,24 +441,62 @@ export default function CvAdmin() {
     }
   }, [ansattId]);
 
-  const handleSave = useCallback(
-    async (doc: CVDocument) => {
-      if (!cvId) return;
+  const generateTranslatedVariantDocument = useCallback(async (sourceDoc: CVDocument, variant: CvVariantIdentity) => {
+    const { data, error } = await supabase.functions.invoke("translate-cv-variant", {
+      body: {
+        doc: sourceDoc,
+        is_anonymized: variant.isAnonymized,
+        target_language_code: variant.languageCode,
+      },
+    });
+
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+
+    const translatedDoc = data?.document as CVDocument | undefined;
+    if (!translatedDoc || typeof translatedDoc !== "object") {
+      throw new Error("Oversettelsen returnerte ugyldig CV-data");
+    }
+
+    return applyCvVariantInvariants(translatedDoc, variant);
+  }, []);
+
+  const saveVariantDocument = useCallback(
+    async (variant: CvVariantIdentity, doc: CVDocument, sourceOriginalUpdatedAt?: string | null) => {
+      if (!cvId) throw new Error("CV mangler");
+
       const savedAt = new Date().toISOString();
-      const snapshot = { ...cvDocToDbRow(doc), updated_at: savedAt };
+      const normalizedDoc = applyCvVariantInvariants(doc, variant);
+      const snapshot = { ...cvDocumentToSnapshot(normalizedDoc), updated_at: savedAt };
+      const jsonSnapshot = snapshot as Json;
+      const existingVariant = getStoredVariant(variant);
+      const resolvedSourceUpdatedAt =
+        sourceOriginalUpdatedAt ?? existingVariant?.sourceOriginalUpdatedAt ?? originalUpdatedAt ?? null;
 
-      const { error } = await supabase
-        .from("cv_documents")
-        .update(snapshot as any)
-        .eq("id", cvId);
+      const { data: variantRow, error } = await supabase
+        .from("cv_document_variants")
+        .upsert(
+          {
+            cv_id: cvId,
+            language_code: variant.languageCode,
+            is_anonymized: variant.isAnonymized,
+            snapshot: jsonSnapshot,
+            source_original_updated_at: resolvedSourceUpdatedAt,
+            updated_at: savedAt,
+          },
+          { onConflict: "cv_id,language_code,is_anonymized" },
+        )
+        .select("*")
+        .single();
 
-      if (error) {
-        throw error;
+      if (error || !variantRow) {
+        throw error || new Error("Kunne ikke lagre variant");
       }
 
       const { error: versionError } = await supabase.from("cv_versions").insert({
         cv_id: cvId,
-        snapshot: snapshot as any,
+        variant_id: variantRow.id,
+        snapshot: jsonSnapshot,
         saved_by: user?.email || "crm",
         source: "admin",
         created_at: savedAt,
@@ -281,20 +506,188 @@ export default function CvAdmin() {
         throw versionError;
       }
 
+      const loadedVariant = updateVariantInState({
+        ...variantRow,
+        snapshot: jsonSnapshot,
+        updated_at: savedAt,
+        source_original_updated_at: resolvedSourceUpdatedAt,
+      } as CvVariantRow);
+
+      return loadedVariant;
+    },
+    [cvId, getStoredVariant, originalUpdatedAt, updateVariantInState, user?.email],
+  );
+
+  const materializeVariant = useCallback(
+    async function materializeVariantInner(
+      variant: CvVariantIdentity,
+      options?: { force?: boolean },
+    ): Promise<{
+      doc: CVDocument;
+      updatedAt: string | null;
+      status: "existing" | "created" | "updated";
+      loadedVariant?: LoadedCvVariant;
+    }> {
+      if (isRootCvVariant(variant)) {
+        if (!originalCvData) throw new Error("Original CV mangler");
+        return {
+          doc: originalCvData,
+          updatedAt: originalUpdatedAt,
+          status: "existing",
+        };
+      }
+
+      const existingVariant = getStoredVariant(variant);
+      const sourceVariant = getCvVariantSource(variant);
+      if (!sourceVariant) throw new Error("Varianten mangler kilde");
+
+      const sourceResult = await materializeVariantInner(sourceVariant, { force: false });
+      const sourceIsStale = !isRootCvVariant(sourceVariant) && isVariantStale(sourceVariant);
+      const sourceUpdatedAt = sourceResult.updatedAt ?? getVariantUpdatedAt(sourceVariant);
+      const needsSync =
+        Boolean(options?.force) ||
+        !existingVariant ||
+        sourceIsStale ||
+        isOlderDate(existingVariant.sourceOriginalUpdatedAt, sourceUpdatedAt);
+
+      if (!needsSync && existingVariant) {
+        return {
+          doc: existingVariant.cvData,
+          updatedAt: existingVariant.updatedAt,
+          status: "existing",
+          loadedVariant: existingVariant,
+        };
+      }
+
+      const nextDoc =
+        variant.languageCode === "nb"
+          ? createAnonymizedCvDocument(sourceResult.doc, variant.languageCode)
+          : await generateTranslatedVariantDocument(sourceResult.doc, variant);
+
+      const loadedVariant = await saveVariantDocument(variant, nextDoc, sourceUpdatedAt);
+
+      return {
+        doc: loadedVariant.cvData,
+        updatedAt: loadedVariant.updatedAt,
+        status: existingVariant ? "updated" : "created",
+        loadedVariant,
+      };
+    },
+    [
+      generateTranslatedVariantDocument,
+      getStoredVariant,
+      getVariantUpdatedAt,
+      isVariantStale,
+      originalCvData,
+      originalUpdatedAt,
+      saveVariantDocument,
+    ],
+  );
+
+  const activateVariant = useCallback(
+    async (variant: CvVariantIdentity, options?: { force?: boolean }) => {
+      if (isRootCvVariant(variant)) {
+        setActiveVariant(variant);
+        return;
+      }
+
+      const busyKey = getCvVariantStorageKey(variant);
+      const existingVariant = getStoredVariant(variant);
+      setVariantBusy({
+        key: busyKey,
+        mode: options?.force ? "regenerating" : existingVariant ? "syncing" : "creating",
+      });
+
+      try {
+        const result = await materializeVariant(variant, options);
+        setActiveVariant(variant);
+
+        if (result.status === "created") {
+          toast.success(getVariantCreateMessage(variant));
+        } else if (result.status === "updated" && options?.force) {
+          toast.success(getVariantSyncMessage(variant));
+        } else if (result.status === "updated" && !options?.force) {
+          toast.info(getVariantSyncMessage(variant));
+        }
+      } catch (error) {
+        const message = getErrorMessage(error);
+        throw new Error(message);
+      } finally {
+        setVariantBusy((current) => (current?.key === busyKey ? null : current));
+      }
+    },
+    [getStoredVariant, materializeVariant],
+  );
+
+  const handleSave = useCallback(
+    async (doc: CVDocument) => {
+      if (!cvId) return;
+
+      if (!activeIsRootVariant) {
+        const sourceVariant = getCvVariantSource(activeVariant);
+        const sourceUpdatedAt = sourceVariant ? getVariantUpdatedAt(sourceVariant) : originalUpdatedAt;
+        await saveVariantDocument(activeVariant, doc, sourceUpdatedAt);
+        return;
+      }
+
+      const savedAt = new Date().toISOString();
+      const snapshot = { ...cvDocumentToSnapshot(doc), updated_at: savedAt };
+      const jsonSnapshot = snapshot as Json;
+
+      const { error } = await supabase
+        .from("cv_documents")
+        .update(jsonSnapshot)
+        .eq("id", cvId);
+
+      if (error) {
+        throw error;
+      }
+
+      const { error: versionError } = await supabase.from("cv_versions").insert({
+        cv_id: cvId,
+        variant_id: null,
+        snapshot: jsonSnapshot,
+        saved_by: user?.email || "crm",
+        source: "admin",
+        created_at: savedAt,
+      });
+
+      if (versionError) {
+        throw versionError;
+      }
+
+      setOriginalCvData(doc);
+      setOriginalUpdatedAt(savedAt);
       setLastAdminUpdatedAt(savedAt);
       await runCompetenceSync();
     },
-    [cvId, runCompetenceSync, user?.email],
+    [
+      activeIsRootVariant,
+      activeVariant,
+      cvId,
+      getVariantUpdatedAt,
+      originalUpdatedAt,
+      runCompetenceSync,
+      saveVariantDocument,
+      user?.email,
+    ],
   );
 
   const loadVersions = useCallback(async () => {
     if (!cvId) return;
+    let query = supabase.from("cv_versions").select("*").eq("cv_id", cvId).order("created_at", { ascending: false });
 
-    const { data, error } = await supabase
-      .from("cv_versions")
-      .select("*")
-      .eq("cv_id", cvId)
-      .order("created_at", { ascending: false });
+    if (!activeIsRootVariant) {
+      if (!activeLoadedVariant?.id) {
+        toast.error("Denne varianten er ikke opprettet ennå.");
+        return;
+      }
+      query = query.eq("variant_id", activeLoadedVariant.id);
+    } else {
+      query = query.is("variant_id", null);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       toast.error("Kunne ikke laste versjonshistorikk");
@@ -303,31 +696,60 @@ export default function CvAdmin() {
 
     setVersions(data || []);
     setVersionsOpen(true);
-  }, [cvId]);
+  }, [activeIsRootVariant, activeLoadedVariant?.id, cvId]);
 
-  const restoreVersion = useCallback((snapshot: any) => {
-    setCvData(dbRowToCvDoc(snapshot));
+  const restoreVersion = useCallback((snapshot: Record<string, unknown> | null | undefined) => {
+    const restoredBaseDoc = snapshotToCvDocument(snapshot, getDefaultContact(activeVariant.languageCode, baseContact));
+    const restoredDoc = applyCvVariantInvariants(restoredBaseDoc, activeVariant);
+
+    if (!activeIsRootVariant) {
+      if (!activeLoadedVariant) return;
+
+      setVariantDocuments((current) => ({
+        ...current,
+        [activeVariantKey]: {
+          ...activeLoadedVariant,
+          cvData: restoredDoc,
+          updatedAt: typeof snapshot?.updated_at === "string" ? snapshot.updated_at : activeLoadedVariant.updatedAt,
+        },
+      }));
+    } else {
+      setOriginalCvData(restoredDoc);
+    }
+
     setVersionsOpen(false);
     toast.info("Versjon gjenopprettet — husk å kontrollere og la autosave lagre endringen.");
-  }, []);
+  }, [activeIsRootVariant, activeLoadedVariant, activeVariant, activeVariantKey, baseContact]);
 
   const handleDownloadPdf = useCallback(
     async (doc: CVDocument) => {
       if (cvId) {
         await supabase.from("cv_versions").insert({
           cv_id: cvId,
-          snapshot: cvDocToDbRow(doc) as any,
+          variant_id: activeIsRootVariant ? null : activeLoadedVariant?.id ?? null,
+          snapshot: cvDocumentToSnapshot(doc) as Json,
           saved_by: user?.email || "crm",
+          source: "admin",
         });
       }
 
-      await openCvPrintDialog(doc.hero.name ? `CV - ${doc.hero.name} - STACQ` : "CV - STACQ");
+      const titlePrefix = getVariantHeading(activeVariant);
+      await openCvPrintDialog(
+        doc.hero.name ? `${titlePrefix} - ${doc.hero.name} - STACQ` : `${titlePrefix} - STACQ`,
+        activeVariant.languageCode,
+      );
     },
-    [cvId, user?.email],
+    [activeIsRootVariant, activeLoadedVariant?.id, activeVariant, cvId, user?.email],
   );
 
   const handleCvUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!activeIsRootVariant) {
+        toast.info("Bytt til original CV for å importere og analysere PDF.");
+        e.target.value = "";
+        return;
+      }
+
       const file = e.target.files?.[0];
       if (!file) return;
       e.target.value = "";
@@ -364,8 +786,8 @@ export default function CvAdmin() {
           return;
         }
 
-        const currentCv = cvData || EMPTY_CV;
-        const preservedContact = currentCv.hero.contact || DEFAULT_CONTACT;
+        const currentCv = originalCvData || EMPTY_CV;
+        const preservedContact = currentCv.hero.contact || getDefaultContact("nb");
         const preservedPortraitUrl = currentCv.hero.portrait_url;
         const preservedPortraitPosition = currentCv.hero.portrait_position || "50% 50%";
 
@@ -392,14 +814,16 @@ export default function CvAdmin() {
           return;
         }
 
-        setCvData(newCvData);
+        setOriginalCvData(newCvData);
 
         if (cvId) {
           if (hasCvDocumentContent(currentCv)) {
             const backupSavedAt = new Date().toISOString();
+            const backupSnapshot = { ...cvDocumentToSnapshot(currentCv), updated_at: backupSavedAt } as Json;
             const { error: backupError } = await supabase.from("cv_versions").insert({
               cv_id: cvId,
-              snapshot: { ...cvDocToDbRow(currentCv), updated_at: backupSavedAt } as any,
+              variant_id: null,
+              snapshot: backupSnapshot,
               saved_by: user?.email || "crm",
               source: "admin",
               created_at: backupSavedAt,
@@ -412,10 +836,11 @@ export default function CvAdmin() {
           }
 
           const savedAt = new Date().toISOString();
-          const snapshot = { ...cvDocToDbRow(newCvData), updated_at: savedAt };
+          const snapshot = { ...cvDocumentToSnapshot(newCvData), updated_at: savedAt };
+          const jsonSnapshot = snapshot as Json;
           const { error: saveError } = await supabase
             .from("cv_documents")
-            .update(snapshot as any)
+            .update(jsonSnapshot)
             .eq("id", cvId);
 
           if (saveError) {
@@ -425,7 +850,8 @@ export default function CvAdmin() {
 
           const { error: versionError } = await supabase.from("cv_versions").insert({
             cv_id: cvId,
-            snapshot: snapshot as any,
+            variant_id: null,
+            snapshot: jsonSnapshot,
             saved_by: user?.email || "crm",
             source: "admin",
             created_at: savedAt,
@@ -436,6 +862,7 @@ export default function CvAdmin() {
             return;
           }
 
+          setOriginalUpdatedAt(savedAt);
           setLastAdminUpdatedAt(savedAt);
           await runCompetenceSync();
         }
@@ -455,7 +882,70 @@ export default function CvAdmin() {
         setCvUploadParsing(false);
       }
     },
-    [cvData, cvId, runCompetenceSync, user?.email],
+    [activeIsRootVariant, cvId, originalCvData, runCompetenceSync, user?.email],
+  );
+
+  const handleSelectVariant = useCallback(
+    async (variant: CvVariantIdentity) => {
+      try {
+        await activateVariant(variant);
+      } catch (error) {
+        const message = getErrorMessage(error);
+        toast.error(`Kunne ikke åpne ${getVariantDisplayLabel(variant).toLocaleLowerCase("nb-NO")}: ${message}`);
+      }
+    },
+    [activateVariant],
+  );
+
+  const handleRegenerateActiveVariant = useCallback(async () => {
+    if (activeIsRootVariant) return;
+
+    try {
+      await activateVariant(activeVariant, { force: true });
+    } catch (error) {
+      const message = getErrorMessage(error);
+      toast.error(`Kunne ikke oppdatere ${getVariantDisplayLabel(activeVariant).toLocaleLowerCase("nb-NO")}: ${message}`);
+    }
+  }, [activeIsRootVariant, activateVariant, activeVariant]);
+
+  const statusLines = useMemo(() => {
+    if (!activeIsRootVariant) {
+      const sourceVariant = getCvVariantSource(activeVariant);
+      const sourceLabel = sourceVariant ? getVariantDisplayLabel(sourceVariant) : "kilden";
+      const activeVariantIsStale = isVariantStale(activeVariant);
+
+      return [
+        `Sist oppdatert (${getVariantDisplayLabel(activeVariant)}): ${formatUpdatedAt(activeLoadedVariant?.updatedAt)}`,
+        `Basert på ${sourceLabel}: ${formatUpdatedAt(activeLoadedVariant?.sourceOriginalUpdatedAt)}`,
+        activeVariantIsStale ? `${sourceLabel} er oppdatert senere — regenerer ved behov.` : null,
+      ].filter(Boolean) as string[];
+    }
+
+    return [
+      `Sist oppdatert (admin): ${formatUpdatedAt(lastAdminUpdatedAt)}`,
+      `Sist oppdatert (ansatt): ${formatUpdatedAt(lastAnsattUpdatedAt)}`,
+      ...staleDerivedVariants.map((variant) => `${getVariantDisplayLabel(variant)} er eldre enn kilden.`),
+    ].filter(Boolean) as string[];
+  }, [
+    activeIsRootVariant,
+    activeLoadedVariant?.sourceOriginalUpdatedAt,
+    activeLoadedVariant?.updatedAt,
+    activeVariant,
+    isVariantStale,
+    lastAdminUpdatedAt,
+    lastAnsattUpdatedAt,
+    staleDerivedVariants,
+  ]);
+
+  const activeVariantBusyMode = variantBusy?.key === activeVariantKey ? variantBusy.mode : null;
+
+  const isVariantBusy = useCallback(
+    (variant: CvVariantIdentity, mode?: VariantBusyMode) => {
+      const busyKey = getCvVariantStorageKey(variant);
+      if (variantBusy?.key !== busyKey) return false;
+      return mode ? variantBusy.mode === mode : true;
+    },
+    [variantBusy],
   );
 
   if (loading) {
@@ -468,7 +958,7 @@ export default function CvAdmin() {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  if (!cvData) {
+  if (!activeCvData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <p className="text-muted-foreground">Laster CV...</p>
@@ -480,15 +970,17 @@ export default function CvAdmin() {
     <>
       <div className={fullscreen ? "fixed inset-0 z-50 bg-background flex flex-col" : "h-screen flex flex-col"}>
         <CvEditorPanel
-          cvData={cvData}
+          cvData={activeCvData}
           onSave={handleSave}
           savedBy={user.email || "crm"}
-          imageUrl={imageUrl}
+          imageUrl={activePreviewImageUrl}
+          anonymizedMode={activeVariant.isAnonymized}
+          languageCode={activeVariant.languageCode}
           onDownloadPdf={handleDownloadPdf}
           renderToolbar={({ saveStatus, onDownload }) => (
             <div className="sticky top-0 z-10 bg-background border-b border-border px-6 py-3 flex items-center justify-between shrink-0">
               <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-3 text-[0.8125rem]">
+                <div className="flex items-center gap-3 text-[0.8125rem] flex-wrap">
                   <button
                     onClick={() => navigate("/konsulenter/ansatte")}
                     className="text-muted-foreground hover:text-foreground flex items-center gap-1"
@@ -496,7 +988,61 @@ export default function CvAdmin() {
                     <ArrowLeft className="h-3.5 w-3.5" />
                     Tilbake
                   </button>
-                  <span className="text-foreground font-medium">{ansattName ? `${ansattName} — CV` : "CV"}</span>
+                  <span className="text-foreground font-medium">
+                    {ansattName ? `${ansattName} — ${getVariantHeading(activeVariant)}` : getVariantHeading(activeVariant)}
+                  </span>
+                  <div className="inline-flex items-center rounded-lg border border-border bg-card p-1">
+                    <Button
+                      size="sm"
+                      variant={activeVariant.languageCode === "nb" ? "secondary" : "ghost"}
+                      className="h-7 px-2.5 text-[0.75rem]"
+                      onClick={() => void handleSelectVariant({ languageCode: "nb", isAnonymized: activeVariant.isAnonymized })}
+                      disabled={Boolean(variantBusy)}
+                    >
+                      Norsk
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={activeVariant.languageCode === "en" ? "secondary" : "ghost"}
+                      className="h-7 px-2.5 text-[0.75rem]"
+                      onClick={() => void handleSelectVariant({ languageCode: "en", isAnonymized: activeVariant.isAnonymized })}
+                      disabled={Boolean(variantBusy)}
+                    >
+                      {isVariantBusy({ languageCode: "en", isAnonymized: activeVariant.isAnonymized }) ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        "English"
+                      )}
+                    </Button>
+                  </div>
+                  <div className="inline-flex items-center rounded-lg border border-border bg-card p-1">
+                    <Button
+                      size="sm"
+                      variant={!activeVariant.isAnonymized ? "secondary" : "ghost"}
+                      className="h-7 px-2.5 text-[0.75rem]"
+                      onClick={() =>
+                        void handleSelectVariant({ languageCode: activeVariant.languageCode, isAnonymized: false })
+                      }
+                      disabled={Boolean(variantBusy)}
+                    >
+                      Original
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={activeVariant.isAnonymized ? "secondary" : "ghost"}
+                      className="h-7 px-2.5 text-[0.75rem]"
+                      onClick={() =>
+                        void handleSelectVariant({ languageCode: activeVariant.languageCode, isAnonymized: true })
+                      }
+                      disabled={Boolean(variantBusy)}
+                    >
+                      {isVariantBusy({ languageCode: activeVariant.languageCode, isAnonymized: true }) ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        "Anonymisert"
+                      )}
+                    </Button>
+                  </div>
                   {saveStatus === "saving" && (
                     <span className="flex items-center gap-1 text-muted-foreground">
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -511,8 +1057,9 @@ export default function CvAdmin() {
                   )}
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.6875rem] text-muted-foreground">
-                  <span>Sist oppdatert (admin): {formatUpdatedAt(lastAdminUpdatedAt)}</span>
-                  <span>Sist oppdatert (ansatt): {formatUpdatedAt(lastAnsattUpdatedAt)}</span>
+                  {statusLines.map((line) => (
+                    <span key={line}>{line}</span>
+                  ))}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -535,6 +1082,22 @@ export default function CvAdmin() {
                   <History className="h-3.5 w-3.5 mr-1" />
                   Versjonshistorikk
                 </Button>
+                {!activeIsRootVariant && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="border border-border"
+                    onClick={() => void handleRegenerateActiveVariant()}
+                    disabled={activeVariantBusyMode === "regenerating"}
+                  >
+                    {activeVariantBusyMode === "regenerating" ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                    ) : (
+                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                    )}
+                    {getVariantRegenerateButtonLabel(activeVariant)}
+                  </Button>
+                )}
                 <button
                   onClick={handleShareLink}
                   className="inline-flex items-center gap-1.5 h-9 px-3 text-[0.8125rem] font-medium rounded-lg border border-border text-foreground hover:bg-muted transition-colors"
@@ -554,13 +1117,18 @@ export default function CvAdmin() {
                         size="sm"
                         variant="ghost"
                         className="border border-border"
+                        disabled={!activeIsRootVariant}
                         onClick={() => cvUploadRef.current?.click()}
                       >
                         <Sparkles className="h-3.5 w-3.5 mr-1" />
                         Importer CV
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Last opp eksisterende CV — teksten importeres inn i editoren</TooltipContent>
+                    <TooltipContent>
+                      {!activeIsRootVariant
+                        ? "Importer CV på norsk original først, så regenereres anonymisert og engelsk fra den."
+                        : "Last opp eksisterende CV — teksten importeres inn i editoren"}
+                    </TooltipContent>
                   </Tooltip>
                 )}
                 <input ref={cvUploadRef} type="file" accept=".pdf" className="hidden" onChange={handleCvUpload} />

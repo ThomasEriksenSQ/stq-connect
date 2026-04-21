@@ -301,6 +301,7 @@ Deno.serve(async (req) => {
         saved_by: savedBy,
         snapshot: normalizedSnapshot,
         source: "ansatt",
+        variant_id: null,
       });
 
       if (versionError) throw versionError;
@@ -334,6 +335,7 @@ Deno.serve(async (req) => {
         .from("cv_versions")
         .select("*")
         .eq("cv_id", cvId)
+        .is("variant_id", null)
         .order("created_at", { ascending: false });
 
       if (versionsError) throw versionsError;

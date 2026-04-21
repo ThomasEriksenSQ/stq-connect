@@ -9,6 +9,9 @@ verify_jwt = false
 [functions.parse-cv-editor]
 verify_jwt = false
 
+[functions.translate-cv-variant]
+verify_jwt = false
+
 [functions.salesforce-import]
 verify_jwt = false
 

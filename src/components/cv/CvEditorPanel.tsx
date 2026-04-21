@@ -5,7 +5,6 @@ import {
   DEFAULT_ADDITIONAL_SECTION_TITLE,
   openCvPrintDialog,
   formatProjectPeriod,
-  PROJECT_MONTH_OPTIONS,
   type CVDocument,
   type AdditionalSection,
   type ProjectEntry,
@@ -13,6 +12,7 @@ import {
   type TimelineEntry,
   type SidebarSection,
 } from "./CvRenderer";
+import { getProjectMonthOptions, type CvLanguageCode } from "@/lib/cvLanguage";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Plus, Trash2, GripVertical, Download, Check, Loader2, Upload, Move } from "lucide-react";
 import { toast } from "sonner";
-import { DEFAULT_PROJECTS_SECTION_TITLE } from "@/lib/cvProjectsTitle";
+import { getDefaultProjectsSectionTitle } from "@/lib/cvProjectsTitle";
 import { getInitials } from "@/lib/utils";
 import {
   DndContext,
@@ -47,6 +47,8 @@ interface CvEditorPanelProps {
   onSave: (data: CVDocument, savedBy: string) => Promise<void>;
   savedBy: string;
   imageUrl?: string;
+  anonymizedMode?: boolean;
+  languageCode?: CvLanguageCode;
   headerLabel?: string;
   toolbarStart?: ReactNode;
   toolbarEnd?: ReactNode;
@@ -110,8 +112,8 @@ function normalizeProjectDateValue(value: string) {
   return Number.isInteger(parsed) ? parsed : null;
 }
 
-function syncProjectPeriod(project: ProjectEntry): ProjectEntry {
-  const formattedPeriod = formatProjectPeriod({ ...project, period: "" });
+function syncProjectPeriod(project: ProjectEntry, languageCode: CvLanguageCode = "nb"): ProjectEntry {
+  const formattedPeriod = formatProjectPeriod({ ...project, period: "" }, languageCode);
   return { ...project, period: formattedPeriod || project.period || "" };
 }
 
@@ -216,6 +218,8 @@ export function CvEditorPanel({
   onSave,
   savedBy,
   imageUrl,
+  anonymizedMode = false,
+  languageCode = "nb",
   headerLabel,
   toolbarStart,
   toolbarEnd,
@@ -235,6 +239,11 @@ export function CvEditorPanel({
   const [isResizingEditor, setIsResizingEditor] = useState(false);
   const [expandedAdditionalSection, setExpandedAdditionalSection] = useState<string>("");
   const resizeBoundsRef = useRef({ right: 0, width: 0 });
+  const projectMonthOptions = useMemo(() => getProjectMonthOptions(languageCode), [languageCode]);
+  const defaultProjectsSectionTitle = useMemo(
+    () => getDefaultProjectsSectionTitle(languageCode),
+    [languageCode],
+  );
 
   const EDITOR_MIN_WIDTH = 440;
   const EDITOR_MAX_WIDTH = 860;
@@ -368,11 +377,12 @@ export function CvEditorPanel({
     (projectIndex: number, updater: (project: ProjectEntry) => ProjectEntry) => {
       update((prev) => {
         const projects = [...prev.projects];
-        projects[projectIndex] = syncProjectPeriod(updater(projects[projectIndex]));
+        const nextProject = updater(projects[projectIndex]);
+        projects[projectIndex] = syncProjectPeriod(nextProject, languageCode);
         return { ...prev, projects };
       });
     },
-    [update],
+    [languageCode, update],
   );
 
   const updateSidebarSectionAt = useCallback(
@@ -498,8 +508,9 @@ export function CvEditorPanel({
       const { data: urlData } = supabase.storage.from("ansatte-bilder").getPublicUrl(path);
       update((p) => ({ ...p, hero: { ...p.hero, portrait_url: urlData.publicUrl } }));
       toast.success("Bilde lastet opp");
-    } catch (err: any) {
-      toast.error("Kunne ikke laste opp bilde: " + (err.message || "Ukjent feil"));
+    } catch (err: unknown) {
+      const message = err instanceof Error && err.message ? err.message : "Ukjent feil";
+      toast.error("Kunne ikke laste opp bilde: " + message);
     } finally {
       setPortraitUploading(false);
       if (portraitInputRef.current) portraitInputRef.current.value = "";
@@ -512,7 +523,7 @@ export function CvEditorPanel({
       return;
     }
 
-    await openCvPrintDialog(doc.hero.name ? `CV - ${doc.hero.name} - STACQ` : "CV - STACQ");
+    await openCvPrintDialog(doc.hero.name ? `CV - ${doc.hero.name} - STACQ` : "CV - STACQ", languageCode);
   };
 
   const handleResizeStart = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -559,7 +570,12 @@ export function CvEditorPanel({
       <div ref={splitLayoutRef} className="flex flex-1 min-h-0">
         {/* LEFT PANEL — Live Preview */}
         <div ref={previewContainerRef} className="flex-1 min-w-0 overflow-y-auto bg-[#d7d7d7] p-4">
-          <CvRendererPreview doc={doc} imageUrl={doc.hero.portrait_url || imageUrl} scale={previewScale} />
+      <CvRendererPreview
+        doc={doc}
+        imageUrl={doc.hero.portrait_url || imageUrl}
+        scale={previewScale}
+        languageCode={languageCode}
+      />
         </div>
 
         <div
@@ -585,6 +601,12 @@ export function CvEditorPanel({
                   Profil
                 </AccordionTrigger>
                 <AccordionContent className="space-y-3 pt-2">
+                  {anonymizedMode && (
+                    <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-[0.75rem] text-muted-foreground">
+                      Denne varianten er anonymisert. Hold navn og bilde anonymt, og bruk regenerering fra admin hvis
+                      du vil starte på nytt fra originalen.
+                    </div>
+                  )}
                   <div>
                     <label className={LABEL}>Navn</label>
                     <Input
@@ -598,7 +620,7 @@ export function CvEditorPanel({
                     <div className="flex flex-col gap-2 mt-1">
                       <button
                         onClick={() => portraitInputRef.current?.click()}
-                        disabled={portraitUploading}
+                        disabled={portraitUploading || anonymizedMode}
                         className="inline-flex items-center gap-1.5 h-8 px-3 text-[0.75rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50 self-start"
                       >
                         {portraitUploading ? (
@@ -606,7 +628,7 @@ export function CvEditorPanel({
                         ) : (
                           <Upload className="h-3.5 w-3.5" />
                         )}
-                        {portraitUploading ? "Laster opp..." : "Last opp bilde"}
+                        {portraitUploading ? "Laster opp..." : anonymizedMode ? "Bilde er låst i anonymisert variant" : "Last opp bilde"}
                       </button>
                       <input
                         ref={portraitInputRef}
@@ -759,12 +781,12 @@ export function CvEditorPanel({
                 <AccordionContent className="space-y-2 pt-2">
                   <div>
                     <label className={LABEL}>Seksjonstittel</label>
-                    <Input
-                      value={doc.projectsTitle}
-                      placeholder={DEFAULT_PROJECTS_SECTION_TITLE}
-                      onChange={(e) => update((p) => ({ ...p, projectsTitle: e.target.value }))}
-                      className="mt-1 text-[0.8125rem] font-medium"
-                    />
+                      <Input
+                        value={doc.projectsTitle}
+                        placeholder={defaultProjectsSectionTitle}
+                        onChange={(e) => update((p) => ({ ...p, projectsTitle: e.target.value }))}
+                        className="mt-1 text-[0.8125rem] font-medium"
+                      />
                   </div>
                   <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleProjectDragEnd}>
                     <SortableContext
@@ -772,7 +794,7 @@ export function CvEditorPanel({
                       strategy={verticalListSortingStrategy}
                     >
                       {doc.projects.map((project, i) => {
-                        const projectPeriodLabel = formatProjectPeriod(project);
+                        const projectPeriodLabel = formatProjectPeriod(project, languageCode);
 
                         return (
                           <SortableItem key={`project-${i}`} id={`project-${i}`}>
@@ -810,7 +832,7 @@ export function CvEditorPanel({
                                           </SelectTrigger>
                                           <SelectContent>
                                             <SelectItem value={CLEAR_SELECT}>Ingen</SelectItem>
-                                            {PROJECT_MONTH_OPTIONS.map((month) => (
+                                            {projectMonthOptions.map((month) => (
                                               <SelectItem key={month.value} value={String(month.value)}>
                                                 {month.label}
                                               </SelectItem>
@@ -865,7 +887,7 @@ export function CvEditorPanel({
                                           </SelectTrigger>
                                           <SelectContent>
                                             <SelectItem value={CLEAR_SELECT}>Ingen</SelectItem>
-                                            {PROJECT_MONTH_OPTIONS.map((month) => (
+                                            {projectMonthOptions.map((month) => (
                                               <SelectItem key={month.value} value={String(month.value)}>
                                                 {month.label}
                                               </SelectItem>
