@@ -21,7 +21,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
 import { useCrmNavigation } from "@/lib/crmNavigation";
-import { buildEmployeeGeoText } from "@/lib/geographicMatch";
+import { buildEmployeeGeoText, deriveEmployeeAddressFields } from "@/lib/geographicMatch";
 import {
   DesignLabPrimaryAction,
   DesignLabSecondaryAction,
@@ -260,8 +260,9 @@ const AnsattDetail = ({
     : ansatt.start_dato && new Date(ansatt.start_dato) > today ? "Kommende" : "Aktiv";
 
   const portrait = cvDoc?.portrait_url || ansatt.bilde_url;
-  const publicGeoText = buildEmployeeGeoText((ansatt as any).postnummer, (ansatt as any).poststed, ansatt.geografi);
-  const addressText = [((ansatt as any).adresse || "").trim(), publicGeoText].filter(Boolean).join(", ") || "–";
+  const addressFields = deriveEmployeeAddressFields(ansatt as any);
+  const publicGeoText = buildEmployeeGeoText(addressFields.postalCode, addressFields.city, ansatt.geografi);
+  const addressText = [addressFields.address, publicGeoText].filter(Boolean).join(", ") || "–";
   const durationMonths = ansatt.start_dato
     ? differenceInMonths(ansatt.slutt_dato ? new Date(ansatt.slutt_dato) : today, new Date(ansatt.start_dato))
     : null;

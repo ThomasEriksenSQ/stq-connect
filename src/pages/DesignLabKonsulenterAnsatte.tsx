@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatMonths, getInitials } from "@/lib/utils";
-import { buildEmployeeGeoText } from "@/lib/geographicMatch";
+import { buildEmployeeGeoText, deriveEmployeeAddressFields } from "@/lib/geographicMatch";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
@@ -260,6 +260,7 @@ export default function DesignLabKonsulenterAnsatte() {
     const status = getStatus(row);
     const selected = selectedId === row.id;
     const portrait = cvPortraitMap.get(row.id) || row.bilde_url || null;
+    const addressFields = deriveEmployeeAddressFields(row);
 
     return (
       <button
@@ -297,7 +298,7 @@ export default function DesignLabKonsulenterAnsatte() {
         </div>
 
         <div className="truncate" style={{ fontSize: 13, color: C.textMuted }}>
-          {buildEmployeeGeoText(row.postnummer, row.poststed, row.geografi) || "–"}
+          {buildEmployeeGeoText(addressFields.postalCode, addressFields.city, row.geografi) || "–"}
         </div>
 
         <div style={{ fontSize: 13, color: C.textMuted }}>

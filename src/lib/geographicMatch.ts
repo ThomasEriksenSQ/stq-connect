@@ -9,6 +9,13 @@ export type GeoMatchInput = {
   locations?: Array<string | null | undefined> | null;
 };
 
+export type EmployeeAddressFields = {
+  address: string;
+  postalCode: string;
+  city: string;
+  geography: string;
+};
+
 export type GeoCandidate = {
   raw: string;
   postalCode: string | null;
@@ -524,4 +531,48 @@ export function rankGeoMatch(consultantInput: GeoMatchInput, companyInputs: GeoM
 export function buildEmployeeGeoText(postalCode?: string | null, city?: string | null, fallback?: string | null): string | null {
   const structured = [postalCode, city].map((value) => String(value || "").trim()).filter(Boolean).join(" ");
   return structured || String(fallback || "").trim() || null;
+}
+
+export function buildEmployeeAddressFallbackText(
+  address?: string | null,
+  postalCode?: string | null,
+  city?: string | null,
+  fallback?: string | null,
+): string | null {
+  const postalPlace = buildEmployeeGeoText(postalCode, city, null);
+  const structured = [address, postalPlace].map((value) => String(value || "").trim()).filter(Boolean).join(", ");
+  return structured || String(fallback || "").trim() || null;
+}
+
+export function deriveEmployeeAddressFields(input: {
+  adresse?: string | null;
+  address?: string | null;
+  postnummer?: string | null;
+  postalCode?: string | null;
+  poststed?: string | null;
+  city?: string | null;
+  geografi?: string | null;
+  geography?: string | null;
+} | null | undefined): EmployeeAddressFields {
+  const geography = String(input?.geografi || input?.geography || "").trim();
+  const explicitAddress = String(input?.adresse || input?.address || "").trim();
+  const explicitPostalCode = findPostalCode(input?.postnummer || input?.postalCode) || "";
+  const explicitCity = String(input?.poststed || input?.city || "").trim();
+
+  const postalCode = findPostalCode(geography) || "";
+  const bestPostalCode = explicitPostalCode || postalCode;
+  const city = findCityAfterPostal(geography, bestPostalCode) || "";
+  const address = postalCode
+    ? geography
+        .slice(0, geography.indexOf(postalCode))
+        .replace(/[,;\s-]+$/g, "")
+        .trim()
+    : "";
+
+  return {
+    address: explicitAddress || address,
+    postalCode: bestPostalCode,
+    city: explicitCity || city,
+    geography,
+  };
 }

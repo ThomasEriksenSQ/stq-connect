@@ -13,7 +13,11 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { normalizeTechnologyTags } from "@/lib/technologyTags";
 import { getConsultantMatchScoreColor } from "@/lib/consultantMatches";
-import { buildEmployeeGeoText } from "@/lib/geographicMatch";
+import {
+  buildEmployeeAddressFallbackText,
+  buildEmployeeGeoText,
+  deriveEmployeeAddressFields,
+} from "@/lib/geographicMatch";
 
 const SUPABASE_URL = "https://kbvzpcebfopqqrvmbiap.supabase.co";
 
@@ -123,14 +127,15 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
         fodselsdato: "",
       });
     } else if (ansatt) {
+      const addressFields = deriveEmployeeAddressFields(ansatt);
       setEditing(false);
       setForm({
         navn: ansatt.navn || "",
         epost: ansatt.epost || "",
         tlf: ansatt.tlf || "",
-        adresse: ansatt.adresse || "",
-        postnummer: ansatt.postnummer || "",
-        poststed: ansatt.poststed || "",
+        adresse: addressFields.address,
+        postnummer: addressFields.postalCode,
+        poststed: addressFields.city,
         geografi: ansatt.geografi || "",
         status: ansatt.status || "AKTIV/SIGNERT",
         start_dato: ansatt.start_dato || "",
@@ -270,6 +275,12 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
     setSaving(true);
     const normalizedPostnummer = form.postnummer.replace(/\D/g, "").slice(0, 4);
     const geografiFallback = buildEmployeeGeoText(normalizedPostnummer, form.poststed, form.geografi);
+    const legacyGeografiFallback = buildEmployeeAddressFallbackText(
+      form.adresse,
+      normalizedPostnummer,
+      form.poststed,
+      form.geografi,
+    );
     const payload: any = {
       navn: form.navn.trim(),
       epost: form.epost.trim() || null,
@@ -290,6 +301,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
     };
 
     let error;
+    let usedLegacyAddressStorage = false;
     if (isCreate) {
       ({ error } = await supabase.from("stacq_ansatte").insert(payload));
     } else {
@@ -301,6 +313,8 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
       delete legacyPayload.adresse;
       delete legacyPayload.postnummer;
       delete legacyPayload.poststed;
+      legacyPayload.geografi = legacyGeografiFallback;
+      usedLegacyAddressStorage = true;
       if (isCreate) {
         ({ error } = await supabase.from("stacq_ansatte").insert(legacyPayload));
       } else {
@@ -314,6 +328,22 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
       return;
     }
     toast.success(isCreate ? "Ansatt lagt til" : "Profil oppdatert");
+    const cachePatch = usedLegacyAddressStorage
+      ? {
+          ...payload,
+          geografi: legacyGeografiFallback,
+        }
+      : payload;
+    if (!isCreate && ansatt?.id) {
+      queryClient.setQueryData(["ansatt-detail", ansatt.id], (old: any) =>
+        old ? { ...old, ...cachePatch } : old,
+      );
+      queryClient.setQueryData(["stacq-ansatte"], (old: any) =>
+        Array.isArray(old)
+          ? old.map((row) => (row.id === ansatt.id ? { ...row, ...cachePatch } : row))
+          : old,
+      );
+    }
     queryClient.invalidateQueries({ queryKey: ["stacq-ansatte"] });
     queryClient.invalidateQueries({ queryKey: ["dl-available-consultants-v9"] });
     queryClient.invalidateQueries({ queryKey: ["ansatt-detail", ansatt?.id] });
@@ -393,7 +423,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
             navn: ansatt.navn,
             teknologier: ansatt.kompetanse || [],
             erfaring_aar: ansatt.erfaring_aar || null,
-            geografi: buildEmployeeGeoText(ansatt.postnummer, ansatt.poststed, ansatt.geografi),
+            geografi: buildEmployeeGeoText(addressFields.postalCode, addressFields.city, ansatt.geografi),
             tilgjengelig_fra: ansatt.tilgjengelig_fra || null,
           },
           kontakter: berikede,
@@ -412,7 +442,8 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
   };
 
   const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
-  const publicGeoText = buildEmployeeGeoText(ansatt?.postnummer, ansatt?.poststed, ansatt?.geografi);
+  const addressFields = deriveEmployeeAddressFields(ansatt);
+  const publicGeoText = buildEmployeeGeoText(addressFields.postalCode, addressFields.city, ansatt?.geografi);
 
   return (
     <Sheet
@@ -780,7 +811,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                       navn: ansatt?.navn || "",
                       teknologier: ansatt?.kompetanse || [],
                       cv_tekst: ansatt?.bio || null,
-                      geografi: buildEmployeeGeoText(ansatt?.postnummer, ansatt?.poststed, ansatt?.geografi),
+                      geografi: buildEmployeeGeoText(addressFields.postalCode, addressFields.city, ansatt?.geografi),
                       ansatt_id: ansatt?.id,
                       forny_dato: ansatt?.forny_dato || null,
                       erfaring_aar: ansatt?.erfaring_aar || null,

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildEmployeeAddressFallbackText,
   buildEmployeeGeoText,
+  deriveEmployeeAddressFields,
   getGeoCandidates,
   normalizeGeoText,
   rankGeoMatch,
@@ -65,5 +67,21 @@ describe("geographicMatch", () => {
   it("builds a safe geography fallback for existing consumers", () => {
     expect(buildEmployeeGeoText("7030", "Trondheim", "")).toBe("7030 Trondheim");
     expect(buildEmployeeGeoText("", "", "Oslo")).toBe("Oslo");
+  });
+
+  it("stores and restores a full employee address when structured columns are unavailable", () => {
+    const fallback = buildEmployeeAddressFallbackText("Hegsbroveien 8", "3413", "Lier", "");
+    expect(fallback).toBe("Hegsbroveien 8, 3413 Lier");
+
+    expect(deriveEmployeeAddressFields({ geografi: fallback })).toMatchObject({
+      address: "Hegsbroveien 8",
+      postalCode: "3413",
+      city: "Lier",
+    });
+
+    expect(deriveEmployeeAddressFields({ postnummer: "3413", geografi: "3413 Lier" })).toMatchObject({
+      postalCode: "3413",
+      city: "Lier",
+    });
   });
 });
