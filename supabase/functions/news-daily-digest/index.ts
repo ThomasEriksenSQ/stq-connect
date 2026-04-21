@@ -4,7 +4,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "../_shared/cors.ts";
 import { hostFromUrl, isTrustedSource, sourceForUrl, tierForUrl } from "./sources.ts";
-import { aggregateHeatTiers, type Tier } from "./heat.ts";
+import { getHeatResult, getTaskStatus, type Tier } from "../_shared/heatScore.ts";
+import {
+  rankCompaniesFromContacts,
+  type CompanyMeta,
+  type RankInputContact,
+} from "../_shared/newsSourceCompanies.ts";
 import {
   baseWeightFor,
   dedupAndMerge,
