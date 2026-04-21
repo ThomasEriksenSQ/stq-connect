@@ -417,8 +417,9 @@ export default function DesignLabNews() {
   return (
     <DesignLabPageShell
       activePath="/design-lab/news"
-      title="STACQ Daily"
+      title="STACQ Nyheter"
       maxWidth={1100}
+      contentClassName="dl-news-content"
     >
       {/* Masthead */}
       <header style={{ marginBottom: 24 }}>
@@ -431,7 +432,7 @@ export default function DesignLabNews() {
             letterSpacing: -0.2,
           }}
         >
-          STACQ Daily
+          STACQ Nyheter
         </h1>
         <p
           style={{
