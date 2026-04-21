@@ -386,23 +386,35 @@ export default function DesignLabCompanies() {
     mutationFn: async () => {
       const finalLocations = createLocations.map((location) => location.trim()).filter(Boolean);
       const cityValue = finalLocations.length > 0 ? finalLocations.join(", ") : createForm.city || null;
-      const { error } = await supabase.from("companies").insert({
-        name: createForm.name,
-        org_number: createForm.org_number || null,
-        city: cityValue,
-        website: createForm.website || null,
-        linkedin: createForm.linkedin || null,
-        created_by: user?.id,
-        status: createForm.status,
-        owner_id: createForm.owner_id || null,
-      });
+      const { data, error } = await supabase
+        .from("companies")
+        .insert({
+          name: createForm.name,
+          org_number: createForm.org_number || null,
+          city: cityValue,
+          website: createForm.website || null,
+          linkedin: createForm.linkedin || null,
+          created_by: user?.id,
+          status: createForm.status,
+          owner_id: createForm.owner_id || null,
+        })
+        .select("id")
+        .single();
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (createdCompany) => {
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
+      if (createdCompany?.id) {
+        setSelectedId(createdCompany.id);
+        const nextParams = new URLSearchParams(searchParams);
+        nextParams.delete("ny");
+        nextParams.set("company", createdCompany.id);
+        setSearchParams(nextParams, { replace: true });
+      }
       setCreateOpen(false);
       resetCreateForm();
-      if (prefillCompanyName) {
+      if (prefillCompanyName && !createdCompany?.id) {
         const nextParams = new URLSearchParams(searchParams);
         nextParams.delete("ny");
         setSearchParams(nextParams, { replace: true });

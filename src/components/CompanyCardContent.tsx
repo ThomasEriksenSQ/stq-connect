@@ -388,6 +388,46 @@ export function CompanyCardContent({
     });
   };
 
+  const openCreatedContact = (contactId: string) => {
+    setActiveContactId(contactId);
+    if (onOpenContact) {
+      onOpenContact(contactId);
+      return;
+    }
+    navigate(getContactPath(contactId));
+  };
+
+  const createContactFromForm = async () => {
+    const { data, error } = await supabase
+      .from("contacts")
+      .insert({
+        first_name: contactForm.first_name,
+        last_name: contactForm.last_name,
+        email: contactForm.email || null,
+        phone: contactForm.phone || null,
+        title: contactForm.title || null,
+        linkedin: contactForm.linkedin || null,
+        locations: contactForm.location ? [contactForm.location] : [],
+        cv_email: sanitizeContactCvEmail(contactForm.email, contactForm.cv_email),
+        call_list: contactForm.call_list,
+        company_id: companyId,
+        created_by: user?.id,
+        owner_id: user?.id,
+      })
+      .select("id")
+      .single();
+
+    if (error) throw error;
+
+    queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.contacts(companyId) });
+    queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() });
+    setNewContactOpen(false);
+    resetNewContactForm();
+    toast.success("Kontakt opprettet");
+
+    if (data?.id) openCreatedContact(data.id);
+  };
+
   const { data: company, isLoading } = useQuery({
     queryKey: crmQueryKeys.companies.detail(companyId),
     queryFn: async () => {
@@ -1222,29 +1262,11 @@ export function CompanyCardContent({
                   className="space-y-5"
                   onSubmit={async (e) => {
                     e.preventDefault();
-                    const { error } = await supabase.from("contacts").insert({
-                      first_name: contactForm.first_name,
-                      last_name: contactForm.last_name,
-                      email: contactForm.email || null,
-                      phone: contactForm.phone || null,
-                      title: contactForm.title || null,
-                      linkedin: contactForm.linkedin || null,
-                      locations: contactForm.location ? [contactForm.location] : [],
-                      cv_email: sanitizeContactCvEmail(contactForm.email, contactForm.cv_email),
-                      call_list: contactForm.call_list,
-                      company_id: companyId,
-                      created_by: user?.id,
-                      owner_id: user?.id,
-                    });
-                    if (error) {
+                    try {
+                      await createContactFromForm();
+                    } catch {
                       toast.error("Kunne ikke opprette kontakt");
-                      return;
                     }
-                    queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.contacts(companyId) });
-                    queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() });
-                    setNewContactOpen(false);
-                    resetNewContactForm();
-                    toast.success("Kontakt opprettet");
                   }}
                 >
                   <div>
@@ -1356,29 +1378,11 @@ export function CompanyCardContent({
                 className="flex flex-1 flex-col min-h-0"
                 onSubmit={async (e) => {
                   e.preventDefault();
-                  const { error } = await supabase.from("contacts").insert({
-                    first_name: contactForm.first_name,
-                    last_name: contactForm.last_name,
-                    email: contactForm.email || null,
-                    phone: contactForm.phone || null,
-                    title: contactForm.title || null,
-                    linkedin: contactForm.linkedin || null,
-                    locations: contactForm.location ? [contactForm.location] : [],
-                    cv_email: sanitizeContactCvEmail(contactForm.email, contactForm.cv_email),
-                    call_list: contactForm.call_list,
-                    company_id: companyId,
-                    created_by: user?.id,
-                    owner_id: user?.id,
-                  });
-                  if (error) {
+                  try {
+                    await createContactFromForm();
+                  } catch {
                     toast.error("Kunne ikke opprette kontakt");
-                    return;
                   }
-                  queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.contacts(companyId) });
-                  queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() });
-                  setNewContactOpen(false);
-                  resetNewContactForm();
-                  toast.success("Kontakt opprettet");
                 }}
               >
                 <DesignLabFormSheetBody>
