@@ -174,18 +174,25 @@ function LeadStory({ item }: { item: NewsLead }) {
             {item.title}
           </a>
         </h3>
-        <p
-          style={{
-            fontSize: 13,
-            fontWeight: 400,
-            lineHeight: 1.5,
-            color: C.textMuted,
-            margin: "10px 0 0",
-            ...clampStyle(3),
-          }}
+        <a
+          href={trackedHref(item.url)}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ textDecoration: "none", color: "inherit", display: "block" }}
         >
-          {item.ingress}
-        </p>
+          <p
+            style={{
+              fontSize: 13,
+              fontWeight: 400,
+              lineHeight: 1.5,
+              color: C.textMuted,
+              margin: "10px 0 0",
+              ...clampStyle(3),
+            }}
+          >
+            {item.ingress}
+          </p>
+        </a>
         <MetaRow item={item} />
       </div>
     </article>
@@ -228,18 +235,25 @@ function FeatureCard({ item }: { item: NewsFeature }) {
             {item.title}
           </a>
         </h4>
-        <p
-          style={{
-            fontSize: 13,
-            fontWeight: 400,
-            lineHeight: 1.5,
-            color: C.textMuted,
-            margin: "8px 0 0",
-            ...clampStyle(3),
-          }}
+        <a
+          href={trackedHref(item.url)}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ textDecoration: "none", color: "inherit", display: "block" }}
         >
-          {item.ingress}
-        </p>
+          <p
+            style={{
+              fontSize: 13,
+              fontWeight: 400,
+              lineHeight: 1.5,
+              color: C.textMuted,
+              margin: "8px 0 0",
+              ...clampStyle(3),
+            }}
+          >
+            {item.ingress}
+          </p>
+        </a>
         <MetaRow item={item} withReadMore={false} />
       </div>
     </article>
