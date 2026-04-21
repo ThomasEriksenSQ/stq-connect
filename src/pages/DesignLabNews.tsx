@@ -7,6 +7,7 @@ import {
   DesignLabMediaFrame,
   DesignLabSectionHeader,
 } from "@/components/designlab/system";
+import { SourceListTab } from "@/components/designlab/news/SourceListTab";
 import { C } from "@/components/designlab/theme";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -378,9 +379,12 @@ async function fetchNewsDaily(): Promise<NewsDailyRow | null> {
 
 /* ────────────────────── SIDE ────────────────────── */
 
+type NewsTab = "news" | "sources";
+
 export default function DesignLabNews() {
   const todayLabel = formatTodayLabel();
   const [triggered, setTriggered] = useState(false);
+  const [tab, setTab] = useState<NewsTab>("news");
 
   const query = useQuery({
     queryKey: ["news-daily", new Date().toISOString().slice(0, 10)],
