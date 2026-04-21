@@ -1,6 +1,7 @@
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { differenceInDays } from "date-fns";
+import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { C } from "@/components/designlab/theme";
@@ -20,6 +21,17 @@ import {
   type RankInputContact,
   type RankedSourceCompany,
 } from "@/lib/newsSourceCompanies";
+
+const SOURCE_QUERY_KEY = ["news-source-companies"] as const;
+
+const SOURCE_STATUS_OPTIONS = [
+  { value: "prospect", label: "Potensiell kunde" },
+  { value: "customer", label: "Kunde" },
+  { value: "partner", label: "Partner" },
+  { value: "churned", label: "Ikke relevant selskap" },
+] as const;
+
+type SourceStatus = (typeof SOURCE_STATUS_OPTIONS)[number]["value"];
 
 interface ContactsFullData {
   contacts: Array<{
@@ -227,10 +239,48 @@ function buildRanked(data: ContactsFullData): RankedSourceCompany[] {
 }
 
 export function SourceListTab() {
+  const queryClient = useQueryClient();
   const query = useQuery({
-    queryKey: ["news-source-companies"],
+    queryKey: SOURCE_QUERY_KEY,
     queryFn: fetchSourceData,
     staleTime: 5 * 60_000,
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: async ({ companyId, status }: { companyId: string; status: SourceStatus }) => {
+      const { error } = await supabase.from("companies").update({ status }).eq("id", companyId);
+      if (error) throw error;
+    },
+    onMutate: async ({ companyId, status }) => {
+      await queryClient.cancelQueries({ queryKey: SOURCE_QUERY_KEY });
+      const previous = queryClient.getQueryData<ContactsFullData>(SOURCE_QUERY_KEY);
+
+      queryClient.setQueryData<ContactsFullData>(SOURCE_QUERY_KEY, (old) =>
+        old
+          ? {
+              ...old,
+              contacts: old.contacts.map((contact) =>
+                contact.companies?.id === companyId
+                  ? { ...contact, companies: { ...contact.companies, status } }
+                  : contact,
+              ),
+            }
+          : old,
+      );
+
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) queryClient.setQueryData(SOURCE_QUERY_KEY, context.previous);
+      toast.error("Kunne ikke oppdatere selskapsstatus");
+    },
+    onSuccess: () => {
+      toast.success("Selskapsstatus oppdatert");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: SOURCE_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
+    },
   });
 
   const ranked = useMemo<RankedSourceCompany[]>(() => {
@@ -276,7 +326,7 @@ export function SourceListTab() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "40px minmax(200px, 1.4fr) 130px minmax(180px, 1fr) 80px",
+          gridTemplateColumns: "40px minmax(200px, 1.4fr) 150px 130px minmax(180px, 1fr) 80px",
           gap: 16,
           padding: "10px 0",
           borderBottom: `1px solid ${C.border}`,
@@ -287,6 +337,7 @@ export function SourceListTab() {
       >
         <span style={{ textAlign: "right" }}>#</span>
         <span>Selskap</span>
+        <span>Status</span>
         <span>Org.nr</span>
         <span>Nettsted</span>
         <span>LinkedIn</span>
@@ -298,7 +349,14 @@ export function SourceListTab() {
         </div>
       ) : (
         <>
-          {ranked.map((row) => <SourceRow key={row.companyId} row={row} />)}
+          {ranked.map((row) => (
+            <SourceRow
+              key={row.companyId}
+              row={row}
+              statusPending={statusMutation.isPending && statusMutation.variables?.companyId === row.companyId}
+              onStatusChange={(status) => statusMutation.mutate({ companyId: row.companyId, status })}
+            />
+          ))}
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 20 }}>
             <button
               type="button"
@@ -338,13 +396,14 @@ function csvEscape(value: string | null | undefined): string {
 }
 
 function downloadCsv(rows: RankedSourceCompany[]): void {
-  const header = ["Rangering", "Selskap", "Org.nr", "Nettsted", "LinkedIn"];
+  const header = ["Rangering", "Selskap", "Status", "Org.nr", "Nettsted", "LinkedIn"];
   const lines = [header.map(csvEscape).join(",")];
   for (const r of rows) {
     lines.push(
       [
         String(r.rank),
         csvEscape(r.name),
+        csvEscape(getStatusLabel(r.status)),
         csvEscape(formatOrgNumber(r.orgNumber) ?? ""),
         csvEscape(r.website ?? ""),
         csvEscape(r.linkedin ?? ""),
@@ -364,7 +423,26 @@ function downloadCsv(rows: RankedSourceCompany[]): void {
   URL.revokeObjectURL(url);
 }
 
-function SourceRow({ row }: { row: RankedSourceCompany }) {
+function normalizeStatus(value: string | null | undefined): SourceStatus {
+  if (value === "kunde") return "customer";
+  if (SOURCE_STATUS_OPTIONS.some((option) => option.value === value)) return value as SourceStatus;
+  return "prospect";
+}
+
+function getStatusLabel(value: string | null | undefined): string {
+  const normalized = normalizeStatus(value);
+  return SOURCE_STATUS_OPTIONS.find((option) => option.value === normalized)?.label ?? "Potensiell kunde";
+}
+
+function SourceRow({
+  row,
+  statusPending,
+  onStatusChange,
+}: {
+  row: RankedSourceCompany;
+  statusPending: boolean;
+  onStatusChange: (status: SourceStatus) => void;
+}) {
   const websitePretty = prettyUrl(row.website);
   const websiteHref = ensureHref(row.website);
   const linkedinHref = ensureHref(row.linkedin);
@@ -375,7 +453,7 @@ function SourceRow({ row }: { row: RankedSourceCompany }) {
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "40px minmax(200px, 1.4fr) 130px minmax(180px, 1fr) 80px",
+        gridTemplateColumns: "40px minmax(200px, 1.4fr) 150px 130px minmax(180px, 1fr) 80px",
         gap: 16,
         alignItems: "center",
         padding: "9px 0",
@@ -397,6 +475,33 @@ function SourceRow({ row }: { row: RankedSourceCompany }) {
       </span>
       <span style={{ fontSize: 13, fontWeight: 500, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         {row.name}
+      </span>
+      <span>
+        <select
+          value={normalizeStatus(row.status)}
+          disabled={statusPending}
+          onChange={(e) => onStatusChange(e.target.value as SourceStatus)}
+          aria-label={`Endre status for ${row.name}`}
+          style={{
+            width: "100%",
+            height: 28,
+            border: `1px solid ${C.border}`,
+            borderRadius: 6,
+            background: C.surface,
+            color: C.text,
+            fontSize: 12,
+            fontWeight: 500,
+            padding: "0 8px",
+            cursor: statusPending ? "wait" : "pointer",
+            opacity: statusPending ? 0.65 : 1,
+          }}
+        >
+          {SOURCE_STATUS_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </span>
       <span style={{ fontSize: 12, color: C.textMuted, fontVariantNumeric: "tabular-nums" }}>
         {orgFormatted ?? dash}

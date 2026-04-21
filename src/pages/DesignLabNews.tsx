@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 
 import { DesignLabPageShell } from "@/components/designlab/DesignLabPageShell";
 import {
@@ -10,6 +11,7 @@ import {
 import { SourceListTab } from "@/components/designlab/news/SourceListTab";
 import { C } from "@/components/designlab/theme";
 import { supabase } from "@/integrations/supabase/client";
+import { useCrmNavigation } from "@/lib/crmNavigation";
 import {
   newsRelative,
   withUtm,
@@ -72,6 +74,7 @@ function ensureImage(item: NewsItem): string {
 /* ────────────────────── LOKALE KOMPONENTER ────────────────────── */
 
 function Kicker({ item }: { item: NewsItem }) {
+  const { getCompanyPath } = useCrmNavigation();
   const extra = item.also_matched_company_names.slice(0, 2);
   const overflow =
     item.also_matched_company_names.length > 2
@@ -87,7 +90,14 @@ function Kicker({ item }: { item: NewsItem }) {
         marginBottom: 8,
       }}
     >
-      {item.primary_company_name}
+      <Link
+        to={getCompanyPath(item.primary_company_id)}
+        style={{ color: "inherit", textDecoration: "none" }}
+        onMouseEnter={(e) => (e.currentTarget.style.color = C.text)}
+        onMouseLeave={(e) => (e.currentTarget.style.color = "inherit")}
+      >
+        {item.primary_company_name}
+      </Link>
       {extra.length > 0 ? (
         <span style={{ color: C.textFaint, fontWeight: 500 }}>
           {" · også "}
@@ -130,7 +140,7 @@ function MetaRow({ item, withReadMore = true }: { item: NewsItem; withReadMore?:
           onMouseEnter={(e) => (e.currentTarget.style.color = C.accent)}
           onMouseLeave={(e) => (e.currentTarget.style.color = C.text)}
         >
-          Les saken →
+          Les mer →
         </a>
       ) : null}
     </div>
@@ -254,7 +264,7 @@ function FeatureCard({ item }: { item: NewsFeature }) {
             {item.ingress}
           </p>
         </a>
-        <MetaRow item={item} withReadMore={false} />
+        <MetaRow item={item} />
       </div>
     </article>
   );
