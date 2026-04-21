@@ -426,3 +426,9 @@ button[class*="bg-gray-400"][class*="border-gray-400"] {
   color: #1A1C1F;
   border-color: #C5CBE8;
 }
+
+/* STACQ Nyheter — venstrejuster innhold (override shell-sentrering) */
+.dl-news-content {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+}
