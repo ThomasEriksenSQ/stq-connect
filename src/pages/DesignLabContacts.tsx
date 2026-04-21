@@ -53,6 +53,7 @@ import {
   type GeoMatchInput,
   type GeoMatchResult,
 } from "@/lib/geographicMatch";
+import { isEmployeeEndDatePassed } from "@/lib/employeeStatus";
 import {
   MATCH_OWNER_FILTER_NONE,
   buildMatchLeadOwnerCandidate,
@@ -187,6 +188,7 @@ type HuntConsultant = {
   navn: string;
   status: string | null;
   tilgjengelig_fra: string | null;
+  slutt_dato: string | null;
   kompetanse: string[] | null;
   geografi: string | null;
   adresse: string | null;
@@ -288,8 +290,8 @@ const DL_QUERY_KEYS = {
 } as const;
 
 const AVAILABLE_CONSULTANT_SELECT =
-  "id, navn, status, tilgjengelig_fra, kompetanse, geografi, adresse, postnummer, poststed";
-const AVAILABLE_CONSULTANT_LEGACY_SELECT = "id, navn, status, tilgjengelig_fra, kompetanse, geografi";
+  "id, navn, status, tilgjengelig_fra, slutt_dato, kompetanse, geografi, adresse, postnummer, poststed";
+const AVAILABLE_CONSULTANT_LEGACY_SELECT = "id, navn, status, tilgjengelig_fra, slutt_dato, kompetanse, geografi";
 
 function isMissingEmployeeAddressColumnError(error: unknown) {
   const message = String((error as { message?: string } | null)?.message || error || "").toLowerCase();
@@ -713,7 +715,7 @@ export default function DesignLabContacts() {
   const sortedConsultants = useMemo(() => {
     return sortHuntConsultants(
       (availableConsultants as HuntConsultant[]).filter((consultant) =>
-        hasConsultantAvailability(consultant.tilgjengelig_fra),
+        hasConsultantAvailability(consultant.tilgjengelig_fra) && !isEmployeeEndDatePassed(consultant.slutt_dato),
       ),
     );
   }, [availableConsultants]);

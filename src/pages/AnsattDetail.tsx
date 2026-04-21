@@ -22,6 +22,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
 import { useCrmNavigation } from "@/lib/crmNavigation";
 import { buildEmployeeGeoText, deriveEmployeeAddressFields } from "@/lib/geographicMatch";
+import { getEmployeeLifecycleStatus } from "@/lib/employeeStatus";
 import {
   DesignLabPrimaryAction,
   DesignLabSecondaryAction,
@@ -256,8 +257,7 @@ const AnsattDetail = ({
   if (!ansatt) return <p className="text-muted-foreground py-12 text-center">Ansatt ikke funnet</p>;
 
   const today = new Date();
-  const status = ansatt.status === "SLUTTET" ? "Sluttet"
-    : ansatt.start_dato && new Date(ansatt.start_dato) > today ? "Kommende" : "Aktiv";
+  const status = getEmployeeLifecycleStatus(ansatt, today);
 
   const portrait = cvDoc?.portrait_url || ansatt.bilde_url;
   const addressFields = deriveEmployeeAddressFields(ansatt as any);

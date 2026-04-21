@@ -18,6 +18,7 @@ import {
   buildEmployeeGeoText,
   deriveEmployeeAddressFields,
 } from "@/lib/geographicMatch";
+import { getEmployeeDatabaseStatus } from "@/lib/employeeStatus";
 
 const SUPABASE_URL = "https://kbvzpcebfopqqrvmbiap.supabase.co";
 
@@ -45,11 +46,6 @@ const SUGGESTED_TAGS = [
   "Assembly",
   "FreeRTOS",
   "TrustZone",
-];
-
-const STATUS_OPTIONS = [
-  { value: "AKTIV/SIGNERT", label: "Aktiv" },
-  { value: "SLUTTET", label: "Sluttet" },
 ];
 
 function isMissingEmployeeAddressColumnError(error: unknown) {
@@ -94,7 +90,6 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
     postnummer: "",
     poststed: "",
     geografi: "",
-    status: "AKTIV/SIGNERT",
     start_dato: "",
     slutt_dato: "",
     kompetanse: [] as string[],
@@ -117,7 +112,6 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
         postnummer: "",
         poststed: "",
         geografi: "",
-        status: "AKTIV/SIGNERT",
         start_dato: "",
         slutt_dato: "",
         kompetanse: [],
@@ -137,7 +131,6 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
         postnummer: addressFields.postalCode,
         poststed: addressFields.city,
         geografi: ansatt.geografi || "",
-        status: ansatt.status || "AKTIV/SIGNERT",
         start_dato: ansatt.start_dato || "",
         slutt_dato: ansatt.slutt_dato || "",
         kompetanse: ansatt.kompetanse || [],
@@ -289,7 +282,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
       postnummer: normalizedPostnummer || null,
       poststed: form.poststed.trim() || null,
       geografi: geografiFallback,
-      status: form.status,
+      status: getEmployeeDatabaseStatus({ slutt_dato: form.slutt_dato }),
       start_dato: form.start_dato || null,
       slutt_dato: form.slutt_dato || null,
       kompetanse: normalizeTechnologyTags(form.kompetanse),
@@ -657,25 +650,6 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
                 </div>
               )}
 
-              <div>
-                <label className={cn(LABEL, "mb-1.5 block")}>Status</label>
-                <div className="flex gap-2">
-                  {STATUS_OPTIONS.map((s) => (
-                    <button
-                      key={s.value}
-                      onClick={() => set("status", s.value)}
-                      className={cn(
-                        "h-8 px-3 text-[0.8125rem] rounded-full border transition-colors",
-                        form.status === s.value
-                          ? "bg-foreground text-background border-foreground"
-                          : "border-border text-muted-foreground hover:bg-secondary",
-                      )}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
 
             {/* Save / Cancel footer */}

@@ -46,6 +46,7 @@ import {
   type MatchBand,
 } from "@/lib/contactMatchScore";
 import { getConsultantMatchScoreColor } from "@/lib/consultantMatches";
+import { isEmployeeEndDatePassed } from "@/lib/employeeStatus";
 import {
   MATCH_OWNER_FILTER_NONE,
   buildMatchLeadOwnerCandidate,
@@ -59,7 +60,7 @@ type SortField = "name" | "company" | "title" | "signal" | "owner" | "last_activ
 type SortDir = "asc" | "desc";
 type HuntConsultant = Pick<
   Database["public"]["Tables"]["stacq_ansatte"]["Row"],
-  "id" | "navn" | "status" | "tilgjengelig_fra" | "kompetanse"
+  "id" | "navn" | "status" | "tilgjengelig_fra" | "kompetanse" | "slutt_dato"
 >;
 type OwnerPreview = { id: string; full_name: string } | null;
 type CompanyPreview = Pick<
@@ -514,12 +515,12 @@ const Contacts = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stacq_ansatte")
-        .select("id, navn, status, tilgjengelig_fra, kompetanse")
+        .select("id, navn, status, tilgjengelig_fra, kompetanse, slutt_dato")
         .in("status", ["AKTIV/SIGNERT", "Ledig"])
         .not("tilgjengelig_fra", "is", null);
       if (error) throw error;
       return sortHuntConsultants(((data || []) as HuntConsultant[]).filter((consultant) =>
-        hasConsultantAvailability(consultant.tilgjengelig_fra),
+        hasConsultantAvailability(consultant.tilgjengelig_fra) && !isEmployeeEndDatePassed(consultant.slutt_dato),
       ));
     },
   });

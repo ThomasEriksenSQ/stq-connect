@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { differenceInDays, differenceInMonths, format, isAfter } from "date-fns";
+import { differenceInDays, differenceInMonths, format } from "date-fns";
 import { nb } from "date-fns/locale";
 import { Plus, X } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatMonths, getInitials } from "@/lib/utils";
 import { buildEmployeeGeoText, deriveEmployeeAddressFields } from "@/lib/geographicMatch";
+import { getEmployeeLifecycleStatus } from "@/lib/employeeStatus";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
@@ -129,9 +130,7 @@ export default function DesignLabKonsulenterAnsatte() {
   }, [oppdrag]);
 
   const getStatus = (row: any) => {
-    if (row.status === "SLUTTET") return "Sluttet";
-    if (row.start_dato && isAfter(new Date(row.start_dato), today)) return "Kommende";
-    return "Aktiv";
+    return getEmployeeLifecycleStatus(row, today);
   };
 
   const handleSetOppdragStatus = async (navn: string, status: string | null) => {

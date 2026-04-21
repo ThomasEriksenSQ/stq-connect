@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState } from "react";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
-import { format, differenceInMonths, differenceInDays, isAfter } from "date-fns";
+import { format, differenceInMonths, differenceInDays } from "date-fns";
 import { nb } from "date-fns/locale";
 import { Plus } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
 import { issueAndCopyCvShareLink } from "@/lib/cvAccess";
+import { getEmployeeLifecycleStatus } from "@/lib/employeeStatus";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -105,9 +106,7 @@ export default function KonsulenterAnsatte({ hidePageTitle = false }: Konsulente
   );
 
   const getStatus = (row: any) => {
-    if (row.status === "SLUTTET") return "Sluttet";
-    if (row.start_dato && isAfter(new Date(row.start_dato), today)) return "Kommende";
-    return "Aktiv";
+    return getEmployeeLifecycleStatus(row, today);
   };
 
   const stats = useMemo(() => {
