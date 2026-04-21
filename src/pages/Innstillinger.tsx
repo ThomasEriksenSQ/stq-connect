@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { Mail, Loader2, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { VarslingsInnstillinger } from "@/components/VarslingsInnstillinger";
 import { VarslingsInnstillingerV2 } from "@/components/VarslingsInnstillingerV2";
 import { toast } from "sonner";
@@ -10,6 +11,76 @@ import { useDesignVersion } from "@/context/DesignVersionContext";
 import { DesignLabPageShell } from "@/components/designlab/DesignLabPageShell";
 import { DesignLabPrimaryAction, DesignLabSecondaryAction } from "@/components/designlab/system/actions";
 import { C } from "@/theme";
+
+const SENT_CV_SYNC_OPTIONS = [
+  { value: "7", label: "7 dager" },
+  { value: "14", label: "14 dager" },
+  { value: "30", label: "30 dager" },
+  { value: "60", label: "60 dager" },
+  { value: "90", label: "90 dager" },
+  { value: "120", label: "120 dager" },
+] as const;
+
+type SentCvSyncResult = {
+  scanned_messages: number;
+  matched_rows: number;
+  generated_at: string;
+  accounts?: Array<{
+    status: "ok" | "error";
+    scanned_messages: number;
+    matched_rows: number;
+    error?: string;
+  }>;
+};
+
+function useSentCvSync() {
+  const [sentCvLookbackDays, setSentCvLookbackDays] = useState<string>("14");
+  const [sentCvSyncing, setSentCvSyncing] = useState(false);
+  const [sentCvResult, setSentCvResult] = useState<SentCvSyncResult | null>(null);
+
+  const handleRunSentCvSync = async () => {
+    setSentCvSyncing(true);
+    try {
+      const lookbackDays = Number(sentCvLookbackDays);
+      const { data, error } = await supabase.functions.invoke<SentCvSyncResult>("sync-sent-cvs", {
+        body: {
+          trigger: "manual",
+          lookbackDays,
+          maxMessagesPerMailbox: 400,
+        },
+      });
+
+      if (error) throw error;
+      if (!data) throw new Error("Ingen respons fra Sendt CV-sync");
+
+      setSentCvResult(data);
+
+      const failedAccounts = (data.accounts || []).filter((account) => account.status === "error");
+      if (failedAccounts.length > 0) {
+        toast.warning(
+          `Sendt CV-sync fullført med ${failedAccounts.length} kontoer som feilet. ${data.matched_rows} rader registrert.`,
+        );
+        return;
+      }
+
+      toast.success(
+        `Sendt CV-sync fullført. ${data.matched_rows} rader registrert fra ${data.scanned_messages} sendte e-poster.`,
+      );
+    } catch (e) {
+      toast.error(`Sendt CV-sync feilet: ${(e as Error).message}`);
+    } finally {
+      setSentCvSyncing(false);
+    }
+  };
+
+  return {
+    sentCvLookbackDays,
+    setSentCvLookbackDays,
+    sentCvSyncing,
+    sentCvResult,
+    handleRunSentCvSync,
+  };
+}
 
 export default function Innstillinger() {
   const { isV2Active } = useDesignVersion();
@@ -20,6 +91,13 @@ function InnstillingerV1() {
   const [connecting, setConnecting] = useState(false);
   const [mcSyncing, setMcSyncing] = useState(false);
   const [mcResult, setMcResult] = useState<{ total: number; active: number; inactive: number; batches: number } | null>(null);
+  const {
+    sentCvLookbackDays,
+    setSentCvLookbackDays,
+    sentCvSyncing,
+    sentCvResult,
+    handleRunSentCvSync,
+  } = useSentCvSync();
 
   const { data: outlookStatus, isLoading: outlookLoading } = useQuery({
     queryKey: ["outlook-status"],
@@ -125,6 +203,79 @@ function InnstillingerV1() {
                     ? "Koble til på nytt"
                     : "Koble til Outlook"}
               </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sent CV sync section */}
+      <div className="mb-8">
+        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-3">
+          Sendt CV-synkronisering
+        </p>
+        <div className="border border-border rounded-xl bg-card p-6 shadow-[0_1px_3px_rgba(0,0,0,0.07)] max-w-md">
+          <div className="flex items-start gap-4">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <RefreshCw className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[0.9375rem] font-semibold text-foreground">Backfill Sendt CV</p>
+              <p className="text-[0.8125rem] text-muted-foreground mt-1">
+                Skanner sendte e-poster for alle tilkoblede Outlook-kontoer og fyller opp "Sendt CV" på ansattprofiler.
+              </p>
+              {sentCvResult ? (
+                <div className="mt-3 text-[0.8125rem]">
+                  <span className="text-emerald-600 font-medium">{sentCvResult.matched_rows} rader registrert</span>
+                  <span className="text-muted-foreground ml-2">{sentCvResult.scanned_messages} e-poster skannet</span>
+                  {!!sentCvResult.accounts?.some((account) => account.status === "error") && (
+                    <span className="text-amber-600 ml-2">
+                      {sentCvResult.accounts.filter((account) => account.status === "error").length} kontoer med feil
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-3 text-[0.8125rem] text-muted-foreground">
+                  Ingen manuell Sendt CV-sync kjørt i denne økten.
+                </div>
+              )}
+
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="w-full sm:w-36">
+                  <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">
+                    Periode
+                  </p>
+                  <Select value={sentCvLookbackDays} onValueChange={setSentCvLookbackDays}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SENT_CV_SYNC_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <button
+                  onClick={handleRunSentCvSync}
+                  disabled={sentCvSyncing}
+                  className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground h-9 px-4 rounded-lg text-[0.8125rem] font-medium hover:opacity-90 disabled:opacity-50"
+                >
+                  {sentCvSyncing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Kjører sync...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4" />
+                      Kjør Sendt CV-sync
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -238,6 +389,13 @@ export function InnstillingerV2() {
   const [connecting, setConnecting] = useState(false);
   const [mcSyncing, setMcSyncing] = useState(false);
   const [mcResult, setMcResult] = useState<{ total: number; active: number; inactive: number; batches: number } | null>(null);
+  const {
+    sentCvLookbackDays,
+    setSentCvLookbackDays,
+    sentCvSyncing,
+    sentCvResult,
+    handleRunSentCvSync,
+  } = useSentCvSync();
 
   const { data: outlookStatus, isLoading: outlookLoading } = useQuery({
     queryKey: ["outlook-status"],
@@ -351,6 +509,59 @@ export function InnstillingerV2() {
                 <>
                   <RefreshCw className="h-3.5 w-3.5" />
                   Synk alle til Mailchimp
+                </>
+              )}
+            </DesignLabSecondaryAction>
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          title="Sendt CV-sync"
+          description="Kjør en manuell backfill for alle tilkoblede Outlook-kontoer og fyll opp Sendt CV-listene på ansattprofiler."
+        >
+          {sentCvResult ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", fontSize: 13 }}>
+              <span style={{ color: C.success, fontWeight: 500 }}>{sentCvResult.matched_rows} rader registrert</span>
+              <span style={{ color: C.textMuted }}>{sentCvResult.scanned_messages} e-poster skannet</span>
+              {!!sentCvResult.accounts?.some((account) => account.status === "error") && (
+                <span style={{ color: C.warning }}>
+                  {sentCvResult.accounts.filter((account) => account.status === "error").length} kontoer med feil
+                </span>
+              )}
+            </div>
+          ) : (
+            <StatusDot tone="muted" label="Ingen manuell Sendt CV-sync kjørt i denne økten" />
+          )}
+
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "end", gap: 12 }}>
+            <div style={{ minWidth: 148, display: "flex", flexDirection: "column", gap: 8 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: C.textMuted }}>
+                Periode
+              </span>
+              <Select value={sentCvLookbackDays} onValueChange={setSentCvLookbackDays}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SENT_CV_SYNC_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <DesignLabSecondaryAction onClick={handleRunSentCvSync} disabled={sentCvSyncing}>
+              {sentCvSyncing ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Kjører sync...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Kjør Sendt CV-sync
                 </>
               )}
             </DesignLabSecondaryAction>
