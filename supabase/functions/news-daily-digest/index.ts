@@ -27,7 +27,7 @@ const SEARCH_RESULTS_PER_QUERY = 8; // hvor mange treff vi henter per selskap
 const PASS1_MAX_AGE_DAYS = 14; // varme selskaper: siste 14 dager
 const PASS2_MAX_AGE_DAYS = 30; // alle selskaper: siste 30 dager
 const HARD_CAP_COMPANIES = 200; // sikkerhetstak per kjøring
-const TARGET_ITEMS = 15;
+const TARGET_ITEMS = 30;
 const MAX_PER_COMPANY = 2; // unngå at ett selskap dominerer feeden
 const FETCH_CHUNK = 200; // Supabase .in() URL-lengde-grense
 
