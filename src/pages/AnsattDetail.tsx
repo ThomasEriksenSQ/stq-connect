@@ -30,8 +30,39 @@ import {
   DESIGN_LAB_STATUS_NEUTRAL_CHIP_ACTIVE_COLORS,
 } from "@/components/designlab/system";
 import { C } from "@/components/designlab/theme";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const fmt = (d: string | null) => d ? format(new Date(d), "d. MMM yyyy", { locale: nb }) : "–";
+
+type SentCvRow = {
+  id: string;
+  ansatt_id: number;
+  contact_id: string | null;
+  company_id: string | null;
+  contact_name_snapshot: string | null;
+  company_name_snapshot: string | null;
+  contact_title_snapshot: string | null;
+  recipient_email: string;
+  attachment_name: string;
+  sent_at: string;
+  message_web_link: string | null;
+  message_subject: string | null;
+};
+type ContactRow = {
+  id: string;
+  company_id: string | null;
+  first_name: string;
+  last_name: string;
+  title: string | null;
+};
+type CompanyRow = {
+  id: string;
+  name: string;
+};
+type SentCvEntry = SentCvRow & {
+  contact?: ContactRow | null;
+  company?: CompanyRow | null;
+};
 
 interface AnsattDetailProps {
   ansattIdOverride?: number;
@@ -48,7 +79,7 @@ const AnsattDetail = ({
 }: AnsattDetailProps = {}) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getNavPath } = useCrmNavigation();
+  const { getNavPath, getContactPath, getCompanyPath } = useCrmNavigation();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [editingNote, setEditingNote] = useState(false);
@@ -166,6 +197,69 @@ const AnsattDetail = ({
         .eq("status", "vunnet");
       if (error) throw error;
       return data as any[];
+    },
+    enabled: !isNaN(ansattId),
+  });
+
+  const { data: sentCvEntries = [] } = useQuery({
+    queryKey: ["ansatt-sent-cv", ansattId],
+    queryFn: async () => {
+      const { data: rows, error } = await supabase
+        .from("sent_cv_log")
+        .select("*")
+        .eq("ansatt_id", ansattId)
+        .order("sent_at", { ascending: false });
+      if (error) throw error;
+
+      const sentCvRows = (rows || []) as SentCvRow[];
+      if (sentCvRows.length === 0) return [] as SentCvEntry[];
+
+      const contactIds = Array.from(new Set(sentCvRows.map((row) => row.contact_id).filter(Boolean))) as string[];
+      const directCompanyIds = Array.from(new Set(sentCvRows.map((row) => row.company_id).filter(Boolean))) as string[];
+
+      const { data: contactsData, error: contactsError } = contactIds.length
+        ? await supabase
+            .from("contacts")
+            .select("id, company_id, first_name, last_name, title, email, phone, created_at, updated_at, created_by, cv_email, call_list, ikke_aktuell_kontakt, linkedin, location, locations, mailchimp_status, next_review_at, notes, owner_id, sf_contact_id, teknologier, department")
+            .in("id", contactIds)
+        : { data: [], error: null };
+      if (contactsError) throw contactsError;
+
+      const contactMap = new Map<string, ContactRow>();
+      const contactCompanyIds: string[] = [];
+      ((contactsData || []) as ContactRow[]).forEach((contact) => {
+        contactMap.set(contact.id, contact);
+        if (contact.company_id) contactCompanyIds.push(contact.company_id);
+      });
+
+      const companyIds = Array.from(new Set([...directCompanyIds, ...contactCompanyIds]));
+      const { data: companiesData, error: companiesError } = companyIds.length
+        ? await supabase
+            .from("companies")
+            .select("id, name, address, city, created_at, created_by, email, ikke_relevant, industry, linkedin, notes, org_number, owner_id, phone, sf_account_id, status, updated_at, website, zip_code")
+            .in("id", companyIds)
+        : { data: [], error: null };
+      if (companiesError) throw companiesError;
+
+      const companyMap = new Map<string, CompanyRow>();
+      ((companiesData || []) as CompanyRow[]).forEach((company) => {
+        companyMap.set(company.id, company);
+      });
+
+      return sentCvRows.map((row) => {
+        const contact = row.contact_id ? contactMap.get(row.contact_id) || null : null;
+        const company = row.company_id
+          ? companyMap.get(row.company_id) || null
+          : contact?.company_id
+            ? companyMap.get(contact.company_id) || null
+            : null;
+
+        return {
+          ...row,
+          contact,
+          company,
+        } satisfies SentCvEntry;
+      });
     },
     enabled: !isNaN(ansattId),
   });
@@ -367,11 +461,12 @@ const AnsattDetail = ({
       <Card className="bg-card border border-border rounded-lg shadow-card">
         <CardContent className="p-5">
           <Tabs defaultValue={ansatt.tilgjengelig_fra ? "prosesser" : "aktive"}>
-            <TabsList>
+            <TabsList className="h-auto flex-wrap justify-start">
               {ansatt.tilgjengelig_fra ? (
                 <>
                   <TabsTrigger value="prosesser">Aktive prosesser ({aktiveProsesser.length})</TabsTrigger>
                   <TabsTrigger value="tidl-prosesser">Tidligere prosesser ({tidligereProsesser.length})</TabsTrigger>
+                  <TabsTrigger value="sent-cv">Sendt CV ({sentCvEntries.length})</TabsTrigger>
                   <TabsTrigger value="aktive">Aktive oppdrag ({activeOppdrag.length})</TabsTrigger>
                   <TabsTrigger value="tidligere">Tidligere oppdrag ({previousOppdrag.length})</TabsTrigger>
                 </>
@@ -381,6 +476,7 @@ const AnsattDetail = ({
                   <TabsTrigger value="tidligere">Tidligere oppdrag ({previousOppdrag.length})</TabsTrigger>
                   <TabsTrigger value="prosesser">Aktive prosesser ({aktiveProsesser.length})</TabsTrigger>
                   <TabsTrigger value="tidl-prosesser">Tidligere prosesser ({tidligereProsesser.length})</TabsTrigger>
+                  <TabsTrigger value="sent-cv">Sendt CV ({sentCvEntries.length})</TabsTrigger>
                 </>
               )}
             </TabsList>
@@ -460,6 +556,17 @@ const AnsattDetail = ({
                     );
                   })}
                 </div>
+              )}
+            </TabsContent>
+            <TabsContent value="sent-cv">
+              {sentCvEntries.length === 0 ? (
+                <p className="text-[0.8125rem] text-muted-foreground">Ingen registrerte sendte CV-er ennå</p>
+              ) : (
+                <SentCvList
+                  entries={sentCvEntries}
+                  getContactPath={getContactPath}
+                  getCompanyPath={getCompanyPath}
+                />
               )}
             </TabsContent>
           </Tabs>
@@ -725,6 +832,126 @@ function OppdragRow({ o, isActive = false, kontaktNavn }: { o: any; isActive?: b
           </span>
         </div>
       )}
+    </div>
+  );
+}
+
+function SentCvList({
+  entries,
+  getContactPath,
+  getCompanyPath,
+}: {
+  entries: SentCvEntry[];
+  getContactPath: (contactId: string) => string;
+  getCompanyPath: (companyId: string) => string;
+}) {
+  return (
+    <div className="overflow-hidden rounded-lg border border-border bg-background">
+      <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(0,1.1fr)_112px_44px] items-center gap-3 border-b border-border bg-muted/30 px-3 py-2 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground md:grid">
+        <span>Kontaktperson</span>
+        <span>Selskap</span>
+        <span>Stilling</span>
+        <span>Sendt</span>
+        <span className="text-right">Epost</span>
+      </div>
+      <div className="divide-y divide-border">
+        {entries.map((entry) => {
+          const companyId = entry.company_id || entry.contact?.company_id || null;
+          const contactName =
+            entry.contact
+              ? `${entry.contact.first_name} ${entry.contact.last_name}`.trim()
+              : entry.contact_name_snapshot || entry.recipient_email;
+          const companyName =
+            entry.company?.name ||
+            entry.company_name_snapshot ||
+            "–";
+          const contactTitle =
+            entry.contact?.title ||
+            entry.contact_title_snapshot ||
+            "–";
+
+          return (
+            <div
+              key={entry.id}
+              className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(0,1.1fr)_112px_44px] md:items-center"
+            >
+              <div className="min-w-0">
+                <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
+                  Kontaktperson
+                </p>
+                {entry.contact_id ? (
+                  <Link
+                    to={getContactPath(entry.contact_id)}
+                    className="block truncate text-[0.9375rem] font-medium text-foreground hover:text-primary"
+                  >
+                    {contactName}
+                  </Link>
+                ) : (
+                  <span className="block truncate text-[0.9375rem] font-medium text-foreground">{contactName}</span>
+                )}
+                <p className="truncate text-[0.75rem] text-muted-foreground">{entry.recipient_email}</p>
+              </div>
+
+              <div className="min-w-0">
+                <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
+                  Selskap
+                </p>
+                {companyId ? (
+                  <Link
+                    to={getCompanyPath(companyId)}
+                    className="block truncate text-[0.9375rem] font-medium text-foreground hover:text-primary"
+                  >
+                    {companyName}
+                  </Link>
+                ) : (
+                  <span className="block truncate text-[0.9375rem] font-medium text-foreground">{companyName}</span>
+                )}
+                <p className="truncate text-[0.75rem] text-muted-foreground">{entry.attachment_name}</p>
+              </div>
+
+              <div className="min-w-0">
+                <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
+                  Stilling
+                </p>
+                <span className="block truncate text-[0.875rem] text-foreground">{contactTitle}</span>
+              </div>
+
+              <div className="min-w-0">
+                <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
+                  Sendt
+                </p>
+                <span className="block text-[0.8125rem] text-muted-foreground">
+                  {format(new Date(entry.sent_at), "d. MMM yyyy HH:mm", { locale: nb })}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-end">
+                {entry.message_web_link ? (
+                  <TooltipProvider delayDuration={100}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <a
+                          href={entry.message_web_link}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-56 text-[0.75rem]">{entry.message_subject || "Åpne epost i Outlook"}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  <span className="text-[0.75rem] text-muted-foreground">–</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
