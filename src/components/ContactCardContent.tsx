@@ -1416,7 +1416,7 @@ export function ContactCardContent({
               </div>
             </div>
           ) : contact.notes ? (
-            canEditProfile ? (
+            editable ? (
               <NotesEditTrigger
                 onEdit={() => {
                   setNotesDraft(contact.notes || "");
@@ -1434,7 +1434,7 @@ export function ContactCardContent({
                 </p>
               </div>
             )
-          ) : canEditProfile ? (
+          ) : editable ? (
             <button
               onClick={() => {
                 setNotesDraft("");
