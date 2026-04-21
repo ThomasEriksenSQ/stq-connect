@@ -1,99 +1,50 @@
 
 
-## Mål
-Legg til en ny **fane** på `/design-lab/news` som viser den faktiske kildelisten — selskapene nyhetene baseres på — i nøyaktig samme rekkefølge som brukeren ser dem på `/kontakter`. Denne listen skal også bli den autoritative kilden som edge-funksjonen `news-daily-digest` bruker, slik at nyhetspipelinen og UI-listen alltid er synkronisert.
+## Berik selskaper med nettsted og LinkedIn fra LinkedIn-dump
 
-## Hva vises i fanen
-For hvert selskap én rad med:
-- Selskapsnavn
-- Org.nr (hvis tilgjengelig)
-- Nettsted (hvis tilgjengelig — klikkbar lenke)
-- LinkedIn (hvis tilgjengelig — klikkbar lenke)
+Importer URL-er fra `Must_have_kunder_dump_fra_Linkedin.xlsx` og legg dem inn på selskapene i CRM hvor `org_number` matcher eksakt.
 
-Pluss en liten posisjonsnummerering (1, 2, 3 …) til venstre, og total-teller øverst.
+### Beslutninger
+- **Overskriving**: Kun fyll inn `website` og `linkedin` der nåværende verdi er `NULL` eller tom. Eksisterende URL-er beholdes urørt.
+- **Omfang**: Alle selskaper med matchende org.nummer — ingen begrensning på `status`.
 
-## Rangering — eksakt som /kontakter (default)
-1. Hent kontakter med samme query og samme filtre som `Contacts.tsx` bruker som default:
-   - Ekskluder `ikke_aktuell_kontakt = true`
-   - Ekskluder kontakter hvis `companies.ikke_relevant = true`
-   - Inkluder kun kontakter hvor `companies.status IN ('prospect', 'customer')` (Potensiell kunde / Kunde)
-2. Beregn `tier` og `heatScore` per kontakt med samme `getHeatResult` fra `src/lib/heatScore.ts` som kontaktsiden bruker (signal, innkjøper, markedsradar, aktiv forespørsel, overdue, dager siden siste aktivitet, m.m.).
-3. Sorter kontaktene med samme `priority desc`-logikk: lavest tier først, deretter høyest heatScore.
-4. Gå listen ovenfra og ned, ta selskapet til hver kontakt, og **dedupliser** — første gang et selskap dukker opp beholdes posisjonen, alle senere forekomster droppes. Slik får selskapet rangen til sin høyest rangerte kontakt.
+### Steg
 
-Resultat: rekkefølgen på selskapsfanen matcher 1:1 hva brukeren ser øverst i Kontakter når default sortering er aktiv.
+1. **Lese Excel-filen**
+   - Parse `Must_have_kunder_dump_fra_Linkedin.xlsx` med pandas
+   - Identifiser kolonner for: organisasjonsnummer, nettside-URL, LinkedIn-URL
+   - Normaliser org.nummer (fjern alt som ikke er siffer, behold 9 siffer)
+   - Normaliser URL-er: legg på `https://` hvis manglende, fjern trailing slash
 
-## Datakilde + delt logikk
-For å unngå avvik mellom "hva brukeren ser" og "hva fanen viser":
+2. **Matche mot `companies`-tabellen**
+   - Hent alle selskaper med `org_number IS NOT NULL` via `psql`
+   - Match eksakt på normalisert 9-sifret org.nummer (ingen fuzzy)
+   - Rapporter antall: treff, Excel-rader uten match i CRM, duplikate org.numre i Excel
 
-- Lag en ny shared helper `src/lib/newsSourceCompanies.ts` som:
-  - Eksporterer en funksjon `rankCompaniesFromContacts(contacts, requests, finn, tasks, activities)` som tar samme rådata som Contacts-siden og returnerer en ordnet liste `{ companyId, name, orgNumber, website, linkedin, rank }[]` filtrert på `prospect`/`customer` og deduplisert.
-  - Bruker `getHeatResult` fra `heatScore.ts` (samme funksjon som /kontakter), så reglene kan ikke divergere.
+3. **Generere forhåndsvisning (CSV)**
+   - Skriv `/mnt/documents/url-berikelse-preview.csv` med kolonner:
+     `org_number, selskap_navn, eksisterende_website, ny_website, eksisterende_linkedin, ny_linkedin, action_website, action_linkedin`
+   - `action_*` kan være: `insert` (tomt → ny verdi), `skip-existing` (allerede satt), `no-new-value` (Excel mangler verdi)
+   - Rapporter også selskaper i Excel som ikke finnes i CRM (egen seksjon i konsoll-output)
 
-- Frontend-fanen kaller denne via en lett `useQuery` (samme pattern som Contacts-siden, men kun nødvendige felter).
+4. **Kjøre oppdatering via migration**
+   - Generere SQL med `UPDATE public.companies SET website = COALESCE(NULLIF(website,''), '<ny>'), linkedin = COALESCE(NULLIF(linkedin,''), '<ny>') WHERE org_number = '<orgnr>'` per match
+   - Kjøre alt i én transaksjon
+   - `COALESCE(NULLIF(...))`-mønsteret garanterer at eksisterende verdier aldri overskrives, selv om noe glipper i preview-logikken
 
-## Ny fane-struktur på /design-lab/news
-Legg til en enkel taberad rett under masthead, i tråd med Design Lab V8-stilen (Linear-aktig, ingen tunge chips):
+5. **Sluttrapport**
+   - Antall selskaper oppdatert (website + linkedin separat)
+   - Antall som ble hoppet over fordi feltet allerede var fylt
+   - Antall i Excel uten CRM-match
 
-```text
-STACQ Daily
-torsdag 21. apr. 2026 · 14 saker
+### Filer som opprettes
+- `/mnt/documents/url-berikelse-preview.csv` — forhåndsvisning av endringer
+- En ny migrasjon under `supabase/migrations/` med UPDATE-statements
 
-[ Nyheter ]   [ Kildeliste ]
-─────────────
-```
-
-- "Nyheter": dagens innhold (eksisterende layout, uendret).
-- "Kildeliste": ny tabellvisning.
-
-Tab-stil: 13 px tekst, `font-weight: 500`, aktiv tab har `border-bottom: 2px solid C.text`, inaktiv er `C.textMuted`. Ingen pillebakgrunner.
-
-## Tabellutforming for "Kildeliste"
-Tett, lesbar Linear-stil med V8-tokens:
-
-```text
-#    SELSKAP                       ORG.NR        NETTSTED           LINKEDIN
-1    Forsvarets Forskningsinst.    971 525 893   ffi.no →           in →
-2    Tomra Systems ASA             927 124 238   tomra.com →        in →
-3    Experis                       —             experis.no →       —
-…
-```
-
-- Rad-høyde ca. 34 px, `border-bottom: 1px solid C.borderLight`.
-- `#`-kolonne: 40 px, `C.textFaint`, tabular nums.
-- Selskapsnavn: 13 px, `C.text`, `font-weight: 500`.
-- Org.nr: 12 px, tabular nums, `C.textMuted`, formattert med tusenskille.
-- Nettsted/LinkedIn: 12 px lenker, `C.text` med `target="_blank"`. Tom verdi vises som `—` i `C.textGhost`.
-- Hover på rad: `background: C.hoverBg`.
-- Header-rad: 11 px, uppercase OFF (i tråd med V8), `C.textFaint`.
-
-Øverst over tabellen en kort meta-linje:
-> "Listen er sortert eksakt som Kontakter-siden (Potensiell kunde + Kunde, deduplisert)."
-Pluss totalantall: "X selskaper".
-
-## Edge function — bruk samme rangering
-Oppdater `supabase/functions/news-daily-digest/index.ts` slik at den bruker den samme rangerte listen i stedet for nåværende heat-aggregering:
-
-- Behold dagens query for kontakter/aktiviteter, men flytt sorterings-/dedupliserings-logikken til en delt port av `rankCompaniesFromContacts` (Deno-versjon under `supabase/functions/_shared/newsSourceCompanies.ts`, samme regler som klient-helpere).
-- Resultatet brukes direkte som søkerekkefølge for Perplexity (varmest øverst).
-- Selskaper utenfor `prospect`/`customer` ekskluderes (uendret), men nå garantert i samme rekkefølge som UI-fanen viser.
-- Pass 1 = topp ~50 selskaper (varmest), Pass 2 = resten av listen ved behov.
-
-## Filer som endres / opprettes
-**Nye:**
-- `src/lib/newsSourceCompanies.ts` — delt rangerings-/dedupliseringslogikk for klient.
-- `supabase/functions/_shared/newsSourceCompanies.ts` — Deno-port av samme logikk.
-- `src/components/designlab/news/SourceListTab.tsx` — selve tabell-komponenten.
-
-**Endres:**
-- `src/pages/DesignLabNews.tsx` — legg til tab-state (`"news" | "sources"`), tab-bar under masthead, render `SourceListTab` når valgt.
-- `supabase/functions/news-daily-digest/index.ts` — bytt nåværende sortering ut med shared helper.
-
-## Akseptkriterier
-1. Fanen "Kildeliste" på /design-lab/news viser kun selskaper med `status` Potensiell kunde eller Kunde, uten duplikater.
-2. Rekkefølgen på fanen matcher topp-til-bunn rekkefølgen brukeren ser på /kontakter med default sortering (priority desc).
-3. Hver rad viser navn, org.nr, nettsted, LinkedIn — manglende felter vises som "—".
-4. Lenker åpner i ny fane.
-5. Edge-funksjonen `news-daily-digest` bruker samme rangerte selskapsliste som fanen viser, slik at "viktigste selskap øverst" gjelder både i UI og i nyhetsuthenting.
-6. Eksisterende "Nyheter"-fane er uendret i utseende og oppførsel.
+### Tekniske detaljer
+- Tabell: `public.companies`, kolonner `org_number`, `website`, `linkedin`
+- Org.nummer normaliseres med regex `\D` → "" og match på de 9 siste sifrene
+- Eksakt match på org.nummer — ingen fallback på navn
+- Ingen UI-endringer; dette er et engangs-databerikelse
+- Eksisterende `companies` RLS-policies påvirkes ikke
 
