@@ -74,3 +74,6 @@ verify_jwt = false
 
 [functions.news-daily-digest]
 verify_jwt = false
+
+[functions.sync-sent-cvs]
+verify_jwt = true
