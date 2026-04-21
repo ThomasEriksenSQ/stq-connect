@@ -1,14 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
-import { usePersistentState } from "@/hooks/usePersistentState";
 
 export type DesignVersion = "v1" | "v2";
 
-// Versioned key so old localStorage from pre-launch V1/V2 testing does not override the cutover.
-const STORAGE_KEY = "designVersion.crm-v2-launch";
-const ENABLE_V2 = new Set(["thomas@stacq.no", "jon@stacq.no"]);
-const V2_ENABLED = true;
 const DEFAULT_VERSION: DesignVersion = "v2";
 
 interface DesignVersionContextValue {
@@ -22,13 +17,11 @@ interface DesignVersionContextValue {
 const DesignVersionContext = createContext<DesignVersionContextValue | null>(null);
 
 export function DesignVersionProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
-  const [storedVersion, setStoredVersion] = usePersistentState<DesignVersion>(STORAGE_KEY, DEFAULT_VERSION);
+  useAuth();
 
-  const version: DesignVersion = storedVersion === "v2" ? "v2" : "v1";
-  const email = user?.email?.toLowerCase() ?? "";
-  const canUseToggle = V2_ENABLED && ENABLE_V2.has(email);
-  const effectiveVersion: DesignVersion = canUseToggle ? version : DEFAULT_VERSION;
+  const version: DesignVersion = DEFAULT_VERSION;
+  const canUseToggle = false;
+  const effectiveVersion: DesignVersion = DEFAULT_VERSION;
 
   useEffect(() => {
     document.documentElement.dataset.design = effectiveVersion;
@@ -44,9 +37,9 @@ export function DesignVersionProvider({ children }: { children: ReactNode }) {
       effectiveVersion,
       isV2Active: effectiveVersion === "v2",
       canUseToggle,
-      setVersion: setStoredVersion,
+      setVersion: () => {},
     }),
-    [canUseToggle, effectiveVersion, setStoredVersion, version],
+    [canUseToggle, effectiveVersion, version],
   );
 
   return (
