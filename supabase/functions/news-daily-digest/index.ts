@@ -219,8 +219,9 @@ function pickItems(scored: Array<{ item: RawItem; score: number }>): {
     if (balanced.length >= TARGET_ITEMS) break;
   }
   const lead = balanced[0] ?? null;
-  const features = balanced.slice(1, 5); // 4 features
-  const briefs = balanced.slice(5, TARGET_ITEMS); // resten som briefs (opptil 10)
+  // Alle øvrige saker blir features (med bilde, tittel og ingress) — ingen briefs
+  const features = balanced.slice(1, TARGET_ITEMS);
+  const briefs: Array<{ item: RawItem; score: number }> = [];
   return { lead, features, briefs };
 }
 
