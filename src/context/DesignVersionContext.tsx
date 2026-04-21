@@ -5,7 +5,8 @@ import { usePersistentState } from "@/hooks/usePersistentState";
 
 export type DesignVersion = "v1" | "v2";
 
-const STORAGE_KEY = "designVersion";
+// Versioned key so old localStorage from pre-launch V1/V2 testing does not override the cutover.
+const STORAGE_KEY = "designVersion.crm-v2-launch";
 const ENABLE_V2 = new Set(["thomas@stacq.no", "jon@stacq.no"]);
 const V2_ENABLED = true;
 const DEFAULT_VERSION: DesignVersion = "v2";
