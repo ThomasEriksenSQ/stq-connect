@@ -984,7 +984,6 @@ export function ContactCardContent({
                       <DropdownMenuItem onClick={() => {
                         setShowNotes((prev) => !prev);
                         if (!showNotes && !contact.notes) {
-                          openProfileEditor();
                           setNotesDraft("");
                           setTimeout(() => setEditingNotes(true), 50);
                         }
