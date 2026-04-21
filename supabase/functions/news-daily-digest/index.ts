@@ -4,7 +4,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "../_shared/cors.ts";
 import { hostFromUrl, isTrustedSource, sourceForUrl, tierForUrl } from "./sources.ts";
-import { aggregateHeatTiers, type Tier } from "./heat.ts";
+import { getHeatResult, getTaskStatus, type Tier } from "../_shared/heatScore.ts";
+import {
+  rankCompaniesFromContacts,
+  type CompanyMeta,
+  type RankInputContact,
+} from "../_shared/newsSourceCompanies.ts";
 import {
   baseWeightFor,
   dedupAndMerge,
@@ -247,13 +252,13 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    // 1. Hent selskaper (DB-statuser: prospect, customer, partner, churned)
+    // 1. Hent selskaper (DB-statuser: prospect, customer)
     const { data: companies, error: cErr } = await supabase
       .from("companies")
-      .select("id, name, website, org_number, status")
+      .select("id, name, website, org_number, status, ikke_relevant, linkedin")
       .in("status", ["prospect", "customer"]);
     if (cErr) throw cErr;
-    const companyList = (companies ?? []) as CompanyRow[];
+    const companyList = (companies ?? []) as Array<CompanyRow & { ikke_relevant: boolean | null; linkedin: string | null }>;
 
     // Map status: customer = "Kunde" (vekt 1.2), prospect = "Potensiell kunde" (vekt 0.6)
     const baseWeight = new Map<string, number>();
@@ -262,14 +267,20 @@ Deno.serve(async (req: Request) => {
       baseWeight.set(c.id, baseWeightFor(eff));
     }
 
-    // 2. Hent kontakter + siste aktivitet → heat tier per selskap (chunket for å unngå URL-grenser)
+    // 2. Hent kontakter + aktiviteter + tasks + forespørsler + tech-profil
+    //    → samme priority-rangering som /kontakter (priority desc).
     const companyIds = companyList.map((c) => c.id);
-    const allContacts: Array<{ id: string; company_id: string | null; ikke_aktuell_kontakt: boolean | null }> = [];
+    const allContacts: Array<{
+      id: string;
+      company_id: string | null;
+      ikke_aktuell_kontakt: boolean | null;
+      call_list: boolean | null;
+    }> = [];
     for (let i = 0; i < companyIds.length; i += FETCH_CHUNK) {
       const chunk = companyIds.slice(i, i + FETCH_CHUNK);
       const { data, error } = await supabase
         .from("contacts")
-        .select("id, company_id, ikke_aktuell_kontakt")
+        .select("id, company_id, ikke_aktuell_kontakt, call_list")
         .in("company_id", chunk);
       if (error) console.error(`[contacts chunk ${i}] error:`, error.message);
       if (data) allContacts.push(...data);
@@ -278,56 +289,153 @@ Deno.serve(async (req: Request) => {
 
     const contactIds = allContacts.map((c) => c.id);
     const allActivities: ActivityRow[] = [];
+    const allTasks: Array<{ contact_id: string | null; due_date: string | null; status: string }> = [];
     for (let i = 0; i < contactIds.length; i += FETCH_CHUNK) {
       const chunk = contactIds.slice(i, i + FETCH_CHUNK);
-      const { data, error } = await supabase
-        .from("activities")
-        .select("contact_id, description, created_at")
-        .in("contact_id", chunk)
-        .order("created_at", { ascending: false });
-      if (error) console.error(`[activities chunk ${i}] error:`, error.message);
-      if (data) allActivities.push(...(data as ActivityRow[]));
+      const [{ data: actData, error: actErr }, { data: taskData, error: taskErr }] = await Promise.all([
+        supabase
+          .from("activities")
+          .select("contact_id, description, created_at")
+          .in("contact_id", chunk)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("tasks")
+          .select("contact_id, due_date, status")
+          .in("contact_id", chunk),
+      ]);
+      if (actErr) console.error(`[activities chunk ${i}] error:`, actErr.message);
+      if (taskErr) console.error(`[tasks chunk ${i}] error:`, taskErr.message);
+      if (actData) allActivities.push(...(actData as ActivityRow[]));
+      if (taskData) allTasks.push(...taskData);
     }
-    console.log(`[activities] contacts=${contactIds.length} activities_fetched=${allActivities.length}`);
+    console.log(`[activities] contacts=${contactIds.length} activities_fetched=${allActivities.length} tasks_fetched=${allTasks.length}`);
 
-    // Per kontakt: nyeste aktivitet → signal + alder
+    // Tech-profil (markedsradar) per company
+    const sistFraFinnByCompany = new Map<string, string>();
+    for (let i = 0; i < companyIds.length; i += FETCH_CHUNK) {
+      const chunk = companyIds.slice(i, i + FETCH_CHUNK);
+      const { data, error } = await supabase
+        .from("company_tech_profile")
+        .select("company_id, sist_fra_finn")
+        .in("company_id", chunk);
+      if (error) console.error(`[tech_profile chunk ${i}] error:`, error.message);
+      for (const p of data ?? []) {
+        if (p.company_id && p.sist_fra_finn) sistFraFinnByCompany.set(p.company_id, p.sist_fra_finn);
+      }
+    }
+
+    // Forespørsler per company
+    const activeRequestByCompany = new Map<string, boolean>();
+    const anyRequestByCompany = new Map<string, boolean>();
+    for (let i = 0; i < companyIds.length; i += FETCH_CHUNK) {
+      const chunk = companyIds.slice(i, i + FETCH_CHUNK);
+      const { data, error } = await supabase
+        .from("foresporsler")
+        .select("selskap_id, mottatt_dato, status")
+        .in("selskap_id", chunk);
+      if (error) console.error(`[foresporsler chunk ${i}] error:`, error.message);
+      for (const r of data ?? []) {
+        if (!r.selskap_id) continue;
+        anyRequestByCompany.set(r.selskap_id, true);
+        const days = Math.floor((Date.now() - new Date(r.mottatt_dato).getTime()) / 86_400_000);
+        const closed = r.status && /vunnet|tapt|avslått|avslag/i.test(r.status);
+        if (days <= 45 && !closed) activeRequestByCompany.set(r.selskap_id, true);
+      }
+    }
+
+    // Per kontakt: nyeste aktivitet + tasks
     const latestByContact = new Map<string, ActivityRow>();
+    const tasksByContact = new Map<string, Array<{ due_date: string | null; status: string }>>();
     for (const a of allActivities) {
       if (!a.contact_id) continue;
       if (!latestByContact.has(a.contact_id)) latestByContact.set(a.contact_id, a);
     }
+    for (const t of allTasks) {
+      if (!t.contact_id) continue;
+      const arr = tasksByContact.get(t.contact_id) ?? [];
+      arr.push({ due_date: t.due_date, status: t.status });
+      tasksByContact.set(t.contact_id, arr);
+    }
 
+    const today = new Date().toISOString().slice(0, 10);
     const now = Date.now();
-    const contactSignals = allContacts
-      .filter((c) => c.company_id)
-      .map((c) => {
-        const latest = latestByContact.get(c.id);
-        const days = latest
-          ? Math.floor((now - new Date(latest.created_at).getTime()) / 86_400_000)
-          : 999;
-        return {
-          company_id: c.company_id as string,
-          signal: extractSignal(latest?.description ?? null),
-          days_since_last_activity: days,
-          ikke_aktuell: !!c.ikke_aktuell_kontakt,
-        };
-      });
-    const heatTier = aggregateHeatTiers(contactSignals);
 
+    const companyMetaList: CompanyMeta[] = companyList.map((c) => ({
+      id: c.id,
+      name: c.name,
+      org_number: c.org_number,
+      website: c.website,
+      linkedin: c.linkedin,
+      status: c.status,
+      ikke_relevant: c.ikke_relevant,
+    }));
+
+    const companyStatusById = new Map<string, string | null>();
+    const companyIkkeRelevantById = new Map<string, boolean>();
+    for (const c of companyList) {
+      companyStatusById.set(c.id, c.status);
+      companyIkkeRelevantById.set(c.id, !!c.ikke_relevant);
+    }
+
+    const rankInputs: RankInputContact[] = allContacts.map((c) => {
+      const latest = c.id ? latestByContact.get(c.id) : undefined;
+      const daysSince = latest
+        ? Math.floor((now - new Date(latest.created_at).getTime()) / 86_400_000)
+        : 999;
+      const signal = extractSignal(latest?.description ?? null) ?? "";
+      const sistFraFinn = c.company_id ? sistFraFinnByCompany.get(c.company_id) : null;
+      const hasMarkedsradar = !!(sistFraFinn && (now - new Date(sistFraFinn).getTime()) / 86_400_000 <= 90);
+      const hasAktivForespørsel = !!(c.company_id && activeRequestByCompany.get(c.company_id));
+      const hasTidligereForespørsel =
+        !!(c.company_id && anyRequestByCompany.get(c.company_id)) && !hasAktivForespørsel;
+      const tasks = tasksByContact.get(c.id) ?? [];
+      const taskStatus = getTaskStatus(tasks);
+      const hasOverdue = tasks.some((t) => t.due_date && t.due_date < today && t.status === "open");
+
+      const heat = getHeatResult(
+        {
+          signal,
+          isInnkjoper: !!c.call_list,
+          hasMarkedsradar,
+          hasAktivForespørsel,
+          hasOverdue,
+          daysSinceLastContact: daysSince,
+          hasTidligereForespørsel,
+          ikkeAktuellKontakt: !!c.ikke_aktuell_kontakt,
+          ikkeRelevantSelskap: !!(c.company_id && companyIkkeRelevantById.get(c.company_id)),
+        },
+        taskStatus,
+      );
+
+      return {
+        companyId: c.company_id,
+        heat,
+        companyStatus: c.company_id ? companyStatusById.get(c.company_id) ?? null : null,
+        ikkeRelevantSelskap: !!(c.company_id && companyIkkeRelevantById.get(c.company_id)),
+        ikkeAktuellKontakt: !!c.ikke_aktuell_kontakt,
+      };
+    });
+
+    const ranked = rankCompaniesFromContacts(rankInputs, companyMetaList);
+    console.log(`[ranker] eligible_companies=${ranked.length} of ${companyList.length}`);
+
+    // Behold heat-tier-distribusjon for logging
+    const heatTier = new Map<string, Tier>();
+    for (const r of ranked) heatTier.set(r.companyId, r.tier);
     const heatTierDistribution: Record<string, number> = { "1": 0, "2": 0, "3": 0, "4": 0 };
     for (const t of heatTier.values()) heatTierDistribution[String(t)]++;
 
-    // 3. Sortér selskaper: varmest først → de bestem rekkefølgen i batchene
-    const sortedCompanies = [...companyList].sort((a, b) => {
-      const ta: Tier = heatTier.get(a.id) ?? 4;
-      const tb: Tier = heatTier.get(b.id) ?? 4;
-      return ta - tb;
+    // 3. Sortert selskapsliste følger nå rangeringen fra /kontakter (priority desc)
+    const sortedCompanies: CompanyRow[] = ranked.map((r) => {
+      const meta = companyList.find((c) => c.id === r.companyId)!;
+      return { id: meta.id, name: meta.name, website: meta.website, org_number: meta.org_number, status: meta.status };
     });
 
-    // Pass 1 prioriterer Tier 1-3 (varme) — Tier 4 (kalde) tas i Pass 2 hvis vi mangler items
-    const warmCompanies = sortedCompanies.filter((c) => (heatTier.get(c.id) ?? 4) <= 3);
-    const coldCompanies = sortedCompanies.filter((c) => (heatTier.get(c.id) ?? 4) === 4);
-    console.log(`[heat split] warm(T1-3)=${warmCompanies.length} cold(T4)=${coldCompanies.length}`);
+    // Pass 1 = topp ~50 (varmest), Pass 2 = resten av rangerte selskaper
+    const PASS1_TOP = 50;
+    const warmCompanies = sortedCompanies.slice(0, PASS1_TOP);
+    const coldCompanies = sortedCompanies.slice(PASS1_TOP);
+    console.log(`[ranker split] pass1_top=${warmCompanies.length} pass2_rest=${coldCompanies.length}`);
 
     // 4. Søk via Perplexity Search API — én query per selskap, parallellisert
     const allRaw: RawItem[] = [];

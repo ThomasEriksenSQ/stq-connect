@@ -7,6 +7,7 @@ import {
   DesignLabMediaFrame,
   DesignLabSectionHeader,
 } from "@/components/designlab/system";
+import { SourceListTab } from "@/components/designlab/news/SourceListTab";
 import { C } from "@/components/designlab/theme";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -378,9 +379,12 @@ async function fetchNewsDaily(): Promise<NewsDailyRow | null> {
 
 /* ────────────────────── SIDE ────────────────────── */
 
+type NewsTab = "news" | "sources";
+
 export default function DesignLabNews() {
   const todayLabel = formatTodayLabel();
   const [triggered, setTriggered] = useState(false);
+  const [tab, setTab] = useState<NewsTab>("news");
 
   const query = useQuery({
     queryKey: ["news-daily", new Date().toISOString().slice(0, 10)],
@@ -399,29 +403,15 @@ export default function DesignLabNews() {
     }
   }, [query, triggered]);
 
-  if (query.isLoading || (query.data === null && triggered)) {
-    return (
-      <DesignLabPageShell activePath="/design-lab/news" title="STACQ Daily" maxWidth={1100}>
-        <LoadingSkeleton />
-      </DesignLabPageShell>
-    );
-  }
-
-  if (query.isError) {
-    return (
-      <DesignLabPageShell activePath="/design-lab/news" title="STACQ Daily" maxWidth={1100}>
-        <EmptyState message="Kunne ikke hente nyheter" hint="Prøv å laste siden på nytt." />
-      </DesignLabPageShell>
-    );
-  }
-
-  const row = query.data;
+  const row = query.data ?? null;
   const items: NewsItem[] = row?.payload?.items ?? [];
   const lead = items.find((i): i is NewsLead => i.variant === "lead") ?? null;
   // Alle ikke-lead-saker rendres som features (bilde + tittel + ingress)
   const features = items.filter((i) => i.variant !== "lead") as NewsFeature[];
   const total = items.length;
 
+  const isLoadingNews = query.isLoading || (query.data === null && triggered);
+  const isErrorNews = query.isError;
   const isEmpty = !row || row.status === "empty" || (!lead && features.length === 0);
 
   return (
@@ -431,7 +421,7 @@ export default function DesignLabNews() {
       maxWidth={1100}
     >
       {/* Masthead */}
-      <header style={{ marginBottom: 56 }}>
+      <header style={{ marginBottom: 24 }}>
         <h1
           style={{
             fontSize: 28,
@@ -455,8 +445,52 @@ export default function DesignLabNews() {
         </p>
       </header>
 
+      {/* Tab-bar */}
+      <div
+        role="tablist"
+        style={{
+          display: "flex",
+          gap: 24,
+          borderBottom: `1px solid ${C.borderLight}`,
+          marginBottom: 32,
+        }}
+      >
+        {([
+          { value: "news", label: "Nyheter" },
+          { value: "sources", label: "Kildeliste" },
+        ] as const).map((t) => {
+          const active = tab === t.value;
+          return (
+            <button
+              key={t.value}
+              role="tab"
+              aria-selected={active}
+              onClick={() => setTab(t.value)}
+              style={{
+                background: "transparent",
+                border: "none",
+                padding: "10px 0",
+                fontSize: 13,
+                fontWeight: 500,
+                color: active ? C.text : C.textMuted,
+                borderBottom: `2px solid ${active ? C.text : "transparent"}`,
+                marginBottom: -1,
+                cursor: "pointer",
+              }}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
 
-      {isEmpty ? (
+      {tab === "sources" ? (
+        <SourceListTab />
+      ) : isLoadingNews ? (
+        <LoadingSkeleton />
+      ) : isErrorNews ? (
+        <EmptyState message="Kunne ikke hente nyheter" hint="Prøv å laste siden på nytt." />
+      ) : isEmpty ? (
         <EmptyState />
       ) : (
         <>
