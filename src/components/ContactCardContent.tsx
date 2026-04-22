@@ -379,75 +379,74 @@ function ContactSentCvNotice({
   if (entries.length === 0) return null;
 
   return (
-    <div className="mb-5 rounded-lg border border-primary/20 bg-primary/5 p-3">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="text-[0.8125rem] font-semibold text-foreground">CV sendt</p>
-      </div>
+    <div className="mb-5">
+      <h3 className="mb-3 text-[13px] font-medium text-[#1A1C1F]">CV sendt</h3>
+      <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+        <div className="divide-y divide-primary/10">
+          {entries.map((entry) => {
+            const senderName =
+              entry.sender_user_id
+                ? profileMap[entry.sender_user_id] || entry.sender_email || "Ukjent avsender"
+                : entry.sender_email || "Ukjent avsender";
+            const hasMailDetails = Boolean(
+              entry.message_subject ||
+              entry.message_preview ||
+              entry.message_body_text ||
+              entry.message_web_link,
+            );
+            const isExpanded = expandedEntryId === entry.id;
 
-      <div className="divide-y divide-primary/10">
-        {entries.map((entry) => {
-          const senderName =
-            entry.sender_user_id
-              ? profileMap[entry.sender_user_id] || entry.sender_email || "Ukjent avsender"
-              : entry.sender_email || "Ukjent avsender";
-          const hasMailDetails = Boolean(
-            entry.message_subject ||
-            entry.message_preview ||
-            entry.message_body_text ||
-            entry.message_web_link,
-          );
-          const isExpanded = expandedEntryId === entry.id;
+            return (
+              <div key={entry.id} className="py-2 first:pt-0 last:pb-0">
+                <div className="grid gap-2 md:grid-cols-[minmax(0,1.35fr)_128px_minmax(0,1fr)_minmax(0,1.45fr)_48px] md:items-center">
+                  <div className="min-w-0">
+                    <p className="mb-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
+                      Konsulent
+                    </p>
+                    <p className="truncate text-[0.875rem] font-semibold text-foreground">{entry.consultantName}</p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="mb-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
+                      Sendt
+                    </p>
+                    <p className="truncate text-[0.8125rem] text-muted-foreground">
+                      {format(new Date(entry.sent_at), "d. MMM yyyy HH:mm", { locale: nb })}
+                    </p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="mb-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
+                      Av CRM-bruker
+                    </p>
+                    <p className="truncate text-[0.8125rem] text-muted-foreground">{senderName}</p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="mb-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
+                      CV-fil
+                    </p>
+                    <p className="truncate text-[0.8125rem] text-muted-foreground">{entry.attachment_name}</p>
+                  </div>
+                  {hasMailDetails ? (
+                    <button
+                      type="button"
+                      onClick={() => setExpandedEntryId(isExpanded ? null : entry.id)}
+                      aria-expanded={isExpanded}
+                      aria-label={isExpanded ? "Skjul sendt CV-epost" : "Vis sendt CV-epost"}
+                      title={isExpanded ? "Skjul epost" : "Vis epost"}
+                      className="inline-flex h-8 w-fit items-center justify-center gap-1 rounded-md border border-primary/20 bg-background px-2 text-[0.75rem] text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground md:ml-auto"
+                    >
+                      <Mail className="h-3.5 w-3.5" />
+                      <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isExpanded && "rotate-180")} />
+                    </button>
+                  ) : (
+                    <span className="hidden text-right text-[0.75rem] text-muted-foreground md:block">–</span>
+                  )}
+                </div>
 
-          return (
-            <div key={entry.id} className="py-2 first:pt-0 last:pb-0">
-              <div className="grid gap-2 md:grid-cols-[minmax(0,1.35fr)_128px_minmax(0,1fr)_minmax(0,1.45fr)_48px] md:items-center">
-                <div className="min-w-0">
-                  <p className="mb-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
-                    Konsulent
-                  </p>
-                  <p className="truncate text-[0.875rem] font-semibold text-foreground">{entry.consultantName}</p>
-                </div>
-                <div className="min-w-0">
-                  <p className="mb-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
-                    Sendt
-                  </p>
-                  <p className="truncate text-[0.8125rem] text-muted-foreground">
-                    {format(new Date(entry.sent_at), "d. MMM yyyy HH:mm", { locale: nb })}
-                  </p>
-                </div>
-                <div className="min-w-0">
-                  <p className="mb-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
-                    Av CRM-bruker
-                  </p>
-                  <p className="truncate text-[0.8125rem] text-muted-foreground">{senderName}</p>
-                </div>
-                <div className="min-w-0">
-                  <p className="mb-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
-                    CV-fil
-                  </p>
-                  <p className="truncate text-[0.8125rem] text-muted-foreground">{entry.attachment_name}</p>
-                </div>
-                {hasMailDetails ? (
-                  <button
-                    type="button"
-                    onClick={() => setExpandedEntryId(isExpanded ? null : entry.id)}
-                    aria-expanded={isExpanded}
-                    aria-label={isExpanded ? "Skjul sendt CV-epost" : "Vis sendt CV-epost"}
-                    title={isExpanded ? "Skjul epost" : "Vis epost"}
-                    className="inline-flex h-8 w-fit items-center justify-center gap-1 rounded-md border border-primary/20 bg-background px-2 text-[0.75rem] text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground md:ml-auto"
-                  >
-                    <Mail className="h-3.5 w-3.5" />
-                    <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isExpanded && "rotate-180")} />
-                  </button>
-                ) : (
-                  <span className="hidden text-right text-[0.75rem] text-muted-foreground md:block">–</span>
-                )}
+                {isExpanded ? <ContactSentCvEmailBody entry={entry} /> : null}
               </div>
-
-              {isExpanded ? <ContactSentCvEmailBody entry={entry} /> : null}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
