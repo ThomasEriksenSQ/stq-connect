@@ -65,6 +65,7 @@ type SentMessage = {
   id: string;
   subject: string;
   bodyPreview: string;
+  bodyText: string;
   sentAt: string;
   webLink: string | null;
   senderEmail: string;
@@ -87,6 +88,25 @@ function getErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) return error.message;
   if (typeof error === "string") return error;
   return "Ukjent feil";
+}
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|tr|li|h[1-6])>/gi, "\n")
+    .replace(/<(hr)\s*\/?>/gi, "\n---\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n /g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 function isPdfAttachment(attachment: Record<string, unknown>) {
@@ -144,7 +164,7 @@ async function fetchSentMessagesForMailbox(accessToken: string, sinceIso: string
     `${GRAPH_BASE}/me/mailFolders/sentitems/messages` +
     `?$top=${PAGE_SIZE}` +
     `&$orderby=sentDateTime desc` +
-    `&$select=id,subject,bodyPreview,toRecipients,ccRecipients,bccRecipients,sentDateTime,hasAttachments,webLink,from`;
+    `&$select=id,subject,bodyPreview,body,toRecipients,ccRecipients,bccRecipients,sentDateTime,hasAttachments,webLink,from`;
   let shouldStop = false;
 
   while (requestUrl && messages.length < maxMessages && !shouldStop) {
@@ -197,6 +217,10 @@ async function fetchSentMessagesForMailbox(accessToken: string, sinceIso: string
         id: String(row.id || ""),
         subject: String(row.subject || "(uten emne)"),
         bodyPreview: String(row.bodyPreview || ""),
+        bodyText:
+          row.body?.contentType === "html"
+            ? stripHtml(String(row.body?.content || ""))
+            : String(row.body?.content || ""),
         sentAt,
         webLink: row.webLink ? String(row.webLink) : null,
         senderEmail: normalizeEmailAddress(row.from?.emailAddress?.address || ""),
@@ -383,9 +407,12 @@ serve(async (req) => {
 
         const accessToken = await refreshTokenIfNeeded(supabase, tokenRow);
         const previousSync = syncStateMap.get(tokenRow.user_id)?.last_synced_at || null;
-        const sinceIso = previousSync
-          ? new Date(new Date(previousSync).getTime() - 12 * 60 * 60 * 1000).toISOString()
-          : new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000).toISOString();
+        const sinceIso =
+          isAdminRequest && body.trigger === "manual"
+            ? new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000).toISOString()
+            : previousSync
+              ? new Date(new Date(previousSync).getTime() - 12 * 60 * 60 * 1000).toISOString()
+              : new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000).toISOString();
 
         const sentMessages = await fetchSentMessagesForMailbox(accessToken, sinceIso, maxMessagesPerMailbox);
         totalScannedMessages += sentMessages.length;
@@ -429,6 +456,8 @@ serve(async (req) => {
                 message_id: message.id,
                 message_web_link: message.webLink,
                 message_subject: message.subject,
+                message_preview: message.bodyPreview,
+                message_body_text: message.bodyText || null,
                 attachment_name: employeeMatch.attachmentName,
                 contact_name_snapshot: getContactDisplayName(contact),
                 company_name_snapshot: company?.name || null,
