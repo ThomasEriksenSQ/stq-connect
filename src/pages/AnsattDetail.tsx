@@ -24,6 +24,8 @@ import { useCrmNavigation } from "@/lib/crmNavigation";
 import { buildEmployeeGeoText, deriveEmployeeAddressFields } from "@/lib/geographicMatch";
 import { getEmployeeLifecycleStatus } from "@/lib/employeeStatus";
 import { coerceDisplayText } from "@/lib/outlookMail";
+import { crmQueryKeys } from "@/lib/queryKeys";
+import { useSentCvLiveSync } from "@/hooks/useSentCvLiveSync";
 import {
   DesignLabPrimaryAction,
   DesignLabSecondaryAction,
@@ -206,7 +208,7 @@ const AnsattDetail = ({
   });
 
   const { data: sentCvEntries = [] } = useQuery({
-    queryKey: ["ansatt-sent-cv", ansattId],
+    queryKey: crmQueryKeys.sentCv.employee(ansattId),
     queryFn: async () => {
       const { data: rows, error } = await supabase
         .from("sent_cv_log")
@@ -266,6 +268,17 @@ const AnsattDetail = ({
       });
     },
     enabled: !isNaN(ansattId),
+  });
+
+  const sentCvInvalidateKeys = useMemo(
+    () => [crmQueryKeys.sentCv.employee(ansattId)],
+    [ansattId],
+  );
+
+  useSentCvLiveSync({
+    scopeKey: `employee:${ansattId}`,
+    enabled: !isNaN(ansattId),
+    invalidateQueryKeys: sentCvInvalidateKeys,
   });
 
   const saveNoteMutation = useMutation({

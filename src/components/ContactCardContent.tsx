@@ -98,6 +98,7 @@ import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/q
 import { coerceDisplayText, normalizeOutlookMailItems } from "@/lib/outlookMail";
 import { useClickWithoutSelection, activateOnEnterOrSpace } from "@/hooks/useClickWithoutSelection";
 import { useCrmNavigation } from "@/lib/crmNavigation";
+import { useSentCvLiveSync } from "@/hooks/useSentCvLiveSync";
 /* ── Helpers for storing/retrieving category in description ── */
 
 /**
@@ -616,7 +617,7 @@ export function ContactCardContent({
   );
 
   const { data: sentCvEntries = [] } = useQuery({
-    queryKey: ["contact-sent-cv", contactId],
+    queryKey: crmQueryKeys.sentCv.contact(contactId),
     queryFn: async () => {
       const { data: rows, error } = await supabase
         .from("sent_cv_log")
@@ -660,6 +661,17 @@ export function ContactCardContent({
         .filter((entry): entry is ContactSentCvEntry => Boolean(entry));
     },
     enabled: !!contactId,
+  });
+
+  const sentCvInvalidateKeys = useMemo(
+    () => [crmQueryKeys.sentCv.contact(contactId)],
+    [contactId],
+  );
+
+  useSentCvLiveSync({
+    scopeKey: `contact:${contactId}`,
+    enabled: !!contactId,
+    invalidateQueryKeys: sentCvInvalidateKeys,
   });
 
   // Outlook connection status

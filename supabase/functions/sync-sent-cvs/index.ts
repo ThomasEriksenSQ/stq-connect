@@ -23,7 +23,14 @@ const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
 const INTERNAL_DOMAINS = ["stacq.no"];
 const DEFAULT_INITIAL_LOOKBACK_DAYS = 120;
 const DEFAULT_MAX_MESSAGES_PER_MAILBOX = 400;
+const DEFAULT_LIVE_LOOKBACK_HOURS = 72;
+const DEFAULT_LIVE_MAX_MESSAGES_PER_MAILBOX = 120;
+const LIVE_SYNC_MIN_INTERVAL_MINUTES = 3;
+const LIVE_SYNC_OVERLAP_MINUTES = 30;
 const PAGE_SIZE = 50;
+const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
 
 type OutlookTokenRow = {
   user_id: string;
@@ -35,6 +42,7 @@ type OutlookTokenRow = {
 type SyncStateRow = {
   user_id: string;
   last_synced_at: string | null;
+  last_scan_started_at: string | null;
 };
 
 type ContactRow = {
@@ -119,6 +127,12 @@ function isPdfAttachment(attachment: Record<string, unknown>) {
 
 function getContactDisplayName(contact: ContactRow) {
   return `${contact.first_name} ${contact.last_name}`.trim() || null;
+}
+
+function parseIsoDate(value: string | null | undefined) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 async function refreshTokenIfNeeded(supabase: ReturnType<typeof createClient>, tokenRow: OutlookTokenRow) {
@@ -281,6 +295,7 @@ serve(async (req) => {
   const jwtPayload = bearerToken ? parseJwtPayload(bearerToken) : null;
   const jwtRole = typeof jwtPayload?.role === "string" ? jwtPayload.role : null;
   let isAdminRequest = false;
+  const isLiveRequest = body.trigger === "live";
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -321,8 +336,11 @@ serve(async (req) => {
   const lookbackDays = isAdminRequest
     ? Math.min(Math.max(body.lookbackDays || DEFAULT_INITIAL_LOOKBACK_DAYS, 1), 365)
     : DEFAULT_INITIAL_LOOKBACK_DAYS;
+  const defaultMaxMessagesPerMailbox = isLiveRequest
+    ? DEFAULT_LIVE_MAX_MESSAGES_PER_MAILBOX
+    : DEFAULT_MAX_MESSAGES_PER_MAILBOX;
   const maxMessagesPerMailbox = isAdminRequest
-    ? Math.min(Math.max(body.maxMessagesPerMailbox || DEFAULT_MAX_MESSAGES_PER_MAILBOX, 20), 1000)
+    ? Math.min(Math.max(body.maxMessagesPerMailbox || defaultMaxMessagesPerMailbox, 20), 1000)
     : DEFAULT_MAX_MESSAGES_PER_MAILBOX;
   const runStartedAt = new Date().toISOString();
 
@@ -336,7 +354,7 @@ serve(async (req) => {
       { data: cvDocuments, error: cvDocumentsError },
     ] = await Promise.all([
       supabase.from("outlook_tokens").select("user_id, access_token, refresh_token, expires_at"),
-      supabase.from("outlook_sent_cv_sync_state").select("user_id, last_synced_at"),
+      supabase.from("outlook_sent_cv_sync_state").select("user_id, last_synced_at, last_scan_started_at"),
       supabase
         .from("contacts")
         .select("id, email, first_name, last_name, title, company_id")
@@ -388,16 +406,37 @@ serve(async (req) => {
       user_id: string;
       scanned_messages: number;
       matched_rows: number;
-      status: "ok" | "error";
+      status: "ok" | "error" | "skipped";
       error?: string;
     }> = [];
 
     let totalScannedMessages = 0;
     let totalMatchedRows = 0;
+    let scannedAccounts = 0;
+    let skippedAccounts = 0;
 
     for (const tokenRow of (tokenRows || []) as OutlookTokenRow[]) {
       let matchedRowsForAccount = 0;
       try {
+        const syncState = syncStateMap.get(tokenRow.user_id);
+        const previousSync = parseIsoDate(syncState?.last_synced_at);
+        const lastScanStartedAt = parseIsoDate(syncState?.last_scan_started_at);
+
+        if (
+          isLiveRequest &&
+          lastScanStartedAt &&
+          Date.now() - lastScanStartedAt.getTime() < LIVE_SYNC_MIN_INTERVAL_MINUTES * MINUTE_MS
+        ) {
+          skippedAccounts += 1;
+          accountSummaries.push({
+            user_id: tokenRow.user_id,
+            scanned_messages: 0,
+            matched_rows: 0,
+            status: "skipped",
+          });
+          continue;
+        }
+
         await supabase.from("outlook_sent_cv_sync_state").upsert({
           user_id: tokenRow.user_id,
           last_scan_started_at: runStartedAt,
@@ -406,16 +445,23 @@ serve(async (req) => {
         });
 
         const accessToken = await refreshTokenIfNeeded(supabase, tokenRow);
-        const previousSync = syncStateMap.get(tokenRow.user_id)?.last_synced_at || null;
+        const defaultLookbackStart = isLiveRequest
+          ? new Date(Date.now() - DEFAULT_LIVE_LOOKBACK_HOURS * HOUR_MS)
+          : new Date(Date.now() - lookbackDays * DAY_MS);
+        const overlapMs = isLiveRequest ? LIVE_SYNC_OVERLAP_MINUTES * MINUTE_MS : 12 * HOUR_MS;
+        const incrementalSyncStart = previousSync
+          ? new Date(Math.max(previousSync.getTime() - overlapMs, defaultLookbackStart.getTime()))
+          : defaultLookbackStart;
         const sinceIso =
           isAdminRequest && body.trigger === "manual"
-            ? new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000).toISOString()
+            ? new Date(Date.now() - lookbackDays * DAY_MS).toISOString()
             : previousSync
-              ? new Date(new Date(previousSync).getTime() - 12 * 60 * 60 * 1000).toISOString()
-              : new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000).toISOString();
+              ? incrementalSyncStart.toISOString()
+              : defaultLookbackStart.toISOString();
 
         const sentMessages = await fetchSentMessagesForMailbox(accessToken, sinceIso, maxMessagesPerMailbox);
         totalScannedMessages += sentMessages.length;
+        scannedAccounts += 1;
 
         const rowsToUpsert: Array<Record<string, unknown>> = [];
 
@@ -517,6 +563,8 @@ serve(async (req) => {
         trigger: body.trigger || "manual",
         scanned_messages: totalScannedMessages,
         matched_rows: totalMatchedRows,
+        scanned_accounts: scannedAccounts,
+        skipped_accounts: skippedAccounts,
         accounts: accountSummaries,
         generated_at: runStartedAt,
       }),

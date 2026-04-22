@@ -24,9 +24,11 @@ const SENT_CV_SYNC_OPTIONS = [
 type SentCvSyncResult = {
   scanned_messages: number;
   matched_rows: number;
+  scanned_accounts?: number;
+  skipped_accounts?: number;
   generated_at: string;
   accounts?: Array<{
-    status: "ok" | "error";
+    status: "ok" | "error" | "skipped";
     scanned_messages: number;
     matched_rows: number;
     error?: string;

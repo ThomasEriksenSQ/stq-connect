@@ -7,6 +7,11 @@ export const crmQueryKeys = {
     activities: (contactId: string) => ["contact-activities", contactId] as const,
     tasks: (contactId: string) => ["contact-tasks", contactId] as const,
   },
+  sentCv: {
+    contact: (contactId: string) => ["contact-sent-cv", contactId] as const,
+    employee: (ansattId: number | string) => ["ansatt-sent-cv", ansattId] as const,
+    live: (scopeKey: string) => ["sent-cv-live-sync", scopeKey] as const,
+  },
   companies: {
     all: () => ["companies-full"] as const,
     detail: (companyId: string) => ["company", companyId] as const,
