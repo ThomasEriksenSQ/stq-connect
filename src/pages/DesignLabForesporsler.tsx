@@ -15,7 +15,8 @@ import { crmQueryKeys } from "@/lib/queryKeys";
 import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { C } from "@/components/designlab/theme";
-import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
+import { DesignLabMobileNavButton, DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { getInitials } from "@/lib/utils";
 import {
   DesignLabIconButton,
@@ -132,6 +133,7 @@ function PipelineTrack({ status }: { status: string }) {
 
 export default function DesignLabForesporsler() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { signOut, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
@@ -387,20 +389,22 @@ export default function DesignLabForesporsler() {
 
   /* ═══ RENDER ═══ */
   return (
-    <div className="flex h-screen overflow-hidden select-none" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}>
+    <div className="dl-shell flex h-screen overflow-hidden select-none" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}>
 
       <DesignLabSidebar navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/foresporsler" />
 
       {/* ═══ MAIN ═══ */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ ...getDesignLabTextSizeStyle(textSize), background: C.appBg }}>
         {/* Header */}
-        <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
-          <div className="flex items-baseline gap-2.5">
-            <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Forespørsler</h1>
-            <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>{stats.aktive}</span>
-            
+        <header className="dl-shell-header flex shrink-0 flex-wrap items-center justify-between gap-3" style={{ borderBottom: `1px solid ${C.border}` }}>
+          <div className="flex min-w-0 items-center gap-3">
+            <DesignLabMobileNavButton navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/foresporsler" />
+            <div className="flex items-baseline gap-2.5">
+              <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Forespørsler</h1>
+              <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>{stats.aktive}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
             <DesignLabPrimaryAction onClick={() => setCreateOpen(true)}>
               + Ny forespørsel
             </DesignLabPrimaryAction>
@@ -408,7 +412,7 @@ export default function DesignLabForesporsler() {
         </header>
 
         {/* Filters + stat line */}
-        <div className="shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
+        <div className="dl-filter-bar shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}` }}>
           <DesignLabFilterRow
             label="TID"
             options={STATUS_CHIPS.map((option) => option.label)}
@@ -440,6 +444,26 @@ export default function DesignLabForesporsler() {
 
         {/* Content: list + detail */}
         <div className="flex-1 min-h-0 flex">
+          {isMobile ? (
+            <div className="h-full w-full overflow-y-auto">
+              {isLoading ? (
+                <LoadingMsg />
+              ) : sorted.length === 0 ? (
+                <EmptyMsg />
+              ) : (
+                sorted.map((row: any) => (
+                  <ForespMobileRow
+                    key={row.id}
+                    row={row}
+                    portraitByAnsattId={portraitByAnsattId}
+                    signalByContactId={signalByContactId}
+                    isActive={selectedRowId === row.id}
+                    onClick={() => setSelectedRowId(row.id)}
+                  />
+                ))
+              )}
+            </div>
+          ) : (
           <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel defaultSize={38} minSize={24} maxSize={60}>
               <div className="h-full overflow-y-auto" style={{ scrollbarColor: `${C.borderStrong} ${C.surfaceAlt}` }}>
@@ -504,8 +528,26 @@ export default function DesignLabForesporsler() {
               <div className="h-full" style={{ background: C.appBg }} />
             </ResizablePanel>
           </ResizablePanelGroup>
+          )}
         </div>
       </main>
+
+      <DesignLabEntitySheet
+        open={isMobile && Boolean(selectedRow)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedRowId(null);
+        }}
+        contentClassName="dl-v8-theme"
+      >
+        {isMobile && selectedRow ? (
+          <ForespørselSheet
+            row={selectedRow}
+            onClose={() => setSelectedRowId(null)}
+            onExpandChange={() => {}}
+            onRequestEdit={() => setEditSheetOpen(true)}
+          />
+        ) : null}
+      </DesignLabEntitySheet>
 
       <DesignLabEntitySheet
         open={editSheetOpen && Boolean(selectedRow)}
@@ -742,6 +784,110 @@ function ForespRow({
         {relTime(days)}
       </span>
     </div>
+  );
+}
+
+function ForespMobileRow({
+  row,
+  portraitByAnsattId,
+  signalByContactId,
+  isActive,
+  onClick,
+}: {
+  row: any;
+  portraitByAnsattId: Map<number, string>;
+  signalByContactId: Map<string, string>;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  const days = getDaysAgo(row.mottatt_dato);
+  const kontaktNavn = row.contacts ? `${row.contacts.first_name} ${row.contacts.last_name}`.trim() : "";
+  const sendt = row.foresporsler_konsulenter || [];
+  const signal = row.contacts?.id ? signalByContactId.get(row.contacts.id) || null : null;
+  const firstConsultant = sendt[0] || null;
+  const consultantName = firstConsultant
+    ? (firstConsultant.konsulent_type === "intern"
+        ? firstConsultant.stacq_ansatte?.navn
+        : firstConsultant.external_consultants?.navn) || "Ukjent"
+    : null;
+  const portrait =
+    firstConsultant?.konsulent_type === "intern" && firstConsultant?.stacq_ansatte?.id
+      ? portraitByAnsattId.get(firstConsultant.stacq_ansatte.id) || null
+      : null;
+  const firstStatus = firstConsultant ? (PIPELINE[firstConsultant.status] || { label: "Ny", color: C.textFaint }) : null;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full text-left transition-colors"
+      style={{
+        padding: "14px 16px",
+        borderBottom: `1px solid ${C.borderLight}`,
+        background: isActive ? C.activeBg : "transparent",
+      }}
+      onMouseEnter={(event) => {
+        if (!isActive) event.currentTarget.style.background = C.hoverBg;
+      }}
+      onMouseLeave={(event) => {
+        if (!isActive) event.currentTarget.style.background = "transparent";
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate" style={{ fontSize: 13, fontWeight: 600, color: C.text }}>
+            {kontaktNavn || "Ingen kontakt"}
+          </p>
+          <p className="truncate" style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+            {row.selskap_navn}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {signal ? <DesignLabSignalBadge signal={signal} /> : null}
+          <TypeChip type={row.type} />
+        </div>
+      </div>
+
+      {(consultantName || firstStatus) && (
+        <div className="mt-3 flex items-center gap-2">
+          {portrait ? (
+            <img
+              src={portrait}
+              alt={consultantName || "Konsulent"}
+              className="h-7 w-7 rounded-full border object-cover"
+              style={{ borderColor: C.border }}
+            />
+          ) : consultantName ? (
+            <div
+              className="flex h-7 w-7 items-center justify-center rounded-full"
+              style={{ background: C.accentBg, color: C.accent, fontSize: 10, fontWeight: 700 }}
+            >
+              {getInitials(consultantName)}
+            </div>
+          ) : null}
+          <div className="min-w-0">
+            {consultantName ? (
+              <p className="truncate" style={{ fontSize: 12, fontWeight: 500, color: C.text }}>
+                {consultantName}
+              </p>
+            ) : null}
+            {firstStatus ? (
+              <p style={{ fontSize: 11, color: firstStatus.color }}>
+                {firstStatus.label}
+                {sendt.length > 1 ? ` +${sendt.length - 1}` : ""}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-3 flex items-center justify-between gap-3" style={{ fontSize: 12, color: C.textFaint }}>
+        <span>{days <= 7 ? "Ny forespørsel" : "Mottatt"}</span>
+        <span style={{ color: days <= 7 ? C.text : days <= 21 ? C.warning : C.danger, fontWeight: 500 }}>
+          {relTime(days)}
+        </span>
+      </div>
+    </button>
   );
 }
 

@@ -6,10 +6,12 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { formatCleanupSummary } from "@/lib/candidateIdentity";
 import { relativeFutureDate } from "@/lib/relativeDate";
-import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
+import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
+import { DesignLabMobileNavButton, DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { C } from "@/components/designlab/theme";
 import {
@@ -58,6 +60,7 @@ const STATUS_TAG_COLORS: Record<string, { background: string; color: string; bor
 
 export default function DesignLabEksterneKonsulenter() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const { user, signOut } = useAuth();
   const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
@@ -201,9 +204,59 @@ export default function DesignLabEksterneKonsulenter() {
     );
   };
 
+  const renderMobileRow = (row: any) => {
+    const name = row.navn || "—";
+    const company = row.companies?.name || row.selskap_tekst || "—";
+    const isSelected = selectedId === row.id;
+    const availability = getExternalAvailabilityMeta(row.tilgjengelig_fra);
+
+    return (
+      <button
+        key={row.id}
+        type="button"
+        onClick={() => setSelectedId(row.id)}
+        className="w-full text-left transition-colors"
+        style={{
+          padding: "14px 16px",
+          borderBottom: `1px solid ${C.borderLight}`,
+          background: isSelected ? C.selected : "transparent",
+        }}
+        onMouseEnter={(event) => {
+          if (!isSelected) event.currentTarget.style.background = C.hoverBg;
+        }}
+        onMouseLeave={(event) => {
+          event.currentTarget.style.background = isSelected ? C.selected : "transparent";
+        }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate" style={{ fontSize: 13, fontWeight: 600, color: C.text }}>
+              {name}
+            </p>
+            <p className="truncate" style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+              {company}
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <DesignLabStaticTag colors={TYPE_TAG_COLORS[row.type] || DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>
+              {TYPE_LABELS[row.type] || row.type}
+            </DesignLabStaticTag>
+            <DesignLabStaticTag colors={STATUS_TAG_COLORS[availability.statusKey] || DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>
+              {availability.label}
+            </DesignLabStaticTag>
+          </div>
+        </div>
+        <div className="mt-3 flex items-center justify-between gap-3" style={{ fontSize: 12, color: C.textFaint }}>
+          <span>{(row.teknologier || []).slice(0, 2).join(", ") || "Ingen teknologier"}</span>
+          <span>{relativeFutureDate(row.tilgjengelig_fra)}</span>
+        </div>
+      </button>
+    );
+  };
+
   return (
     <div
-      className="flex h-screen overflow-hidden select-none"
+      className="dl-shell flex h-screen overflow-hidden select-none"
       style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}
     >
       <DesignLabSidebar navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/eksterne" />
@@ -213,14 +266,17 @@ export default function DesignLabEksterneKonsulenter() {
         style={{ ...getDesignLabTextSizeStyle(textSize), background: C.appBg }}
       >
         <header
-          className="flex items-center justify-between px-6 shrink-0"
-          style={{ height: 40, borderBottom: `1px solid ${C.border}` }}
+          className="dl-shell-header flex shrink-0 flex-wrap items-center justify-between gap-3"
+          style={{ borderBottom: `1px solid ${C.border}` }}
         >
-          <div className="flex items-baseline gap-2.5">
-            <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Eksterne</h1>
-            <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {filtered.length}</span>
+          <div className="flex min-w-0 items-center gap-3">
+            <DesignLabMobileNavButton navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/eksterne" />
+            <div className="flex items-baseline gap-2.5">
+              <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Eksterne</h1>
+              <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {filtered.length}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
             <DesignLabSecondaryAction onClick={() => navigate("/stacq/importer-cver")}>
               <Upload className="h-3.5 w-3.5" />
               Importer CVer
@@ -236,7 +292,7 @@ export default function DesignLabEksterneKonsulenter() {
           </div>
         </header>
 
-        <div className="shrink-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
+        <div className="dl-filter-bar shrink-0" style={{ borderBottom: `1px solid ${C.border}` }}>
           <div className="space-y-1.5">
             <DesignLabFilterRow
               label="TYPE"
@@ -254,6 +310,21 @@ export default function DesignLabEksterneKonsulenter() {
         </div>
 
         <div className="flex-1 min-h-0 flex">
+          {isMobile ? (
+            <div className="h-full w-full overflow-y-auto">
+              {isLoading ? (
+                <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>
+                  Laster eksterne konsulenter…
+                </div>
+              ) : filtered.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>
+                  Ingen eksterne konsulenter å vise
+                </div>
+              ) : (
+                filtered.map((row) => renderMobileRow(row))
+              )}
+            </div>
+          ) : (
           <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel defaultSize={38} minSize={24} maxSize={60}>
               <div className="h-full overflow-y-auto" style={{ scrollbarColor: `${C.borderStrong} ${C.surfaceAlt}` }}>
@@ -330,8 +401,22 @@ export default function DesignLabEksterneKonsulenter() {
               )}
             </ResizablePanel>
           </ResizablePanelGroup>
+          )}
         </div>
       </main>
+      <DesignLabEntitySheet
+        open={isMobile && Boolean(selectedRow)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedId(null);
+        }}
+        contentClassName="dl-v8-theme"
+      >
+        {isMobile && selectedRow ? (
+          <div className="dl-detail-scroll">
+            <ExternalConsultantDetailCard row={selectedRow} onEdit={() => openEdit(selectedRow)} />
+          </div>
+        ) : null}
+      </DesignLabEntitySheet>
 
       <ConsultantModal
         open={modalOpen}

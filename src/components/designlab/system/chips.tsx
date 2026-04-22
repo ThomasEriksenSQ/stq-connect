@@ -149,7 +149,7 @@ export function DesignLabFilterRow<TOption extends string>({
   onChange: (value: TOption) => void;
 }) {
   return (
-    <div className="flex items-center gap-2 py-[3px]">
+    <div className="flex flex-wrap items-start gap-x-2 gap-y-1.5 py-[3px]">
       <DesignLabControlLabel>{label}</DesignLabControlLabel>
       <div className="flex items-center gap-1.5 flex-wrap">
         {options.map((option) => {

@@ -16,10 +16,11 @@ import { getEffectiveSignal, normalizeCategoryLabel } from "@/lib/categoryUtils"
 import { useAuth } from "@/hooks/useAuth";
 import { C } from "@/components/designlab/theme";
 import { crmQueryKeys } from "@/lib/queryKeys";
-import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
+import { DesignLabMobileNavButton, DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { CommandPalette } from "@/components/designlab/CommandPalette";
 import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { BrregSearch, lookupByOrgNr } from "@/components/BrregSearch";
 import { toast } from "sonner";
 import { useCrmNavigation } from "@/lib/crmNavigation";
@@ -181,6 +182,7 @@ function OrgNrInput({
 
 export default function DesignLabCompanies() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { getCompanyPath } = useCrmNavigation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { signOut, user } = useAuth();
@@ -548,6 +550,50 @@ export default function DesignLabCompanies() {
     );
   }, [selectedId]);
 
+  const renderMobileRow = useCallback((company: any) => {
+    const daysSince = company.lastActivity ? differenceInDays(new Date(), new Date(company.lastActivity)) : null;
+    const typeLabel = TYPE_VALUE_TO_LABEL[company.status] || company.status;
+    const isSelected = selectedId === company.id;
+
+    return (
+      <button
+        key={company.id}
+        type="button"
+        onClick={() => setSelectedId(isSelected ? null : company.id)}
+        className="w-full text-left transition-colors"
+        style={{
+          padding: "14px 16px",
+          borderBottom: `1px solid ${C.borderLight}`,
+          background: isSelected ? C.activeBg : "transparent",
+        }}
+        onMouseEnter={(event) => {
+          if (!isSelected) event.currentTarget.style.background = C.hoverBg;
+        }}
+        onMouseLeave={(event) => {
+          event.currentTarget.style.background = isSelected ? C.activeBg : "transparent";
+        }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate" style={{ fontSize: 13, fontWeight: 600, color: C.text }}>
+              {company.name}
+            </p>
+            <p className="truncate" style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+              {company.city || "Sted ikke satt"}
+            </p>
+          </div>
+          <DesignLabStaticTag>
+            <span className="truncate">{typeLabel}</span>
+          </DesignLabStaticTag>
+        </div>
+        <div className="mt-3 flex items-center justify-between gap-3" style={{ fontSize: 12, color: C.textFaint }}>
+          <span>{company.contactCount || 0} kontakter</span>
+          <span>{daysSince !== null ? `Siste aktivitet ${relTime(daysSince)}` : "Ingen aktivitet"}</span>
+        </div>
+      </button>
+    );
+  }, [selectedId]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (cmdOpen) return;
@@ -578,19 +624,22 @@ export default function DesignLabCompanies() {
 
   /* ═══ RENDER ═══ */
   return (
-    <div className="flex h-screen overflow-hidden select-none" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}>
+    <div className="dl-shell flex h-screen overflow-hidden select-none" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}>
 
       <DesignLabSidebar navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/selskaper" />
 
       {/* ═══ MAIN ═══ */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ ...getDesignLabTextSizeStyle(textSize), background: C.appBg }}>
         {/* Header bar */}
-        <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
-          <div className="flex items-baseline gap-2.5">
-            <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Selskaper</h1>
-            <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {filtered.length}</span>
+        <header className="dl-shell-header flex shrink-0 flex-wrap items-center justify-between gap-3" style={{ borderBottom: `1px solid ${C.border}` }}>
+          <div className="flex min-w-0 items-center gap-3">
+            <DesignLabMobileNavButton navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/selskaper" />
+            <div className="flex items-baseline gap-2.5">
+              <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Selskaper</h1>
+              <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {filtered.length}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
             <DesignLabPrimaryAction onClick={() => setCreateOpen(true)}>
               + Nytt selskap
             </DesignLabPrimaryAction>
@@ -598,7 +647,7 @@ export default function DesignLabCompanies() {
         </header>
 
         {/* Filters bar */}
-        <div className="shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
+        <div className="dl-filter-bar shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}` }}>
           <DesignLabFilterRow label="EIER" options={OWNERS} value={ownerFilter} onChange={setOwnerFilter} />
           <div className="flex items-center justify-between">
             <DesignLabFilterRow label="TYPE" options={[...TYPE_FILTERS]} value={typeFilter} onChange={(v) => setTypeFilter(v as TypeFilter)} />
@@ -614,6 +663,17 @@ export default function DesignLabCompanies() {
 
         {/* Content: list + detail */}
         <div className="flex-1 min-h-0 flex">
+          {isMobile ? (
+            <div className="h-full w-full overflow-y-auto">
+              {isLoading ? (
+                <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster selskaper…</div>
+              ) : sorted.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen selskaper funnet</div>
+              ) : (
+                sorted.map((company: any) => renderMobileRow(company))
+              )}
+            </div>
+          ) : (
           <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel defaultSize={38} minSize={24} maxSize={60}>
               <div className="h-full overflow-y-auto" style={{ scrollbarColor: `${C.borderStrong} ${C.surfaceAlt}` }}>
@@ -703,8 +763,38 @@ export default function DesignLabCompanies() {
               <div className="h-full" style={{ background: C.appBg }} />
             </ResizablePanel>
           </ResizablePanelGroup>
+          )}
         </div>
       </main>
+      <DesignLabEntitySheet
+        open={isMobile && Boolean(selectedId)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedId(null);
+        }}
+        contentClassName="dl-v8-theme"
+      >
+        {isMobile && selectedId ? (
+          <div className="dl-detail-scroll">
+            <RenderErrorBoundary
+              resetKey={selectedId}
+              fallbackMessage="Kunne ikke laste selskapskortet. Prøv et annet selskap eller last siden på nytt."
+            >
+              <CompanyCardContent
+                companyId={selectedId}
+                editable
+                useV1CreateSheet
+                headerPaddingTop={12}
+                showContactsDivider
+                defaultHidden={{
+                  techDna: true,
+                  notes: true,
+                }}
+                onNavigateToFullPage={() => navigate(getCompanyPath(selectedId))}
+              />
+            </RenderErrorBoundary>
+          </div>
+        ) : null}
+      </DesignLabEntitySheet>
       <AktivOppdragStyleSheet
         open={createOpen}
         onOpenChange={(nextOpen) => {

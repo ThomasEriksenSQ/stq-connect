@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/hooks/useAuth";
 import { usePersistentState } from "@/hooks/usePersistentState";
-import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
+import { DesignLabMobileNavButton, DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { C } from "@/components/designlab/theme";
 
@@ -36,27 +36,30 @@ export function DesignLabPageShell({
 
   return (
     <div
-      className="flex h-screen overflow-hidden"
+      className="dl-shell flex h-screen overflow-hidden"
       style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}
     >
       <DesignLabSidebar navigate={navigate} signOut={signOut} user={user} activePath={activePath} />
 
       <main className="flex-1 flex min-w-0 flex-col overflow-hidden" style={{ ...getDesignLabTextSizeStyle(textSize), background: C.appBg }}>
         {hideHeader ? null : (
-          <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
-            <div className="flex items-baseline gap-2.5">
-              <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{title}</h1>
-              {typeof count === "number" ? (
-                <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {count}</span>
-              ) : null}
+          <header className="dl-shell-header flex shrink-0 flex-wrap items-center justify-between gap-3" style={{ borderBottom: `1px solid ${C.border}` }}>
+            <div className="flex min-w-0 items-center gap-3">
+              <DesignLabMobileNavButton navigate={navigate} signOut={signOut} user={user} activePath={activePath} />
+              <div className="flex min-w-0 items-baseline gap-2.5">
+                <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{title}</h1>
+                {typeof count === "number" ? (
+                  <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {count}</span>
+                ) : null}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
               {headerRight}
             </div>
           </header>
         )}
 
-        <div className="flex-1 overflow-y-auto" style={{ padding: "24px 24px 48px", ...contentStyle }}>
+        <div className="dl-page-scroll flex-1 overflow-y-auto" style={contentStyle}>
           <div
             className={contentClassName}
             style={{

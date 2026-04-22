@@ -1,15 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { User } from "@supabase/supabase-js";
 import {
   Users, Building2, LayoutDashboard, Briefcase, Settings, LogOut,
-  UserPlus, Radar, TrendingUp, Globe, Clock, PanelLeftClose, PanelLeftOpen,
+  UserPlus, Radar, TrendingUp, Globe, Clock, Menu, PanelLeftClose, PanelLeftOpen, X,
 } from "lucide-react";
 import { C } from "@/components/designlab/theme";
 import { ThemeModeButton, ThemeModeControl } from "@/components/ThemeModeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { SCALE_MAP, getDesignLabTextSizeVars, TextSizeControlSidebar, type TextSize } from "@/components/designlab/TextSizeControl";
 import { getNavItemFromPath, type CrmNavItem, useCrmNavigation } from "@/lib/crmNavigation";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { DesignLabIconButton } from "@/components/designlab/controls";
+import { useIsMobile } from "@/hooks/use-mobile";
 import stacqLogoFull from "@/assets/stacq-logo-full-black.png";
 import stacqLogoIcon from "@/assets/stacq-logo-icon-black.png";
 import stacqLogoFullWhite from "@/assets/stacq-logo-full-white.png";
@@ -44,6 +47,7 @@ interface DesignLabSidebarProps {
 }
 
 export function DesignLabSidebar({ navigate, signOut, user, activePath }: DesignLabSidebarProps) {
+  const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = usePersistentState("dl-sidebar-collapsed", false);
   const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const { resolvedTheme } = useTheme();
@@ -67,6 +71,10 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [setCollapsed]);
+
+  if (isMobile) {
+    return null;
+  }
 
   return (
     <aside
@@ -187,6 +195,147 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
         <FooterBtn icon={LogOut} label="Logg ut" onClick={signOut} muted collapsed={collapsed} scale={scale} />
       </div>
     </aside>
+  );
+}
+
+export function DesignLabMobileNavButton({ navigate, signOut, user, activePath }: DesignLabSidebarProps) {
+  const [open, setOpen] = useState(false);
+  const [textSize, setTextSize] = usePersistentState<TextSize>("dl-text-size", "M");
+  const { resolvedTheme } = useTheme();
+  const { getHomePath, getNavPath } = useCrmNavigation();
+  const scale = SCALE_MAP[textSize];
+  const px = (value: number) => Math.round(value * scale * 100) / 100;
+  const activeItem = getNavItemFromPath(activePath);
+  const logoFull = resolvedTheme === "dark" ? stacqLogoFullWhite : stacqLogoFull;
+
+  const isActive = (item: CrmNavItem) => item === activeItem;
+
+  const closeAndNavigate = (path: string) => {
+    setOpen(false);
+    navigate(path);
+  };
+
+  const closeAndSignOut = () => {
+    setOpen(false);
+    signOut();
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-label="Åpne navigasjon"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center justify-center rounded-md border transition-colors md:hidden"
+        style={{
+          width: "var(--dl-mobile-nav-size, 36px)",
+          height: "var(--dl-mobile-nav-size, 36px)",
+          borderColor: C.borderDefault,
+          background: C.surface,
+          color: C.textSecondary,
+          flexShrink: 0,
+        }}
+      >
+        <Menu style={{ width: 16, height: 16, strokeWidth: 1.75 }} />
+      </button>
+
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent
+          side="left"
+          hideCloseButton
+          className="w-[280px] max-w-[86vw] p-0"
+          style={{ background: C.sidebarBg, borderRight: `1px solid ${C.borderLight}` }}
+        >
+          <aside
+            className="flex h-full min-h-0 flex-col overflow-hidden"
+            style={{
+              ...getDesignLabTextSizeVars(textSize),
+              background: C.sidebarBg,
+            }}
+          >
+            <div
+              className="flex items-center justify-between shrink-0"
+              style={{
+                height: px(48),
+                paddingLeft: px(12),
+                paddingRight: px(8),
+                borderBottom: `1px solid ${C.borderLight}`,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => closeAndNavigate(getHomePath())}
+                aria-label="Gå til STACQ Nyheter"
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dl-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--dl-focus-offset)]"
+                style={{
+                  ["--dl-focus-ring" as string]: C.borderFocus,
+                  ["--dl-focus-offset" as string]: C.sidebarBg,
+                  border: "none",
+                  background: "transparent",
+                  padding: 0,
+                  cursor: "pointer",
+                }}
+              >
+                <img
+                  src={logoFull}
+                  alt="STACQ"
+                  style={{ height: px(18), width: "auto", display: "block" }}
+                />
+              </button>
+
+              <DesignLabIconButton aria-label="Lukk navigasjon" onClick={() => setOpen(false)}>
+                <X style={{ width: 16, height: 16 }} />
+              </DesignLabIconButton>
+            </div>
+
+            <nav
+              className="flex-1 overflow-y-auto space-y-4"
+              style={{ minHeight: 0, paddingInline: px(12), paddingTop: px(8), paddingBottom: px(12) }}
+            >
+              <div>
+                <p className="px-2 pb-1.5 pt-1" style={{ fontSize: px(11), fontWeight: 500, color: C.textFaint, whiteSpace: "nowrap" }}>
+                  CRM
+                </p>
+                <NavGroup
+                  items={NAV_MAIN}
+                  navigate={closeAndNavigate}
+                  getNavPath={getNavPath}
+                  isActive={isActive}
+                  collapsed={false}
+                  scale={scale}
+                />
+              </div>
+              <div>
+                <p className="px-2 pb-1.5 pt-1" style={{ fontSize: px(11), fontWeight: 500, color: C.textFaint, whiteSpace: "nowrap" }}>
+                  STACQ
+                </p>
+                <NavGroup
+                  items={NAV_STACQ}
+                  navigate={closeAndNavigate}
+                  getNavPath={getNavPath}
+                  isActive={isActive}
+                  collapsed={false}
+                  scale={scale}
+                />
+              </div>
+            </nav>
+
+            <div className="shrink-0 space-y-2" style={{ paddingInline: px(10), paddingBottom: px(10) }}>
+              <TextSizeControlSidebar value={textSize} onChange={setTextSize} />
+              <ThemeModeControl scale={scale} />
+            </div>
+
+            <div
+              className="mt-auto shrink-0 space-y-0.5"
+              style={{ borderTop: `1px solid ${C.border}`, padding: `${px(8)}px ${px(12)}px` }}
+            >
+              <FooterBtn icon={Settings} label="Innstillinger" onClick={() => closeAndNavigate(getNavPath("settings"))} active={isActive("settings")} collapsed={false} scale={scale} />
+              <FooterBtn icon={LogOut} label="Logg ut" onClick={closeAndSignOut} muted collapsed={false} scale={scale} />
+            </div>
+          </aside>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }
 

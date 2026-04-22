@@ -15,7 +15,7 @@ import {
 import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { C } from "@/components/designlab/theme";
-import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
+import { DesignLabMobileNavButton, DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { DesignLabColumnHeader } from "@/components/designlab/system";
 import { computeOppdragStatus as computeSharedOppdragStatus } from "@/lib/oppdragForm";
 import { DesignLabStaticTag } from "@/components/designlab/controls";
@@ -194,22 +194,24 @@ export default function DesignLabStacqPrisen() {
     : 0;
 
   return (
-    <div className="flex h-screen overflow-hidden select-none" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}>
+    <div className="dl-shell flex h-screen overflow-hidden select-none" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}>
 
       <DesignLabSidebar navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/stacq-prisen" />
 
       {/* ═══ MAIN ═══ */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ ...getDesignLabTextSizeStyle(textSize), background: C.appBg }}>
         {/* Header */}
-        <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
-          <div className="flex items-baseline gap-2.5">
-            <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>STACQ Prisen</h1>
+        <header className="dl-shell-header flex shrink-0 flex-wrap items-center justify-between gap-3" style={{ borderBottom: `1px solid ${C.border}` }}>
+          <div className="flex min-w-0 items-center gap-3">
+            <DesignLabMobileNavButton navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/stacq-prisen" />
+            <div className="flex items-baseline gap-2.5">
+              <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>STACQ Prisen</h1>
+            </div>
           </div>
-          
         </header>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto" style={{ padding: "24px 24px 48px" }}>
+        <div className="dl-page-scroll flex-1 overflow-y-auto">
           <div className="flex flex-col gap-4" style={{ maxWidth: "none", margin: 0 }}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
               <TopStatCard
@@ -244,7 +246,7 @@ export default function DesignLabStacqPrisen() {
               className="flex flex-col gap-4 xl:grid xl:grid-cols-[minmax(860px,1.18fr)_minmax(620px,0.92fr)] xl:items-stretch"
               style={{ maxWidth: "none", margin: 0 }}
             >
-            <div className="min-w-0 w-full">
+            <div className="min-w-0 w-full overflow-x-auto">
               {isLoading ? (
                 <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster…</div>
               ) : (

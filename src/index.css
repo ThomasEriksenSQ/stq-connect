@@ -8,6 +8,63 @@ html {
   overflow-y: scroll;
 }
 
+:root {
+  --dl-shell-pad-x: 24px;
+  --dl-page-pad-top: 24px;
+  --dl-page-pad-bottom: 48px;
+  --dl-header-min-height: 40px;
+  --dl-filter-pad-top: 8px;
+  --dl-filter-pad-bottom: 10px;
+  --dl-action-height: 32px;
+  --dl-action-min-width: 32px;
+  --dl-action-padding-x: 12px;
+  --dl-action-font-size: 12px;
+  --dl-filter-height: 28px;
+  --dl-filter-min-width: 28px;
+  --dl-filter-padding-x: 10px;
+  --dl-filter-font-size: 12px;
+  --dl-search-height: 32px;
+  --dl-search-padding-left: 30px;
+  --dl-search-padding-right: 10px;
+  --dl-search-font-size: 13px;
+  --dl-control-label-width: 56px;
+  --dl-mobile-nav-size: 36px;
+}
+
+@media (max-width: 767px) {
+  :root {
+    --dl-shell-pad-x: 16px;
+    --dl-page-pad-top: 16px;
+    --dl-page-pad-bottom: 32px;
+    --dl-header-min-height: 48px;
+    --dl-filter-pad-top: 10px;
+    --dl-filter-pad-bottom: 12px;
+    --dl-action-height: 36px;
+    --dl-action-min-width: 36px;
+    --dl-action-padding-x: 12px;
+    --dl-action-font-size: 13px;
+    --dl-filter-height: 32px;
+    --dl-filter-min-width: 32px;
+    --dl-filter-padding-x: 10px;
+    --dl-filter-font-size: 12px;
+    --dl-search-height: 36px;
+    --dl-search-padding-left: 32px;
+    --dl-search-padding-right: 12px;
+    --dl-search-font-size: 13px;
+    --dl-control-label-width: auto;
+    --dl-mobile-nav-size: 36px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  :root {
+    --dl-shell-pad-x: 20px;
+    --dl-page-pad-top: 20px;
+    --dl-page-pad-bottom: 40px;
+    --dl-header-min-height: 44px;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 98%;
@@ -269,6 +326,30 @@ html {
   h3 {
     line-height: 1.35;
     letter-spacing: -0.015em;
+  }
+}
+
+@layer components {
+  .dl-shell-header {
+    min-height: var(--dl-header-min-height);
+    padding-left: var(--dl-shell-pad-x);
+    padding-right: var(--dl-shell-pad-x);
+  }
+
+  .dl-filter-bar {
+    padding: var(--dl-filter-pad-top) var(--dl-shell-pad-x) var(--dl-filter-pad-bottom);
+  }
+
+  .dl-page-scroll {
+    padding: var(--dl-page-pad-top) var(--dl-shell-pad-x) var(--dl-page-pad-bottom);
+  }
+
+  .dl-detail-scroll {
+    padding: var(--dl-page-pad-top) var(--dl-shell-pad-x);
+  }
+
+  .dl-mobile-list {
+    padding: 0 var(--dl-shell-pad-x) var(--dl-page-pad-bottom);
   }
 }
 

@@ -4,7 +4,7 @@ import { Plus } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { usePersistentState } from "@/hooks/usePersistentState";
-import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
+import { DesignLabMobileNavButton, DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { C } from "@/components/designlab/theme";
 import { DesignLabSearchInput, DesignLabStaticTag } from "@/components/designlab/controls";
@@ -72,31 +72,34 @@ export default function DesignLabStyleguide() {
 
   return (
     <div
-      className="flex h-screen overflow-hidden select-none"
+      className="dl-shell flex h-screen overflow-hidden select-none"
       style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}
     >
       <DesignLabSidebar navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/stilark" />
 
       <main className="flex-1 min-w-0 overflow-y-auto" style={{ ...getDesignLabTextSizeStyle(textSize), background: C.appBg }}>
         <header
-          className="flex items-center justify-between px-6"
-          style={{ height: 40, borderBottom: `1px solid ${C.border}` }}
+          className="dl-shell-header flex flex-wrap items-center justify-between gap-3"
+          style={{ borderBottom: `1px solid ${C.border}` }}
         >
-          <div className="flex items-baseline gap-2.5">
-            <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Stilark</h1>
-            <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· V2 system</span>
+          <div className="flex min-w-0 items-center gap-3">
+            <DesignLabMobileNavButton navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/stilark" />
+            <div className="flex items-baseline gap-2.5">
+              <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Stilark</h1>
+              <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· V2 system</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full items-center gap-2 sm:w-auto">
             <DesignLabSearchInput
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Søk komponenter…"
-              style={{ width: 220 }}
+              style={{ width: "min(100%, 220px)" }}
             />
           </div>
         </header>
 
-        <div className="mx-auto max-w-[1180px] space-y-6 px-6 py-6">
+        <div className="dl-page-scroll mx-auto max-w-[1180px] space-y-6">
           <ExampleCard title="Knapper">
             <div className="flex flex-wrap items-center gap-3">
               <DesignLabPrimaryAction>

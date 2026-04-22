@@ -285,8 +285,8 @@ export const DesignLabIconButton = forwardRef<HTMLButtonElement, ButtonHTMLAttri
       ref={ref}
       variant="ghost"
       style={{
-        width: size,
-        minWidth: size,
+        width: `max(${size}px, var(--dl-action-min-width, ${size}px))`,
+        minWidth: `max(${size}px, var(--dl-action-min-width, ${size}px))`,
         paddingInline: 0,
         ...style,
       }}
@@ -314,14 +314,14 @@ export const DesignLabSearchInput = forwardRef<HTMLInputElement, InputHTMLAttrib
           )}
           style={withFocusVars({
             ["--dl-placeholder" as string]: C.textGhost,
-            height: 32,
-            paddingLeft: 30,
-            paddingRight: 10,
+            height: "var(--dl-search-height, 32px)",
+            paddingLeft: "var(--dl-search-padding-left, 30px)",
+            paddingRight: "var(--dl-search-padding-right, 10px)",
             borderRadius: 6,
             border,
             background: C.surface,
             color: C.textPrimary,
-            fontSize: 13,
+            fontSize: "var(--dl-search-font-size, 13px)",
           })}
           onFocus={(event) => {
             event.currentTarget.style.border = focusBorder;
@@ -347,7 +347,7 @@ export function DesignLabControlLabel({ children }: { children: ReactNode }) {
         fontWeight: 500,
         letterSpacing: "0.04em",
         color: C.textMuted,
-        width: 56,
+        width: "var(--dl-control-label-width, 56px)",
         flexShrink: 0,
       }}
     >

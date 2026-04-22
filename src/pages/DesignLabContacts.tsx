@@ -29,15 +29,17 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { ContactCardContent } from "@/components/ContactCardContent";
 import { RenderErrorBoundary } from "@/components/RenderErrorBoundary";
+import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
 import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { C } from "@/components/designlab/theme";
 import { CommandPalette } from "@/components/designlab/CommandPalette";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { getHeatResult, getTaskStatus, getActivityStatus, type HeatResult } from "@/lib/heatScore";
-import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
+import { DesignLabMobileNavButton, DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { CONTACT_CV_EMAIL_REQUIRED_MESSAGE, contactHasEmail } from "@/lib/contactCvEligibility";
 import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/queryKeys";
 import { useCrmNavigation } from "@/lib/crmNavigation";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { relativeDate } from "@/lib/relativeDate";
 import { mergeTechnologyTags } from "@/lib/technologyTags";
 import {
@@ -71,6 +73,7 @@ import {
   DesignLabFilterButton,
   DesignLabIconButton,
   DesignLabSearchInput,
+  DesignLabStaticTag,
 } from "@/components/designlab/controls";
 import {
   DesignLabColumnHeader,
@@ -427,6 +430,7 @@ function getGeoDistanceDetail(geoMatch?: GeoMatchResult | null): string {
 
 export default function DesignLabContacts() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { getCompanyPath, getContactPath, getRequestPath } = useCrmNavigation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { signOut, user } = useAuth();
@@ -2045,6 +2049,194 @@ export default function DesignLabContacts() {
 
   const sel = selectedId ? (contacts.find((c) => c.id === selectedId) ?? null) : null;
 
+  const renderMobileContactRow = useCallback((contact: NormalizedContact) => {
+    const isActive = selectedId === contact.id;
+
+    return (
+      <div
+        key={contact.id}
+        onClick={() => setSelectedId(isActive ? null : contact.id)}
+        role="button"
+        tabIndex={0}
+        className="w-full cursor-pointer text-left transition-colors"
+        style={{
+          padding: "14px 16px",
+          borderBottom: `1px solid ${C.borderLight}`,
+          background: isActive ? C.activeBg : "transparent",
+          boxShadow: `inset 3px 0 0 ${getHeatBarColor(contact.heatResult)}`,
+        }}
+        onMouseEnter={(event) => {
+          if (!isActive) event.currentTarget.style.background = C.hoverBg;
+        }}
+        onMouseLeave={(event) => {
+          event.currentTarget.style.background = isActive ? C.activeBg : "transparent";
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            setSelectedId(isActive ? null : contact.id);
+          }
+        }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate" style={{ fontSize: 13, fontWeight: 600, color: C.text }}>
+              {contact.firstName} {contact.lastName}
+            </p>
+            <p className="truncate" style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+              {[contact.company, contact.title].filter(Boolean).join(" · ") || "Ingen stilling registrert"}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {contact.signal ? <DesignLabSignalBadge signal={contact.signal as Signal} /> : null}
+            {contact.hasMarkedsradar ? (
+              <img
+                src={finnIcon}
+                alt="Finn"
+                style={{ width: 14, height: 14, filter: "grayscale(1) opacity(0.65)", objectFit: "contain" }}
+              />
+            ) : null}
+          </div>
+        </div>
+        <div className="mt-3 flex items-center justify-between gap-3" style={{ fontSize: 12, color: C.textFaint }}>
+          <span>{contact.daysSince < 999 ? `Siste aktivitet ${relTime(contact.daysSince)}` : "Ingen aktivitet"}</span>
+          <div className="flex items-center gap-1.5" onClick={(event) => event.stopPropagation()}>
+            <DesignLabFilterButton
+              type="button"
+              active={Boolean(contact.cvEmail)}
+              activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+              inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+              inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+              disabled={contact.cvEmail && (contact.mailchimpStatus === "unsubscribed" || contact.mailchimpStatus === "cleaned")}
+              title={
+                contact.cvEmail && (contact.mailchimpStatus === "unsubscribed" || contact.mailchimpStatus === "cleaned")
+                  ? "Kontakten har avmeldt seg via Mailchimp og kan ikke re-abonneres"
+                  : contact.cvEmail
+                    ? "CV-Epost aktiv"
+                    : contactHasEmail(contact)
+                      ? "Aktiver CV-Epost"
+                      : CONTACT_CV_EMAIL_REQUIRED_MESSAGE
+              }
+              onClick={() => {
+                if (contact.cvEmail && (contact.mailchimpStatus === "unsubscribed" || contact.mailchimpStatus === "cleaned")) {
+                  toast.info("Kontakten har avmeldt seg via Mailchimp og kan ikke re-abonneres.");
+                  return;
+                }
+                handleToggle(
+                  {
+                    id: contact.id,
+                    email: contact.email,
+                    cvEmail: contact.cvEmail,
+                    callList: contact.callList,
+                    mailchimpStatus: contact.mailchimpStatus,
+                  },
+                  "cv_email",
+                  !contact.cvEmail,
+                );
+              }}
+            >
+              {contact.cvEmail && (contact.mailchimpStatus === "unsubscribed" || contact.mailchimpStatus === "cleaned")
+                ? "CV ✗"
+                : "CV"}
+            </DesignLabFilterButton>
+            <DesignLabFilterButton
+              type="button"
+              active={Boolean(contact.callList)}
+              activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+              inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+              inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+              title={contact.callList ? "Innkjøper aktiv" : "Aktiver innkjøper"}
+              onClick={() =>
+                handleToggle(
+                  {
+                    id: contact.id,
+                    email: contact.email,
+                    cvEmail: contact.cvEmail,
+                    callList: contact.callList,
+                    mailchimpStatus: contact.mailchimpStatus,
+                  },
+                  "call_list",
+                  !contact.callList,
+                )
+              }
+            >
+              Innkjøper
+            </DesignLabFilterButton>
+          </div>
+        </div>
+      </div>
+    );
+  }, [handleToggle, selectedId]);
+
+  const renderMobileMatchLeadRow = useCallback((lead: MatchLead) => {
+    const isActive = isContactMatchLead(lead) && selectedId === lead.id;
+    const scoreLabel = lead.matchSources.includes("geografi") ? "GEO MATCH" : "MATCH";
+    const heatColor = isContactMatchLead(lead)
+      ? getHeatBarColor(lead.heatResult)
+      : getMatchLeadTemperature(lead) === "hett"
+        ? C.danger
+        : getMatchLeadTemperature(lead) === "lovende"
+          ? C.heatPromising
+          : getMatchLeadTemperature(lead) === "mulig"
+            ? C.heatPossible
+            : "transparent";
+    const secondaryLine = isContactMatchLead(lead)
+      ? [lead.companyName, lead.title].filter(Boolean).join(" · ")
+      : isRequestMatchLead(lead)
+        ? [lead.companyName, lead.contactName, lead.contactTitle].filter(Boolean).join(" · ")
+        : [lead.companyName, lead.preferredContactName, lead.preferredContactTitle].filter(Boolean).join(" · ");
+
+    return (
+      <button
+        key={lead.leadKey}
+        type="button"
+        onClick={() => handleMatchLeadSelect(lead)}
+        className="w-full text-left transition-colors"
+        style={{
+          padding: "14px 16px",
+          borderBottom: `1px solid ${C.borderLight}`,
+          background: isActive ? C.activeBg : "transparent",
+          boxShadow: `inset 3px 0 0 ${heatColor}`,
+        }}
+        onMouseEnter={(event) => {
+          if (!isActive) event.currentTarget.style.background = C.hoverBg;
+        }}
+        onMouseLeave={(event) => {
+          event.currentTarget.style.background = isActive ? C.activeBg : "transparent";
+        }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate" style={{ fontSize: 13, fontWeight: 600, color: C.text }}>
+              {lead.name}
+            </p>
+            <p className="truncate" style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+              {secondaryLine || "Ingen ekstra detaljer"}
+            </p>
+          </div>
+          <div className="shrink-0" style={{ fontSize: 12, fontWeight: 600, color: C.text }}>
+            <span
+              className={getConsultantMatchScoreColor(lead.matchScore10)}
+              style={{ width: 8, height: 8, borderRadius: 999, display: "inline-block", marginRight: 6 }}
+            />
+            {lead.matchScore10}/10
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <DesignLabHeatBadge temperature={getMatchLeadTemperature(lead)} />
+          <span style={{ fontSize: 12, color: C.textFaint }}>
+            {scoreLabel}
+          </span>
+          {lead.matchTags.slice(0, 3).map((tag) => (
+            <DesignLabStaticTag key={`${lead.leadKey}-${tag}`} colors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}>
+              {tag}
+            </DesignLabStaticTag>
+          ))}
+        </div>
+      </button>
+    );
+  }, [handleMatchLeadSelect, selectedId]);
+
   // Derived companies for command palette
   const companiesList = useMemo(() => {
     const map = new Map<string, { id: string; name: string; count: number }>();
@@ -2077,7 +2269,7 @@ export default function DesignLabContacts() {
   /* ═══ RENDER ═══ */
   return (
     <div
-      className="flex h-screen overflow-hidden select-none"
+      className="dl-shell flex h-screen overflow-hidden select-none"
       style={{
         fontFamily: "'Inter', -apple-system, system-ui, sans-serif",
         background: C.bg,
@@ -2089,20 +2281,23 @@ export default function DesignLabContacts() {
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ ...getDesignLabTextSizeStyle(textSize), background: C.appBg }}>
         {/* Header bar */}
         <header
-          className="flex items-center justify-between px-6 shrink-0"
-          style={{ height: 40, borderBottom: `1px solid ${C.border}` }}
+          className="dl-shell-header flex shrink-0 flex-wrap items-center justify-between gap-3"
+          style={{ borderBottom: `1px solid ${C.border}` }}
         >
-          <div className="flex items-baseline gap-2.5">
-            <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Kontakter</h1>
-            <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>
-              · {visibleResultCount}
-            </span>
+          <div className="flex min-w-0 items-center gap-3">
+            <DesignLabMobileNavButton navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/kontakter" />
+            <div className="flex items-baseline gap-2.5">
+              <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Kontakter</h1>
+              <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>
+                · {visibleResultCount}
+              </span>
+            </div>
           </div>
           <div className="flex items-center gap-2" />
         </header>
 
         {/* Filters bar */}
-        <div className="shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
+        <div className="dl-filter-bar shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}` }}>
           {!selectedConsultant ? (
             <>
               <DesignLabFilterRow label="EIER" options={ownerOptions} value={ownerFilter} onChange={setOwnerFilter} />
@@ -2143,7 +2338,7 @@ export default function DesignLabContacts() {
                   <X style={{ width: 12, height: 12 }} /> Vis alle kontakter
                 </DesignLabActionButton>
               </div>
-              <div className="flex items-start justify-between gap-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
                 <div className="min-w-0 flex-1 space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <DesignLabControlLabel>EIER</DesignLabControlLabel>
@@ -2191,7 +2386,7 @@ export default function DesignLabContacts() {
 
         {/* Available consultants bar */}
         {sortedConsultants.length > 0 && (
-          <div className="shrink-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
+          <div className="dl-filter-bar shrink-0" style={{ borderBottom: `1px solid ${C.border}` }}>
             <p style={{ fontSize: 12, fontWeight: 500, color: "#5C636E", marginBottom: 6 }}>
               Tilgjengelig for oppdrag
             </p>
@@ -2251,6 +2446,33 @@ export default function DesignLabContacts() {
 
         {/* Content: list + detail */}
         <div className="flex-1 min-h-0 flex">
+          {isMobile ? (
+            <div className="h-full w-full overflow-y-auto">
+              {selectedConsultant ? (
+                isLoading || isLoadingParity ? (
+                  <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>
+                    Laster kontakter…
+                  </div>
+                ) : !hasVisibleResults ? (
+                  <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>
+                    {matchResults.emptyState}
+                  </div>
+                ) : (
+                  visibleMatchLeads.map((lead) => renderMobileMatchLeadRow(lead))
+                )
+              ) : isLoading || isLoadingParity ? (
+                <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>
+                  Laster kontakter…
+                </div>
+              ) : !hasVisibleResults ? (
+                <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>
+                  Ingen kontakter funnet
+                </div>
+              ) : (
+                sorted.map((contact) => renderMobileContactRow(contact))
+              )}
+            </div>
+          ) : (
           <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel defaultSize={38} minSize={24} maxSize={60}>
               <div className="h-full overflow-y-auto" style={{ scrollbarColor: `${C.borderStrong} ${C.surfaceAlt}` }}>
@@ -2787,8 +3009,42 @@ export default function DesignLabContacts() {
               <div className="h-full" style={{ background: C.appBg }} />
             </ResizablePanel>
           </ResizablePanelGroup>
+          )}
         </div>
       </main>
+      <DesignLabEntitySheet
+        open={isMobile && Boolean(sel)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedId(null);
+        }}
+        contentClassName="dl-v8-theme"
+      >
+        {isMobile && sel ? (
+          <div className="dl-detail-scroll">
+            <RenderErrorBoundary
+              resetKey={sel.id}
+              fallbackMessage="Kunne ikke laste kontaktkortet. Prøv en annen kontakt eller last siden på nytt."
+            >
+              <ContactCardContent
+                contactId={sel.id}
+                editable
+                enableProfileEditMode
+                headerPaddingTop={12}
+                onDataChanged={() => {
+                  void invalidateDesignLabQueries();
+                }}
+                defaultHidden={{
+                  techDna: true,
+                  notes: true,
+                  consultantMatch: true,
+                  linkedinIfEmpty: true,
+                  locationsIfEmpty: true,
+                }}
+              />
+            </RenderErrorBoundary>
+          </div>
+        ) : null}
+      </DesignLabEntitySheet>
 
       <CommandPalette
         open={cmdOpen}

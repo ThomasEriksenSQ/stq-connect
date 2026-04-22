@@ -12,8 +12,10 @@ import { buildEmployeeGeoText, deriveEmployeeAddressFields } from "@/lib/geograp
 import { downloadEmployeeAddressPdf } from "@/lib/employeeAddressPdf";
 import { getEmployeeLifecycleStatus } from "@/lib/employeeStatus";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { usePersistentState } from "@/hooks/usePersistentState";
-import { DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
+import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
+import { DesignLabMobileNavButton, DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { C } from "@/components/designlab/theme";
 import { DesignLabIconButton } from "@/components/designlab/controls";
@@ -54,6 +56,7 @@ const UPCOMING_CHIP_COLORS = {
 
 export default function DesignLabKonsulenterAnsatte() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { getEmployeePath, getNavPath } = useCrmNavigation();
   const { id } = useParams<{ id?: string }>();
   const selectedId = id ? Number(id) : null;
@@ -362,6 +365,66 @@ export default function DesignLabKonsulenterAnsatte() {
     );
   };
 
+  const renderMobileRow = (row: any) => {
+    const status = getStatus(row);
+    const selected = selectedId === row.id;
+    const portrait = cvPortraitMap.get(row.id) || row.bilde_url || null;
+    const addressFields = deriveEmployeeAddressFields(row);
+
+    return (
+      <button
+        key={row.id}
+        type="button"
+        onClick={() => navigate(getEmployeePath(row.id))}
+        className="w-full text-left transition-colors"
+        style={{
+          padding: "14px 16px",
+          borderBottom: `1px solid ${C.borderLight}`,
+          background: selected ? C.selected : "transparent",
+          opacity: status === "Sluttet" ? 0.55 : status === "Kommende" ? 0.82 : 1,
+        }}
+        onMouseEnter={(event) => {
+          if (!selected) event.currentTarget.style.background = C.hoverBg;
+        }}
+        onMouseLeave={(event) => {
+          event.currentTarget.style.background = selected ? C.selected : "transparent";
+        }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            {portrait ? (
+              <img src={portrait} alt={row.navn} className="h-8 w-8 rounded-full border object-cover" style={{ borderColor: C.border }} />
+            ) : (
+              <div
+                className="flex h-8 w-8 items-center justify-center rounded-full"
+                style={{ background: C.accentBg, color: C.accent, fontSize: 10, fontWeight: 700 }}
+              >
+                {getInitials(row.navn)}
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="truncate" style={{ fontSize: 13, fontWeight: 600, color: C.text }}>
+                {row.navn}
+              </p>
+              <p className="truncate" style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+                {buildEmployeeGeoText(addressFields.postalCode, addressFields.city, row.geografi) || "Sted ikke satt"}
+              </p>
+            </div>
+          </div>
+          {status === "Kommende" && row.start_dato ? (
+            <DesignLabReadonlyChip active={true} activeColors={UPCOMING_CHIP_COLORS}>
+              Starter {format(new Date(row.start_dato), "dd.MM")}
+            </DesignLabReadonlyChip>
+          ) : null}
+        </div>
+        <div className="mt-3 flex items-center justify-between gap-3" style={{ fontSize: 12, color: C.textFaint }}>
+          <span>{row.erfaring_aar ? `${row.erfaring_aar} år erfaring` : "Erfaring ikke satt"}</span>
+          <span>{renderOppdragBadge(row.navn)}</span>
+        </div>
+      </button>
+    );
+  };
+
   const handleDownloadAddressList = async () => {
     if (!exportableEmployees.length || isDownloadingAddressList) return;
 
@@ -381,18 +444,21 @@ export default function DesignLabKonsulenterAnsatte() {
 
   return (
     <div
-      className="flex h-screen overflow-hidden select-none"
+      className="dl-shell flex h-screen overflow-hidden select-none"
       style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}
     >
       <DesignLabSidebar navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/ansatte" />
 
       <main className="flex-1 flex min-w-0 flex-col overflow-hidden" style={{ ...getDesignLabTextSizeStyle(textSize), background: C.appBg }}>
-        <header className="flex items-center justify-between px-6 shrink-0" style={{ height: 40, borderBottom: `1px solid ${C.border}` }}>
-          <div className="flex items-baseline gap-2.5">
-            <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Ansatte</h1>
-            <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {filtered.length}</span>
+        <header className="dl-shell-header flex shrink-0 flex-wrap items-center justify-between gap-3" style={{ borderBottom: `1px solid ${C.border}` }}>
+          <div className="flex min-w-0 items-center gap-3">
+            <DesignLabMobileNavButton navigate={navigate} signOut={signOut} user={user} activePath="/design-lab/ansatte" />
+            <div className="flex items-baseline gap-2.5">
+              <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Ansatte</h1>
+              <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {filtered.length}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
             <DesignLabPrimaryAction onClick={() => setCreateOpen(true)}>
               <Plus className="h-3.5 w-3.5" />
               Ny ansatt
@@ -400,7 +466,7 @@ export default function DesignLabKonsulenterAnsatte() {
           </div>
         </header>
 
-        <div className="shrink-0" style={{ borderBottom: `1px solid ${C.border}`, padding: "8px 24px 10px" }}>
+        <div className="dl-filter-bar shrink-0" style={{ borderBottom: `1px solid ${C.border}` }}>
           <div className="flex items-center justify-between gap-4">
             <DesignLabFilterRow
               label="STATUS"
@@ -412,6 +478,38 @@ export default function DesignLabKonsulenterAnsatte() {
         </div>
 
         <div className="flex-1 min-h-0 flex">
+          {isMobile ? (
+            <div className="flex h-full min-h-0 w-full flex-col">
+              <div className="flex-1 overflow-y-auto">
+                {isLoading ? (
+                  <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster ansatte…</div>
+                ) : filtered.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen ansatte funnet</div>
+                ) : (
+                  filtered.map((row: any) => renderMobileRow(row))
+                )}
+              </div>
+              <div
+                className="shrink-0 px-4 py-3"
+                style={{ borderTop: `1px solid ${C.border}`, background: C.surface }}
+              >
+                <button
+                  type="button"
+                  onClick={handleDownloadAddressList}
+                  disabled={isLoading || !exportableEmployees.length || isDownloadingAddressList}
+                  className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-medium transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{
+                    background: C.panel,
+                    color: C.text,
+                    border: `1px solid ${C.border}`,
+                  }}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  {isDownloadingAddressList ? "Lager PDF..." : "Last ned adresseliste"}
+                </button>
+              </div>
+            </div>
+          ) : (
           <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel defaultSize={34} minSize={22} maxSize={55}>
               <div className="flex h-full min-h-0 flex-col">
@@ -507,8 +605,26 @@ export default function DesignLabKonsulenterAnsatte() {
               )}
             </ResizablePanel>
           </ResizablePanelGroup>
+          )}
         </div>
       </main>
+      <DesignLabEntitySheet
+        open={isMobile && Boolean(selectedId)}
+        onOpenChange={(open) => {
+          if (!open) navigate(getNavPath("employees"));
+        }}
+      >
+        {isMobile && selectedId ? (
+          <div className="dl-detail-scroll">
+            <AnsattDetail
+              ansattIdOverride={selectedId}
+              hideBackButton
+              embedded
+              designLabMode
+            />
+          </div>
+        ) : null}
+      </DesignLabEntitySheet>
 
       <AnsattDetailSheet
         open={createOpen}
