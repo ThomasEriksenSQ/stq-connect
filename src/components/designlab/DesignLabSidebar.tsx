@@ -17,7 +17,7 @@ import stacqLogoIconWhite from "@/assets/stacq-logo-icon-white.png";
 
 /* ═══ NAV ITEMS ═══ */
 
-const NAV_MAIN = [
+const NAV_MAIN: { label: string; icon: typeof LayoutDashboard; key: CrmNavItem }[] = [
   { label: "Salgsagent", icon: LayoutDashboard, key: "dashboard" },
   { label: "Selskaper", icon: Building2, key: "companies" },
   { label: "Kontakter", icon: Users, key: "contacts" },
@@ -25,7 +25,7 @@ const NAV_MAIN = [
   { label: "Oppfølginger", icon: Clock, key: "followUps" },
 ];
 
-const NAV_STACQ = [
+const NAV_STACQ: { label: string; icon: typeof LayoutDashboard; key: CrmNavItem }[] = [
   { label: "STACQ Prisen", icon: TrendingUp, key: "stacqPrisen" },
   { label: "Markedsradar", icon: Radar, key: "markedsradar" },
   { label: "Aktive oppdrag", icon: Briefcase, key: "activeAssignments" },
