@@ -70,6 +70,8 @@ import {
   getConsultantMatchScoreColor,
   sortConsultantMatches,
 } from "@/lib/consultantMatches";
+import { hasConsultantAvailability } from "@/lib/contactHunt";
+import { isEmployeeEndDatePassed } from "@/lib/employeeStatus";
 import {
   buildContactCvSafeUpdates,
   CONTACT_CV_EMAIL_REQUIRED_MESSAGE,
@@ -156,6 +158,52 @@ interface ConsultantMatchResult {
   score: number;
   begrunnelse: string;
   match_tags: string[];
+}
+
+type ContactSentCvRow = {
+  id: string;
+  ansatt_id: number;
+  sender_user_id: string | null;
+  sender_email: string;
+  recipient_email: string;
+  attachment_name: string;
+  sent_at: string;
+  message_web_link: string | null;
+  message_subject: string | null;
+  message_preview: string | null;
+  message_body_text: string | null;
+};
+
+type ContactSentCvEntry = ContactSentCvRow & {
+  consultantName: string;
+};
+
+type ContactSentCvEmployeeRow = {
+  id: number;
+  navn: string;
+  tilgjengelig_fra: string | null;
+  slutt_dato: string | null;
+};
+
+function splitSentCvThread(bodyText: string): { latest: string; rest: string | null } {
+  const threadPatterns = [
+    /\n\s*(?:From|Fra)\s*:/i,
+    /\n\s*_{5,}/,
+    /\n\s*-{5,}/,
+    /\n\s*On .+ wrote:/i,
+    /\n\s*Den .+ skrev:/i,
+  ];
+  let splitIndex = -1;
+  for (const pattern of threadPatterns) {
+    const match = bodyText.match(pattern);
+    if (match && match.index !== undefined && match.index > 20) {
+      if (splitIndex === -1 || match.index < splitIndex) splitIndex = match.index;
+    }
+  }
+  if (splitIndex > 0) {
+    return { latest: bodyText.slice(0, splitIndex).trim(), rest: bodyText.slice(splitIndex).trim() };
+  }
+  return { latest: bodyText.trim(), rest: null };
 }
 
 // Inline editable text field
@@ -255,6 +303,152 @@ function EmailRowBody({ onToggle, children }: { onToggle: () => void; children: 
       className="min-w-0 cursor-pointer select-text focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-sm"
     >
       {children}
+    </div>
+  );
+}
+
+function ContactSentCvEmailBody({ entry }: { entry: ContactSentCvEntry }) {
+  const [showThread, setShowThread] = useState(false);
+  const bodyText = coerceDisplayText(entry.message_body_text);
+  const preview = coerceDisplayText(entry.message_preview);
+  const subject = coerceDisplayText(entry.message_subject) || "Uten emne";
+  const { latest, rest } = useMemo(() => splitSentCvThread(bodyText), [bodyText]);
+  const visibleBody = latest || preview;
+
+  return (
+    <div className="mt-3 rounded-lg border border-border bg-background px-3 py-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <p className="truncate text-[0.875rem] font-semibold text-foreground">{subject}</p>
+          <p className="mt-0.5 break-all text-[0.75rem] text-muted-foreground">
+            {entry.sender_email} → {entry.recipient_email}
+          </p>
+        </div>
+        {entry.message_web_link ? (
+          <a
+            href={entry.message_web_link}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex flex-shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-[0.75rem] text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Åpne i Outlook
+          </a>
+        ) : null}
+      </div>
+
+      {visibleBody ? (
+        <p className="mt-3 whitespace-pre-wrap text-[0.8125rem] leading-relaxed text-foreground/80">
+          {visibleBody}
+        </p>
+      ) : (
+        <p className="mt-3 text-[0.8125rem] text-muted-foreground">
+          Epostinnhold mangler. Kjør Sendt CV-sync på nytt for å fylle inn meldingen her.
+        </p>
+      )}
+
+      {rest ? (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => setShowThread((current) => !current)}
+            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[0.75rem] text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+          >
+            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showThread && "rotate-180")} />
+            {showThread ? "Skjul hele tråden" : "Vis hele tråden"}
+          </button>
+          {showThread ? (
+            <div className="mt-2 rounded-lg bg-muted/30 p-3">
+              <p className="whitespace-pre-wrap text-[0.8125rem] leading-relaxed text-muted-foreground">{rest}</p>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ContactSentCvNotice({
+  entries,
+  profileMap,
+}: {
+  entries: ContactSentCvEntry[];
+  profileMap: Record<string, string>;
+}) {
+  const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
+  if (entries.length === 0) return null;
+
+  return (
+    <div className="mb-5 rounded-lg border border-primary/20 bg-primary/5 p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="text-[0.8125rem] font-semibold text-foreground">CV sendt</p>
+      </div>
+
+      <div className="divide-y divide-primary/10">
+        {entries.map((entry) => {
+          const senderName =
+            entry.sender_user_id
+              ? profileMap[entry.sender_user_id] || entry.sender_email || "Ukjent avsender"
+              : entry.sender_email || "Ukjent avsender";
+          const hasMailDetails = Boolean(
+            entry.message_subject ||
+            entry.message_preview ||
+            entry.message_body_text ||
+            entry.message_web_link,
+          );
+          const isExpanded = expandedEntryId === entry.id;
+
+          return (
+            <div key={entry.id} className="py-2 first:pt-0 last:pb-0">
+              <div className="grid gap-2 md:grid-cols-[minmax(0,1.35fr)_128px_minmax(0,1fr)_minmax(0,1.45fr)_48px] md:items-center">
+                <div className="min-w-0">
+                  <p className="mb-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
+                    Konsulent
+                  </p>
+                  <p className="truncate text-[0.875rem] font-semibold text-foreground">{entry.consultantName}</p>
+                </div>
+                <div className="min-w-0">
+                  <p className="mb-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
+                    Sendt
+                  </p>
+                  <p className="truncate text-[0.8125rem] text-muted-foreground">
+                    {format(new Date(entry.sent_at), "d. MMM yyyy HH:mm", { locale: nb })}
+                  </p>
+                </div>
+                <div className="min-w-0">
+                  <p className="mb-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
+                    Av CRM-bruker
+                  </p>
+                  <p className="truncate text-[0.8125rem] text-muted-foreground">{senderName}</p>
+                </div>
+                <div className="min-w-0">
+                  <p className="mb-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
+                    CV-fil
+                  </p>
+                  <p className="truncate text-[0.8125rem] text-muted-foreground">{entry.attachment_name}</p>
+                </div>
+                {hasMailDetails ? (
+                  <button
+                    type="button"
+                    onClick={() => setExpandedEntryId(isExpanded ? null : entry.id)}
+                    aria-expanded={isExpanded}
+                    aria-label={isExpanded ? "Skjul sendt CV-epost" : "Vis sendt CV-epost"}
+                    title={isExpanded ? "Skjul epost" : "Vis epost"}
+                    className="inline-flex h-8 w-fit items-center justify-center gap-1 rounded-md border border-primary/20 bg-background px-2 text-[0.75rem] text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground md:ml-auto"
+                  >
+                    <Mail className="h-3.5 w-3.5" />
+                    <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isExpanded && "rotate-180")} />
+                  </button>
+                ) : (
+                  <span className="hidden text-right text-[0.75rem] text-muted-foreground md:block">–</span>
+                )}
+              </div>
+
+              {isExpanded ? <ContactSentCvEmailBody entry={entry} /> : null}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -421,6 +615,53 @@ export function ContactCardContent({
       .filter((p) => p?.id)
       .map((p) => [p.id, typeof p.full_name === "string" && p.full_name.trim() ? p.full_name.trim() : "Ukjent"]),
   );
+
+  const { data: sentCvEntries = [] } = useQuery({
+    queryKey: ["contact-sent-cv", contactId],
+    queryFn: async () => {
+      const { data: rows, error } = await supabase
+        .from("sent_cv_log")
+        .select("id, ansatt_id, sender_user_id, sender_email, recipient_email, attachment_name, sent_at, message_web_link, message_subject, message_preview, message_body_text")
+        .eq("contact_id", contactId)
+        .order("sent_at", { ascending: false });
+      if (error) throw error;
+
+      const sentRows = (rows || []) as ContactSentCvRow[];
+      if (sentRows.length === 0) return [] as ContactSentCvEntry[];
+
+      const employeeIds = Array.from(new Set(sentRows.map((row) => row.ansatt_id).filter(Boolean)));
+      const { data: employees, error: employeesError } = employeeIds.length
+        ? await supabase
+            .from("stacq_ansatte")
+            .select("id, navn, tilgjengelig_fra, slutt_dato")
+            .in("id", employeeIds)
+            .not("tilgjengelig_fra", "is", null)
+        : { data: [], error: null };
+      if (employeesError) throw employeesError;
+
+      const availableEmployeeMap = new Map<number, ContactSentCvEmployeeRow>();
+      ((employees || []) as ContactSentCvEmployeeRow[]).forEach((employee) => {
+        if (
+          hasConsultantAvailability(employee.tilgjengelig_fra) &&
+          !isEmployeeEndDatePassed(employee.slutt_dato)
+        ) {
+          availableEmployeeMap.set(employee.id, employee);
+        }
+      });
+
+      return sentRows
+        .map((row) => {
+          const employee = availableEmployeeMap.get(row.ansatt_id);
+          if (!employee) return null;
+          return {
+            ...row,
+            consultantName: employee.navn,
+          } satisfies ContactSentCvEntry;
+        })
+        .filter((entry): entry is ContactSentCvEntry => Boolean(entry));
+    },
+    enabled: !!contactId,
+  });
 
   // Outlook connection status
   const { data: outlookStatus } = useQuery({
@@ -1313,71 +1554,6 @@ export function ContactCardContent({
       </div>
 
       <div className="space-y-0">
-        {/* ── Tekniske behov ── */}
-        {shouldRenderTechDnaSection && (
-        <div className={cn("mb-5", shouldHideTechDnaSection && "hidden")} aria-hidden={shouldHideTechDnaSection || undefined}>
-          <div>
-            <div className="flex items-center justify-between mb-3" style={{ minHeight: 32 }}>
-              <h3 className="text-[13px] font-medium text-[#1A1C1F]">
-                Teknologier
-              </h3>
-              {contact.teknologier && (contact.teknologier as string[]).length > 0 && (
-                <DesignLabActionButton
-                  onClick={handleFinnKonsulent}
-                  disabled={matchingConsultants}
-                  variant="secondary"
-                  style={{ height: 32, fontSize: 12 }}
-                >
-                  {matchingConsultants ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Matcher...
-                    </>
-                  ) : (
-                    <>
-                      <Target className="h-3.5 w-3.5 text-primary" /> Finn konsulent
-                    </>
-                  )}
-                </DesignLabActionButton>
-              )}
-            </div>
-
-            {(contact as any).teknologier?.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {((contact as any).teknologier as string[]).map((tag: string) => (
-                  <span
-                    key={tag}
-                    className="chip chip--tech"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-[0.8125rem] text-muted-foreground">Ingen teknisk profil ennå.</p>
-            )}
-          </div>
-
-          {/* AI Signal suggestion */}
-          {shouldAnalyzeAiSignal && (
-            <AiSignalBanner
-              contactId={contactId}
-              contactName={`${contact.first_name} ${contact.last_name}`}
-              contactEmail={contact.email || null}
-              currentSignal={effectiveSignal}
-              currentTechnologies={((contact as any).teknologier as string[]) || []}
-              activities={aiSignalActivities}
-              lastTaskDueDate={lastTaskDueDate}
-              onUpdateSignal={(signal) => {
-                updateSignalMutation.mutate(signal);
-              }}
-              onAddTechnologies={handleAddAiTechnologies}
-              onVisibilityChange={setHasVisibleAiSuggestion}
-              hideContent={shouldHideTechDnaSection}
-            />
-          )}
-        </div>
-        )}
-
         {/* ── Notat ── */}
         {showNotes && (
         <div className="mb-5">
@@ -1445,6 +1621,73 @@ export function ContactCardContent({
               <Pencil className="h-3 w-3" /> Legg til notat
             </button>
           ) : null}
+        </div>
+        )}
+
+        <ContactSentCvNotice entries={sentCvEntries} profileMap={profileMapFull} />
+
+        {/* ── Tekniske behov ── */}
+        {shouldRenderTechDnaSection && (
+        <div className={cn("mb-5", shouldHideTechDnaSection && "hidden")} aria-hidden={shouldHideTechDnaSection || undefined}>
+          <div>
+            <div className="flex items-center justify-between mb-3" style={{ minHeight: 32 }}>
+              <h3 className="text-[13px] font-medium text-[#1A1C1F]">
+                Teknologier
+              </h3>
+              {contact.teknologier && (contact.teknologier as string[]).length > 0 && (
+                <DesignLabActionButton
+                  onClick={handleFinnKonsulent}
+                  disabled={matchingConsultants}
+                  variant="secondary"
+                  style={{ height: 32, fontSize: 12 }}
+                >
+                  {matchingConsultants ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Matcher...
+                    </>
+                  ) : (
+                    <>
+                      <Target className="h-3.5 w-3.5 text-primary" /> Finn konsulent
+                    </>
+                  )}
+                </DesignLabActionButton>
+              )}
+            </div>
+
+            {(contact as any).teknologier?.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {((contact as any).teknologier as string[]).map((tag: string) => (
+                  <span
+                    key={tag}
+                    className="chip chip--tech"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[0.8125rem] text-muted-foreground">Ingen teknisk profil ennå.</p>
+            )}
+          </div>
+
+          {/* AI Signal suggestion */}
+          {shouldAnalyzeAiSignal && (
+            <AiSignalBanner
+              contactId={contactId}
+              contactName={`${contact.first_name} ${contact.last_name}`}
+              contactEmail={contact.email || null}
+              currentSignal={effectiveSignal}
+              currentTechnologies={((contact as any).teknologier as string[]) || []}
+              activities={aiSignalActivities}
+              lastTaskDueDate={lastTaskDueDate}
+              onUpdateSignal={(signal) => {
+                updateSignalMutation.mutate(signal);
+              }}
+              onAddTechnologies={handleAddAiTechnologies}
+              onVisibilityChange={setHasVisibleAiSuggestion}
+              hideContent={shouldHideTechDnaSection}
+            />
+          )}
         </div>
         )}
 
