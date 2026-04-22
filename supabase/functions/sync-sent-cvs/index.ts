@@ -383,9 +383,12 @@ serve(async (req) => {
 
         const accessToken = await refreshTokenIfNeeded(supabase, tokenRow);
         const previousSync = syncStateMap.get(tokenRow.user_id)?.last_synced_at || null;
-        const sinceIso = previousSync
-          ? new Date(new Date(previousSync).getTime() - 12 * 60 * 60 * 1000).toISOString()
-          : new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000).toISOString();
+        const sinceIso =
+          isAdminRequest && body.trigger === "manual"
+            ? new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000).toISOString()
+            : previousSync
+              ? new Date(new Date(previousSync).getTime() - 12 * 60 * 60 * 1000).toISOString()
+              : new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000).toISOString();
 
         const sentMessages = await fetchSentMessagesForMailbox(accessToken, sinceIso, maxMessagesPerMailbox);
         totalScannedMessages += sentMessages.length;
