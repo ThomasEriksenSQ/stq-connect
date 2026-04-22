@@ -1,0 +1,328 @@
+diff --git a/src/pages/AnsattDetail.tsx b/src/pages/AnsattDetail.tsx
+index e4639683..918ead13 100644
+--- a/src/pages/AnsattDetail.tsx
++++ b/src/pages/AnsattDetail.tsx
+@@ -2,7 +2,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
+ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+ import { supabase } from "@/integrations/supabase/client";
+-import { ArrowLeft, Phone, Mail, MapPin, Calendar, Briefcase, MessageCircle, FileText, Plus, User, Pencil, Trash2, Check, X, ExternalLink, Sparkles } from "lucide-react";
++import { ArrowLeft, Phone, Mail, MapPin, Calendar, Briefcase, MessageCircle, FileText, User, Pencil, Trash2, Check, X, ChevronDown, Sparkles } from "lucide-react";
+ import { format, differenceInMonths, differenceInYears, differenceInDays, addDays } from "date-fns";
+ import { nb } from "date-fns/locale";
+ import { cn, getInitials, formatMonths } from "@/lib/utils";
+@@ -16,13 +16,14 @@ import { Label } from "@/components/ui/label";
+ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+-import { useState, useRef, useEffect } from "react";
++import { Fragment, useState, useRef, useEffect, useMemo } from "react";
+ import { toast } from "sonner";
+ import { useAuth } from "@/hooks/useAuth";
+ import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
+ import { useCrmNavigation } from "@/lib/crmNavigation";
+ import { buildEmployeeGeoText, deriveEmployeeAddressFields } from "@/lib/geographicMatch";
+ import { getEmployeeLifecycleStatus } from "@/lib/employeeStatus";
++import { coerceDisplayText } from "@/lib/outlookMail";
+ import {
+   DesignLabPrimaryAction,
+   DesignLabSecondaryAction,
+@@ -30,7 +31,6 @@ import {
+   DESIGN_LAB_STATUS_NEUTRAL_CHIP_ACTIVE_COLORS,
+ } from "@/components/designlab/system";
+ import { C } from "@/components/designlab/theme";
+-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+ 
+ const fmt = (d: string | null) => d ? format(new Date(d), "d. MMM yyyy", { locale: nb }) : "–";
+ 
+@@ -45,8 +45,11 @@ type SentCvRow = {
+   recipient_email: string;
+   attachment_name: string;
+   sent_at: string;
++  sender_email: string;
+   message_web_link: string | null;
+   message_subject: string | null;
++  message_preview: string | null;
++  message_body_text: string | null;
+ };
+ type ContactRow = {
+   id: string;
+@@ -836,6 +839,94 @@ function OppdragRow({ o, isActive = false, kontaktNavn }: { o: any; isActive?: b
+   );
+ }
+ 
++function splitSentCvThread(bodyText: string): { latest: string; rest: string | null } {
++  const threadPatterns = [
++    /\n\s*(?:From|Fra)\s*:/i,
++    /\n\s*_{5,}/,
++    /\n\s*-{5,}/,
++    /\n\s*On .+ wrote:/i,
++    /\n\s*Den .+ skrev:/i,
++  ];
++  let splitIndex = -1;
++  for (const pattern of threadPatterns) {
++    const match = bodyText.match(pattern);
++    if (match && match.index !== undefined && match.index > 20) {
++      if (splitIndex === -1 || match.index < splitIndex) {
++        splitIndex = match.index;
++      }
++    }
++  }
++  if (splitIndex > 0) {
++    return { latest: bodyText.slice(0, splitIndex).trim(), rest: bodyText.slice(splitIndex).trim() };
++  }
++  return { latest: bodyText.trim(), rest: null };
++}
++
++function SentCvEmailPreview({ entry }: { entry: SentCvEntry }) {
++  const [showThread, setShowThread] = useState(false);
++  const bodyText = coerceDisplayText(entry.message_body_text);
++  const preview = coerceDisplayText(entry.message_preview);
++  const subject = coerceDisplayText(entry.message_subject) || "Uten emne";
++  const { latest, rest } = useMemo(() => splitSentCvThread(bodyText), [bodyText]);
++  const visibleBody = latest || preview;
++  const missingStoredContent = !bodyText && !preview;
++
++  return (
++    <div className="rounded-lg border border-border bg-background px-4 py-3">
++      <div className="flex items-start gap-3">
++        <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
++          <Mail className="h-4 w-4" />
++        </div>
++        <div className="min-w-0 flex-1">
++          <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
++            <div className="min-w-0">
++              <p className="truncate text-[0.9375rem] font-semibold text-foreground">{subject}</p>
++              <p className="mt-0.5 text-[0.8125rem] text-muted-foreground break-all">
++                {entry.sender_email} → {entry.recipient_email}
++              </p>
++              <p className="mt-0.5 text-[0.75rem] text-muted-foreground">{entry.attachment_name}</p>
++            </div>
++            <span className="text-[0.8125rem] text-muted-foreground">
++              {format(new Date(entry.sent_at), "d. MMM yyyy HH:mm", { locale: nb })}
++            </span>
++          </div>
++
++          {missingStoredContent ? (
++            <p className="mt-3 text-[0.875rem] text-muted-foreground">
++              Denne raden ble registrert før vi begynte å lagre epostinnhold i CRM-et. Kjør Sendt CV-sync på nytt for å fylle inn meldingen her.
++            </p>
++          ) : (
++            <>
++              <p className="mt-3 whitespace-pre-wrap text-[0.875rem] leading-relaxed text-foreground/80">
++                {visibleBody}
++              </p>
++              {rest ? (
++                <div className="mt-3">
++                  <button
++                    type="button"
++                    onClick={() => setShowThread((current) => !current)}
++                    className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[0.75rem] text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
++                  >
++                    <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showThread && "rotate-180")} />
++                    {showThread ? "Skjul hele tråden" : "Vis hele tråden"}
++                  </button>
++                  {showThread ? (
++                    <div className="mt-2 rounded-lg bg-muted/30 p-3">
++                      <p className="whitespace-pre-wrap text-[0.8125rem] leading-relaxed text-muted-foreground">
++                        {rest}
++                      </p>
++                    </div>
++                  ) : null}
++                </div>
++              ) : null}
++            </>
++          )}
++        </div>
++      </div>
++    </div>
++  );
++}
++
+ function SentCvList({
+   entries,
+   getContactPath,
+@@ -845,18 +936,27 @@ function SentCvList({
+   getContactPath: (contactId: string) => string;
+   getCompanyPath: (companyId: string) => string;
+ }) {
++  const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
++
+   return (
+     <div className="overflow-hidden rounded-lg border border-border bg-background">
+-      <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(0,1.1fr)_112px_44px] items-center gap-3 border-b border-border bg-muted/30 px-3 py-2 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground md:grid">
++      <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(0,1.1fr)_112px_72px] items-center gap-3 border-b border-border bg-muted/30 px-3 py-2 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground md:grid">
+         <span>Kontaktperson</span>
+         <span>Selskap</span>
+         <span>Stilling</span>
+         <span>Sendt</span>
+-        <span className="text-right">Epost</span>
++        <span className="text-right">E-post</span>
+       </div>
+       <div className="divide-y divide-border">
+         {entries.map((entry) => {
+           const companyId = entry.company_id || entry.contact?.company_id || null;
++          const hasMailDetails = Boolean(
++            entry.message_subject ||
++            entry.message_preview ||
++            entry.message_body_text ||
++            entry.message_web_link,
++          );
++          const isExpanded = expandedEntryId === entry.id;
+           const contactName =
+             entry.contact
+               ? `${entry.contact.first_name} ${entry.contact.last_name}`.trim()
+@@ -871,84 +971,80 @@ function SentCvList({
+             "–";
+ 
+           return (
+-            <div
+-              key={entry.id}
+-              className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(0,1.1fr)_112px_44px] md:items-center"
+-            >
+-              <div className="min-w-0">
+-                <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
+-                  Kontaktperson
+-                </p>
+-                {entry.contact_id ? (
+-                  <Link
+-                    to={getContactPath(entry.contact_id)}
+-                    className="block truncate text-[0.9375rem] font-medium text-foreground hover:text-primary"
+-                  >
+-                    {contactName}
+-                  </Link>
+-                ) : (
+-                  <span className="block truncate text-[0.9375rem] font-medium text-foreground">{contactName}</span>
+-                )}
+-                <p className="truncate text-[0.75rem] text-muted-foreground">{entry.recipient_email}</p>
+-              </div>
++            <Fragment key={entry.id}>
++              <div className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(0,1.1fr)_112px_72px] md:items-center">
++                <div className="min-w-0">
++                  <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
++                    Kontaktperson
++                  </p>
++                  {entry.contact_id ? (
++                    <Link
++                      to={getContactPath(entry.contact_id)}
++                      className="block truncate text-[0.9375rem] font-medium text-foreground hover:text-primary"
++                    >
++                      {contactName}
++                    </Link>
++                  ) : (
++                    <span className="block truncate text-[0.9375rem] font-medium text-foreground">{contactName}</span>
++                  )}
++                  <p className="truncate text-[0.75rem] text-muted-foreground">{entry.recipient_email}</p>
++                </div>
+ 
+-              <div className="min-w-0">
+-                <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
+-                  Selskap
+-                </p>
+-                {companyId ? (
+-                  <Link
+-                    to={getCompanyPath(companyId)}
+-                    className="block truncate text-[0.9375rem] font-medium text-foreground hover:text-primary"
+-                  >
+-                    {companyName}
+-                  </Link>
+-                ) : (
+-                  <span className="block truncate text-[0.9375rem] font-medium text-foreground">{companyName}</span>
+-                )}
+-                <p className="truncate text-[0.75rem] text-muted-foreground">{entry.attachment_name}</p>
+-              </div>
++                <div className="min-w-0">
++                  <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
++                    Selskap
++                  </p>
++                  {companyId ? (
++                    <Link
++                      to={getCompanyPath(companyId)}
++                      className="block truncate text-[0.9375rem] font-medium text-foreground hover:text-primary"
++                    >
++                      {companyName}
++                    </Link>
++                  ) : (
++                    <span className="block truncate text-[0.9375rem] font-medium text-foreground">{companyName}</span>
++                  )}
++                  <p className="truncate text-[0.75rem] text-muted-foreground">{entry.attachment_name}</p>
++                </div>
+ 
+-              <div className="min-w-0">
+-                <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
+-                  Stilling
+-                </p>
+-                <span className="block truncate text-[0.875rem] text-foreground">{contactTitle}</span>
+-              </div>
++                <div className="min-w-0">
++                  <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
++                    Stilling
++                  </p>
++                  <span className="block truncate text-[0.875rem] text-foreground">{contactTitle}</span>
++                </div>
+ 
+-              <div className="min-w-0">
+-                <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
+-                  Sendt
+-                </p>
+-                <span className="block text-[0.8125rem] text-muted-foreground">
+-                  {format(new Date(entry.sent_at), "d. MMM yyyy HH:mm", { locale: nb })}
+-                </span>
+-              </div>
++                <div className="min-w-0">
++                  <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
++                    Sendt
++                  </p>
++                  <span className="block text-[0.8125rem] text-muted-foreground">
++                    {format(new Date(entry.sent_at), "d. MMM yyyy HH:mm", { locale: nb })}
++                  </span>
++                </div>
+ 
+-              <div className="flex items-center justify-end">
+-                {entry.message_web_link ? (
+-                  <TooltipProvider delayDuration={100}>
+-                    <Tooltip>
+-                      <TooltipTrigger asChild>
+-                        <a
+-                          href={entry.message_web_link}
+-                          target="_blank"
+-                          rel="noreferrer"
+-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+-                        >
+-                          <ExternalLink className="h-3.5 w-3.5" />
+-                        </a>
+-                      </TooltipTrigger>
+-                      <TooltipContent>
+-                        <p className="max-w-56 text-[0.75rem]">{entry.message_subject || "Åpne epost i Outlook"}</p>
+-                      </TooltipContent>
+-                    </Tooltip>
+-                  </TooltipProvider>
+-                ) : (
+-                  <span className="text-[0.75rem] text-muted-foreground">–</span>
+-                )}
++                <div className="flex items-center justify-end">
++                  {hasMailDetails ? (
++                    <button
++                      type="button"
++                      onClick={() => setExpandedEntryId(isExpanded ? null : entry.id)}
++                      className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-2 text-[0.75rem] text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
++                    >
++                      <Mail className="h-3.5 w-3.5" />
++                      <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isExpanded && "rotate-180")} />
++                    </button>
++                  ) : (
++                    <span className="text-[0.75rem] text-muted-foreground">–</span>
++                  )}
++                </div>
+               </div>
+-            </div>
++
++              {isExpanded ? (
++                <div className="border-t border-border bg-muted/15 px-3 py-3">
++                  <SentCvEmailPreview entry={entry} />
++                </div>
++              ) : null}
++            </Fragment>
+           );
+         })}
+       </div>
