@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.sync-sent-cvs]
 verify_jwt = false
+
+[functions.task-due-reminder]
+verify_jwt = false

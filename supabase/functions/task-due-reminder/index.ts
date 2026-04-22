@@ -6,6 +6,28 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const CRM_TIME_ZONE = Deno.env.get("CRM_TIME_ZONE") || "Europe/Oslo";
+const APP_URL = Deno.env.get("APP_URL") || "https://crm.stacq.no";
+
+function getDateKeyInTimeZone(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+
+  if (!year || !month || !day) {
+    throw new Error("Could not format date in configured time zone");
+  }
+
+  return `${year}-${month}-${day}`;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -26,7 +48,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Find tasks due today or overdue with email_notify = true
-    const today = new Date().toISOString().split("T")[0];
+    const today = getDateKeyInTimeZone(new Date(), CRM_TIME_ZONE);
     const { data: tasks, error: tasksError } = await adminClient
       .from("tasks")
       .select("id, title, due_date, assigned_to, contact_id, company_id, contacts(first_name, last_name, companies(name))")
@@ -59,13 +81,17 @@ Deno.serve(async (req: Request) => {
         const contactName = contact ? `${contact.first_name} ${contact.last_name}` : "Ukjent kontakt";
         const companyName = contact?.companies?.name || "";
         const contactLine = companyName ? `${contactName} · ${companyName}` : contactName;
-        const appUrl = Deno.env.get("APP_URL") || "https://stq-connect.lovable.app";
-        const contactUrl = task.contact_id ? `${appUrl}/kontakter/${task.contact_id}` : appUrl;
+        const contactUrl = task.contact_id ? `${APP_URL}/kontakter/${task.contact_id}` : APP_URL;
 
         const isOverdue = task.due_date < today;
         const dueLine = isOverdue ? `⚠️ Forfalt (${task.due_date})` : `Forfaller i dag`;
 
-        const datoNorsk = new Date().toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' });
+        const datoNorsk = new Intl.DateTimeFormat("nb-NO", {
+          timeZone: CRM_TIME_ZONE,
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }).format(new Date());
         const html = `
 <!DOCTYPE html>
 <html>
