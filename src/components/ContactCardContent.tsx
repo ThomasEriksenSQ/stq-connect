@@ -522,7 +522,7 @@ export function ContactCardContent({
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { getCompanyPath, useModernRoutes } = useCrmNavigation();
-  const { interne: cachedInterne, eksterne: cachedEksterne } = useConsultantCache();
+  const { interne: cachedInterne, eksterne: cachedEksterne, isReady: consultantCacheReady } = useConsultantCache();
 
   // Form states
   const [activeForm, setActiveForm] = useState<"call" | "meeting" | "task" | null>(null);
@@ -544,6 +544,8 @@ export function ContactCardContent({
   const [consultantResults, setConsultantResults] = useState<ConsultantMatchResult[] | null>(null);
   const [matchSourceFilter, setMatchSourceFilter] = useState<"Alle" | "Ansatte" | "Eksterne">("Alle");
   const [matchUpdatedAt, setMatchUpdatedAt] = useState<string | null>(null);
+  const [consultantMatchMessage, setConsultantMatchMessage] = useState<string | null>(null);
+  const [pendingConsultantMatch, setPendingConsultantMatch] = useState(false);
   const [showTechDna, setShowTechDna] = useState(!defaultHidden?.techDna);
   const [hasVisibleAiSuggestion, setHasVisibleAiSuggestion] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
@@ -733,6 +735,16 @@ export function ContactCardContent({
   useEffect(() => {
     setHasVisibleAiSuggestion(false);
   }, [contactId]);
+
+  useEffect(() => {
+    setConsultantResults(null);
+    setMatchSourceFilter("Alle");
+    setMatchUpdatedAt(null);
+    setConsultantMatchMessage(null);
+    setMatchingConsultants(false);
+    setPendingConsultantMatch(false);
+    setShowConsultantMatch(!defaultHidden?.consultantMatch);
+  }, [contactId, defaultHidden?.consultantMatch]);
 
   const updateMutation = useMutation({
     mutationFn: async (updates: Record<string, any>) => {
@@ -926,15 +938,21 @@ export function ContactCardContent({
     },
   });
 
-  const handleFinnKonsulent = async () => {
+  const runConsultantMatchNow = async () => {
     const teknologier = mergeTechnologyTags((contact as any).teknologier || []);
     if (!teknologier.length) {
+      setPendingConsultantMatch(false);
+      setConsultantResults([]);
+      setConsultantMatchMessage("Kontaktens tekniske DNA er tomt ennå. Legg inn teknologier for å få match-treff.");
+      setMatchUpdatedAt(null);
+      setMatchingConsultants(false);
       toast("Kontaktens tekniske DNA er tomt ennå");
       return;
     }
+
+    setPendingConsultantMatch(false);
     setMatchingConsultants(true);
-    setConsultantResults(null);
-    setMatchUpdatedAt(null);
+    setConsultantMatchMessage(null);
     try {
       const { data, error } = await supabase.functions.invoke("match-consultants", {
         body: {
@@ -947,16 +965,49 @@ export function ContactCardContent({
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setMatchSourceFilter("Alle");
-      setConsultantResults(sortConsultantMatches(Array.isArray(data) ? data : []));
+      const sortedResults = sortConsultantMatches(Array.isArray(data) ? data : []);
+      setConsultantResults(sortedResults);
+      setConsultantMatchMessage(sortedResults.length === 0 ? "Ingen treff med score ≥ 4" : null);
       setMatchUpdatedAt(new Date().toISOString());
     } catch (err: any) {
       toast.error(err.message || "Kunne ikke kjøre matching");
       setConsultantResults([]);
+      setConsultantMatchMessage(err?.message || "Kunne ikke kjøre matching");
       setMatchUpdatedAt(null);
     } finally {
       setMatchingConsultants(false);
     }
   };
+
+  const handleFinnKonsulent = async () => {
+    if (matchingConsultants) return;
+
+    const teknologier = mergeTechnologyTags((contact as any).teknologier || []);
+
+    setShowConsultantMatch(true);
+    setMatchSourceFilter("Alle");
+    setConsultantResults(null);
+    setMatchUpdatedAt(null);
+    setConsultantMatchMessage(null);
+
+    if (!teknologier.length) {
+      await runConsultantMatchNow();
+      return;
+    }
+
+    if (!consultantCacheReady) {
+      setPendingConsultantMatch(true);
+      setMatchingConsultants(true);
+      return;
+    }
+
+    await runConsultantMatchNow();
+  };
+
+  useEffect(() => {
+    if (!pendingConsultantMatch || !consultantCacheReady) return;
+    void runConsultantMatchNow();
+  }, [pendingConsultantMatch, consultantCacheReady, contactId]);
 
   const visibleConsultantResults = useMemo(
     () => filterConsultantMatches(consultantResults || [], matchSourceFilter),
@@ -1051,12 +1102,16 @@ export function ContactCardContent({
   const companyName = (contact.companies as any)?.name;
   const companyId = (contact.companies as any)?.id;
   const companyCity = (contact.companies as any)?.city as string | null;
+  const contactTechnologies = mergeTechnologyTags((contact as any).teknologier || []);
   const companyLocations: string[] = companyCity
     ? companyCity
         .split(",")
         .map((s: string) => s.trim())
         .filter(Boolean)
     : [];
+  const consultantMatchVisible = !defaultHidden?.consultantMatch || showConsultantMatch;
+  const showConsultantMatchPane = consultantMatchVisible && (matchingConsultants || consultantResults !== null);
+  const isPreparingConsultantMatch = pendingConsultantMatch && !consultantCacheReady;
   const showAvdeling = companyLocations.length > 1;
   const canEditProfile = editable && (!enableProfileEditMode || profileEditMode);
   const canToggleContactFlags = editable;
@@ -1231,8 +1286,7 @@ export function ContactCardContent({
                   {defaultHidden && (
                     <>
                       <DropdownMenuItem onClick={() => {
-                        setShowConsultantMatch(true);
-                        handleFinnKonsulent();
+                        void handleFinnKonsulent();
                       }}>
                         <UserSearch className="h-3.5 w-3.5 mr-2" /> Finn konsulent
                       </DropdownMenuItem>
@@ -1567,7 +1621,8 @@ export function ContactCardContent({
         )}
       </div>
 
-      <div className="space-y-0">
+      <div className={cn("space-y-0", showConsultantMatchPane && "lg:grid lg:grid-cols-[340px_minmax(0,1fr)] lg:gap-6")}>
+        <div className={cn(showConsultantMatchPane && "lg:min-w-0")}>
         {/* ── Notat ── */}
         {showNotes && (
         <div className="mb-5">
@@ -1648,22 +1703,13 @@ export function ContactCardContent({
               <h3 className="text-[13px] font-medium" style={SECTION_TITLE_STYLE}>
                 Teknologier
               </h3>
-              {contact.teknologier && (contact.teknologier as string[]).length > 0 && (
+              {!showConsultantMatchPane && (
                 <DesignLabActionButton
                   onClick={handleFinnKonsulent}
-                  disabled={matchingConsultants}
                   variant="secondary"
                   style={{ height: 32, fontSize: 12 }}
                 >
-                  {matchingConsultants ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Matcher...
-                    </>
-                  ) : (
-                    <>
-                      <Target className="h-3.5 w-3.5 text-primary" /> Finn konsulent
-                    </>
-                  )}
+                  <Target className="h-3.5 w-3.5" /> Finn konsulent
                 </DesignLabActionButton>
               )}
             </div>
@@ -1897,102 +1943,6 @@ export function ContactCardContent({
           </div>
         )}
 
-        {/* ── Konsulent match-resultater ── */}
-        {(!defaultHidden?.consultantMatch || showConsultantMatch) && consultantResults !== null && (
-          <div className="space-y-3 mb-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Target className="h-4 w-4 text-primary" />
-                <div>
-                  <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                    Konsulentmatch
-                  </span>
-                  {consultantMatchFreshness && (
-                    <p className="text-[0.6875rem] text-muted-foreground normal-case tracking-normal">
-                      {consultantMatchFreshness}
-                    </p>
-                  )}
-                </div>
-                <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-primary/10 text-primary text-[0.6875rem] font-semibold">
-                  {consultantResults.length}
-                </span>
-              </div>
-              <button
-                onClick={handleFinnKonsulent}
-                className="text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Kjør på nytt
-              </button>
-            </div>
-
-            {visibleConsultantResults.length === 0 ? (
-              <p className="text-[0.8125rem] text-muted-foreground">Ingen treff med score ≥ 4</p>
-            ) : (
-              <div className="space-y-2">
-                {consultantResults.length > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    {(["Alle", "Ansatte", "Eksterne"] as const).map((chip) => {
-                      const selected = matchSourceFilter === chip;
-                      return (
-                        <DesignLabFilterButton
-                          key={chip}
-                          onClick={() => setMatchSourceFilter(chip)}
-                          active={selected}
-                        >
-                          {chip}
-                        </DesignLabFilterButton>
-                      );
-                    })}
-                  </div>
-                )}
-                {visibleConsultantResults.map((m, i) => (
-                  <div key={`${m.type || "ukjent"}-${m.id}`} className="rounded-lg border border-border bg-card p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
-                        <span className="text-[0.875rem] font-semibold text-foreground truncate">{m.navn}</span>
-                        {m.type && (
-                          <span
-                            className={cn(
-                              "inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold shrink-0",
-                              m.type === "intern"
-                                ? "bg-foreground text-background"
-                                : "bg-blue-100 text-blue-700",
-                            )}
-                          >
-                            {m.type === "intern" ? "Ansatt" : "Ekstern"}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span
-                          className={cn(
-                            "inline-block h-2.5 w-2.5 rounded-full",
-                            getConsultantMatchScoreColor(m.score),
-                          )}
-                        />
-
-                        <span className="text-[0.8125rem] font-bold text-foreground">{m.score}/10</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {(m.match_tags || []).map((t: string) => (
-                        <span
-                          key={t}
-                          className="chip chip--tech"
-                        >
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                    <p className="text-[0.8125rem] text-muted-foreground mt-1.5 italic">{m.begrunnelse}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         {/* ── Oppfølginger ── */}
         {tasks.length > 0 && (
           <div className="bg-card border border-border rounded-lg shadow-card p-4 mb-6">
@@ -2035,6 +1985,124 @@ export function ContactCardContent({
             contactEmail={contact.email || undefined}
           />
         </div>
+        </div>
+
+        {showConsultantMatchPane && (
+          <div className="mt-5 border-t border-border pt-5 lg:mt-0 lg:min-w-0 lg:border-t-0 lg:border-l lg:pl-6">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Target className="h-4 w-4 text-primary shrink-0" />
+                  <div className="min-w-0">
+                    <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                      Konsulentmatch
+                    </span>
+                    {consultantMatchFreshness && (
+                      <p className="text-[0.6875rem] text-muted-foreground normal-case tracking-normal">
+                        {consultantMatchFreshness}
+                      </p>
+                    )}
+                  </div>
+                  {consultantResults && (
+                    <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-primary/10 text-primary text-[0.6875rem] font-semibold shrink-0">
+                      {consultantResults.length}
+                    </span>
+                  )}
+                </div>
+                {!matchingConsultants && (
+                  <button
+                    onClick={handleFinnKonsulent}
+                    className="text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                  >
+                    Kjør på nytt
+                  </button>
+                )}
+              </div>
+
+              {matchingConsultants ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="rounded-lg border border-border bg-muted/30 p-3 animate-pulse">
+                      <div className="h-4 bg-muted rounded w-2/3 mb-2" />
+                      <div className="h-3 bg-muted rounded w-1/2" />
+                    </div>
+                  ))}
+                  <p className="text-[0.8125rem] text-primary font-medium flex items-center gap-2">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    {isPreparingConsultantMatch ? "Laster kandidater..." : "Analyserer match..."}
+                  </p>
+                </div>
+              ) : visibleConsultantResults.length === 0 ? (
+                <p className="text-[0.8125rem] text-muted-foreground">
+                  {consultantResults && consultantResults.length > 0
+                    ? "Ingen treff for valgt filter"
+                    : consultantMatchMessage || "Ingen treff med score ≥ 4"}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {consultantResults && consultantResults.length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      {(["Alle", "Ansatte", "Eksterne"] as const).map((chip) => {
+                        const selected = matchSourceFilter === chip;
+                        return (
+                          <DesignLabFilterButton
+                            key={chip}
+                            onClick={() => setMatchSourceFilter(chip)}
+                            active={selected}
+                          >
+                            {chip}
+                          </DesignLabFilterButton>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {visibleConsultantResults.map((m, i) => (
+                    <div key={`${m.type || "ukjent"}-${m.id}`} className="rounded-lg border border-border bg-card p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-[0.75rem] font-bold text-muted-foreground">#{i + 1}</span>
+                          <span className="text-[0.875rem] font-semibold text-foreground truncate">{m.navn}</span>
+                          {m.type && (
+                            <span
+                              className={cn(
+                                "inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold shrink-0",
+                                m.type === "intern"
+                                  ? "bg-foreground text-background"
+                                  : "bg-blue-100 text-blue-700",
+                              )}
+                            >
+                              {m.type === "intern" ? "Ansatt" : "Ekstern"}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span
+                            className={cn(
+                              "inline-block h-2.5 w-2.5 rounded-full",
+                              getConsultantMatchScoreColor(m.score),
+                            )}
+                          />
+                          <span className="text-[0.8125rem] font-bold text-foreground">{m.score}/10</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {(m.match_tags || []).map((t: string) => (
+                          <span
+                            key={t}
+                            className="chip chip--tech"
+                          >
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="text-[0.8125rem] text-muted-foreground mt-1.5 italic">{m.begrunnelse}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <DesignLabEntitySheet

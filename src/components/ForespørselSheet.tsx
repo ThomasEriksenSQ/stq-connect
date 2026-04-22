@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { X, Pencil, Trash2, Sparkles, Loader2, ChevronDown, Plus, Target, Phone, Mail, MapPin } from "lucide-react";
+import { X, Pencil, Trash2, Loader2, ChevronDown, Plus, Target, Phone, Mail, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Dialog,
@@ -42,6 +42,7 @@ import { useCrmNavigation } from "@/lib/crmNavigation";
 import { createOppdrag, invalidateOppdragQueries } from "@/lib/oppdragPersistence";
 import { crmQueryKeys } from "@/lib/queryKeys";
 import { DesignLabReadonlyChip } from "@/components/designlab/system";
+import { DesignLabActionButton } from "@/components/designlab/controls";
 
 const LABEL = "text-[13px] font-medium text-foreground";
 
@@ -190,7 +191,7 @@ export function ForespørselSheet({
   const navigate = useNavigate();
   const { getCompanyPath } = useCrmNavigation();
   const queryClient = useQueryClient();
-  const { interne: cachedInterne, eksterne: cachedEksterne } = useConsultantCache();
+  const { interne: cachedInterne, eksterne: cachedEksterne, isReady: consultantCacheReady } = useConsultantCache();
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -223,6 +224,7 @@ export function ForespørselSheet({
   const [matchResults, setMatchResults] = useState<MatchResult[] | null>(null);
   const [matchSourceFilter, setMatchSourceFilter] = useState<"Alle" | "Ansatte" | "Eksterne">("Alle");
   const [matchUpdatedAt, setMatchUpdatedAt] = useState<string | null>(null);
+  const [pendingMatchRequest, setPendingMatchRequest] = useState(false);
 
   // Opprett oppdrag modal state
   const [oppdragModalOpen, setOppdragModalOpen] = useState(false);
@@ -307,6 +309,7 @@ export function ForespørselSheet({
     setMatchResults(null);
     setMatchUpdatedAt(null);
     setMatching(false);
+    setPendingMatchRequest(false);
     setEditMode(startInEditMode);
     setEditingKommentar(false);
     setKommentar(row?.kommentar || "");
@@ -521,9 +524,9 @@ export function ForespørselSheet({
   };
 
   // AI Match
-  const runMatch = async () => {
+  const runMatchNow = async () => {
     setMatching(true);
-    setMatchResults(null);
+    setPendingMatchRequest(false);
     try {
       const kontaktData = row.kontakt_id
           ? await Promise.all([
@@ -564,6 +567,7 @@ export function ForespørselSheet({
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      setMatchSourceFilter("Alle");
       setMatchResults(sortConsultantMatches(Array.isArray(data) ? data : []));
       setMatchUpdatedAt(new Date().toISOString());
     } catch (err: any) {
@@ -575,6 +579,27 @@ export function ForespørselSheet({
       setMatching(false);
     }
   };
+
+  const runMatch = async () => {
+    if (matching) return;
+
+    setMatchSourceFilter("Alle");
+    setMatchResults(null);
+    setMatchUpdatedAt(null);
+
+    if (!consultantCacheReady) {
+      setPendingMatchRequest(true);
+      setMatching(true);
+      return;
+    }
+
+    await runMatchNow();
+  };
+
+  useEffect(() => {
+    if (!pendingMatchRequest || !consultantCacheReady || !row?.id) return;
+    void runMatchNow();
+  }, [pendingMatchRequest, consultantCacheReady, row?.id]);
 
   // Add from match result
   const addFromMatch = async (match: MatchResult) => {
@@ -592,6 +617,7 @@ export function ForespørselSheet({
     [matchResults, matchSourceFilter],
   );
   const matchFreshness = formatConsultantMatchFreshness(matchUpdatedAt);
+  const isPreparingMatch = pendingMatchRequest && !consultantCacheReady;
 
   const SUGGESTED_TAGS = ["C++", "C", "Embedded", "Yocto", "Linux", "Qt", "FPGA", "Python", "SPI/I2C", "MCU", "Embedded Linux", "Sikkerhet"];
 
@@ -752,14 +778,15 @@ export function ForespørselSheet({
                   </div>
                   {!matchResults && !matching && (
                     <div className="sm:justify-self-end">
-                      <button
+                      <DesignLabActionButton
                         onClick={runMatch}
                         disabled={!(row.teknologier?.length)}
-                        className="inline-flex items-center gap-2 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+                        variant="secondary"
+                        style={{ height: 32, fontSize: 12 }}
                       >
-                        <Sparkles className="h-4 w-4" />
+                        <Target className="h-3.5 w-3.5" />
                         Finn match
-                      </button>
+                      </DesignLabActionButton>
                     </div>
                   )}
                 </div>
@@ -954,7 +981,7 @@ export function ForespørselSheet({
                     ))}
                     <p className="text-[0.8125rem] text-primary font-medium flex items-center gap-2">
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Analyserer match...
+                      {isPreparingMatch ? "Laster kandidater..." : "Analyserer match..."}
                     </p>
                   </div>
                 )}

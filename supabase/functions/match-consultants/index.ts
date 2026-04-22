@@ -2,12 +2,41 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { buildMatchingProfile, sanitizeAiMatchResults } from "../_shared/matchingProfile.ts";
+import { getCanonicalMatchScore } from "../_shared/matchScore.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const MAX_AI_CANDIDATES_PER_TYPE = 12;
+
+type PreparedConsultantCandidate = {
+  id: number | string;
+  navn: string;
+  _profile: ReturnType<typeof buildMatchingProfile>;
+};
+
+function rankAiCandidates<T extends PreparedConsultantCandidate>(
+  candidates: T[],
+  targetTags: string[],
+  limit: number,
+): T[] {
+  return candidates
+    .map((candidate) => ({
+      candidate,
+      score: getCanonicalMatchScore(targetTags, candidate._profile.tags, 50).score10,
+    }))
+    .filter((entry) => entry.score > 0)
+    .sort((left, right) =>
+      right.score - left.score ||
+      left.candidate.navn.localeCompare(right.candidate.navn, "nb") ||
+      String(left.candidate.id).localeCompare(String(right.candidate.id), "nb")
+    )
+    .slice(0, limit)
+    .map((entry) => entry.candidate);
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS")
@@ -66,6 +95,21 @@ serve(async (req) => {
       candidateProfiles.set(String(k.id), { tags: profile.tags, type: "ekstern", navn: k.navn });
       return { ...k, _profile: profile };
     });
+    const aiInterne = rankAiCandidates(normalizedInterne, requestProfile.tags, MAX_AI_CANDIDATES_PER_TYPE);
+    const aiEksterne = rankAiCandidates(normalizedEksterne, requestProfile.tags, MAX_AI_CANDIDATES_PER_TYPE);
+
+    if (aiInterne.length === 0 && aiEksterne.length === 0) {
+      const sanitized = sanitizeAiMatchResults([], {
+        targetTags: requestProfile.tags,
+        sourcesById: candidateProfiles,
+        allowedTypes: new Set(["intern", "ekstern"]),
+        fallbackReason: "Relevant teknologimatch",
+      });
+
+      return new Response(JSON.stringify(sanitized), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const systemPrompt = `You are a consultant matching assistant for STACQ, a Norwegian IT staffing company specializing in embedded systems and engineering.
 Rank consultants by fit for the assignment. Return ONLY a valid JSON array, no markdown, no explanation:
@@ -76,10 +120,10 @@ Use exact canonical tags from the provided profiles when you populate match_tags
     const userPrompt = `Forespørsel: ${requestProfile.promptText}${sted ? ` — ${sted}` : ""}
 
 Interne konsulenter:
-${normalizedInterne.map((k) => `[id:${k.id}] ${k.navn}: ${k._profile.promptText}`).join("\n") || "Ingen"}
+${aiInterne.map((k) => `[id:${k.id}] ${k.navn}: ${k._profile.promptText}`).join("\n") || "Ingen"}
 
 Eksterne konsulenter (tilgjengelige):
-${normalizedEksterne.map((k) => `[id:${k.id}] ${k.navn}: ${k._profile.promptText}`).join("\n") || "Ingen"}`;
+${aiEksterne.map((k) => `[id:${k.id}] ${k.navn}: ${k._profile.promptText}`).join("\n") || "Ingen"}`;
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
