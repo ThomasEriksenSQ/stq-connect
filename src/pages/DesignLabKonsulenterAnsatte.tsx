@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
 import { differenceInDays, differenceInMonths, format } from "date-fns";
 import { nb } from "date-fns/locale";
-import { Plus, X } from "lucide-react";
+import { Download, Plus, X } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatMonths, getInitials } from "@/lib/utils";
 import { buildEmployeeGeoText, deriveEmployeeAddressFields } from "@/lib/geographicMatch";
+import { downloadEmployeeAddressPdf } from "@/lib/employeeAddressPdf";
 import { getEmployeeLifecycleStatus } from "@/lib/employeeStatus";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersistentState } from "@/hooks/usePersistentState";
@@ -61,6 +63,7 @@ export default function DesignLabKonsulenterAnsatte() {
   const [search] = useState("");
   const [filter, setFilter] = useState<Filter>("Aktiv");
   const [createOpen, setCreateOpen] = useState(false);
+  const [isDownloadingAddressList, setIsDownloadingAddressList] = useState(false);
   const today = new Date();
 
   const { data: ansatte = [], isLoading } = useQuery({
@@ -192,6 +195,11 @@ export default function DesignLabKonsulenterAnsatte() {
       return haystack.includes(query);
     });
   }, [ansatte, filter, search]);
+
+  const exportableEmployees = useMemo(
+    () => ansatte.filter((row: any) => getStatus(row) !== "Sluttet"),
+    [ansatte],
+  );
 
   const renderRenewal = (navn: string) => {
     const entry = fornyMap.get(navn);
@@ -354,6 +362,23 @@ export default function DesignLabKonsulenterAnsatte() {
     );
   };
 
+  const handleDownloadAddressList = async () => {
+    if (!exportableEmployees.length || isDownloadingAddressList) return;
+
+    setIsDownloadingAddressList(true);
+    try {
+      await downloadEmployeeAddressPdf(exportableEmployees as any[], {
+        fileName: `adresseliste-ansatte-${format(new Date(), "yyyy-MM-dd")}.pdf`,
+      });
+      toast.success(`Adresseliste lastet ned for ${exportableEmployees.length} ansatte`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Ukjent feil";
+      toast.error(`Kunne ikke laste ned adresseliste: ${message}`);
+    } finally {
+      setIsDownloadingAddressList(false);
+    }
+  };
+
   return (
     <div
       className="flex h-screen overflow-hidden select-none"
@@ -389,40 +414,62 @@ export default function DesignLabKonsulenterAnsatte() {
         <div className="flex-1 min-h-0 flex">
           <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel defaultSize={34} minSize={22} maxSize={55}>
-              <div className="h-full overflow-y-auto" style={{ scrollbarColor: `${C.borderStrong} ${C.surfaceAlt}` }}>
-                <div
-                  className="grid items-center sticky top-0 z-10"
-                  style={{
-                    gridTemplateColumns: GRID_TEMPLATE,
-                    height: 32,
-                    borderBottom: `1px solid ${C.border}`,
-                    background: C.surfaceAlt,
-                    paddingInline: 16,
-                  }}
-                >
-                  {["Navn", "Geografi", "Erfaring", "Start", "Ansatt i", "Oppdrag", "Fornyes"].map((label, index) => (
-                    <span
-                      key={`${label}-${index}`}
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 500,
-                        letterSpacing: "0.08em",
-                        color: C.textMuted,
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {label}
-                    </span>
-                  ))}
+              <div className="flex h-full min-h-0 flex-col">
+                <div className="flex-1 overflow-y-auto" style={{ scrollbarColor: `${C.borderStrong} ${C.surfaceAlt}` }}>
+                  <div
+                    className="grid items-center sticky top-0 z-10"
+                    style={{
+                      gridTemplateColumns: GRID_TEMPLATE,
+                      height: 32,
+                      borderBottom: `1px solid ${C.border}`,
+                      background: C.surfaceAlt,
+                      paddingInline: 16,
+                    }}
+                  >
+                    {["Navn", "Geografi", "Erfaring", "Start", "Ansatt i", "Oppdrag", "Fornyes"].map((label, index) => (
+                      <span
+                        key={`${label}-${index}`}
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 500,
+                          letterSpacing: "0.08em",
+                          color: C.textMuted,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+
+                  {isLoading ? (
+                    <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster ansatte…</div>
+                  ) : filtered.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen ansatte funnet</div>
+                  ) : (
+                    filtered.map((row: any) => renderRow(row))
+                  )}
                 </div>
 
-                {isLoading ? (
-                  <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster ansatte…</div>
-                ) : filtered.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Ingen ansatte funnet</div>
-                ) : (
-                  filtered.map((row: any) => renderRow(row))
-                )}
+                <div
+                  className="shrink-0 px-4 py-3"
+                  style={{ borderTop: `1px solid ${C.border}`, background: C.surface }}
+                >
+                  <button
+                    type="button"
+                    onClick={handleDownloadAddressList}
+                    disabled={isLoading || !exportableEmployees.length || isDownloadingAddressList}
+                    className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-medium transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{
+                      background: C.panel,
+                      color: C.text,
+                      border: `1px solid ${C.border}`,
+                    }}
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    {isDownloadingAddressList ? "Lager PDF..." : "Last ned adresseliste"}
+                  </button>
+                </div>
               </div>
             </ResizablePanel>
 
