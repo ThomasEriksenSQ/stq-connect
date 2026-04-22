@@ -186,6 +186,9 @@ type ContactSentCvEmployeeRow = {
   slutt_dato: string | null;
 };
 
+const SECTION_TITLE_STYLE = { color: C.text };
+const SECTION_COUNT_STYLE = { color: C.textFaint };
+
 function splitSentCvThread(bodyText: string): { latest: string; rest: string | null } {
   const threadPatterns = [
     /\n\s*(?:From|Fra)\s*:/i,
@@ -381,7 +384,7 @@ function ContactSentCvNotice({
 
   return (
     <div className="mb-5">
-      <h3 className="mb-3 text-[13px] font-medium text-[#1A1C1F]">CV sendt</h3>
+      <h3 className="mb-3 text-[13px] font-medium" style={SECTION_TITLE_STYLE}>CV sendt</h3>
       <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
         <div className="divide-y divide-primary/10">
           {entries.map((entry) => {
@@ -1642,7 +1645,7 @@ export function ContactCardContent({
         <div className={cn("mb-5", shouldHideTechDnaSection && "hidden")} aria-hidden={shouldHideTechDnaSection || undefined}>
           <div>
             <div className="flex items-center justify-between mb-3" style={{ minHeight: 32 }}>
-              <h3 className="text-[13px] font-medium text-[#1A1C1F]">
+              <h3 className="text-[13px] font-medium" style={SECTION_TITLE_STYLE}>
                 Teknologier
               </h3>
               {contact.teknologier && (contact.teknologier as string[]).length > 0 && (
@@ -1994,8 +1997,8 @@ export function ContactCardContent({
         {tasks.length > 0 && (
           <div className="bg-card border border-border rounded-lg shadow-card p-4 mb-6">
             <div className="flex items-center justify-between mb-3" style={{ minHeight: 32 }}>
-              <h3 className="text-[13px] font-medium text-[#1A1C1F]">
-                Oppfølginger <span className="font-normal text-[#8C929C]">· {tasks.length}</span>
+              <h3 className="text-[13px] font-medium" style={SECTION_TITLE_STYLE}>
+                Oppfølginger <span className="font-normal" style={SECTION_COUNT_STYLE}>· {tasks.length}</span>
               </h3>
             </div>
             <div className="space-y-px">
@@ -2736,8 +2739,8 @@ function ActivityTimeline({
     return (
       <div>
         <div className="flex items-center justify-between" style={{ minHeight: 32 }}>
-          <h3 className="text-[13px] font-medium text-[#1A1C1F]">
-            Aktiviteter <span className="font-normal text-[#8C929C]">· 0</span>
+          <h3 className="text-[13px] font-medium" style={SECTION_TITLE_STYLE}>
+            Aktiviteter <span className="font-normal" style={SECTION_COUNT_STYLE}>· 0</span>
           </h3>
           {hasEmails && (
             <DesignLabFilterButton
@@ -2758,8 +2761,8 @@ function ActivityTimeline({
   return (
     <div>
       <div className="flex items-center justify-between mb-3 mt-5" style={{ minHeight: 32 }}>
-        <h3 className="text-[13px] font-medium text-[#1A1C1F]">
-          Aktiviteter <span className="font-normal text-[#8C929C]">· {totalCount}</span>
+        <h3 className="text-[13px] font-medium" style={SECTION_TITLE_STYLE}>
+          Aktiviteter <span className="font-normal" style={SECTION_COUNT_STYLE}>· {totalCount}</span>
         </h3>
         {hasEmails && (
           <DesignLabFilterButton

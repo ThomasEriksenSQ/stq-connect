@@ -241,6 +241,9 @@ function CategoryBadge({ label, className }: { label: string; className?: string
   );
 }
 
+const SECTION_TITLE_STYLE = { color: C.text };
+const SECTION_COUNT_STYLE = { color: C.textFaint };
+
 function CategoryPicker({ selected, onSelect }: { selected: string; onSelect: (v: string) => void }) {
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -1094,8 +1097,8 @@ export function CompanyCardContent({
       {tasks.length > 0 && (
         <div className="bg-card border border-border rounded-lg shadow-card p-4">
           <div className="flex items-center mb-3" style={{ minHeight: 32 }}>
-            <h3 className="text-[13px] font-medium text-[#1A1C1F]">
-              Oppfølginger <span className="font-normal text-[#8C929C]">· {tasks.length}</span>
+            <h3 className="text-[13px] font-medium" style={SECTION_TITLE_STYLE}>
+              Oppfølginger <span className="font-normal" style={SECTION_COUNT_STYLE}>· {tasks.length}</span>
             </h3>
           </div>
           <div className="space-y-px">
@@ -1198,8 +1201,8 @@ export function CompanyCardContent({
   const relatedContactsContent = (
     <div className="pt-4 md:pt-0">
       <div className="mb-3 flex items-center justify-between gap-3" style={{ minHeight: 32 }}>
-        <h3 className="text-[13px] font-medium text-[#1A1C1F]">
-          Kontakter <span className="font-normal text-[#8C929C]">· {contacts.length}</span>
+        <h3 className="text-[13px] font-medium" style={SECTION_TITLE_STYLE}>
+          Kontakter <span className="font-normal" style={SECTION_COUNT_STYLE}>· {contacts.length}</span>
         </h3>
         {editable && (
           <>
@@ -2205,8 +2208,8 @@ function CompanyActivityTimeline({
     return (
       <div>
         <div className="flex items-center" style={{ minHeight: 32 }}>
-          <h3 className="text-[13px] font-medium text-[#1A1C1F]">
-            Aktiviteter <span className="font-normal text-[#8C929C]">· 0</span>
+          <h3 className="text-[13px] font-medium" style={SECTION_TITLE_STYLE}>
+            Aktiviteter <span className="font-normal" style={SECTION_COUNT_STYLE}>· 0</span>
           </h3>
         </div>
         <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen aktiviteter</p>
@@ -2217,8 +2220,8 @@ function CompanyActivityTimeline({
   return (
     <div>
       <div className="flex items-center mb-3" style={{ minHeight: 32 }}>
-        <h3 className="text-[13px] font-medium text-[#1A1C1F]">
-          Aktiviteter <span className="font-normal text-[#8C929C]">· {activities.length}</span>
+        <h3 className="text-[13px] font-medium" style={SECTION_TITLE_STYLE}>
+          Aktiviteter <span className="font-normal" style={SECTION_COUNT_STYLE}>· {activities.length}</span>
         </h3>
       </div>
 

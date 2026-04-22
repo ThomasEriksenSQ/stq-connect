@@ -251,10 +251,15 @@ function NavGroup({
     <div className="space-y-px">
       {items.map((item) => {
         const active = isActive(item.key);
+        const handleClick = () => {
+          if (active) return;
+          navigate(getNavPath(item.key));
+        };
         return (
           <button
             key={item.label}
-            onClick={() => navigate(getNavPath(item.key))}
+            type="button"
+            onClick={handleClick}
             title={collapsed ? item.label : undefined}
             className="flex items-center w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dl-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--dl-focus-offset)]"
             style={{
@@ -305,9 +310,14 @@ function FooterBtn({
 }) {
   const px = (value: number) => Math.round(value * scale * 100) / 100;
   const baseColor = active ? C.text : muted ? C.textGhost : C.textMuted;
+  const handleClick = () => {
+    if (active) return;
+    onClick();
+  };
   return (
     <button
-      onClick={onClick}
+      type="button"
+      onClick={handleClick}
       title={collapsed ? label : undefined}
       className="flex items-center w-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dl-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--dl-focus-offset)]"
       style={{

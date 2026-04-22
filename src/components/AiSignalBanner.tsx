@@ -19,6 +19,26 @@ function getBadgeColor(label: string) {
   return CATEGORIES.find((c) => c.label === label)?.badgeColor || "bg-gray-100 text-gray-600 border-gray-200";
 }
 
+function getBannerToneClasses(confidence: AiSignalResult["konfidens"]) {
+  if (confidence === "høy") {
+    return "border-[hsl(var(--primary)/0.28)] bg-[hsl(var(--primary)/0.08)] dark:border-[hsl(var(--primary)/0.4)] dark:bg-[hsl(var(--primary)/0.14)]";
+  }
+  if (confidence === "middels") {
+    return "border-[hsl(var(--warning)/0.28)] bg-[hsl(var(--warning)/0.08)] dark:border-[hsl(var(--warning)/0.38)] dark:bg-[hsl(var(--warning)/0.12)]";
+  }
+  return "border-border bg-card/75 dark:bg-card/95";
+}
+
+function getAccentTextClasses(confidence: AiSignalResult["konfidens"]) {
+  if (confidence === "høy") {
+    return "text-[hsl(var(--primary))] dark:text-[hsl(var(--primary))]";
+  }
+  if (confidence === "middels") {
+    return "text-[hsl(var(--warning))] dark:text-[hsl(var(--warning))]";
+  }
+  return "text-primary";
+}
+
 interface AiSignalBannerProps {
   contactId: string;
   contactName: string;
@@ -120,17 +140,13 @@ export function AiSignalBanner({
   // Don't show if nothing actionable
   if (!hasResult || !isVisible || hideContent) return null;
 
-  const borderColor =
-    result.konfidens === "høy"
-      ? "border-blue-300 bg-blue-50/50"
-      : result.konfidens === "middels"
-        ? "border-amber-300 bg-amber-50/50"
-        : "border-border bg-muted/30";
+  const bannerToneClasses = getBannerToneClasses(result.konfidens);
+  const accentTextClasses = getAccentTextClasses(result.konfidens);
 
   return (
-    <div className={cn("rounded-lg border px-3.5 py-2.5 mt-2", borderColor)}>
+    <div className={cn("mt-2 rounded-xl border px-3.5 py-3 shadow-sm backdrop-blur-[1px]", bannerToneClasses)}>
       <div className="flex items-start gap-2">
-        <Sparkles className="h-3.5 w-3.5 text-primary mt-0.5 flex-shrink-0" />
+        <Sparkles className={cn("mt-0.5 h-3.5 w-3.5 flex-shrink-0", accentTextClasses)} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[0.8125rem] font-medium text-foreground">AI foreslår:</span>
@@ -143,21 +159,22 @@ export function AiSignalBanner({
               <span className="text-[0.6875rem] text-muted-foreground">(usikker)</span>
             )}
           </div>
-
-          <p className="text-[0.75rem] text-muted-foreground mt-0.5">{result.begrunnelse}</p>
+          <p className="mt-0.5 text-[0.75rem] leading-relaxed text-foreground/80 dark:text-foreground/78">
+            {result.begrunnelse}
+          </p>
 
           {/* Tidsramme */}
           {result.tidsramme && (
             <div className="flex items-center gap-1 mt-1">
-              <Clock className="h-3 w-3 text-muted-foreground" />
-              <span className="text-[0.6875rem] text-muted-foreground">Tidsramme: {result.tidsramme}</span>
+              <Clock className="h-3 w-3 text-foreground/55 dark:text-foreground/60" />
+              <span className="text-[0.6875rem] text-foreground/62 dark:text-foreground/68">Tidsramme: {result.tidsramme}</span>
             </div>
           )}
 
           {/* Nye teknologier — klikkbare for individuell tillegging */}
           {hasNewTechs && (
             <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-              <span className="text-[0.6875rem] text-muted-foreground">Foreslåtte teknologier (klikk for å legge til):</span>
+              <span className="text-[0.6875rem] text-foreground/58 dark:text-foreground/64">Foreslåtte teknologier (klikk for å legge til):</span>
               {remainingTechs.map((t) => (
                 <button
                   key={t}
@@ -170,7 +187,7 @@ export function AiSignalBanner({
                       return next;
                     });
                   }}
-                  className="chip chip--tech inline-flex items-center gap-1 hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-colors cursor-pointer"
+                  className="chip chip--tech inline-flex cursor-pointer items-center gap-1 transition-colors hover:border-[hsl(var(--primary)/0.35)] hover:bg-[hsl(var(--primary)/0.10)] hover:text-[hsl(var(--primary))] dark:hover:border-[hsl(var(--primary)/0.45)] dark:hover:bg-[hsl(var(--primary)/0.16)]"
                   title={`Legg til ${t}`}
                 >
                   <Plus className="h-3 w-3" />
@@ -181,14 +198,14 @@ export function AiSignalBanner({
           )}
 
           {/* Action buttons */}
-          <div className="flex items-center gap-3 mt-1.5">
+          <div className="mt-2 flex items-center gap-3">
             {signalChanged && !applied && (
               <button
                 onClick={() => {
                   onUpdateSignal(result.anbefalt_signal);
                   setApplied(true);
                 }}
-                className="inline-flex items-center gap-1 text-[0.75rem] font-medium text-primary hover:text-primary/80 transition-colors"
+                className="inline-flex items-center gap-1 text-[0.75rem] font-medium text-[hsl(var(--primary))] transition-colors hover:text-[hsl(var(--primary)/0.8)]"
               >
                 <Check className="h-3 w-3" />
                 Oppdater signal
@@ -204,7 +221,7 @@ export function AiSignalBanner({
                     return next;
                   });
                 }}
-                className="inline-flex items-center gap-1 text-[0.75rem] font-medium text-primary hover:text-primary/80 transition-colors"
+                className="inline-flex items-center gap-1 text-[0.75rem] font-medium text-[hsl(var(--primary))] transition-colors hover:text-[hsl(var(--primary)/0.8)]"
               >
                 <Plus className="h-3 w-3" />
                 Oppdater alle
@@ -215,7 +232,7 @@ export function AiSignalBanner({
                 localStorage.setItem(dismissKey, new Date().toISOString());
                 setDismissed(true);
               }}
-              className="inline-flex items-center gap-1 text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors"
+              className="inline-flex items-center gap-1 text-[0.75rem] text-foreground/58 transition-colors hover:text-foreground/86 dark:text-foreground/62 dark:hover:text-foreground"
             >
               <X className="h-3 w-3" />
               Ignorer
