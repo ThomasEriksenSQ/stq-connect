@@ -19,7 +19,7 @@ export function snapshotToCvDocument(row: SnapshotLike, fallbackContact: HeroCon
     sidebarSections: asArray(row?.sidebar_sections),
     introParagraphs: asArray(row?.intro_paragraphs),
     competenceGroups: asArray(row?.competence_groups),
-    projectsTitle: normalizeProjectsSectionTitle(row?.title),
+    projectsTitle: normalizeProjectsSectionTitle(typeof row?.title === "string" ? row.title : ""),
     projects: asArray(row?.projects),
     additionalSections: asArray(row?.additional_sections),
     education: asArray(row?.education),

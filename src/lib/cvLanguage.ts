@@ -79,7 +79,7 @@ const PROJECT_MONTH_OPTIONS_BY_LANGUAGE = {
   ],
 } as const;
 
-export type ProjectMonthOption = (typeof PROJECT_MONTH_OPTIONS_BY_LANGUAGE.nb)[number];
+export type ProjectMonthOption = { value: number; label: string };
 
 export function getCvCopy(languageCode: CvLanguageCode = "nb") {
   return CV_COPY[languageCode];
