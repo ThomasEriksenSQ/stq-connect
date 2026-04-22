@@ -1156,7 +1156,7 @@ export default function CvAdmin() {
                     </p>
                     <p className="text-xs text-muted-foreground">Lagret av: {version.saved_by || "ukjent"}</p>
                   </div>
-                  <Button size="sm" variant="outline" onClick={() => restoreVersion(version.snapshot)}>
+                  <Button size="sm" variant="outline" onClick={() => restoreVersion(version.snapshot as Record<string, unknown>)}>
                     <RotateCcw className="h-3 w-3 mr-1" />
                     Gjenopprett
                   </Button>
