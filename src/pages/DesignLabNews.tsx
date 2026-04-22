@@ -14,11 +14,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCrmNavigation } from "@/lib/crmNavigation";
 import {
   newsRelative,
+  sortNewsItemsNewestFirst,
   withUtm,
   type NewsBrief,
-  type NewsFeature,
   type NewsItem,
-  type NewsLead,
 } from "@/lib/news";
 
 /* ────────────────────── HEADER-META ────────────────────── */
@@ -70,6 +69,8 @@ function ensureImage(item: NewsItem): string {
   if (item.image.url) return item.image.url;
   return placeholderImage(item.primary_company_name);
 }
+
+type RenderableNewsStory = Exclude<NewsItem, NewsBrief>;
 
 /* ────────────────────── LOKALE KOMPONENTER ────────────────────── */
 
@@ -147,7 +148,7 @@ function MetaRow({ item, withReadMore = true }: { item: NewsItem; withReadMore?:
   );
 }
 
-function LeadStory({ item }: { item: NewsLead }) {
+function LeadStory({ item }: { item: RenderableNewsStory }) {
   return (
     <article className="news-lead">
       <a
@@ -209,7 +210,7 @@ function LeadStory({ item }: { item: NewsLead }) {
   );
 }
 
-function FeatureCard({ item }: { item: NewsFeature }) {
+function FeatureCard({ item }: { item: RenderableNewsStory }) {
   return (
     <article style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <a
@@ -429,9 +430,10 @@ export default function DesignLabNews() {
 
   const row = query.data ?? null;
   const items: NewsItem[] = row?.payload?.items ?? [];
-  const lead = items.find((i): i is NewsLead => i.variant === "lead") ?? null;
-  // Alle ikke-lead-saker rendres som features (bilde + tittel + ingress)
-  const features = items.filter((i) => i.variant !== "lead") as NewsFeature[];
+  const sortedItems = sortNewsItemsNewestFirst(items);
+  const stories = sortedItems.filter((i): i is RenderableNewsStory => i.variant !== "brief");
+  const lead = stories[0] ?? null;
+  const features = stories.slice(1);
   const total = items.length;
 
   const isLoadingNews = query.isLoading || (query.data === null && triggered);

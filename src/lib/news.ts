@@ -36,6 +36,15 @@ export type NewsDailyPayload = {
   generation_version: string;
 };
 
+function newsTimestamp(iso: string): number {
+  const timestamp = Date.parse(iso);
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+export function sortNewsItemsNewestFirst<T extends { published_at: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => newsTimestamp(b.published_at) - newsTimestamp(a.published_at));
+}
+
 /* UTM-helper. Bevarer eksisterende query, legger på utm_source og utm_medium. */
 export function withUtm(
   url: string,
