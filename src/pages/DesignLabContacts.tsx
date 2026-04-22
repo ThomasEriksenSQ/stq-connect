@@ -229,6 +229,10 @@ type CompanyMatchLead = MatchLeadBase & {
   companyTechnologyTags: string[];
   preferredContactName?: string | null;
   preferredContactTitle?: string | null;
+  tier?: 1 | 2 | 3 | 4;
+  heatScore?: number;
+  temperature?: "hett" | "lovende" | "mulig" | "sovende";
+  needsReview?: boolean;
 };
 
 type RequestMatchLead = MatchLeadBase & {
@@ -396,6 +400,23 @@ function getMatchLeadDate(lead: MatchLead): string | null {
   if (lead.sourceDates[0]) return lead.sourceDates[0];
   if (isContactMatchLead(lead)) return lead.lastActivityAt;
   return null;
+}
+
+function getMatchLeadTemperature(lead: MatchLead): HeatResult["temperature"] | null {
+  if (isContactMatchLead(lead)) return lead.temperature;
+  if (isCompanyMatchLead(lead) || isRequestMatchLead(lead)) return lead.temperature ?? null;
+  return null;
+}
+
+function getGeoDistanceLabel(geoMatch?: GeoMatchResult | null): string {
+  if (!geoMatch) return "";
+  if (typeof geoMatch.distanceKm === "number") return `${Math.round(geoMatch.distanceKm)} km`;
+  return geoMatch.label;
+}
+
+function getGeoDistanceDetail(geoMatch?: GeoMatchResult | null): string {
+  if (!geoMatch) return "";
+  return geoMatch.companyLocation || geoMatch.detail.replace(/^Selskap:\s*/, "");
 }
 
 
@@ -1405,6 +1426,10 @@ export default function DesignLabContacts() {
         summary: summary || "Selskapslead uten registrert kontakt",
         preferredContactName: preferredContact?.name || null,
         preferredContactTitle: preferredContact?.title || null,
+        tier: fallbackContact?.tier,
+        heatScore: fallbackContact?.heatScore,
+        temperature: fallbackContact?.temperature,
+        needsReview: fallbackContact?.needsReview,
         ownerId: owner.ownerId,
         ownerName: owner.ownerName,
         ownerSource: owner.ownerSource,
@@ -1477,6 +1502,10 @@ export default function DesignLabContacts() {
           ? `${preferredContact.firstName} ${preferredContact.lastName}`.trim()
           : null,
         preferredContactTitle: preferredContact?.title || null,
+        tier: preferredContact?.tier,
+        heatScore: preferredContact?.heatScore,
+        temperature: preferredContact?.temperature,
+        needsReview: preferredContact?.needsReview,
         ownerId: owner.ownerId,
         ownerName: owner.ownerName,
         ownerSource: owner.ownerSource,
@@ -1876,8 +1905,8 @@ export default function DesignLabContacts() {
       if (huntSort.field === "match") {
         diff = (left.matchScore10 ?? 0) - (right.matchScore10 ?? 0);
       } else {
-        const leftTemp = isContactMatchLead(left) ? left.temperature : isRequestMatchLead(left) ? left.temperature : undefined;
-        const rightTemp = isContactMatchLead(right) ? right.temperature : isRequestMatchLead(right) ? right.temperature : undefined;
+        const leftTemp = getMatchLeadTemperature(left) ?? undefined;
+        const rightTemp = getMatchLeadTemperature(right) ?? undefined;
         diff = tempToNum(leftTemp) - tempToNum(rightTemp);
       }
       return huntSort.dir === "desc" ? -diff : diff;
@@ -1890,6 +1919,9 @@ export default function DesignLabContacts() {
   const visibleResultCount = selectedConsultant ? visibleMatchLeads.length : filteredContacts.length;
   const isGeographicMatchFilter = Boolean(selectedConsultant && jaktChip === "geografi");
   const matchColumnLabel = isGeographicMatchFilter ? "GEO MATCH" : "Match";
+  const matchTableColumns = isGeographicMatchFilter
+    ? "minmax(220px,1.8fr) 120px 96px minmax(220px,1.4fr)"
+    : "minmax(200px,1.5fr) 120px 96px minmax(160px,1.2fr) minmax(160px,1.2fr) minmax(140px,1fr) 96px";
 
   const handleToggle = useCallback(
     (contact: {
@@ -2234,44 +2266,77 @@ export default function DesignLabContacts() {
                       <div
                         className="grid items-center"
                         style={{
-                          gridTemplateColumns: "minmax(200px,1.5fr) 120px 96px minmax(160px,1.2fr) minmax(160px,1.2fr) minmax(140px,1fr) 96px",
+                          gridTemplateColumns: matchTableColumns,
                           height: 32,
                           paddingLeft: 16,
                           paddingRight: 16,
                           gap: 12,
                         }}
                       >
-                        <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Navn</span>
-                        <button
-                          onClick={() => toggleHuntSort("match")}
-                          className="flex items-center gap-0.5 transition-colors"
-                          style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}
-                        >
-                          {matchColumnLabel}
-                          {huntSort.field === "match"
-                            ? huntSort.dir === "asc"
-                              ? <ChevronUp style={{ width: 12, height: 12 }} />
-                              : <ChevronDown style={{ width: 12, height: 12 }} />
-                            : <ArrowUpDown style={{ width: 12, height: 12 }} />}
-                        </button>
-                        <button
-                          onClick={() => toggleHuntSort("varme")}
-                          className="flex items-center gap-0.5 transition-colors"
-                          style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}
-                        >
-                          Varme
-                          {huntSort.field === "varme"
-                            ? huntSort.dir === "asc"
-                              ? <ChevronUp style={{ width: 12, height: 12 }} />
-                              : <ChevronDown style={{ width: 12, height: 12 }} />
-                            : <ArrowUpDown style={{ width: 12, height: 12 }} />}
-                        </button>
-                        <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Selskap</span>
-                        <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Stilling</span>
-                        <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Tags</span>
-                        <span className="text-right" style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>
-                          Siste akt
-                        </span>
+                        {isGeographicMatchFilter ? (
+                          <>
+                            <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Selskap</span>
+                            <button
+                              onClick={() => toggleHuntSort("match")}
+                              className="flex items-center gap-0.5 transition-colors"
+                              style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}
+                            >
+                              GEO MATCH
+                              {huntSort.field === "match"
+                                ? huntSort.dir === "asc"
+                                  ? <ChevronUp style={{ width: 12, height: 12 }} />
+                                  : <ChevronDown style={{ width: 12, height: 12 }} />
+                                : <ArrowUpDown style={{ width: 12, height: 12 }} />}
+                            </button>
+                            <button
+                              onClick={() => toggleHuntSort("varme")}
+                              className="flex items-center gap-0.5 transition-colors"
+                              style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}
+                            >
+                              Varme
+                              {huntSort.field === "varme"
+                                ? huntSort.dir === "asc"
+                                  ? <ChevronUp style={{ width: 12, height: 12 }} />
+                                  : <ChevronDown style={{ width: 12, height: 12 }} />
+                                : <ArrowUpDown style={{ width: 12, height: 12 }} />}
+                            </button>
+                            <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Avstand</span>
+                          </>
+                        ) : (
+                          <>
+                            <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Navn</span>
+                            <button
+                              onClick={() => toggleHuntSort("match")}
+                              className="flex items-center gap-0.5 transition-colors"
+                              style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}
+                            >
+                              {matchColumnLabel}
+                              {huntSort.field === "match"
+                                ? huntSort.dir === "asc"
+                                  ? <ChevronUp style={{ width: 12, height: 12 }} />
+                                  : <ChevronDown style={{ width: 12, height: 12 }} />
+                                : <ArrowUpDown style={{ width: 12, height: 12 }} />}
+                            </button>
+                            <button
+                              onClick={() => toggleHuntSort("varme")}
+                              className="flex items-center gap-0.5 transition-colors"
+                              style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}
+                            >
+                              Varme
+                              {huntSort.field === "varme"
+                                ? huntSort.dir === "asc"
+                                  ? <ChevronUp style={{ width: 12, height: 12 }} />
+                                  : <ChevronDown style={{ width: 12, height: 12 }} />
+                                : <ArrowUpDown style={{ width: 12, height: 12 }} />}
+                            </button>
+                            <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Selskap</span>
+                            <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Stilling</span>
+                            <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Tags</span>
+                            <span className="text-right" style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>
+                              Siste akt
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                     {isLoading || isLoadingParity ? (
@@ -2283,37 +2348,34 @@ export default function DesignLabContacts() {
                         {matchResults.emptyState}
                       </div>
                     ) : (
-                      visibleMatchLeads.map((lead) => {
-                        const isActive = isContactMatchLead(lead) && selectedId === lead.id;
-                        const leadDate = getMatchLeadDate(lead);
-                        const confidence = getConfidenceConfig(lead.confidenceBand);
-                        const requestTemp = isRequestMatchLead(lead) ? lead.temperature : undefined;
-                        const heatColor = isContactMatchLead(lead)
-                          ? getHeatBarColor(lead.heatResult)
-                          : requestTemp === "hett"
-                            ? C.danger
-                            : requestTemp === "lovende"
-                              ? C.heatPromising
-                              : requestTemp === "mulig"
-                                ? C.heatPossible
-                                : "transparent";
-                        const heatLabel = isContactMatchLead(lead)
-                          ? lead.temperature
-                          : isRequestMatchLead(lead) && lead.temperature
-                            ? lead.temperature
-                            : null;
-                        const scoreLabel = lead.matchSources.includes("geografi") ? "GEO MATCH" : "Match";
+	                      visibleMatchLeads.map((lead) => {
+	                        const isActive = isContactMatchLead(lead) && selectedId === lead.id;
+	                        const leadDate = getMatchLeadDate(lead);
+	                        const confidence = getConfidenceConfig(lead.confidenceBand);
+	                        const heatLabel = getMatchLeadTemperature(lead);
+	                        const heatColor = isContactMatchLead(lead)
+	                          ? getHeatBarColor(lead.heatResult)
+	                          : heatLabel === "hett"
+	                            ? C.danger
+	                            : heatLabel === "lovende"
+	                              ? C.heatPromising
+	                              : heatLabel === "mulig"
+	                                ? C.heatPossible
+	                                : "transparent";
+	                        const scoreLabel = lead.matchSources.includes("geografi") ? "GEO MATCH" : "Match";
+	                        const geoDistanceLabel = getGeoDistanceLabel(lead.geoMatch);
+	                        const geoDistanceDetail = getGeoDistanceDetail(lead.geoMatch);
 
-                        return (
-                          <div
+	                        return (
+	                          <div
                             key={lead.leadKey}
                             onClick={() => handleMatchLeadSelect(lead)}
-                            className="grid items-center cursor-pointer"
-                            style={{
-                              gridTemplateColumns: "minmax(200px,1.5fr) 120px 96px minmax(160px,1.2fr) minmax(160px,1.2fr) minmax(140px,1fr) 96px",
-                              minHeight: 48,
-                              paddingLeft: 16,
-                              paddingRight: 16,
+	                            className="grid items-center cursor-pointer"
+	                            style={{
+	                              gridTemplateColumns: matchTableColumns,
+	                              minHeight: 48,
+	                              paddingLeft: 16,
+	                              paddingRight: 16,
                               gap: 12,
                               borderBottom: `1px solid ${C.borderLight}`,
                               background: isActive ? C.activeBg : "transparent",
@@ -2326,121 +2388,159 @@ export default function DesignLabContacts() {
                               if (!isActive) e.currentTarget.style.background = "transparent";
                             }}
                           >
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>
-                                  {lead.name}
-                                </span>
-                                {isCompanyMatchLead(lead) && (
-                                  <span style={{ fontSize: 10, color: C.textFaint, flexShrink: 0 }}>Selskap</span>
-                                )}
-                                {isRequestMatchLead(lead) && (
-                                  <span style={{ fontSize: 10, color: C.textFaint, flexShrink: 0 }}>Forespørsel</span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="min-w-0">
-                              <p style={{ fontSize: 12, fontWeight: 600, color: C.text, display: "flex", alignItems: "center", gap: 6 }}>
-                                <span
-                                  className={getConsultantMatchScoreColor(lead.matchScore10)}
-                                  style={{ width: 8, height: 8, borderRadius: 999, display: "inline-block" }}
-                                />
-                                {scoreLabel} {lead.matchScore10}/10
-                              </p>
-                            </div>
-                            <div className="min-w-0">
-                              <DesignLabHeatBadge temperature={heatLabel} />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="truncate" style={{ fontSize: 12, color: C.textMuted }}>
-                                {isContactMatchLead(lead)
-                                  ? lead.companyName
-                                  : isRequestMatchLead(lead)
-                                    ? lead.companyName
-                                    : lead.companyName}
-                              </p>
-                            </div>
-                            <div className="min-w-0">
-                              <p className="truncate" style={{ fontSize: 12, color: C.textMuted }}>
-                                {isContactMatchLead(lead)
-                                  ? lead.title || ""
-                                  : isRequestMatchLead(lead)
-                                    ? lead.contactTitle || ""
-                                    : lead.preferredContactName || ""}
-                              </p>
-                            </div>
-                            <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
-                              {isContactMatchLead(lead) ? (
-                                <div className="flex items-center gap-1.5">
-                                  <DesignLabFilterButton
-                                    type="button"
-                                    active={Boolean(lead.cvEmail)}
-                                    activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
-                                    inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
-                                    inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
-                                    disabled={!lead.email}
-                                    title={
-                                      lead.email
-                                        ? lead.cvEmail
-                                          ? "CV-Epost aktiv"
-                                          : "Aktiver CV-Epost"
-                                        : CONTACT_CV_EMAIL_REQUIRED_MESSAGE
-                                    }
-                                    onClick={() => {
-                                      if (lead.cvEmail && (lead.mailchimpStatus === "unsubscribed" || lead.mailchimpStatus === "cleaned")) {
-                                        toast.info("Kontakten har avmeldt seg via Mailchimp og kan ikke re-abonneres.");
-                                        return;
-                                      }
-                                      handleToggle(
-                                        {
-                                          id: lead.id,
-                                          email: lead.email,
-                                          cvEmail: lead.cvEmail,
-                                          callList: lead.callList,
-                                          mailchimpStatus: lead.mailchimpStatus,
-                                        },
-                                        "cv_email",
-                                        !lead.cvEmail,
-                                      );
-                                    }}
-                                  >
-                                    {lead.cvEmail && (lead.mailchimpStatus === "unsubscribed" || lead.mailchimpStatus === "cleaned")
-                                      ? "CV ✗"
-                                      : "CV"}
-                                  </DesignLabFilterButton>
-                                  <DesignLabFilterButton
-                                    type="button"
-                                    active={Boolean(lead.callList)}
-                                    activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
-                                    inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
-                                    inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
-                                    title={lead.callList ? "Innkjøper aktiv" : "Aktiver innkjøper"}
-                                    onClick={() =>
-                                      handleToggle(
-                                        {
-                                          id: lead.id,
-                                          email: lead.email,
-                                          cvEmail: lead.cvEmail,
-                                          callList: lead.callList,
-                                          mailchimpStatus: lead.mailchimpStatus,
-                                        },
-                                        "call_list",
-                                        !lead.callList,
-                                      )
-                                    }
-                                  >
-                                    Innkjøper
-                                  </DesignLabFilterButton>
-                                </div>
-                              ) : (
-                                <p className="truncate" style={{ fontSize: 11, color: C.textFaint }}>
-                                  {lead.matchTags.slice(0, 3).join(", ")}
-                                </p>
-                              )}
-                            </div>
-                            <div className="text-right" style={{ fontSize: 11, color: C.textFaint }}>
-                              {leadDate ? relativeDate(leadDate) : ""}
-                            </div>
+	                            {isGeographicMatchFilter ? (
+	                              <>
+	                                <div className="min-w-0">
+	                                  <p className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>
+	                                    {lead.companyName || lead.name}
+	                                  </p>
+	                                  {isCompanyMatchLead(lead) && (lead.preferredContactName || lead.preferredContactTitle) && (
+	                                    <p className="truncate" style={{ fontSize: 11, color: C.textFaint }}>
+	                                      {[lead.preferredContactName, lead.preferredContactTitle].filter(Boolean).join(" · ")}
+	                                    </p>
+	                                  )}
+	                                </div>
+	                                <div className="min-w-0">
+	                                  <p style={{ fontSize: 12, fontWeight: 600, color: C.text, display: "flex", alignItems: "center", gap: 6 }}>
+	                                    <span
+	                                      className={getConsultantMatchScoreColor(lead.matchScore10)}
+	                                      style={{ width: 8, height: 8, borderRadius: 999, display: "inline-block" }}
+	                                    />
+	                                    {lead.matchScore10}/10
+	                                  </p>
+	                                  <p className="truncate" style={{ fontSize: 11, color: confidence.tone }}>
+	                                    {confidence.label}
+	                                  </p>
+	                                </div>
+	                                <div className="min-w-0">
+	                                  <DesignLabHeatBadge temperature={heatLabel} />
+	                                </div>
+	                                <div className="min-w-0">
+	                                  <p className="truncate" style={{ fontSize: 12, color: C.textMuted }}>
+	                                    {geoDistanceLabel}
+	                                  </p>
+	                                  {geoDistanceDetail && geoDistanceDetail !== geoDistanceLabel && (
+	                                    <p className="truncate" style={{ fontSize: 11, color: C.textFaint }}>
+	                                      {geoDistanceDetail}
+	                                    </p>
+	                                  )}
+	                                </div>
+	                              </>
+	                            ) : (
+	                              <>
+	                                <div className="min-w-0">
+	                                  <div className="flex items-center gap-2 min-w-0">
+	                                    <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>
+	                                      {lead.name}
+	                                    </span>
+	                                    {isCompanyMatchLead(lead) && (
+	                                      <span style={{ fontSize: 10, color: C.textFaint, flexShrink: 0 }}>Selskap</span>
+	                                    )}
+	                                    {isRequestMatchLead(lead) && (
+	                                      <span style={{ fontSize: 10, color: C.textFaint, flexShrink: 0 }}>Forespørsel</span>
+	                                    )}
+	                                  </div>
+	                                </div>
+	                                <div className="min-w-0">
+	                                  <p style={{ fontSize: 12, fontWeight: 600, color: C.text, display: "flex", alignItems: "center", gap: 6 }}>
+	                                    <span
+	                                      className={getConsultantMatchScoreColor(lead.matchScore10)}
+	                                      style={{ width: 8, height: 8, borderRadius: 999, display: "inline-block" }}
+	                                    />
+	                                    {scoreLabel} {lead.matchScore10}/10
+	                                  </p>
+	                                </div>
+	                                <div className="min-w-0">
+	                                  <DesignLabHeatBadge temperature={heatLabel} />
+	                                </div>
+	                                <div className="min-w-0">
+	                                  <p className="truncate" style={{ fontSize: 12, color: C.textMuted }}>
+	                                    {lead.companyName}
+	                                  </p>
+	                                </div>
+	                                <div className="min-w-0">
+	                                  <p className="truncate" style={{ fontSize: 12, color: C.textMuted }}>
+	                                    {isContactMatchLead(lead)
+	                                      ? lead.title || ""
+	                                      : isRequestMatchLead(lead)
+	                                        ? lead.contactTitle || ""
+	                                        : lead.preferredContactName || ""}
+	                                  </p>
+	                                </div>
+	                                <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
+	                                  {isContactMatchLead(lead) ? (
+	                                    <div className="flex items-center gap-1.5">
+	                                      <DesignLabFilterButton
+	                                        type="button"
+	                                        active={Boolean(lead.cvEmail)}
+	                                        activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+	                                        inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+	                                        inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+	                                        disabled={!lead.email}
+	                                        title={
+	                                          lead.email
+	                                            ? lead.cvEmail
+	                                              ? "CV-Epost aktiv"
+	                                              : "Aktiver CV-Epost"
+	                                            : CONTACT_CV_EMAIL_REQUIRED_MESSAGE
+	                                        }
+	                                        onClick={() => {
+	                                          if (lead.cvEmail && (lead.mailchimpStatus === "unsubscribed" || lead.mailchimpStatus === "cleaned")) {
+	                                            toast.info("Kontakten har avmeldt seg via Mailchimp og kan ikke re-abonneres.");
+	                                            return;
+	                                          }
+	                                          handleToggle(
+	                                            {
+	                                              id: lead.id,
+	                                              email: lead.email,
+	                                              cvEmail: lead.cvEmail,
+	                                              callList: lead.callList,
+	                                              mailchimpStatus: lead.mailchimpStatus,
+	                                            },
+	                                            "cv_email",
+	                                            !lead.cvEmail,
+	                                          );
+	                                        }}
+	                                      >
+	                                        {lead.cvEmail && (lead.mailchimpStatus === "unsubscribed" || lead.mailchimpStatus === "cleaned")
+	                                          ? "CV ✗"
+	                                          : "CV"}
+	                                      </DesignLabFilterButton>
+	                                      <DesignLabFilterButton
+	                                        type="button"
+	                                        active={Boolean(lead.callList)}
+	                                        activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+	                                        inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+	                                        inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+	                                        title={lead.callList ? "Innkjøper aktiv" : "Aktiver innkjøper"}
+	                                        onClick={() =>
+	                                          handleToggle(
+	                                            {
+	                                              id: lead.id,
+	                                              email: lead.email,
+	                                              cvEmail: lead.cvEmail,
+	                                              callList: lead.callList,
+	                                              mailchimpStatus: lead.mailchimpStatus,
+	                                            },
+	                                            "call_list",
+	                                            !lead.callList,
+	                                          )
+	                                        }
+	                                      >
+	                                        Innkjøper
+	                                      </DesignLabFilterButton>
+	                                    </div>
+	                                  ) : (
+	                                    <p className="truncate" style={{ fontSize: 11, color: C.textFaint }}>
+	                                      {lead.matchTags.slice(0, 3).join(", ")}
+	                                    </p>
+	                                  )}
+	                                </div>
+	                                <div className="text-right" style={{ fontSize: 11, color: C.textFaint }}>
+	                                  {leadDate ? relativeDate(leadDate) : ""}
+	                                </div>
+	                              </>
+	                            )}
                           </div>
                         );
                       })
