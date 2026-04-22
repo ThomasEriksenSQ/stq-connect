@@ -519,6 +519,47 @@ export type Database = {
           },
         ]
       }
+      cv_document_variants: {
+        Row: {
+          created_at: string
+          cv_id: string
+          id: string
+          is_anonymized: boolean
+          language_code: string
+          snapshot: Json
+          source_original_updated_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          cv_id: string
+          id?: string
+          is_anonymized?: boolean
+          language_code?: string
+          snapshot?: Json
+          source_original_updated_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          cv_id?: string
+          id?: string
+          is_anonymized?: boolean
+          language_code?: string
+          snapshot?: Json
+          source_original_updated_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cv_document_variants_cv_id_fkey"
+            columns: ["cv_id"]
+            isOneToOne: false
+            referencedRelation: "cv_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cv_documents: {
         Row: {
           additional_sections: Json
@@ -580,47 +621,6 @@ export type Database = {
             columns: ["ansatt_id"]
             isOneToOne: false
             referencedRelation: "stacq_ansatte"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      cv_document_variants: {
-        Row: {
-          created_at: string
-          cv_id: string
-          id: string
-          is_anonymized: boolean
-          language_code: string
-          snapshot: Json
-          source_original_updated_at: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          cv_id: string
-          id?: string
-          is_anonymized?: boolean
-          language_code?: string
-          snapshot?: Json
-          source_original_updated_at?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          cv_id?: string
-          id?: string
-          is_anonymized?: boolean
-          language_code?: string
-          snapshot?: Json
-          source_original_updated_at?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "cv_document_variants_cv_id_fkey"
-            columns: ["cv_id"]
-            isOneToOne: false
-            referencedRelation: "cv_documents"
             referencedColumns: ["id"]
           },
         ]
@@ -1021,6 +1021,33 @@ export type Database = {
         }
         Relationships: []
       }
+      outlook_sent_cv_sync_state: {
+        Row: {
+          created_at: string
+          last_error: string | null
+          last_scan_started_at: string | null
+          last_synced_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          last_error?: string | null
+          last_scan_started_at?: string | null
+          last_synced_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          last_error?: string | null
+          last_scan_started_at?: string | null
+          last_synced_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       outlook_tokens: {
         Row: {
           access_token: string
@@ -1092,6 +1119,100 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      sent_cv_log: {
+        Row: {
+          ansatt_id: number
+          attachment_name: string
+          company_id: string | null
+          company_name_snapshot: string | null
+          contact_id: string | null
+          contact_name_snapshot: string | null
+          contact_title_snapshot: string | null
+          created_at: string
+          employee_match_basis: string | null
+          employee_match_score: number | null
+          id: string
+          message_body_text: string | null
+          message_id: string
+          message_preview: string | null
+          message_subject: string | null
+          message_web_link: string | null
+          recipient_email: string
+          sender_email: string
+          sender_user_id: string | null
+          sent_at: string
+          updated_at: string
+        }
+        Insert: {
+          ansatt_id: number
+          attachment_name: string
+          company_id?: string | null
+          company_name_snapshot?: string | null
+          contact_id?: string | null
+          contact_name_snapshot?: string | null
+          contact_title_snapshot?: string | null
+          created_at?: string
+          employee_match_basis?: string | null
+          employee_match_score?: number | null
+          id?: string
+          message_body_text?: string | null
+          message_id: string
+          message_preview?: string | null
+          message_subject?: string | null
+          message_web_link?: string | null
+          recipient_email: string
+          sender_email: string
+          sender_user_id?: string | null
+          sent_at: string
+          updated_at?: string
+        }
+        Update: {
+          ansatt_id?: number
+          attachment_name?: string
+          company_id?: string | null
+          company_name_snapshot?: string | null
+          contact_id?: string | null
+          contact_name_snapshot?: string | null
+          contact_title_snapshot?: string | null
+          created_at?: string
+          employee_match_basis?: string | null
+          employee_match_score?: number | null
+          id?: string
+          message_body_text?: string | null
+          message_id?: string
+          message_preview?: string | null
+          message_subject?: string | null
+          message_web_link?: string | null
+          recipient_email?: string
+          sender_email?: string
+          sender_user_id?: string | null
+          sent_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sent_cv_log_ansatt_id_fkey"
+            columns: ["ansatt_id"]
+            isOneToOne: false
+            referencedRelation: "stacq_ansatte"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sent_cv_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sent_cv_log_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       site_settings: {
         Row: {
