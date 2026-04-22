@@ -45,6 +45,7 @@ type SentCvRow = {
   recipient_email: string;
   attachment_name: string;
   sent_at: string;
+  sender_user_id: string | null;
   sender_email: string;
   message_web_link: string | null;
   message_subject: string | null;
@@ -569,6 +570,7 @@ const AnsattDetail = ({
                   entries={sentCvEntries}
                   getContactPath={getContactPath}
                   getCompanyPath={getCompanyPath}
+                  profileMap={profileMap}
                 />
               )}
             </TabsContent>
@@ -944,19 +946,22 @@ function SentCvList({
   entries,
   getContactPath,
   getCompanyPath,
+  profileMap,
 }: {
   entries: SentCvEntry[];
   getContactPath: (contactId: string) => string;
   getCompanyPath: (companyId: string) => string;
+  profileMap: Record<string, string>;
 }) {
   const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-background">
-      <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(0,1.1fr)_112px_72px] items-center gap-3 border-b border-border bg-muted/30 px-3 py-2 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground md:grid">
+      <div className="hidden grid-cols-[minmax(0,1.3fr)_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,0.9fr)_112px_72px] items-center gap-3 border-b border-border bg-muted/30 px-3 py-2 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground md:grid">
         <span>Kontaktperson</span>
         <span>Selskap</span>
         <span>Stilling</span>
+        <span>Avsender</span>
         <span>Sendt</span>
         <span className="text-right">E-post</span>
       </div>
@@ -982,10 +987,14 @@ function SentCvList({
             entry.contact?.title ||
             entry.contact_title_snapshot ||
             "–";
+          const senderName =
+            entry.sender_user_id
+              ? profileMap[entry.sender_user_id] || entry.sender_email || "–"
+              : entry.sender_email || "–";
 
           return (
             <Fragment key={entry.id}>
-              <div className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(0,1.1fr)_112px_72px] md:items-center">
+              <div className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,0.9fr)_112px_72px] md:items-center">
                 <div className="min-w-0">
                   <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
                     Kontaktperson
@@ -1025,6 +1034,13 @@ function SentCvList({
                     Stilling
                   </p>
                   <span className="block truncate text-[0.875rem] text-foreground">{contactTitle}</span>
+                </div>
+
+                <div className="min-w-0">
+                  <p className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
+                    Avsender
+                  </p>
+                  <span className="block truncate text-[0.875rem] text-foreground">{senderName}</span>
                 </div>
 
                 <div className="min-w-0">
