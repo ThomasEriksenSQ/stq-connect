@@ -2351,7 +2351,6 @@ export default function DesignLabContacts() {
 	                      visibleMatchLeads.map((lead) => {
 	                        const isActive = isContactMatchLead(lead) && selectedId === lead.id;
 	                        const leadDate = getMatchLeadDate(lead);
-	                        const confidence = getConfidenceConfig(lead.confidenceBand);
 	                        const heatLabel = getMatchLeadTemperature(lead);
 	                        const heatColor = isContactMatchLead(lead)
 	                          ? getHeatBarColor(lead.heatResult)
@@ -2407,9 +2406,6 @@ export default function DesignLabContacts() {
 	                                      style={{ width: 8, height: 8, borderRadius: 999, display: "inline-block" }}
 	                                    />
 	                                    {lead.matchScore10}/10
-	                                  </p>
-	                                  <p className="truncate" style={{ fontSize: 11, color: confidence.tone }}>
-	                                    {confidence.label}
 	                                  </p>
 	                                </div>
 	                                <div className="min-w-0">
