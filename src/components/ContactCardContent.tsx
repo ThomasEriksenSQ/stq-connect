@@ -23,6 +23,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -49,11 +51,11 @@ import {
   Eye,
   EyeOff,
   StickyNote,
-  UserSearch,
 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { differenceInDays, format, isPast, isToday, getYear, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { nb } from "date-fns/locale";
+import { scaleTextMetric, type TextSize } from "@/components/designlab/TextSizeControl";
 import { fullDate } from "@/lib/relativeDate";
 import { cleanDescription } from "@/lib/cleanDescription";
 import { cn } from "@/lib/utils";
@@ -104,6 +106,7 @@ import { getInitials } from "@/lib/utils";
 import { useClickWithoutSelection, activateOnEnterOrSpace } from "@/hooks/useClickWithoutSelection";
 import { useCrmNavigation } from "@/lib/crmNavigation";
 import { useSentCvLiveSync } from "@/hooks/useSentCvLiveSync";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { isLikelySentCvAttachmentName } from "@/lib/sentCvMatching";
 /* ── Helpers for storing/retrieving category in description ── */
 
@@ -663,9 +666,33 @@ export function ContactCardContent({
   const [profileEditMode, setProfileEditMode] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
+  const [contactActionMenuOpen, setContactActionMenuOpen] = useState(false);
+  const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const notifyDataChanged = () => {
     onDataChanged?.();
   };
+
+  const contactActionMenuMetrics = useMemo(
+    () => ({
+      triggerSize: Math.max(scaleTextMetric(32, textSize), 32),
+      triggerIconSize: scaleTextMetric(15, textSize),
+      triggerRadius: scaleTextMetric(8, textSize),
+      menuMinWidth: scaleTextMetric(248, textSize),
+      menuPadding: scaleTextMetric(6, textSize),
+      labelFontSize: scaleTextMetric(10.5, textSize),
+      labelPaddingX: scaleTextMetric(12, textSize),
+      labelPaddingTop: scaleTextMetric(6, textSize),
+      labelPaddingBottom: scaleTextMetric(4, textSize),
+      itemMinHeight: scaleTextMetric(52, textSize),
+      itemPaddingY: scaleTextMetric(10, textSize),
+      itemRadius: scaleTextMetric(10, textSize),
+      itemIconBoxSize: scaleTextMetric(28, textSize),
+      itemIconSize: scaleTextMetric(14, textSize),
+      itemTitleFontSize: scaleTextMetric(12, textSize),
+      itemDescriptionFontSize: scaleTextMetric(10, textSize),
+    }),
+    [textSize],
+  );
 
   const { data: contact, isLoading } = useQuery({
     queryKey: crmQueryKeys.contacts.detail(contactId),
@@ -730,69 +757,6 @@ export function ContactCardContent({
     requestHistoryQuery.fetchStatus === "fetching" && !requestHistoryQuery.isFetched;
   const requestHistoryError =
     requestHistoryQuery.error instanceof Error ? requestHistoryQuery.error.message : null;
-
-  const requestHistoryContactIds = useMemo(() => {
-    const ids = new Set<string>();
-    (requestHistoryRows as any[]).forEach((row) => {
-      if (row.contacts?.id) ids.add(row.contacts.id);
-    });
-    return Array.from(ids);
-  }, [requestHistoryRows]);
-
-  const { data: requestSignalByContactId = new Map<string, string>() } = useQuery({
-    queryKey: ["contact-card-request-signals", requestHistoryContactIds.join(",")],
-    enabled: showRequests && requestHistoryContactIds.length > 0,
-    queryFn: async () => {
-      const [actsRes, tasksRes] = await Promise.all([
-        supabase
-          .from("activities")
-          .select("contact_id, created_at, subject, description")
-          .in("contact_id", requestHistoryContactIds)
-          .order("created_at", { ascending: false })
-          .limit(5000),
-        supabase
-          .from("tasks")
-          .select("contact_id, created_at, updated_at, title, description, due_date, status")
-          .in("contact_id", requestHistoryContactIds)
-          .limit(5000),
-      ]);
-
-      if (actsRes.error) throw actsRes.error;
-      if (tasksRes.error) throw tasksRes.error;
-
-      const actsByContact: Record<string, any[]> = {};
-      const tasksByContact: Record<string, any[]> = {};
-
-      (actsRes.data || []).forEach((activity: any) => {
-        if (activity.contact_id) (actsByContact[activity.contact_id] ??= []).push(activity);
-      });
-      (tasksRes.data || []).forEach((task: any) => {
-        if (task.contact_id) (tasksByContact[task.contact_id] ??= []).push(task);
-      });
-
-      const signalMap = new Map<string, string>();
-      requestHistoryContactIds.forEach((id) => {
-        const signal = getEffectiveSignal(
-          (actsByContact[id] || []).map((activity) => ({
-            created_at: activity.created_at,
-            subject: activity.subject || "",
-            description: activity.description,
-          })),
-          (tasksByContact[id] || []).map((task) => ({
-            created_at: task.created_at,
-            updated_at: task.updated_at,
-            title: task.title || "",
-            description: task.description,
-            due_date: task.due_date,
-            status: task.status || "",
-          })),
-        );
-        if (signal) signalMap.set(id, signal);
-      });
-
-      return signalMap;
-    },
-  });
 
   const requestHistoryHasInternalConsultants = useMemo(
     () =>
@@ -1604,49 +1568,315 @@ export function ContactCardContent({
             )}
             {/* 3-dot menu for Design Lab */}
             {showProfileEditMenu && (
-              <DropdownMenu modal={false}>
+              <DropdownMenu modal={false} open={contactActionMenuOpen} onOpenChange={setContactActionMenuOpen}>
                 <DropdownMenuTrigger asChild>
-                  <DesignLabIconButton size={32}>
-                    <MoreVertical className="h-4 w-4" />
+                  <DesignLabIconButton
+                    size={32}
+                    aria-label="Flere handlinger"
+                    title="Flere handlinger"
+                    style={{
+                      width: contactActionMenuMetrics.triggerSize,
+                      minWidth: contactActionMenuMetrics.triggerSize,
+                      height: contactActionMenuMetrics.triggerSize,
+                      borderRadius: contactActionMenuMetrics.triggerRadius,
+                      border: `1px solid ${contactActionMenuOpen ? C.borderFocus : C.borderDefault}`,
+                      background: contactActionMenuOpen ? C.panel : "transparent",
+                      color: contactActionMenuOpen ? C.textPrimary : C.textSecondary,
+                      boxShadow: contactActionMenuOpen ? "0 8px 24px rgba(15,23,42,0.10)" : "none",
+                    }}
+                  >
+                    <MoreVertical
+                      style={{
+                        width: contactActionMenuMetrics.triggerIconSize,
+                        height: contactActionMenuMetrics.triggerIconSize,
+                      }}
+                    />
                   </DesignLabIconButton>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" sideOffset={4}>
-                  <DropdownMenuItem onClick={() => {
-                    if (!useProfileEditSheet && profileEditMode) exitProfileEditMode();
-                    else openProfileEditor();
-                  }}>
-                    <Pencil className="h-3.5 w-3.5 mr-2" />
-                    {!useProfileEditSheet && profileEditMode ? "Avslutt redigering" : "Rediger profil"}
+                <DropdownMenuContent
+                  align="end"
+                  sideOffset={8}
+                  className="rounded-[14px] border-[#E3E7EF] bg-[rgba(255,255,255,0.98)] shadow-[0_18px_48px_rgba(15,23,42,0.12)] backdrop-blur-[10px]"
+                  style={{
+                    minWidth: contactActionMenuMetrics.menuMinWidth,
+                    padding: contactActionMenuMetrics.menuPadding,
+                  }}
+                >
+                  <DropdownMenuLabel
+                    className="font-semibold uppercase tracking-[0.12em] text-[#8C929C]"
+                    style={{
+                      fontSize: contactActionMenuMetrics.labelFontSize,
+                      paddingLeft: contactActionMenuMetrics.labelPaddingX,
+                      paddingRight: contactActionMenuMetrics.labelPaddingX,
+                      paddingTop: contactActionMenuMetrics.labelPaddingTop,
+                      paddingBottom: contactActionMenuMetrics.labelPaddingBottom,
+                    }}
+                  >
+                    Profil
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem
+                    className="rounded-[10px] px-2.5"
+                    style={{
+                      height: "auto",
+                      minHeight: contactActionMenuMetrics.itemMinHeight,
+                      borderRadius: contactActionMenuMetrics.itemRadius,
+                      alignItems: "flex-start",
+                      paddingTop: contactActionMenuMetrics.itemPaddingY,
+                      paddingBottom: contactActionMenuMetrics.itemPaddingY,
+                    }}
+                    onClick={() => {
+                      if (!useProfileEditSheet && profileEditMode) exitProfileEditMode();
+                      else openProfileEditor();
+                    }}
+                  >
+                    <span
+                      className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[#E3E7EF] bg-[#F8F9FB] text-[#5C636E]"
+                      style={{
+                        width: contactActionMenuMetrics.itemIconBoxSize,
+                        height: contactActionMenuMetrics.itemIconBoxSize,
+                      }}
+                    >
+                      <Pencil
+                        style={{
+                          width: contactActionMenuMetrics.itemIconSize,
+                          height: contactActionMenuMetrics.itemIconSize,
+                        }}
+                      />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className="block truncate font-semibold text-[#1A1C1F]"
+                        style={{ fontSize: contactActionMenuMetrics.itemTitleFontSize }}
+                      >
+                        {!useProfileEditSheet && profileEditMode ? "Avslutt redigering" : "Rediger profil"}
+                      </span>
+                      <span
+                        className="mt-0.5 block text-[#7A818C]"
+                        style={{
+                          fontSize: contactActionMenuMetrics.itemDescriptionFontSize,
+                          lineHeight: 1.35,
+                        }}
+                      >
+                        Oppdater kontaktinfo, eierskap og felter.
+                      </span>
+                    </span>
                   </DropdownMenuItem>
                   {defaultHidden && (
                     <>
-                      <DropdownMenuItem onClick={() => {
-                        void handleFinnKonsulent();
-                      }}>
-                        <UserSearch className="h-3.5 w-3.5 mr-2" /> Finn konsulent
+                      <DropdownMenuSeparator className="my-2 bg-[#EEF1F5]" />
+                      <DropdownMenuLabel
+                        className="font-semibold uppercase tracking-[0.12em] text-[#8C929C]"
+                        style={{
+                          fontSize: contactActionMenuMetrics.labelFontSize,
+                          paddingLeft: contactActionMenuMetrics.labelPaddingX,
+                          paddingRight: contactActionMenuMetrics.labelPaddingX,
+                          paddingTop: contactActionMenuMetrics.labelPaddingTop,
+                          paddingBottom: contactActionMenuMetrics.labelPaddingBottom,
+                        }}
+                      >
+                        Visning og verktøy
+                      </DropdownMenuLabel>
+                      <DropdownMenuItem
+                        className="rounded-[10px] px-2.5"
+                        style={{
+                          height: "auto",
+                          minHeight: contactActionMenuMetrics.itemMinHeight,
+                          borderRadius: contactActionMenuMetrics.itemRadius,
+                          alignItems: "flex-start",
+                          paddingTop: contactActionMenuMetrics.itemPaddingY,
+                          paddingBottom: contactActionMenuMetrics.itemPaddingY,
+                        }}
+                        onClick={() => {
+                          void handleFinnKonsulent();
+                        }}
+                      >
+                        <span
+                          className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[#E3E7EF] bg-[#F8F9FB] text-[#5C636E]"
+                          style={{
+                            width: contactActionMenuMetrics.itemIconBoxSize,
+                            height: contactActionMenuMetrics.itemIconBoxSize,
+                          }}
+                        >
+                          <Target
+                            style={{
+                              width: contactActionMenuMetrics.itemIconSize,
+                              height: contactActionMenuMetrics.itemIconSize,
+                            }}
+                          />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span
+                            className="block truncate font-semibold text-[#1A1C1F]"
+                            style={{ fontSize: contactActionMenuMetrics.itemTitleFontSize }}
+                          >
+                            Finn konsulent match
+                          </span>
+                          <span
+                            className="mt-0.5 block text-[#7A818C]"
+                            style={{
+                              fontSize: contactActionMenuMetrics.itemDescriptionFontSize,
+                              lineHeight: 1.35,
+                            }}
+                          >
+                            Kjør match mot tilgjengelige konsulenter.
+                          </span>
+                        </span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
+                        className="rounded-[10px] px-2.5"
+                        style={{
+                          height: "auto",
+                          minHeight: contactActionMenuMetrics.itemMinHeight,
+                          borderRadius: contactActionMenuMetrics.itemRadius,
+                          alignItems: "flex-start",
+                          paddingTop: contactActionMenuMetrics.itemPaddingY,
+                          paddingBottom: contactActionMenuMetrics.itemPaddingY,
+                        }}
                         onClick={() => {
                           setShowRequests((prev) => !prev);
                           if (showRequests) setSelectedRequestId(null);
                         }}
                       >
-                        <FileText className="h-3.5 w-3.5 mr-2" />
-                        {showRequests ? "Skjul forespørsler" : "Vis forespørsler"}
+                        <span
+                          className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[#E3E7EF] bg-[#F8F9FB] text-[#5C636E]"
+                          style={{
+                            width: contactActionMenuMetrics.itemIconBoxSize,
+                            height: contactActionMenuMetrics.itemIconBoxSize,
+                          }}
+                        >
+                          <FileText
+                            style={{
+                              width: contactActionMenuMetrics.itemIconSize,
+                              height: contactActionMenuMetrics.itemIconSize,
+                            }}
+                          />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span
+                            className="block truncate font-semibold text-[#1A1C1F]"
+                            style={{ fontSize: contactActionMenuMetrics.itemTitleFontSize }}
+                          >
+                            {showRequests ? "Skjul forespørsler" : "Vis forespørsler"}
+                          </span>
+                          <span
+                            className="mt-0.5 block text-[#7A818C]"
+                            style={{
+                              fontSize: contactActionMenuMetrics.itemDescriptionFontSize,
+                              lineHeight: 1.35,
+                            }}
+                          >
+                            {showRequests
+                              ? "Skjul listen over tidligere forespørsler."
+                              : "Vis forespørsler som er koblet til kontakten."}
+                          </span>
+                        </span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => {
-                        setShowNotes((prev) => !prev);
-                        if (!showNotes && !contact.notes) {
-                          setNotesDraft("");
-                          setTimeout(() => setEditingNotes(true), 50);
-                        }
-                      }}>
-                        <StickyNote className="h-3.5 w-3.5 mr-2" />
-                        {showNotes ? "Skjul notat" : contact.notes ? "Vis notat" : "Legg til notat"}
+                      <DropdownMenuItem
+                        className="rounded-[10px] px-2.5"
+                        style={{
+                          height: "auto",
+                          minHeight: contactActionMenuMetrics.itemMinHeight,
+                          borderRadius: contactActionMenuMetrics.itemRadius,
+                          alignItems: "flex-start",
+                          paddingTop: contactActionMenuMetrics.itemPaddingY,
+                          paddingBottom: contactActionMenuMetrics.itemPaddingY,
+                        }}
+                        onClick={() => {
+                          setShowNotes((prev) => !prev);
+                          if (!showNotes && !contact.notes) {
+                            setNotesDraft("");
+                            setTimeout(() => setEditingNotes(true), 50);
+                          }
+                        }}
+                      >
+                        <span
+                          className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[#E3E7EF] bg-[#F8F9FB] text-[#5C636E]"
+                          style={{
+                            width: contactActionMenuMetrics.itemIconBoxSize,
+                            height: contactActionMenuMetrics.itemIconBoxSize,
+                          }}
+                        >
+                          <StickyNote
+                            style={{
+                              width: contactActionMenuMetrics.itemIconSize,
+                              height: contactActionMenuMetrics.itemIconSize,
+                            }}
+                          />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span
+                            className="block truncate font-semibold text-[#1A1C1F]"
+                            style={{ fontSize: contactActionMenuMetrics.itemTitleFontSize }}
+                          >
+                            {showNotes ? "Skjul notat" : contact.notes ? "Vis notat" : "Legg til notat"}
+                          </span>
+                          <span
+                            className="mt-0.5 block text-[#7A818C]"
+                            style={{
+                              fontSize: contactActionMenuMetrics.itemDescriptionFontSize,
+                              lineHeight: 1.35,
+                            }}
+                          >
+                            {contact.notes
+                              ? "Åpne eller skjul interne notater på kontaktkortet."
+                              : "Opprett et nytt notat direkte på kontakten."}
+                          </span>
+                        </span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setShowTechDna((prev) => !prev)}>
-                        {showTechDna ? <EyeOff className="h-3.5 w-3.5 mr-2" /> : <Eye className="h-3.5 w-3.5 mr-2" />}
-                        {showTechDna ? "Skjul teknisk DNA" : "Vis teknisk DNA"}
+                      <DropdownMenuItem
+                        className="rounded-[10px] px-2.5"
+                        style={{
+                          height: "auto",
+                          minHeight: contactActionMenuMetrics.itemMinHeight,
+                          borderRadius: contactActionMenuMetrics.itemRadius,
+                          alignItems: "flex-start",
+                          paddingTop: contactActionMenuMetrics.itemPaddingY,
+                          paddingBottom: contactActionMenuMetrics.itemPaddingY,
+                        }}
+                        onClick={() => setShowTechDna((prev) => !prev)}
+                      >
+                        <span
+                          className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[#E3E7EF] bg-[#F8F9FB] text-[#5C636E]"
+                          style={{
+                            width: contactActionMenuMetrics.itemIconBoxSize,
+                            height: contactActionMenuMetrics.itemIconBoxSize,
+                          }}
+                        >
+                          {showTechDna ? (
+                            <EyeOff
+                              style={{
+                                width: contactActionMenuMetrics.itemIconSize,
+                                height: contactActionMenuMetrics.itemIconSize,
+                              }}
+                            />
+                          ) : (
+                            <Eye
+                              style={{
+                                width: contactActionMenuMetrics.itemIconSize,
+                                height: contactActionMenuMetrics.itemIconSize,
+                              }}
+                            />
+                          )}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span
+                            className="block truncate font-semibold text-[#1A1C1F]"
+                            style={{ fontSize: contactActionMenuMetrics.itemTitleFontSize }}
+                          >
+                            {showTechDna ? "Skjul tech stack" : "Vis tech stack"}
+                          </span>
+                          <span
+                            className="mt-0.5 block text-[#7A818C]"
+                            style={{
+                              fontSize: contactActionMenuMetrics.itemDescriptionFontSize,
+                              lineHeight: 1.35,
+                            }}
+                          >
+                            {showTechDna
+                              ? "Skjul teknologier og identifiserte behov."
+                              : "Vis teknologier og identifiserte behov."}
+                          </span>
+                        </span>
                       </DropdownMenuItem>
                     </>
                   )}
@@ -2044,7 +2274,6 @@ export function ContactCardContent({
             rows={requestHistoryRows as any[]}
             isLoading={isLoadingRequestHistory}
             errorMessage={requestHistoryError}
-            signalByContactId={requestSignalByContactId}
             portraitByAnsattId={requestPortraitByAnsattId}
             onSelectRow={(row) => setSelectedRequestId(row.id)}
           />
@@ -2064,7 +2293,7 @@ export function ContactCardContent({
                   variant="secondary"
                   style={{ height: 32, fontSize: 12 }}
                 >
-                  <Target className="h-3.5 w-3.5" /> Finn konsulent
+                  <Target className="h-3.5 w-3.5" /> Finn konsulent match
                 </DesignLabActionButton>
               )}
             </div>
@@ -2526,19 +2755,17 @@ function ContactRequestHistorySection({
   rows,
   isLoading,
   errorMessage,
-  signalByContactId,
   portraitByAnsattId,
   onSelectRow,
 }: {
   rows: any[];
   isLoading: boolean;
   errorMessage?: string | null;
-  signalByContactId: Map<string, string>;
   portraitByAnsattId: Map<number, string>;
   onSelectRow: (row: any) => void;
 }) {
   const cols =
-    "minmax(150px,1.1fr) 120px minmax(150px,1.1fr) 80px minmax(150px,1.1fr) minmax(170px,1.15fr) minmax(110px,0.8fr) 146px";
+    "minmax(170px,1.2fr) minmax(160px,1.15fr) 80px minmax(150px,1.1fr) minmax(170px,1.15fr) minmax(110px,0.8fr) 146px";
 
   return (
     <div className="bg-card border border-border rounded-lg shadow-card p-4 mb-5">
@@ -2565,7 +2792,6 @@ function ContactRequestHistorySection({
           <div className="space-y-2 md:hidden">
             {rows.map((row) => {
               const consultants = row.foresporsler_konsulenter || [];
-              const signal = row.contacts?.id ? signalByContactId.get(row.contacts.id) || null : null;
               const days = getRequestDaysAgo(row.mottatt_dato);
               const received = getRequestReceivedParts(row.mottatt_dato);
               const firstConsultant = consultants[0] || null;
@@ -2599,8 +2825,7 @@ function ContactRequestHistorySection({
                         {row.selskap_navn}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {signal ? <DesignLabSignalBadge signal={signal} /> : null}
+                    <div className="shrink-0">
                       <ContactRequestTypeChip type={row.type} />
                     </div>
                   </div>
@@ -2655,7 +2880,7 @@ function ContactRequestHistorySection({
                 className="grid items-center px-4 pb-2"
                 style={{ gridTemplateColumns: cols, borderBottom: `1px solid ${C.borderLight}` }}
               >
-                {["Kontakt", "Signal", "Selskap", "Type", "Teknologier", "Konsulent", "Status", "Mottatt"].map((label) => (
+                {["Kontakt", "Selskap", "Type", "Teknologier", "Konsulent", "Status", "Mottatt"].map((label) => (
                   <span
                     key={label}
                     style={{
@@ -2677,7 +2902,6 @@ function ContactRequestHistorySection({
                 const contactName = row.contacts ? `${row.contacts.first_name} ${row.contacts.last_name}`.trim() : "";
                 const consultants = row.foresporsler_konsulenter || [];
                 const technologies = getRequestVisibleTechnologies(row.teknologier);
-                const signal = row.contacts?.id ? signalByContactId.get(row.contacts.id) || null : null;
 
                 return (
                   <div
@@ -2709,10 +2933,6 @@ function ContactRequestHistorySection({
                       ) : (
                         <span style={{ fontSize: 13, color: C.textGhost }}>—</span>
                       )}
-                    </div>
-
-                    <div className="flex items-center" style={{ paddingTop: 1 }}>
-                      {signal ? <DesignLabSignalBadge signal={signal} /> : <span style={{ fontSize: 11, color: C.textGhost }}>—</span>}
                     </div>
 
                     <div className="min-w-0 pr-4" style={{ paddingTop: 2 }}>
