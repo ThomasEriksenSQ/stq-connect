@@ -715,7 +715,7 @@ export function ContactCardContent({
         .select(
           "*, contacts(id, first_name, last_name, title, email, phone), foresporsler_konsulenter(id, konsulent_type, status, status_updated_at, stacq_ansatte(id, navn), external_consultants(id, navn))",
         )
-        .eq("contact_id", contactId)
+        .eq("kontakt_id", contactId)
         .order("mottatt_dato", { ascending: false });
       if (error) throw error;
       return data || [];
