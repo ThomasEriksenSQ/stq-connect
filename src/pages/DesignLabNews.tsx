@@ -95,17 +95,26 @@ function NewTodayBadge() {
   return (
     <span
       style={{
-        display: "inline-flex",
+        position: "absolute",
+        top: 16,
+        left: -34,
+        zIndex: 2,
+        display: "flex",
         alignItems: "center",
-        height: 20,
-        padding: "0 8px",
-        borderRadius: 999,
-        fontSize: 10,
-        fontWeight: 600,
-        color: C.accent,
-        background: C.accentBg,
-        border: `1px solid ${C.filterActiveBorder}`,
+        justifyContent: "center",
+        width: 132,
+        height: 28,
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: 0.3,
+        textTransform: "uppercase",
+        color: "#5F4300",
+        background: "linear-gradient(135deg, #FFE08A 0%, #F4C542 58%, #E3AF1E 100%)",
+        border: "1px solid rgba(116, 78, 0, 0.22)",
+        boxShadow: "0 8px 18px rgba(116, 78, 0, 0.18)",
         whiteSpace: "nowrap",
+        transform: "rotate(-33deg)",
+        pointerEvents: "none",
       }}
     >
       Ny i dag
@@ -142,7 +151,6 @@ function Kicker({ item }: { item: NewsItem }) {
       >
         {item.primary_company_name}
       </Link>
-      {isPublishedToday(item.published_at) ? <NewTodayBadge /> : null}
       {extra.length > 0 ? (
         <span style={{ color: C.textFaint, fontWeight: 500 }}>
           {" · også "}
@@ -200,13 +208,19 @@ function LeadStory({ item }: { item: RenderableNewsStory }) {
         target="_blank"
         rel="noopener noreferrer"
         className="news-lead-media"
-        style={{ display: "block", textDecoration: "none", flexShrink: 0 }}
+        style={{
+          position: "relative",
+          display: "block",
+          textDecoration: "none",
+          flexShrink: 0,
+        }}
       >
         <DesignLabMediaFrame
           src={ensureImage(item)}
           alt={item.title}
           ratio="16:9"
         />
+        {isPublishedToday(item.published_at) ? <NewTodayBadge /> : null}
       </a>
       <div className="news-lead-text" style={{ minWidth: 0 }}>
         <Kicker item={item} />
@@ -261,13 +275,14 @@ function FeatureCard({ item }: { item: RenderableNewsStory }) {
         href={trackedHref(item.url)}
         target="_blank"
         rel="noopener noreferrer"
-        style={{ display: "block", textDecoration: "none" }}
+        style={{ position: "relative", display: "block", textDecoration: "none" }}
       >
         <DesignLabMediaFrame
           src={ensureImage(item)}
           alt={item.title}
           ratio="4:3"
         />
+        {isPublishedToday(item.published_at) ? <NewTodayBadge /> : null}
       </a>
       <div>
         <Kicker item={item} />
