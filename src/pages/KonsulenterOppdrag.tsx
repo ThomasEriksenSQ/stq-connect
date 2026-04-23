@@ -124,8 +124,13 @@ export default function KonsulenterOppdrag({
   const stats = useMemo(() => {
     const aktive = enriched.filter((o: any) => o.status === "Aktiv");
     const oppstart = enriched.filter((o: any) => o.status === "Oppstart");
+    const aktiveAnsatteMedUtpris = aktive.filter((o: any) => o.er_ansatt === true && (Number(o.utpris) || 0) > 0);
     const totalDagspris = aktive.reduce((s: number, o: any) => s + (Number(o.utpris) || 0) * TIMER_PER_DAG, 0);
     const avgMargin = aktive.length > 0 ? aktive.reduce((s: number, o: any) => s + o.marginPct, 0) / aktive.length : 0;
+    const avgUtprisAktiveAnsatte =
+      aktiveAnsatteMedUtpris.length > 0
+        ? aktiveAnsatteMedUtpris.reduce((sum: number, o: any) => sum + (Number(o.utpris) || 0), 0) / aktiveAnsatteMedUtpris.length
+        : null;
     const now = new Date();
     const y = now.getFullYear(),
       m = now.getMonth();
@@ -177,6 +182,7 @@ export default function KonsulenterOppdrag({
       fornyelser30,
       fornyelser60,
       avsluttes60,
+      avgUtprisAktiveAnsatte,
     };
   }, [enriched]);
 
@@ -239,7 +245,7 @@ export default function KonsulenterOppdrag({
 
       {/* Stat cards */}
           {/* Stat cards */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-3">
             <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 rounded-xl px-5 py-4 shadow-sm">
               <Briefcase className="h-4 w-4 text-emerald-600 mb-1" />
               <p className="text-2xl font-bold text-emerald-600">{stats.aktive}</p>
@@ -267,6 +273,14 @@ export default function KonsulenterOppdrag({
               <p className="text-2xl font-bold text-amber-600">{stats.fornyelser60}</p>
               <p className="text-[0.8125rem] text-muted-foreground">Fornyelser under 60 dager</p>
               <p className="text-xs text-muted-foreground">Krever oppfølging</p>
+            </div>
+            <div className="bg-sky-50 dark:bg-sky-950/20 border border-sky-100 rounded-xl px-5 py-4 shadow-sm">
+              <BarChart2 className="h-4 w-4 text-sky-600 mb-1" />
+              <p className="text-2xl font-bold text-sky-600">
+                {stats.avgUtprisAktiveAnsatte === null ? "–" : `kr ${formatNOK(stats.avgUtprisAktiveAnsatte)}/t`}
+              </p>
+              <p className="text-[0.8125rem] text-muted-foreground">Snitt UTPRIS</p>
+              <p className="text-xs text-muted-foreground">Kun ansatte i aktivt oppdrag</p>
             </div>
           </div>
 
