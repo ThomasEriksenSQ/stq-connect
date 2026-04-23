@@ -82,7 +82,6 @@ import {
 import {
   DesignLabCategoryBadge,
   DesignLabCategoryPicker,
-  DesignLabHeatBadge,
   DesignLabReadonlyChip,
   DesignLabStatusBadge,
   DESIGN_LAB_STATUS_NEUTRAL_CHIP_ACTIVE_COLORS,
@@ -209,6 +208,44 @@ const CONTACT_PREVIOUS_REQUEST_CHIP_COLORS = {
   border: `1px solid ${C.statusNeutralBorder}`,
   fontWeight: 500,
 };
+const CONTACT_HEAT_CHIP_COLORS = {
+  hett: {
+    background: "rgba(208, 64, 69, 0.10)",
+    color: "#8B1D20",
+    border: "1px solid rgba(208, 64, 69, 0.28)",
+    fontWeight: 500,
+  },
+  lovende: {
+    background: "rgba(229, 160, 48, 0.12)",
+    color: "#7D4E00",
+    border: "1px solid rgba(229, 160, 48, 0.32)",
+    fontWeight: 500,
+  },
+  mulig: {
+    background: "rgba(26, 79, 160, 0.10)",
+    color: "#1A4FA0",
+    border: "1px solid rgba(26, 79, 160, 0.28)",
+    fontWeight: 500,
+  },
+  sovende: {
+    background: C.statusNeutralBg,
+    color: C.statusNeutral,
+    border: `1px solid ${C.statusNeutralBorder}`,
+    fontWeight: 500,
+  },
+} as const;
+const CONTACT_HEAT_DOT_COLORS = {
+  hett: "#D04045",
+  lovende: "#E5A030",
+  mulig: "#1A4FA0",
+  sovende: C.textGhost,
+} as const;
+const CONTACT_HEAT_LABELS = {
+  hett: "Hett",
+  lovende: "Lovende",
+  mulig: "Mulig",
+  sovende: "Sovende",
+} as const;
 
 function splitSentCvThread(bodyText: string): { latest: string; rest: string | null } {
   const threadPatterns = [
@@ -1265,9 +1302,9 @@ export function ContactCardContent({
       <div className="mb-5" style={headerPaddingTop ? { paddingTop: headerPaddingTop } : undefined}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2">
               {canEditProfile ? (
-                <h2 className="text-[1.5rem] font-bold truncate min-w-0 flex-1">
+                <h2 className="min-w-0 shrink text-[1.5rem] font-bold truncate">
                   <InlineField
                     value={`${contact.first_name} ${contact.last_name}`}
                     onSave={(v) => {
@@ -1280,12 +1317,22 @@ export function ContactCardContent({
                   />
                 </h2>
               ) : (
-                <h2 className="text-[1.5rem] font-bold truncate min-w-0 flex-1">
+                <h2 className="min-w-0 shrink text-[1.5rem] font-bold truncate">
                   {contact.first_name} {contact.last_name}
                 </h2>
               )}
-              <div className="flex flex-wrap items-center gap-1.5">
-                <DesignLabHeatBadge temperature={contactHeatResult.temperature} />
+              <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                <span className="text-sm leading-none text-muted-foreground/70 select-none">|</span>
+                <DesignLabReadonlyChip
+                  active={true}
+                  activeColors={CONTACT_HEAT_CHIP_COLORS[contactHeatResult.temperature]}
+                >
+                  <span
+                    className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full"
+                    style={{ background: CONTACT_HEAT_DOT_COLORS[contactHeatResult.temperature] }}
+                  />
+                  {CONTACT_HEAT_LABELS[contactHeatResult.temperature]}
+                </DesignLabReadonlyChip>
                 {hasMarkedsradar && (
                   <DesignLabReadonlyChip active={true} activeColors={CONTACT_FINN_CHIP_COLORS}>
                     <img
