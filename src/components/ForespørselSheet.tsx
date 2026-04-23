@@ -76,9 +76,11 @@ interface MatchResult {
 interface LaterReviewEntry {
   id: string;
   ansatt_id: number | null;
+  consultant_name: string;
   created_at: string;
   date_notification_task_id: string | null;
   ekstern_id: string | null;
+  external_type: string | null;
   foresporsler_id: number;
   konsulent_type: "intern" | "ekstern";
   notify_email_date: string | null;
@@ -87,14 +89,30 @@ interface LaterReviewEntry {
   pipeline_notification_task_id: string | null;
   pipeline_notified_at: string | null;
   updated_at: string;
-  stacq_ansatte?: { id: number; navn: string | null } | null;
-  external_consultants?: { id: string; navn: string | null; type: string | null } | null;
 }
 
 interface LaterReviewNotificationOptions {
   notifyOnPipelineExit: boolean;
   notifyEmailDate: string | null;
 }
+
+interface LaterReviewTaskMeta {
+  consultantId: string;
+  consultantName: string;
+  consultantType: "intern" | "ekstern";
+  dateNotificationTaskId: string | null;
+  externalType: string | null;
+  foresporselId: number;
+  notifyEmailDate: string | null;
+  notifyOnPipelineExit: boolean;
+  notifyUserId: string;
+  pipelineNotificationTaskId: string | null;
+  pipelineNotifiedAt: string | null;
+}
+
+const LATER_REVIEW_HOLDER_TITLE_PREFIX = "LR-HOLD:";
+const LATER_REVIEW_META_MARKER = "[crm-later-review]";
+const LATER_REVIEW_REMINDER_MARKER = "[crm-later-review-reminder]";
 
 function isPipelineExitStatus(status: string | null | undefined): boolean {
   return status === "avslag" || status === "bortfalt";
@@ -111,14 +129,101 @@ function formatNotificationDate(dateValue: string | null): string | null {
 }
 
 function getLaterReviewName(entry: LaterReviewEntry): string {
-  return entry.konsulent_type === "intern"
-    ? entry.stacq_ansatte?.navn || "Ukjent"
-    : entry.external_consultants?.navn || "Ukjent";
+  return entry.consultant_name || "Ukjent";
 }
 
 function getExternalConsultantTypeLabel(type: string | null | undefined): string {
-  if (type === "partner" || type === "konsulenthus") return "Partner";
+  if (type === "partner" || type === "konsulenthus" || type === "via_partner") return "Partner";
   return "Freelance";
+}
+
+function buildLaterReviewHolderTitle(
+  foresporselId: number,
+  consultantType: "intern" | "ekstern",
+  consultantId: string,
+) {
+  return `${LATER_REVIEW_HOLDER_TITLE_PREFIX}${foresporselId}:${consultantType}:${consultantId}`;
+}
+
+function serializeLaterReviewMeta(meta: LaterReviewTaskMeta): string {
+  return `${LATER_REVIEW_META_MARKER}\n${JSON.stringify(meta)}`;
+}
+
+function parseLaterReviewMeta(description: string | null | undefined): LaterReviewTaskMeta | null {
+  if (!description) return null;
+  const [marker, ...jsonLines] = description.split("\n");
+  if (marker !== LATER_REVIEW_META_MARKER) return null;
+
+  try {
+    const parsed = JSON.parse(jsonLines.join("\n")) as LaterReviewTaskMeta;
+    if (
+      !parsed ||
+      !parsed.foresporselId ||
+      !parsed.consultantId ||
+      !parsed.consultantName ||
+      !parsed.consultantType ||
+      !parsed.notifyUserId
+    ) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function mapLaterReviewTaskToEntry(task: {
+  id: string;
+  created_at: string;
+  description: string | null;
+  updated_at: string;
+}): LaterReviewEntry | null {
+  const meta = parseLaterReviewMeta(task.description);
+  if (!meta) return null;
+
+  const parsedAnsattId = meta.consultantType === "intern" ? Number(meta.consultantId) : null;
+
+  return {
+    id: task.id,
+    ansatt_id: meta.consultantType === "intern" && Number.isFinite(parsedAnsattId) ? parsedAnsattId : null,
+    consultant_name: meta.consultantName,
+    created_at: task.created_at,
+    date_notification_task_id: meta.dateNotificationTaskId,
+    ekstern_id: meta.consultantType === "ekstern" ? meta.consultantId : null,
+    external_type: meta.externalType,
+    foresporsler_id: meta.foresporselId,
+    konsulent_type: meta.consultantType,
+    notify_email_date: meta.notifyEmailDate,
+    notify_on_pipeline_exit: meta.notifyOnPipelineExit,
+    notify_user_id: meta.notifyUserId,
+    pipeline_notification_task_id: meta.pipelineNotificationTaskId,
+    pipeline_notified_at: meta.pipelineNotifiedAt,
+    updated_at: task.updated_at,
+  };
+}
+
+function entryToLaterReviewMeta(entry: LaterReviewEntry): LaterReviewTaskMeta {
+  return {
+    consultantId: entry.konsulent_type === "intern" ? String(entry.ansatt_id ?? "") : String(entry.ekstern_id ?? ""),
+    consultantName: entry.consultant_name,
+    consultantType: entry.konsulent_type,
+    dateNotificationTaskId: entry.date_notification_task_id,
+    externalType: entry.external_type,
+    foresporselId: entry.foresporsler_id,
+    notifyEmailDate: entry.notify_email_date,
+    notifyOnPipelineExit: entry.notify_on_pipeline_exit,
+    notifyUserId: entry.notify_user_id,
+    pipelineNotificationTaskId: entry.pipeline_notification_task_id,
+    pipelineNotifiedAt: entry.pipeline_notified_at,
+  };
+}
+
+function buildLaterReviewReminderDescription(
+  body: string,
+  holderTaskId: string,
+  reminderType: "date" | "pipeline",
+): string {
+  return `${body}\n\n${LATER_REVIEW_REMINDER_MARKER}\n${JSON.stringify({ holderTaskId, reminderType })}`;
 }
 
 /* ─── Delete button with inline confirmation ─── */
@@ -331,11 +436,14 @@ export function ForespørselSheet({
     enabled: !!row?.id,
     queryFn: async () => {
       const { data } = await supabase
-        .from("foresporsler_konsulenter_senere")
-        .select("id, ansatt_id, created_at, date_notification_task_id, ekstern_id, foresporsler_id, konsulent_type, notify_email_date, notify_on_pipeline_exit, notify_user_id, pipeline_notification_task_id, pipeline_notified_at, updated_at, stacq_ansatte(id, navn), external_consultants(id, navn, type)")
-        .eq("foresporsler_id", row.id)
+        .from("tasks")
+        .select("id, title, description, created_at, updated_at")
+        .eq("status", "done")
+        .like("title", `${LATER_REVIEW_HOLDER_TITLE_PREFIX}${row.id}:%`)
         .order("created_at", { ascending: false });
-      return (data || []) as LaterReviewEntry[];
+      return (data || [])
+        .map((task) => mapLaterReviewTaskToEntry(task))
+        .filter((entry): entry is LaterReviewEntry => Boolean(entry) && entry.foresporsler_id === row.id);
     },
   });
 
@@ -375,12 +483,17 @@ export function ForespørselSheet({
     emailNotify,
     title,
     description,
+    reminderContext,
   }: {
     assignedTo: string;
     dueDate: string;
     emailNotify: boolean;
     title: string;
     description: string;
+    reminderContext?: {
+      holderTaskId: string;
+      reminderType: "date" | "pipeline";
+    };
   }): Promise<string> => {
     const { data, error } = await supabase
       .from("tasks")
@@ -389,7 +502,9 @@ export function ForespørselSheet({
         company_id: row.selskap_id || null,
         contact_id: row.kontakt_id || null,
         created_by: user?.id || assignedTo,
-        description,
+        description: reminderContext
+          ? buildLaterReviewReminderDescription(description, reminderContext.holderTaskId, reminderContext.reminderType)
+          : description,
         due_date: dueDate,
         email_notify: emailNotify,
         priority: "medium",
@@ -414,11 +529,28 @@ export function ForespørselSheet({
 
   const removeLaterReviewEntry = async (entry: LaterReviewEntry) => {
     await deleteLaterReviewTasks(entry);
-    const { error } = await supabase
-      .from("foresporsler_konsulenter_senere")
-      .delete()
-      .eq("id", entry.id);
+    const { error } = await supabase.from("tasks").delete().eq("id", entry.id);
     if (error) throw error;
+  };
+
+  const updateLaterReviewEntry = async (entryId: string, meta: LaterReviewTaskMeta) => {
+    const { error } = await supabase
+      .from("tasks")
+      .update({
+        description: serializeLaterReviewMeta(meta),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", entryId);
+
+    if (error) throw error;
+  };
+
+  const triggerDueReminderEmails = async () => {
+    try {
+      await supabase.functions.invoke("task-due-reminder");
+    } catch (error) {
+      console.error("Kunne ikke trigge e-postpåminnelser", error);
+    }
   };
 
   const syncLaterReviewAfterPipelineAdd = async (consultantType: "intern" | "ekstern", consultantId: number | string) => {
@@ -466,21 +598,18 @@ export function ForespørselSheet({
         const taskId = await createLaterReviewTask({
           assignedTo: entry.notify_user_id,
           dueDate: today,
-          emailNotify: false,
+          emailNotify: true,
           title: `Klar for vurdering: ${candidateName}`,
           description: `${context.pipelineDescription} Trigger: ${PIPELINE_CONFIG[triggerStatus].label}.`,
+          reminderContext: {
+            holderTaskId: entry.id,
+            reminderType: "pipeline",
+          },
         });
-
-        const { error } = await supabase
-          .from("foresporsler_konsulenter_senere")
-          .update({
-            pipeline_notification_task_id: taskId,
-            pipeline_notified_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", entry.id);
-
-        if (error) throw error;
+        const meta = entryToLaterReviewMeta(entry);
+        meta.pipelineNotificationTaskId = taskId;
+        meta.pipelineNotifiedAt = new Date().toISOString();
+        await updateLaterReviewEntry(entry.id, meta);
         createdCount += 1;
       } catch (error) {
         console.error("Kunne ikke opprette senere-vurdering-varsel", error);
@@ -488,10 +617,11 @@ export function ForespørselSheet({
     }
 
     if (createdCount > 0) {
+      await triggerDueReminderEmails();
       toast.success(
         createdCount === 1
-          ? "1 konsulent er klar for senere vurdering"
-          : `${createdCount} konsulenter er klare for senere vurdering`,
+          ? "1 e-postvarsel er sendt for senere vurdering"
+          : `${createdCount} e-postvarsler er sendt for senere vurdering`,
       );
     }
   };
@@ -501,56 +631,80 @@ export function ForespørselSheet({
     consultantId: number | string,
     candidateName: string,
     options: LaterReviewNotificationOptions,
+    externalType?: string | null,
   ) => {
     if (!user?.id) {
       toast.error("Kunne ikke lagre senere vurdering uten innlogget bruker");
       return;
     }
 
-    const now = new Date().toISOString();
-    const insertPayload =
+    const alreadyExists = laterReviewKonsulenter.some((entry) =>
       consultantType === "intern"
-        ? {
-            foresporsler_id: row.id,
-            ansatt_id: consultantId as number,
-            konsulent_type: "intern",
-            notify_email_date: options.notifyEmailDate || null,
-            notify_on_pipeline_exit: options.notifyOnPipelineExit,
-            notify_user_id: user.id,
-            updated_at: now,
-          }
-        : {
-            foresporsler_id: row.id,
-            ekstern_id: consultantId as string,
-            konsulent_type: "ekstern",
-            notify_email_date: options.notifyEmailDate || null,
-            notify_on_pipeline_exit: options.notifyOnPipelineExit,
-            notify_user_id: user.id,
-            updated_at: now,
-          };
+        ? entry.konsulent_type === "intern" && entry.ansatt_id === consultantId
+        : entry.konsulent_type === "ekstern" && entry.ekstern_id === consultantId,
+    );
+
+    if (alreadyExists) {
+      throw new Error("Konsulenten er allerede lagret for senere vurdering");
+    }
+
+    const now = new Date().toISOString();
+    const holderMeta: LaterReviewTaskMeta = {
+      consultantId: String(consultantId),
+      consultantName: candidateName,
+      consultantType,
+      dateNotificationTaskId: null,
+      externalType: consultantType === "ekstern" ? externalType || null : null,
+      foresporselId: row.id,
+      notifyEmailDate: options.notifyEmailDate || null,
+      notifyOnPipelineExit: options.notifyOnPipelineExit,
+      notifyUserId: user.id,
+      pipelineNotificationTaskId: null,
+      pipelineNotifiedAt: null,
+    };
 
     const { data: inserted, error } = await supabase
-      .from("foresporsler_konsulenter_senere")
-      .insert(insertPayload)
-      .select("id, notify_user_id")
+      .from("tasks")
+      .insert({
+        assigned_to: user.id,
+        company_id: row.selskap_id || null,
+        contact_id: row.kontakt_id || null,
+        created_by: user.id,
+        description: serializeLaterReviewMeta(holderMeta),
+        due_date: null,
+        email_notify: false,
+        priority: "medium",
+        status: "done",
+        title: buildLaterReviewHolderTitle(row.id, consultantType, String(consultantId)),
+        updated_at: now,
+      })
+      .select("id")
       .single();
 
-    if (error || !inserted) throw error || new Error("Kunne ikke lagre senere vurdering");
+    if (error || !inserted?.id) throw error || new Error("Kunne ikke lagre senere vurdering");
 
     const context = buildLaterReviewContext(candidateName);
-    const updates: Record<string, string> = { updated_at: new Date().toISOString() };
+    const updatedMeta = { ...holderMeta };
     const notificationErrors: string[] = [];
+    let shouldTriggerEmailRun = false;
 
     if (options.notifyEmailDate) {
       try {
         const taskId = await createLaterReviewTask({
-          assignedTo: inserted.notify_user_id,
+          assignedTo: user.id,
           dueDate: options.notifyEmailDate,
           emailNotify: true,
           title: `Vurder senere: ${candidateName}`,
           description: context.dateDescription,
+          reminderContext: {
+            holderTaskId: inserted.id,
+            reminderType: "date",
+          },
         });
-        updates.date_notification_task_id = taskId;
+        updatedMeta.dateNotificationTaskId = taskId;
+        if (options.notifyEmailDate <= format(new Date(), "yyyy-MM-dd")) {
+          shouldTriggerEmailRun = true;
+        }
       } catch (notificationError) {
         console.error("Kunne ikke opprette e-postpåminnelse", notificationError);
         notificationErrors.push("E-postpåminnelse kunne ikke opprettes");
@@ -560,28 +714,31 @@ export function ForespørselSheet({
     if (options.notifyOnPipelineExit && hasPipelineExit) {
       try {
         const taskId = await createLaterReviewTask({
-          assignedTo: inserted.notify_user_id,
+          assignedTo: user.id,
           dueDate: format(new Date(), "yyyy-MM-dd"),
-          emailNotify: false,
+          emailNotify: true,
           title: `Klar for vurdering: ${candidateName}`,
           description: context.pipelineDescription,
+          reminderContext: {
+            holderTaskId: inserted.id,
+            reminderType: "pipeline",
+          },
         });
-        updates.pipeline_notification_task_id = taskId;
-        updates.pipeline_notified_at = new Date().toISOString();
+        updatedMeta.pipelineNotificationTaskId = taskId;
+        updatedMeta.pipelineNotifiedAt = new Date().toISOString();
+        shouldTriggerEmailRun = true;
       } catch (notificationError) {
         console.error("Kunne ikke opprette pipeline-varsel", notificationError);
         notificationErrors.push("Varsel ved avslag/bortfall kunne ikke opprettes");
       }
     }
 
-    if (Object.keys(updates).length > 1) {
-      await supabase
-        .from("foresporsler_konsulenter_senere")
-        .update(updates)
-        .eq("id", inserted.id);
-    }
+    await updateLaterReviewEntry(inserted.id, updatedMeta);
 
     await invalidateForesporselQueries();
+    if (shouldTriggerEmailRun) {
+      await triggerDueReminderEmails();
+    }
 
     toast.success(`${candidateName} lagret for senere vurdering`);
     if (notificationErrors.length > 0) {
@@ -1244,8 +1401,8 @@ export function ForespørselSheet({
                       onAddIntern={(ansattId, consultantName, options) =>
                         addLaterReviewConsultant("intern", ansattId, consultantName, options)
                       }
-                      onAddEkstern={(eksternId, consultantName, options) =>
-                        addLaterReviewConsultant("ekstern", eksternId, consultantName, options)
+                      onAddEkstern={(eksternId, consultantName, options, externalType) =>
+                        addLaterReviewConsultant("ekstern", eksternId, consultantName, options, externalType)
                       }
                     />
                   </div>
@@ -1318,7 +1475,7 @@ export function ForespørselSheet({
                                 </span>
                                 {!isIntern && (
                                   <span className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-muted-foreground">
-                                    {getExternalConsultantTypeLabel(entry.external_consultants?.type)}
+                                    {getExternalConsultantTypeLabel(entry.external_type)}
                                   </span>
                                 )}
                               </div>
@@ -1334,7 +1491,7 @@ export function ForespørselSheet({
                                     )}
                                   >
                                     <Bell className="h-3 w-3" />
-                                    {pipelineNotificationReady ? "Varsel sendt" : "Ved avslag/bortfall"}
+                                    {pipelineNotificationReady ? "E-post klargjort" : "E-post ved avslag/bortfall"}
                                   </span>
                                 )}
                                 {entry.notify_email_date && (
@@ -2204,6 +2361,7 @@ function AddLaterReviewCombobox({
     eksternId: string,
     consultantName: string,
     options: LaterReviewNotificationOptions,
+    externalType?: string | null,
   ) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
@@ -2275,10 +2433,10 @@ function AddLaterReviewCombobox({
     }
   };
 
-  const handleSelectEkstern = async (eksternId: string, consultantName: string) => {
+  const handleSelectEkstern = async (eksternId: string, consultantName: string, externalType?: string | null) => {
     setAddingKey(`ekstern-${eksternId}`);
     try {
-      await onAddEkstern(eksternId, consultantName, options);
+      await onAddEkstern(eksternId, consultantName, options, externalType);
       setOpen(false);
       resetState();
     } catch (error: any) {
@@ -2341,12 +2499,12 @@ function AddLaterReviewCombobox({
                 onCheckedChange={(value) => setNotifyOnPipelineExit(Boolean(value))}
                 className="mt-0.5 h-4 w-4"
               />
-              <span>
+                <span>
                 <span className="block text-[0.8125rem] font-medium text-foreground">
-                  Varsle ved avslag eller bortfall
+                  E-postvarsel ved avslag eller bortfall
                 </span>
                 <span className="block text-[0.75rem] text-muted-foreground">
-                  Oppretter en oppfølging når en konsulent i pipeline faller ut.
+                  Sender e-post til deg når en konsulent i pipeline faller ut.
                 </span>
               </span>
             </label>
@@ -2426,7 +2584,7 @@ function AddLaterReviewCombobox({
                 filteredEksterne.map((e: any) => (
                   <button
                     key={e.id}
-                    onClick={() => void handleSelectEkstern(e.id, e.navn || "Ukjent")}
+                    onClick={() => void handleSelectEkstern(e.id, e.navn || "Ukjent", e.type || null)}
                     disabled={addingKey !== null}
                     className="w-full text-left px-2 py-2 rounded hover:bg-muted transition-colors disabled:opacity-60"
                   >
