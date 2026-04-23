@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   getExternalRecipientEmails,
+  isLikelySentCvAttachmentName,
   isExternalEmailAddress,
   matchSentCvEmployees,
   normalizeEmailAddress,
@@ -32,6 +33,16 @@ describe("getExternalRecipientEmails", () => {
         null,
       ]),
     ).toEqual(["kunde@example.com"]);
+  });
+});
+
+describe("isLikelySentCvAttachmentName", () => {
+  it("rejects ssa-b agreement attachments", () => {
+    expect(isLikelySentCvAttachmentName("ssa-b_enkel_2026-bok - FFI.pdf")).toBe(false);
+  });
+
+  it("keeps normal CV attachments", () => {
+    expect(isLikelySentCvAttachmentName("CV - Tom Erik Lundesgaard - STACQ.pdf")).toBe(true);
   });
 });
 
@@ -110,5 +121,15 @@ describe("matchSentCvEmployees", () => {
         score: 120,
       },
     ]);
+  });
+
+  it("does not treat ssa-b agreements as sent cv even when the email mentions an employee", () => {
+    expect(
+      matchSentCvEmployees({
+        attachmentNames: ["ssa-b_enkel_2026-bok - FFI.pdf"],
+        subject: "Tom Erik Lundesgaard",
+        employees,
+      }),
+    ).toEqual([]);
   });
 });

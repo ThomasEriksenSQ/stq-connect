@@ -30,6 +30,16 @@ function uniqueStrings(values: Array<string | null | undefined>) {
   );
 }
 
+function normalizeAttachmentNameForClassification(value: string) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\.[a-z0-9]+$/i, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function tokenizeName(value: string) {
   return normalizeCandidateText(value)
     .split(" ")
@@ -118,6 +128,13 @@ export function getExternalRecipientEmails(
   );
 }
 
+export function isLikelySentCvAttachmentName(attachmentName: string | null | undefined) {
+  const normalized = normalizeAttachmentNameForClassification(attachmentName || "");
+  if (!normalized) return false;
+  if (normalized.includes("ssa b")) return false;
+  return true;
+}
+
 export function matchSentCvEmployees(params: {
   attachmentNames: string[];
   subject?: string | null;
@@ -126,7 +143,7 @@ export function matchSentCvEmployees(params: {
 }) {
   const attachmentNames = params.attachmentNames
     .map((name) => String(name || "").trim())
-    .filter(Boolean);
+    .filter((name) => isLikelySentCvAttachmentName(name));
 
   if (attachmentNames.length === 0 || params.employees.length === 0) return [] satisfies SentCvAttachmentMatch[];
 

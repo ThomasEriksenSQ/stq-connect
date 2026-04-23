@@ -104,6 +104,7 @@ import { getInitials } from "@/lib/utils";
 import { useClickWithoutSelection, activateOnEnterOrSpace } from "@/hooks/useClickWithoutSelection";
 import { useCrmNavigation } from "@/lib/crmNavigation";
 import { useSentCvLiveSync } from "@/hooks/useSentCvLiveSync";
+import { isLikelySentCvAttachmentName } from "@/lib/sentCvMatching";
 /* ── Helpers for storing/retrieving category in description ── */
 
 /**
@@ -887,7 +888,9 @@ export function ContactCardContent({
         .order("sent_at", { ascending: false });
       if (error) throw error;
 
-      const sentRows = (rows || []) as ContactSentCvRow[];
+      const sentRows = ((rows || []) as ContactSentCvRow[]).filter((row) =>
+        isLikelySentCvAttachmentName(row.attachment_name),
+      );
       if (sentRows.length === 0) return [] as ContactSentCvEntry[];
 
       const employeeIds = Array.from(new Set(sentRows.map((row) => row.ansatt_id).filter(Boolean)));

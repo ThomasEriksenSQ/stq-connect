@@ -26,6 +26,7 @@ import { getEmployeeLifecycleStatus } from "@/lib/employeeStatus";
 import { coerceDisplayText } from "@/lib/outlookMail";
 import { crmQueryKeys } from "@/lib/queryKeys";
 import { useSentCvLiveSync } from "@/hooks/useSentCvLiveSync";
+import { isLikelySentCvAttachmentName } from "@/lib/sentCvMatching";
 import {
   DesignLabPrimaryAction,
   DesignLabSecondaryAction,
@@ -217,7 +218,9 @@ const AnsattDetail = ({
         .order("sent_at", { ascending: false });
       if (error) throw error;
 
-      const sentCvRows = (rows || []) as SentCvRow[];
+      const sentCvRows = ((rows || []) as SentCvRow[]).filter((row) =>
+        isLikelySentCvAttachmentName(row.attachment_name),
+      );
       if (sentCvRows.length === 0) return [] as SentCvEntry[];
 
       const contactIds = Array.from(new Set(sentCvRows.map((row) => row.contact_id).filter(Boolean))) as string[];
