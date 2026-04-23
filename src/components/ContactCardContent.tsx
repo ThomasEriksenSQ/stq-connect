@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { C } from "@/components/designlab/theme";
+import finnIcon from "@/assets/finn-icon.webp";
 import {
   DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS,
   DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS,
@@ -51,7 +52,7 @@ import {
   UserSearch,
 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
-import { format, isPast, isToday, getYear, addDays, addWeeks, addMonths, addYears } from "date-fns";
+import { differenceInDays, format, isPast, isToday, getYear, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { nb } from "date-fns/locale";
 import { fullDate } from "@/lib/relativeDate";
 import { cleanDescription } from "@/lib/cleanDescription";
@@ -70,7 +71,7 @@ import {
   getConsultantMatchScoreColor,
   sortConsultantMatches,
 } from "@/lib/consultantMatches";
-import { hasConsultantAvailability } from "@/lib/contactHunt";
+import { hasConsultantAvailability, isActiveRequest } from "@/lib/contactHunt";
 import { isEmployeeEndDatePassed } from "@/lib/employeeStatus";
 import {
   buildContactCvSafeUpdates,
@@ -81,6 +82,7 @@ import {
 import {
   DesignLabCategoryBadge,
   DesignLabCategoryPicker,
+  DesignLabHeatBadge,
   DesignLabReadonlyChip,
   DesignLabStatusBadge,
   DESIGN_LAB_STATUS_NEUTRAL_CHIP_ACTIVE_COLORS,
@@ -94,6 +96,7 @@ import {
   DesignLabTextField,
 } from "@/components/designlab/system/fields";
 import { mergeTechnologyTags } from "@/lib/technologyTags";
+import { getActivityStatus, getHeatResult, getTaskStatus } from "@/lib/heatScore";
 import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/queryKeys";
 import { coerceDisplayText, normalizeOutlookMailItems } from "@/lib/outlookMail";
 import { useClickWithoutSelection, activateOnEnterOrSpace } from "@/hooks/useClickWithoutSelection";
@@ -188,6 +191,24 @@ type ContactSentCvEmployeeRow = {
 
 const SECTION_TITLE_STYLE = { color: C.text };
 const SECTION_COUNT_STYLE = { color: C.textFaint };
+const CONTACT_FINN_CHIP_COLORS = {
+  background: C.infoBg,
+  color: C.info,
+  border: "1px solid rgba(26,79,160,0.18)",
+  fontWeight: 500,
+};
+const CONTACT_REQUEST_CHIP_COLORS = {
+  background: C.successBg,
+  color: C.success,
+  border: "1px solid rgba(45,106,79,0.18)",
+  fontWeight: 500,
+};
+const CONTACT_PREVIOUS_REQUEST_CHIP_COLORS = {
+  background: C.statusNeutralBg,
+  color: C.statusNeutral,
+  border: `1px solid ${C.statusNeutralBorder}`,
+  fontWeight: 500,
+};
 
 function splitSentCvThread(bodyText: string): { latest: string; rest: string | null } {
   const threadPatterns = [
@@ -561,13 +582,41 @@ export function ContactCardContent({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
-        .select("*, companies(id, name, city), profiles!contacts_owner_id_fkey(full_name)")
+        .select("*, companies(id, name, city, ikke_relevant), profiles!contacts_owner_id_fkey(full_name)")
         .eq("id", contactId)
         .single();
       if (error) throw error;
       return data;
     },
     enabled: !!contactId,
+  });
+  const companyId = ((contact?.companies as any)?.id as string | null | undefined) ?? null;
+
+  const { data: companyTechProfile } = useQuery({
+    queryKey: crmQueryKeys.companies.techProfile(companyId ?? "__none__"),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("company_tech_profile")
+        .select("sist_fra_finn")
+        .eq("company_id", companyId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: Boolean(companyId),
+  });
+
+  const { data: companyRequests = [] } = useQuery({
+    queryKey: crmQueryKeys.companies.foresporslerTags(companyId ?? "__none__"),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("foresporsler")
+        .select("mottatt_dato, status")
+        .eq("selskap_id", companyId!);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: Boolean(companyId),
   });
 
   const { data: allProfiles = [] } = useQuery({
@@ -1100,7 +1149,6 @@ export function ContactCardContent({
   if (!contact) return <p className="text-sm text-muted-foreground">Kontakt ikke funnet</p>;
 
   const companyName = (contact.companies as any)?.name;
-  const companyId = (contact.companies as any)?.id;
   const companyCity = (contact.companies as any)?.city as string | null;
   const contactTechnologies = mergeTechnologyTags((contact as any).teknologier || []);
   const companyLocations: string[] = companyCity
@@ -1126,6 +1174,41 @@ export function ContactCardContent({
     })),
   );
   const signalCat = effectiveSignal ? CATEGORIES.find((c) => c.label === effectiveSignal) : null;
+  const lastActivityAt = sanitizedActivities[0]?.created_at || null;
+  const daysSinceLastContact = lastActivityAt ? differenceInDays(new Date(), new Date(lastActivityAt)) : 999;
+  const hasMarkedsradar = Boolean(
+    companyTechProfile?.sist_fra_finn && differenceInDays(new Date(), new Date(companyTechProfile.sist_fra_finn)) <= 90,
+  );
+  const hasAktivForespørsel = companyRequests.some((request) => isActiveRequest(request.mottatt_dato, request.status));
+  const hasTidligereForespørsel =
+    companyRequests.length > 0 && companyRequests.some((request) => !isActiveRequest(request.mottatt_dato, request.status));
+  const taskStatus = getTaskStatus(tasks.map((task) => ({ due_date: task.due_date, status: task.status })));
+  const activityStatus = getActivityStatus(daysSinceLastContact);
+  const signalAct = sanitizedActivities.find((activity) => {
+    const normalizedSubject = normalizeCategoryLabel(activity.subject || "");
+    return CATEGORIES.some((category) => category.label === normalizedSubject);
+  });
+  const signalSetAt = signalAct ? new Date(signalAct.created_at) : null;
+  const lastActivityDate = lastActivityAt ? new Date(lastActivityAt) : null;
+  const kes = Boolean(signalSetAt && lastActivityDate && lastActivityDate > signalSetAt);
+  const hasOverdueTask = tasks.some((task) => {
+    const dueDate = parseSafeDate(task.due_date);
+    return Boolean(dueDate && isPast(dueDate) && !isToday(dueDate));
+  });
+  const contactHeatResult = getHeatResult({
+    signal: effectiveSignal || "",
+    isInnkjoper: Boolean((contact as any).call_list),
+    hasMarkedsradar,
+    hasAktivForespørsel,
+    hasOverdue: hasOverdueTask,
+    daysSinceLastContact,
+    hasTidligereForespørsel,
+    ikkeAktuellKontakt: Boolean((contact as any).ikke_aktuell_kontakt),
+    ikkeRelevantSelskap: Boolean((contact.companies as any)?.ikke_relevant),
+    taskStatus,
+    activityStatus,
+    kes,
+  });
   const shouldAnalyzeAiSignal = editable && sanitizedActivities.length > 0;
   const shouldHideTechDnaSection = Boolean(defaultHidden?.techDna && !showTechDna && !hasVisibleAiSuggestion);
   const shouldRenderTechDnaSection =
@@ -1181,24 +1264,50 @@ export function ContactCardContent({
       {/* ── ZONE A: Contact Header ── */}
       <div className="mb-5" style={headerPaddingTop ? { paddingTop: headerPaddingTop } : undefined}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          {canEditProfile ? (
-            <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">
-              <InlineField
-                value={`${contact.first_name} ${contact.last_name}`}
-                onSave={(v) => {
-                  const parts = v.split(" ");
-                  const first = parts[0] || "";
-                  const last = parts.slice(1).join(" ") || "";
-                  updateMutation.mutate({ first_name: first, last_name: last });
-                }}
-                className="text-[1.5rem] font-bold text-foreground"
-              />
-            </h2>
-          ) : (
-            <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">
-              {contact.first_name} {contact.last_name}
-            </h2>
-          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              {canEditProfile ? (
+                <h2 className="text-[1.5rem] font-bold truncate min-w-0 flex-1">
+                  <InlineField
+                    value={`${contact.first_name} ${contact.last_name}`}
+                    onSave={(v) => {
+                      const parts = v.split(" ");
+                      const first = parts[0] || "";
+                      const last = parts.slice(1).join(" ") || "";
+                      updateMutation.mutate({ first_name: first, last_name: last });
+                    }}
+                    className="text-[1.5rem] font-bold text-foreground"
+                  />
+                </h2>
+              ) : (
+                <h2 className="text-[1.5rem] font-bold truncate min-w-0 flex-1">
+                  {contact.first_name} {contact.last_name}
+                </h2>
+              )}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <DesignLabHeatBadge temperature={contactHeatResult.temperature} />
+                {hasMarkedsradar && (
+                  <DesignLabReadonlyChip active={true} activeColors={CONTACT_FINN_CHIP_COLORS}>
+                    <img
+                      src={finnIcon}
+                      alt="Finn"
+                      className="mr-1.5 h-3 w-3 object-contain grayscale opacity-70"
+                    />
+                    Finn.no annonsering siste 90 dager
+                  </DesignLabReadonlyChip>
+                )}
+                {hasAktivForespørsel ? (
+                  <DesignLabReadonlyChip active={true} activeColors={CONTACT_REQUEST_CHIP_COLORS}>
+                    Forespørsel siste 45 dager
+                  </DesignLabReadonlyChip>
+                ) : hasTidligereForespørsel ? (
+                  <DesignLabReadonlyChip active={true} activeColors={CONTACT_PREVIOUS_REQUEST_CHIP_COLORS}>
+                    Tidligere fått forespørsel
+                  </DesignLabReadonlyChip>
+                ) : null}
+              </div>
+            </div>
+          </div>
           {/* Owner badge */}
           <div className="flex items-center gap-2 flex-shrink-0 sm:ml-auto">
             {showProfileEditMenu && profileEditMode && (
