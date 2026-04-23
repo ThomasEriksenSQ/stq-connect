@@ -51,6 +51,12 @@ function placeholderImage(label: string): string {
 }
 
 const NOW = new Date();
+const OSLO_DATE_FORMATTER = new Intl.DateTimeFormat("sv-SE", {
+  timeZone: "Europe/Oslo",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
 
 /* ────────────────────── UTILS ────────────────────── */
 
@@ -65,6 +71,17 @@ function trackedHref(url: string): string {
   return withUtm(url, { source: "stacq", medium: "daily" });
 }
 
+function getOsloDateKey(value: string | Date): string | null {
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : OSLO_DATE_FORMATTER.format(date);
+}
+
+function isPublishedToday(iso: string, now: Date = NOW): boolean {
+  const publishedKey = getOsloDateKey(iso);
+  const todayKey = getOsloDateKey(now);
+  return publishedKey !== null && publishedKey === todayKey;
+}
+
 function ensureImage(item: NewsItem): string {
   if (item.image.url) return item.image.url;
   return placeholderImage(item.primary_company_name);
@@ -73,6 +90,28 @@ function ensureImage(item: NewsItem): string {
 type RenderableNewsStory = Exclude<NewsItem, NewsBrief>;
 
 /* ────────────────────── LOKALE KOMPONENTER ────────────────────── */
+
+function NewTodayBadge() {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        height: 20,
+        padding: "0 8px",
+        borderRadius: 999,
+        fontSize: 10,
+        fontWeight: 600,
+        color: C.accent,
+        background: C.accentBg,
+        border: `1px solid ${C.filterActiveBorder}`,
+        whiteSpace: "nowrap",
+      }}
+    >
+      Ny i dag
+    </span>
+  );
+}
 
 function Kicker({ item }: { item: NewsItem }) {
   const { getCompanyPath } = useCrmNavigation();
@@ -84,6 +123,10 @@ function Kicker({ item }: { item: NewsItem }) {
   return (
     <div
       style={{
+        display: "flex",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: 6,
         fontSize: 11,
         fontWeight: 600,
         color: C.accent,
@@ -99,6 +142,7 @@ function Kicker({ item }: { item: NewsItem }) {
       >
         {item.primary_company_name}
       </Link>
+      {isPublishedToday(item.published_at) ? <NewTodayBadge /> : null}
       {extra.length > 0 ? (
         <span style={{ color: C.textFaint, fontWeight: 500 }}>
           {" · også "}
