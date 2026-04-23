@@ -43,28 +43,30 @@ Returner KUN gyldig JSON, ingen markdown, ingen forklaring:
 For technologies: bruk korte tekniske nøkkelord som C++, Embedded, Python, Linux, Yocto, FPGA, Qt, React, TypeScript, Java, AWS, etc.
 Maks 12 teknologier, sortert etter relevans/erfaring.`;
 
-    const userContent: Array<Record<string, unknown>> = [
-      {
-        type: "text",
-        text: `Analyser denne CV-en (${filename || "cv"}) og ekstraher navn, e-post, telefon og teknologier.`,
-      },
-    ];
-
-    if (rawText) {
-      userContent.push({
-        type: "text",
-        text: `CV-tekst:\n${rawText.slice(0, 40000)}`,
-      });
-    }
-
-    if (base64) {
-      userContent.push({
-        type: "image_url",
-        image_url: {
-          url: `data:application/pdf;base64,${base64}`,
+    const promptIntro = `Analyser denne CV-en (${filename || "cv"}) og ekstraher navn, e-post, telefon og teknologier.`;
+    const trimmedText = rawText ? rawText.slice(0, 40000) : "";
+    const userContent: string | Array<Record<string, unknown>> = base64
+      ? [
+        {
+          type: "text",
+          text: promptIntro,
         },
-      });
-    }
+        ...(trimmedText
+          ? [{
+            type: "text",
+            text: `CV-tekst:\n${trimmedText}`,
+          }]
+          : []),
+        {
+          type: "image_url",
+          image_url: {
+            url: `data:application/pdf;base64,${base64}`,
+          },
+        },
+      ]
+      : [promptIntro, trimmedText ? `CV-tekst:\n${trimmedText}` : ""]
+          .filter(Boolean)
+          .join("\n\n");
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
