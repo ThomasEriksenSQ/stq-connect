@@ -705,9 +705,10 @@ export function ContactCardContent({
     enabled: Boolean(companyId),
   });
 
-  const { data: requestHistoryRows = [], isLoading: isLoadingRequestHistory } = useQuery({
+  const requestHistoryQuery = useQuery({
     queryKey: ["contact-card-request-history", contactId],
     enabled: showRequests && Boolean(contactId),
+    retry: false,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("foresporsler")
@@ -720,6 +721,11 @@ export function ContactCardContent({
       return data || [];
     },
   });
+  const requestHistoryRows = requestHistoryQuery.data ?? [];
+  const isLoadingRequestHistory =
+    requestHistoryQuery.fetchStatus === "fetching" && !requestHistoryQuery.isFetched;
+  const requestHistoryError =
+    requestHistoryQuery.error instanceof Error ? requestHistoryQuery.error.message : null;
 
   const requestHistoryContactIds = useMemo(() => {
     const ids = new Set<string>();
@@ -2031,6 +2037,7 @@ export function ContactCardContent({
           <ContactRequestHistorySection
             rows={requestHistoryRows as any[]}
             isLoading={isLoadingRequestHistory}
+            errorMessage={requestHistoryError}
             signalByContactId={requestSignalByContactId}
             portraitByAnsattId={requestPortraitByAnsattId}
             onSelectRow={(row) => setSelectedRequestId(row.id)}
@@ -2512,12 +2519,14 @@ function ContactRequestTypeChip({ type }: { type: string | null }) {
 function ContactRequestHistorySection({
   rows,
   isLoading,
+  errorMessage,
   signalByContactId,
   portraitByAnsattId,
   onSelectRow,
 }: {
   rows: any[];
   isLoading: boolean;
+  errorMessage?: string | null;
   signalByContactId: Map<string, string>;
   portraitByAnsattId: Map<number, string>;
   onSelectRow: (row: any) => void;
@@ -2536,6 +2545,10 @@ function ContactRequestHistorySection({
       {isLoading ? (
         <div style={{ textAlign: "center", padding: "32px 0", color: C.textFaint, fontSize: 13 }}>
           Laster forespørsler…
+        </div>
+      ) : errorMessage ? (
+        <div style={{ textAlign: "center", padding: "20px 0", color: C.textFaint, fontSize: 13 }}>
+          Kunne ikke laste forespørsler
         </div>
       ) : rows.length === 0 ? (
         <div style={{ textAlign: "center", padding: "20px 0", color: C.textFaint, fontSize: 13 }}>
