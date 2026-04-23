@@ -43,6 +43,10 @@ function formatKr(n: number): string {
   return n.toLocaleString("nb-NO", { maximumFractionDigits: 0 });
 }
 
+function formatPct(n: number): string {
+  return n.toLocaleString("nb-NO", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
 function stacqColor(timePris: number): string {
   if (timePris >= 450) return "text-emerald-600";
   if (timePris >= 350) return "text-blue-600";
@@ -138,6 +142,12 @@ export default function StacqPrisen() {
   const avgMarginPerEkstern = aktiveEksterne.length > 0
     ? aktiveEksterne.reduce((s, r) => s + r.stacqPris, 0) / aktiveEksterne.length
     : 0;
+  const avgMarginPctPerAnsatt = aktiveAnsatte.length > 0
+    ? aktiveAnsatte.reduce((s, r) => s + (r.utpris ? (r.stacqPris / r.utpris) * 100 : 0), 0) / aktiveAnsatte.length
+    : 0;
+  const avgMarginPctPerEkstern = aktiveEksterne.length > 0
+    ? aktiveEksterne.reduce((s, r) => s + (r.utpris ? (r.stacqPris / r.utpris) * 100 : 0), 0) / aktiveEksterne.length
+    : 0;
 
   const now = new Date();
   const workdayCount = (() => {
@@ -209,8 +219,8 @@ export default function StacqPrisen() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <StatCard label="STACQ Prisen / time" value={`kr ${formatKr(Math.round(stacqTotalPerTime))}`} sub={`${aktive.length} konsulenter i oppdrag`} accent="emerald" suffix="/ time" />
         <StatCard label="STACQ Prisen / mnd" value={`kr ${formatKr(Math.round(monthlyTotal))}`} sub={`${workdayCount} arbeidsdager · ${format(now, "MMMM yyyy", { locale: nb })}`} suffix="/ mnd" />
-        <StatCard label="Snitt margin per ansatt" value={`kr ${formatKr(Math.round(avgMarginPerAnsatt))}`} sub="kun ansatte" suffix="/ time" />
-        <StatCard label="Snitt margin per ekstern" value={`kr ${formatKr(Math.round(avgMarginPerEkstern))}`} sub="kun eksterne" suffix="/ time" />
+        <StatCard label="Snitt margin per ansatt" value={`kr ${formatKr(Math.round(avgMarginPerAnsatt))} (${formatPct(avgMarginPctPerAnsatt)}%)`} sub="kun ansatte" suffix="/ time" />
+        <StatCard label="Snitt margin per ekstern" value={`kr ${formatKr(Math.round(avgMarginPerEkstern))} (${formatPct(avgMarginPctPerEkstern)}%)`} sub="kun eksterne" suffix="/ time" />
         <StatCard label="Oppstart" value={`+ kr ${formatKr(Math.round(oppstartTotalPerTime))}`} sub={`${oppstart.length} konsulenter kommer snart`} accent="amber" suffix="/ time" />
       </div>
 

@@ -49,6 +49,10 @@ function formatKr(n: number): string {
   return n.toLocaleString("nb-NO", { maximumFractionDigits: 0 });
 }
 
+function formatPct(n: number): string {
+  return n.toLocaleString("nb-NO", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
 function stacqColorV8(timePris: number): string {
   if (timePris >= 450) return C.accent;
   if (timePris >= 350) return C.success;
@@ -166,6 +170,12 @@ export default function DesignLabStacqPrisen() {
   const avgMarginPerEkstern = aktiveEksterne.length > 0
     ? aktiveEksterne.reduce((s, r) => s + r.stacqPris, 0) / aktiveEksterne.length
     : 0;
+  const avgMarginPctPerAnsatt = aktiveAnsatte.length > 0
+    ? aktiveAnsatte.reduce((s, r) => s + (r.utpris ? (r.stacqPris / r.utpris) * 100 : 0), 0) / aktiveAnsatte.length
+    : 0;
+  const avgMarginPctPerEkstern = aktiveEksterne.length > 0
+    ? aktiveEksterne.reduce((s, r) => s + (r.utpris ? (r.stacqPris / r.utpris) * 100 : 0), 0) / aktiveEksterne.length
+    : 0;
 
   const now = new Date();
   const workdayCount = countNorwegianWorkdays(now.getFullYear(), now.getMonth());
@@ -236,13 +246,13 @@ export default function DesignLabStacqPrisen() {
               />
               <TopStatCard
                 label="Snitt margin per ansatt"
-                value={`kr ${formatKr(Math.round(avgMarginPerAnsatt))}`}
+                value={`kr ${formatKr(Math.round(avgMarginPerAnsatt))} (${formatPct(avgMarginPctPerAnsatt)}%)`}
                 sub="kun ansatte"
                 suffix="/ time"
               />
               <TopStatCard
                 label="Snitt margin per ekstern"
-                value={`kr ${formatKr(Math.round(avgMarginPerEkstern))}`}
+                value={`kr ${formatKr(Math.round(avgMarginPerEkstern))} (${formatPct(avgMarginPctPerEkstern)}%)`}
                 sub="kun eksterne"
                 suffix="/ time"
               />
