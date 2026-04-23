@@ -698,8 +698,17 @@ export function ConsultantModal({ open, onClose, editRow, onSaved }: {
     }
   };
 
+  const cvUploadLocked = isCreate && !form.type;
+
+  const ensureTypeSelectedBeforeCvUpload = useCallback(() => {
+    if (!cvUploadLocked) return true;
+    toast.error("Velg freelance eller via partner før du laster opp CV");
+    return false;
+  }, [cvUploadLocked]);
+
   // CV Upload & Parse
   const handleCvUpload = useCallback(async (file: File) => {
+    if (!ensureTypeSelectedBeforeCvUpload()) return;
     setCvParsing(true);
     try {
       const analysis = await analyzeExternalCvUpload(file);
@@ -734,13 +743,14 @@ export function ConsultantModal({ open, onClose, editRow, onSaved }: {
     } finally {
       setCvParsing(false);
     }
-  }, [form.navn, form.epost, form.telefon, form.teknologier.length]);
+  }, [ensureTypeSelectedBeforeCvUpload, form.navn, form.epost, form.telefon, form.teknologier.length]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
+    if (!ensureTypeSelectedBeforeCvUpload()) return;
     const file = e.dataTransfer.files[0];
     if (file) handleCvUpload(file);
-  }, [handleCvUpload]);
+  }, [ensureTypeSelectedBeforeCvUpload, handleCvUpload]);
 
   const selectType = (nextType: "freelance" | "partner") => {
     setForm(prev => ({
@@ -913,10 +923,15 @@ export function ConsultantModal({ open, onClose, editRow, onSaved }: {
             <div
               onDragOver={e => e.preventDefault()}
               onDrop={handleDrop}
-              onClick={() => fileRef.current?.click()}
+              onClick={() => {
+                if (!ensureTypeSelectedBeforeCvUpload()) return;
+                fileRef.current?.click();
+              }}
               className={cn(
                 "mt-1 flex flex-col items-center gap-2 rounded-lg border-2 border-dashed p-5 transition-colors cursor-pointer",
-                cvParsing
+                cvUploadLocked
+                  ? "border-border bg-muted/40 text-muted-foreground"
+                  : cvParsing
                   ? "border-primary/40 bg-primary/5"
                   : "border-border hover:border-primary/40 hover:bg-primary/5"
               )}
@@ -954,6 +969,11 @@ export function ConsultantModal({ open, onClose, editRow, onSaved }: {
                 </>
               )}
             </div>
+            {cvUploadLocked && (
+              <p className="mt-2 text-[0.75rem] font-medium text-amber-700">
+                Velg først om konsulenten er freelance eller via partner.
+              </p>
+            )}
           </div>
 
           {/* Partner: Company picker */}
