@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { X, Pencil, Trash2, Loader2, ChevronDown, Plus, Target, Phone, Mail, MapPin } from "lucide-react";
+import { X, Pencil, Trash2, Loader2, ChevronDown, Plus, Target, Phone, Mail, MapPin, ArrowRight, Bell, CalendarDays, Clock3, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Dialog,
@@ -27,6 +27,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { format, parseISO } from "date-fns";
 import { nb } from "date-fns/locale";
 import { getEffectiveSignal } from "@/lib/categoryUtils";
@@ -43,6 +44,7 @@ import { createOppdrag, invalidateOppdragQueries } from "@/lib/oppdragPersistenc
 import { crmQueryKeys } from "@/lib/queryKeys";
 import { DesignLabReadonlyChip } from "@/components/designlab/system";
 import { DesignLabActionButton } from "@/components/designlab/controls";
+import { useAuth } from "@/hooks/useAuth";
 
 const LABEL = "text-[13px] font-medium text-foreground";
 
@@ -69,6 +71,54 @@ interface MatchResult {
   score: number;
   begrunnelse: string;
   match_tags: string[];
+}
+
+interface LaterReviewEntry {
+  id: string;
+  ansatt_id: number | null;
+  created_at: string;
+  date_notification_task_id: string | null;
+  ekstern_id: string | null;
+  foresporsler_id: number;
+  konsulent_type: "intern" | "ekstern";
+  notify_email_date: string | null;
+  notify_on_pipeline_exit: boolean;
+  notify_user_id: string;
+  pipeline_notification_task_id: string | null;
+  pipeline_notified_at: string | null;
+  updated_at: string;
+  stacq_ansatte?: { id: number; navn: string | null } | null;
+  external_consultants?: { id: string; navn: string | null; type: string | null } | null;
+}
+
+interface LaterReviewNotificationOptions {
+  notifyOnPipelineExit: boolean;
+  notifyEmailDate: string | null;
+}
+
+function isPipelineExitStatus(status: string | null | undefined): boolean {
+  return status === "avslag" || status === "bortfalt";
+}
+
+function formatNotificationDate(dateValue: string | null): string | null {
+  if (!dateValue) return null;
+
+  try {
+    return format(parseISO(`${dateValue}T00:00:00`), "d. MMM yyyy", { locale: nb });
+  } catch {
+    return dateValue;
+  }
+}
+
+function getLaterReviewName(entry: LaterReviewEntry): string {
+  return entry.konsulent_type === "intern"
+    ? entry.stacq_ansatte?.navn || "Ukjent"
+    : entry.external_consultants?.navn || "Ukjent";
+}
+
+function getExternalConsultantTypeLabel(type: string | null | undefined): string {
+  if (type === "partner" || type === "konsulenthus") return "Partner";
+  return "Freelance";
 }
 
 /* ─── Delete button with inline confirmation ─── */
@@ -189,6 +239,7 @@ export function ForespørselSheet({
   onRequestEdit?: () => void;
 }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { getCompanyPath } = useCrmNavigation();
   const queryClient = useQueryClient();
   const { interne: cachedInterne, eksterne: cachedEksterne, isReady: consultantCacheReady } = useConsultantCache();
@@ -239,6 +290,7 @@ export function ForespørselSheet({
   const [oppdragAnsattId, setOppdragAnsattId] = useState<number | null>(null);
   const [oppdragEksternId, setOppdragEksternId] = useState<string | null>(null);
   const [oppdragErAnsatt, setOppdragErAnsatt] = useState(true);
+  const [laterReviewActionId, setLaterReviewActionId] = useState<string | null>(null);
 
   // Portrait lookup for ansatte
   const { data: ansattePortraits = [] } = useQuery({
@@ -261,7 +313,7 @@ export function ForespørselSheet({
   }, [ansattePortraits]);
 
   // Linked consultants (both intern and ekstern)
-  const { data: linkedKonsulenter = [], refetch: refetchLinked } = useQuery({
+  const { data: linkedKonsulenter = [] } = useQuery({
     queryKey: crmQueryKeys.foresporsler.konsulenter(row?.id),
     enabled: !!row?.id,
     queryFn: async () => {
@@ -271,6 +323,19 @@ export function ForespørselSheet({
         .eq("foresporsler_id", row.id)
         .order("created_at", { ascending: false });
       return data || [];
+    },
+  });
+
+  const { data: laterReviewKonsulenter = [] } = useQuery({
+    queryKey: crmQueryKeys.foresporsler.senereKonsulenter(row?.id),
+    enabled: !!row?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("foresporsler_konsulenter_senere")
+        .select("id, ansatt_id, created_at, date_notification_task_id, ekstern_id, foresporsler_id, konsulent_type, notify_email_date, notify_on_pipeline_exit, notify_user_id, pipeline_notification_task_id, pipeline_notified_at, updated_at, stacq_ansatte(id, navn), external_consultants(id, navn, type)")
+        .eq("foresporsler_id", row.id)
+        .order("created_at", { ascending: false });
+      return (data || []) as LaterReviewEntry[];
     },
   });
 
@@ -295,6 +360,269 @@ export function ForespørselSheet({
       `${c.first_name} ${c.last_name}`.toLowerCase().includes(q)
     );
   }, [companyContacts, kontakt]);
+
+  const invalidateForesporselQueries = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.list() }),
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.konsulenter(row.id) }),
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.senereKonsulenter(row.id) }),
+    ]);
+  };
+
+  const createLaterReviewTask = async ({
+    assignedTo,
+    dueDate,
+    emailNotify,
+    title,
+    description,
+  }: {
+    assignedTo: string;
+    dueDate: string;
+    emailNotify: boolean;
+    title: string;
+    description: string;
+  }): Promise<string> => {
+    const { data, error } = await supabase
+      .from("tasks")
+      .insert({
+        assigned_to: assignedTo,
+        company_id: row.selskap_id || null,
+        contact_id: row.kontakt_id || null,
+        created_by: user?.id || assignedTo,
+        description,
+        due_date: dueDate,
+        email_notify: emailNotify,
+        priority: "medium",
+        status: "open",
+        title,
+        updated_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+
+    if (error || !data?.id) throw error || new Error("Kunne ikke opprette oppgave");
+    return data.id;
+  };
+
+  const deleteLaterReviewTasks = async (entry: Pick<LaterReviewEntry, "date_notification_task_id" | "pipeline_notification_task_id">) => {
+    const taskIds = [entry.date_notification_task_id, entry.pipeline_notification_task_id].filter(Boolean) as string[];
+    if (taskIds.length === 0) return;
+
+    const { error } = await supabase.from("tasks").delete().in("id", taskIds);
+    if (error) throw error;
+  };
+
+  const removeLaterReviewEntry = async (entry: LaterReviewEntry) => {
+    await deleteLaterReviewTasks(entry);
+    const { error } = await supabase
+      .from("foresporsler_konsulenter_senere")
+      .delete()
+      .eq("id", entry.id);
+    if (error) throw error;
+  };
+
+  const syncLaterReviewAfterPipelineAdd = async (consultantType: "intern" | "ekstern", consultantId: number | string) => {
+    const match = laterReviewKonsulenter.find((entry) =>
+      consultantType === "intern"
+        ? entry.konsulent_type === "intern" && entry.ansatt_id === consultantId
+        : entry.konsulent_type === "ekstern" && entry.ekstern_id === consultantId
+    );
+
+    if (!match) return;
+    await removeLaterReviewEntry(match);
+  };
+
+  const hasPipelineExit = useMemo(
+    () => linkedKonsulenter.some((entry: any) => isPipelineExitStatus(entry.status)),
+    [linkedKonsulenter],
+  );
+
+  const buildLaterReviewContext = (candidateName: string) => {
+    const requestContext = row.contacts
+      ? `${row.selskap_navn} · ${row.contacts.first_name} ${row.contacts.last_name}`.trim()
+      : row.selskap_navn;
+    return {
+      requestContext,
+      dateDescription: `${candidateName} er lagret for senere vurdering på forespørselen fra ${requestContext}.`,
+      pipelineDescription: `${candidateName} er klar for vurdering igjen etter avslag eller bortfall i pipeline på forespørselen fra ${requestContext}.`,
+    };
+  };
+
+  const createPipelineExitNotifications = async (triggerStatus: "avslag" | "bortfalt") => {
+    const pendingEntries = laterReviewKonsulenter.filter(
+      (entry) => entry.notify_on_pipeline_exit && !entry.pipeline_notification_task_id,
+    );
+
+    if (pendingEntries.length === 0) return;
+
+    let createdCount = 0;
+    const today = format(new Date(), "yyyy-MM-dd");
+
+    for (const entry of pendingEntries) {
+      const candidateName = getLaterReviewName(entry);
+      const context = buildLaterReviewContext(candidateName);
+
+      try {
+        const taskId = await createLaterReviewTask({
+          assignedTo: entry.notify_user_id,
+          dueDate: today,
+          emailNotify: false,
+          title: `Klar for vurdering: ${candidateName}`,
+          description: `${context.pipelineDescription} Trigger: ${PIPELINE_CONFIG[triggerStatus].label}.`,
+        });
+
+        const { error } = await supabase
+          .from("foresporsler_konsulenter_senere")
+          .update({
+            pipeline_notification_task_id: taskId,
+            pipeline_notified_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", entry.id);
+
+        if (error) throw error;
+        createdCount += 1;
+      } catch (error) {
+        console.error("Kunne ikke opprette senere-vurdering-varsel", error);
+      }
+    }
+
+    if (createdCount > 0) {
+      toast.success(
+        createdCount === 1
+          ? "1 konsulent er klar for senere vurdering"
+          : `${createdCount} konsulenter er klare for senere vurdering`,
+      );
+    }
+  };
+
+  const addLaterReviewConsultant = async (
+    consultantType: "intern" | "ekstern",
+    consultantId: number | string,
+    candidateName: string,
+    options: LaterReviewNotificationOptions,
+  ) => {
+    if (!user?.id) {
+      toast.error("Kunne ikke lagre senere vurdering uten innlogget bruker");
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const insertPayload =
+      consultantType === "intern"
+        ? {
+            foresporsler_id: row.id,
+            ansatt_id: consultantId as number,
+            konsulent_type: "intern",
+            notify_email_date: options.notifyEmailDate || null,
+            notify_on_pipeline_exit: options.notifyOnPipelineExit,
+            notify_user_id: user.id,
+            updated_at: now,
+          }
+        : {
+            foresporsler_id: row.id,
+            ekstern_id: consultantId as string,
+            konsulent_type: "ekstern",
+            notify_email_date: options.notifyEmailDate || null,
+            notify_on_pipeline_exit: options.notifyOnPipelineExit,
+            notify_user_id: user.id,
+            updated_at: now,
+          };
+
+    const { data: inserted, error } = await supabase
+      .from("foresporsler_konsulenter_senere")
+      .insert(insertPayload)
+      .select("id, notify_user_id")
+      .single();
+
+    if (error || !inserted) throw error || new Error("Kunne ikke lagre senere vurdering");
+
+    const context = buildLaterReviewContext(candidateName);
+    const updates: Record<string, string> = { updated_at: new Date().toISOString() };
+    const notificationErrors: string[] = [];
+
+    if (options.notifyEmailDate) {
+      try {
+        const taskId = await createLaterReviewTask({
+          assignedTo: inserted.notify_user_id,
+          dueDate: options.notifyEmailDate,
+          emailNotify: true,
+          title: `Vurder senere: ${candidateName}`,
+          description: context.dateDescription,
+        });
+        updates.date_notification_task_id = taskId;
+      } catch (notificationError) {
+        console.error("Kunne ikke opprette e-postpåminnelse", notificationError);
+        notificationErrors.push("E-postpåminnelse kunne ikke opprettes");
+      }
+    }
+
+    if (options.notifyOnPipelineExit && hasPipelineExit) {
+      try {
+        const taskId = await createLaterReviewTask({
+          assignedTo: inserted.notify_user_id,
+          dueDate: format(new Date(), "yyyy-MM-dd"),
+          emailNotify: false,
+          title: `Klar for vurdering: ${candidateName}`,
+          description: context.pipelineDescription,
+        });
+        updates.pipeline_notification_task_id = taskId;
+        updates.pipeline_notified_at = new Date().toISOString();
+      } catch (notificationError) {
+        console.error("Kunne ikke opprette pipeline-varsel", notificationError);
+        notificationErrors.push("Varsel ved avslag/bortfall kunne ikke opprettes");
+      }
+    }
+
+    if (Object.keys(updates).length > 1) {
+      await supabase
+        .from("foresporsler_konsulenter_senere")
+        .update(updates)
+        .eq("id", inserted.id);
+    }
+
+    await invalidateForesporselQueries();
+
+    toast.success(`${candidateName} lagret for senere vurdering`);
+    if (notificationErrors.length > 0) {
+      toast.error(notificationErrors.join(" "));
+    }
+  };
+
+  const handleRemoveLaterReview = async (entry: LaterReviewEntry) => {
+    setLaterReviewActionId(entry.id);
+    try {
+      await removeLaterReviewEntry(entry);
+      await invalidateForesporselQueries();
+      toast.success(`${getLaterReviewName(entry)} fjernet fra senere vurdering`);
+    } catch (error: any) {
+      console.error("Kunne ikke fjerne senere vurdering", error);
+      toast.error(error?.message || "Kunne ikke fjerne konsulenten");
+    } finally {
+      setLaterReviewActionId(null);
+    }
+  };
+
+  const handlePromoteLaterReview = async (entry: LaterReviewEntry) => {
+    const candidateName = getLaterReviewName(entry);
+    setLaterReviewActionId(entry.id);
+    try {
+      if (entry.konsulent_type === "intern" && entry.ansatt_id) {
+        await handleAddKonsulent(entry.ansatt_id);
+      } else if (entry.konsulent_type === "ekstern" && entry.ekstern_id) {
+        await handleAddEkstern(entry.ekstern_id);
+      } else {
+        throw new Error("Fant ikke konsulenten som skulle legges til");
+      }
+
+      toast.success(`${candidateName} lagt inn i pipeline`);
+    } catch (error: any) {
+      console.error("Kunne ikke legge konsulenten i pipeline", error);
+      toast.error(error?.message || "Kunne ikke legge konsulenten til");
+    } finally {
+      setLaterReviewActionId(null);
+    }
+  };
 
   // Derived expanded state
   const showMatch = matching || (matchResults !== null && matchResults.length > 0);
@@ -419,29 +747,30 @@ export function ForespørselSheet({
   };
 
   const handleAddKonsulent = async (ansattId: number) => {
-    await supabase.from("foresporsler_konsulenter").insert({
+    const { error } = await supabase.from("foresporsler_konsulenter").insert({
       foresporsler_id: row.id,
       ansatt_id: ansattId,
       konsulent_type: "intern",
     });
-    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.list() });
-    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.konsulenter(row.id) });
+    if (error) throw error;
+    await syncLaterReviewAfterPipelineAdd("intern", ansattId);
+    await invalidateForesporselQueries();
   };
 
   const handleAddEkstern = async (eksternId: string) => {
-    await supabase.from("foresporsler_konsulenter").insert({
+    const { error } = await supabase.from("foresporsler_konsulenter").insert({
       foresporsler_id: row.id,
       ekstern_id: eksternId,
       konsulent_type: "ekstern",
     });
-    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.list() });
-    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.konsulenter(row.id) });
+    if (error) throw error;
+    await syncLaterReviewAfterPipelineAdd("ekstern", eksternId);
+    await invalidateForesporselQueries();
   };
 
   const handleRemoveKonsulent = async (linkId: string) => {
     await supabase.from("foresporsler_konsulenter").delete().eq("id", linkId);
-    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.list() });
-    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.konsulenter(row.id) });
+    await invalidateForesporselQueries();
   };
 
   const fireConfetti = () => {
@@ -477,8 +806,10 @@ export function ForespørselSheet({
       setOppdragErAnsatt(isIntern);
       setTimeout(() => setOppdragModalOpen(true), 600);
     }
-    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.konsulenter(row.id) });
-    queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.list() });
+    if (newStatus === "avslag" || newStatus === "bortfalt") {
+      await createPipelineExitNotifications(newStatus);
+    }
+    await invalidateForesporselQueries();
   };
 
   const handleCreateOppdrag = async () => {
@@ -603,12 +934,17 @@ export function ForespørselSheet({
 
   // Add from match result
   const addFromMatch = async (match: MatchResult) => {
-    if (match.type === "intern") {
-      await handleAddKonsulent(match.id as number);
-      toast.success(`${match.navn} lagt til`);
-    } else {
-      await handleAddEkstern(match.id as string);
-      toast.success(`${match.navn} (ekstern) lagt til`);
+    try {
+      if (match.type === "intern") {
+        await handleAddKonsulent(match.id as number);
+        toast.success(`${match.navn} lagt til`);
+      } else {
+        await handleAddEkstern(match.id as string);
+        toast.success(`${match.navn} (ekstern) lagt til`);
+      }
+    } catch (error: any) {
+      console.error("Kunne ikke legge til fra match", error);
+      toast.error(error?.message || "Kunne ikke legge til konsulenten");
     }
   };
 
@@ -628,10 +964,21 @@ export function ForespørselSheet({
   const contactEmail = row.contacts?.email || null;
   const contactPhone = row.contacts?.phone || null;
   const companyHref = row.selskap_id ? getCompanyPath(row.selskap_id) : null;
-  const alreadyLinkedIds = new Set([
-    ...linkedKonsulenter.filter((k: any) => k.konsulent_type === "intern").map((k: any) => k.ansatt_id),
-    ...linkedKonsulenter.filter((k: any) => k.konsulent_type === "ekstern").map((k: any) => k.ekstern_id),
-  ]);
+  const linkedInternIds = linkedKonsulenter
+    .filter((k: any) => k.konsulent_type === "intern")
+    .map((k: any) => k.ansatt_id)
+    .filter(Boolean);
+  const linkedEksternIds = linkedKonsulenter
+    .filter((k: any) => k.konsulent_type === "ekstern")
+    .map((k: any) => k.ekstern_id)
+    .filter(Boolean);
+  const laterReviewInternIds = laterReviewKonsulenter
+    .filter((entry) => entry.konsulent_type === "intern" && entry.ansatt_id)
+    .map((entry) => entry.ansatt_id as number);
+  const laterReviewEksternIds = laterReviewKonsulenter
+    .filter((entry) => entry.konsulent_type === "ekstern" && entry.ekstern_id)
+    .map((entry) => entry.ekstern_id as string);
+  const alreadyLinkedIds = new Set([...linkedInternIds, ...linkedEksternIds]);
 
   return (
     <div className="flex flex-col h-full">
@@ -882,15 +1229,161 @@ export function ForespørselSheet({
                       );
                     })}
                   </div>
+                  <div className="flex flex-wrap items-start gap-2">
+                    <AddKonsulentCombobox
+                      alreadyLinkedIntern={linkedInternIds as number[]}
+                      alreadyLinkedEkstern={linkedEksternIds as string[]}
+                      portraitByAnsattId={portraitByAnsattId}
+                      onAddIntern={handleAddKonsulent}
+                      onAddEkstern={handleAddEkstern}
+                    />
+                    <AddLaterReviewCombobox
+                      alreadyLinkedIntern={[...(linkedInternIds as number[]), ...laterReviewInternIds]}
+                      alreadyLinkedEkstern={[...(linkedEksternIds as string[]), ...laterReviewEksternIds]}
+                      portraitByAnsattId={portraitByAnsattId}
+                      onAddIntern={(ansattId, consultantName, options) =>
+                        addLaterReviewConsultant("intern", ansattId, consultantName, options)
+                      }
+                      onAddEkstern={(eksternId, consultantName, options) =>
+                        addLaterReviewConsultant("ekstern", eksternId, consultantName, options)
+                      }
+                    />
+                  </div>
+                </div>
 
-                  <AddKonsulentCombobox
-                    foresporslerID={row.id}
-                    alreadyLinkedIntern={linkedKonsulenter.filter((k: any) => k.konsulent_type === "intern").map((k: any) => k.ansatt_id)}
-                    alreadyLinkedEkstern={linkedKonsulenter.filter((k: any) => k.konsulent_type === "ekstern").map((k: any) => k.ekstern_id)}
-                    portraitByAnsattId={portraitByAnsattId}
-                    onAddIntern={handleAddKonsulent}
-                    onAddEkstern={handleAddEkstern}
-                  />
+                <div>
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <p className={LABEL}>Senere vurdering ({laterReviewKonsulenter.length})</p>
+                    <span className="text-[0.6875rem] text-muted-foreground">
+                      Utenfor pipeline
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {laterReviewKonsulenter.length === 0 && (
+                      <p className="text-[0.8125rem] text-muted-foreground">
+                        Ingen konsulenter lagret for senere vurdering ennå
+                      </p>
+                    )}
+                    {laterReviewKonsulenter.map((entry) => {
+                      const isIntern = entry.konsulent_type === "intern";
+                      const name = getLaterReviewName(entry);
+                      const isBusy = laterReviewActionId === entry.id;
+                      const pipelineNotificationReady = Boolean(entry.pipeline_notification_task_id);
+                      const hasNotifications = entry.notify_on_pipeline_exit || Boolean(entry.notify_email_date);
+
+                      return (
+                        <div
+                          key={entry.id}
+                          className="rounded-lg border border-dashed border-border bg-background/80 px-3 py-3"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                {isIntern ? (
+                                  (() => {
+                                    const portrait = entry.ansatt_id
+                                      ? portraitByAnsattId.get(entry.ansatt_id)
+                                      : undefined;
+                                    if (portrait) {
+                                      return (
+                                        <img
+                                          src={portrait}
+                                          alt={name}
+                                          className="h-7 w-7 rounded-full object-cover border border-border shrink-0"
+                                        />
+                                      );
+                                    }
+                                    return (
+                                      <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[0.6875rem] font-semibold text-primary shrink-0">
+                                        {getInitials(name)}
+                                      </div>
+                                    );
+                                  })()
+                                ) : (
+                                  <div className="h-7 w-7 rounded-full bg-blue-100 flex items-center justify-center text-[0.6875rem] font-semibold text-blue-700 shrink-0">
+                                    {getInitials(name)}
+                                  </div>
+                                )}
+
+                                <span className="text-[0.875rem] font-medium text-foreground">
+                                  {name}
+                                </span>
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold",
+                                    isIntern ? "bg-foreground text-background" : "bg-blue-100 text-blue-700",
+                                  )}
+                                >
+                                  {isIntern ? "Ansatt" : "Ekstern"}
+                                </span>
+                                {!isIntern && (
+                                  <span className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-muted-foreground">
+                                    {getExternalConsultantTypeLabel(entry.external_consultants?.type)}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {entry.notify_on_pipeline_exit && (
+                                  <span
+                                    className={cn(
+                                      "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.6875rem] font-medium",
+                                      pipelineNotificationReady
+                                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                        : "border-border bg-muted text-muted-foreground",
+                                    )}
+                                  >
+                                    <Bell className="h-3 w-3" />
+                                    {pipelineNotificationReady ? "Varsel sendt" : "Ved avslag/bortfall"}
+                                  </span>
+                                )}
+                                {entry.notify_email_date && (
+                                  <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-muted-foreground">
+                                    <CalendarDays className="h-3 w-3" />
+                                    E-post {formatNotificationDate(entry.notify_email_date)}
+                                  </span>
+                                )}
+                                {!hasNotifications && (
+                                  <span className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-muted-foreground">
+                                    Ingen varsling
+                                  </span>
+                                )}
+                              </div>
+
+                              <p className="mt-2 text-[0.75rem] text-muted-foreground">
+                                Holdes utenfor pipeline til du er klar til å legge konsulenten inn.
+                              </p>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => void handleRemoveLaterReview(entry)}
+                              disabled={isBusy}
+                              className="mt-0.5 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <DesignLabActionButton
+                              variant="secondary"
+                              onClick={() => void handlePromoteLaterReview(entry)}
+                              disabled={isBusy}
+                              style={{ height: 32, fontSize: 12 }}
+                            >
+                              {isBusy ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <ArrowRight className="h-3.5 w-3.5" />
+                              )}
+                              Legg konsulenten
+                            </DesignLabActionButton>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* ─── Kommentar (inline edit) ─── */}
@@ -1475,23 +1968,22 @@ function EditMode(props: any) {
 /* ─── Add Konsulent Combobox ─── */
 
 function AddKonsulentCombobox({
-  foresporslerID,
   alreadyLinkedIntern,
   alreadyLinkedEkstern,
   portraitByAnsattId,
   onAddIntern,
   onAddEkstern,
 }: {
-  foresporslerID: number;
   alreadyLinkedIntern: number[];
   alreadyLinkedEkstern: string[];
   portraitByAnsattId: Map<number, string>;
-  onAddIntern: (ansattId: number) => void;
-  onAddEkstern: (eksternId: string) => void;
+  onAddIntern: (ansattId: number) => Promise<void>;
+  onAddEkstern: (eksternId: string) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [subTab, setSubTab] = useState<"ansatte" | "eksterne">("ansatte");
+  const [addingKey, setAddingKey] = useState<string | null>(null);
 
   const { data: ansatte = [] } = useQuery({
     queryKey: ["stacq-ansatte-aktive"],
@@ -1531,6 +2023,36 @@ function AddKonsulentCombobox({
     .filter((e: any) => !q || e.navn?.toLowerCase().includes(q));
 
   const CHIP_BASE_SM = "h-7 px-2.5 text-[0.75rem] rounded-[6px] border transition-colors cursor-pointer select-none font-medium";
+
+  const handleSelectIntern = async (ansattId: number) => {
+    setAddingKey(`intern-${ansattId}`);
+    try {
+      await onAddIntern(ansattId);
+      toast.success("Konsulenten er lagt til");
+      setOpen(false);
+      setSearch("");
+    } catch (error: any) {
+      console.error("Kunne ikke legge til konsulent", error);
+      toast.error(error?.message || "Kunne ikke legge til konsulenten");
+    } finally {
+      setAddingKey(null);
+    }
+  };
+
+  const handleSelectEkstern = async (eksternId: string) => {
+    setAddingKey(`ekstern-${eksternId}`);
+    try {
+      await onAddEkstern(eksternId);
+      toast.success("Konsulenten er lagt til");
+      setOpen(false);
+      setSearch("");
+    } catch (error: any) {
+      console.error("Kunne ikke legge til ekstern konsulent", error);
+      toast.error(error?.message || "Kunne ikke legge til konsulenten");
+    } finally {
+      setAddingKey(null);
+    }
+  };
 
   return (
     <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setSearch(""); } }}>
@@ -1573,8 +2095,9 @@ function AddKonsulentCombobox({
               filteredAnsatte.map((a: any) => (
                 <button
                   key={a.id}
-                  onClick={() => { onAddIntern(a.id); setOpen(false); setSearch(""); }}
-                  className="w-full text-left px-2 py-2 rounded hover:bg-muted transition-colors"
+                  onClick={() => void handleSelectIntern(a.id)}
+                  disabled={addingKey !== null}
+                  className="w-full text-left px-2 py-2 rounded hover:bg-muted transition-colors disabled:opacity-60"
                 >
                   <div className="flex items-center gap-2">
                     {(() => {
@@ -1595,6 +2118,9 @@ function AddKonsulentCombobox({
                       );
                     })()}
                     <span className="text-[0.8125rem] font-medium text-foreground">{a.navn}</span>
+                    {addingKey === `intern-${a.id}` && (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                    )}
                   </div>
                   {a.kompetanse?.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1 ml-8">
@@ -1618,14 +2144,18 @@ function AddKonsulentCombobox({
               filteredEksterne.map((e: any) => (
                 <button
                   key={e.id}
-                  onClick={() => { onAddEkstern(e.id); setOpen(false); setSearch(""); }}
-                  className="w-full text-left px-2 py-2 rounded hover:bg-muted transition-colors"
+                  onClick={() => void handleSelectEkstern(e.id)}
+                  disabled={addingKey !== null}
+                  className="w-full text-left px-2 py-2 rounded hover:bg-muted transition-colors disabled:opacity-60"
                 >
                   <div className="flex items-center gap-2">
                     <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-[0.625rem] font-semibold text-blue-700 shrink-0">
                       {getInitials(e.navn || "?")}
                     </div>
                     <span className="text-[0.8125rem] font-medium text-foreground">{e.navn || "Ukjent"}</span>
+                    {addingKey === `ekstern-${e.id}` && (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                    )}
                     <span className={cn(
                       "inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold",
                       e.type === "via_partner" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
@@ -1649,6 +2179,289 @@ function AddKonsulentCombobox({
               ))
             )
           )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function AddLaterReviewCombobox({
+  alreadyLinkedIntern,
+  alreadyLinkedEkstern,
+  portraitByAnsattId,
+  onAddIntern,
+  onAddEkstern,
+}: {
+  alreadyLinkedIntern: number[];
+  alreadyLinkedEkstern: string[];
+  portraitByAnsattId: Map<number, string>;
+  onAddIntern: (
+    ansattId: number,
+    consultantName: string,
+    options: LaterReviewNotificationOptions,
+  ) => Promise<void>;
+  onAddEkstern: (
+    eksternId: string,
+    consultantName: string,
+    options: LaterReviewNotificationOptions,
+  ) => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [subTab, setSubTab] = useState<"ansatte" | "eksterne">("ansatte");
+  const [notifyOnPipelineExit, setNotifyOnPipelineExit] = useState(false);
+  const [notifyEmailDate, setNotifyEmailDate] = useState("");
+  const [addingKey, setAddingKey] = useState<string | null>(null);
+
+  const { data: ansatte = [] } = useQuery({
+    queryKey: ["stacq-ansatte-aktive"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("stacq_ansatte")
+        .select("id, navn, kompetanse, status")
+        .in("status", ["AKTIV/SIGNERT", "Ledig"])
+        .order("navn");
+      return data || [];
+    },
+  });
+
+  const { data: eksterne = [] } = useQuery({
+    queryKey: ["external-consultants-legg-til"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("external_consultants")
+        .select("id, navn, teknologier, type, status")
+        .order("created_at", { ascending: true });
+      const unique = (data || []).filter((c: any, i: number, arr: any[]) =>
+        arr.findIndex((x: any) => x.navn === c.navn) === i
+      );
+      return unique;
+    },
+  });
+
+  const q = search.toLowerCase();
+  const options: LaterReviewNotificationOptions = {
+    notifyOnPipelineExit,
+    notifyEmailDate: notifyEmailDate || null,
+  };
+
+  const filteredAnsatte = ansatte
+    .filter((a: any) => !alreadyLinkedIntern.includes(a.id))
+    .filter((a: any) => !q || a.navn?.toLowerCase().includes(q));
+
+  const filteredEksterne = eksterne
+    .filter((e: any) => !alreadyLinkedEkstern.includes(e.id))
+    .filter((e: any) => !q || e.navn?.toLowerCase().includes(q));
+
+  const CHIP_BASE_SM = "h-7 px-2.5 text-[0.75rem] rounded-[6px] border transition-colors cursor-pointer select-none font-medium";
+
+  const resetState = () => {
+    setSearch("");
+    setNotifyOnPipelineExit(false);
+    setNotifyEmailDate("");
+    setAddingKey(null);
+  };
+
+  const handleSelectIntern = async (ansattId: number, consultantName: string) => {
+    setAddingKey(`intern-${ansattId}`);
+    try {
+      await onAddIntern(ansattId, consultantName, options);
+      setOpen(false);
+      resetState();
+    } catch (error: any) {
+      console.error("Kunne ikke lagre intern konsulent for senere vurdering", error);
+      toast.error(error?.message || "Kunne ikke lagre konsulenten");
+      setAddingKey(null);
+    }
+  };
+
+  const handleSelectEkstern = async (eksternId: string, consultantName: string) => {
+    setAddingKey(`ekstern-${eksternId}`);
+    try {
+      await onAddEkstern(eksternId, consultantName, options);
+      setOpen(false);
+      resetState();
+    } catch (error: any) {
+      console.error("Kunne ikke lagre ekstern konsulent for senere vurdering", error);
+      toast.error(error?.message || "Kunne ikke lagre konsulenten");
+      setAddingKey(null);
+    }
+  };
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (!nextOpen) resetState();
+      }}
+    >
+      <PopoverTrigger asChild>
+        <button className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border text-muted-foreground hover:bg-secondary transition-colors">
+          <Clock3 className="h-4 w-4" />
+          Legg til konsulent for senere vurdering
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[360px] p-3" align="start">
+        <div className="space-y-3">
+          <div>
+            <p className="text-[0.8125rem] font-medium text-foreground">Legg til for senere vurdering</p>
+            <p className="text-[0.75rem] text-muted-foreground mt-1">
+              Konsulenten lagres utenfor pipeline til du er klar til å legge den inn.
+            </p>
+          </div>
+
+          <div className="flex gap-1.5">
+            <button
+              className={`${CHIP_BASE_SM} ${subTab === "ansatte" ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:bg-secondary"}`}
+              onClick={() => setSubTab("ansatte")}
+            >
+              Ansatte
+            </button>
+            <button
+              className={`${CHIP_BASE_SM} ${subTab === "eksterne" ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:bg-secondary"}`}
+              onClick={() => setSubTab("eksterne")}
+            >
+              Eksterne
+            </button>
+          </div>
+
+          <Input
+            placeholder="Søk etter konsulent..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8 text-sm"
+            autoFocus
+          />
+
+          <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
+            <label className="flex items-start gap-2 cursor-pointer select-none">
+              <Checkbox
+                checked={notifyOnPipelineExit}
+                onCheckedChange={(value) => setNotifyOnPipelineExit(Boolean(value))}
+                className="mt-0.5 h-4 w-4"
+              />
+              <span>
+                <span className="block text-[0.8125rem] font-medium text-foreground">
+                  Varsle ved avslag eller bortfall
+                </span>
+                <span className="block text-[0.75rem] text-muted-foreground">
+                  Oppretter en oppfølging når en konsulent i pipeline faller ut.
+                </span>
+              </span>
+            </label>
+
+            <div className="space-y-1.5">
+              <label htmlFor="later-review-email-date" className="block text-[0.8125rem] font-medium text-foreground">
+                E-postpåminnelse på dato
+              </label>
+              <Input
+                id="later-review-email-date"
+                type="date"
+                min={format(new Date(), "yyyy-MM-dd")}
+                value={notifyEmailDate}
+                onChange={(e) => setNotifyEmailDate(e.target.value)}
+                className="h-8 text-sm"
+              />
+              <p className="text-[0.75rem] text-muted-foreground">
+                Sender e-post til deg på valgt dato.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-0.5 max-h-[260px] overflow-y-auto">
+            {subTab === "ansatte" ? (
+              filteredAnsatte.length === 0 ? (
+                <p className="text-[0.8125rem] text-muted-foreground px-2 py-2">Ingen treff</p>
+              ) : (
+                filteredAnsatte.map((a: any) => (
+                  <button
+                    key={a.id}
+                    onClick={() => void handleSelectIntern(a.id, a.navn || "Ukjent")}
+                    disabled={addingKey !== null}
+                    className="w-full text-left px-2 py-2 rounded hover:bg-muted transition-colors disabled:opacity-60"
+                  >
+                    <div className="flex items-center gap-2">
+                      {(() => {
+                        const portrait = portraitByAnsattId.get(a.id);
+                        if (portrait) {
+                          return (
+                            <img
+                              src={portrait}
+                              alt={a.navn}
+                              className="h-6 w-6 rounded-full object-cover border border-border shrink-0"
+                            />
+                          );
+                        }
+                        return (
+                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[0.625rem] font-semibold text-primary shrink-0">
+                            {getInitials(a.navn)}
+                          </div>
+                        );
+                      })()}
+                      <span className="text-[0.8125rem] font-medium text-foreground">{a.navn}</span>
+                      {addingKey === `intern-${a.id}` && (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                      )}
+                    </div>
+                    {a.kompetanse?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1 ml-8">
+                        {(a.kompetanse as string[]).slice(0, 4).map((t: string) => (
+                          <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-1.5 py-0.5 text-[0.625rem] text-muted-foreground">
+                            {t}
+                          </span>
+                        ))}
+                        {a.kompetanse.length > 4 && (
+                          <span className="text-[0.625rem] text-muted-foreground">+{a.kompetanse.length - 4}</span>
+                        )}
+                      </div>
+                    )}
+                  </button>
+                ))
+              )
+            ) : (
+              filteredEksterne.length === 0 ? (
+                <p className="text-[0.8125rem] text-muted-foreground px-2 py-2">Ingen treff</p>
+              ) : (
+                filteredEksterne.map((e: any) => (
+                  <button
+                    key={e.id}
+                    onClick={() => void handleSelectEkstern(e.id, e.navn || "Ukjent")}
+                    disabled={addingKey !== null}
+                    className="w-full text-left px-2 py-2 rounded hover:bg-muted transition-colors disabled:opacity-60"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-[0.625rem] font-semibold text-blue-700 shrink-0">
+                        {getInitials(e.navn || "?")}
+                      </div>
+                      <span className="text-[0.8125rem] font-medium text-foreground">{e.navn || "Ukjent"}</span>
+                      {addingKey === `ekstern-${e.id}` && (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                      )}
+                      <span className={cn(
+                        "inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold",
+                        e.type === "via_partner" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
+                      )}>
+                        {e.type === "via_partner" ? "Partner" : "Freelance"}
+                      </span>
+                    </div>
+                    {e.teknologier?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1 ml-8">
+                        {(e.teknologier as string[]).slice(0, 4).map((t: string) => (
+                          <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-1.5 py-0.5 text-[0.625rem] text-muted-foreground">
+                            {t}
+                          </span>
+                        ))}
+                        {e.teknologier.length > 4 && (
+                          <span className="text-[0.625rem] text-muted-foreground">+{e.teknologier.length - 4}</span>
+                        )}
+                      </div>
+                    )}
+                  </button>
+                ))
+              )
+            )}
+          </div>
         </div>
       </PopoverContent>
     </Popover>

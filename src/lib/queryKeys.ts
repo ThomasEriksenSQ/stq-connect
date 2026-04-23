@@ -32,6 +32,8 @@ export const crmQueryKeys = {
     editKontakter: (selskapId: string | null) => ["foresporsler-edit-kontakter", selskapId] as const,
     konsulenter: (foresporselId: number | string | null | undefined) =>
       ["foresporsler-konsulenter", foresporselId] as const,
+    senereKonsulenter: (foresporselId: number | string | null | undefined) =>
+      ["foresporsler-senere-konsulenter", foresporselId] as const,
   },
   profiles: {
     all: () => ["profiles"] as const,

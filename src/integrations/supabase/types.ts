@@ -952,6 +952,90 @@ export type Database = {
           },
         ]
       }
+      foresporsler_konsulenter_senere: {
+        Row: {
+          ansatt_id: number | null
+          created_at: string
+          date_notification_task_id: string | null
+          ekstern_id: string | null
+          foresporsler_id: number
+          id: string
+          konsulent_type: string
+          notify_email_date: string | null
+          notify_on_pipeline_exit: boolean
+          notify_user_id: string
+          pipeline_notification_task_id: string | null
+          pipeline_notified_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          ansatt_id?: number | null
+          created_at?: string
+          date_notification_task_id?: string | null
+          ekstern_id?: string | null
+          foresporsler_id: number
+          id?: string
+          konsulent_type?: string
+          notify_email_date?: string | null
+          notify_on_pipeline_exit?: boolean
+          notify_user_id: string
+          pipeline_notification_task_id?: string | null
+          pipeline_notified_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ansatt_id?: number | null
+          created_at?: string
+          date_notification_task_id?: string | null
+          ekstern_id?: string | null
+          foresporsler_id?: number
+          id?: string
+          konsulent_type?: string
+          notify_email_date?: string | null
+          notify_on_pipeline_exit?: boolean
+          notify_user_id?: string
+          pipeline_notification_task_id?: string | null
+          pipeline_notified_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "foresporsler_konsulenter_senere_ansatt_id_fkey"
+            columns: ["ansatt_id"]
+            isOneToOne: false
+            referencedRelation: "stacq_ansatte"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "foresporsler_konsulenter_senere_date_notification_task_id_fkey"
+            columns: ["date_notification_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "foresporsler_konsulenter_senere_ekstern_id_fkey"
+            columns: ["ekstern_id"]
+            isOneToOne: false
+            referencedRelation: "external_consultants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "foresporsler_konsulenter_senere_foresporsler_id_fkey"
+            columns: ["foresporsler_id"]
+            isOneToOne: false
+            referencedRelation: "foresporsler"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "foresporsler_konsulenter_senere_pipeline_notification_task_id_fkey"
+            columns: ["pipeline_notification_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_base: {
         Row: {
           active: boolean

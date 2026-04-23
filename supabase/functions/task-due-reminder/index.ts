@@ -51,7 +51,7 @@ Deno.serve(async (req: Request) => {
     const today = getDateKeyInTimeZone(new Date(), CRM_TIME_ZONE);
     const { data: tasks, error: tasksError } = await adminClient
       .from("tasks")
-      .select("id, title, due_date, assigned_to, contact_id, company_id, contacts(first_name, last_name, companies(name))")
+      .select("id, title, description, due_date, assigned_to, contact_id, company_id, contacts(first_name, last_name, companies(name)), companies(name)")
       .eq("email_notify", true)
       .lte("due_date", today)
       .neq("status", "done");
@@ -78,13 +78,27 @@ Deno.serve(async (req: Request) => {
         }
 
         const contact = task.contacts as any;
+        const company = task.companies as any;
         const contactName = contact ? `${contact.first_name} ${contact.last_name}` : "Ukjent kontakt";
-        const companyName = contact?.companies?.name || "";
-        const contactLine = companyName ? `${contactName} · ${companyName}` : contactName;
-        const contactUrl = task.contact_id ? `${APP_URL}/kontakter/${task.contact_id}` : APP_URL;
+        const companyName = contact?.companies?.name || company?.name || "";
+        const contactLine = contact
+          ? (companyName ? `${contactName} · ${companyName}` : contactName)
+          : (companyName || "STACQ CRM");
+        const contactUrl = task.contact_id
+          ? `${APP_URL}/kontakter/${task.contact_id}`
+          : task.company_id
+            ? `${APP_URL}/selskaper/${task.company_id}`
+            : APP_URL;
 
         const isOverdue = task.due_date < today;
         const dueLine = isOverdue ? `⚠️ Forfalt (${task.due_date})` : `Forfaller i dag`;
+        const descriptionHtml = task.description
+          ? `
+  <!-- Description -->
+  <div style="padding:0 40px 24px">
+    <p style="font-size:14px;line-height:1.6;color:#475569;margin:0">${task.description}</p>
+  </div>`
+          : "";
 
         const datoNorsk = new Intl.DateTimeFormat("nb-NO", {
           timeZone: CRM_TIME_ZONE,
@@ -128,6 +142,8 @@ Deno.serve(async (req: Request) => {
       <p style="font-size:14px;color:${isOverdue ? '#dc2626' : '#1e293b'};margin:0;font-weight:600">${dueLine}</p>
     </div>
   </div>
+
+  ${descriptionHtml}
 
   <!-- CTA -->
   <div style="padding:16px 40px 32px">
