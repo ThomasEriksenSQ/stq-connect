@@ -128,11 +128,15 @@ export default function StacqPrisen() {
 
   const aktive = enriched.filter((r) => r.status === "Aktiv");
   const aktiveAnsatte = aktive.filter((r) => r.er_ansatt === true);
+  const aktiveEksterne = aktive.filter((r) => r.er_ansatt !== true);
   const oppstart = enriched.filter((r) => r.status === "Oppstart");
   const stacqTotalPerTime = aktive.reduce((s, r) => s + r.stacqPris, 0);
   const oppstartTotalPerTime = oppstart.reduce((s, r) => s + r.stacqPris, 0);
   const avgMarginPerAnsatt = aktiveAnsatte.length > 0
     ? aktiveAnsatte.reduce((s, r) => s + r.stacqPris, 0) / aktiveAnsatte.length
+    : 0;
+  const avgMarginPerEkstern = aktiveEksterne.length > 0
+    ? aktiveEksterne.reduce((s, r) => s + r.stacqPris, 0) / aktiveEksterne.length
     : 0;
 
   const now = new Date();
@@ -202,10 +206,11 @@ export default function StacqPrisen() {
       </div>
 
       {/* Hero stat cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <StatCard label="STACQ Prisen / time" value={`kr ${formatKr(Math.round(stacqTotalPerTime))}`} sub={`${aktive.length} konsulenter i oppdrag`} accent="emerald" suffix="/ time" />
         <StatCard label="STACQ Prisen / mnd" value={`kr ${formatKr(Math.round(monthlyTotal))}`} sub={`${workdayCount} arbeidsdager · ${format(now, "MMMM yyyy", { locale: nb })}`} suffix="/ mnd" />
         <StatCard label="Snitt margin per ansatt" value={`kr ${formatKr(Math.round(avgMarginPerAnsatt))}`} sub="kun ansatte" suffix="/ time" />
+        <StatCard label="Snitt margin per ekstern" value={`kr ${formatKr(Math.round(avgMarginPerEkstern))}`} sub="kun eksterne" suffix="/ time" />
         <StatCard label="Oppstart" value={`+ kr ${formatKr(Math.round(oppstartTotalPerTime))}`} sub={`${oppstart.length} konsulenter kommer snart`} accent="amber" suffix="/ time" />
       </div>
 

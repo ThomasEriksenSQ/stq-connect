@@ -156,11 +156,15 @@ export default function DesignLabStacqPrisen() {
 
   const aktive = enriched.filter((r) => r.status === "Aktiv");
   const aktiveAnsatte = aktive.filter((r) => r.er_ansatt === true);
+  const aktiveEksterne = aktive.filter((r) => r.er_ansatt !== true);
   const oppstart = enriched.filter((r) => r.status === "Oppstart");
   const stacqTotalPerTime = aktive.reduce((s, r) => s + r.stacqPris, 0);
   const oppstartTotalPerTime = oppstart.reduce((s, r) => s + r.stacqPris, 0);
   const avgMarginPerAnsatt = aktiveAnsatte.length > 0
     ? aktiveAnsatte.reduce((s, r) => s + r.stacqPris, 0) / aktiveAnsatte.length
+    : 0;
+  const avgMarginPerEkstern = aktiveEksterne.length > 0
+    ? aktiveEksterne.reduce((s, r) => s + r.stacqPris, 0) / aktiveEksterne.length
     : 0;
 
   const now = new Date();
@@ -216,7 +220,7 @@ export default function DesignLabStacqPrisen() {
         {/* Content */}
         <div className="dl-page-scroll flex-1 overflow-y-auto">
           <div className="flex flex-col gap-4" style={{ maxWidth: "none", margin: 0 }}>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
               <TopStatCard
                 label="STACQ Prisen / time"
                 value={`kr ${formatKr(Math.round(stacqTotalPerTime))}`}
@@ -234,6 +238,12 @@ export default function DesignLabStacqPrisen() {
                 label="Snitt margin per ansatt"
                 value={`kr ${formatKr(Math.round(avgMarginPerAnsatt))}`}
                 sub="kun ansatte"
+                suffix="/ time"
+              />
+              <TopStatCard
+                label="Snitt margin per ekstern"
+                value={`kr ${formatKr(Math.round(avgMarginPerEkstern))}`}
+                sub="kun eksterne"
                 suffix="/ time"
               />
               <TopStatCard
