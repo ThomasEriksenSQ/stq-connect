@@ -336,9 +336,20 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
           ? old.map((row) => (row.id === ansatt.id ? { ...row, ...cachePatch } : row))
           : old,
       );
+      queryClient.setQueryData(["dl-available-consultants-v9"], (old: any) =>
+        Array.isArray(old)
+          ? old.map((row) => (row.id === ansatt.id ? { ...row, ...cachePatch } : row))
+          : old,
+      );
+      queryClient.setQueryData(["contacts-hunt-consultants"], (old: any) =>
+        Array.isArray(old)
+          ? old.map((row) => (row.id === ansatt.id ? { ...row, ...cachePatch } : row))
+          : old,
+      );
     }
     queryClient.invalidateQueries({ queryKey: ["stacq-ansatte"] });
     queryClient.invalidateQueries({ queryKey: ["dl-available-consultants-v9"] });
+    queryClient.invalidateQueries({ queryKey: ["contacts-hunt-consultants"] });
     queryClient.invalidateQueries({ queryKey: ["ansatt-detail", ansatt?.id] });
     if (isCreate || openInEditMode) {
       onClose();
