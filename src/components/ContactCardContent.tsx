@@ -433,24 +433,11 @@ function ContactSentCvEmailBody({ entry }: { entry: ContactSentCvEntry }) {
 
   return (
     <div className="mt-3 rounded-lg border border-border bg-background px-3 py-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <p className="truncate text-[0.875rem] font-semibold text-foreground">{subject}</p>
-          <p className="mt-0.5 break-all text-[0.75rem] text-muted-foreground">
-            {entry.sender_email} → {entry.recipient_email}
-          </p>
-        </div>
-        {entry.message_web_link ? (
-          <a
-            href={entry.message_web_link}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex flex-shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-[0.75rem] text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-            Åpne i Outlook
-          </a>
-        ) : null}
+      <div className="min-w-0">
+        <p className="truncate text-[0.875rem] font-semibold text-foreground">{subject}</p>
+        <p className="mt-0.5 break-all text-[0.75rem] text-muted-foreground">
+          {entry.sender_email} → {entry.recipient_email}
+        </p>
       </div>
 
       {visibleBody ? (

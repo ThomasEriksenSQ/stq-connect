@@ -29,7 +29,7 @@ function getModeTitle(mode: ThemeMode, resolvedTheme?: string) {
   return `Tema: ${mode === "dark" ? "mørk" : "lys"}`;
 }
 
-export function ThemeModeControl({ scale = 1 }: { scale?: number }) {
+export function ThemeModeControl({ scale = 1, embedded = false }: { scale?: number; embedded?: boolean }) {
   const { theme, resolvedTheme, setTheme } = useTheme();
   const mode = normalizeTheme(theme);
   const px = (value: number) => Math.round(value * scale * 100) / 100;
@@ -37,13 +37,23 @@ export function ThemeModeControl({ scale = 1 }: { scale?: number }) {
   return (
     <div
       style={{
-        border: `1px solid ${C.borderLight}`,
-        background: C.surfaceAlt,
-        borderRadius: px(8),
-        padding: px(4),
+        border: embedded ? "none" : `1px solid ${C.borderLight}`,
+        background: embedded ? "transparent" : C.surfaceAlt,
+        borderRadius: embedded ? 0 : px(10),
+        padding: embedded ? 0 : px(4),
+        boxShadow: embedded ? "none" : "inset 0 1px 0 rgba(255,255,255,0.55)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: px(6), marginBottom: px(4), paddingInline: px(4) }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: px(6),
+          marginBottom: px(4),
+          paddingInline: embedded ? px(2) : px(4),
+        }}
+      >
         <span style={{ fontSize: px(11), fontWeight: 500, color: C.textFaint }}>Tema</span>
         <span style={{ fontSize: px(10), fontWeight: 500, color: C.textGhost }}>
           {mode === "system" ? (resolvedTheme === "dark" ? "System: mørk" : "System: lys") : mode === "dark" ? "Mørk" : "Lys"}
@@ -63,13 +73,13 @@ export function ThemeModeControl({ scale = 1 }: { scale?: number }) {
               className="flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dl-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--dl-focus-offset)]"
               style={{
                 ["--dl-focus-ring" as string]: C.borderFocus,
-                ["--dl-focus-offset" as string]: C.surfaceAlt,
-                height: px(28),
+                ["--dl-focus-offset" as string]: embedded ? "transparent" : C.surfaceAlt,
+                height: px(30),
                 gap: px(5),
-                border: "none",
-                borderRadius: px(6),
+                border: active ? `1px solid ${C.borderDefault}` : "1px solid transparent",
+                borderRadius: px(8),
                 background: active ? C.surface : "transparent",
-                boxShadow: active ? C.shadow : "none",
+                boxShadow: active ? "0 1px 2px rgba(15,23,42,0.06)" : "none",
                 color: active ? C.text : C.textFaint,
                 cursor: "pointer",
                 fontSize: px(11),

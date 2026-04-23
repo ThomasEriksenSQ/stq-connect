@@ -175,16 +175,47 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
 
       {/* Tekststørrelse — over footer-streken, gruppert med nav */}
       {!collapsed && (
-        <div className="shrink-0 space-y-2" style={{ paddingInline: px(10), paddingBottom: px(10) }}>
-          <TextSizeControlSidebar value={textSize} onChange={setTextSize} />
-          <ThemeModeControl scale={scale} />
+        <div className="shrink-0" style={{ paddingInline: px(10), paddingBottom: px(12) }}>
+          <div
+            style={{
+              border: `1px solid ${C.borderLight}`,
+              background: C.surface,
+              borderRadius: px(12),
+              paddingTop: px(6),
+              paddingBottom: px(6),
+              boxShadow: "0 1px 2px rgba(15,23,42,0.04), inset 0 1px 0 rgba(255,255,255,0.55)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingInline: px(10),
+                paddingBottom: px(4),
+              }}
+            >
+              <span style={{ fontSize: px(10.5), fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textFaint }}>
+                Tilpasning
+              </span>
+              <span style={{ fontSize: px(10), fontWeight: 500, color: C.textGhost }}>
+                {Math.round(scale * 100)}%
+              </span>
+            </div>
+            <TextSizeControlSidebar value={textSize} onChange={setTextSize} />
+            <div style={{ marginTop: px(4), paddingTop: px(6), borderTop: `1px solid ${C.borderLight}` }}>
+              <div style={{ paddingInline: px(8) }}>
+                <ThemeModeControl scale={scale} embedded />
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Footer */}
       <div
         className="mt-auto shrink-0 space-y-0.5"
-        style={{ borderTop: `1px solid ${C.border}`, padding: `${px(8)}px ${collapsed ? px(6) : px(12)}px` }}
+        style={{ borderTop: `1px solid ${C.borderLight}`, padding: `${px(10)}px ${collapsed ? px(6) : px(12)}px` }}
       >
         {collapsed && (
           <div style={{ display: "flex", justifyContent: "center", paddingBottom: px(4) }}>
@@ -320,14 +351,45 @@ export function DesignLabMobileNavButton({ navigate, signOut, user, activePath }
               </div>
             </nav>
 
-            <div className="shrink-0 space-y-2" style={{ paddingInline: px(10), paddingBottom: px(10) }}>
-              <TextSizeControlSidebar value={textSize} onChange={setTextSize} />
-              <ThemeModeControl scale={scale} />
+            <div className="shrink-0" style={{ paddingInline: px(10), paddingBottom: px(12) }}>
+              <div
+                style={{
+                  border: `1px solid ${C.borderLight}`,
+                  background: C.surface,
+                  borderRadius: px(12),
+                  paddingTop: px(6),
+                  paddingBottom: px(6),
+                  boxShadow: "0 1px 2px rgba(15,23,42,0.04), inset 0 1px 0 rgba(255,255,255,0.55)",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    paddingInline: px(10),
+                    paddingBottom: px(4),
+                  }}
+                >
+                  <span style={{ fontSize: px(10.5), fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textFaint }}>
+                    Tilpasning
+                  </span>
+                  <span style={{ fontSize: px(10), fontWeight: 500, color: C.textGhost }}>
+                    {Math.round(scale * 100)}%
+                  </span>
+                </div>
+                <TextSizeControlSidebar value={textSize} onChange={setTextSize} />
+                <div style={{ marginTop: px(4), paddingTop: px(6), borderTop: `1px solid ${C.borderLight}` }}>
+                  <div style={{ paddingInline: px(8) }}>
+                    <ThemeModeControl scale={scale} embedded />
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div
               className="mt-auto shrink-0 space-y-0.5"
-              style={{ borderTop: `1px solid ${C.border}`, padding: `${px(8)}px ${px(12)}px` }}
+              style={{ borderTop: `1px solid ${C.borderLight}`, padding: `${px(10)}px ${px(12)}px` }}
             >
               <FooterBtn icon={Settings} label="Innstillinger" onClick={() => closeAndNavigate(getNavPath("settings"))} active={isActive("settings")} collapsed={false} scale={scale} />
               <FooterBtn icon={LogOut} label="Logg ut" onClick={closeAndSignOut} muted collapsed={false} scale={scale} />
@@ -473,20 +535,34 @@ function FooterBtn({
         ["--dl-focus-ring" as string]: C.borderFocus,
         ["--dl-focus-offset" as string]: C.sidebarBg,
         fontSize: px(13),
-        fontWeight: active ? 500 : 400,
+        fontWeight: active ? 600 : 500,
         color: baseColor,
-        background: active ? C.filterActiveBg : "transparent",
-        borderRadius: px(6),
-        height: collapsed ? px(34) : px(28),
-        gap: px(8),
+        background: active ? C.surfaceAlt : "transparent",
+        border: active ? `1px solid ${C.borderLight}` : "1px solid transparent",
+        borderRadius: px(8),
+        height: collapsed ? px(34) : px(32),
+        gap: px(10),
         justifyContent: collapsed ? "center" : "flex-start",
-        paddingLeft: collapsed ? 0 : px(8),
-        paddingRight: collapsed ? 0 : px(8),
+        paddingLeft: collapsed ? 0 : px(10),
+        paddingRight: collapsed ? 0 : px(10),
         whiteSpace: "nowrap",
         overflow: "hidden",
+        transition: "background-color 120ms cubic-bezier(0.16, 1, 0.3, 1), border-color 120ms cubic-bezier(0.16, 1, 0.3, 1), color 120ms cubic-bezier(0.16, 1, 0.3, 1)",
       }}
-      onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = C.hoverSubtle; e.currentTarget.style.color = C.text; } }}
-      onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = baseColor; } }}
+      onMouseEnter={(e) => {
+        if (!active) {
+          e.currentTarget.style.background = C.hoverSubtle;
+          e.currentTarget.style.borderColor = C.borderLight;
+          e.currentTarget.style.color = C.text;
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!active) {
+          e.currentTarget.style.background = "transparent";
+          e.currentTarget.style.borderColor = "transparent";
+          e.currentTarget.style.color = baseColor;
+        }
+      }}
     >
       <Icon style={{ width: collapsed ? px(20) : px(14), height: collapsed ? px(20) : px(14), strokeWidth: 1.5, color: active ? C.text : C.textFaint, flexShrink: 0 }} />
       {!collapsed && label}

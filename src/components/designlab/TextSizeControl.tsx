@@ -91,7 +91,7 @@ export function TextSizeControlSidebar({ value, onChange }: Props) {
   return (
     <div
       className="flex items-center"
-      style={{ paddingInline: 10, height: 32 }}
+      style={{ paddingInline: 8, height: 34 }}
       title="Tekststørrelse"
     >
       <div
@@ -100,11 +100,12 @@ export function TextSizeControlSidebar({ value, onChange }: Props) {
         className="flex items-center"
         style={{
           width: "100%",
-          height: 24,
-          padding: 2,
-          borderRadius: 6,
+          height: 28,
+          padding: 3,
+          borderRadius: 8,
           background: C.surfaceAlt,
           border: `1px solid ${C.borderLight}`,
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.55)",
         }}
       >
         {SIZES.map((s) => {
@@ -120,18 +121,18 @@ export function TextSizeControlSidebar({ value, onChange }: Props) {
               style={{
                 ["--dl-seg-focus" as string]: C.borderFocus,
                 flex: 1,
-                height: 20,
+                height: 22,
                 paddingInline: 4,
                 fontSize: 11,
-                fontWeight: active ? 500 : 400,
+                fontWeight: active ? 600 : 500,
                 color: active ? C.text : C.textMuted,
                 background: active ? C.panel : "transparent",
-                borderRadius: 4,
-                border: "none",
+                borderRadius: 6,
+                border: active ? `1px solid ${C.borderDefault}` : "1px solid transparent",
                 boxShadow: active
-                  ? "0 1px 2px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.04)"
+                  ? "0 1px 2px rgba(15,23,42,0.06)"
                   : "none",
-                transition: "background-color 120ms ease, color 120ms ease",
+                transition: "background-color 120ms ease, color 120ms ease, border-color 120ms ease",
                 cursor: "pointer",
               }}
               onMouseEnter={(e) => {
