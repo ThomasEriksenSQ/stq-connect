@@ -270,8 +270,11 @@ function getRequestRelativeTime(days: number): string {
   return `${Math.floor(days / 365)}å`;
 }
 
-function getRequestReceivedLabel(date: string): string {
-  return `${format(new Date(date), "dd.MM.yyyy")} / ${getRequestRelativeTime(getRequestDaysAgo(date))}`;
+function getRequestReceivedParts(date: string) {
+  return {
+    dateLabel: format(new Date(date), "dd.MM.yyyy"),
+    relativeLabel: getRequestRelativeTime(getRequestDaysAgo(date)),
+  };
 }
 
 function getRequestVisibleTechnologies(tags: unknown): { visible: string[]; hiddenCount: number } {
@@ -2561,6 +2564,7 @@ function ContactRequestHistorySection({
               const consultants = row.foresporsler_konsulenter || [];
               const signal = row.contacts?.id ? signalByContactId.get(row.contacts.id) || null : null;
               const days = getRequestDaysAgo(row.mottatt_dato);
+              const received = getRequestReceivedParts(row.mottatt_dato);
               const firstConsultant = consultants[0] || null;
               const consultantName = firstConsultant
                 ? (firstConsultant.konsulent_type === "intern"
@@ -2626,9 +2630,15 @@ function ContactRequestHistorySection({
                     </div>
                     <span
                       title={format(new Date(row.mottatt_dato), "d. MMM yyyy", { locale: nb })}
-                      style={{ color: days <= 7 ? C.text : days <= 21 ? C.warning : C.danger, fontWeight: 500 }}
+                      className="inline-grid items-center gap-x-2"
+                      style={{
+                        gridTemplateColumns: "auto auto",
+                        color: days <= 7 ? C.text : days <= 21 ? C.warning : C.danger,
+                        fontWeight: 500,
+                      }}
                     >
-                      {getRequestReceivedLabel(row.mottatt_dato)}
+                      <span>{received.dateLabel}</span>
+                      <span style={{ minWidth: 24, textAlign: "right" }}>{received.relativeLabel}</span>
                     </span>
                   </div>
                 </button>
@@ -2660,6 +2670,7 @@ function ContactRequestHistorySection({
 
               {rows.map((row) => {
                 const days = getRequestDaysAgo(row.mottatt_dato);
+                const received = getRequestReceivedParts(row.mottatt_dato);
                 const contactName = row.contacts ? `${row.contacts.first_name} ${row.contacts.last_name}`.trim() : "";
                 const consultants = row.foresporsler_konsulenter || [];
                 const technologies = getRequestVisibleTechnologies(row.teknologier);
@@ -2820,14 +2831,18 @@ function ContactRequestHistorySection({
                     <div className="flex items-start justify-end" style={{ paddingTop: 2 }}>
                       <span
                         title={format(new Date(row.mottatt_dato), "d. MMM yyyy", { locale: nb })}
+                        className="inline-grid items-center gap-x-3"
                         style={{
+                          gridTemplateColumns: "84px 28px",
+                          justifyItems: "end",
                           fontSize: 13,
                           fontWeight: 500,
                           color: days <= 7 ? C.text : days <= 21 ? C.warning : C.danger,
                           paddingTop: 2,
                         }}
                       >
-                        {getRequestReceivedLabel(row.mottatt_dato)}
+                        <span>{received.dateLabel}</span>
+                        <span>{received.relativeLabel}</span>
                       </span>
                     </div>
                   </div>
