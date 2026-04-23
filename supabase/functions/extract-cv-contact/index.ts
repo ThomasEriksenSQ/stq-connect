@@ -27,8 +27,9 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const { base64, filename } = await req.json();
-    if (!base64) throw new Error("Missing base64 PDF data");
+    const { base64, filename, text } = await req.json();
+    const rawText = typeof text === "string" ? text.trim() : "";
+    if (!base64 && !rawText) throw new Error("Missing CV content");
 
     const systemPrompt = `Du er en CV-analysator. Analyser CV-en og ekstraher kontaktinformasjon og tekniske kompetanser.
 Returner KUN gyldig JSON, ingen markdown, ingen forklaring:
@@ -41,6 +42,29 @@ Returner KUN gyldig JSON, ingen markdown, ingen forklaring:
 
 For technologies: bruk korte tekniske nøkkelord som C++, Embedded, Python, Linux, Yocto, FPGA, Qt, React, TypeScript, Java, AWS, etc.
 Maks 12 teknologier, sortert etter relevans/erfaring.`;
+
+    const userContent: Array<Record<string, unknown>> = [
+      {
+        type: "text",
+        text: `Analyser denne CV-en (${filename || "cv"}) og ekstraher navn, e-post, telefon og teknologier.`,
+      },
+    ];
+
+    if (rawText) {
+      userContent.push({
+        type: "text",
+        text: `CV-tekst:\n${rawText.slice(0, 40000)}`,
+      });
+    }
+
+    if (base64) {
+      userContent.push({
+        type: "image_url",
+        image_url: {
+          url: `data:application/pdf;base64,${base64}`,
+        },
+      });
+    }
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -56,18 +80,7 @@ Maks 12 teknologier, sortert etter relevans/erfaring.`;
             { role: "system", content: systemPrompt },
             {
               role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: `Analyser denne CV-en (${filename || "cv.pdf"}) og ekstraher navn, e-post, telefon og teknologier.`,
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: `data:application/pdf;base64,${base64}`,
-                  },
-                },
-              ],
+              content: userContent,
             },
           ],
         }),

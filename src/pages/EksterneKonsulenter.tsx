@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { formatCleanupSummary } from "@/lib/candidateIdentity";
 import { normalizeTechnologyTags } from "@/lib/technologyTags";
 import { relativeFutureDate } from "@/lib/relativeDate";
+import { analyzeExternalCvUpload, EXTERNAL_CV_ACCEPT, EXTERNAL_CV_SUPPORTED_LABEL } from "@/lib/externalCvUpload";
 import { OppdragsMatchPanel } from "@/components/OppdragsMatchPanel";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Calendar } from "@/components/ui/calendar";
@@ -21,7 +22,6 @@ import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/sonner";
-import { useAuth } from "@/hooks/useAuth";
 import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
 import {
   DesignLabFilterButton,
@@ -92,7 +92,6 @@ export default function EksterneKonsulenter({
   showActionBar = true,
   createRequestId,
 }: EksterneKonsulenterProps) {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
@@ -425,7 +424,6 @@ export default function EksterneKonsulenter({
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         editRow={editId ? rows.find((r: any) => r.id === editId) : null}
-        userId={user?.id}
       />
 
       <AlertDialog open={cleanupOpen} onOpenChange={setCleanupOpen}>
@@ -620,11 +618,11 @@ const emptyForm: ConsultantForm = {
   kommentar: "",
 };
 
-export function ConsultantModal({ open, onClose, editRow, userId }: {
+export function ConsultantModal({ open, onClose, editRow, onSaved }: {
   open: boolean;
   onClose: () => void;
   editRow: any | null;
-  userId?: string;
+  onSaved?: (consultant: any, mode: "create" | "update") => void;
 }) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
@@ -633,6 +631,7 @@ export function ConsultantModal({ open, onClose, editRow, userId }: {
   const [companySearch, setCompanySearch] = useState("");
   const [cvParsing, setCvParsing] = useState(false);
   const [cvPrefilled, setCvPrefilled] = useState<Set<string>>(new Set());
+  const [cvFileName, setCvFileName] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const isCreate = !editRow;
@@ -646,6 +645,7 @@ export function ConsultantModal({ open, onClose, editRow, userId }: {
     setCompanySearch("");
     setCvPrefilled(new Set());
     setCvParsing(false);
+    setCvFileName("");
     if (editRow) {
       setForm({
         type: editRow.type || "freelance",
@@ -700,50 +700,31 @@ export function ConsultantModal({ open, onClose, editRow, userId }: {
 
   // CV Upload & Parse
   const handleCvUpload = useCallback(async (file: File) => {
-    if (!file || file.type !== "application/pdf") {
-      toast.error("Kun PDF-filer støttes");
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Filen er for stor (maks 10 MB)");
-      return;
-    }
-
     setCvParsing(true);
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const base64 = btoa(
-        new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
-      );
-
-      const { data, error } = await supabase.functions.invoke("extract-cv-contact", {
-        body: { base64, filename: file.name },
-      });
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      const analysis = await analyzeExternalCvUpload(file);
 
       const prefilled = new Set<string>();
+      setCvFileName(analysis.fileName);
 
-      if (data.name && !form.navn) {
-        set("navn", data.name);
+      if (analysis.name && !form.navn) {
+        set("navn", analysis.name);
         prefilled.add("navn");
       }
-      if (data.email && !form.epost) {
-        set("epost", data.email);
+      if (analysis.email && !form.epost) {
+        set("epost", analysis.email);
         prefilled.add("epost");
       }
-      if (data.phone && !form.telefon) {
-        set("telefon", data.phone);
+      if (analysis.phone && !form.telefon) {
+        set("telefon", analysis.phone);
         prefilled.add("telefon");
       }
-      if (data.technologies?.length && form.teknologier.length === 0) {
-        set("teknologier", normalizeTechnologyTags(data.technologies));
+      if (analysis.technologies.length && form.teknologier.length === 0) {
+        set("teknologier", analysis.technologies);
         prefilled.add("teknologier");
       }
 
-      // Store raw CV text placeholder (the base64 is too large, but we mark it)
-      set("cv_tekst", `[CV: ${file.name}]`);
+      set("cv_tekst", analysis.rawText || `[CV: ${analysis.fileName}]`);
 
       setCvPrefilled(prefilled);
       toast.success("CV analysert — felter fylt ut");
@@ -783,15 +764,34 @@ export function ConsultantModal({ open, onClose, editRow, userId }: {
     };
 
     let error;
+    let savedConsultant: any = null;
     if (isCreate) {
-      ({ error } = await supabase.from("external_consultants").insert(payload));
+      const response = await supabase
+        .from("external_consultants")
+        .insert(payload)
+        .select("id, navn, type, epost, telefon, teknologier, tilgjengelig_fra, selskap_tekst, company_id")
+        .single();
+      error = response.error;
+      savedConsultant = response.data;
     } else {
-      ({ error } = await supabase.from("external_consultants").update(payload).eq("id", editRow.id));
+      const response = await supabase
+        .from("external_consultants")
+        .update(payload)
+        .eq("id", editRow.id)
+        .select("id, navn, type, epost, telefon, teknologier, tilgjengelig_fra, selskap_tekst, company_id")
+        .single();
+      error = response.error;
+      savedConsultant = response.data;
     }
     setSaving(false);
     if (error) { toast.error("Kunne ikke lagre"); return; }
     toast.success(isCreate ? "Ekstern konsulent lagt til" : "Oppdatert");
-    queryClient.invalidateQueries({ queryKey: ["external-consultants"] });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["external-consultants"] }),
+      queryClient.invalidateQueries({ queryKey: ["external-consultants-all"] }),
+      queryClient.invalidateQueries({ queryKey: ["external-consultants-legg-til"] }),
+    ]);
+    onSaved?.(savedConsultant || { ...payload, id: editRow?.id }, isCreate ? "create" : "update");
     onClose();
   };
 
@@ -808,6 +808,7 @@ export function ConsultantModal({ open, onClose, editRow, userId }: {
 
   const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
   const showTypeSelection = isCreate && !form.type;
+  const availabilityQuickChoices = [14, 30, 45];
 
   const CvBadge = ({ field }: { field: string }) =>
     cvPrefilled.has(field) ? (
@@ -886,6 +887,60 @@ export function ConsultantModal({ open, onClose, editRow, userId }: {
               </div>
             )}
 
+            {/* CV Upload */}
+            <div>
+              <label className={LABEL}>CV-opplasting</label>
+              {isCreate && (
+                <p className="mt-1 text-[0.75rem] text-muted-foreground">
+                  Start med å laste opp CV-en. Vi henter automatisk ut navn, e-post, telefon og teknologier når de finnes.
+                </p>
+              )}
+              <div
+                onDragOver={e => e.preventDefault()}
+                onDrop={handleDrop}
+                onClick={() => fileRef.current?.click()}
+                className={cn(
+                  "mt-1 flex flex-col items-center gap-2 p-5 rounded-lg border-2 border-dashed cursor-pointer transition-colors",
+                  cvParsing
+                    ? "border-primary/40 bg-primary/5"
+                    : "border-border hover:border-primary/40 hover:bg-primary/5"
+                )}
+              >
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept={EXTERNAL_CV_ACCEPT}
+                  className="hidden"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) handleCvUpload(file);
+                    e.target.value = "";
+                  }}
+                />
+                {cvParsing ? (
+                  <>
+                    <Loader2 className="h-6 w-6 text-primary animate-spin" />
+                    <span className="text-[0.8125rem] text-primary font-medium">Analyserer CV...</span>
+                  </>
+                ) : cvPrefilled.size > 0 ? (
+                  <>
+                    <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                    <span className="text-[0.8125rem] text-emerald-600 font-medium">CV analysert</span>
+                    <span className="text-[0.6875rem] text-muted-foreground">
+                      {cvFileName ? `${cvFileName} · ` : ""}Klikk for å laste opp ny
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-6 w-6 text-muted-foreground" />
+                    <span className="text-[0.8125rem] text-muted-foreground">
+                      Dra og slipp {EXTERNAL_CV_SUPPORTED_LABEL}, eller klikk for å velge
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+
             {/* Partner: Company picker */}
             {form.type === "partner" && (
               <div>
@@ -929,51 +984,6 @@ export function ConsultantModal({ open, onClose, editRow, userId }: {
                 <p className="text-[0.6875rem] text-muted-foreground mt-1">Ikke et salgsselskap i CRM</p>
               </div>
             )}
-
-            {/* CV Upload */}
-            <div>
-              <label className={LABEL}>CV-opplasting</label>
-              <div
-                onDragOver={e => e.preventDefault()}
-                onDrop={handleDrop}
-                onClick={() => fileRef.current?.click()}
-                className={cn(
-                  "mt-1 flex flex-col items-center gap-2 p-5 rounded-lg border-2 border-dashed cursor-pointer transition-colors",
-                  cvParsing
-                    ? "border-primary/40 bg-primary/5"
-                    : "border-border hover:border-primary/40 hover:bg-primary/5"
-                )}
-              >
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept=".pdf"
-                  className="hidden"
-                  onChange={e => {
-                    const file = e.target.files?.[0];
-                    if (file) handleCvUpload(file);
-                    e.target.value = "";
-                  }}
-                />
-                {cvParsing ? (
-                  <>
-                    <Loader2 className="h-6 w-6 text-primary animate-spin" />
-                    <span className="text-[0.8125rem] text-primary font-medium">Analyserer CV...</span>
-                  </>
-                ) : cvPrefilled.size > 0 ? (
-                  <>
-                    <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-                    <span className="text-[0.8125rem] text-emerald-600 font-medium">CV analysert</span>
-                    <span className="text-[0.6875rem] text-muted-foreground">Klikk for å laste opp ny</span>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-6 w-6 text-muted-foreground" />
-                    <span className="text-[0.8125rem] text-muted-foreground">Dra og slipp PDF, eller klikk for å velge</span>
-                  </>
-                )}
-              </div>
-            </div>
 
             {/* Navn */}
             <div>
@@ -1061,23 +1071,46 @@ export function ConsultantModal({ open, onClose, editRow, userId }: {
               <p className="mt-1 text-[0.75rem] text-muted-foreground">
                 Tilgjengelig-badge vises automatisk fra denne datoen og i {AVAILABILITY_WINDOW_DAYS} dager.
               </p>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("mt-2 w-full justify-start text-left text-[0.875rem] font-normal", !form.tilgjengelig_fra && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.tilgjengelig_fra ? format(new Date(form.tilgjengelig_fra), "d. MMM yyyy", { locale: nb }) : "Velg dato"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={form.tilgjengelig_fra ? new Date(form.tilgjengelig_fra) : undefined}
-                    onSelect={(d) => set("tilgjengelig_fra", d ? format(d, "yyyy-MM-dd") : "")}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                </PopoverContent>
-              </Popover>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {availabilityQuickChoices.map((days) => {
+                  const isoDate = format(addDays(new Date(), days), "yyyy-MM-dd");
+                  return (
+                    <DesignLabFilterButton
+                      key={days}
+                      type="button"
+                      onClick={() => set("tilgjengelig_fra", isoDate)}
+                      active={form.tilgjengelig_fra === isoDate}
+                      activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
+                      inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
+                      inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
+                    >
+                      +{days} dager
+                    </DesignLabFilterButton>
+                  );
+                })}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("justify-start text-left text-[0.875rem] font-normal", !form.tilgjengelig_fra && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      Velg selv
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={form.tilgjengelig_fra ? new Date(form.tilgjengelig_fra) : undefined}
+                      onSelect={(d) => set("tilgjengelig_fra", d ? format(d, "yyyy-MM-dd") : "")}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <p className="mt-2 text-[0.8125rem] text-foreground">
+                {form.tilgjengelig_fra
+                  ? format(new Date(form.tilgjengelig_fra), "d. MMM yyyy", { locale: nb })
+                  : "Ingen dato valgt"}
+              </p>
             </div>
 
             {/* Kommentar */}
