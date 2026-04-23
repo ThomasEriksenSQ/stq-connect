@@ -270,6 +270,10 @@ function getRequestRelativeTime(days: number): string {
   return `${Math.floor(days / 365)}å`;
 }
 
+function getRequestReceivedLabel(date: string): string {
+  return `${format(new Date(date), "dd.MM.yyyy")} / ${getRequestRelativeTime(getRequestDaysAgo(date))}`;
+}
+
 function getRequestVisibleTechnologies(tags: unknown): { visible: string[]; hiddenCount: number } {
   const normalized = Array.isArray(tags)
     ? tags
@@ -702,19 +706,16 @@ export function ContactCardContent({
   });
 
   const { data: requestHistoryRows = [], isLoading: isLoadingRequestHistory } = useQuery({
-    queryKey: ["contact-card-request-history", companyId ?? `contact:${contactId}`],
-    enabled: showRequests && Boolean(companyId || contactId),
+    queryKey: ["contact-card-request-history", contactId],
+    enabled: showRequests && Boolean(contactId),
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from("foresporsler")
         .select(
           "*, contacts(id, first_name, last_name, title, email, phone), foresporsler_konsulenter(id, konsulent_type, status, status_updated_at, stacq_ansatte(id, navn), external_consultants(id, navn))",
         )
+        .eq("contact_id", contactId)
         .order("mottatt_dato", { ascending: false });
-
-      query = companyId ? query.eq("selskap_id", companyId) : query.eq("contact_id", contactId);
-
-      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
@@ -2525,7 +2526,7 @@ function ContactRequestHistorySection({
   onSelectRow: (row: any) => void;
 }) {
   const cols =
-    "minmax(150px,1.1fr) 120px minmax(150px,1.1fr) 80px minmax(150px,1.1fr) minmax(170px,1.15fr) minmax(110px,0.8fr) 88px";
+    "minmax(150px,1.1fr) 120px minmax(150px,1.1fr) 80px minmax(150px,1.1fr) minmax(170px,1.15fr) minmax(110px,0.8fr) 146px";
 
   return (
     <div className="bg-card border border-border rounded-lg shadow-card p-4 mb-5">
@@ -2617,7 +2618,7 @@ function ContactRequestHistorySection({
                       title={format(new Date(row.mottatt_dato), "d. MMM yyyy", { locale: nb })}
                       style={{ color: days <= 7 ? C.text : days <= 21 ? C.warning : C.danger, fontWeight: 500 }}
                     >
-                      {getRequestRelativeTime(days)}
+                      {getRequestReceivedLabel(row.mottatt_dato)}
                     </span>
                   </div>
                 </button>
@@ -2626,7 +2627,7 @@ function ContactRequestHistorySection({
           </div>
 
           <div className="hidden md:block overflow-x-auto">
-            <div style={{ minWidth: 980 }}>
+            <div style={{ minWidth: 1060 }}>
               <div
                 className="grid items-center px-4 pb-2"
                 style={{ gridTemplateColumns: cols, borderBottom: `1px solid ${C.borderLight}` }}
@@ -2816,7 +2817,7 @@ function ContactRequestHistorySection({
                           paddingTop: 2,
                         }}
                       >
-                        {getRequestRelativeTime(days)}
+                        {getRequestReceivedLabel(row.mottatt_dato)}
                       </span>
                     </div>
                   </div>
