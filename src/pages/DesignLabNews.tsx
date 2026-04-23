@@ -1,6 +1,5 @@
 import type { CSSProperties } from "react";
-import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { DesignLabPageShell } from "@/components/designlab/DesignLabPageShell";
@@ -9,7 +8,7 @@ import {
 } from "@/components/designlab/system";
 import { SourceListTab } from "@/components/designlab/news/SourceListTab";
 import { C } from "@/components/designlab/theme";
-import { supabase } from "@/integrations/supabase/client";
+import { useNewsDailyDigest } from "@/hooks/useNewsDailyDigest";
 import { useCrmNavigation } from "@/lib/crmNavigation";
 import {
   newsRelative,
@@ -459,58 +458,19 @@ function LoadingSkeleton() {
   );
 }
 
-interface NewsDailyRow {
-  status: "ok" | "empty" | "error";
-  payload: { items: NewsItem[] };
-  source_count: number;
-}
-
-async function fetchNewsDaily(): Promise<NewsDailyRow | null> {
-  const today = new Date().toISOString().slice(0, 10);
-  const { data, error } = await supabase
-    .from("news_daily")
-    .select("status, payload, source_count")
-    .eq("date", today)
-    .eq("is_current", true)
-    .maybeSingle();
-  if (error) throw error;
-  return (data as unknown as NewsDailyRow) ?? null;
-}
-
 /* ────────────────────── SIDE ────────────────────── */
 
 type NewsTab = "news" | "sources";
 
 export default function DesignLabNews() {
   const todayLabel = formatTodayLabel();
-  const [triggered, setTriggered] = useState(false);
   const [tab, setTab] = useState<NewsTab>("news");
-
-  const query = useQuery({
-    queryKey: ["news-daily", new Date().toISOString().slice(0, 10)],
-    queryFn: fetchNewsDaily,
-    staleTime: 5 * 60_000,
-  });
-
-  // On-demand trigger hvis ingen rad finnes for dagen
-  useEffect(() => {
-    if (query.isLoading || query.isError || triggered) return;
-    if (query.data === null) {
-      setTriggered(true);
-      void supabase.functions
-        .invoke("news-daily-digest", { body: { trigger: "on-demand" } })
-        .then(() => query.refetch());
-    }
-  }, [query, triggered]);
-
-  const row = query.data ?? null;
-  const items: NewsItem[] = row?.payload?.items ?? [];
+  const { row, items, isLoadingNews, query } = useNewsDailyDigest();
   const sortedItems = sortNewsItemsNewestFirst(items);
   const stories = sortedItems.filter((i): i is RenderableNewsStory => i.variant !== "brief");
   const lead = stories[0] ?? null;
   const features = stories.slice(1);
 
-  const isLoadingNews = query.isLoading || (query.data === null && triggered);
   const isErrorNews = query.isError;
   const isEmpty = !row || row.status === "empty" || (!lead && features.length === 0);
 

@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams } from "react
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
+import { GlobalNewsBadge } from "@/components/news/GlobalNewsBadge";
 import { lazy, Suspense, type ReactElement } from "react";
 import { DesignVersionProvider, useDesignVersion } from "@/context/DesignVersionContext";
 import { DesignVersionToggle } from "@/components/design/DesignVersionToggle";
@@ -72,7 +73,12 @@ function ProtectedAppLayout() {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  return <AppLayout />;
+  return (
+    <>
+      <GlobalNewsBadge />
+      <AppLayout />
+    </>
+  );
 }
 
 function ProtectedCrmLayout() {
@@ -89,14 +95,24 @@ function ProtectedCrmLayout() {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  return isV2Active ? <Outlet /> : <AppLayout />;
+  return (
+    <>
+      <GlobalNewsBadge />
+      {isV2Active ? <Outlet /> : <AppLayout />}
+    </>
+  );
 }
 
 function ProtectedMinimal() {
   const { user, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><p className="text-muted-foreground">Laster...</p></div>;
   if (!user) return <Navigate to="/login" replace />;
-  return <Outlet />;
+  return (
+    <>
+      <GlobalNewsBadge />
+      <Outlet />
+    </>
+  );
 }
 
 function AuthRoute() {
