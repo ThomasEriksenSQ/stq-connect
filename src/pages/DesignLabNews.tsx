@@ -17,6 +17,7 @@ import {
   sortNewsItemsNewestFirst,
   withUtm,
   type NewsBrief,
+  type NewsFeature,
   type NewsItem,
 } from "@/lib/news";
 
@@ -96,27 +97,39 @@ function NewTodayBadge() {
     <span
       style={{
         position: "absolute",
-        top: 16,
-        left: -34,
+        top: 12,
+        left: 12,
         zIndex: 2,
-        display: "flex",
+        display: "inline-flex",
         alignItems: "center",
-        justifyContent: "center",
-        width: 132,
-        height: 28,
-        fontSize: 11,
+        gap: 6,
+        minHeight: 28,
+        padding: "0 10px",
+        borderRadius: 999,
+        fontSize: 10,
         fontWeight: 700,
-        letterSpacing: 0.3,
+        letterSpacing: 0.7,
         textTransform: "uppercase",
         color: "#5F4300",
-        background: "linear-gradient(135deg, #FFE08A 0%, #F4C542 58%, #E3AF1E 100%)",
-        border: "1px solid rgba(116, 78, 0, 0.22)",
-        boxShadow: "0 8px 18px rgba(116, 78, 0, 0.18)",
+        background: "rgba(255, 239, 184, 0.96)",
+        border: "1px solid rgba(146, 111, 17, 0.18)",
+        boxShadow: "0 8px 24px rgba(17, 24, 39, 0.10)",
         whiteSpace: "nowrap",
-        transform: "rotate(-33deg)",
         pointerEvents: "none",
+        backdropFilter: "blur(8px)",
       }}
     >
+      <span
+        aria-hidden="true"
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: 999,
+          background: "#A17400",
+          boxShadow: "0 0 0 3px rgba(161, 116, 0, 0.12)",
+          flexShrink: 0,
+        }}
+      />
       Ny i dag
     </span>
   );
@@ -170,7 +183,9 @@ function MetaRow({ item, withReadMore = true }: { item: NewsItem; withReadMore?:
         alignItems: "baseline",
         justifyContent: "space-between",
         gap: 12,
-        marginTop: 10,
+        marginTop: 14,
+        paddingTop: 12,
+        borderTop: `1px solid ${C.borderLight}`,
         fontSize: 11,
         fontWeight: 400,
         color: C.textFaint,
@@ -202,7 +217,7 @@ function MetaRow({ item, withReadMore = true }: { item: NewsItem; withReadMore?:
 
 function LeadStory({ item }: { item: RenderableNewsStory }) {
   return (
-    <article className="news-lead">
+    <article className="news-lead news-surface news-surface-lead">
       <a
         href={trackedHref(item.url)}
         target="_blank"
@@ -223,6 +238,7 @@ function LeadStory({ item }: { item: RenderableNewsStory }) {
         {isPublishedToday(item.published_at) ? <NewTodayBadge /> : null}
       </a>
       <div className="news-lead-text" style={{ minWidth: 0 }}>
+        <div className="news-story-overline">Dagens hovedsak</div>
         <Kicker item={item} />
         <h3
           style={{
@@ -270,7 +286,7 @@ function LeadStory({ item }: { item: RenderableNewsStory }) {
 
 function FeatureCard({ item }: { item: RenderableNewsStory }) {
   return (
-    <article style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <article className="news-feature-card news-surface">
       <a
         href={trackedHref(item.url)}
         target="_blank"
@@ -285,6 +301,7 @@ function FeatureCard({ item }: { item: RenderableNewsStory }) {
         {isPublishedToday(item.published_at) ? <NewTodayBadge /> : null}
       </a>
       <div>
+        <div className="news-story-overline">Analyse</div>
         <Kicker item={item} />
         <h4
           style={{
@@ -508,40 +525,41 @@ export default function DesignLabNews() {
       hideHeader
     >
       {/* Masthead */}
-      <header style={{ marginBottom: 24 }}>
-        <h1
-          style={{
-            fontSize: 28,
-            fontWeight: 600,
-            color: C.text,
-            margin: 0,
-            letterSpacing: -0.2,
-          }}
-        >
-          STACQ Nyheter
-        </h1>
-        <p
-          style={{
-            fontSize: 12,
-            fontWeight: 400,
-            color: C.textFaint,
-            margin: "8px 0 0",
-          }}
-        >
-          {todayLabel} · {total} {total === 1 ? "sak" : "saker"}
-        </p>
+      <header className="news-masthead">
+        <div style={{ minWidth: 0 }}>
+          <div className="news-masthead-kicker">Dagens brief</div>
+          <h1
+            style={{
+              fontSize: 32,
+              fontWeight: 600,
+              lineHeight: 1.05,
+              color: C.text,
+              margin: 0,
+              letterSpacing: -0.6,
+            }}
+          >
+            STACQ Nyheter
+          </h1>
+          <p className="news-masthead-copy">
+            Et kuratert overblikk over det som rører seg i porteføljen akkurat nå.
+          </p>
+        </div>
+        <div className="news-masthead-stats">
+          <div className="news-masthead-stat">
+            <span className="news-masthead-stat-label">Oppdatert</span>
+            <strong className="news-masthead-stat-value">{todayLabel}</strong>
+          </div>
+          <div className="news-masthead-stat">
+            <span className="news-masthead-stat-label">Utvalg</span>
+            <strong className="news-masthead-stat-value">
+              {total} {total === 1 ? "sak" : "saker"}
+            </strong>
+          </div>
+        </div>
       </header>
 
       {/* Tab-bar */}
-      <div
-        role="tablist"
-        style={{
-          display: "flex",
-          gap: 24,
-          borderBottom: `1px solid ${C.borderLight}`,
-          marginBottom: 32,
-        }}
-      >
+      <div className="news-tab-shell" role="tablist">
         {([
           { value: "news", label: "Nyheter" },
           { value: "sources", label: "Kildeliste" },
@@ -553,17 +571,7 @@ export default function DesignLabNews() {
               role="tab"
               aria-selected={active}
               onClick={() => setTab(t.value)}
-              style={{
-                background: "transparent",
-                border: "none",
-                padding: "10px 0",
-                fontSize: 13,
-                fontWeight: 500,
-                color: active ? C.text : C.textMuted,
-                borderBottom: `2px solid ${active ? C.text : "transparent"}`,
-                marginBottom: -1,
-                cursor: "pointer",
-              }}
+              className={`news-tab-button${active ? " is-active" : ""}`}
             >
               {t.label}
             </button>
@@ -610,20 +618,157 @@ export default function DesignLabNews() {
       )}
 
       <style>{`
+        .news-masthead {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 24px;
+          padding: clamp(20px, 3vw, 28px);
+          margin-bottom: 28px;
+          border: 1px solid ${C.borderLight};
+          border-radius: 24px;
+          background:
+            radial-gradient(circle at top left, rgba(94, 106, 210, 0.08), transparent 34%),
+            linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(250,251,252,0.96) 100%);
+          box-shadow: 0 18px 52px rgba(17, 24, 39, 0.05);
+        }
+        .news-masthead-kicker {
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          color: ${C.textFaint};
+          margin-bottom: 14px;
+        }
+        .news-masthead-copy {
+          max-width: 560px;
+          margin: 14px 0 0;
+          font-size: 14px;
+          line-height: 1.6;
+          color: ${C.textMuted};
+        }
+        .news-masthead-stats {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 12px;
+          align-self: start;
+        }
+        .news-masthead-stat {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          padding: 14px 16px;
+          border: 1px solid ${C.borderLight};
+          border-radius: 18px;
+          background: rgba(255,255,255,0.84);
+        }
+        .news-masthead-stat-label {
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: ${C.textFaint};
+        }
+        .news-masthead-stat-value {
+          font-size: 13px;
+          line-height: 1.5;
+          color: ${C.text};
+          font-weight: 600;
+        }
+        .news-tab-shell {
+          display: inline-flex;
+          gap: 6px;
+          padding: 4px;
+          margin-bottom: 36px;
+          border: 1px solid ${C.borderLight};
+          border-radius: 999px;
+          background: rgba(255,255,255,0.9);
+          box-shadow: 0 8px 24px rgba(17, 24, 39, 0.04);
+        }
+        .news-tab-button {
+          background: transparent;
+          border: none;
+          border-radius: 999px;
+          padding: 10px 16px;
+          font-size: 13px;
+          font-weight: 600;
+          color: ${C.textMuted};
+          cursor: pointer;
+          transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+        }
+        .news-tab-button.is-active {
+          color: ${C.text};
+          background: ${C.surface};
+          box-shadow: inset 0 0 0 1px ${C.borderLight};
+        }
+        .news-surface {
+          border: 1px solid ${C.borderLight};
+          border-radius: 22px;
+          background:
+            linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(250,251,252,0.96) 100%);
+          box-shadow: 0 16px 42px rgba(17, 24, 39, 0.05);
+        }
+        .news-surface-lead {
+          padding: clamp(16px, 2vw, 22px);
+        }
+        .news-feature-card {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          padding: 14px;
+          transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        }
+        .news-story-overline {
+          margin-bottom: 10px;
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: ${C.textFaint};
+        }
         .news-lead {
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 22px;
         }
         .news-lead-media { width: 100%; }
+        @media (hover: hover) {
+          .news-feature-card:hover {
+            transform: translateY(-2px);
+            border-color: ${C.border};
+            box-shadow: 0 20px 50px rgba(17, 24, 39, 0.08);
+          }
+          .news-tab-button:hover {
+            color: ${C.text};
+            background: rgba(255,255,255,0.72);
+          }
+        }
+        @media (min-width: 860px) {
+          .news-masthead {
+            grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.9fr);
+            align-items: end;
+          }
+        }
         @media (min-width: 760px) {
           .news-lead {
             flex-direction: row;
-            align-items: center;
+            align-items: stretch;
             gap: 32px;
           }
           .news-lead-media { width: 520px; }
           .news-lead-text { flex: 1; }
+        }
+        @media (max-width: 639px) {
+          .news-tab-shell {
+            width: 100%;
+            justify-content: space-between;
+          }
+          .news-tab-button {
+            flex: 1;
+            text-align: center;
+          }
+          .news-masthead-stats {
+            grid-template-columns: 1fr;
+          }
         }
         .news-feature-grid { --news-cols: 1; }
         @media (min-width: 640px) {
