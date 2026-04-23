@@ -259,13 +259,31 @@ function AiTeknologiBox({
 
 /* ─── Ny forespørsel modal ─── */
 
-export function NyForesporselModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export interface NyForesporselInitialContext {
+  companyCity?: string | null;
+  companyId?: string | null;
+  companyName?: string | null;
+  companyStatus?: string | null;
+  contactId?: string | null;
+  contactName?: string | null;
+}
+
+export function NyForesporselModal({
+  open,
+  onClose,
+  initialContext,
+}: {
+  open: boolean;
+  onClose: () => void;
+  initialContext?: NyForesporselInitialContext;
+}) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const [mottattDato, setMottattDato] = useState(format(new Date(), "yyyy-MM-dd"));
   const [selskap, setSelskap] = useState("");
   const [selskapId, setSelskapId] = useState<string | null>(null);
+  const [selskapStatus, setSelskapStatus] = useState<string | null>(null);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [avdeling, setAvdeling] = useState("");
   const [sted, setSted] = useState("");
@@ -293,15 +311,25 @@ export function NyForesporselModal({ open, onClose }: { open: boolean; onClose: 
 
   useEffect(() => {
     if (open) {
+      const prefilledLocations = initialContext?.companyCity
+        ? initialContext.companyCity.split(",").map((location) => location.trim()).filter(Boolean)
+        : [];
       setMottattDato(format(new Date(), "yyyy-MM-dd"));
-      setSelskap(""); setSelskapId(null); setSelectedLocations([]);
-      setAvdeling(""); setSted(""); setKontakt(""); setKontaktId(null);
+      setSelskap(initialContext?.companyName ?? "");
+      setSelskapId(initialContext?.companyId ?? null);
+      setSelskapStatus(initialContext?.companyStatus ?? null);
+      setSelectedLocations(prefilledLocations);
+      setAvdeling("");
+      setSted(prefilledLocations.length === 1 ? prefilledLocations[0] : (initialContext?.companyCity ?? ""));
+      setKontakt(initialContext?.contactName ?? "");
+      setKontaktId(initialContext?.contactId ?? null);
       setKommentar(""); setTags([]); setTagInput("");
       setCompanyResults([]); setSluttkunde("");
       setShowCreateContact(false); setNewFirstName(""); setNewLastName("");
       setNewTitle(""); setNewEmail(""); setKontaktError(false);
+      setShowDropdown(false); setShowKontaktDropdown(false);
     }
-  }, [open]);
+  }, [initialContext, open]);
 
   const searchCompanies = (query: string) => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
@@ -319,6 +347,7 @@ export function NyForesporselModal({ open, onClose }: { open: boolean; onClose: 
   const selectCompany = (c: { id: string; name: string; city: string | null; status: string }) => {
     setSelskap(c.name);
     setSelskapId(c.id);
+    setSelskapStatus(c.status);
     setAvdeling("");
     setKontakt("");
     setKontaktId(null);
@@ -338,8 +367,7 @@ export function NyForesporselModal({ open, onClose }: { open: boolean; onClose: 
     setShowDropdown(false);
   };
 
-  const selectedCompany = companyResults.find(c => c.id === selskapId);
-  const isPartner = selectedCompany?.status === "partner";
+  const isPartner = selskapStatus === "partner";
 
   const { data: companyContacts = [] } = useQuery({
     queryKey: crmQueryKeys.foresporsler.kontakter(selskapId),
@@ -472,6 +500,7 @@ export function NyForesporselModal({ open, onClose }: { open: boolean; onClose: 
     queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.list() });
     queryClient.invalidateQueries({ queryKey: ["tasks"] });
     queryClient.invalidateQueries({ queryKey: ["contacts"] });
+    queryClient.invalidateQueries({ queryKey: ["contact-card-request-history"] });
     onClose();
   };
 
@@ -505,6 +534,7 @@ export function NyForesporselModal({ open, onClose }: { open: boolean; onClose: 
                 onChange={(e) => {
                   setSelskap(e.target.value);
                   setSelskapId(null);
+                  setSelskapStatus(null);
                   setSelectedLocations([]);
                   setShowDropdown(true);
                   searchCompanies(e.target.value);

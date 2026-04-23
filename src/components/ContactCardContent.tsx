@@ -92,6 +92,7 @@ import {
 } from "@/components/designlab/system";
 import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
 import { ForespørselSheet } from "@/components/ForespørselSheet";
+import { NyForesporselModal, type NyForesporselInitialContext } from "@/pages/Foresporsler";
 import {
   DesignLabFieldGrid,
   DesignLabFieldLabel,
@@ -652,6 +653,7 @@ export function ContactCardContent({
   const [showConsultantMatch, setShowConsultantMatch] = useState(!defaultHidden?.consultantMatch);
   const [profileEditMode, setProfileEditMode] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [createRequestOpen, setCreateRequestOpen] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
   const [contactActionMenuOpen, setContactActionMenuOpen] = useState(false);
   const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
@@ -686,7 +688,7 @@ export function ContactCardContent({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
-        .select("*, companies(id, name, city, ikke_relevant), profiles!contacts_owner_id_fkey(full_name)")
+        .select("*, companies(id, name, city, status, ikke_relevant), profiles!contacts_owner_id_fkey(full_name)")
         .eq("id", contactId)
         .single();
       if (error) throw error;
@@ -1316,6 +1318,7 @@ export function ContactCardContent({
 
   const companyName = (contact.companies as any)?.name;
   const companyCity = (contact.companies as any)?.city as string | null;
+  const companyStatus = (contact.companies as any)?.status as string | null;
   const contactTechnologies = mergeTechnologyTags((contact as any).teknologier || []);
   const companyLocations: string[] = companyCity
     ? companyCity
@@ -1323,6 +1326,14 @@ export function ContactCardContent({
         .map((s: string) => s.trim())
         .filter(Boolean)
     : [];
+  const createRequestInitialContext: NyForesporselInitialContext = {
+    companyCity,
+    companyId,
+    companyName: companyName || null,
+    companyStatus,
+    contactId: contact.id,
+    contactName: `${contact.first_name || ""} ${contact.last_name || ""}`.trim(),
+  };
   const consultantMatchVisible = !defaultHidden?.consultantMatch || showConsultantMatch;
   const showConsultantMatchPane = consultantMatchVisible && (matchingConsultants || consultantResults !== null);
   const isPreparingConsultantMatch = pendingConsultantMatch && !consultantCacheReady;
@@ -1645,6 +1656,59 @@ export function ContactCardContent({
                         }}
                       >
                         Oppdater kontaktinfo, eierskap og felter.
+                      </span>
+                    </span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="rounded-[10px] px-2.5"
+                    disabled={!companyId}
+                    style={{
+                      height: "auto",
+                      minHeight: contactActionMenuMetrics.itemMinHeight,
+                      borderRadius: contactActionMenuMetrics.itemRadius,
+                      alignItems: "flex-start",
+                      paddingTop: contactActionMenuMetrics.itemPaddingY,
+                      paddingBottom: contactActionMenuMetrics.itemPaddingY,
+                    }}
+                    onClick={() => {
+                      if (!companyId) {
+                        toast.error("Kontakten må være koblet til et selskap for å opprette forespørsel");
+                        return;
+                      }
+                      setCreateRequestOpen(true);
+                    }}
+                  >
+                    <span
+                      className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[#E3E7EF] bg-[#F8F9FB] text-[#5C636E]"
+                      style={{
+                        width: contactActionMenuMetrics.itemIconBoxSize,
+                        height: contactActionMenuMetrics.itemIconBoxSize,
+                      }}
+                    >
+                      <Plus
+                        style={{
+                          width: contactActionMenuMetrics.itemIconSize,
+                          height: contactActionMenuMetrics.itemIconSize,
+                        }}
+                      />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className="block truncate font-semibold text-[#1A1C1F]"
+                        style={{ fontSize: contactActionMenuMetrics.itemTitleFontSize }}
+                      >
+                        Opprett forespørsel
+                      </span>
+                      <span
+                        className="mt-0.5 block text-[#7A818C]"
+                        style={{
+                          fontSize: contactActionMenuMetrics.itemDescriptionFontSize,
+                          lineHeight: 1.35,
+                        }}
+                      >
+                        {companyId
+                          ? "Start en ny forespørsel med kontakt og selskap fylt inn."
+                          : "Krever at kontakten er koblet til et selskap."}
                       </span>
                     </span>
                   </DropdownMenuItem>
@@ -2691,6 +2755,12 @@ export function ContactCardContent({
           />
         ) : null}
       </DesignLabEntitySheet>
+
+      <NyForesporselModal
+        open={createRequestOpen}
+        onClose={() => setCreateRequestOpen(false)}
+        initialContext={createRequestInitialContext}
+      />
 
       <DesignLabEntitySheet
         open={editSheetOpen}
