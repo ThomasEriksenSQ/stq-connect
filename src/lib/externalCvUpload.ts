@@ -32,6 +32,28 @@ const NAME_LINE_BLACKLIST = [
   /^contact$/i,
   /^kontakt$/i,
 ];
+const CV_SECTION_TECH_BLACKLIST = new Set([
+  "about",
+  "arbeidserfaring",
+  "certifications",
+  "education",
+  "erfaring",
+  "experience",
+  "ferdigheter",
+  "kompetanse",
+  "kontakt",
+  "oppsummering",
+  "profile",
+  "profil",
+  "projects",
+  "prosjekter",
+  "sertifiseringer",
+  "skills",
+  "sprak",
+  "summary",
+  "sammendrag",
+  "utdanning",
+]);
 
 function getExternalCvExtension(file: File): ExternalCvExtension | null {
   const lowerName = file.name.toLowerCase();
@@ -129,6 +151,17 @@ function toDisplayName(value: string) {
     .join(" ");
 }
 
+function normalizeCvComparisonText(value: string | null | undefined) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9+#./ -]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function extractNameFromFilename(fileName: string) {
   const base = fileName.replace(/\.[^.]+$/, "");
   const tokens = base
@@ -170,12 +203,35 @@ function extractNameFromText(rawText: string | null, fileName: string) {
   return extractNameFromFilename(fileName);
 }
 
+export function sanitizeExtractedCvTechnologies(
+  values: Array<string | null | undefined> | string | null | undefined,
+  detectedName?: string | null,
+) {
+  const normalizedName = normalizeCvComparisonText(detectedName);
+  const nameTokens = new Set(normalizedName.split(" ").filter(Boolean));
+
+  return normalizeTechnologyTags(values).filter((technology) => {
+    const normalizedTechnology = normalizeCvComparisonText(technology);
+    if (!normalizedTechnology) return false;
+    if (CV_SECTION_TECH_BLACKLIST.has(normalizedTechnology)) return false;
+    if (normalizedName && normalizedTechnology === normalizedName) return false;
+
+    const technologyTokens = normalizedTechnology.split(" ").filter(Boolean);
+    if (nameTokens.size >= 2 && technologyTokens.length >= 2 && technologyTokens.every((token) => nameTokens.has(token))) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
 function buildLocalFallbackAnalysis(rawText: string | null, fileName: string) {
+  const name = extractNameFromText(rawText, fileName);
   return {
     email: extractEmailFromText(rawText),
-    name: extractNameFromText(rawText, fileName),
+    name,
     phone: extractPhoneFromText(rawText),
-    technologies: (rawText ? extractTechnologyTagsFromText(rawText) : []).slice(0, 12),
+    technologies: sanitizeExtractedCvTechnologies(rawText ? extractTechnologyTagsFromText(rawText) : [], name).slice(0, 12),
   };
 }
 
@@ -208,17 +264,21 @@ export async function analyzeExternalCvUpload(file: File): Promise<ExternalCvUpl
     if (error) throw error;
     if (data?.error) throw new Error(data.error);
 
+    const resolvedName = data?.name || localFallback.name || "";
+    const resolvedTechnologies = sanitizeExtractedCvTechnologies(
+      Array.isArray(data?.technologies) && data.technologies.length > 0
+        ? data.technologies
+        : localFallback.technologies,
+      resolvedName,
+    ).slice(0, 12);
+
     return {
       email: data?.email || localFallback.email || null,
       fileName: file.name,
-      name: data?.name || localFallback.name || "",
+      name: resolvedName,
       phone: data?.phone || localFallback.phone || null,
       rawText: rawText || null,
-      technologies: normalizeTechnologyTags(
-        Array.isArray(data?.technologies) && data.technologies.length > 0
-          ? data.technologies
-          : localFallback.technologies,
-      ).slice(0, 12),
+      technologies: resolvedTechnologies,
     };
   } catch (error) {
     console.warn("extract-cv-contact failed, using local fallback", error);
