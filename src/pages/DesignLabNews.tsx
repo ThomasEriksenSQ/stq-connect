@@ -6,7 +6,6 @@ import { Link } from "react-router-dom";
 import { DesignLabPageShell } from "@/components/designlab/DesignLabPageShell";
 import {
   DesignLabMediaFrame,
-  DesignLabSectionHeader,
 } from "@/components/designlab/system";
 import { SourceListTab } from "@/components/designlab/news/SourceListTab";
 import { C } from "@/components/designlab/theme";
@@ -510,7 +509,6 @@ export default function DesignLabNews() {
   const stories = sortedItems.filter((i): i is RenderableNewsStory => i.variant !== "brief");
   const lead = stories[0] ?? null;
   const features = stories.slice(1);
-  const total = items.length;
 
   const isLoadingNews = query.isLoading || (query.data === null && triggered);
   const isErrorNews = query.isError;
@@ -541,19 +539,13 @@ export default function DesignLabNews() {
             STACQ Nyheter
           </h1>
           <p className="news-masthead-copy">
-            Et kuratert overblikk over det som rører seg i porteføljen akkurat nå.
+            Oversikt over nyhetene fra porteføljen i dag.
           </p>
         </div>
         <div className="news-masthead-stats">
           <div className="news-masthead-stat">
             <span className="news-masthead-stat-label">Oppdatert</span>
             <strong className="news-masthead-stat-value">{todayLabel}</strong>
-          </div>
-          <div className="news-masthead-stat">
-            <span className="news-masthead-stat-label">Utvalg</span>
-            <strong className="news-masthead-stat-value">
-              {total} {total === 1 ? "sak" : "saker"}
-            </strong>
           </div>
         </div>
       </header>
@@ -595,11 +587,6 @@ export default function DesignLabNews() {
           {/* Features (alle øvrige saker) */}
           {features.length > 0 ? (
             <section style={{ marginBottom: 64 }}>
-              <DesignLabSectionHeader
-                title="Mer fra porteføljen"
-                meta={`${features.length} saker`}
-                style={{ marginBottom: 28 }}
-              />
               <div
                 style={{
                   display: "grid",
@@ -648,7 +635,7 @@ export default function DesignLabNews() {
         }
         .news-masthead-stats {
           display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
+          grid-template-columns: minmax(0, 1fr);
           gap: 12px;
           align-self: start;
         }
