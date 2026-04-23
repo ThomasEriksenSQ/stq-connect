@@ -86,12 +86,17 @@ const URGENCY_COLOR: Record<Urgency, string> = {
 
 /* ─── Type badge helper ─── */
 
-function TypeBadge({ type }: { type: string | null }) {
+function TypeBadge({ type, partnerName }: { type: string | null; partnerName?: string | null }) {
   if (type === "DIR" || type === "direktekunde") return (
     <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-700 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Direkte</span>
   );
   if (type === "VIA" || type === "via_partner") return (
-    <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Partner</span>
+    <span className="inline-flex items-center gap-1.5 min-w-0">
+      <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Partner</span>
+      {partnerName ? (
+        <span className="truncate text-[0.75rem] text-muted-foreground">{partnerName}</span>
+      ) : null}
+    </span>
   );
   if (type === "via_megler") return (
     <span className="inline-flex items-center rounded-full bg-violet-100 text-violet-700 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Megler</span>
@@ -1060,7 +1065,7 @@ export default function Foresporsler() {
                         </TooltipTrigger>
                         <TooltipContent>{fullDate(row.mottatt_dato)}</TooltipContent>
                       </Tooltip>
-                      <TypeBadge type={row.type} />
+                      <TypeBadge type={row.type} partnerName={row.type === "VIA" || row.type === "via_partner" ? row.selskap_navn : null} />
                     </div>
                   </div>
 
@@ -1164,7 +1169,7 @@ export default function Foresporsler() {
                       ? `${row.contacts.first_name} ${row.contacts.last_name}`.trim()
                       : <span className="text-muted-foreground">—</span>}
                   </span>
-                  <TypeBadge type={row.type} />
+                  <TypeBadge type={row.type} partnerName={row.type === "VIA" || row.type === "via_partner" ? row.selskap_navn : null} />
                   <div className="flex items-center gap-1 flex-wrap">
                     {(row.teknologier || []).slice(0, 3).map((t: string) => (
                       <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-foreground">

@@ -190,16 +190,12 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
               style={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "space-between",
                 paddingInline: px(10),
                 paddingBottom: px(4),
               }}
             >
-              <span style={{ fontSize: px(10.5), fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textFaint }}>
-                Tilpasning
-              </span>
-              <span style={{ fontSize: px(10), fontWeight: 500, color: C.textGhost }}>
-                {Math.round(scale * 100)}%
+              <span style={{ fontSize: px(11), fontWeight: 500, color: C.textFaint }}>
+                Tekst
               </span>
             </div>
             <TextSizeControlSidebar value={textSize} onChange={setTextSize} />
@@ -366,16 +362,12 @@ export function DesignLabMobileNavButton({ navigate, signOut, user, activePath }
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
                     paddingInline: px(10),
                     paddingBottom: px(4),
                   }}
                 >
-                  <span style={{ fontSize: px(10.5), fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textFaint }}>
-                    Tilpasning
-                  </span>
-                  <span style={{ fontSize: px(10), fontWeight: 500, color: C.textGhost }}>
-                    {Math.round(scale * 100)}%
+                  <span style={{ fontSize: px(11), fontWeight: 500, color: C.textFaint }}>
+                    Tekst
                   </span>
                 </div>
                 <TextSizeControlSidebar value={textSize} onChange={setTextSize} />

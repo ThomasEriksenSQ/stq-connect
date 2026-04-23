@@ -684,7 +684,7 @@ function ForespRow({
       </div>
       {/* Type */}
       <div style={{ paddingTop: 1 }}>
-        <TypeChip type={row.type} />
+        <TypeChip type={row.type} partnerName={row.type === "VIA" || row.type === "via_partner" ? row.selskap_navn : null} />
       </div>
       {/* Teknologier */}
       <div className="min-w-0 pr-4" style={{ overflow: "hidden" }}>
@@ -844,7 +844,7 @@ function ForespMobileRow({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {signal ? <DesignLabSignalBadge signal={signal} /> : null}
-          <TypeChip type={row.type} />
+          <TypeChip type={row.type} partnerName={row.type === "VIA" || row.type === "via_partner" ? row.selskap_navn : null} />
         </div>
       </div>
 
@@ -895,11 +895,28 @@ function ForespMobileRow({
    SUB-COMPONENTS
    ═══════════════════════════════════════════════════════════ */
 
-function TypeChip({ type }: { type: string | null }) {
+function TypeChip({ type, partnerName }: { type: string | null; partnerName?: string | null }) {
   const isDir = type === "DIR" || type === "direktekunde";
   const isVia = type === "VIA" || type === "via_partner";
   const label = isDir ? "Direkte" : isVia ? "Via" : "—";
   const color = isDir ? C.accent : isVia ? C.warning : C.textGhost;
+  if (isVia) {
+    return (
+      <span className="inline-flex min-w-0 items-center gap-1.5">
+        <span className="inline-flex items-center rounded-[6px]" style={{
+          height: 28, fontSize: 12, fontWeight: 500, padding: "0 10px",
+          background: `${color}10`, color, border: `1px solid ${color}20`,
+        }}>
+          {label}
+        </span>
+        {partnerName ? (
+          <span className="truncate text-[12px]" style={{ color: C.textFaint }}>
+            {partnerName}
+          </span>
+        ) : null}
+      </span>
+    );
+  }
   return (
     <span className="inline-flex items-center rounded-[6px]" style={{
       height: 28, fontSize: 12, fontWeight: 500, padding: "0 10px",
