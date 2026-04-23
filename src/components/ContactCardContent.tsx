@@ -1412,10 +1412,7 @@ export function ContactCardContent({
     activityStatus,
     kes,
   });
-  const selectedRequestRow = useMemo(
-    () => (requestHistoryRows as any[]).find((row) => row.id === selectedRequestId) ?? null,
-    [requestHistoryRows, selectedRequestId],
-  );
+  const selectedRequestRow = (requestHistoryRows as any[]).find((row) => row.id === selectedRequestId) ?? null;
   const shouldAnalyzeAiSignal = editable && sanitizedActivities.length > 0;
   const shouldHideTechDnaSection = Boolean(defaultHidden?.techDna && !showTechDna && !hasVisibleAiSuggestion);
   const shouldRenderTechDnaSection =
