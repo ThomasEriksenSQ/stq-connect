@@ -82,12 +82,14 @@ import {
 import {
   DesignLabCategoryBadge,
   DesignLabCategoryPicker,
+  DesignLabSignalBadge,
   DesignLabReadonlyChip,
   DesignLabStatusBadge,
   DESIGN_LAB_STATUS_NEUTRAL_CHIP_ACTIVE_COLORS,
   getDesignLabCategoryChipActiveColors,
 } from "@/components/designlab/system";
 import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
+import { ForespørselSheet } from "@/components/ForespørselSheet";
 import {
   DesignLabFieldGrid,
   DesignLabFieldLabel,
@@ -98,6 +100,7 @@ import { mergeTechnologyTags } from "@/lib/technologyTags";
 import { getActivityStatus, getHeatResult, getTaskStatus } from "@/lib/heatScore";
 import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/queryKeys";
 import { coerceDisplayText, normalizeOutlookMailItems } from "@/lib/outlookMail";
+import { getInitials } from "@/lib/utils";
 import { useClickWithoutSelection, activateOnEnterOrSpace } from "@/hooks/useClickWithoutSelection";
 import { useCrmNavigation } from "@/lib/crmNavigation";
 import { useSentCvLiveSync } from "@/hooks/useSentCvLiveSync";
@@ -246,6 +249,46 @@ const CONTACT_HEAT_LABELS = {
   mulig: "Mulig",
   sovende: "Sovende",
 } as const;
+const REQUEST_HISTORY_PIPELINE = {
+  sendt_cv: { label: "Sendt CV", color: C.warning },
+  intervju: { label: "Intervju", color: C.accent },
+  vunnet: { label: "Vunnet", color: C.success },
+  avslag: { label: "Avslag", color: C.danger },
+  bortfalt: { label: "Bortfalt", color: C.textFaint },
+} as const;
+
+function getRequestDaysAgo(date: string): number {
+  return differenceInDays(new Date(), new Date(date));
+}
+
+function getRequestRelativeTime(days: number): string {
+  if (days === 0) return "I dag";
+  if (days === 1) return "1d";
+  if (days < 7) return `${days}d`;
+  if (days < 30) return `${Math.floor(days / 7)}u`;
+  if (days < 365) return `${Math.floor(days / 30)}m`;
+  return `${Math.floor(days / 365)}å`;
+}
+
+function getRequestVisibleTechnologies(tags: unknown): { visible: string[]; hiddenCount: number } {
+  const normalized = Array.isArray(tags)
+    ? tags
+        .map((tag) => (typeof tag === "string" ? tag.trim() : ""))
+        .filter(Boolean)
+    : [];
+
+  const visible: string[] = [];
+  let charBudget = 18;
+
+  for (const tag of normalized) {
+    const nextCost = tag.length + (visible.length > 0 ? 2 : 0);
+    if (visible.length >= 2 || nextCost > charBudget) break;
+    visible.push(tag);
+    charBudget -= nextCost;
+  }
+
+  return { visible, hiddenCount: Math.max(0, normalized.length - visible.length) };
+}
 
 function splitSentCvThread(bodyText: string): { latest: string; rest: string | null } {
   const threadPatterns = [
@@ -607,9 +650,11 @@ export function ContactCardContent({
   const [showTechDna, setShowTechDna] = useState(!defaultHidden?.techDna);
   const [hasVisibleAiSuggestion, setHasVisibleAiSuggestion] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+  const [showRequests, setShowRequests] = useState(false);
   const [showConsultantMatch, setShowConsultantMatch] = useState(!defaultHidden?.consultantMatch);
   const [profileEditMode, setProfileEditMode] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
   const notifyDataChanged = () => {
     onDataChanged?.();
   };
@@ -655,6 +700,121 @@ export function ContactCardContent({
     },
     enabled: Boolean(companyId),
   });
+
+  const { data: requestHistoryRows = [], isLoading: isLoadingRequestHistory } = useQuery({
+    queryKey: ["contact-card-request-history", companyId ?? `contact:${contactId}`],
+    enabled: showRequests && Boolean(companyId || contactId),
+    queryFn: async () => {
+      let query = supabase
+        .from("foresporsler")
+        .select(
+          "*, contacts(id, first_name, last_name, title, email, phone), foresporsler_konsulenter(id, konsulent_type, status, status_updated_at, stacq_ansatte(id, navn), external_consultants(id, navn))",
+        )
+        .order("mottatt_dato", { ascending: false });
+
+      query = companyId ? query.eq("selskap_id", companyId) : query.eq("contact_id", contactId);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const requestHistoryContactIds = useMemo(() => {
+    const ids = new Set<string>();
+    (requestHistoryRows as any[]).forEach((row) => {
+      if (row.contacts?.id) ids.add(row.contacts.id);
+    });
+    return Array.from(ids);
+  }, [requestHistoryRows]);
+
+  const { data: requestSignalByContactId = new Map<string, string>() } = useQuery({
+    queryKey: ["contact-card-request-signals", requestHistoryContactIds.join(",")],
+    enabled: showRequests && requestHistoryContactIds.length > 0,
+    queryFn: async () => {
+      const [actsRes, tasksRes] = await Promise.all([
+        supabase
+          .from("activities")
+          .select("contact_id, created_at, subject, description")
+          .in("contact_id", requestHistoryContactIds)
+          .order("created_at", { ascending: false })
+          .limit(5000),
+        supabase
+          .from("tasks")
+          .select("contact_id, created_at, updated_at, title, description, due_date, status")
+          .in("contact_id", requestHistoryContactIds)
+          .limit(5000),
+      ]);
+
+      if (actsRes.error) throw actsRes.error;
+      if (tasksRes.error) throw tasksRes.error;
+
+      const actsByContact: Record<string, any[]> = {};
+      const tasksByContact: Record<string, any[]> = {};
+
+      (actsRes.data || []).forEach((activity: any) => {
+        if (activity.contact_id) (actsByContact[activity.contact_id] ??= []).push(activity);
+      });
+      (tasksRes.data || []).forEach((task: any) => {
+        if (task.contact_id) (tasksByContact[task.contact_id] ??= []).push(task);
+      });
+
+      const signalMap = new Map<string, string>();
+      requestHistoryContactIds.forEach((id) => {
+        const signal = getEffectiveSignal(
+          (actsByContact[id] || []).map((activity) => ({
+            created_at: activity.created_at,
+            subject: activity.subject || "",
+            description: activity.description,
+          })),
+          (tasksByContact[id] || []).map((task) => ({
+            created_at: task.created_at,
+            updated_at: task.updated_at,
+            title: task.title || "",
+            description: task.description,
+            due_date: task.due_date,
+            status: task.status || "",
+          })),
+        );
+        if (signal) signalMap.set(id, signal);
+      });
+
+      return signalMap;
+    },
+  });
+
+  const requestHistoryHasInternalConsultants = useMemo(
+    () =>
+      (requestHistoryRows as any[]).some((row) =>
+        (row.foresporsler_konsulenter || []).some(
+          (consultant: any) => consultant.konsulent_type === "intern" && consultant.stacq_ansatte?.id,
+        ),
+      ),
+    [requestHistoryRows],
+  );
+
+  const { data: requestHistoryPortraits = [] } = useQuery({
+    queryKey: ["contact-card-request-portraits"],
+    enabled: showRequests && requestHistoryHasInternalConsultants,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cv_documents")
+        .select("ansatt_id, portrait_url")
+        .not("portrait_url", "is", null);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const requestPortraitByAnsattId = useMemo(() => {
+    const map = new Map<number, string>();
+    (requestHistoryPortraits as any[]).forEach((item) => {
+      if (item.ansatt_id && item.portrait_url) {
+        map.set(item.ansatt_id, item.portrait_url);
+      }
+    });
+    return map;
+  }, [requestHistoryPortraits]);
 
   const { data: allProfiles = [] } = useQuery({
     queryKey: crmQueryKeys.profiles.all(),
@@ -817,6 +977,11 @@ export function ContactCardContent({
     if (!contact) return;
     setShowNotes(Boolean(coerceDisplayText(contact.notes).trim()));
   }, [contactId, contact?.notes]);
+
+  useEffect(() => {
+    setShowRequests(false);
+    setSelectedRequestId(null);
+  }, [contactId]);
 
   useEffect(() => {
     setHasVisibleAiSuggestion(false);
@@ -1246,6 +1411,10 @@ export function ContactCardContent({
     activityStatus,
     kes,
   });
+  const selectedRequestRow = useMemo(
+    () => (requestHistoryRows as any[]).find((row) => row.id === selectedRequestId) ?? null,
+    [requestHistoryRows, selectedRequestId],
+  );
   const shouldAnalyzeAiSignal = editable && sanitizedActivities.length > 0;
   const shouldHideTechDnaSection = Boolean(defaultHidden?.techDna && !showTechDna && !hasVisibleAiSuggestion);
   const shouldRenderTechDnaSection =
@@ -1445,6 +1614,15 @@ export function ContactCardContent({
                         void handleFinnKonsulent();
                       }}>
                         <UserSearch className="h-3.5 w-3.5 mr-2" /> Finn konsulent
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setShowRequests((prev) => !prev);
+                          if (showRequests) setSelectedRequestId(null);
+                        }}
+                      >
+                        <FileText className="h-3.5 w-3.5 mr-2" />
+                        {showRequests ? "Skjul forespørsler" : "Vis forespørsler"}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => {
                         setShowNotes((prev) => !prev);
@@ -1850,6 +2028,16 @@ export function ContactCardContent({
         )}
 
         <ContactSentCvNotice entries={sentCvEntries} profileMap={profileMapFull} />
+
+        {showRequests && (
+          <ContactRequestHistorySection
+            rows={requestHistoryRows as any[]}
+            isLoading={isLoadingRequestHistory}
+            signalByContactId={requestSignalByContactId}
+            portraitByAnsattId={requestPortraitByAnsattId}
+            onSelectRow={(row) => setSelectedRequestId(row.id)}
+          />
+        )}
 
         {/* ── Tekniske behov ── */}
         {shouldRenderTechDnaSection && (
@@ -2262,6 +2450,22 @@ export function ContactCardContent({
       </div>
 
       <DesignLabEntitySheet
+        open={Boolean(selectedRequestRow)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedRequestId(null);
+        }}
+        contentClassName="dl-v8-theme"
+      >
+        {selectedRequestRow ? (
+          <ForespørselSheet
+            row={selectedRequestRow}
+            onClose={() => setSelectedRequestId(null)}
+            onExpandChange={() => {}}
+          />
+        ) : null}
+      </DesignLabEntitySheet>
+
+      <DesignLabEntitySheet
         open={editSheetOpen}
         onOpenChange={setEditSheetOpen}
         contentClassName="px-6 py-5 dl-v8-theme"
@@ -2279,6 +2483,349 @@ export function ContactCardContent({
           defaultHidden={defaultHidden}
         />
       </DesignLabEntitySheet>
+    </div>
+  );
+}
+
+function ContactRequestTypeChip({ type }: { type: string | null }) {
+  const isDirect = type === "DIR" || type === "direktekunde";
+  const isPartner = type === "VIA" || type === "via_partner";
+  const label = isDirect ? "Direkte" : isPartner ? "Via" : "—";
+  const color = isDirect ? C.accent : isPartner ? C.warning : C.textGhost;
+
+  return (
+    <span
+      className="inline-flex items-center rounded-[6px]"
+      style={{
+        height: 28,
+        fontSize: 12,
+        fontWeight: 500,
+        padding: "0 10px",
+        background: `${color}10`,
+        color,
+        border: `1px solid ${color}20`,
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
+function ContactRequestHistorySection({
+  rows,
+  isLoading,
+  signalByContactId,
+  portraitByAnsattId,
+  onSelectRow,
+}: {
+  rows: any[];
+  isLoading: boolean;
+  signalByContactId: Map<string, string>;
+  portraitByAnsattId: Map<number, string>;
+  onSelectRow: (row: any) => void;
+}) {
+  const cols =
+    "minmax(150px,1.1fr) 120px minmax(150px,1.1fr) 80px minmax(150px,1.1fr) minmax(170px,1.15fr) minmax(110px,0.8fr) 88px";
+
+  return (
+    <div className="bg-card border border-border rounded-lg shadow-card p-4 mb-5">
+      <div className="flex items-center justify-between mb-3" style={{ minHeight: 32 }}>
+        <h3 className="text-[13px] font-medium" style={SECTION_TITLE_STYLE}>
+          Forespørsler <span className="font-normal" style={SECTION_COUNT_STYLE}>· {rows.length}</span>
+        </h3>
+      </div>
+
+      {isLoading ? (
+        <div style={{ textAlign: "center", padding: "32px 0", color: C.textFaint, fontSize: 13 }}>
+          Laster forespørsler…
+        </div>
+      ) : rows.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "20px 0", color: C.textFaint, fontSize: 13 }}>
+          Ingen tidligere forespørsler
+        </div>
+      ) : (
+        <>
+          <div className="space-y-2 md:hidden">
+            {rows.map((row) => {
+              const consultants = row.foresporsler_konsulenter || [];
+              const signal = row.contacts?.id ? signalByContactId.get(row.contacts.id) || null : null;
+              const days = getRequestDaysAgo(row.mottatt_dato);
+              const firstConsultant = consultants[0] || null;
+              const consultantName = firstConsultant
+                ? (firstConsultant.konsulent_type === "intern"
+                    ? firstConsultant.stacq_ansatte?.navn
+                    : firstConsultant.external_consultants?.navn) || "Ukjent"
+                : null;
+              const statusCfg = firstConsultant ? REQUEST_HISTORY_PIPELINE[firstConsultant.status as keyof typeof REQUEST_HISTORY_PIPELINE] : null;
+
+              return (
+                <button
+                  key={row.id}
+                  type="button"
+                  onClick={() => onSelectRow(row)}
+                  className="w-full rounded-lg border text-left transition-colors"
+                  style={{ borderColor: C.borderLight, background: C.panel, padding: 14 }}
+                  onMouseEnter={(event) => {
+                    event.currentTarget.style.background = C.hoverBg;
+                  }}
+                  onMouseLeave={(event) => {
+                    event.currentTarget.style.background = C.panel;
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate" style={{ fontSize: 13, fontWeight: 600, color: C.text }}>
+                        {row.contacts ? `${row.contacts.first_name} ${row.contacts.last_name}`.trim() : "Ingen kontakt"}
+                      </p>
+                      <p className="truncate" style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+                        {row.selskap_navn}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {signal ? <DesignLabSignalBadge signal={signal} /> : null}
+                      <ContactRequestTypeChip type={row.type} />
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                    {getRequestVisibleTechnologies(row.teknologier).visible.map((tag) => (
+                      <DesignLabReadonlyChip key={tag} active={false}>
+                        {tag}
+                      </DesignLabReadonlyChip>
+                    ))}
+                    {getRequestVisibleTechnologies(row.teknologier).hiddenCount > 0 ? (
+                      <span style={{ fontSize: 11, color: C.textGhost }}>
+                        +{getRequestVisibleTechnologies(row.teknologier).hiddenCount}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between gap-3" style={{ fontSize: 12, color: C.textFaint }}>
+                    <div className="min-w-0">
+                      {consultantName ? (
+                        <span className="truncate block" style={{ color: C.text }}>
+                          {consultantName}
+                        </span>
+                      ) : (
+                        <span>Ingen konsulent lagt til</span>
+                      )}
+                      {statusCfg ? (
+                        <span style={{ color: statusCfg.color }}>{statusCfg.label}</span>
+                      ) : null}
+                    </div>
+                    <span
+                      title={format(new Date(row.mottatt_dato), "d. MMM yyyy", { locale: nb })}
+                      style={{ color: days <= 7 ? C.text : days <= 21 ? C.warning : C.danger, fontWeight: 500 }}
+                    >
+                      {getRequestRelativeTime(days)}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="hidden md:block overflow-x-auto">
+            <div style={{ minWidth: 980 }}>
+              <div
+                className="grid items-center px-4 pb-2"
+                style={{ gridTemplateColumns: cols, borderBottom: `1px solid ${C.borderLight}` }}
+              >
+                {["Kontakt", "Signal", "Selskap", "Type", "Teknologier", "Konsulent", "Status", "Mottatt"].map((label) => (
+                  <span
+                    key={label}
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 500,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      color: C.textMuted,
+                    }}
+                  >
+                    {label}
+                  </span>
+                ))}
+              </div>
+
+              {rows.map((row) => {
+                const days = getRequestDaysAgo(row.mottatt_dato);
+                const contactName = row.contacts ? `${row.contacts.first_name} ${row.contacts.last_name}`.trim() : "";
+                const consultants = row.foresporsler_konsulenter || [];
+                const technologies = getRequestVisibleTechnologies(row.teknologier);
+                const signal = row.contacts?.id ? signalByContactId.get(row.contacts.id) || null : null;
+
+                return (
+                  <div
+                    key={row.id}
+                    onClick={() => onSelectRow(row)}
+                    className="grid items-start cursor-pointer"
+                    style={{
+                      gridTemplateColumns: cols,
+                      minHeight: 38,
+                      paddingLeft: 16,
+                      paddingRight: 16,
+                      paddingTop: 4,
+                      paddingBottom: 4,
+                      borderBottom: `1px solid ${C.borderLight}`,
+                      transition: "background 80ms ease",
+                    }}
+                    onMouseEnter={(event) => {
+                      event.currentTarget.style.background = C.hoverBg;
+                    }}
+                    onMouseLeave={(event) => {
+                      event.currentTarget.style.background = "transparent";
+                    }}
+                  >
+                    <div className="min-w-0 pr-4" style={{ paddingTop: 2 }}>
+                      {contactName ? (
+                        <span className="block truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>
+                          {contactName}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 13, color: C.textGhost }}>—</span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center" style={{ paddingTop: 1 }}>
+                      {signal ? <DesignLabSignalBadge signal={signal} /> : <span style={{ fontSize: 11, color: C.textGhost }}>—</span>}
+                    </div>
+
+                    <div className="min-w-0 pr-4" style={{ paddingTop: 2 }}>
+                      <span className="block truncate" style={{ fontSize: 12, color: C.textMuted }}>
+                        {row.selskap_navn}
+                      </span>
+                    </div>
+
+                    <div style={{ paddingTop: 1 }}>
+                      <ContactRequestTypeChip type={row.type} />
+                    </div>
+
+                    <div className="min-w-0 pr-4" style={{ overflow: "hidden" }}>
+                      <div className="flex items-center gap-1.5 flex-nowrap" style={{ minWidth: 0, overflow: "hidden" }}>
+                        {technologies.visible.map((tag) => (
+                          <DesignLabReadonlyChip key={tag} active={false}>
+                            {tag}
+                          </DesignLabReadonlyChip>
+                        ))}
+                        {technologies.hiddenCount > 0 ? (
+                          <span className="shrink-0" style={{ fontSize: 11, color: C.textGhost }}>
+                            +{technologies.hiddenCount}
+                          </span>
+                        ) : null}
+                        {technologies.visible.length === 0 && technologies.hiddenCount === 0 ? (
+                          <span style={{ fontSize: 12, color: C.textGhost }}>—</span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-start gap-2 pr-8 min-w-0" style={{ paddingTop: 2, overflow: "hidden" }}>
+                      {consultants.length === 0 ? (
+                        <div style={{ minHeight: 28, display: "flex", alignItems: "center" }}>
+                          <span style={{ fontSize: 12, color: C.textGhost }}>—</span>
+                        </div>
+                      ) : (
+                        consultants.map((consultant: any) => {
+                          const name =
+                            (consultant.konsulent_type === "intern"
+                              ? consultant.stacq_ansatte?.navn
+                              : consultant.external_consultants?.navn) || "Ukjent";
+                          const portrait =
+                            consultant.konsulent_type === "intern" && consultant.stacq_ansatte?.id
+                              ? portraitByAnsattId.get(consultant.stacq_ansatte.id) || null
+                              : null;
+
+                          return (
+                            <div
+                              key={consultant.id}
+                              style={{ minHeight: 32, display: "flex", alignItems: "center", gap: 12, width: "100%", minWidth: 0 }}
+                            >
+                              {portrait ? (
+                                <img
+                                  src={portrait}
+                                  alt={name}
+                                  className="h-8 w-8 rounded-full border object-cover"
+                                  style={{ borderColor: C.border, flexShrink: 0 }}
+                                />
+                              ) : (
+                                <div
+                                  className="flex h-8 w-8 items-center justify-center rounded-full"
+                                  style={{
+                                    flexShrink: 0,
+                                    background: C.accentBg,
+                                    color: C.accent,
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  {getInitials(name)}
+                                </div>
+                              )}
+                              <span
+                                className="truncate"
+                                style={{ fontSize: 13, fontWeight: 500, color: C.text, lineHeight: 1.2, flex: "1 1 auto", minWidth: 0 }}
+                              >
+                                {name}
+                              </span>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    <div className="flex flex-col items-start gap-2" style={{ paddingTop: 1 }}>
+                      {consultants.length === 0 ? (
+                        <div style={{ minHeight: 28, display: "flex", alignItems: "center" }}>
+                          <span style={{ fontSize: 12, color: C.textGhost }}>—</span>
+                        </div>
+                      ) : (
+                        consultants.map((consultant: any) => {
+                          const cfg =
+                            REQUEST_HISTORY_PIPELINE[consultant.status as keyof typeof REQUEST_HISTORY_PIPELINE] ||
+                            { label: "Ny", color: C.textFaint };
+
+                          return (
+                            <div key={consultant.id} style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
+                              <span
+                                className="inline-flex items-center rounded-[6px]"
+                                style={{
+                                  height: 28,
+                                  width: "fit-content",
+                                  fontSize: 12,
+                                  fontWeight: 500,
+                                  padding: "0 10px",
+                                  background: `${cfg.color}10`,
+                                  color: cfg.color,
+                                  border: `1px solid ${cfg.color}20`,
+                                }}
+                              >
+                                {cfg.label}
+                              </span>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    <div className="flex items-start justify-end" style={{ paddingTop: 2 }}>
+                      <span
+                        title={format(new Date(row.mottatt_dato), "d. MMM yyyy", { locale: nb })}
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 500,
+                          color: days <= 7 ? C.text : days <= 21 ? C.warning : C.danger,
+                          paddingTop: 2,
+                        }}
+                      >
+                        {getRequestRelativeTime(days)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
