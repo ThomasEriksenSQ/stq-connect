@@ -539,7 +539,7 @@ export default function DesignLabNews() {
             STACQ Nyheter
           </h1>
           <p className="news-masthead-copy">
-            Oversikt over nyhetene fra porteføljen i dag.
+            Oversikt over nyhetene fra CRM porteføljen i dag.
           </p>
         </div>
         <div className="news-masthead-stats">
