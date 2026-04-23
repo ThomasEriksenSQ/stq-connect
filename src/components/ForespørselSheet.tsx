@@ -2532,7 +2532,7 @@ function AddLaterReviewCombobox({
               </span>
             </label>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 border-t border-border pt-3">
               <label htmlFor="later-review-email-date" className="block text-[0.8125rem] font-medium text-foreground">
                 E-postpåminnelse på dato
               </label>
