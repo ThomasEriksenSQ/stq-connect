@@ -742,7 +742,17 @@ export function ConsultantModal({ open, onClose, editRow, onSaved }: {
     if (file) handleCvUpload(file);
   }, [handleCvUpload]);
 
+  const selectType = (nextType: "freelance" | "partner") => {
+    setForm(prev => ({
+      ...prev,
+      type: nextType,
+      company_id: nextType === "partner" ? prev.company_id : "",
+      selskap_tekst: nextType === "freelance" ? prev.selskap_tekst : "",
+    }));
+  };
+
   const handleSave = async () => {
+    if (!form.type) { toast.error("Velg freelance eller via partner"); return; }
     if (!form.navn.trim()) { toast.error("Navn er påkrevd"); return; }
     if (form.type === "partner" && !form.company_id) { toast.error("Velg partnerselskap"); return; }
 
@@ -807,7 +817,6 @@ export function ConsultantModal({ open, onClose, editRow, onSaved }: {
   };
 
   const LABEL = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
-  const showTypeSelection = isCreate && !form.type;
   const availabilityQuickChoices = [14, 30, 45];
 
   const CvBadge = ({ field }: { field: string }) =>
@@ -830,42 +839,48 @@ export function ConsultantModal({ open, onClose, editRow, onSaved }: {
           {isCreate ? "Ny ekstern konsulent" : "Rediger konsulent"}
         </h2>
 
-        {/* STEP 1: Type selection (create only) */}
-        {showTypeSelection && (
-          <div className="space-y-3">
-            <p className="text-[0.8125rem] text-muted-foreground">Velg type:</p>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => set("type", "freelance")}
-                className="flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all text-center"
-              >
-                <User className="h-7 w-7 text-primary" />
-                <span className="text-[0.9375rem] font-semibold">Freelance</span>
-                <span className="text-[0.75rem] text-muted-foreground leading-snug">Selvstendig konsulent</span>
-              </button>
-              <button
-                onClick={() => set("type", "partner")}
-                className="flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all text-center"
-              >
-                <Users className="h-7 w-7 text-primary" />
-                <span className="text-[0.9375rem] font-semibold">Via partner</span>
-                <span className="text-[0.75rem] text-muted-foreground leading-snug">Kommer via et partnerselskap</span>
-              </button>
+        <div className="space-y-4">
+          {isCreate ? (
+            <div>
+              <label className={LABEL}>Type *</label>
+              <div className="grid grid-cols-2 gap-3 mt-1">
+                <button
+                  type="button"
+                  onClick={() => selectType("freelance")}
+                  className={cn(
+                    "flex flex-col items-center gap-2 rounded-xl border-2 p-5 text-center transition-all",
+                    form.type === "freelance"
+                      ? "border-primary bg-primary/5 shadow-[0_0_0_1px_rgba(59,130,246,0.08)]"
+                      : "border-border hover:border-primary/40 hover:bg-primary/5",
+                  )}
+                >
+                  <User className={cn("h-7 w-7", form.type === "freelance" ? "text-primary" : "text-muted-foreground")} />
+                  <span className="text-[0.9375rem] font-semibold text-foreground">Freelance</span>
+                  <span className="text-[0.75rem] leading-snug text-muted-foreground">Selvstendig konsulent</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectType("partner")}
+                  className={cn(
+                    "flex flex-col items-center gap-2 rounded-xl border-2 p-5 text-center transition-all",
+                    form.type === "partner"
+                      ? "border-primary bg-primary/5 shadow-[0_0_0_1px_rgba(59,130,246,0.08)]"
+                      : "border-border hover:border-primary/40 hover:bg-primary/5",
+                  )}
+                >
+                  <Users className={cn("h-7 w-7", form.type === "partner" ? "text-primary" : "text-muted-foreground")} />
+                  <span className="text-[0.9375rem] font-semibold text-foreground">Via partner</span>
+                  <span className="text-[0.75rem] leading-snug text-muted-foreground">Kommer via et partnerselskap</span>
+                </button>
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* STEP 2: Fields (after type selected or edit mode) */}
-        {(form.type || !isCreate) && (
-          <div className="space-y-4">
-            {/* Type toggle (always shown in edit, hidden in create until type selected via step 1) */}
-            {!isCreate && (
+          ) : (
               <div>
                 <label className={LABEL}>Type</label>
                 <div className="flex gap-2 mt-1">
                   <DesignLabFilterButton
                     type="button"
-                    onClick={() => { set("type", "freelance"); set("company_id", ""); }}
+                    onClick={() => selectType("freelance")}
                     active={form.type === "freelance"}
                     activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
                     inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
@@ -875,7 +890,7 @@ export function ConsultantModal({ open, onClose, editRow, onSaved }: {
                   </DesignLabFilterButton>
                   <DesignLabFilterButton
                     type="button"
-                    onClick={() => set("type", "partner")}
+                    onClick={() => selectType("partner")}
                     active={form.type === "partner"}
                     activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
                     inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
@@ -887,103 +902,103 @@ export function ConsultantModal({ open, onClose, editRow, onSaved }: {
               </div>
             )}
 
-            {/* CV Upload */}
-            <div>
-              <label className={LABEL}>CV-opplasting</label>
-              {isCreate && (
-                <p className="mt-1 text-[0.75rem] text-muted-foreground">
-                  Start med å laste opp CV-en. Vi henter automatisk ut navn, e-post, telefon og teknologier når de finnes.
-                </p>
+          {/* CV Upload */}
+          <div>
+            <label className={LABEL}>CV-opplasting</label>
+            {isCreate && (
+              <p className="mt-1 text-[0.75rem] text-muted-foreground">
+                Start med å laste opp CV-en. Vi henter automatisk ut navn, e-post, telefon og teknologier når de finnes.
+              </p>
+            )}
+            <div
+              onDragOver={e => e.preventDefault()}
+              onDrop={handleDrop}
+              onClick={() => fileRef.current?.click()}
+              className={cn(
+                "mt-1 flex flex-col items-center gap-2 rounded-lg border-2 border-dashed p-5 transition-colors cursor-pointer",
+                cvParsing
+                  ? "border-primary/40 bg-primary/5"
+                  : "border-border hover:border-primary/40 hover:bg-primary/5"
               )}
-              <div
-                onDragOver={e => e.preventDefault()}
-                onDrop={handleDrop}
-                onClick={() => fileRef.current?.click()}
-                className={cn(
-                  "mt-1 flex flex-col items-center gap-2 p-5 rounded-lg border-2 border-dashed cursor-pointer transition-colors",
-                  cvParsing
-                    ? "border-primary/40 bg-primary/5"
-                    : "border-border hover:border-primary/40 hover:bg-primary/5"
-                )}
-              >
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept={EXTERNAL_CV_ACCEPT}
-                  className="hidden"
-                  onChange={e => {
-                    const file = e.target.files?.[0];
-                    if (file) handleCvUpload(file);
-                    e.target.value = "";
-                  }}
-                />
-                {cvParsing ? (
-                  <>
-                    <Loader2 className="h-6 w-6 text-primary animate-spin" />
-                    <span className="text-[0.8125rem] text-primary font-medium">Analyserer CV...</span>
-                  </>
-                ) : cvPrefilled.size > 0 ? (
-                  <>
-                    <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-                    <span className="text-[0.8125rem] text-emerald-600 font-medium">CV analysert</span>
-                    <span className="text-[0.6875rem] text-muted-foreground">
-                      {cvFileName ? `${cvFileName} · ` : ""}Klikk for å laste opp ny
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-6 w-6 text-muted-foreground" />
-                    <span className="text-[0.8125rem] text-muted-foreground">
-                      Dra og slipp {EXTERNAL_CV_SUPPORTED_LABEL}, eller klikk for å velge
-                    </span>
-                  </>
-                )}
-              </div>
+            >
+              <input
+                ref={fileRef}
+                type="file"
+                accept={EXTERNAL_CV_ACCEPT}
+                className="hidden"
+                onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (file) handleCvUpload(file);
+                  e.target.value = "";
+                }}
+              />
+              {cvParsing ? (
+                <>
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <span className="text-[0.8125rem] font-medium text-primary">Analyserer CV...</span>
+                </>
+              ) : cvPrefilled.size > 0 ? (
+                <>
+                  <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                  <span className="text-[0.8125rem] font-medium text-emerald-600">CV analysert</span>
+                  <span className="text-[0.6875rem] text-muted-foreground">
+                    {cvFileName ? `${cvFileName} · ` : ""}Klikk for å laste opp ny
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Upload className="h-6 w-6 text-muted-foreground" />
+                  <span className="text-[0.8125rem] text-muted-foreground">
+                    Dra og slipp {EXTERNAL_CV_SUPPORTED_LABEL}, eller klikk for å velge
+                  </span>
+                </>
+              )}
             </div>
+          </div>
 
-            {/* Partner: Company picker */}
-            {form.type === "partner" && (
-              <div>
-                <label className={LABEL}>Partnerselskap *</label>
-                {selectedCompany ? (
-                  <div className="mt-1 flex items-center gap-2">
-                    <span className="text-[0.875rem] font-medium">{selectedCompany.name}</span>
-                    <button onClick={() => set("company_id", "")} className="text-muted-foreground hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
-                  </div>
-                ) : (
-                  <div className="mt-1">
-                    <Input
-                      value={companySearch}
-                      onChange={e => setCompanySearch(e.target.value)}
-                      placeholder="Søk selskaper..."
-                      className="text-[0.875rem]"
-                    />
-                    {companySearch.trim() && filteredCompanies.length > 0 && (
-                      <div className="border border-border rounded-lg mt-1 max-h-40 overflow-y-auto bg-popover">
-                        {filteredCompanies.map(c => (
-                          <button
-                            key={c.id}
-                            onClick={() => { set("company_id", c.id); setCompanySearch(""); }}
-                            className="w-full text-left px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors"
-                          >
-                            {c.name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+          {/* Partner: Company picker */}
+          {form.type === "partner" && (
+            <div>
+              <label className={LABEL}>Partnerselskap *</label>
+              {selectedCompany ? (
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="text-[0.875rem] font-medium">{selectedCompany.name}</span>
+                  <button onClick={() => set("company_id", "")} className="text-muted-foreground hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
+                </div>
+              ) : (
+                <div className="mt-1">
+                  <Input
+                    value={companySearch}
+                    onChange={e => setCompanySearch(e.target.value)}
+                    placeholder="Søk selskaper..."
+                    className="text-[0.875rem]"
+                  />
+                  {companySearch.trim() && filteredCompanies.length > 0 && (
+                    <div className="border border-border rounded-lg mt-1 max-h-40 overflow-y-auto bg-popover">
+                      {filteredCompanies.map(c => (
+                        <button
+                          key={c.id}
+                          onClick={() => { set("company_id", c.id); setCompanySearch(""); }}
+                          className="w-full text-left px-3 py-2 text-[0.8125rem] hover:bg-secondary transition-colors"
+                        >
+                          {c.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
-            {/* Freelance: free-text selskap */}
-            {form.type === "freelance" && (
-              <div>
-                <label className={LABEL}>Selskap</label>
-                <Input value={form.selskap_tekst} onChange={e => set("selskap_tekst", e.target.value)} placeholder="Eget enkeltpersonforetak e.l." className="mt-1 text-[0.875rem]" />
-                <p className="text-[0.6875rem] text-muted-foreground mt-1">Ikke et salgsselskap i CRM</p>
-              </div>
-            )}
+          {/* Freelance: free-text selskap */}
+          {form.type === "freelance" && (
+            <div>
+              <label className={LABEL}>Selskap</label>
+              <Input value={form.selskap_tekst} onChange={e => set("selskap_tekst", e.target.value)} placeholder="Eget enkeltpersonforetak e.l." className="mt-1 text-[0.875rem]" />
+              <p className="text-[0.6875rem] text-muted-foreground mt-1">Ikke et salgsselskap i CRM</p>
+            </div>
+          )}
 
             {/* Navn */}
             <div>
@@ -1124,33 +1139,30 @@ export function ConsultantModal({ open, onClose, editRow, onSaved }: {
                 className="mt-1 flex w-full rounded-md border border-input bg-background px-3 py-2 text-[0.875rem] ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
             </div>
-          </div>
-        )}
+        </div>
 
         {/* Footer */}
-        {(form.type || !isCreate) && (
-          <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
-            <div>
-              {!isCreate && (
-                <button onClick={handleDelete} className="text-[0.8125rem] text-destructive hover:underline">
-                  Slett
-                </button>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              <button onClick={onClose} className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">
-                Avbryt
+        <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
+          <div>
+            {!isCreate && (
+              <button onClick={handleDelete} className="text-[0.8125rem] text-destructive hover:underline">
+                Slett
               </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
-              >
-                {saving ? "Lagrer..." : isCreate ? "Legg til" : "Lagre"}
-              </button>
-            </div>
+            )}
           </div>
-        )}
+          <div className="flex items-center gap-3">
+            <button onClick={onClose} className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors">
+              Avbryt
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving || !form.type}
+              className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              {saving ? "Lagrer..." : isCreate ? "Legg til" : "Lagre"}
+            </button>
+          </div>
+        </div>
       </DesignLabEntitySheet>
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
