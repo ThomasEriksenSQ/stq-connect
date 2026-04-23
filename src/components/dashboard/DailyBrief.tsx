@@ -29,7 +29,7 @@ import {
   DesignLabSignalBadge,
   getDesignLabCategoryChipActiveColors,
 } from "@/components/designlab/system";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { C } from "@/theme";
 import { useCrmNavigation } from "@/lib/crmNavigation";
 

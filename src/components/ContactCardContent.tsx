@@ -50,7 +50,7 @@ import {
   StickyNote,
   UserSearch,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { format, isPast, isToday, getYear, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { nb } from "date-fns/locale";
 import { fullDate } from "@/lib/relativeDate";

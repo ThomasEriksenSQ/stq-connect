@@ -10,7 +10,7 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { normalizeTechnologyTags } from "@/lib/technologyTags";
 import { getConsultantMatchScoreColor } from "@/lib/consultantMatches";
 import {

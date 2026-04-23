@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { calcStacqPris } from "@/lib/stacqPris";
 import { computeOppdragStatus as computeSharedOppdragStatus } from "@/lib/oppdragForm";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { ArrowUpDown, TrendingUp } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,

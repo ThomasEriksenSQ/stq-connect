@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { differenceInDays } from "date-fns";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { C } from "@/components/designlab/theme";

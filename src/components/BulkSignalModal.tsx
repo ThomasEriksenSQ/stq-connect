@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { analyzeSignal, type AiSignalResult } from "@/lib/aiSignal";
 import { getEffectiveSignal, getSignalBadgeStyle, upsertTaskSignalDescription } from "@/lib/categoryUtils";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
 

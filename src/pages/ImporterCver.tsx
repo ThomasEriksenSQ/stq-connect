@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Upload, FileText, Loader2, Check, X, AlertCircle, Search, CloudOff } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { normalizeTechnologyTags } from "@/lib/technologyTags";
 
 /* ─── Types ─── */

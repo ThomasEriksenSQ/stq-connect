@@ -39,7 +39,7 @@ import {
   isRootCvVariant,
   type CvVariantIdentity,
 } from "@/lib/cvVariants";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 
 const DEFAULT_CONTACT = {
   name: "Jon Richard Nygaard",

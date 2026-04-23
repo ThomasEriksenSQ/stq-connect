@@ -9,7 +9,7 @@ import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { format, startOfWeek, differenceInDays } from "date-fns";
 import { nb } from "date-fns/locale";
 import { Input } from "@/components/ui/input";

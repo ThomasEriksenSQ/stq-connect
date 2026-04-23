@@ -4,7 +4,7 @@ import { nb } from "date-fns/locale";
 import { Download, Plus, X } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatMonths, getInitials } from "@/lib/utils";

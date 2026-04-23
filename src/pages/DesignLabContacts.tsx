@@ -14,7 +14,7 @@ import finnIcon from "@/assets/finn-icon.webp";
 import { differenceInDays, format } from "date-fns";
 import { nb } from "date-fns/locale";
 import { getEffectiveSignal, normalizeCategoryLabel } from "@/lib/categoryUtils";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import {
   getConsultantAvailabilityMeta,
   hasConsultantAvailability,

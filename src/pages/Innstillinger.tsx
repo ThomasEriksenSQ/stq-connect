@@ -5,7 +5,7 @@ import { Mail, Loader2, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { VarslingsInnstillinger } from "@/components/VarslingsInnstillinger";
 import { VarslingsInnstillingerV2 } from "@/components/VarslingsInnstillingerV2";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 
 import { useDesignVersion } from "@/context/DesignVersionContext";
 import { DesignLabPageShell } from "@/components/designlab/DesignLabPageShell";

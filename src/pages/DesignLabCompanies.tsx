@@ -22,7 +22,7 @@ import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BrregSearch, lookupByOrgNr } from "@/components/BrregSearch";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { useCrmNavigation } from "@/lib/crmNavigation";
 import {
   DesignLabEntitySheet,

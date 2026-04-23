@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { History, RotateCcw, Download, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import {
   invokeCvAccess,
   type CvAccessDocumentResponse,

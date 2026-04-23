@@ -21,7 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Plus, Trash2, GripVertical, Download, Check, Loader2, Upload, Move } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { getDefaultProjectsSectionTitle } from "@/lib/cvProjectsTitle";
 import { getInitials } from "@/lib/utils";
 import {

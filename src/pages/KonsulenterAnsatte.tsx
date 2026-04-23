@@ -6,7 +6,7 @@ import { format, differenceInMonths, differenceInDays } from "date-fns";
 import { nb } from "date-fns/locale";
 import { Plus } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { useNavigate } from "react-router-dom";
 import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
 import { issueAndCopyCvShareLink } from "@/lib/cvAccess";

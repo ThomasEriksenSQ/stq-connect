@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { FileText, Upload, User, Handshake, KeyRound, X, Loader2, Search, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import { normalizeTechnologyTags } from "@/lib/technologyTags";
 

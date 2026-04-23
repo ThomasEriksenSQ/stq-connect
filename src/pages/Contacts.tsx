@@ -12,7 +12,7 @@ import {
 import { Search, ArrowUpDown, ChevronDown, Radio, Ban } from "lucide-react";
 import { cn, getInitials } from "@/lib/utils";
 import { BulkSignalModal } from "@/components/BulkSignalModal";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { relativeDate } from "@/lib/relativeDate";

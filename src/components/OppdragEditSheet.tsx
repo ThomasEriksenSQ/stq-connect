@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { cn, formatNOK, getInitials } from "@/lib/utils";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { Plus, X, ArrowUpDown, Pencil, Trash2, Sparkles, Loader2, ChevronDown, Check, ClipboardList, UserX, Users, Trophy } from "lucide-react";
 import { ForespørselSheet } from "@/components/ForespørselSheet";
 import { relativeDate, fullDate } from "@/lib/relativeDate";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";

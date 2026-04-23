@@ -11,7 +11,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { relativeDate, fullDate } from "@/lib/relativeDate";
 import { relativeTime } from "@/lib/relativeDate";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useConsultantCache } from "@/hooks/useConsultantCache";
@@ -887,6 +887,7 @@ export function ForespørselSheet({
                     foresporslerID={row.id}
                     alreadyLinkedIntern={linkedKonsulenter.filter((k: any) => k.konsulent_type === "intern").map((k: any) => k.ansatt_id)}
                     alreadyLinkedEkstern={linkedKonsulenter.filter((k: any) => k.konsulent_type === "ekstern").map((k: any) => k.ekstern_id)}
+                    portraitByAnsattId={portraitByAnsattId}
                     onAddIntern={handleAddKonsulent}
                     onAddEkstern={handleAddEkstern}
                   />
@@ -1477,12 +1478,14 @@ function AddKonsulentCombobox({
   foresporslerID,
   alreadyLinkedIntern,
   alreadyLinkedEkstern,
+  portraitByAnsattId,
   onAddIntern,
   onAddEkstern,
 }: {
   foresporslerID: number;
   alreadyLinkedIntern: number[];
   alreadyLinkedEkstern: string[];
+  portraitByAnsattId: Map<number, string>;
   onAddIntern: (ansattId: number) => void;
   onAddEkstern: (eksternId: string) => void;
 }) {
@@ -1574,9 +1577,23 @@ function AddKonsulentCombobox({
                   className="w-full text-left px-2 py-2 rounded hover:bg-muted transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[0.625rem] font-semibold text-primary shrink-0">
-                      {getInitials(a.navn)}
-                    </div>
+                    {(() => {
+                      const portrait = portraitByAnsattId.get(a.id);
+                      if (portrait) {
+                        return (
+                          <img
+                            src={portrait}
+                            alt={a.navn}
+                            className="h-6 w-6 rounded-full object-cover border border-border shrink-0"
+                          />
+                        );
+                      }
+                      return (
+                        <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[0.625rem] font-semibold text-primary shrink-0">
+                          {getInitials(a.navn)}
+                        </div>
+                      );
+                    })()}
                     <span className="text-[0.8125rem] font-medium text-foreground">{a.navn}</span>
                   </div>
                   {a.kompetanse?.length > 0 && (
