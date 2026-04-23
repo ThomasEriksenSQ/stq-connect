@@ -9,12 +9,13 @@ import { cn } from "@/lib/utils";
 import { getEffectiveSignal, getSignalBadgeStyle, upsertTaskSignalDescription } from "@/lib/categoryUtils";
 import { CONTACT_CV_EMAIL_REQUIRED_MESSAGE, contactHasEmail } from "@/lib/contactCvEligibility";
 import { getHeatResult, TEMP_CONFIG } from "@/lib/heatScore";
-import { ChevronLeft, ChevronRight, Radio, Loader2, ChevronDown, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, ChevronDown, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog } from "@/components/ui/dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { ContactCardContent } from "@/components/ContactCardContent";
+import finnIcon from "@/assets/finn-icon.webp";
 import {
   DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS,
   DesignLabControlLabel,
@@ -167,6 +168,20 @@ const DESIGN_LAB_FINN_CHIP_COLORS = {
   color: C.info,
   border: `1px solid rgba(26,79,160,0.18)`,
   fontWeight: 600,
+} as const;
+
+const DESIGN_LAB_REQUEST_CHIP_COLORS = {
+  background: C.successBg,
+  color: C.success,
+  border: `1px solid rgba(45,106,79,0.18)`,
+  fontWeight: 600,
+} as const;
+
+const DESIGN_LAB_PREVIOUS_REQUEST_CHIP_COLORS = {
+  background: C.statusNeutralBg,
+  color: C.statusNeutral,
+  border: `1px solid ${C.statusNeutralBorder}`,
+  fontWeight: 500,
 } as const;
 
 const DESIGN_LAB_IRRELEVANT_CHIP_COLORS = {
@@ -934,19 +949,56 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
                   {/* Finn.no-badge */}
                   {(() => {
                     const companyTech = techProfiles.find((tp: any) => tp.company_id === current.contact.company_id);
-                    if (!companyTech?.teknologier) return null;
-                    const hasTech = Object.keys(companyTech.teknologier as Record<string, number>).length > 0;
-                    if (!hasTech) return null;
+                    const hasFreshFinn = !!(
+                      companyTech?.sist_fra_finn &&
+                      differenceInDays(new Date(), new Date(companyTech.sist_fra_finn)) <= 90
+                    );
+                    if (!hasFreshFinn) return null;
                     return designLabMode ? (
                       <DesignLabReadonlyChip active={true} activeColors={DESIGN_LAB_FINN_CHIP_COLORS}>
-                        <Radio className="h-3 w-3" /> Finn.no
+                        <img
+                          src={finnIcon}
+                          alt="Finn"
+                          className="mr-1 h-3 w-3 object-contain grayscale opacity-70"
+                        />
+                        Finn.no annonsering siste 90 dager
                       </DesignLabReadonlyChip>
                     ) : (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-blue-100 bg-blue-50 text-[0.75rem] font-medium text-blue-800">
-                        <Radio className="h-3 w-3 text-blue-500" /> Finn.no
+                        <img
+                          src={finnIcon}
+                          alt="Finn"
+                          className="mr-1 h-3 w-3 object-contain grayscale opacity-70"
+                        />
+                        Finn.no annonsering siste 90 dager
                       </span>
                     );
                   })()}
+                  {current.hasAktivForespørsel
+                    ? (
+                      designLabMode ? (
+                        <DesignLabReadonlyChip active={true} activeColors={DESIGN_LAB_REQUEST_CHIP_COLORS}>
+                          Forespørsel siste 45 dager
+                        </DesignLabReadonlyChip>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[0.75rem] font-medium" style={getSignalBadgeStyle("Behov nå")}>
+                          Forespørsel siste 45 dager
+                        </span>
+                      )
+                    )
+                    : current.hasTidligereForespørsel
+                      ? (
+                        designLabMode ? (
+                          <DesignLabReadonlyChip active={true} activeColors={DESIGN_LAB_PREVIOUS_REQUEST_CHIP_COLORS}>
+                            Tidligere fått forespørsel
+                          </DesignLabReadonlyChip>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[0.75rem] font-medium" style={getSignalBadgeStyle("Ukjent om behov")}>
+                            Tidligere fått forespørsel
+                          </span>
+                        )
+                      )
+                      : null}
                   {!designLabMode && (
                     <button
                       onClick={() => setPanelOpen(true)}
@@ -1643,6 +1695,7 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
             <div className="divide-y divide-border">
               {eligibleScoredLeads.map((lead) => {
                 const temp = TEMP_CONFIG[lead.temperature];
+                const tempEmoji = lead.temperature === "hett" ? "🔥" : lead.temperature === "lovende" ? "⚡" : lead.temperature === "mulig" ? "💡" : "💤";
                 return (
                   <button
                     key={lead.contact.id}
@@ -1663,14 +1716,40 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
                             {lead.signal}
                           </span>
                         )}
+                        <span
+                          className="inline-flex items-center gap-1 rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium flex-shrink-0 h-7"
+                          style={DESIGN_LAB_HEAT_CHIP_COLORS[lead.temperature]}
+                        >
+                          {tempEmoji} {TEMP_CONFIG[lead.temperature].label}
+                        </span>
                         {lead.hasMarkedsradar && (
                           <span
                             className="inline-flex items-center gap-1 rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium flex-shrink-0 h-7"
                             style={getSignalBadgeStyle("Får fremtidig behov")}
                           >
-                            <Radio className="h-3 w-3" /> Finn.no
+                            <img
+                              src={finnIcon}
+                              alt="Finn"
+                              className="mr-1 h-3 w-3 object-contain grayscale opacity-70"
+                            />
+                            Finn.no annonsering siste 90 dager
                           </span>
                         )}
+                        {lead.hasAktivForespørsel ? (
+                          <span
+                            className="inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium flex-shrink-0 h-7"
+                            style={getSignalBadgeStyle("Behov nå")}
+                          >
+                            Forespørsel siste 45 dager
+                          </span>
+                        ) : lead.hasTidligereForespørsel ? (
+                          <span
+                            className="inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium flex-shrink-0 h-7"
+                            style={getSignalBadgeStyle("Ukjent om behov")}
+                          >
+                            Tidligere fått forespørsel
+                          </span>
+                        ) : null}
                         {lead.isInnkjoper && (
                           <span
                             className="inline-flex items-center rounded-[6px] border px-2.5 py-0.5 text-[0.75rem] font-medium flex-shrink-0 h-7"

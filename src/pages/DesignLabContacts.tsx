@@ -422,6 +422,76 @@ function getGeoDistanceDetail(geoMatch?: GeoMatchResult | null): string {
   return geoMatch.companyLocation || geoMatch.detail.replace(/^Selskap:\s*/, "");
 }
 
+const CONTACT_CONTEXT_BADGE_STYLE = {
+  height: 22,
+  padding: "0 8px",
+  borderRadius: 5,
+  fontSize: 11,
+  fontWeight: 500,
+  display: "inline-flex",
+  alignItems: "center",
+  flexShrink: 0,
+  whiteSpace: "nowrap" as const,
+};
+
+function DesignLabContactContextBadges({
+  temperature,
+  hasMarkedsradar,
+  hasAktivForespørsel,
+  hasTidligereForespørsel,
+}: {
+  temperature?: HeatResult["temperature"] | null;
+  hasMarkedsradar: boolean;
+  hasAktivForespørsel: boolean;
+  hasTidligereForespørsel: boolean;
+}) {
+  return (
+    <>
+      <DesignLabHeatBadge temperature={temperature} />
+      {hasMarkedsradar && (
+        <span
+          style={{
+            ...CONTACT_CONTEXT_BADGE_STYLE,
+            background: C.infoBg,
+            color: C.info,
+            border: "1px solid rgba(26,79,160,0.18)",
+          }}
+        >
+          <img
+            src={finnIcon}
+            alt="Finn"
+            style={{ width: 12, height: 12, marginRight: 6, objectFit: "contain", filter: "grayscale(1) opacity(0.7)" }}
+          />
+          Finn.no annonsering siste 90 dager
+        </span>
+      )}
+      {hasAktivForespørsel ? (
+        <span
+          style={{
+            ...CONTACT_CONTEXT_BADGE_STYLE,
+            background: C.successBg,
+            color: C.success,
+            border: "1px solid rgba(45,106,79,0.18)",
+          }}
+        >
+          Forespørsel siste 45 dager
+        </span>
+      ) : hasTidligereForespørsel ? (
+        <span
+          style={{
+            ...CONTACT_CONTEXT_BADGE_STYLE,
+            background: C.statusNeutralBg,
+            color: C.statusNeutral,
+            border: `1px solid ${C.statusNeutralBorder}`,
+          }}
+        >
+          Tidligere fått forespørsel
+        </span>
+      ) : null}
+    </>
+  );
+}
+
 
 
 /* ═══════════════════════════════════════════════════════════
@@ -2087,15 +2157,14 @@ export default function DesignLabContacts() {
               {[contact.company, contact.title].filter(Boolean).join(" · ") || "Ingen stilling registrert"}
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="flex shrink-0 max-w-[62%] flex-wrap items-center justify-end gap-1.5">
             {contact.signal ? <DesignLabSignalBadge signal={contact.signal as Signal} /> : null}
-            {contact.hasMarkedsradar ? (
-              <img
-                src={finnIcon}
-                alt="Finn"
-                style={{ width: 14, height: 14, filter: "grayscale(1) opacity(0.65)", objectFit: "contain" }}
-              />
-            ) : null}
+            <DesignLabContactContextBadges
+              temperature={contact.heatResult.temperature}
+              hasMarkedsradar={contact.hasMarkedsradar}
+              hasAktivForespørsel={contact.hasAktivForespørsel}
+              hasTidligereForespørsel={contact.hasTidligereForespørsel}
+            />
           </div>
         </div>
         <div className="mt-3 flex items-center justify-between gap-3" style={{ fontSize: 12, color: C.textFaint }}>
@@ -2825,8 +2894,8 @@ export default function DesignLabContacts() {
                               if (!isActive) e.currentTarget.style.background = isActive ? C.activeBg : "transparent";
                             }}
                           >
-                            <div className="min-w-0 flex items-center gap-2">
-                              <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text }}>
+                            <div className="min-w-0 flex flex-wrap items-center gap-2">
+                              <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: C.text, maxWidth: "100%" }}>
                                 {c.firstName} {c.lastName}
                               </span>
                               {c.heatResult.needsReview && (
@@ -2837,6 +2906,14 @@ export default function DesignLabContacts() {
                                   !
                                 </span>
                               )}
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <DesignLabContactContextBadges
+                                  temperature={c.heatResult.temperature}
+                                  hasMarkedsradar={c.hasMarkedsradar}
+                                  hasAktivForespørsel={c.hasAktivForespørsel}
+                                  hasTidligereForespørsel={c.hasTidligereForespørsel}
+                                />
+                              </div>
                             </div>
                             <div className="flex items-center gap-1.5">
                               {c.signal ? (
