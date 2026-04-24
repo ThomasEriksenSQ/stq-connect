@@ -21,6 +21,7 @@ import { getInitials } from "@/lib/utils";
 import {
   DesignLabIconButton,
   DesignLabSearchInput,
+  DesignLabStaticTag,
 } from "@/components/designlab/controls";
 import {
   DesignLabColumnHeader,
@@ -104,6 +105,21 @@ const PIPELINE: Record<string, { label: string; color: string; step: number | nu
   avslag:    { label: "Avslag", color: C.danger, step: null },
   bortfalt:  { label: "Bortfalt", color: C.textFaint, step: null },
 };
+
+const REQUEST_TYPE_TAG_COLORS = {
+  direct: { background: "#F1F5F9", color: "#334155", border: "1px solid #CBD5E1", fontWeight: 600 },
+  via: { background: "#FEF3C7", color: "#B45309", border: "1px solid #FCD34D", fontWeight: 600 },
+  muted: { background: "#F7F8FA", color: "#8C929C", border: "1px solid #E3E6EB", fontWeight: 500 },
+} as const;
+
+const REQUEST_STATUS_TAG_COLORS = {
+  sendt_cv: { background: "#FBF3E6", color: "#7D4E00", border: "1px solid #E8D0A0", fontWeight: 600 },
+  intervju: { background: "#EAF0F9", color: "#1A4FA0", border: "1px solid #B3C8E8", fontWeight: 600 },
+  vunnet: { background: "#EBF3EE", color: "#2D6A4F", border: "1px solid #C0DEC8", fontWeight: 600 },
+  avslag: { background: "#FAEBEC", color: "#8B1D20", border: "1px solid #E8B8BA", fontWeight: 600 },
+  bortfalt: { background: "#F0F2F6", color: "#3A3F4A", border: "1px solid #C8CDD6", fontWeight: 500 },
+  ny: { background: "#F7F8FA", color: "#8C929C", border: "1px solid #E3E6EB", fontWeight: 500 },
+} as const;
 
 function PipelineTrack({ status }: { status: string }) {
   const steps = [1, 2, 3];
@@ -684,7 +700,7 @@ function ForespRow({
       </div>
       {/* Type */}
       <div style={{ paddingTop: 1 }}>
-        <TypeChip type={row.type} partnerName={row.type === "VIA" || row.type === "via_partner" ? row.selskap_navn : null} />
+        <TypeChip type={row.type} />
       </div>
       {/* Teknologier */}
       <div className="min-w-0 pr-4" style={{ overflow: "hidden" }}>
@@ -759,21 +775,7 @@ function ForespRow({
             const cfg = PIPELINE[k.status] || { label: "Ny", color: C.textFaint };
             return (
               <div key={k.id} style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
-                <span
-                  className="inline-flex items-center rounded-[6px]"
-                  style={{
-                    height: 28,
-                    width: "fit-content",
-                    fontSize: 12,
-                    fontWeight: 500,
-                    padding: "0 10px",
-                    background: `${cfg.color}10`,
-                    color: cfg.color,
-                    border: `1px solid ${cfg.color}25`,
-                  }}
-                >
-                  {cfg.label}
-                </span>
+                <StatusChip status={k.status} label={cfg.label} />
               </div>
             );
           })
@@ -844,7 +846,7 @@ function ForespMobileRow({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {signal ? <DesignLabSignalBadge signal={signal} /> : null}
-          <TypeChip type={row.type} partnerName={row.type === "VIA" || row.type === "via_partner" ? row.selskap_navn : null} />
+          <TypeChip type={row.type} />
         </div>
       </div>
 
@@ -872,10 +874,14 @@ function ForespMobileRow({
               </p>
             ) : null}
             {firstStatus ? (
-              <p style={{ fontSize: 11, color: firstStatus.color }}>
-                {firstStatus.label}
-                {sendt.length > 1 ? ` +${sendt.length - 1}` : ""}
-              </p>
+              <div className="mt-1 flex items-center gap-1.5">
+                <StatusChip status={firstConsultant?.status} label={firstStatus.label} />
+                {sendt.length > 1 ? (
+                  <span style={{ fontSize: 11, color: C.textFaint }}>
+                    +{sendt.length - 1}
+                  </span>
+                ) : null}
+              </div>
             ) : null}
           </div>
         </div>
@@ -895,36 +901,22 @@ function ForespMobileRow({
    SUB-COMPONENTS
    ═══════════════════════════════════════════════════════════ */
 
-function TypeChip({ type, partnerName }: { type: string | null; partnerName?: string | null }) {
+function TypeChip({ type }: { type: string | null }) {
   const isDir = type === "DIR" || type === "direktekunde";
   const isVia = type === "VIA" || type === "via_partner";
   const label = isDir ? "Direkte" : isVia ? "Via" : "—";
-  const color = isDir ? C.accent : isVia ? C.warning : C.textGhost;
-  if (isVia) {
-    return (
-      <span className="inline-flex min-w-0 items-center gap-1.5">
-        <span className="inline-flex items-center rounded-[6px]" style={{
-          height: 28, fontSize: 12, fontWeight: 500, padding: "0 10px",
-          background: `${color}10`, color, border: `1px solid ${color}20`,
-        }}>
-          {label}
-        </span>
-        {partnerName ? (
-          <span className="truncate text-[12px]" style={{ color: C.textFaint }}>
-            {partnerName}
-          </span>
-        ) : null}
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center rounded-[6px]" style={{
-      height: 28, fontSize: 12, fontWeight: 500, padding: "0 10px",
-      background: `${color}10`, color, border: `1px solid ${color}20`,
-    }}>
-      {label}
-    </span>
-  );
+  const colors = isDir
+    ? REQUEST_TYPE_TAG_COLORS.direct
+    : isVia
+      ? REQUEST_TYPE_TAG_COLORS.via
+      : REQUEST_TYPE_TAG_COLORS.muted;
+
+  return <DesignLabStaticTag colors={colors}>{label}</DesignLabStaticTag>;
+}
+
+function StatusChip({ status, label }: { status: string | null | undefined; label: string }) {
+  const colors = REQUEST_STATUS_TAG_COLORS[status as keyof typeof REQUEST_STATUS_TAG_COLORS] || REQUEST_STATUS_TAG_COLORS.ny;
+  return <DesignLabStaticTag colors={colors}>{label}</DesignLabStaticTag>;
 }
 
 function LoadingMsg() {
