@@ -25,6 +25,7 @@ import AdminBrregSync from "./pages/AdminBrregSync";
 import Foresporsler from "./pages/Foresporsler";
 import NettsideAI from "./pages/NettsideAI";
 import CvEditor from "./pages/CvEditor";
+import Okonomi from "./pages/Okonomi";
 
 
 const KonsulenterAnsatte = lazy(() => import("./pages/KonsulenterAnsatte"));
@@ -586,6 +587,9 @@ function AppRouter() {
               </Suspense>
             }
           />
+        </Route>
+        <Route path="/okonomi" element={<ProtectedMinimal />}>
+          <Route index element={<Okonomi />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
